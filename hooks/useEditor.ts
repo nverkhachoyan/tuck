@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 import { Alert } from "react-native";
 import {
 	createTextLayer,
@@ -7,6 +7,68 @@ import {
 } from "../lib/editor-document";
 import { pickPhotoDocument } from "../lib/pick-photo";
 
+type EditorState = {
+	document: EditorDocument | null;
+	selectedLayerId: string | null;
+};
+
+type EditorAction =
+	| { type: "document-opened"; document: EditorDocument }
+	| { type: "document-closed" }
+	| { type: "text-layer-added"; layer: TextLayer }
+	| { type: "selected-layer-updated"; patch: Partial<TextLayer> }
+	| { type: "selected-layer-deleted" }
+	| { type: "layer-selected"; id: string | null };
+
+const initialState: EditorState = {
+	document: null,
+	selectedLayerId: null,
+};
+
+function editorReducer(state: EditorState, action: EditorAction): EditorState {
+	switch (action.type) {
+		case "document-opened":
+			return { document: action.document, selectedLayerId: null };
+		case "document-closed":
+			return initialState;
+		case "text-layer-added":
+			if (!state.document) return state;
+			return {
+				document: {
+					...state.document,
+					layers: [...state.document.layers, action.layer],
+				},
+				selectedLayerId: action.layer.id,
+			};
+		case "selected-layer-updated":
+			if (!state.document || !state.selectedLayerId) return state;
+			return {
+				...state,
+				document: {
+					...state.document,
+					layers: state.document.layers.map((layer) =>
+						layer.type === "text" && layer.id === state.selectedLayerId
+							? { ...layer, ...action.patch }
+							: layer,
+					),
+				},
+			};
+		case "selected-layer-deleted":
+			if (!state.document || !state.selectedLayerId) return state;
+			return {
+				document: {
+					...state.document,
+					layers: state.document.layers.filter(
+						(layer) => layer.id !== state.selectedLayerId,
+					),
+				},
+				selectedLayerId: null,
+			};
+		case "layer-selected":
+			return { ...state, selectedLayerId: action.id };
+	}
+}
+
 /**
  * Owns the editor's document + selection state and every mutation that acts
  * on them. Keeping this out of the screen components means the document
@@ -14,13 +76,12 @@ import { pickPhotoDocument } from "../lib/pick-photo";
  * Native rendering concerns.
  */
 export function useEditor() {
-	const [doc, setDoc] = useState<EditorDocument | null>(null);
-	const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+	const [state, dispatch] = useReducer(editorReducer, initialState);
 
 	const pickImage = useCallback(async () => {
 		const result = await pickPhotoDocument();
 		if (result.status === "picked") {
-			setDoc(result.document);
+			dispatch({ type: "document-opened", document: result.document });
 		} else if (result.status === "permission-denied") {
 			Alert.alert(
 				"Permission required",
@@ -29,70 +90,54 @@ export function useEditor() {
 		}
 	}, []);
 
-	const closeDocument = useCallback(() => {
-		setDoc(null);
-		setSelectedLayerId(null);
-	}, []);
-
-	const addTextLayer = useCallback(() => {
-		setDoc((current) => {
-			if (!current) return current;
-			const layer = createTextLayer(current);
-			setSelectedLayerId(layer.id);
-			return { ...current, layers: [...current.layers, layer] };
-		});
-	}, []);
-
-	const updateSelectedLayer = useCallback(
-		(patch: Partial<TextLayer>) => {
-			if (!selectedLayerId) return;
-			setDoc((current) => {
-				if (!current) return current;
-				return {
-					...current,
-					layers: current.layers.map((layer) =>
-						layer.type === "text" && layer.id === selectedLayerId
-							? { ...layer, ...patch }
-							: layer,
-					),
-				};
-			});
-		},
-		[selectedLayerId],
+	const closeDocument = useCallback(
+		() => dispatch({ type: "document-closed" }),
+		[],
 	);
 
-	const deleteSelectedLayer = useCallback(() => {
-		if (!selectedLayerId) return;
-		setDoc((current) => {
-			if (!current) return current;
-			return {
-				...current,
-				layers: current.layers.filter((layer) => layer.id !== selectedLayerId),
-			};
+	const addTextLayer = useCallback(() => {
+		if (!state.document) return;
+		dispatch({
+			type: "text-layer-added",
+			layer: createTextLayer(state.document),
 		});
-		setSelectedLayerId(null);
-	}, [selectedLayerId]);
+	}, [state.document]);
 
-	const deselectLayer = useCallback(() => setSelectedLayerId(null), []);
+	const updateSelectedLayer = useCallback(
+		(patch: Partial<TextLayer>) =>
+			dispatch({ type: "selected-layer-updated", patch }),
+		[],
+	);
+
+	const deleteSelectedLayer = useCallback(
+		() => dispatch({ type: "selected-layer-deleted" }),
+		[],
+	);
+
+	const selectLayer = useCallback(
+		(id: string | null) => dispatch({ type: "layer-selected", id }),
+		[],
+	);
+	const deselectLayer = useCallback(() => selectLayer(null), [selectLayer]);
 
 	const selectedLayer = useMemo(
 		() =>
-			doc?.layers.find(
+			state.document?.layers.find(
 				(layer): layer is TextLayer =>
-					layer.type === "text" && layer.id === selectedLayerId,
+					layer.type === "text" && layer.id === state.selectedLayerId,
 			),
-		[doc, selectedLayerId],
+		[state.document, state.selectedLayerId],
 	);
 
 	return {
-		doc,
+		doc: state.document,
 		selectedLayer,
 		pickImage,
 		closeDocument,
 		addTextLayer,
 		updateSelectedLayer,
 		deleteSelectedLayer,
-		selectLayer: setSelectedLayerId,
+		selectLayer,
 		deselectLayer,
 	};
 }
