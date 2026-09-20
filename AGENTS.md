@@ -12,3 +12,7 @@
 ## Git Commits
 
 - Use Conventional Commits format for commit messages, such as `feat: add text editing` or `fix: handle invalid image input`.
+
+## Code Checks
+
+- After code changes, run `npm run check` to verify formatting and linting. Use `npm run format` to apply formatting fixes, and run `npm run lint` when checking lint rules only.
