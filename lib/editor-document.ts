@@ -71,14 +71,30 @@ export function createDocumentFromImage(
 	};
 }
 
-export function createTextLayer(centerX: number, centerY: number): TextLayer {
+/**
+ * Font sizing is relative to the photo's shorter side so text looks the same
+ * on a 1080px screenshot and a 4000px camera photo.
+ */
+export type FontSizeRange = { min: number; max: number; step: number; initial: number };
+
+export function getFontSizeRange(doc: EditorDocument): FontSizeRange {
+	const base = Math.min(doc.width, doc.height);
+	return {
+		min: Math.round(base * 0.02),
+		max: Math.round(base * 0.4),
+		step: Math.round(base * 0.015),
+		initial: Math.round(base * 0.08),
+	};
+}
+
+export function createTextLayer(doc: EditorDocument): TextLayer {
 	return {
 		type: "text",
 		id: createLayerId("text"),
 		text: "TEXT",
-		fontSize: 64,
+		fontSize: getFontSizeRange(doc).initial,
 		color: "white",
 		outlineColor: "black",
-		transform: { ...identityTransform, x: centerX, y: centerY },
+		transform: { ...identityTransform, x: doc.width / 2, y: doc.height / 2 },
 	};
 }

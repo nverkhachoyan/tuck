@@ -27,6 +27,7 @@ export default function Page() {
 					onChangeColor={(color) => editor.updateSelectedLayer({ color })}
 					onDeleteLayer={editor.deleteSelectedLayer}
 					onDeselect={editor.deselectLayer}
+					onCommitTransform={(transform) => editor.updateSelectedLayer({ transform })}
 				/>
 			) : (
 				<WelcomeScreen onPickImage={editor.pickImage} />

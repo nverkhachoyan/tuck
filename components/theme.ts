@@ -1,3 +1,7 @@
+// The bottom bar (main toolbar or text panel) is always this tall so the
+// canvas above it never resizes when selection changes.
+export const BOTTOM_PANEL_HEIGHT = 120;
+
 export const colors = {
 	background: "#0A0A0B",
 	surface: "#151517",

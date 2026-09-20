@@ -1,27 +1,43 @@
-import { Canvas } from "@shopify/react-native-skia";
-import { useState } from "react";
-import { type LayoutChangeEvent, Pressable, StyleSheet } from "react-native";
-import type { EditorDocument } from "../../lib/editor-document";
+import { Canvas, Group } from "@shopify/react-native-skia";
+import { useCallback, useLayoutEffect, useState } from "react";
+import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { GestureDetector } from "react-native-gesture-handler";
+import type { EditorDocument, Transform } from "../../lib/editor-document";
+import { hitTestBox } from "../../lib/hit-test";
 import { ImageLayerNode } from "./ImageLayerNode";
-import { TextLayerHitArea } from "./TextLayerHitArea";
-import { TextLayerNode } from "./TextLayerNode";
+import { selectionPadding, TextLayerNode } from "./TextLayerNode";
+import { measureTextLayer } from "./textLayerMetrics";
+import {
+	syncLiveTransform,
+	useLiveTransform,
+	useTextTransformGesture,
+} from "./useTextTransformGesture";
+
+// Minimum comfortable touch padding around text, in screen pixels.
+const HIT_PADDING_PX = 14;
 
 /**
- * Renders an EditorDocument fitted to the available space, mapping the
- * document's fixed logical dimensions onto the container's screen size.
- * Document-space coordinates stay independent of screen size so the same
- * layer positions can later drive full-resolution export.
+ * Renders an EditorDocument fitted to the available space. A root group maps
+ * the document's logical coordinates onto the container's screen size, so
+ * layers live purely in document space and the same layer tree can later be
+ * rendered at full resolution for export.
+ *
+ * All touch handling (tap-to-select, drag/pinch/rotate) is a single gesture
+ * on the canvas; selection is resolved by hit-testing in document space.
  */
 export function EditorCanvas({
 	document,
 	selectedLayerId = null,
 	onSelectLayer,
+	onCommitTransform,
 }: {
 	document: EditorDocument;
 	selectedLayerId?: string | null;
 	onSelectLayer?: (id: string | null) => void;
+	onCommitTransform?: (transform: Transform) => void;
 }) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
+	const live = useLiveTransform();
 
 	const handleLayout = (event: LayoutChangeEvent) => {
 		const { width, height } = event.nativeEvent.layout;
@@ -32,64 +48,89 @@ export function EditorCanvas({
 		size.width > 0 && size.height > 0
 			? Math.min(size.width / document.width, size.height / document.height)
 			: 0;
-	const renderWidth = document.width * scale;
-	const renderHeight = document.height * scale;
-	const offsetX = (size.width - renderWidth) / 2;
-	const offsetY = (size.height - renderHeight) / 2;
+	const offsetX = (size.width - document.width * scale) / 2;
+	const offsetY = (size.height - document.height * scale) / 2;
+
+	// Keep the gesture-driven values in step with whichever layer is selected,
+	// however it got selected (tap, add, delete).
+	useLayoutEffect(() => {
+		const layer = document.layers.find((l) => l.id === selectedLayerId);
+		syncLiveTransform(live, layer ? layer.id : null, layer?.transform);
+		// Deliberately keyed on selection only: while a gesture runs, the live
+		// values are the source of truth, not the document.
+	}, [selectedLayerId, live]);
+
+	const handleTap = useCallback(
+		(screenX: number, screenY: number) => {
+			if (!onSelectLayer || scale === 0) return;
+			const point = {
+				x: (screenX - offsetX) / scale,
+				y: (screenY - offsetY) / scale,
+			};
+			// Topmost layer first.
+			for (let i = document.layers.length - 1; i >= 0; i--) {
+				const layer = document.layers[i];
+				if (layer.type !== "text") continue;
+				const { width, height } = measureTextLayer(layer);
+				const hitPad = Math.max(
+					selectionPadding(layer),
+					HIT_PADDING_PX / (scale * layer.transform.scaleX),
+				);
+				if (hitTestBox(layer.transform, width / 2 + hitPad, height / 2 + hitPad, point)) {
+					onSelectLayer(layer.id);
+					return;
+				}
+			}
+			onSelectLayer(null);
+		},
+		[document.layers, offsetX, offsetY, onSelectLayer, scale],
+	);
+
+	const gesture = useTextTransformGesture({
+		live,
+		viewScale: scale || 1,
+		onTap: handleTap,
+		onCommit: useCallback(
+			(transform) => onCommitTransform?.(transform),
+			[onCommitTransform],
+		),
+	});
 
 	return (
-		<Pressable
-			style={styles.container}
-			onLayout={handleLayout}
-			onPress={() => onSelectLayer?.(null)}
-		>
-			<Canvas style={styles.canvas}>
-				{scale > 0 &&
-					document.layers.map((layer) => {
-						switch (layer.type) {
-							case "image":
-								return (
-									<ImageLayerNode
-										key={layer.id}
-										layer={layer}
-										x={offsetX}
-										y={offsetY}
-										width={renderWidth}
-										height={renderHeight}
-									/>
-								);
-							case "text":
-								return (
-									<TextLayerNode
-										key={layer.id}
-										layer={layer}
-										scale={scale}
-										offsetX={offsetX}
-										offsetY={offsetY}
-										selected={layer.id === selectedLayerId}
-									/>
-								);
-							default:
-								return null;
-						}
-					})}
-			</Canvas>
-
-			{scale > 0 &&
-				onSelectLayer &&
-				document.layers.map((layer) =>
-					layer.type === "text" ? (
-						<TextLayerHitArea
-							key={layer.id}
-							layer={layer}
-							scale={scale}
-							offsetX={offsetX}
-							offsetY={offsetY}
-							onPress={() => onSelectLayer(layer.id)}
-						/>
-					) : null,
-				)}
-		</Pressable>
+		<GestureDetector gesture={gesture}>
+			<View style={styles.container} onLayout={handleLayout}>
+				<Canvas style={styles.canvas}>
+					{scale > 0 && (
+						<Group
+							transform={[
+								{ translateX: offsetX },
+								{ translateY: offsetY },
+								{ scale },
+							]}
+						>
+							{document.layers.map((layer) => {
+								switch (layer.type) {
+									case "image":
+										return <ImageLayerNode key={layer.id} layer={layer} />;
+									case "text":
+										return (
+											<TextLayerNode
+												key={layer.id}
+												layer={layer}
+												viewScale={scale}
+												live={live}
+												selected={layer.id === selectedLayerId}
+											/>
+										);
+									default:
+										return null;
+								}
+							})}
+						</Group>
+					)}
+				</Canvas>
+			</View>
+		</GestureDetector>
 	);
 }
 

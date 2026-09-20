@@ -1,14 +1,12 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import type { TextLayer } from "../../lib/editor-document";
-import { colors } from "../theme";
+import type { FontSizeRange, TextLayer } from "../../lib/editor-document";
+import { BOTTOM_PANEL_HEIGHT, colors } from "../theme";
 
 const SWATCHES = ["#FFFFFF", "#000000", "#FF3B30", "#FFD60A", "#34C759", "#0A84FF"];
 
-const MIN_FONT_SIZE = 24;
-const MAX_FONT_SIZE = 160;
-
 export function TextEditPanel({
 	layer,
+	fontSizeRange,
 	onChangeText,
 	onChangeFontSize,
 	onChangeColor,
@@ -16,6 +14,7 @@ export function TextEditPanel({
 	onDone,
 }: {
 	layer: TextLayer;
+	fontSizeRange: FontSizeRange;
 	onChangeText: (text: string) => void;
 	onChangeFontSize: (fontSize: number) => void;
 	onChangeColor: (color: string) => void;
@@ -31,7 +30,7 @@ export function TextEditPanel({
 					placeholder="Text"
 					placeholderTextColor={colors.textSecondary}
 					style={styles.input}
-					autoFocus
+					selectTextOnFocus
 				/>
 				<Pressable onPress={onDelete} hitSlop={8}>
 					<Text style={styles.delete}>Delete</Text>
@@ -56,7 +55,9 @@ export function TextEditPanel({
 				<View style={styles.sizeControls}>
 					<Pressable
 						onPress={() =>
-							onChangeFontSize(Math.max(MIN_FONT_SIZE, layer.fontSize - 8))
+							onChangeFontSize(
+								Math.max(fontSizeRange.min, layer.fontSize - fontSizeRange.step),
+							)
 						}
 						hitSlop={8}
 						style={styles.sizeButton}
@@ -65,7 +66,9 @@ export function TextEditPanel({
 					</Pressable>
 					<Pressable
 						onPress={() =>
-							onChangeFontSize(Math.min(MAX_FONT_SIZE, layer.fontSize + 8))
+							onChangeFontSize(
+								Math.min(fontSizeRange.max, layer.fontSize + fontSizeRange.step),
+							)
 						}
 						hitSlop={8}
 						style={styles.sizeButton}
@@ -84,8 +87,9 @@ export function TextEditPanel({
 
 const styles = StyleSheet.create({
 	container: {
+		height: BOTTOM_PANEL_HEIGHT,
+		justifyContent: "center",
 		paddingHorizontal: 20,
-		paddingVertical: 14,
 		gap: 14,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,

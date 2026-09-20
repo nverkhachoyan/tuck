@@ -1,46 +1,31 @@
 import { matchFont, type SkFont } from "@shopify/react-native-skia";
 import type { TextLayer } from "../../lib/editor-document";
 
-export const TEXT_HIT_PADDING = 14;
-
 export type TextLayerMetrics = {
 	font: SkFont;
-	fontSize: number;
+	width: number;
+	height: number;
+	// Draw origin in the layer's local space (origin = text center).
 	drawX: number;
 	baselineY: number;
-	boxX: number;
-	boxY: number;
-	boxWidth: number;
-	boxHeight: number;
 };
 
 /**
- * Maps a TextLayer's document-space center point and font size onto screen
- * space, and measures its rendered bounds. Shared by the visual renderer and
- * the tap-target overlay so both agree on exactly where the text sits.
+ * Measures a TextLayer in document space, ignoring its transform. Shared by
+ * the renderer and hit-testing so both agree on the text's bounds.
  */
-export function measureTextLayer(
-	layer: TextLayer,
-	scale: number,
-	offsetX: number,
-	offsetY: number,
-): TextLayerMetrics {
-	const fontSize = layer.fontSize * scale;
-	const font = matchFont({ fontFamily: "System", fontWeight: "bold", fontSize });
-	const bounds = font.measureText(layer.text || " ");
-	const centerX = offsetX + layer.transform.x * scale;
-	const centerY = offsetY + layer.transform.y * scale;
-	const drawX = centerX - bounds.width / 2;
-	const baselineY = centerY + fontSize * 0.35;
-
+export function measureTextLayer(layer: TextLayer): TextLayerMetrics {
+	const font = matchFont({
+		fontFamily: "System",
+		fontWeight: "bold",
+		fontSize: layer.fontSize,
+	});
+	const width = font.measureText(layer.text || " ").width;
 	return {
 		font,
-		fontSize,
-		drawX,
-		baselineY,
-		boxX: drawX - TEXT_HIT_PADDING,
-		boxY: centerY - fontSize / 2 - TEXT_HIT_PADDING,
-		boxWidth: bounds.width + TEXT_HIT_PADDING * 2,
-		boxHeight: fontSize + TEXT_HIT_PADDING * 2,
+		width,
+		height: layer.fontSize,
+		drawX: -width / 2,
+		baselineY: layer.fontSize * 0.35,
 	};
 }

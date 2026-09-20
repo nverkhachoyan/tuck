@@ -37,7 +37,7 @@ export function useEditor() {
 	const addTextLayer = useCallback(() => {
 		setDoc((current) => {
 			if (!current) return current;
-			const layer = createTextLayer(current.width / 2, current.height / 2);
+			const layer = createTextLayer(current);
 			setSelectedLayerId(layer.id);
 			return { ...current, layers: [...current.layers, layer] };
 		});

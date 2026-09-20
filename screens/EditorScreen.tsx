@@ -3,8 +3,13 @@ import { EditorCanvas } from "../components/editor/EditorCanvas";
 import { TextEditPanel } from "../components/editor/TextEditPanel";
 import { Button } from "../components/ui/Button";
 import { HeaderButton } from "../components/ui/HeaderButton";
-import { colors } from "../components/theme";
-import type { EditorDocument, TextLayer } from "../lib/editor-document";
+import { BOTTOM_PANEL_HEIGHT, colors } from "../components/theme";
+import {
+	type EditorDocument,
+	getFontSizeRange,
+	type TextLayer,
+	type Transform,
+} from "../lib/editor-document";
 
 export function EditorScreen({
 	document,
@@ -19,6 +24,7 @@ export function EditorScreen({
 	onChangeColor,
 	onDeleteLayer,
 	onDeselect,
+	onCommitTransform,
 }: {
 	document: EditorDocument;
 	selectedLayer: TextLayer | undefined;
@@ -32,6 +38,7 @@ export function EditorScreen({
 	onChangeColor: (color: string) => void;
 	onDeleteLayer: () => void;
 	onDeselect: () => void;
+	onCommitTransform: (transform: Transform) => void;
 }) {
 	return (
 		<View style={styles.editor}>
@@ -45,12 +52,14 @@ export function EditorScreen({
 					document={document}
 					selectedLayerId={selectedLayer?.id ?? null}
 					onSelectLayer={onSelectLayer}
+					onCommitTransform={onCommitTransform}
 				/>
 			</View>
 
 			{selectedLayer ? (
 				<TextEditPanel
 					layer={selectedLayer}
+					fontSizeRange={getFontSizeRange(document)}
 					onChangeText={onChangeText}
 					onChangeFontSize={onChangeFontSize}
 					onChangeColor={onChangeColor}
@@ -88,8 +97,8 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
+		height: BOTTOM_PANEL_HEIGHT,
 		paddingHorizontal: 20,
-		paddingVertical: 14,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},
