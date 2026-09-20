@@ -6,14 +6,18 @@ import { Button } from "../components/Button";
 import { EditorCanvas } from "../components/EditorCanvas";
 import { HeaderButton } from "../components/HeaderButton";
 import { colors } from "../components/theme";
+import { TextEditPanel } from "../components/TextEditPanel";
 import {
 	createDocumentFromImage,
+	createTextLayer,
 	type EditorDocument,
+	type TextLayer,
 } from "../lib/editor-document";
 import { normalizePickedImage } from "../lib/normalize-picked-image";
 
 export default function Page() {
 	const [doc, setDoc] = useState<EditorDocument | null>(null);
+	const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
 	const pickImage = async () => {
 		const permissionResult =
@@ -48,16 +52,56 @@ export default function Page() {
 	const notReady = () =>
 		Alert.alert("Coming soon", "This tool isn't wired up yet.");
 
+	const addTextLayer = () => {
+		if (!doc) return;
+		const layer = createTextLayer(doc.width / 2, doc.height / 2);
+		setDoc({ ...doc, layers: [...doc.layers, layer] });
+		setSelectedLayerId(layer.id);
+	};
+
+	const updateSelectedLayer = (patch: Partial<TextLayer>) => {
+		if (!doc || !selectedLayerId) return;
+		setDoc({
+			...doc,
+			layers: doc.layers.map((layer) =>
+				layer.type === "text" && layer.id === selectedLayerId
+					? { ...layer, ...patch }
+					: layer,
+			),
+		});
+	};
+
+	const deleteSelectedLayer = () => {
+		if (!doc || !selectedLayerId) return;
+		setDoc({
+			...doc,
+			layers: doc.layers.filter((layer) => layer.id !== selectedLayerId),
+		});
+		setSelectedLayerId(null);
+	};
+
+	const selectedLayer = doc?.layers.find(
+		(layer): layer is TextLayer =>
+			layer.type === "text" && layer.id === selectedLayerId,
+	);
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<StatusBar barStyle="light-content" />
 			{doc ? (
 				<EditorScreen
 					document={doc}
+					selectedLayer={selectedLayer}
+					onSelectLayer={setSelectedLayerId}
 					onBack={() => setDoc(null)}
 					onDone={notReady}
-					onAddText={notReady}
+					onAddText={addTextLayer}
 					onExport={notReady}
+					onChangeText={(text) => updateSelectedLayer({ text })}
+					onChangeFontSize={(fontSize) => updateSelectedLayer({ fontSize })}
+					onChangeColor={(color) => updateSelectedLayer({ color })}
+					onDeleteLayer={deleteSelectedLayer}
+					onDeselect={() => setSelectedLayerId(null)}
 				/>
 			) : (
 				<WelcomeScreen onPickImage={pickImage} />
@@ -89,16 +133,30 @@ function WelcomeScreen({ onPickImage }: { onPickImage: () => void }) {
 
 function EditorScreen({
 	document,
+	selectedLayer,
+	onSelectLayer,
 	onBack,
 	onDone,
 	onAddText,
 	onExport,
+	onChangeText,
+	onChangeFontSize,
+	onChangeColor,
+	onDeleteLayer,
+	onDeselect,
 }: {
 	document: EditorDocument;
+	selectedLayer: TextLayer | undefined;
+	onSelectLayer: (id: string | null) => void;
 	onBack: () => void;
 	onDone: () => void;
 	onAddText: () => void;
 	onExport: () => void;
+	onChangeText: (text: string) => void;
+	onChangeFontSize: (fontSize: number) => void;
+	onChangeColor: (color: string) => void;
+	onDeleteLayer: () => void;
+	onDeselect: () => void;
 }) {
 	return (
 		<View style={styles.editor}>
@@ -108,13 +166,28 @@ function EditorScreen({
 			</View>
 
 			<View style={styles.canvasArea}>
-				<EditorCanvas document={document} />
+				<EditorCanvas
+					document={document}
+					selectedLayerId={selectedLayer?.id ?? null}
+					onSelectLayer={onSelectLayer}
+				/>
 			</View>
 
-			<View style={styles.editorToolbar}>
-				<Button label="Text" onPress={onAddText} />
-				<Button label="Export" variant="primary" onPress={onExport} />
-			</View>
+			{selectedLayer ? (
+				<TextEditPanel
+					layer={selectedLayer}
+					onChangeText={onChangeText}
+					onChangeFontSize={onChangeFontSize}
+					onChangeColor={onChangeColor}
+					onDelete={onDeleteLayer}
+					onDone={onDeselect}
+				/>
+			) : (
+				<View style={styles.editorToolbar}>
+					<Button label="Text" onPress={onAddText} />
+					<Button label="Export" variant="primary" onPress={onExport} />
+				</View>
+			)}
 		</View>
 	);
 }
