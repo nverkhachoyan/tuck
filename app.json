@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "scheme": "skia",
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "name": "photo-editor",
+    "slug": "photo-editor"
+  }
+}
