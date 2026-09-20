@@ -11,6 +11,22 @@ import {
 	type Transform,
 } from "../lib/editor-document";
 
+type EditorScreenProps = {
+	document: EditorDocument;
+	selectedLayer: TextLayer | undefined;
+	onSelectLayer: (id: string | null) => void;
+	onBack: () => void;
+	onDone: () => void;
+	onAddText: () => void;
+	onExport: () => void;
+	onChangeText: (text: string) => void;
+	onChangeFontSize: (fontSize: number) => void;
+	onChangeColor: (color: string) => void;
+	onDeleteLayer: () => void;
+	onDeselect: () => void;
+	onCommitTransform: (transform: Transform) => void;
+};
+
 export function EditorScreen({
 	document,
 	selectedLayer,
@@ -25,21 +41,7 @@ export function EditorScreen({
 	onDeleteLayer,
 	onDeselect,
 	onCommitTransform,
-}: {
-	document: EditorDocument;
-	selectedLayer: TextLayer | undefined;
-	onSelectLayer: (id: string | null) => void;
-	onBack: () => void;
-	onDone: () => void;
-	onAddText: () => void;
-	onExport: () => void;
-	onChangeText: (text: string) => void;
-	onChangeFontSize: (fontSize: number) => void;
-	onChangeColor: (color: string) => void;
-	onDeleteLayer: () => void;
-	onDeselect: () => void;
-	onCommitTransform: (transform: Transform) => void;
-}) {
+}: EditorScreenProps) {
 	return (
 		<View style={styles.editor}>
 			<View style={styles.editorHeader}>

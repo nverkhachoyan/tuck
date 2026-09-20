@@ -11,6 +11,16 @@ const SWATCHES = [
 	"#0A84FF",
 ];
 
+type TextEditPanelProps = {
+	layer: TextLayer;
+	fontSizeRange: FontSizeRange;
+	onChangeText: (text: string) => void;
+	onChangeFontSize: (fontSize: number) => void;
+	onChangeColor: (color: string) => void;
+	onDelete: () => void;
+	onDone: () => void;
+};
+
 export function TextEditPanel({
 	layer,
 	fontSizeRange,
@@ -19,15 +29,7 @@ export function TextEditPanel({
 	onChangeColor,
 	onDelete,
 	onDone,
-}: {
-	layer: TextLayer;
-	fontSizeRange: FontSizeRange;
-	onChangeText: (text: string) => void;
-	onChangeFontSize: (fontSize: number) => void;
-	onChangeColor: (color: string) => void;
-	onDelete: () => void;
-	onDone: () => void;
-}) {
+}: TextEditPanelProps) {
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>

@@ -17,6 +17,13 @@ import {
 // Minimum comfortable touch padding around text, in screen pixels.
 const HIT_PADDING_PX = 14;
 
+type EditorCanvasProps = {
+	document: EditorDocument;
+	selectedLayerId?: string | null;
+	onSelectLayer?: (id: string | null) => void;
+	onCommitTransform?: (transform: Transform) => void;
+};
+
 /**
  * Renders an EditorDocument fitted to the available space. A root group maps
  * the document's logical coordinates onto the container's screen size, so
@@ -31,12 +38,7 @@ export function EditorCanvas({
 	selectedLayerId = null,
 	onSelectLayer,
 	onCommitTransform,
-}: {
-	document: EditorDocument;
-	selectedLayerId?: string | null;
-	onSelectLayer?: (id: string | null) => void;
-	onCommitTransform?: (transform: Transform) => void;
-}) {
+}: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const live = useLiveTransform();
 
