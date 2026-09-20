@@ -4,6 +4,7 @@ import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import type { EditorDocument, Transform } from "../../lib/editor-document";
 import { hitTestBox } from "../../lib/hit-test";
+import { fitDocumentToView, viewPointToDocument } from "./documentViewport";
 import { ImageLayerNode } from "./ImageLayerNode";
 import { selectionPadding, TextLayerNode } from "./TextLayerNode";
 import { measureTextLayer } from "./textLayerMetrics";
@@ -44,12 +45,8 @@ export function EditorCanvas({
 		setSize({ width, height });
 	};
 
-	const scale =
-		size.width > 0 && size.height > 0
-			? Math.min(size.width / document.width, size.height / document.height)
-			: 0;
-	const offsetX = (size.width - document.width * scale) / 2;
-	const offsetY = (size.height - document.height * scale) / 2;
+	const viewport = fitDocumentToView(document, size);
+	const { scale, offsetX, offsetY } = viewport;
 
 	// Keep the gesture-driven values in step with whichever layer is selected,
 	// however it got selected (tap, add, delete).
@@ -63,10 +60,10 @@ export function EditorCanvas({
 	const handleTap = useCallback(
 		(screenX: number, screenY: number) => {
 			if (!onSelectLayer || scale === 0) return;
-			const point = {
-				x: (screenX - offsetX) / scale,
-				y: (screenY - offsetY) / scale,
-			};
+			const point = viewPointToDocument(viewport, {
+				x: screenX,
+				y: screenY,
+			});
 			// Topmost layer first.
 			for (let i = document.layers.length - 1; i >= 0; i--) {
 				const layer = document.layers[i];
@@ -90,7 +87,7 @@ export function EditorCanvas({
 			}
 			onSelectLayer(null);
 		},
-		[document.layers, offsetX, offsetY, onSelectLayer, scale],
+		[document.layers, onSelectLayer, scale, viewport],
 	);
 
 	const gesture = useTextTransformGesture({
