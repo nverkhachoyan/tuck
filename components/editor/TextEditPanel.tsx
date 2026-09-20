@@ -2,7 +2,14 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { FontSizeRange, TextLayer } from "../../lib/editor-document";
 import { BOTTOM_PANEL_HEIGHT, colors } from "../theme";
 
-const SWATCHES = ["#FFFFFF", "#000000", "#FF3B30", "#FFD60A", "#34C759", "#0A84FF"];
+const SWATCHES = [
+	"#FFFFFF",
+	"#000000",
+	"#FF3B30",
+	"#FFD60A",
+	"#34C759",
+	"#0A84FF",
+];
 
 export function TextEditPanel({
 	layer,
@@ -56,7 +63,10 @@ export function TextEditPanel({
 					<Pressable
 						onPress={() =>
 							onChangeFontSize(
-								Math.max(fontSizeRange.min, layer.fontSize - fontSizeRange.step),
+								Math.max(
+									fontSizeRange.min,
+									layer.fontSize - fontSizeRange.step,
+								),
 							)
 						}
 						hitSlop={8}
@@ -67,7 +77,10 @@ export function TextEditPanel({
 					<Pressable
 						onPress={() =>
 							onChangeFontSize(
-								Math.min(fontSizeRange.max, layer.fontSize + fontSizeRange.step),
+								Math.min(
+									fontSizeRange.max,
+									layer.fontSize + fontSizeRange.step,
+								),
 							)
 						}
 						hitSlop={8}

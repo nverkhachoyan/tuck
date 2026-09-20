@@ -56,9 +56,9 @@ export function EditorCanvas({
 	useLayoutEffect(() => {
 		const layer = document.layers.find((l) => l.id === selectedLayerId);
 		syncLiveTransform(live, layer ? layer.id : null, layer?.transform);
-		// Deliberately keyed on selection only: while a gesture runs, the live
-		// values are the source of truth, not the document.
-	}, [selectedLayerId, live]);
+		// While a gesture runs, the live values are the source of truth. When the
+		// layer list changes, synchronize it with the latest document state.
+	}, [document.layers, live, selectedLayerId]);
 
 	const handleTap = useCallback(
 		(screenX: number, screenY: number) => {
@@ -76,7 +76,14 @@ export function EditorCanvas({
 					selectionPadding(layer),
 					HIT_PADDING_PX / (scale * layer.transform.scaleX),
 				);
-				if (hitTestBox(layer.transform, width / 2 + hitPad, height / 2 + hitPad, point)) {
+				if (
+					hitTestBox(
+						layer.transform,
+						width / 2 + hitPad,
+						height / 2 + hitPad,
+						point,
+					)
+				) {
 					onSelectLayer(layer.id);
 					return;
 				}

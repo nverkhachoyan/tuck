@@ -75,7 +75,12 @@ export function createDocumentFromImage(
  * Font sizing is relative to the photo's shorter side so text looks the same
  * on a 1080px screenshot and a 4000px camera photo.
  */
-export type FontSizeRange = { min: number; max: number; step: number; initial: number };
+export type FontSizeRange = {
+	min: number;
+	max: number;
+	step: number;
+	initial: number;
+};
 
 export function getFontSizeRange(doc: EditorDocument): FontSizeRange {
 	const base = Math.min(doc.width, doc.height);

@@ -130,5 +130,14 @@ export function useTextTransformGesture({
 			});
 
 		return Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotate));
-	}, [live, viewScale, onTap, onCommit, startX, startY, startScale, startRotation]);
+	}, [
+		live,
+		viewScale,
+		onTap,
+		onCommit,
+		startX,
+		startY,
+		startScale,
+		startRotation,
+	]);
 }

@@ -1,9 +1,9 @@
 import { StyleSheet, View } from "react-native";
 import { EditorCanvas } from "../components/editor/EditorCanvas";
 import { TextEditPanel } from "../components/editor/TextEditPanel";
+import { BOTTOM_PANEL_HEIGHT, colors } from "../components/theme";
 import { Button } from "../components/ui/Button";
 import { HeaderButton } from "../components/ui/HeaderButton";
-import { BOTTOM_PANEL_HEIGHT, colors } from "../components/theme";
 import {
 	type EditorDocument,
 	getFontSizeRange,

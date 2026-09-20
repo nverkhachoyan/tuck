@@ -5,7 +5,8 @@ import { useEditor } from "../hooks/useEditor";
 import { EditorScreen } from "../screens/EditorScreen";
 import { WelcomeScreen } from "../screens/WelcomeScreen";
 
-const notReady = () => Alert.alert("Coming soon", "This tool isn't wired up yet.");
+const notReady = () =>
+	Alert.alert("Coming soon", "This tool isn't wired up yet.");
 
 export default function Page() {
 	const editor = useEditor();
@@ -23,11 +24,15 @@ export default function Page() {
 					onAddText={editor.addTextLayer}
 					onExport={notReady}
 					onChangeText={(text) => editor.updateSelectedLayer({ text })}
-					onChangeFontSize={(fontSize) => editor.updateSelectedLayer({ fontSize })}
+					onChangeFontSize={(fontSize) =>
+						editor.updateSelectedLayer({ fontSize })
+					}
 					onChangeColor={(color) => editor.updateSelectedLayer({ color })}
 					onDeleteLayer={editor.deleteSelectedLayer}
 					onDeselect={editor.deselectLayer}
-					onCommitTransform={(transform) => editor.updateSelectedLayer({ transform })}
+					onCommitTransform={(transform) =>
+						editor.updateSelectedLayer({ transform })
+					}
 				/>
 			) : (
 				<WelcomeScreen onPickImage={editor.pickImage} />

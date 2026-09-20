@@ -48,7 +48,10 @@ export function TextLayerNode({
 
 	// Keep the selection outline a constant on-screen thickness at any scale.
 	const selectionStroke = useDerivedValue(() => {
-		const scale = live.activeId.value === layer.id ? live.scale.value : layer.transform.scaleX;
+		const scale =
+			live.activeId.value === layer.id
+				? live.scale.value
+				: layer.transform.scaleX;
 		return SELECTION_STROKE_PX / (viewScale * scale);
 	}, [layer.id, layer.transform, viewScale]);
 
@@ -78,7 +81,13 @@ export function TextLayerNode({
 				strokeWidth={strokeWidth}
 				strokeJoin="round"
 			/>
-			<SkiaText x={drawX} y={baselineY} text={layer.text} font={font} color={layer.color} />
+			<SkiaText
+				x={drawX}
+				y={baselineY}
+				text={layer.text}
+				font={font}
+				color={layer.color}
+			/>
 		</Group>
 	);
 }
