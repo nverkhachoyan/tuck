@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import type { TextLayer } from "../lib/editor-document";
-import { colors } from "./theme";
+import type { TextLayer } from "../../lib/editor-document";
+import { colors } from "../theme";
 
 const SWATCHES = ["#FFFFFF", "#000000", "#FF3B30", "#FFD60A", "#34C759", "#0A84FF"];
 
