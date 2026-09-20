@@ -7,3 +7,8 @@
 - `useImage()` fails silently — a decode error just resolves to `null` with no thrown error or console output. Always pass its `onError` callback (at least temporarily) when an image isn't rendering; it's the fastest way to get an actual error message instead of guessing.
 - A flex container with `alignItems`/`justifyContent: "center"` collapses a `flex: 1` child's cross-axis size to 0 (no stretch). Don't wrap a Skia `<Canvas>` (or anything else that needs `onLayout` to report real dimensions) in a centering container — let it stretch and center its own contents instead.
 - In Expo Go, opening `exp://127.0.0.1:8081` while the app is already foregrounded just refocuses it — it does not fetch a fresh JS bundle after installing new dependencies. Force a real reload with `xcrun simctl terminate <udid> host.exp.Exponent` then reopen the `exp://` URL.
+- The iOS Simulator MCP tool's taps can silently go nowhere after repeated terminate/reload cycles — the RN JS thread can hang while the simulator itself stays fully responsive. If a tap at coordinates that worked before suddenly does nothing, don't assume your coordinate math is wrong: press the hardware HOME button first. If HOME works instantly but in-app taps still do nothing, the JS thread is hung — do a real `simctl terminate` + relaunch, not just another `open_url`/foreground refocus. Also give buttons real `hitSlop` (RN's default is the raw layout box, no forgiveness); it fixes real touch-target UX and takes tap-coordinate guessing out of your own testing.
+
+## Git Commits
+
+- Use Conventional Commits format for commit messages, such as `feat: add text editing` or `fix: handle invalid image input`.
