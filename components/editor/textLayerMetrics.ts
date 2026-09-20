@@ -10,6 +10,10 @@ export type TextLayerMetrics = {
 	baselineY: number;
 };
 
+export function selectionPadding(layer: TextLayer): number {
+	return layer.fontSize * 0.2;
+}
+
 /**
  * Measures a TextLayer in document space, ignoring its transform. Shared by
  * the renderer and hit-testing so both agree on the text's bounds.

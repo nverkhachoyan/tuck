@@ -6,14 +6,10 @@ import {
 import { useDerivedValue } from "react-native-reanimated";
 import type { TextLayer } from "../../lib/editor-document";
 import { colors } from "../theme";
-import { measureTextLayer } from "./textLayerMetrics";
+import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
 import type { LiveTransform } from "./useTextTransformGesture";
 
 const SELECTION_STROKE_PX = 1.5;
-
-export function selectionPadding(layer: TextLayer): number {
-	return layer.fontSize * 0.2;
-}
 
 /**
  * Draws a text layer in document space, centered on its transform origin.

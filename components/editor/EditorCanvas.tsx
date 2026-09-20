@@ -6,8 +6,8 @@ import type { EditorDocument, Transform } from "../../lib/editor-document";
 import { hitTestBox } from "../../lib/hit-test";
 import { fitDocumentToView, viewPointToDocument } from "./documentViewport";
 import { ImageLayerNode } from "./ImageLayerNode";
-import { selectionPadding, TextLayerNode } from "./TextLayerNode";
-import { measureTextLayer } from "./textLayerMetrics";
+import { TextLayerNode } from "./TextLayerNode";
+import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
 import {
 	syncLiveTransform,
 	useLiveTransform,
