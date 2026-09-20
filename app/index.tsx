@@ -1,13 +1,19 @@
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
-import { Alert, Image, StatusBar, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/Button";
+import { EditorCanvas } from "../components/EditorCanvas";
 import { HeaderButton } from "../components/HeaderButton";
 import { colors } from "../components/theme";
+import {
+	createDocumentFromImage,
+	type EditorDocument,
+} from "../lib/editor-document";
+import { normalizePickedImage } from "../lib/normalize-picked-image";
 
 export default function Page() {
-	const [image, setImage] = useState<string | null>(null);
+	const [doc, setDoc] = useState<EditorDocument | null>(null);
 
 	const pickImage = async () => {
 		const permissionResult =
@@ -27,7 +33,15 @@ export default function Page() {
 		});
 
 		if (!result.canceled) {
-			setImage(result.assets[0].uri);
+			const asset = result.assets[0];
+			const normalized = await normalizePickedImage(asset.uri);
+			setDoc(
+				createDocumentFromImage(
+					normalized.uri,
+					normalized.width,
+					normalized.height,
+				),
+			);
 		}
 	};
 
@@ -37,10 +51,10 @@ export default function Page() {
 	return (
 		<SafeAreaView style={styles.container}>
 			<StatusBar barStyle="light-content" />
-			{image ? (
+			{doc ? (
 				<EditorScreen
-					image={image}
-					onBack={() => setImage(null)}
+					document={doc}
+					onBack={() => setDoc(null)}
 					onDone={notReady}
 					onAddText={notReady}
 					onExport={notReady}
@@ -74,13 +88,13 @@ function WelcomeScreen({ onPickImage }: { onPickImage: () => void }) {
 }
 
 function EditorScreen({
-	image,
+	document,
 	onBack,
 	onDone,
 	onAddText,
 	onExport,
 }: {
-	image: string;
+	document: EditorDocument;
 	onBack: () => void;
 	onDone: () => void;
 	onAddText: () => void;
@@ -94,11 +108,7 @@ function EditorScreen({
 			</View>
 
 			<View style={styles.canvasArea}>
-				<Image
-					source={{ uri: image }}
-					style={styles.canvasImage}
-					resizeMode="contain"
-				/>
+				<EditorCanvas document={document} />
 			</View>
 
 			<View style={styles.editorToolbar}>
@@ -163,14 +173,7 @@ const styles = StyleSheet.create({
 	},
 	canvasArea: {
 		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
 		padding: 16,
-	},
-	canvasImage: {
-		width: "100%",
-		height: "100%",
-		borderRadius: 12,
 	},
 	editorToolbar: {
 		flexDirection: "row",
