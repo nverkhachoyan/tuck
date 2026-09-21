@@ -16,16 +16,20 @@ import { editorReducer, initialEditorState } from "./editorReducer";
 export function useEditorState() {
 	const [state, dispatch] = useReducer(editorReducer, initialEditorState);
 
+	/** Resolves to `true` when a photo was opened as the current document. */
 	const pickImage = useCallback(async () => {
 		const result = await pickPhotoDocument();
 		if (result.status === "picked") {
 			dispatch({ type: "document-opened", document: result.document });
-		} else if (result.status === "permission-denied") {
+			return true;
+		}
+		if (result.status === "permission-denied") {
 			Alert.alert(
 				"Permission required",
 				"Permission to access the media library is required.",
 			);
 		}
+		return false;
 	}, []);
 
 	const closeDocument = useCallback(

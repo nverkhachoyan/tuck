@@ -1,47 +1,67 @@
 import { useRouter } from "expo-router";
-import { StatusBar, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { EditorScreen } from "@/features/editor/EditorScreen";
+import { StyleSheet, Text, View } from "react-native";
+import { Button } from "@/components/ui/Button";
 import { useEditor } from "@/features/editor/state/EditorProvider";
-import { WelcomeScreen } from "@/features/welcome/WelcomeScreen";
 import { colors } from "@/theme";
 
-export default function Page() {
-	const editor = useEditor();
+export default function WelcomeRoute() {
+	const { pickImage } = useEditor();
 	const router = useRouter();
 
+	const handlePickImage = async () => {
+		if (await pickImage()) router.push("/editor");
+	};
+
 	return (
-		<SafeAreaView style={styles.container}>
-			<StatusBar barStyle="light-content" />
-			{editor.doc ? (
-				<EditorScreen
-					document={editor.doc}
-					selectedLayer={editor.selectedLayer}
-					onSelectLayer={editor.selectLayer}
-					onBack={editor.closeDocument}
-					onAddText={editor.addTextLayer}
-					onExport={() => router.navigate("/export")}
-					onChangeText={(text) => editor.updateSelectedLayer({ text })}
-					onChangeFontSize={(fontSize) =>
-						editor.updateSelectedLayer({ fontSize })
-					}
-					onChangeColor={(color) => editor.updateSelectedLayer({ color })}
-					onDeleteLayer={editor.deleteSelectedLayer}
-					onDeselect={editor.deselectLayer}
-					onCommitTransform={(transform) =>
-						editor.updateSelectedLayer({ transform })
-					}
-				/>
-			) : (
-				<WelcomeScreen onPickImage={editor.pickImage} />
-			)}
-		</SafeAreaView>
+		<View style={styles.container}>
+			<View style={styles.content}>
+				<View style={styles.logoMark} />
+				<Text style={styles.title}>Photo Editor</Text>
+				<Text style={styles.subtitle}>
+					Open a photo, make your edit, and share it. No account, no waiting.
+				</Text>
+			</View>
+
+			<Button
+				label="Choose Photo"
+				variant="primary"
+				size="large"
+				onPress={handlePickImage}
+			/>
+		</View>
 	);
 }
 
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: colors.background,
+		justifyContent: "space-between",
+		paddingHorizontal: 24,
+		paddingVertical: 32,
+	},
+	content: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 12,
+	},
+	logoMark: {
+		width: 56,
+		height: 56,
+		borderRadius: 16,
+		backgroundColor: colors.accent,
+		marginBottom: 12,
+	},
+	title: {
+		fontSize: 28,
+		fontWeight: "700",
+		color: colors.textPrimary,
+	},
+	subtitle: {
+		fontSize: 15,
+		color: colors.textSecondary,
+		textAlign: "center",
+		maxWidth: 280,
+		lineHeight: 21,
 	},
 });
