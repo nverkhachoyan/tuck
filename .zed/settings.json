@@ -1,22 +1,10 @@
 {
-	"auto_install_extensions": {
-		"biome": true
+	"code_actions_on_format": {
+		"source.fixAll": false,
+		"source.organizeImports": false
 	},
 	"languages": {
 		"JavaScript": {
-			"language_servers": ["vtsls", "biome", "!eslint"],
-			"formatter": {
-				"language_server": {
-					"name": "biome"
-				}
-			},
-			"format_on_save": "on",
-			"code_actions_on_format": {
-				"source.organizeImports.biome": true,
-				"source.fixAll.biome": true
-			}
-		},
-		"JSX": {
 			"language_servers": ["vtsls", "biome", "!eslint"],
 			"formatter": {
 				"language_server": {
