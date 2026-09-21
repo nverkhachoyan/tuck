@@ -11,8 +11,9 @@ import {
 	type TextAlign,
 } from "@/model/document";
 import { colors } from "@/theme";
-import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
+import { TextButton } from "@/ui/TextButton";
+import { GlyphIcon, ToolButton } from "@/ui/ToolButton";
 
 export default function EditorRoute() {
 	const editor = useEditor();
@@ -49,7 +50,16 @@ export default function EditorRoute() {
 
 	return (
 		<View style={styles.container}>
-			<ScreenHeader onBack={editor.closeDocument} />
+			<ScreenHeader
+				onBack={editor.closeDocument}
+				action={
+					<TextButton
+						label="Export"
+						tone="accent"
+						onPress={() => router.push("/export")}
+					/>
+				}
+			/>
 
 			<View style={styles.canvasArea}>
 				<EditorCanvas
@@ -80,11 +90,10 @@ export default function EditorRoute() {
 					/>
 				) : (
 					<View style={styles.toolbar}>
-						<Button label="Text" onPress={() => setEditing("new")} />
-						<Button
-							label="Export"
-							variant="primary"
-							onPress={() => router.push("/export")}
+						<ToolButton
+							label="Text"
+							icon={<GlyphIcon glyph="Aa" />}
+							onPress={() => setEditing("new")}
 						/>
 					</View>
 				)}
@@ -127,11 +136,13 @@ const styles = StyleSheet.create({
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},
+	// Tools sit centered as a group; more tools join the row later.
 	toolbar: {
 		flex: 1,
 		flexDirection: "row",
-		justifyContent: "space-between",
+		justifyContent: "center",
 		alignItems: "center",
+		gap: 28,
 		paddingHorizontal: 20,
 	},
 });

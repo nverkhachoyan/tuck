@@ -1,14 +1,20 @@
+import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { colors } from "@/theme";
 import { TextButton } from "./TextButton";
 
-/** Top bar with a Back action and an optional centered title. */
+/**
+ * Top bar with a Back action, an optional centered title, and an optional
+ * trailing action (keep it text-sized so every header has the same height).
+ */
 export function ScreenHeader({
 	title,
 	onBack,
+	action,
 }: {
 	title?: string;
 	onBack: () => void;
+	action?: ReactNode;
 }) {
 	return (
 		<View style={styles.container}>
@@ -18,6 +24,7 @@ export function ScreenHeader({
 				</View>
 			)}
 			<TextButton label="Back" onPress={onBack} />
+			{action}
 		</View>
 	);
 }
@@ -25,6 +32,7 @@ export function ScreenHeader({
 const styles = StyleSheet.create({
 	container: {
 		flexDirection: "row",
+		justifyContent: "space-between",
 		alignItems: "center",
 		paddingHorizontal: 20,
 		paddingVertical: 14,
