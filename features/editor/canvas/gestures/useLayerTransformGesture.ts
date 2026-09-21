@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import type { Transform } from "../../lib/editor-document";
+import type { Transform } from "../../model/geometry";
 
 export const MIN_LAYER_SCALE = 0.2;
 export const MAX_LAYER_SCALE = 8;
@@ -52,7 +52,7 @@ export function syncLiveTransform(
  * it about its center. `viewScale` converts screen-pixel pan distances into
  * document units.
  */
-export function useTextTransformGesture({
+export function useLayerTransformGesture({
 	live,
 	viewScale,
 	onTap,

@@ -1,4 +1,4 @@
-import type { Point } from "../../lib/hit-test";
+import type { Point } from "../model/geometry";
 
 export type Size = {
 	width: number;

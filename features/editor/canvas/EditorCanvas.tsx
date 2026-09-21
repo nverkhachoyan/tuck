@@ -2,17 +2,20 @@ import { Canvas, Group } from "@shopify/react-native-skia";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
-import type { EditorDocument, Transform } from "../../lib/editor-document";
-import { hitTestBox } from "../../lib/hit-test";
-import { fitDocumentToView, viewPointToDocument } from "./documentViewport";
-import { ImageLayerNode } from "./ImageLayerNode";
-import { TextLayerNode } from "./TextLayerNode";
-import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
+import { ImageLayerNode } from "../layers/image/ImageLayerNode";
+import { TextLayerNode } from "../layers/text/TextLayerNode";
+import {
+	measureTextLayer,
+	selectionPadding,
+} from "../layers/text/textLayerMetrics";
+import type { EditorDocument } from "../model/document";
+import { hitTestBox, type Transform } from "../model/geometry";
 import {
 	syncLiveTransform,
+	useLayerTransformGesture,
 	useLiveTransform,
-	useTextTransformGesture,
-} from "./useTextTransformGesture";
+} from "./gestures/useLayerTransformGesture";
+import { fitDocumentToView, viewPointToDocument } from "./viewport";
 
 // Minimum comfortable touch padding around text, in screen pixels.
 const HIT_PADDING_PX = 14;
@@ -92,7 +95,7 @@ export function EditorCanvas({
 		[document.layers, onSelectLayer, scale, viewport],
 	);
 
-	const gesture = useTextTransformGesture({
+	const gesture = useLayerTransformGesture({
 		live,
 		viewScale: scale || 1,
 		onTap: handleTap,

@@ -48,10 +48,12 @@ committed to the document when the gesture ends.
 Key areas:
 
 - `app/` wires the current editor state to the application screens.
-- `hooks/useEditor.ts` owns the document, selection, and editor commands.
-- `lib/editor-document.ts` defines the persistent document and layer model.
-- `components/editor/` renders layers, measures text, and handles gestures.
-- `screens/` contains application-level layout and controls.
+- `features/editor/model/` defines the persistent document, layers, and geometry.
+- `features/editor/state/` owns document mutations, selection, and commands.
+- `features/editor/canvas/` handles viewport mapping and gestures.
+- `features/editor/layers/` groups rendering and controls by layer type.
+- `features/editor/photo/` imports and normalizes source images.
+- `components/ui/` contains controls shared across features.
 
 Picked images are normalized to JPEG before reaching Skia because iPhone
 photos are commonly HEIC, which Skia cannot decode. See `AGENTS.md` for this

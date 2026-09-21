@@ -1,10 +1,4 @@
-export type Transform = {
-	x: number;
-	y: number;
-	scaleX: number;
-	scaleY: number;
-	rotation: number;
-};
+import type { Transform } from "./geometry";
 
 export type ImageLayer = {
 	type: "image";

@@ -1,9 +1,9 @@
 import { Alert, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../components/theme";
-import { useEditor } from "../hooks/useEditor";
-import { EditorScreen } from "../screens/EditorScreen";
-import { WelcomeScreen } from "../screens/WelcomeScreen";
+import { EditorScreen } from "../features/editor/EditorScreen";
+import { useEditor } from "../features/editor/state/useEditor";
+import { WelcomeScreen } from "../features/welcome/WelcomeScreen";
+import { colors } from "../theme";
 
 const notReady = () =>
 	Alert.alert("Coming soon", "This tool isn't wired up yet.");

@@ -1,15 +1,15 @@
 import { StyleSheet, View } from "react-native";
-import { EditorCanvas } from "../components/editor/EditorCanvas";
-import { TextEditPanel } from "../components/editor/TextEditPanel";
-import { BOTTOM_PANEL_HEIGHT, colors } from "../components/theme";
-import { Button } from "../components/ui/Button";
-import { HeaderButton } from "../components/ui/HeaderButton";
+import { Button } from "../../components/ui/Button";
+import { HeaderButton } from "../../components/ui/HeaderButton";
+import { BOTTOM_PANEL_HEIGHT, colors } from "../../theme";
+import { EditorCanvas } from "./canvas/EditorCanvas";
+import { TextEditPanel } from "./layers/text/TextEditPanel";
 import {
 	type EditorDocument,
 	getFontSizeRange,
 	type TextLayer,
-	type Transform,
-} from "../lib/editor-document";
+} from "./model/document";
+import type { Transform } from "./model/geometry";
 
 type EditorScreenProps = {
 	document: EditorDocument;

@@ -1,6 +1,15 @@
-import type { Transform } from "./editor-document";
+export type Point = {
+	x: number;
+	y: number;
+};
 
-export type Point = { x: number; y: number };
+export type Transform = {
+	x: number;
+	y: number;
+	scaleX: number;
+	scaleY: number;
+	rotation: number;
+};
 
 /**
  * Maps a document-space point into a layer's local space, where the layer's
