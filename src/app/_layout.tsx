@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AsyncSkia } from "@/components/async-skia";
+import { EditorProvider } from "@/contexts/editor";
 
 export default function Layout() {
 	return (
@@ -10,7 +11,9 @@ export default function Layout() {
 			<SafeAreaProvider>
 				<Suspense fallback={null}>
 					<AsyncSkia />
-					<Slot />
+					<EditorProvider>
+						<Slot />
+					</EditorProvider>
 				</Suspense>
 			</SafeAreaProvider>
 		</GestureHandlerRootView>

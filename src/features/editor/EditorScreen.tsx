@@ -16,7 +16,6 @@ type EditorScreenProps = {
 	selectedLayer: TextLayer | undefined;
 	onSelectLayer: (id: string | null) => void;
 	onBack: () => void;
-	onDone: () => void;
 	onAddText: () => void;
 	onExport: () => void;
 	onChangeText: (text: string) => void;
@@ -32,7 +31,6 @@ export function EditorScreen({
 	selectedLayer,
 	onSelectLayer,
 	onBack,
-	onDone,
 	onAddText,
 	onExport,
 	onChangeText,
@@ -46,7 +44,6 @@ export function EditorScreen({
 		<View style={styles.editor}>
 			<View style={styles.editorHeader}>
 				<HeaderButton label="Back" onPress={onBack} />
-				<HeaderButton label="Done" accent onPress={onDone} />
 			</View>
 
 			<View style={styles.canvasArea}>

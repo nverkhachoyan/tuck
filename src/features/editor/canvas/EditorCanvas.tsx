@@ -10,6 +10,7 @@ import {
 } from "@/features/editor/layers/text/textLayerMetrics";
 import type { EditorDocument } from "@/features/editor/model/document";
 import { hitTestBox, type Transform } from "@/features/editor/model/geometry";
+import { assertNever } from "@/utils/assertNever";
 import {
 	syncLiveTransform,
 	useLayerTransformGesture,
@@ -132,7 +133,7 @@ export function EditorCanvas({
 											/>
 										);
 									default:
-										return null;
+										return assertNever(layer);
 								}
 							})}
 						</Group>

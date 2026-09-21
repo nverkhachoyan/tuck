@@ -1,15 +1,14 @@
-import { Alert, StatusBar, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useEditorContext } from "@/contexts/editor";
 import { EditorScreen } from "@/features/editor/EditorScreen";
-import { useEditor } from "@/features/editor/state/useEditor";
 import { WelcomeScreen } from "@/features/welcome/WelcomeScreen";
 import { colors } from "@/theme";
 
-const notReady = () =>
-	Alert.alert("Coming soon", "This tool isn't wired up yet.");
-
 export default function Page() {
-	const editor = useEditor();
+	const editor = useEditorContext();
+	const router = useRouter();
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -20,9 +19,8 @@ export default function Page() {
 					selectedLayer={editor.selectedLayer}
 					onSelectLayer={editor.selectLayer}
 					onBack={editor.closeDocument}
-					onDone={notReady}
 					onAddText={editor.addTextLayer}
-					onExport={notReady}
+					onExport={() => router.navigate("/export")}
 					onChangeText={(text) => editor.updateSelectedLayer({ text })}
 					onChangeFontSize={(fontSize) =>
 						editor.updateSelectedLayer({ fontSize })

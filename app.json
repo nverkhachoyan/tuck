@@ -19,7 +19,8 @@
 						}
 					}
 				}
-			]
+			],
+			"expo-sharing"
 		],
 		"name": "photo-editor",
 		"slug": "photo-editor"

@@ -1,18 +1,10 @@
-import { Image as SkiaImage, useImage } from "@shopify/react-native-skia";
+import { useImage } from "@shopify/react-native-skia";
 import type { ImageLayer } from "@/features/editor/model/document";
+import { ImageLayerView } from "./ImageLayerView";
 
-/** Draws an image layer at its document-space size. */
+/** Loads an image layer asynchronously, for the live editor canvas. */
 export function ImageLayerNode({ layer }: { layer: ImageLayer }) {
 	const image = useImage(layer.uri);
 	if (!image) return null;
-	return (
-		<SkiaImage
-			image={image}
-			x={layer.transform.x}
-			y={layer.transform.y}
-			width={layer.width}
-			height={layer.height}
-			fit="fill"
-		/>
-	);
+	return <ImageLayerView layer={layer} image={image} />;
 }

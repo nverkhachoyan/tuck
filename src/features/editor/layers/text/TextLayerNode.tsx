@@ -1,20 +1,13 @@
-import {
-	Group,
-	Rect as SkiaRect,
-	Text as SkiaText,
-} from "@shopify/react-native-skia";
 import { useDerivedValue } from "react-native-reanimated";
 import type { LiveTransform } from "@/features/editor/canvas/gestures/useLayerTransformGesture";
 import type { TextLayer } from "@/features/editor/model/document";
-import { colors } from "@/theme";
-import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
+import { TextLayerView, toTransformList } from "./TextLayerView";
 
 const SELECTION_STROKE_PX = 1.5;
 
 /**
- * Draws a text layer in document space, centered on its transform origin.
- * The screen fit is applied by a parent group, so this component (and the
- * future export renderer) never deals with screen coordinates.
+ * Editor-canvas wrapper around `TextLayerView`: while a layer is being
+ * dragged, the gesture-driven shared values win over the document.
  */
 export function TextLayerNode({
 	layer,
@@ -27,19 +20,16 @@ export function TextLayerNode({
 	live: LiveTransform;
 	selected: boolean;
 }) {
-	const { font, width, height, drawX, baselineY } = measureTextLayer(layer);
-
-	// While selected, the gesture-driven shared values win over the document.
 	const transform = useDerivedValue(() => {
 		const active = live.activeId.value === layer.id;
 		const t = layer.transform;
-		return [
-			{ translateX: active ? live.x.value : t.x },
-			{ translateY: active ? live.y.value : t.y },
-			{ rotate: active ? live.rotation.value : t.rotation },
-			{ scaleX: active ? live.scale.value : t.scaleX },
-			{ scaleY: active ? live.scale.value : t.scaleY },
-		];
+		return toTransformList({
+			x: active ? live.x.value : t.x,
+			y: active ? live.y.value : t.y,
+			rotation: active ? live.rotation.value : t.rotation,
+			scaleX: active ? live.scale.value : t.scaleX,
+			scaleY: active ? live.scale.value : t.scaleY,
+		});
 	}, [layer.id, layer.transform]);
 
 	// Keep the selection outline a constant on-screen thickness at any scale.
@@ -51,39 +41,11 @@ export function TextLayerNode({
 		return SELECTION_STROKE_PX / (viewScale * scale);
 	}, [layer.id, layer.transform, viewScale]);
 
-	const pad = selectionPadding(layer);
-	const strokeWidth = layer.fontSize * 0.12;
-
 	return (
-		<Group transform={transform}>
-			{selected && (
-				<SkiaRect
-					x={-width / 2 - pad}
-					y={-height / 2 - pad}
-					width={width + pad * 2}
-					height={height + pad * 2}
-					color={colors.accent}
-					style="stroke"
-					strokeWidth={selectionStroke}
-				/>
-			)}
-			<SkiaText
-				x={drawX}
-				y={baselineY}
-				text={layer.text}
-				font={font}
-				color={layer.outlineColor}
-				style="stroke"
-				strokeWidth={strokeWidth}
-				strokeJoin="round"
-			/>
-			<SkiaText
-				x={drawX}
-				y={baselineY}
-				text={layer.text}
-				font={font}
-				color={layer.color}
-			/>
-		</Group>
+		<TextLayerView
+			layer={layer}
+			transform={transform}
+			selectionStroke={selected ? selectionStroke : undefined}
+		/>
 	);
 }
