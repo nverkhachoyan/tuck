@@ -10,8 +10,8 @@ import {
 import type { TextAlign, TextLayer } from "@/model/document";
 
 export type TextLayerLayout = {
-	// Drawn first, so the outline sits behind the fill.
-	outline: SkParagraph;
+	// Drawn first, so the outline sits behind the fill; null when disabled.
+	outline: SkParagraph | null;
 	fill: SkParagraph;
 	// The laid-out text block in the layer's local space, centered on the origin.
 	width: number;
@@ -42,15 +42,11 @@ export function layoutTextLayer(layer: TextLayer): TextLayerLayout {
 	const cached = layouts.get(layer);
 	if (cached) return cached;
 
-	const outlinePaint = Skia.Paint();
-	outlinePaint.setAntiAlias(true);
-	outlinePaint.setStyle(PaintStyle.Stroke);
-	outlinePaint.setStrokeWidth(layer.fontSize * 0.12);
-	outlinePaint.setStrokeJoin(StrokeJoin.Round);
-	outlinePaint.setColor(Skia.Color(layer.outlineColor));
-
-	const outline = buildParagraph(layer, outlinePaint);
 	const fill = buildParagraph(layer);
+	const outline =
+		layer.outlineColor === null
+			? null
+			: buildParagraph(layer, outlinePaint(layer, layer.outlineColor));
 
 	// Wrap at maxWidth, then shrink the box to the longest line so the block's
 	// center is the text's center (alignment then applies between lines).
@@ -58,11 +54,21 @@ export function layoutTextLayer(layer: TextLayer): TextLayerLayout {
 	fill.layout(layer.maxWidth);
 	const width = Math.min(Math.ceil(fill.getLongestLine()), layer.maxWidth);
 	fill.layout(width);
-	outline.layout(width);
+	outline?.layout(width);
 
 	const layout = { outline, fill, width, height: fill.getHeight() };
 	layouts.set(layer, layout);
 	return layout;
+}
+
+function outlinePaint(layer: TextLayer, color: string): SkPaint {
+	const paint = Skia.Paint();
+	paint.setAntiAlias(true);
+	paint.setStyle(PaintStyle.Stroke);
+	paint.setStrokeWidth(layer.fontSize * 0.12);
+	paint.setStrokeJoin(StrokeJoin.Round);
+	paint.setColor(Skia.Color(color));
+	return paint;
 }
 
 function buildParagraph(layer: TextLayer, foreground?: SkPaint): SkParagraph {

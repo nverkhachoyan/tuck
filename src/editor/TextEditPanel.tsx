@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { FontSizeRange, TextLayer } from "@/model/document";
 import { colors } from "@/theme";
@@ -12,59 +13,79 @@ const SWATCHES = [
 	"#0A84FF",
 ];
 
+type ColorTarget = "fill" | "outline";
+
 type TextEditPanelProps = {
 	layer: TextLayer;
 	fontSizeRange: FontSizeRange;
-	onEditText: () => void;
 	onChangeFontSize: (fontSize: number) => void;
 	onChangeColor: (color: string) => void;
+	onChangeOutlineColor: (color: string | null) => void;
 	onDelete: () => void;
 	onDone: () => void;
 };
 
+/**
+ * Styling for the selected text layer. The text itself is edited full-screen
+ * (tap the selected layer), so this is only color, outline, and size.
+ */
 export function TextEditPanel({
 	layer,
 	fontSizeRange,
-	onEditText,
 	onChangeFontSize,
 	onChangeColor,
+	onChangeOutlineColor,
 	onDelete,
 	onDone,
 }: TextEditPanelProps) {
+	const [target, setTarget] = useState<ColorTarget>("fill");
+	const current = target === "fill" ? layer.color : layer.outlineColor;
+	const pick = target === "fill" ? onChangeColor : onChangeOutlineColor;
+
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>
-				{/* Looks like a field; opens the full-screen editor. */}
-				<Pressable
-					onPress={onEditText}
-					style={styles.textPreview}
-					accessibilityRole="button"
-					accessibilityLabel="Edit text"
-				>
-					<Text style={styles.textPreviewLabel} numberOfLines={1}>
-						{layer.text}
-					</Text>
-				</Pressable>
-				<TextButton label="Delete" tone="danger" onPress={onDelete} />
+				<View style={styles.tabs}>
+					<Tab
+						label="Color"
+						active={target === "fill"}
+						onPress={() => setTarget("fill")}
+					/>
+					<Tab
+						label="Outline"
+						active={target === "outline"}
+						onPress={() => setTarget("outline")}
+					/>
+				</View>
+				<View style={styles.actions}>
+					<TextButton label="Delete" tone="danger" onPress={onDelete} />
+					<TextButton label="Done" tone="accent" onPress={onDone} />
+				</View>
 			</View>
 
 			<View style={styles.row}>
 				<View style={styles.swatches}>
+					{/* Text always has a fill; only the outline can be turned off. */}
+					{target === "outline" && (
+						<Swatch
+							color={null}
+							selected={current === null}
+							onPress={() => onChangeOutlineColor(null)}
+						/>
+					)}
 					{SWATCHES.map((swatch) => (
-						<Pressable
+						<Swatch
 							key={swatch}
-							onPress={() => onChangeColor(swatch)}
-							style={[
-								styles.swatch,
-								{ backgroundColor: swatch },
-								layer.color === swatch && styles.swatchSelected,
-							]}
+							color={swatch}
+							selected={current === swatch}
+							onPress={() => pick(swatch)}
 						/>
 					))}
 				</View>
 
 				<View style={styles.sizeControls}>
-					<Pressable
+					<SizeButton
+						label="A-"
 						onPress={() =>
 							onChangeFontSize(
 								Math.max(
@@ -73,12 +94,9 @@ export function TextEditPanel({
 								),
 							)
 						}
-						hitSlop={8}
-						style={styles.sizeButton}
-					>
-						<Text style={styles.sizeButtonLabel}>A-</Text>
-					</Pressable>
-					<Pressable
+					/>
+					<SizeButton
+						label="A+"
 						onPress={() =>
 							onChangeFontSize(
 								Math.min(
@@ -87,16 +105,76 @@ export function TextEditPanel({
 								),
 							)
 						}
-						hitSlop={8}
-						style={styles.sizeButton}
-					>
-						<Text style={styles.sizeButtonLabel}>A+</Text>
-					</Pressable>
+					/>
 				</View>
-
-				<TextButton label="Done" tone="accent" onPress={onDone} />
 			</View>
 		</View>
+	);
+}
+
+function Tab({
+	label,
+	active,
+	onPress,
+}: {
+	label: string;
+	active: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			hitSlop={8}
+			onPress={onPress}
+			accessibilityRole="tab"
+			accessibilityState={{ selected: active }}
+		>
+			<Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+				{label}
+			</Text>
+		</Pressable>
+	);
+}
+
+/** A color choice; `null` is the "none" swatch, drawn with a slash. */
+function Swatch({
+	color,
+	selected,
+	onPress,
+}: {
+	color: string | null;
+	selected: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			// Half the gap between swatches, so neighbors' targets don't overlap.
+			hitSlop={4}
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={color ?? "No outline"}
+			accessibilityState={{ selected }}
+			style={[
+				styles.swatch,
+				color !== null && { backgroundColor: color },
+				selected && styles.swatchSelected,
+			]}
+		>
+			{color === null && <View style={styles.swatchSlash} />}
+		</Pressable>
+	);
+}
+
+function SizeButton({
+	label,
+	onPress,
+}: {
+	label: string;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable hitSlop={8} onPress={onPress} style={styles.sizeButton}>
+			<Text style={styles.sizeButtonLabel}>{label}</Text>
+		</Pressable>
 	);
 }
 
@@ -105,7 +183,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 20,
-		gap: 14,
+		gap: 18,
 	},
 	row: {
 		flexDirection: "row",
@@ -113,17 +191,21 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		gap: 12,
 	},
-	textPreview: {
-		flex: 1,
-		backgroundColor: colors.surface,
-		borderRadius: 10,
-		paddingHorizontal: 12,
-		paddingVertical: 8,
+	tabs: {
+		flexDirection: "row",
+		gap: 20,
 	},
-	textPreviewLabel: {
-		color: colors.textPrimary,
-		fontSize: 17,
+	tabLabel: {
+		fontSize: 15,
 		fontWeight: "600",
+		color: colors.textSecondary,
+	},
+	tabLabelActive: {
+		color: colors.textPrimary,
+	},
+	actions: {
+		flexDirection: "row",
+		gap: 20,
 	},
 	swatches: {
 		flexDirection: "row",
@@ -135,10 +217,19 @@ const styles = StyleSheet.create({
 		borderRadius: 12,
 		borderWidth: 1,
 		borderColor: colors.border,
+		alignItems: "center",
+		justifyContent: "center",
+		overflow: "hidden",
 	},
 	swatchSelected: {
 		borderWidth: 2,
 		borderColor: colors.accent,
+	},
+	swatchSlash: {
+		width: 30,
+		height: 2,
+		backgroundColor: colors.textSecondary,
+		transform: [{ rotate: "-45deg" }],
 	},
 	sizeControls: {
 		flexDirection: "row",

@@ -80,11 +80,13 @@ export default function EditorRoute() {
 					<TextEditPanel
 						layer={selectedTextLayer}
 						fontSizeRange={getFontSizeRange(document)}
-						onEditText={() => setEditing("selected")}
 						onChangeFontSize={(fontSize) =>
 							editor.updateSelectedText({ fontSize })
 						}
 						onChangeColor={(color) => editor.updateSelectedText({ color })}
+						onChangeOutlineColor={(outlineColor) =>
+							editor.updateSelectedText({ outlineColor })
+						}
 						onDelete={editor.deleteSelectedLayer}
 						onDone={editor.deselectLayer}
 					/>

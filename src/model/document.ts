@@ -19,7 +19,8 @@ export type TextLayer = {
 	text: string;
 	fontSize: number;
 	color: string;
-	outlineColor: string;
+	// null draws the text without an outline.
+	outlineColor: string | null;
 	align: TextAlign;
 	maxWidth: number;
 	transform: Transform;
@@ -93,8 +94,8 @@ export function getFontSizeRange(document: EditorDocument): FontSizeRange {
 
 /** Classic meme text: white fill, black outline, centered. */
 export const defaultTextStyle = {
-	color: "white",
-	outlineColor: "black",
+	color: "#FFFFFF",
+	outlineColor: "#000000",
 	align: "center",
 } as const satisfies Pick<TextLayer, "color" | "outlineColor" | "align">;
 

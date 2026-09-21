@@ -21,7 +21,7 @@ type TextEditorProps = {
 	initialText: string;
 	initialAlign: TextAlign;
 	color: string;
-	outlineColor: string;
+	outlineColor: string | null;
 	// Called with the final text, which may be empty.
 	onDone: (text: string, align: TextAlign) => void;
 };
@@ -82,7 +82,11 @@ export function TextEditor({
 						placeholderTextColor={colors.textSecondary}
 						style={[
 							styles.input,
-							{ color, textAlign: align, textShadowColor: outlineColor },
+							{ color, textAlign: align },
+							outlineColor !== null && {
+								textShadowColor: outlineColor,
+								textShadowRadius: 4,
+							},
 						]}
 					/>
 				</Pressable>
@@ -132,7 +136,6 @@ const styles = StyleSheet.create({
 		// React Native can't stroke text, so a tight shadow stands in for the
 		// outline while typing.
 		textShadowOffset: { width: 0, height: 0 },
-		textShadowRadius: 4,
 	},
 	alignIcon: {
 		width: 22,

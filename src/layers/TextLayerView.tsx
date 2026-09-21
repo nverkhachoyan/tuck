@@ -55,12 +55,14 @@ export function TextLayerView({
 					strokeWidth={selectionStroke}
 				/>
 			)}
-			<Paragraph
-				paragraph={outline}
-				x={-width / 2}
-				y={-height / 2}
-				width={width}
-			/>
+			{outline && (
+				<Paragraph
+					paragraph={outline}
+					x={-width / 2}
+					y={-height / 2}
+					width={width}
+				/>
+			)}
 			<Paragraph
 				paragraph={fill}
 				x={-width / 2}
