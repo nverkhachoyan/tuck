@@ -9,7 +9,7 @@
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "biome check .",
-		"postinstall": "node copy-canvaskit.js",
+		"postinstall": "node scripts/copy-canvaskit.mjs",
 		"deploy": "npx expo export -p web && npx eas-cli@latest deploy"
 	},
 	"dependencies": {
