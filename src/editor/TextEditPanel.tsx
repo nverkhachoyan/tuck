@@ -21,6 +21,7 @@ type TextEditPanelProps = {
 	onChangeFontSize: (fontSize: number) => void;
 	onChangeColor: (color: string) => void;
 	onChangeOutlineColor: (color: string | null) => void;
+	onDuplicate: () => void;
 	onDelete: () => void;
 	onDone: () => void;
 };
@@ -35,6 +36,7 @@ export function TextEditPanel({
 	onChangeFontSize,
 	onChangeColor,
 	onChangeOutlineColor,
+	onDuplicate,
 	onDelete,
 	onDone,
 }: TextEditPanelProps) {
@@ -58,6 +60,7 @@ export function TextEditPanel({
 					/>
 				</View>
 				<View style={styles.actions}>
+					<TextButton label="Duplicate" onPress={onDuplicate} />
 					<TextButton label="Delete" tone="danger" onPress={onDelete} />
 					<TextButton label="Done" tone="accent" onPress={onDone} />
 				</View>
@@ -203,9 +206,10 @@ const styles = StyleSheet.create({
 	tabLabelActive: {
 		color: colors.textPrimary,
 	},
+	// Three actions beside the tabs still fit a 375pt-wide phone at this gap.
 	actions: {
 		flexDirection: "row",
-		gap: 20,
+		gap: 16,
 	},
 	swatches: {
 		flexDirection: "row",

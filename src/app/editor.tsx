@@ -26,15 +26,6 @@ export default function EditorRoute() {
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
 
-	// Tapping the already-selected layer edits its text, like most story editors.
-	const handleSelectLayer = (id: string | null) => {
-		if (id !== null && id === selectedTextLayer?.id) {
-			setEditing("selected");
-		} else {
-			editor.selectLayer(id);
-		}
-	};
-
 	// Finishing with no text discards a new layer and deletes an existing one.
 	const handleEditDone = (rawText: string, align: TextAlign) => {
 		const text = rawText.trim();
@@ -68,7 +59,9 @@ export default function EditorRoute() {
 					hiddenLayerId={
 						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
 					}
-					onSelectLayer={handleSelectLayer}
+					onSelectLayer={editor.selectLayer}
+					// Like most story editors, tapping selected text edits it.
+					onTapSelectedLayer={() => setEditing("selected")}
 					onCommitTransform={(transform) =>
 						editor.updateSelectedText({ transform })
 					}
@@ -87,6 +80,7 @@ export default function EditorRoute() {
 						onChangeOutlineColor={(outlineColor) =>
 							editor.updateSelectedText({ outlineColor })
 						}
+						onDuplicate={editor.duplicateSelectedText}
 						onDelete={editor.deleteSelectedLayer}
 						onDone={editor.deselectLayer}
 					/>

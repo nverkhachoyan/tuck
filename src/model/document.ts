@@ -120,3 +120,20 @@ export function createTextLayer(
 		},
 	};
 }
+
+/**
+ * A copy of a text layer with a new id, nudged down and right by half a
+ * line so it's visibly separate from the original instead of hiding it.
+ */
+export function duplicateTextLayer(layer: TextLayer): TextLayer {
+	const offset = layer.fontSize * layer.transform.scaleX * 0.5;
+	return {
+		...layer,
+		id: createLayerId("text"),
+		transform: {
+			...layer.transform,
+			x: layer.transform.x + offset,
+			y: layer.transform.y + offset,
+		},
+	};
+}

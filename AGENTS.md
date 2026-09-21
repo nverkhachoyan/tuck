@@ -11,6 +11,7 @@
 - The iOS Simulator MCP tool's taps can silently go nowhere after repeated terminate/reload cycles — the RN JS thread can hang while the simulator itself stays fully responsive. If a tap at coordinates that worked before suddenly does nothing, don't assume your coordinate math is wrong: press the hardware HOME button first. If HOME works instantly but in-app taps still do nothing, the JS thread is hung — do a real `simctl terminate` + relaunch, not just another `open_url`/foreground refocus. Also give buttons real `hitSlop` (RN's default is the raw layout box, no forgiveness); it fixes real touch-target UX and takes tap-coordinate guessing out of your own testing.
 - `TextInput`'s `selectTextOnFocus` doesn't apply when focus comes from `autoFocus` on iOS. Select from `onFocus` with `ref.setSelection(0, length)` instead, which covers both tap and autofocus.
 - The iOS simulator here runs headless (no Simulator.app), with a hardware keyboard attached, so the software keyboard never appears and keyboard-overlap bugs can't be reproduced on it. Verify keyboard layout on a real device.
+- A flaky `expo start --tunnel` can leave the app running a stale or half-updated bundle with no error in the app: a button from the new code can call a handler the old code never wired up. If behavior contradicts the code, check the Metro output for "Tunnel connection has been closed" before debugging, and prefer LAN mode (`npx expo start`) for simulator work.
 
 ## Project Structure
 

@@ -19,6 +19,8 @@ type EditorCanvasProps = {
 	// Not drawn, e.g. while its text is open in the full-screen editor.
 	hiddenLayerId?: string | null;
 	onSelectLayer?: (id: string | null) => void;
+	// A tap on the layer that's already selected (the editor opens its text).
+	onTapSelectedLayer?: () => void;
 	onCommitTransform?: (transform: Transform) => void;
 };
 
@@ -36,6 +38,7 @@ export function EditorCanvas({
 	selectedLayerId = null,
 	hiddenLayerId = null,
 	onSelectLayer,
+	onTapSelectedLayer,
 	onCommitTransform,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
@@ -58,22 +61,48 @@ export function EditorCanvas({
 		// layer list changes, synchronize it with the latest document state.
 	}, [document.layers, live, selectedLayerId]);
 
+	// Topmost selectable layer under a point reported by the view.
+	const layerAt = useCallback(
+		(screenX: number, screenY: number) =>
+			findLayerAt(
+				document,
+				viewPointToDocument(viewport, { x: screenX, y: screenY }),
+				scale,
+			),
+		[document, viewport, scale],
+	);
+
 	const handleTap = useCallback(
 		(screenX: number, screenY: number) => {
-			if (!onSelectLayer || scale === 0) return;
-			const point = viewPointToDocument(viewport, {
-				x: screenX,
-				y: screenY,
-			});
-			onSelectLayer(findLayerAt(document, point, scale));
+			if (scale === 0) return;
+			const id = layerAt(screenX, screenY);
+			if (id !== null && id === selectedLayerId) {
+				onTapSelectedLayer?.();
+			} else {
+				onSelectLayer?.(id);
+			}
 		},
-		[document, onSelectLayer, scale, viewport],
+		[layerAt, onSelectLayer, onTapSelectedLayer, scale, selectedLayerId],
+	);
+
+	// Dragging a layer that isn't selected selects it first. Dragging empty
+	// space keeps moving the current selection, which helps with small text.
+	const handleDragStart = useCallback(
+		(screenX: number, screenY: number) => {
+			if (scale === 0 || !onSelectLayer) return false;
+			const id = layerAt(screenX, screenY);
+			if (id === null || id === selectedLayerId) return false;
+			onSelectLayer(id);
+			return true;
+		},
+		[layerAt, onSelectLayer, scale, selectedLayerId],
 	);
 
 	const gesture = useLayerTransformGesture({
 		live,
 		viewScale: scale || 1,
 		onTap: handleTap,
+		onDragStart: handleDragStart,
 		onCommit: useCallback(
 			(transform) => onCommitTransform?.(transform),
 			[onCommitTransform],

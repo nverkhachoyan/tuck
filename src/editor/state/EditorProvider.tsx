@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
 	createTextLayer,
+	duplicateTextLayer,
 	type EditorDocument,
 	type TextAlign,
 	type TextLayer,
@@ -96,6 +97,15 @@ function useEditorState() {
 		[state.document, state.selectedLayerId],
 	);
 
+	/** Adds a copy of the selected text layer on top and selects the copy. */
+	const duplicateSelectedText = useCallback(() => {
+		if (!selectedTextLayer) return;
+		dispatch({
+			type: "text-layer-added",
+			layer: duplicateTextLayer(selectedTextLayer),
+		});
+	}, [selectedTextLayer]);
+
 	return {
 		document: state.document,
 		selectedTextLayer,
@@ -104,6 +114,7 @@ function useEditorState() {
 		addTextLayer,
 		updateSelectedText,
 		deleteSelectedLayer,
+		duplicateSelectedText,
 		selectLayer,
 		deselectLayer,
 	};

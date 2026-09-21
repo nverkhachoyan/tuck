@@ -51,16 +51,24 @@ export function syncLiveTransform(
  * Tap selects, and while a layer is selected pan / pinch / rotate transform
  * it about its center. `viewScale` converts screen-pixel pan distances into
  * document units.
+ *
+ * A drag can also pick its own layer: `onDragStart` gets the touch-down point
+ * and returns true when it selected a different layer. The drag then holds
+ * still until that selection reaches `live`, so the previous layer doesn't
+ * twitch in the meantime, and then applies the whole drag so far, keeping
+ * the point the finger grabbed under the finger.
  */
 export function useLayerTransformGesture({
 	live,
 	viewScale,
 	onTap,
+	onDragStart,
 	onCommit,
 }: {
 	live: LiveTransform;
 	viewScale: number;
 	onTap: (screenX: number, screenY: number) => void;
+	onDragStart: (screenX: number, screenY: number) => boolean;
 	onCommit: (transform: Transform) => void;
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
@@ -69,8 +77,16 @@ export function useLayerTransformGesture({
 	const startY = useSharedValue(0);
 	const startScale = useSharedValue(1);
 	const startRotation = useSharedValue(0);
+	// The layer this drag is moving, and whether it's settled on one yet.
+	const dragId = useSharedValue<string | null>(null);
+	const dragReady = useSharedValue(false);
 
 	return useMemo(() => {
+		// Runs on the JS thread, where hit-testing (and Skia text layout) lives.
+		const handleDragStart = (screenX: number, screenY: number) => {
+			if (!onDragStart(screenX, screenY)) dragReady.value = true;
+		};
+
 		const commit = () => {
 			"worklet";
 			scheduleOnRN(onCommit, {
@@ -88,18 +104,36 @@ export function useLayerTransformGesture({
 				if (success) scheduleOnRN(onTap, event.x, event.y);
 			});
 
+		// Starts on activation (after the finger moves), not touch-down, so a tap
+		// on an unselected layer stays a plain select.
 		const pan = Gesture.Pan()
-			.onStart(() => {
+			.onStart((event) => {
 				startX.value = live.x.value;
 				startY.value = live.y.value;
+				dragId.value = live.activeId.value;
+				dragReady.value = false;
+				scheduleOnRN(
+					handleDragStart,
+					event.x - event.translationX,
+					event.y - event.translationY,
+				);
 			})
 			.onUpdate((event) => {
-				if (live.activeId.value === null) return;
+				const id = live.activeId.value;
+				if (id === null) return;
+				// The drag's own selection just landed; anchor to that layer.
+				if (id !== dragId.value) {
+					dragId.value = id;
+					startX.value = live.x.value;
+					startY.value = live.y.value;
+					dragReady.value = true;
+				}
+				if (!dragReady.value) return;
 				live.x.value = startX.value + event.translationX / viewScale;
 				live.y.value = startY.value + event.translationY / viewScale;
 			})
 			.onEnd(() => {
-				if (live.activeId.value !== null) commit();
+				if (live.activeId.value !== null && dragReady.value) commit();
 			});
 
 		const pinch = Gesture.Pinch()
@@ -134,7 +168,10 @@ export function useLayerTransformGesture({
 		live,
 		viewScale,
 		onTap,
+		onDragStart,
 		onCommit,
+		dragId,
+		dragReady,
 		startX,
 		startY,
 		startScale,
