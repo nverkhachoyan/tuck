@@ -21,7 +21,7 @@ type EditorCanvasProps = {
 	onSelectLayer?: (id: string | null) => void;
 	// A tap on the layer that's already selected (the editor opens its text).
 	onTapSelectedLayer?: () => void;
-	onCommitTransform?: (transform: Transform) => void;
+	onCommitTransform?: (id: string, transform: Transform) => void;
 };
 
 /**
@@ -104,7 +104,7 @@ export function EditorCanvas({
 		onTap: handleTap,
 		onDragStart: handleDragStart,
 		onCommit: useCallback(
-			(transform) => onCommitTransform?.(transform),
+			(id, transform) => onCommitTransform?.(id, transform),
 			[onCommitTransform],
 		),
 	});

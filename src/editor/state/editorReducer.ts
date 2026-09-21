@@ -1,4 +1,5 @@
 import type { EditorDocument, TextLayer } from "@/model/document";
+import type { Transform } from "@/model/geometry";
 
 export type EditorState = {
 	document: EditorDocument | null;
@@ -10,6 +11,7 @@ export type EditorAction =
 	| { type: "document-closed" }
 	| { type: "text-layer-added"; layer: TextLayer }
 	| { type: "selected-text-updated"; patch: Partial<TextLayer> }
+	| { type: "layer-transformed"; id: string; transform: Transform }
 	| { type: "selected-layer-deleted" }
 	| { type: "layer-selected"; id: string | null };
 
@@ -45,6 +47,21 @@ export function editorReducer(
 					layers: state.document.layers.map((layer) =>
 						layer.type === "text" && layer.id === state.selectedLayerId
 							? { ...layer, ...action.patch }
+							: layer,
+					),
+				},
+			};
+		// By id rather than "the selected layer": a gesture can end just as the
+		// selection moves on, and its result belongs to the layer it moved.
+		case "layer-transformed":
+			if (!state.document) return state;
+			return {
+				...state,
+				document: {
+					...state.document,
+					layers: state.document.layers.map((layer) =>
+						layer.id === action.id
+							? { ...layer, transform: action.transform }
 							: layer,
 					),
 				},

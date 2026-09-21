@@ -13,6 +13,7 @@ import {
 	type TextAlign,
 	type TextLayer,
 } from "@/model/document";
+import type { Transform } from "@/model/geometry";
 import { editorReducer, initialEditorState } from "./editorReducer";
 
 type EditorContextValue = ReturnType<typeof useEditorState>;
@@ -76,6 +77,12 @@ function useEditorState() {
 		[],
 	);
 
+	const transformLayer = useCallback(
+		(id: string, transform: Transform) =>
+			dispatch({ type: "layer-transformed", id, transform }),
+		[],
+	);
+
 	const deleteSelectedLayer = useCallback(
 		() => dispatch({ type: "selected-layer-deleted" }),
 		[],
@@ -112,6 +119,7 @@ function useEditorState() {
 		closeDocument,
 		addTextLayer,
 		updateSelectedText,
+		transformLayer,
 		deleteSelectedLayer,
 		duplicateSelectedText,
 		selectLayer,

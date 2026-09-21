@@ -57,6 +57,9 @@ export function syncLiveTransform(
  * still until that selection reaches `live`, so the previous layer doesn't
  * twitch in the meantime, and then applies the whole drag so far, keeping
  * the point the finger grabbed under the finger.
+ *
+ * However many of pan / pinch / rotate take part, the result is committed
+ * once, when the last of them ends, and only if the layer actually moved.
  */
 export function useLayerTransformGesture({
 	live,
@@ -69,7 +72,7 @@ export function useLayerTransformGesture({
 	viewScale: number;
 	onTap: (screenX: number, screenY: number) => void;
 	onDragStart: (screenX: number, screenY: number) => boolean;
-	onCommit: (transform: Transform) => void;
+	onCommit: (id: string, transform: Transform) => void;
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
 	// variables captured by worklets are copied, so writes wouldn't persist.
@@ -77,9 +80,18 @@ export function useLayerTransformGesture({
 	const startY = useSharedValue(0);
 	const startScale = useSharedValue(1);
 	const startRotation = useSharedValue(0);
+	// Where the finger went down, and how far it had moved before the pan's
+	// translation started counting (the activation distance).
+	const downX = useSharedValue(0);
+	const downY = useSharedValue(0);
+	const slackX = useSharedValue(0);
+	const slackY = useSharedValue(0);
 	// The layer this drag is moving, and whether it's settled on one yet.
 	const dragId = useSharedValue<string | null>(null);
 	const dragReady = useSharedValue(false);
+	// How many of pan / pinch / rotate are running, and whether any moved.
+	const activeCount = useSharedValue(0);
+	const moved = useSharedValue(false);
 
 	return useMemo(() => {
 		// Runs on the JS thread, where hit-testing (and Skia text layout) lives.
@@ -87,9 +99,18 @@ export function useLayerTransformGesture({
 			if (!onDragStart(screenX, screenY)) dragReady.value = true;
 		};
 
-		const commit = () => {
+		const gestureStarted = () => {
 			"worklet";
-			scheduleOnRN(onCommit, {
+			if (activeCount.value === 0) moved.value = false;
+			activeCount.value += 1;
+		};
+
+		const gestureEnded = () => {
+			"worklet";
+			activeCount.value = Math.max(0, activeCount.value - 1);
+			const id = live.activeId.value;
+			if (activeCount.value > 0 || !moved.value || id === null) return;
+			scheduleOnRN(onCommit, id, {
 				x: live.x.value,
 				y: live.y.value,
 				scaleX: live.scale.value,
@@ -107,16 +128,20 @@ export function useLayerTransformGesture({
 		// Starts on activation (after the finger moves), not touch-down, so a tap
 		// on an unselected layer stays a plain select.
 		const pan = Gesture.Pan()
+			.onBegin((event) => {
+				downX.value = event.x;
+				downY.value = event.y;
+			})
 			.onStart((event) => {
+				gestureStarted();
+				// Zero if translation already counts from touch-down.
+				slackX.value = event.x - event.translationX - downX.value;
+				slackY.value = event.y - event.translationY - downY.value;
 				startX.value = live.x.value;
 				startY.value = live.y.value;
 				dragId.value = live.activeId.value;
 				dragReady.value = false;
-				scheduleOnRN(
-					handleDragStart,
-					event.x - event.translationX,
-					event.y - event.translationY,
-				);
+				scheduleOnRN(handleDragStart, downX.value, downY.value);
 			})
 			.onUpdate((event) => {
 				const id = live.activeId.value;
@@ -129,15 +154,17 @@ export function useLayerTransformGesture({
 					dragReady.value = true;
 				}
 				if (!dragReady.value) return;
-				live.x.value = startX.value + event.translationX / viewScale;
-				live.y.value = startY.value + event.translationY / viewScale;
+				live.x.value =
+					startX.value + (event.translationX + slackX.value) / viewScale;
+				live.y.value =
+					startY.value + (event.translationY + slackY.value) / viewScale;
+				moved.value = true;
 			})
-			.onEnd(() => {
-				if (live.activeId.value !== null && dragReady.value) commit();
-			});
+			.onEnd(gestureEnded);
 
 		const pinch = Gesture.Pinch()
 			.onStart(() => {
+				gestureStarted();
 				startScale.value = live.scale.value;
 			})
 			.onUpdate((event) => {
@@ -146,22 +173,21 @@ export function useLayerTransformGesture({
 					MAX_LAYER_SCALE,
 					Math.max(MIN_LAYER_SCALE, startScale.value * event.scale),
 				);
+				moved.value = true;
 			})
-			.onEnd(() => {
-				if (live.activeId.value !== null) commit();
-			});
+			.onEnd(gestureEnded);
 
 		const rotate = Gesture.Rotation()
 			.onStart(() => {
+				gestureStarted();
 				startRotation.value = live.rotation.value;
 			})
 			.onUpdate((event) => {
 				if (live.activeId.value === null) return;
 				live.rotation.value = startRotation.value + event.rotation;
+				moved.value = true;
 			})
-			.onEnd(() => {
-				if (live.activeId.value !== null) commit();
-			});
+			.onEnd(gestureEnded);
 
 		return Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotate));
 	}, [
@@ -170,8 +196,14 @@ export function useLayerTransformGesture({
 		onTap,
 		onDragStart,
 		onCommit,
+		downX,
+		downY,
+		slackX,
+		slackY,
 		dragId,
 		dragReady,
+		activeCount,
+		moved,
 		startX,
 		startY,
 		startScale,

@@ -78,9 +78,7 @@ export default function EditorRoute() {
 					onSelectLayer={editor.selectLayer}
 					// Like most story editors, tapping selected text edits it.
 					onTapSelectedLayer={() => setEditing("selected")}
-				onCommitTransform={(transform) =>
-					editor.updateSelectedText({ transform })
-				}
+					onCommitTransform={editor.transformLayer}
 				/>
 			</View>
 
