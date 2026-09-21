@@ -4,20 +4,16 @@ import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 
 export type PickPhotoResult =
 	| { status: "picked"; document: EditorDocument }
-	| { status: "canceled" }
-	| { status: "permission-denied" };
+	| { status: "canceled" };
 
 /**
- * Prompts for media-library access, lets the user pick a photo, and builds
- * an EditorDocument from it. Pure IO + data shaping — no UI feedback here,
- * so callers decide how to react to each outcome (e.g. an Alert).
+ * Lets the user pick a photo and builds an EditorDocument from it. The system
+ * picker runs outside the app and returns only what the user chooses, so no
+ * library permission is needed. Pure IO + data shaping — no UI feedback here,
+ * so callers decide how to react to each outcome. Throws if the photo can't
+ * be read or re-encoded.
  */
 export async function pickPhotoDocument(): Promise<PickPhotoResult> {
-	const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-	if (!permission.granted) {
-		return { status: "permission-denied" };
-	}
-
 	const result = await ImagePicker.launchImageLibraryAsync({
 		mediaTypes: ["images"],
 		quality: 1,

@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { pickPhotoDocument } from "@/import/pickPhoto";
@@ -8,17 +9,23 @@ import { Button } from "@/ui/Button";
 export default function WelcomeRoute() {
 	const { openDocument } = useEditor();
 	const router = useRouter();
+	// Picking plus re-encoding a large photo takes a few seconds; a second tap
+	// meanwhile would open the editor twice.
+	const [opening, setOpening] = useState(false);
 
 	const handleChoosePhoto = async () => {
-		const result = await pickPhotoDocument();
-		if (result.status === "picked") {
-			openDocument(result.document);
-			router.push("/editor");
-		} else if (result.status === "permission-denied") {
-			Alert.alert(
-				"Permission required",
-				"Permission to access the media library is required.",
-			);
+		if (opening) return;
+		setOpening(true);
+		try {
+			const result = await pickPhotoDocument();
+			if (result.status === "picked") {
+				openDocument(result.document);
+				router.push("/editor");
+			}
+		} catch (error) {
+			Alert.alert("Couldn't open photo", String(error));
+		} finally {
+			setOpening(false);
 		}
 	};
 
@@ -33,9 +40,10 @@ export default function WelcomeRoute() {
 			</View>
 
 			<Button
-				label="Choose Photo"
+				label={opening ? "Opening…" : "Choose Photo"}
 				variant="primary"
 				size="large"
+				disabled={opening}
 				onPress={handleChoosePhoto}
 			/>
 		</View>
