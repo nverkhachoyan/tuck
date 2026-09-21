@@ -47,13 +47,20 @@ committed to the document when the gesture ends.
 
 Key areas:
 
-- `src/app/` wires the current editor state to the application screens.
-- `src/document/` defines the persistent document, layers, and geometry.
-- `src/layers/` contains render-only layer views shared by the editor and export.
-- `src/editor/` handles the interactive canvas, gestures, layer controls, and photo import.
-- `src/editor/state/` owns document mutations, selection, and commands.
-- `src/export/` renders the document offscreen and shares the result.
-- `src/components/ui/` contains controls shared across screens.
+- `src/app/` holds the routes only (expo-router treats every file here as a route).
+- `src/model/` defines the document, layers, and geometry as plain data: no React.
+- `src/layers/` draws each layer type in document space; shared by editor and export.
+- `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, and the text panel.
+- `src/editor/state/` owns the document, selection, and every command that mutates them.
+- `src/import/` picks a photo and turns it into a document.
+- `src/export/` renders the document offscreen with `ExportScene` and shares the result.
+- `src/ui/` and `src/theme.ts` hold controls and colors shared across screens.
+- `src/lib/` holds platform shims and small language helpers.
+
+Imports flow one way: `app` → `editor` / `import` / `export` → `layers` →
+`model`. `ui`, `theme`, and `lib` import nothing from the app. Adding a layer
+type means a type in `model/document.ts`, a view in `layers/`, and a case in
+both `EditorScene` and `ExportScene` (`assertNever` flags any you miss).
 
 Picked images are normalized to JPEG before reaching Skia because iPhone
 photos are commonly HEIC, which Skia cannot decode. See `AGENTS.md` for this

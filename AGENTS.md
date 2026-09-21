@@ -9,6 +9,13 @@
 - In Expo Go, opening `exp://127.0.0.1:8081` while the app is already foregrounded just refocuses it — it does not fetch a fresh JS bundle after installing new dependencies. Force a real reload with `xcrun simctl terminate <udid> host.exp.Exponent` then reopen the `exp://` URL.
 - The iOS Simulator MCP tool's taps can silently go nowhere after repeated terminate/reload cycles — the RN JS thread can hang while the simulator itself stays fully responsive. If a tap at coordinates that worked before suddenly does nothing, don't assume your coordinate math is wrong: press the hardware HOME button first. If HOME works instantly but in-app taps still do nothing, the JS thread is hung — do a real `simctl terminate` + relaunch, not just another `open_url`/foreground refocus. Also give buttons real `hitSlop` (RN's default is the raw layout box, no forgiveness); it fixes real touch-target UX and takes tap-coordinate guessing out of your own testing.
 
+## Project Structure
+
+- Keep imports flowing one way: `app` → `editor` / `import` / `export` → `layers` → `model`. `model/` stays plain TypeScript (no React, React Native, or Skia); `ui/`, `theme.ts`, and `lib/` never import app code.
+- Only routes go in `src/app/` — expo-router turns every file there into a screen.
+- Name component files in PascalCase and other modules in camelCase. Prefer growing an existing file over adding a single-use one; split a file when it gains a second responsibility.
+- Name the editor document `document` (not `doc`). TypeScript's DOM lib declares a global `document`, so a missing parameter or destructure still type-checks against the browser global; watch for that when renaming.
+
 ## Git Commits
 
 - Use Conventional Commits format for commit messages, such as `feat: add text editing` or `fix: handle invalid image input`.

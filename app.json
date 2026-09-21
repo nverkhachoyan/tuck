@@ -1,6 +1,6 @@
 {
 	"expo": {
-		"scheme": "skia",
+		"scheme": "photo-editor",
 		"web": {
 			"output": "static"
 		},
