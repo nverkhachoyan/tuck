@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
-import { Button } from "@/components/ui/Button";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { colors } from "@/theme";
+import { Button } from "@/ui/Button";
 
 export default function WelcomeRoute() {
 	const { pickImage } = useEditor();

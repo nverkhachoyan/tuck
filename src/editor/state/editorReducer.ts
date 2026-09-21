@@ -1,4 +1,4 @@
-import type { EditorDocument, TextLayer } from "@/document/document";
+import type { EditorDocument, TextLayer } from "@/model/document";
 
 export type EditorState = {
 	document: EditorDocument | null;

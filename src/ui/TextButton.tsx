@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 import { colors } from "@/theme";
 
-export function HeaderButton({
+export function TextButton({
 	label,
 	accent,
 	onPress,

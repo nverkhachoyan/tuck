@@ -1,12 +1,13 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
-import { Button } from "@/components/ui/Button";
-import { HeaderButton } from "@/components/ui/HeaderButton";
-import { getFontSizeRange } from "@/document/document";
 import { EditorCanvas } from "@/editor/EditorCanvas";
+import { BOTTOM_PANEL_HEIGHT } from "@/editor/layout";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { TextEditPanel } from "@/editor/TextEditPanel";
-import { BOTTOM_PANEL_HEIGHT, colors } from "@/theme";
+import { getFontSizeRange } from "@/model/document";
+import { colors } from "@/theme";
+import { Button } from "@/ui/Button";
+import { TextButton } from "@/ui/TextButton";
 
 export default function EditorRoute() {
 	const editor = useEditor();
@@ -19,7 +20,7 @@ export default function EditorRoute() {
 	return (
 		<View style={styles.container}>
 			<View style={styles.header}>
-				<HeaderButton label="Back" onPress={editor.closeDocument} />
+				<TextButton label="Back" onPress={editor.closeDocument} />
 			</View>
 
 			<View style={styles.canvasArea}>

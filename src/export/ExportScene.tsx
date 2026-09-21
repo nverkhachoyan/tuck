@@ -1,15 +1,15 @@
 import { Group, type SkImage } from "@shopify/react-native-skia";
-import type { EditorDocument } from "@/document/document";
 import { ImageLayerView } from "@/layers/ImageLayerView";
 import { TextLayerView, toTransformList } from "@/layers/TextLayerView";
-import { assertNever } from "@/utils/assertNever";
+import { assertNever } from "@/lib/assertNever";
+import type { EditorDocument } from "@/model/document";
 
 /**
  * The document's layers in document space, with no selection chrome or
  * gesture state. `images` must be pre-decoded: the offscreen renderer draws
  * a single frame, so async loaders like `useImage` would still be null.
  */
-export function DocumentScene({
+export function ExportScene({
 	document,
 	images,
 }: {

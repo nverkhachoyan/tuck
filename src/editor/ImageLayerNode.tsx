@@ -1,6 +1,6 @@
 import { useImage } from "@shopify/react-native-skia";
-import type { ImageLayer } from "@/document/document";
 import { ImageLayerView } from "@/layers/ImageLayerView";
+import type { ImageLayer } from "@/model/document";
 
 /** Loads an image layer asynchronously, for the live editor canvas. */
 export function ImageLayerNode({ layer }: { layer: ImageLayer }) {

@@ -1,6 +1,6 @@
 import { useDerivedValue } from "react-native-reanimated";
-import type { TextLayer } from "@/document/document";
 import { TextLayerView, toTransformList } from "@/layers/TextLayerView";
+import type { TextLayer } from "@/model/document";
 import type { LiveTransform } from "./useLayerTransformGesture";
 
 const SELECTION_STROKE_PX = 1.5;

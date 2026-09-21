@@ -4,7 +4,7 @@ import {
 	Text as SkiaText,
 } from "@shopify/react-native-skia";
 import type { SharedValue } from "react-native-reanimated";
-import type { TextLayer } from "@/document/document";
+import type { TextLayer } from "@/model/document";
 import { colors } from "@/theme";
 import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
 

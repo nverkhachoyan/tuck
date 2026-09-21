@@ -1,8 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
-import {
-	createDocumentFromImage,
-	type EditorDocument,
-} from "@/document/document";
+import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import { normalizePickedImage } from "./normalizePickedImage";
 
 export type PickPhotoResult =

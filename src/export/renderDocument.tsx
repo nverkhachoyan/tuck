@@ -1,6 +1,6 @@
 import { drawAsImage, type SkImage, Skia } from "@shopify/react-native-skia";
-import type { EditorDocument } from "@/document/document";
-import { DocumentScene } from "./DocumentScene";
+import type { EditorDocument } from "@/model/document";
+import { ExportScene } from "./ExportScene";
 
 async function decodeImageLayers(document: EditorDocument) {
 	const images = new Map<string, SkImage>();
@@ -23,7 +23,7 @@ export async function renderDocument(
 	const images = await decodeImageLayers(document);
 	try {
 		const result = await drawAsImage(
-			<DocumentScene document={document} images={images} />,
+			<ExportScene document={document} images={images} />,
 			{ width: document.width, height: document.height },
 		);
 		if (!result) {

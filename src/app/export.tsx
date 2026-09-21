@@ -2,10 +2,10 @@ import { Canvas, Image, type SkImage } from "@shopify/react-native-skia";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, type LayoutChangeEvent, StyleSheet, View } from "react-native";
-import { Button } from "@/components/ui/Button";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { renderDocument } from "@/export/renderDocument";
 import { shareImage } from "@/export/shareImage";
+import { Button } from "@/ui/Button";
 
 export default function ExportRoute() {
 	const { doc } = useEditor();

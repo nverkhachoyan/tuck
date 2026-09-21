@@ -1,9 +1,4 @@
-import type { Point } from "@/document/geometry";
-
-export type Size = {
-	width: number;
-	height: number;
-};
+import type { Point, Size } from "@/model/geometry";
 
 export type DocumentViewport = {
 	scale: number;
