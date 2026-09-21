@@ -12,6 +12,8 @@
 - `TextInput`'s `selectTextOnFocus` doesn't apply when focus comes from `autoFocus` on iOS. Select from `onFocus` with `ref.setSelection(0, length)` instead, which covers both tap and autofocus.
 - The iOS simulator here runs headless (no Simulator.app), with a hardware keyboard attached, so the software keyboard never appears and keyboard-overlap bugs can't be reproduced on it. Verify keyboard layout on a real device.
 - A flaky `expo start --tunnel` can leave the app running a stale or half-updated bundle with no error in the app: a button from the new code can call a handler the old code never wired up. If behavior contradicts the code, check the Metro output for "Tunnel connection has been closed" before debugging, and prefer LAN mode (`npx expo start`) for simulator work.
+- `npm install` copies `package.json`'s indentation into `package-lock.json`, and `npx expo install` rewrites `package.json` with 2 spaces. Biome is set to format both files with 2 spaces to match; if a dependency change shows a lockfile diff in the thousands of lines, check `git diff -w` before committing — it's indentation, not content.
+- Tests import the module under test with an explicit `.ts` extension and start with `/// <reference types="node" />`: Node's type stripping needs the extension, and TypeScript 6 no longer includes installed `@types` packages by default. Only modules whose imports are all type-only (like `model/`) can be tested this way, since Node can't resolve the `@/` alias.
 
 ## Project Structure
 
@@ -26,4 +28,4 @@
 
 ## Code Checks
 
-- After code changes, run `npm run check` to verify formatting and linting. Use `npm run format` to apply formatting fixes, and run `npm run lint` when checking lint rules only.
+- After code changes, run `npm run check` to verify formatting and linting, and `npm test` when touching `model/`, the reducer, or other pure modules. Use `npm run format` to apply formatting fixes, and run `npm run lint` when checking lint rules only.

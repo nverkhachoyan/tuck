@@ -29,6 +29,13 @@ Run the repository's formatting and lint checks before committing:
 npm run check
 ```
 
+Unit tests for the plain-TypeScript modules (model, reducer, viewport) run on
+Node's built-in test runner, with no extra framework:
+
+```sh
+npm test
+```
+
 TypeScript can be checked separately with:
 
 ```sh
