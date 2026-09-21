@@ -56,12 +56,12 @@ function useEditorState() {
 		[],
 	);
 
+	/** Adds a text layer, selects it, and returns its id. */
 	const addTextLayer = useCallback(() => {
-		if (!state.document) return;
-		dispatch({
-			type: "text-layer-added",
-			layer: createTextLayer(state.document),
-		});
+		if (!state.document) return null;
+		const layer = createTextLayer(state.document);
+		dispatch({ type: "text-layer-added", layer });
+		return layer.id;
 	}, [state.document]);
 
 	const updateSelectedText = useCallback(

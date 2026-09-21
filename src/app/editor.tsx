@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { TextEditPanel } from "@/editor/TextEditPanel";
@@ -12,12 +13,22 @@ export default function EditorRoute() {
 	const editor = useEditor();
 	const router = useRouter();
 	const { document, selectedTextLayer } = editor;
+	// Only a freshly added layer opens the keyboard; selecting an existing one
+	// is usually about moving it, and the keyboard would hide half the canvas.
+	const [addedLayerId, setAddedLayerId] = useState<string | null>(null);
+	// Forget it once deselected, so selecting that layer again later doesn't.
+	if (addedLayerId && selectedTextLayer?.id !== addedLayerId) {
+		setAddedLayerId(null);
+	}
 
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
 
 	return (
-		<View style={styles.container}>
+		// The keyboard overlays the window on both platforms (iOS never resizes it,
+		// and Android is edge-to-edge), so pad it away explicitly. Padding
+		// shrinks the canvas, which refits the photo above the text panel.
+		<KeyboardAvoidingView behavior="padding" style={styles.container}>
 			<ScreenHeader onBack={editor.closeDocument} />
 
 			<View style={styles.canvasArea}>
@@ -36,6 +47,7 @@ export default function EditorRoute() {
 					<TextEditPanel
 						layer={selectedTextLayer}
 						fontSizeRange={getFontSizeRange(document)}
+						autoFocus={selectedTextLayer.id === addedLayerId}
 						onChangeText={(text) => editor.updateSelectedText({ text })}
 						onChangeFontSize={(fontSize) =>
 							editor.updateSelectedText({ fontSize })
@@ -46,7 +58,10 @@ export default function EditorRoute() {
 					/>
 				) : (
 					<View style={styles.toolbar}>
-						<Button label="Text" onPress={editor.addTextLayer} />
+						<Button
+							label="Text"
+							onPress={() => setAddedLayerId(editor.addTextLayer())}
+						/>
 						<Button
 							label="Export"
 							variant="primary"
@@ -55,7 +70,7 @@ export default function EditorRoute() {
 					</View>
 				)}
 			</View>
-		</View>
+		</KeyboardAvoidingView>
 	);
 }
 

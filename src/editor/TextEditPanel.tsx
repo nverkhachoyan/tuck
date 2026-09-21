@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { FontSizeRange, TextLayer } from "@/model/document";
 import { colors } from "@/theme";
@@ -15,6 +16,8 @@ const SWATCHES = [
 type TextEditPanelProps = {
 	layer: TextLayer;
 	fontSizeRange: FontSizeRange;
+	// Opens the keyboard on mount, for a layer the user just added.
+	autoFocus?: boolean;
 	onChangeText: (text: string) => void;
 	onChangeFontSize: (fontSize: number) => void;
 	onChangeColor: (color: string) => void;
@@ -25,22 +28,30 @@ type TextEditPanelProps = {
 export function TextEditPanel({
 	layer,
 	fontSizeRange,
+	autoFocus = false,
 	onChangeText,
 	onChangeFontSize,
 	onChangeColor,
 	onDelete,
 	onDone,
 }: TextEditPanelProps) {
+	const inputRef = useRef<TextInput>(null);
+
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>
 				<TextInput
+					ref={inputRef}
 					value={layer.text}
 					onChangeText={onChangeText}
 					placeholder="Text"
 					placeholderTextColor={colors.textSecondary}
 					style={styles.input}
-					selectTextOnFocus
+					autoFocus={autoFocus}
+					// Select everything so typing replaces the placeholder. Done here
+					// rather than with selectTextOnFocus, which iOS skips on autoFocus.
+					onFocus={() => inputRef.current?.setSelection(0, layer.text.length)}
+					returnKeyType="done"
 				/>
 				<TextButton label="Delete" tone="danger" onPress={onDelete} />
 			</View>
