@@ -13,7 +13,7 @@ import {
 import { colors } from "@/theme";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
-import { GlyphIcon, ToolButton } from "@/ui/ToolButton";
+import { ToolButton } from "@/ui/ToolButton";
 
 export default function EditorRoute() {
 	const editor = useEditor();
@@ -82,13 +82,12 @@ export default function EditorRoute() {
 						}
 						onDuplicate={editor.duplicateSelectedText}
 						onDelete={editor.deleteSelectedLayer}
-						onDone={editor.deselectLayer}
 					/>
 				) : (
 					<View style={styles.toolbar}>
 						<ToolButton
 							label="Text"
-							icon={<GlyphIcon glyph="Aa" />}
+							icon="format-text"
 							onPress={() => setEditing("new")}
 						/>
 					</View>

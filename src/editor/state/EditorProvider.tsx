@@ -85,7 +85,6 @@ function useEditorState() {
 		(id: string | null) => dispatch({ type: "layer-selected", id }),
 		[],
 	);
-	const deselectLayer = useCallback(() => selectLayer(null), [selectLayer]);
 
 	// Only text layers are selectable for now.
 	const selectedTextLayer = useMemo(
@@ -116,6 +115,5 @@ function useEditorState() {
 		deleteSelectedLayer,
 		duplicateSelectedText,
 		selectLayer,
-		deselectLayer,
 	};
 }

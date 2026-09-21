@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { FontSizeRange, TextLayer } from "@/model/document";
 import { colors } from "@/theme";
-import { TextButton } from "@/ui/TextButton";
+import { IconButton } from "@/ui/IconButton";
 
 const SWATCHES = [
 	"#FFFFFF",
@@ -23,12 +23,12 @@ type TextEditPanelProps = {
 	onChangeOutlineColor: (color: string | null) => void;
 	onDuplicate: () => void;
 	onDelete: () => void;
-	onDone: () => void;
 };
 
 /**
  * Styling for the selected text layer. The text itself is edited full-screen
- * (tap the selected layer), so this is only color, outline, and size.
+ * (tap the selected layer), so this is only color, outline, and size. There's
+ * no Done button: tapping anywhere on the canvas off the text deselects it.
  */
 export function TextEditPanel({
 	layer,
@@ -38,7 +38,6 @@ export function TextEditPanel({
 	onChangeOutlineColor,
 	onDuplicate,
 	onDelete,
-	onDone,
 }: TextEditPanelProps) {
 	const [target, setTarget] = useState<ColorTarget>("fill");
 	const current = target === "fill" ? layer.color : layer.outlineColor;
@@ -60,9 +59,17 @@ export function TextEditPanel({
 					/>
 				</View>
 				<View style={styles.actions}>
-					<TextButton label="Duplicate" onPress={onDuplicate} />
-					<TextButton label="Delete" tone="danger" onPress={onDelete} />
-					<TextButton label="Done" tone="accent" onPress={onDone} />
+					<IconButton
+						icon="copy-outline"
+						label="Duplicate"
+						onPress={onDuplicate}
+					/>
+					<IconButton
+						icon="trash-outline"
+						label="Delete"
+						tone="danger"
+						onPress={onDelete}
+					/>
 				</View>
 			</View>
 
@@ -206,10 +213,9 @@ const styles = StyleSheet.create({
 	tabLabelActive: {
 		color: colors.textPrimary,
 	},
-	// Three actions beside the tabs still fit a 375pt-wide phone at this gap.
 	actions: {
 		flexDirection: "row",
-		gap: 16,
+		gap: 24,
 	},
 	swatches: {
 		flexDirection: "row",

@@ -1,6 +1,11 @@
-import type { ReactNode } from "react";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "@/theme";
+
+// Tools use MaterialCommunityIcons (photo-editor glyphs like format-text, crop,
+// blur); small inline actions use Ionicons via IconButton.
+type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /** An editing tool in the bottom toolbar: an icon tile with a label under it. */
 export function ToolButton({
@@ -9,7 +14,7 @@ export function ToolButton({
 	onPress,
 }: {
 	label: string;
-	icon: ReactNode;
+	icon: ToolIconName;
 	onPress: () => void;
 }) {
 	return (
@@ -20,15 +25,16 @@ export function ToolButton({
 			accessibilityLabel={label}
 			style={({ pressed }) => [styles.container, pressed && styles.pressed]}
 		>
-			<View style={styles.tile}>{icon}</View>
+			<View style={styles.tile}>
+				<MaterialCommunityIcons
+					name={icon}
+					size={28}
+					color={colors.textPrimary}
+				/>
+			</View>
 			<Text style={styles.label}>{label}</Text>
 		</Pressable>
 	);
-}
-
-/** A short glyph (like "Aa") drawn at icon size, for tools with no pictogram. */
-export function GlyphIcon({ glyph }: { glyph: string }) {
-	return <Text style={styles.glyph}>{glyph}</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -46,11 +52,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		backgroundColor: colors.surface,
-	},
-	glyph: {
-		fontSize: 22,
-		fontWeight: "700",
-		color: colors.textPrimary,
 	},
 	label: {
 		fontSize: 12,
