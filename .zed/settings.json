@@ -1,7 +1,7 @@
 {
 	"code_actions_on_format": {
-		"source.fixAll": false,
-		"source.organizeImports": false
+		"source.fixAll": true,
+		"source.organizeImports": true
 	},
 	"languages": {
 		"JavaScript": {
