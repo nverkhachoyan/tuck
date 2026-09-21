@@ -11,6 +11,7 @@ const SELECTION_STROKE_PX = 1.5;
 type EditorSceneProps = {
 	document: EditorDocument;
 	selectedLayerId: string | null;
+	hiddenLayerId: string | null;
 	// Screen pixels per document unit.
 	viewScale: number;
 	live: LiveTransform;
@@ -24,12 +25,14 @@ type EditorSceneProps = {
 export function EditorScene({
 	document,
 	selectedLayerId,
+	hiddenLayerId,
 	viewScale,
 	live,
 }: EditorSceneProps) {
 	return (
 		<Group>
 			{document.layers.map((layer) => {
+				if (layer.id === hiddenLayerId) return null;
 				switch (layer.type) {
 					case "image":
 						return <AsyncImageLayer key={layer.id} layer={layer} />;

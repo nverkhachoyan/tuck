@@ -7,4 +7,6 @@ export const colors = {
 	accent: "#FF6B4A",
 	onAccent: "#1A0D08",
 	danger: "#FF453A",
+	// Dims the canvas behind modal editing UI.
+	scrim: "rgba(0, 0, 0, 0.65)",
 };

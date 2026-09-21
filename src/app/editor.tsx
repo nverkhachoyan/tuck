@@ -1,10 +1,15 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { useEditor } from "@/editor/state/EditorProvider";
+import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
-import { getFontSizeRange } from "@/model/document";
+import {
+	defaultTextStyle,
+	getFontSizeRange,
+	type TextAlign,
+} from "@/model/document";
 import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
@@ -13,29 +18,47 @@ export default function EditorRoute() {
 	const editor = useEditor();
 	const router = useRouter();
 	const { document, selectedTextLayer } = editor;
-	// Only a freshly added layer opens the keyboard; selecting an existing one
-	// is usually about moving it, and the keyboard would hide half the canvas.
-	const [addedLayerId, setAddedLayerId] = useState<string | null>(null);
-	// Forget it once deselected, so selecting that layer again later doesn't.
-	if (addedLayerId && selectedTextLayer?.id !== addedLayerId) {
-		setAddedLayerId(null);
-	}
+	// What the full-screen text editor is open for: a layer that doesn't exist
+	// yet, or the selected one. The layer is only created or changed on Done.
+	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
 
+	// Tapping the already-selected layer edits its text, like most story editors.
+	const handleSelectLayer = (id: string | null) => {
+		if (id !== null && id === selectedTextLayer?.id) {
+			setEditing("selected");
+		} else {
+			editor.selectLayer(id);
+		}
+	};
+
+	// Finishing with no text discards a new layer and deletes an existing one.
+	const handleEditDone = (rawText: string, align: TextAlign) => {
+		const text = rawText.trim();
+		if (editing === "new") {
+			if (text) editor.addTextLayer(text, align);
+		} else if (text) {
+			editor.updateSelectedText({ text, align });
+		} else {
+			editor.deleteSelectedLayer();
+		}
+		setEditing(null);
+	};
+
 	return (
-		// The keyboard overlays the window on both platforms (iOS never resizes it,
-		// and Android is edge-to-edge), so pad it away explicitly. Padding
-		// shrinks the canvas, which refits the photo above the text panel.
-		<KeyboardAvoidingView behavior="padding" style={styles.container}>
+		<View style={styles.container}>
 			<ScreenHeader onBack={editor.closeDocument} />
 
 			<View style={styles.canvasArea}>
 				<EditorCanvas
 					document={document}
 					selectedLayerId={selectedTextLayer?.id ?? null}
-					onSelectLayer={editor.selectLayer}
+					hiddenLayerId={
+						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
+					}
+					onSelectLayer={handleSelectLayer}
 					onCommitTransform={(transform) =>
 						editor.updateSelectedText({ transform })
 					}
@@ -47,8 +70,7 @@ export default function EditorRoute() {
 					<TextEditPanel
 						layer={selectedTextLayer}
 						fontSizeRange={getFontSizeRange(document)}
-						autoFocus={selectedTextLayer.id === addedLayerId}
-						onChangeText={(text) => editor.updateSelectedText({ text })}
+						onEditText={() => setEditing("selected")}
 						onChangeFontSize={(fontSize) =>
 							editor.updateSelectedText({ fontSize })
 						}
@@ -58,10 +80,7 @@ export default function EditorRoute() {
 					/>
 				) : (
 					<View style={styles.toolbar}>
-						<Button
-							label="Text"
-							onPress={() => setAddedLayerId(editor.addTextLayer())}
-						/>
+						<Button label="Text" onPress={() => setEditing("new")} />
 						<Button
 							label="Export"
 							variant="primary"
@@ -70,7 +89,26 @@ export default function EditorRoute() {
 					</View>
 				)}
 			</View>
-		</KeyboardAvoidingView>
+
+			{editing === "new" && (
+				<TextEditor
+					initialText=""
+					initialAlign={defaultTextStyle.align}
+					color={defaultTextStyle.color}
+					outlineColor={defaultTextStyle.outlineColor}
+					onDone={handleEditDone}
+				/>
+			)}
+			{editing === "selected" && selectedTextLayer && (
+				<TextEditor
+					initialText={selectedTextLayer.text}
+					initialAlign={selectedTextLayer.align}
+					color={selectedTextLayer.color}
+					outlineColor={selectedTextLayer.outlineColor}
+					onDone={handleEditDone}
+				/>
+			)}
+		</View>
 	);
 }
 

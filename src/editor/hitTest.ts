@@ -1,4 +1,4 @@
-import { measureTextLayer, selectionPadding } from "@/layers/textLayerMetrics";
+import { layoutTextLayer, selectionPadding } from "@/layers/textLayerLayout";
 import type { EditorDocument } from "@/model/document";
 import { hitTestBox, type Point } from "@/model/geometry";
 
@@ -18,7 +18,7 @@ export function findLayerAt(
 	for (let i = document.layers.length - 1; i >= 0; i--) {
 		const layer = document.layers[i];
 		if (layer.type !== "text") continue;
-		const { width, height } = measureTextLayer(layer);
+		const { width, height } = layoutTextLayer(layer);
 		const hitPad = Math.max(
 			selectionPadding(layer),
 			HIT_PADDING_PX / (viewScale * layer.transform.scaleX),

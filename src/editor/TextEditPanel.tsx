@@ -1,5 +1,4 @@
-import { useRef } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { FontSizeRange, TextLayer } from "@/model/document";
 import { colors } from "@/theme";
 import { TextButton } from "@/ui/TextButton";
@@ -16,9 +15,7 @@ const SWATCHES = [
 type TextEditPanelProps = {
 	layer: TextLayer;
 	fontSizeRange: FontSizeRange;
-	// Opens the keyboard on mount, for a layer the user just added.
-	autoFocus?: boolean;
-	onChangeText: (text: string) => void;
+	onEditText: () => void;
 	onChangeFontSize: (fontSize: number) => void;
 	onChangeColor: (color: string) => void;
 	onDelete: () => void;
@@ -28,31 +25,26 @@ type TextEditPanelProps = {
 export function TextEditPanel({
 	layer,
 	fontSizeRange,
-	autoFocus = false,
-	onChangeText,
+	onEditText,
 	onChangeFontSize,
 	onChangeColor,
 	onDelete,
 	onDone,
 }: TextEditPanelProps) {
-	const inputRef = useRef<TextInput>(null);
-
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>
-				<TextInput
-					ref={inputRef}
-					value={layer.text}
-					onChangeText={onChangeText}
-					placeholder="Text"
-					placeholderTextColor={colors.textSecondary}
-					style={styles.input}
-					autoFocus={autoFocus}
-					// Select everything so typing replaces the placeholder. Done here
-					// rather than with selectTextOnFocus, which iOS skips on autoFocus.
-					onFocus={() => inputRef.current?.setSelection(0, layer.text.length)}
-					returnKeyType="done"
-				/>
+				{/* Looks like a field; opens the full-screen editor. */}
+				<Pressable
+					onPress={onEditText}
+					style={styles.textPreview}
+					accessibilityRole="button"
+					accessibilityLabel="Edit text"
+				>
+					<Text style={styles.textPreviewLabel} numberOfLines={1}>
+						{layer.text}
+					</Text>
+				</Pressable>
 				<TextButton label="Delete" tone="danger" onPress={onDelete} />
 			</View>
 
@@ -121,15 +113,17 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		gap: 12,
 	},
-	input: {
+	textPreview: {
 		flex: 1,
-		color: colors.textPrimary,
-		fontSize: 17,
-		fontWeight: "600",
 		backgroundColor: colors.surface,
 		borderRadius: 10,
 		paddingHorizontal: 12,
 		paddingVertical: 8,
+	},
+	textPreviewLabel: {
+		color: colors.textPrimary,
+		fontSize: 17,
+		fontWeight: "600",
 	},
 	swatches: {
 		flexDirection: "row",

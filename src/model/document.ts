@@ -9,7 +9,10 @@ export type ImageLayer = {
 	transform: Transform;
 };
 
-// transform.x/y is the text's center point in document space.
+export type TextAlign = "left" | "center" | "right";
+
+// transform.x/y is the center of the text block in document space. Lines wrap
+// at `maxWidth` (in the layer's own, unscaled space), and `\n` breaks a line.
 export type TextLayer = {
 	type: "text";
 	id: string;
@@ -17,6 +20,8 @@ export type TextLayer = {
 	fontSize: number;
 	color: string;
 	outlineColor: string;
+	align: TextAlign;
+	maxWidth: number;
 	transform: Transform;
 };
 
@@ -86,14 +91,27 @@ export function getFontSizeRange(document: EditorDocument): FontSizeRange {
 	};
 }
 
-export function createTextLayer(document: EditorDocument): TextLayer {
+/** Classic meme text: white fill, black outline, centered. */
+export const defaultTextStyle = {
+	color: "white",
+	outlineColor: "black",
+	align: "center",
+} as const satisfies Pick<TextLayer, "color" | "outlineColor" | "align">;
+
+export function createTextLayer(
+	document: EditorDocument,
+	text: string,
+	align: TextAlign,
+): TextLayer {
 	return {
 		type: "text",
 		id: createLayerId("text"),
-		text: "TEXT",
+		text,
 		fontSize: getFontSizeRange(document).initial,
-		color: "white",
-		outlineColor: "black",
+		...defaultTextStyle,
+		align,
+		// Meme captions span most of the photo before wrapping.
+		maxWidth: document.width * 0.9,
 		transform: {
 			...identityTransform,
 			x: document.width / 2,

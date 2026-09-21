@@ -1,13 +1,9 @@
-import {
-	Group,
-	Rect as SkiaRect,
-	Text as SkiaText,
-} from "@shopify/react-native-skia";
+import { Group, Paragraph, Rect as SkiaRect } from "@shopify/react-native-skia";
 import type { SharedValue } from "react-native-reanimated";
 import type { TextLayer } from "@/model/document";
 import type { Transform } from "@/model/geometry";
 import { colors } from "@/theme";
-import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
+import { layoutTextLayer, selectionPadding } from "./textLayerLayout";
 
 type Transforms = ReturnType<typeof toTransformList>;
 
@@ -43,9 +39,8 @@ export function TextLayerView({
 	transform: Transforms | SharedValue<Transforms>;
 	selectionStroke?: number | SharedValue<number>;
 }) {
-	const { font, width, height, drawX, baselineY } = measureTextLayer(layer);
+	const { outline, fill, width, height } = layoutTextLayer(layer);
 	const pad = selectionPadding(layer);
-	const strokeWidth = layer.fontSize * 0.12;
 
 	return (
 		<Group transform={transform}>
@@ -60,22 +55,17 @@ export function TextLayerView({
 					strokeWidth={selectionStroke}
 				/>
 			)}
-			<SkiaText
-				x={drawX}
-				y={baselineY}
-				text={layer.text}
-				font={font}
-				color={layer.outlineColor}
-				style="stroke"
-				strokeWidth={strokeWidth}
-				strokeJoin="round"
+			<Paragraph
+				paragraph={outline}
+				x={-width / 2}
+				y={-height / 2}
+				width={width}
 			/>
-			<SkiaText
-				x={drawX}
-				y={baselineY}
-				text={layer.text}
-				font={font}
-				color={layer.color}
+			<Paragraph
+				paragraph={fill}
+				x={-width / 2}
+				y={-height / 2}
+				width={width}
 			/>
 		</Group>
 	);

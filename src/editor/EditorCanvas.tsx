@@ -16,6 +16,8 @@ import { fitDocumentToView, viewPointToDocument } from "./viewport";
 type EditorCanvasProps = {
 	document: EditorDocument;
 	selectedLayerId?: string | null;
+	// Not drawn, e.g. while its text is open in the full-screen editor.
+	hiddenLayerId?: string | null;
 	onSelectLayer?: (id: string | null) => void;
 	onCommitTransform?: (transform: Transform) => void;
 };
@@ -32,6 +34,7 @@ type EditorCanvasProps = {
 export function EditorCanvas({
 	document,
 	selectedLayerId = null,
+	hiddenLayerId = null,
 	onSelectLayer,
 	onCommitTransform,
 }: EditorCanvasProps) {
@@ -92,6 +95,7 @@ export function EditorCanvas({
 							<EditorScene
 								document={document}
 								selectedLayerId={selectedLayerId}
+								hiddenLayerId={hiddenLayerId}
 								viewScale={scale}
 								live={live}
 							/>
