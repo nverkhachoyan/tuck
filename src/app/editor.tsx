@@ -1,6 +1,7 @@
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
+import { usePreventRemove } from "expo-router/react-navigation";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { TextEditor } from "@/editor/TextEditor";
@@ -23,6 +24,21 @@ export default function EditorRoute() {
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 
+	// Leaving by any route (Back, iOS swipe, Android back) discards the edits,
+	// so ask first once there's anything to lose. The photo alone isn't an edit.
+	const navigation = useNavigation();
+	const hasEdits = (document?.layers.length ?? 0) > 1;
+	usePreventRemove(hasEdits, ({ data }) => {
+		Alert.alert("Discard edits?", "Your changes to this photo will be lost.", [
+			{ text: "Keep Editing", style: "cancel" },
+			{
+				text: "Discard",
+				style: "destructive",
+				onPress: () => navigation.dispatch(data.action),
+			},
+		]);
+	});
+
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
 
@@ -42,7 +58,7 @@ export default function EditorRoute() {
 	return (
 		<View style={styles.container}>
 			<ScreenHeader
-				onBack={editor.closeDocument}
+				onBack={() => router.back()}
 				action={
 					<TextButton
 						label="Export"
@@ -62,9 +78,9 @@ export default function EditorRoute() {
 					onSelectLayer={editor.selectLayer}
 					// Like most story editors, tapping selected text edits it.
 					onTapSelectedLayer={() => setEditing("selected")}
-					onCommitTransform={(transform) =>
-						editor.updateSelectedText({ transform })
-					}
+				onCommitTransform={(transform) =>
+					editor.updateSelectedText({ transform })
+				}
 				/>
 			</View>
 

@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { pickPhotoDocument } from "@/import/pickPhoto";
@@ -7,11 +7,14 @@ import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
 
 export default function WelcomeRoute() {
-	const { openDocument } = useEditor();
+	const { openDocument, closeDocument } = useEditor();
 	const router = useRouter();
 	// Picking plus re-encoding a large photo takes a few seconds; a second tap
 	// meanwhile would open the editor twice.
 	const [opening, setOpening] = useState(false);
+
+	// Coming back here, however the editor was left, ends that document.
+	useFocusEffect(useCallback(() => closeDocument(), [closeDocument]));
 
 	const handleChoosePhoto = async () => {
 		if (opening) return;
