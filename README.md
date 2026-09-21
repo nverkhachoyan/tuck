@@ -53,7 +53,7 @@ Key areas:
 - `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, and the text panel.
 - `src/editor/state/` owns the document, selection, and every command that mutates them.
 - `src/import/` picks a photo and turns it into a document.
-- `src/export/` renders the document offscreen with `ExportScene` and shares the result.
+- `src/export/` renders the document offscreen with `ExportScene`, then saves it to Photos or shares it.
 - `src/ui/` and `src/theme.ts` hold controls and colors shared across screens.
 - `src/lib/` holds platform shims and small language helpers.
 

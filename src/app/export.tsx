@@ -5,12 +5,14 @@ import {
 	ActivityIndicator,
 	Alert,
 	type LayoutChangeEvent,
+	Linking,
+	Platform,
 	StyleSheet,
 	Text,
 	View,
 } from "react-native";
 import { useEditor } from "@/editor/state/EditorProvider";
-import { shareImage } from "@/export/shareImage";
+import { saveToPhotos, shareImage } from "@/export/saveImage";
 import { useRenderedDocument } from "@/export/useRenderedDocument";
 import type { EditorDocument } from "@/model/document";
 import { colors } from "@/theme";
@@ -29,7 +31,8 @@ export default function ExportRoute() {
 function ExportScreen({ document }: { document: EditorDocument }) {
 	const router = useRouter();
 	const { state, retry } = useRenderedDocument(document);
-	const [sharing, setSharing] = useState(false);
+	const [busy, setBusy] = useState<"saving" | "sharing" | null>(null);
+	const [saved, setSaved] = useState(false);
 	const [size, setSize] = useState({ width: 0, height: 0 });
 
 	const handleLayout = (event: LayoutChangeEvent) => {
@@ -37,9 +40,33 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 		setSize({ width, height });
 	};
 
+	const handleSave = async () => {
+		if (state.status !== "ready") return;
+		setBusy("saving");
+		try {
+			const result = await saveToPhotos(state.image);
+			if (result.status === "saved") {
+				setSaved(true);
+			} else {
+				Alert.alert(
+					"Photos access needed",
+					"Allow this app to add photos in Settings to save your edit.",
+					[
+						{ text: "Cancel", style: "cancel" },
+						{ text: "Open Settings", onPress: () => Linking.openSettings() },
+					],
+				);
+			}
+		} catch (error) {
+			Alert.alert("Save failed", String(error));
+		} finally {
+			setBusy(null);
+		}
+	};
+
 	const handleShare = async () => {
 		if (state.status !== "ready") return;
-		setSharing(true);
+		setBusy("sharing");
 		try {
 			if (!(await shareImage(state.image))) {
 				Alert.alert("Sharing unavailable", "This device can't share files.");
@@ -47,7 +74,7 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 		} catch (error) {
 			Alert.alert("Share failed", String(error));
 		} finally {
-			setSharing(false);
+			setBusy(null);
 		}
 	};
 
@@ -90,11 +117,27 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 				<Text style={styles.details}>
 					{document.width} × {document.height} · JPEG
 				</Text>
+				{/* The photo library isn't reachable from a browser. */}
+				{Platform.OS !== "web" && (
+					<Button
+						label={
+							saved
+								? "Saved to Photos"
+								: busy === "saving"
+									? "Saving…"
+									: "Save to Photos"
+						}
+						variant="primary"
+						size="large"
+						disabled={state.status !== "ready" || busy !== null || saved}
+						onPress={handleSave}
+					/>
+				)}
 				<Button
-					label={sharing ? "Opening…" : "Share / Save"}
-					variant="primary"
+					label={busy === "sharing" ? "Opening…" : "Share"}
+					variant={Platform.OS === "web" ? "primary" : "secondary"}
 					size="large"
-					disabled={state.status !== "ready" || sharing}
+					disabled={state.status !== "ready" || busy !== null}
 					onPress={handleShare}
 				/>
 			</View>

@@ -20,6 +20,14 @@
 					}
 				}
 			],
+			[
+				"expo-media-library",
+				{
+					"photosPermission": "Allow access to photos.",
+					"savePhotosPermission": "Allow saving your edited photos.",
+					"granularPermissions": ["photo"]
+				}
+			],
 			"expo-sharing"
 		],
 		"name": "photo-editor",
