@@ -28,6 +28,7 @@ export function Button({
 				isLarge ? styles.large : styles.medium,
 				isPrimary ? styles.primary : styles.secondary,
 				pressed && styles.pressed,
+				props.disabled && styles.disabled,
 			]}
 		>
 			<Text
@@ -65,6 +66,9 @@ const styles = StyleSheet.create({
 	},
 	pressed: {
 		opacity: 0.8,
+	},
+	disabled: {
+		opacity: 0.4,
 	},
 	label: {
 		fontSize: 15,

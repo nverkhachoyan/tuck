@@ -6,7 +6,7 @@ import { TextEditPanel } from "@/editor/TextEditPanel";
 import { getFontSizeRange } from "@/model/document";
 import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
-import { TextButton } from "@/ui/TextButton";
+import { ScreenHeader } from "@/ui/ScreenHeader";
 
 export default function EditorRoute() {
 	const editor = useEditor();
@@ -18,9 +18,7 @@ export default function EditorRoute() {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
-				<TextButton label="Back" onPress={editor.closeDocument} />
-			</View>
+			<ScreenHeader onBack={editor.closeDocument} />
 
 			<View style={styles.canvasArea}>
 				<EditorCanvas
@@ -64,15 +62,6 @@ export default function EditorRoute() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-	},
-	header: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingHorizontal: 20,
-		paddingVertical: 14,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
 	},
 	canvasArea: {
 		flex: 1,
