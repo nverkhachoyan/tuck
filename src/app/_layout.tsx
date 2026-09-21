@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AsyncSkia } from "@/components/async-skia";
-import { EditorProvider } from "@/contexts/editor";
+import { EditorProvider } from "@/features/editor/state/EditorProvider";
 
 export default function Layout() {
 	return (

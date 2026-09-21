@@ -13,7 +13,7 @@ import { editorReducer, initialEditorState } from "./editorReducer";
  * model can be reasoned about (and eventually tested) independent of React
  * Native rendering concerns.
  */
-export function useEditor() {
+export function useEditorState() {
 	const [state, dispatch] = useReducer(editorReducer, initialEditorState);
 
 	const pickImage = useCallback(async () => {

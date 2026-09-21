@@ -1,13 +1,13 @@
 import { useRouter } from "expo-router";
 import { StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useEditorContext } from "@/contexts/editor";
 import { EditorScreen } from "@/features/editor/EditorScreen";
+import { useEditor } from "@/features/editor/state/EditorProvider";
 import { WelcomeScreen } from "@/features/welcome/WelcomeScreen";
 import { colors } from "@/theme";
 
 export default function Page() {
-	const editor = useEditorContext();
+	const editor = useEditor();
 	const router = useRouter();
 
 	return (

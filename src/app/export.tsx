@@ -1,12 +1,12 @@
 import { Redirect, useRouter } from "expo-router";
 import { StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useEditorContext } from "@/contexts/editor";
+import { useEditor } from "@/features/editor/state/EditorProvider";
 import { ExportScreen } from "@/features/export/ExportScreen";
 import { colors } from "@/theme";
 
 export default function Page() {
-	const { doc } = useEditorContext();
+	const { doc } = useEditor();
 	const router = useRouter();
 
 	// Reloads and deep links land here with no document open.
