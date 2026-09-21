@@ -1,4 +1,4 @@
-import type { Point } from "@/features/editor/model/geometry";
+import type { Point } from "@/document/geometry";
 
 export type Size = {
 	width: number;

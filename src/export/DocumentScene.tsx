@@ -1,11 +1,8 @@
 import { Group, type SkImage } from "@shopify/react-native-skia";
+import type { EditorDocument } from "@/document/document";
+import { ImageLayerView } from "@/layers/ImageLayerView";
+import { TextLayerView, toTransformList } from "@/layers/TextLayerView";
 import { assertNever } from "@/utils/assertNever";
-import { ImageLayerView } from "../editor/layers/image/ImageLayerView";
-import {
-	TextLayerView,
-	toTransformList,
-} from "../editor/layers/text/TextLayerView";
-import type { EditorDocument } from "../editor/model/document";
 
 /**
  * The document's layers in document space, with no selection chrome or

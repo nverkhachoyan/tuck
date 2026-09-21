@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/ui/Button";
-import { useEditor } from "@/features/editor/state/EditorProvider";
+import { useEditor } from "@/editor/state/EditorProvider";
 import { colors } from "@/theme";
 
 export default function WelcomeRoute() {

@@ -2,20 +2,17 @@ import { Canvas, Group } from "@shopify/react-native-skia";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
-import { ImageLayerNode } from "@/features/editor/layers/image/ImageLayerNode";
-import { TextLayerNode } from "@/features/editor/layers/text/TextLayerNode";
-import {
-	measureTextLayer,
-	selectionPadding,
-} from "@/features/editor/layers/text/textLayerMetrics";
-import type { EditorDocument } from "@/features/editor/model/document";
-import { hitTestBox, type Transform } from "@/features/editor/model/geometry";
+import type { EditorDocument } from "@/document/document";
+import { hitTestBox, type Transform } from "@/document/geometry";
+import { measureTextLayer, selectionPadding } from "@/layers/textLayerMetrics";
 import { assertNever } from "@/utils/assertNever";
+import { ImageLayerNode } from "./ImageLayerNode";
+import { TextLayerNode } from "./TextLayerNode";
 import {
 	syncLiveTransform,
 	useLayerTransformGesture,
 	useLiveTransform,
-} from "./gestures/useLayerTransformGesture";
+} from "./useLayerTransformGesture";
 import { fitDocumentToView, viewPointToDocument } from "./viewport";
 
 // Minimum comfortable touch padding around text, in screen pixels.

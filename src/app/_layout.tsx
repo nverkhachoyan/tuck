@@ -4,10 +4,7 @@ import { StatusBar, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { AsyncSkia } from "@/components/async-skia";
-import {
-	EditorProvider,
-	useEditor,
-} from "@/features/editor/state/EditorProvider";
+import { EditorProvider, useEditor } from "@/editor/state/EditorProvider";
 import { colors } from "@/theme";
 
 export default function Layout() {

@@ -2,10 +2,10 @@ import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/Button";
 import { HeaderButton } from "@/components/ui/HeaderButton";
-import { EditorCanvas } from "@/features/editor/canvas/EditorCanvas";
-import { TextEditPanel } from "@/features/editor/layers/text/TextEditPanel";
-import { getFontSizeRange } from "@/features/editor/model/document";
-import { useEditor } from "@/features/editor/state/EditorProvider";
+import { getFontSizeRange } from "@/document/document";
+import { EditorCanvas } from "@/editor/EditorCanvas";
+import { useEditor } from "@/editor/state/EditorProvider";
+import { TextEditPanel } from "@/editor/TextEditPanel";
 import { BOTTOM_PANEL_HEIGHT, colors } from "@/theme";
 
 export default function EditorRoute() {

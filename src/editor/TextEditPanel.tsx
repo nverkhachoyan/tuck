@@ -1,8 +1,5 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import type {
-	FontSizeRange,
-	TextLayer,
-} from "@/features/editor/model/document";
+import type { FontSizeRange, TextLayer } from "@/document/document";
 import { BOTTOM_PANEL_HEIGHT, colors } from "@/theme";
 
 const SWATCHES = [

@@ -1,5 +1,5 @@
 import { type SkImage, Image as SkiaImage } from "@shopify/react-native-skia";
-import type { ImageLayer } from "@/features/editor/model/document";
+import type { ImageLayer } from "@/document/document";
 
 /** Draws an already-decoded image layer at its document-space size. */
 export function ImageLayerView({

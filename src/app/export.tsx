@@ -3,9 +3,9 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/Button";
-import { useEditor } from "@/features/editor/state/EditorProvider";
-import { renderDocument } from "@/features/export/renderDocument";
-import { shareImage } from "@/features/export/shareImage";
+import { useEditor } from "@/editor/state/EditorProvider";
+import { renderDocument } from "@/export/renderDocument";
+import { shareImage } from "@/export/shareImage";
 
 export default function ExportRoute() {
 	const { doc } = useEditor();

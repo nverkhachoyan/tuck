@@ -48,12 +48,12 @@ committed to the document when the gesture ends.
 Key areas:
 
 - `src/app/` wires the current editor state to the application screens.
-- `src/features/editor/model/` defines the persistent document, layers, and geometry.
-- `src/features/editor/state/` owns document mutations, selection, and commands.
-- `src/features/editor/canvas/` handles viewport mapping and gestures.
-- `src/features/editor/layers/` groups rendering and controls by layer type.
-- `src/features/editor/photo/` imports and normalizes source images.
-- `src/components/ui/` contains controls shared across features.
+- `src/document/` defines the persistent document, layers, and geometry.
+- `src/layers/` contains render-only layer views shared by the editor and export.
+- `src/editor/` handles the interactive canvas, gestures, layer controls, and photo import.
+- `src/editor/state/` owns document mutations, selection, and commands.
+- `src/export/` renders the document offscreen and shares the result.
+- `src/components/ui/` contains controls shared across screens.
 
 Picked images are normalized to JPEG before reaching Skia because iPhone
 photos are commonly HEIC, which Skia cannot decode. See `AGENTS.md` for this

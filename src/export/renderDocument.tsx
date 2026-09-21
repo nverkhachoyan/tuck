@@ -1,5 +1,5 @@
 import { drawAsImage, type SkImage, Skia } from "@shopify/react-native-skia";
-import type { EditorDocument } from "../editor/model/document";
+import type { EditorDocument } from "@/document/document";
 import { DocumentScene } from "./DocumentScene";
 
 async function decodeImageLayers(document: EditorDocument) {

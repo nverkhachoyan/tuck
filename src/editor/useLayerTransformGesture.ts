@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import type { Transform } from "@/features/editor/model/geometry";
+import type { Transform } from "@/document/geometry";
 
 export const MIN_LAYER_SCALE = 0.2;
 export const MAX_LAYER_SCALE = 8;
