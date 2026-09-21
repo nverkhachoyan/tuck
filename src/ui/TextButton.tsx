@@ -1,18 +1,23 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 import { colors } from "@/theme";
 
+type TextButtonTone = "default" | "accent" | "danger";
+
+/** A borderless, label-only button for headers and inline panel actions. */
 export function TextButton({
 	label,
-	accent,
+	tone = "default",
 	onPress,
 }: {
 	label: string;
-	accent?: boolean;
+	tone?: TextButtonTone;
 	onPress: () => void;
 }) {
 	return (
 		<Pressable hitSlop={8} onPress={onPress}>
-			<Text style={[styles.label, accent && styles.accent]}>{label}</Text>
+			<Text style={[styles.label, tone !== "default" && styles[tone]]}>
+				{label}
+			</Text>
 		</Pressable>
 	);
 }
@@ -25,6 +30,10 @@ const styles = StyleSheet.create({
 	},
 	accent: {
 		color: colors.accent,
+		fontWeight: "600",
+	},
+	danger: {
+		color: colors.danger,
 		fontWeight: "600",
 	},
 });

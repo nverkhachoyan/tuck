@@ -6,4 +6,5 @@ export const colors = {
 	textSecondary: "#8E8E93",
 	accent: "#FF6B4A",
 	onAccent: "#1A0D08",
+	danger: "#FF453A",
 };

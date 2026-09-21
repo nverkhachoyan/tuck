@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { EditorCanvas } from "@/editor/EditorCanvas";
-import { BOTTOM_PANEL_HEIGHT } from "@/editor/layout";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { TextEditPanel } from "@/editor/TextEditPanel";
 import { getFontSizeRange } from "@/model/document";
@@ -34,28 +33,30 @@ export default function EditorRoute() {
 				/>
 			</View>
 
-			{selectedLayer ? (
-				<TextEditPanel
-					layer={selectedLayer}
-					fontSizeRange={getFontSizeRange(doc)}
-					onChangeText={(text) => editor.updateSelectedLayer({ text })}
-					onChangeFontSize={(fontSize) =>
-						editor.updateSelectedLayer({ fontSize })
-					}
-					onChangeColor={(color) => editor.updateSelectedLayer({ color })}
-					onDelete={editor.deleteSelectedLayer}
-					onDone={editor.deselectLayer}
-				/>
-			) : (
-				<View style={styles.toolbar}>
-					<Button label="Text" onPress={editor.addTextLayer} />
-					<Button
-						label="Export"
-						variant="primary"
-						onPress={() => router.push("/export")}
+			<View style={styles.bottomPanel}>
+				{selectedLayer ? (
+					<TextEditPanel
+						layer={selectedLayer}
+						fontSizeRange={getFontSizeRange(doc)}
+						onChangeText={(text) => editor.updateSelectedLayer({ text })}
+						onChangeFontSize={(fontSize) =>
+							editor.updateSelectedLayer({ fontSize })
+						}
+						onChangeColor={(color) => editor.updateSelectedLayer({ color })}
+						onDelete={editor.deleteSelectedLayer}
+						onDone={editor.deselectLayer}
 					/>
-				</View>
-			)}
+				) : (
+					<View style={styles.toolbar}>
+						<Button label="Text" onPress={editor.addTextLayer} />
+						<Button
+							label="Export"
+							variant="primary"
+							onPress={() => router.push("/export")}
+						/>
+					</View>
+				)}
+			</View>
 		</View>
 	);
 }
@@ -77,13 +78,18 @@ const styles = StyleSheet.create({
 		flex: 1,
 		padding: 16,
 	},
+	// Toolbar and text panel share one fixed height so the canvas above never
+	// resizes when the selection changes.
+	bottomPanel: {
+		height: 120,
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
+	},
 	toolbar: {
+		flex: 1,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		height: BOTTOM_PANEL_HEIGHT,
 		paddingHorizontal: 20,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
 	},
 });

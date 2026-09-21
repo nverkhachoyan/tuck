@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import type { FontSizeRange, TextLayer } from "@/model/document";
 import { colors } from "@/theme";
-import { BOTTOM_PANEL_HEIGHT } from "./layout";
+import { TextButton } from "@/ui/TextButton";
 
 const SWATCHES = [
 	"#FFFFFF",
@@ -42,9 +42,7 @@ export function TextEditPanel({
 					style={styles.input}
 					selectTextOnFocus
 				/>
-				<Pressable onPress={onDelete} hitSlop={8}>
-					<Text style={styles.delete}>Delete</Text>
-				</Pressable>
+				<TextButton label="Delete" tone="danger" onPress={onDelete} />
 			</View>
 
 			<View style={styles.row}>
@@ -93,9 +91,7 @@ export function TextEditPanel({
 					</Pressable>
 				</View>
 
-				<Pressable onPress={onDone} hitSlop={8}>
-					<Text style={styles.done}>Done</Text>
-				</Pressable>
+				<TextButton label="Done" tone="accent" onPress={onDone} />
 			</View>
 		</View>
 	);
@@ -103,12 +99,10 @@ export function TextEditPanel({
 
 const styles = StyleSheet.create({
 	container: {
-		height: BOTTOM_PANEL_HEIGHT,
+		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 20,
 		gap: 14,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
 	},
 	row: {
 		flexDirection: "row",
@@ -125,11 +119,6 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 		paddingHorizontal: 12,
 		paddingVertical: 8,
-	},
-	delete: {
-		color: "#FF453A",
-		fontSize: 15,
-		fontWeight: "600",
 	},
 	swatches: {
 		flexDirection: "row",
@@ -159,11 +148,6 @@ const styles = StyleSheet.create({
 	sizeButtonLabel: {
 		color: colors.textPrimary,
 		fontSize: 13,
-		fontWeight: "600",
-	},
-	done: {
-		color: colors.accent,
-		fontSize: 15,
 		fontWeight: "600",
 	},
 });

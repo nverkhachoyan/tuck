@@ -2,21 +2,16 @@ import { Canvas, Group } from "@shopify/react-native-skia";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
-import { measureTextLayer, selectionPadding } from "@/layers/textLayerMetrics";
-import { assertNever } from "@/lib/assertNever";
 import type { EditorDocument } from "@/model/document";
-import { hitTestBox, type Transform } from "@/model/geometry";
-import { ImageLayerNode } from "./ImageLayerNode";
-import { TextLayerNode } from "./TextLayerNode";
+import type { Transform } from "@/model/geometry";
+import { EditorScene } from "./EditorScene";
+import { findLayerAt } from "./hitTest";
 import {
 	syncLiveTransform,
 	useLayerTransformGesture,
 	useLiveTransform,
 } from "./useLayerTransformGesture";
 import { fitDocumentToView, viewPointToDocument } from "./viewport";
-
-// Minimum comfortable touch padding around text, in screen pixels.
-const HIT_PADDING_PX = 14;
 
 type EditorCanvasProps = {
 	document: EditorDocument;
@@ -67,30 +62,9 @@ export function EditorCanvas({
 				x: screenX,
 				y: screenY,
 			});
-			// Topmost layer first.
-			for (let i = document.layers.length - 1; i >= 0; i--) {
-				const layer = document.layers[i];
-				if (layer.type !== "text") continue;
-				const { width, height } = measureTextLayer(layer);
-				const hitPad = Math.max(
-					selectionPadding(layer),
-					HIT_PADDING_PX / (scale * layer.transform.scaleX),
-				);
-				if (
-					hitTestBox(
-						layer.transform,
-						width / 2 + hitPad,
-						height / 2 + hitPad,
-						point,
-					)
-				) {
-					onSelectLayer(layer.id);
-					return;
-				}
-			}
-			onSelectLayer(null);
+			onSelectLayer(findLayerAt(document, point, scale));
 		},
-		[document.layers, onSelectLayer, scale, viewport],
+		[document, onSelectLayer, scale, viewport],
 	);
 
 	const gesture = useLayerTransformGesture({
@@ -115,24 +89,12 @@ export function EditorCanvas({
 								{ scale },
 							]}
 						>
-							{document.layers.map((layer) => {
-								switch (layer.type) {
-									case "image":
-										return <ImageLayerNode key={layer.id} layer={layer} />;
-									case "text":
-										return (
-											<TextLayerNode
-												key={layer.id}
-												layer={layer}
-												viewScale={scale}
-												live={live}
-												selected={layer.id === selectedLayerId}
-											/>
-										);
-									default:
-										return assertNever(layer);
-								}
-							})}
+							<EditorScene
+								document={document}
+								selectedLayerId={selectedLayerId}
+								viewScale={scale}
+								live={live}
+							/>
 						</Group>
 					)}
 				</Canvas>

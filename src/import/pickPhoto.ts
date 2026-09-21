@@ -1,6 +1,6 @@
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
-import { normalizePickedImage } from "./normalizePickedImage";
 
 export type PickPhotoResult =
 	| { status: "picked"; document: EditorDocument }
@@ -26,12 +26,21 @@ export async function pickPhotoDocument(): Promise<PickPhotoResult> {
 		return { status: "canceled" };
 	}
 
-	const asset = result.assets[0];
-	const normalized = await normalizePickedImage(asset.uri);
+	const photo = await reencodeAsJpeg(result.assets[0].uri);
 	const document = createDocumentFromImage(
-		normalized.uri,
-		normalized.width,
-		normalized.height,
+		photo.uri,
+		photo.width,
+		photo.height,
 	);
 	return { status: "picked", document };
+}
+
+/**
+ * iOS photos are HEIC by default, which Skia's image codec cannot decode —
+ * re-encoding here guarantees the editor can always load what the picker
+ * returns, regardless of source format.
+ */
+async function reencodeAsJpeg(uri: string) {
+	const rendered = await ImageManipulator.manipulate(uri).renderAsync();
+	return rendered.saveAsync({ format: SaveFormat.JPEG, compress: 1 });
 }
