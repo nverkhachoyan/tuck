@@ -6,9 +6,11 @@ import {
 	useMemo,
 	useReducer,
 } from "react";
-import { Alert } from "react-native";
-import { pickPhotoDocument } from "@/import/pickPhoto";
-import { createTextLayer, type TextLayer } from "@/model/document";
+import {
+	createTextLayer,
+	type EditorDocument,
+	type TextLayer,
+} from "@/model/document";
 import { editorReducer, initialEditorState } from "./editorReducer";
 
 type EditorContextValue = ReturnType<typeof useEditorState>;
@@ -43,21 +45,11 @@ export function useEditor() {
 function useEditorState() {
 	const [state, dispatch] = useReducer(editorReducer, initialEditorState);
 
-	/** Resolves to `true` when a photo was opened as the current document. */
-	const pickImage = useCallback(async () => {
-		const result = await pickPhotoDocument();
-		if (result.status === "picked") {
-			dispatch({ type: "document-opened", document: result.document });
-			return true;
-		}
-		if (result.status === "permission-denied") {
-			Alert.alert(
-				"Permission required",
-				"Permission to access the media library is required.",
-			);
-		}
-		return false;
-	}, []);
+	const openDocument = useCallback(
+		(document: EditorDocument) =>
+			dispatch({ type: "document-opened", document }),
+		[],
+	);
 
 	const closeDocument = useCallback(
 		() => dispatch({ type: "document-closed" }),
@@ -72,9 +64,9 @@ function useEditorState() {
 		});
 	}, [state.document]);
 
-	const updateSelectedLayer = useCallback(
+	const updateSelectedText = useCallback(
 		(patch: Partial<TextLayer>) =>
-			dispatch({ type: "selected-layer-updated", patch }),
+			dispatch({ type: "selected-text-updated", patch }),
 		[],
 	);
 
@@ -89,7 +81,8 @@ function useEditorState() {
 	);
 	const deselectLayer = useCallback(() => selectLayer(null), [selectLayer]);
 
-	const selectedLayer = useMemo(
+	// Only text layers are selectable for now.
+	const selectedTextLayer = useMemo(
 		() =>
 			state.document?.layers.find(
 				(layer): layer is TextLayer =>
@@ -99,12 +92,12 @@ function useEditorState() {
 	);
 
 	return {
-		doc: state.document,
-		selectedLayer,
-		pickImage,
+		document: state.document,
+		selectedTextLayer,
+		openDocument,
 		closeDocument,
 		addTextLayer,
-		updateSelectedLayer,
+		updateSelectedText,
 		deleteSelectedLayer,
 		selectLayer,
 		deselectLayer,

@@ -1,15 +1,25 @@
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { useEditor } from "@/editor/state/EditorProvider";
+import { pickPhotoDocument } from "@/import/pickPhoto";
 import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
 
 export default function WelcomeRoute() {
-	const { pickImage } = useEditor();
+	const { openDocument } = useEditor();
 	const router = useRouter();
 
-	const handlePickImage = async () => {
-		if (await pickImage()) router.push("/editor");
+	const handleChoosePhoto = async () => {
+		const result = await pickPhotoDocument();
+		if (result.status === "picked") {
+			openDocument(result.document);
+			router.push("/editor");
+		} else if (result.status === "permission-denied") {
+			Alert.alert(
+				"Permission required",
+				"Permission to access the media library is required.",
+			);
+		}
 	};
 
 	return (
@@ -26,7 +36,7 @@ export default function WelcomeRoute() {
 				label="Choose Photo"
 				variant="primary"
 				size="large"
-				onPress={handlePickImage}
+				onPress={handleChoosePhoto}
 			/>
 		</View>
 	);

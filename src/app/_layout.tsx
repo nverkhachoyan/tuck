@@ -26,7 +26,7 @@ export default function Layout() {
 }
 
 function Routes() {
-	const { doc } = useEditor();
+	const { document } = useEditor();
 
 	return (
 		<Stack
@@ -37,7 +37,7 @@ function Routes() {
 		>
 			<Stack.Screen name="index" />
 			{/* Reloads, deep links, and closing the document all drop these routes. */}
-			<Stack.Protected guard={!!doc}>
+			<Stack.Protected guard={!!document}>
 				<Stack.Screen name="editor" />
 				<Stack.Screen name="export" />
 			</Stack.Protected>

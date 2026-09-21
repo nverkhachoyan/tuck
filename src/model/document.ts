@@ -76,8 +76,8 @@ export type FontSizeRange = {
 	initial: number;
 };
 
-export function getFontSizeRange(doc: EditorDocument): FontSizeRange {
-	const base = Math.min(doc.width, doc.height);
+export function getFontSizeRange(document: EditorDocument): FontSizeRange {
+	const base = Math.min(document.width, document.height);
 	return {
 		min: Math.round(base * 0.02),
 		max: Math.round(base * 0.4),
@@ -86,14 +86,18 @@ export function getFontSizeRange(doc: EditorDocument): FontSizeRange {
 	};
 }
 
-export function createTextLayer(doc: EditorDocument): TextLayer {
+export function createTextLayer(document: EditorDocument): TextLayer {
 	return {
 		type: "text",
 		id: createLayerId("text"),
 		text: "TEXT",
-		fontSize: getFontSizeRange(doc).initial,
+		fontSize: getFontSizeRange(document).initial,
 		color: "white",
 		outlineColor: "black",
-		transform: { ...identityTransform, x: doc.width / 2, y: doc.height / 2 },
+		transform: {
+			...identityTransform,
+			x: document.width / 2,
+			y: document.height / 2,
+		},
 	};
 }

@@ -8,7 +8,7 @@ import { shareImage } from "@/export/shareImage";
 import { Button } from "@/ui/Button";
 
 export default function ExportRoute() {
-	const { doc } = useEditor();
+	const { document } = useEditor();
 	const router = useRouter();
 	const [result, setResult] = useState<SkImage | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -18,7 +18,7 @@ export default function ExportRoute() {
 	useEffect(() => () => result?.dispose(), [result]);
 
 	// The stack guard unmounts this route once the document closes.
-	if (!doc) return null;
+	if (!document) return null;
 
 	const handleLayout = (event: LayoutChangeEvent) => {
 		const { width, height } = event.nativeEvent.layout;
@@ -37,7 +37,7 @@ export default function ExportRoute() {
 	};
 
 	const handleRender = () =>
-		run(async () => setResult(await renderDocument(doc)), "Export failed");
+		run(async () => setResult(await renderDocument(document)), "Export failed");
 
 	const handleShare = () =>
 		run(async () => {

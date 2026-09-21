@@ -5,6 +5,7 @@ import {
 } from "@shopify/react-native-skia";
 import type { SharedValue } from "react-native-reanimated";
 import type { TextLayer } from "@/model/document";
+import type { Transform } from "@/model/geometry";
 import { colors } from "@/theme";
 import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
 
@@ -12,10 +13,10 @@ type Transforms = ReturnType<typeof toTransformList>;
 
 /**
  * Skia's transform list for a layer's document-space transform. Marked as a
- * worklet because `TextLayerNode` calls it from a `useDerivedValue`, which
+ * worklet because `LiveTextLayer` (in EditorScene) calls it from a `useDerivedValue`, which
  * re-runs on the UI thread and can't call plain JS functions.
  */
-export function toTransformList(t: TextLayer["transform"]) {
+export function toTransformList(t: Transform) {
 	"worklet";
 	return [
 		{ translateX: t.x },

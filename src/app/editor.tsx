@@ -11,10 +11,10 @@ import { TextButton } from "@/ui/TextButton";
 export default function EditorRoute() {
 	const editor = useEditor();
 	const router = useRouter();
-	const { doc, selectedLayer } = editor;
+	const { document, selectedTextLayer } = editor;
 
 	// The stack guard unmounts this route once the document closes.
-	if (!doc) return null;
+	if (!document) return null;
 
 	return (
 		<View style={styles.container}>
@@ -24,25 +24,25 @@ export default function EditorRoute() {
 
 			<View style={styles.canvasArea}>
 				<EditorCanvas
-					document={doc}
-					selectedLayerId={selectedLayer?.id ?? null}
+					document={document}
+					selectedLayerId={selectedTextLayer?.id ?? null}
 					onSelectLayer={editor.selectLayer}
 					onCommitTransform={(transform) =>
-						editor.updateSelectedLayer({ transform })
+						editor.updateSelectedText({ transform })
 					}
 				/>
 			</View>
 
 			<View style={styles.bottomPanel}>
-				{selectedLayer ? (
+				{selectedTextLayer ? (
 					<TextEditPanel
-						layer={selectedLayer}
-						fontSizeRange={getFontSizeRange(doc)}
-						onChangeText={(text) => editor.updateSelectedLayer({ text })}
+						layer={selectedTextLayer}
+						fontSizeRange={getFontSizeRange(document)}
+						onChangeText={(text) => editor.updateSelectedText({ text })}
 						onChangeFontSize={(fontSize) =>
-							editor.updateSelectedLayer({ fontSize })
+							editor.updateSelectedText({ fontSize })
 						}
-						onChangeColor={(color) => editor.updateSelectedLayer({ color })}
+						onChangeColor={(color) => editor.updateSelectedText({ color })}
 						onDelete={editor.deleteSelectedLayer}
 						onDone={editor.deselectLayer}
 					/>

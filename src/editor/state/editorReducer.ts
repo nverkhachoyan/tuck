@@ -9,7 +9,7 @@ export type EditorAction =
 	| { type: "document-opened"; document: EditorDocument }
 	| { type: "document-closed" }
 	| { type: "text-layer-added"; layer: TextLayer }
-	| { type: "selected-layer-updated"; patch: Partial<TextLayer> }
+	| { type: "selected-text-updated"; patch: Partial<TextLayer> }
 	| { type: "selected-layer-deleted" }
 	| { type: "layer-selected"; id: string | null };
 
@@ -36,7 +36,7 @@ export function editorReducer(
 				},
 				selectedLayerId: action.layer.id,
 			};
-		case "selected-layer-updated":
+		case "selected-text-updated":
 			if (!state.document || !state.selectedLayerId) return state;
 			return {
 				...state,
