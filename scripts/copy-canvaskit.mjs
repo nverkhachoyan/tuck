@@ -1,8 +1,10 @@
 // This script is used to copy canvaskit.wasm from node_modules to public folder
 
 import { copyFileSync, mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 
+const require = createRequire(import.meta.url);
 const publicFolder = join(process.cwd(), "public");
 mkdirSync(publicFolder, { recursive: true });
 
