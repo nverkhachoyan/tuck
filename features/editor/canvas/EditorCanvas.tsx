@@ -2,14 +2,14 @@ import { Canvas, Group } from "@shopify/react-native-skia";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
-import { ImageLayerNode } from "../layers/image/ImageLayerNode";
-import { TextLayerNode } from "../layers/text/TextLayerNode";
+import { ImageLayerNode } from "@/features/editor/layers/image/ImageLayerNode";
+import { TextLayerNode } from "@/features/editor/layers/text/TextLayerNode";
 import {
 	measureTextLayer,
 	selectionPadding,
-} from "../layers/text/textLayerMetrics";
-import type { EditorDocument } from "../model/document";
-import { hitTestBox, type Transform } from "../model/geometry";
+} from "@/features/editor/layers/text/textLayerMetrics";
+import type { EditorDocument } from "@/features/editor/model/document";
+import { hitTestBox, type Transform } from "@/features/editor/model/geometry";
 import {
 	syncLiveTransform,
 	useLayerTransformGesture,

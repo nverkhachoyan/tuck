@@ -1,5 +1,5 @@
 import { Pressable, type PressableProps, StyleSheet, Text } from "react-native";
-import { colors } from "../../theme";
+import { colors } from "@/theme";
 
 type ButtonVariant = "primary" | "secondary";
 type ButtonSize = "large" | "medium";

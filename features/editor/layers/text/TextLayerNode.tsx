@@ -4,9 +4,9 @@ import {
 	Text as SkiaText,
 } from "@shopify/react-native-skia";
 import { useDerivedValue } from "react-native-reanimated";
-import { colors } from "../../../../theme";
-import type { LiveTransform } from "../../canvas/gestures/useLayerTransformGesture";
-import type { TextLayer } from "../../model/document";
+import type { LiveTransform } from "@/features/editor/canvas/gestures/useLayerTransformGesture";
+import type { TextLayer } from "@/features/editor/model/document";
+import { colors } from "@/theme";
 import { measureTextLayer, selectionPadding } from "./textLayerMetrics";
 
 const SELECTION_STROKE_PX = 1.5;

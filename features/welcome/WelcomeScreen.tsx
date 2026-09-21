@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
-import { Button } from "../../components/ui/Button";
-import { colors } from "../../theme";
+import { Button } from "@/components/ui/Button";
+import { colors } from "@/theme";
 
 export function WelcomeScreen({ onPickImage }: { onPickImage: () => void }) {
 	return (

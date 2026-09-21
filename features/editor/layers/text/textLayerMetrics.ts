@@ -1,5 +1,5 @@
 import { matchFont, type SkFont } from "@shopify/react-native-skia";
-import type { TextLayer } from "../../model/document";
+import type { TextLayer } from "@/features/editor/model/document";
 
 export type TextLayerMetrics = {
 	font: SkFont;

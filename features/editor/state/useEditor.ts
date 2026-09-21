@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useReducer } from "react";
 import { Alert } from "react-native";
-import { createTextLayer, type TextLayer } from "../model/document";
-import { pickPhotoDocument } from "../photo/pickPhoto";
+import {
+	createTextLayer,
+	type TextLayer,
+} from "@/features/editor/model/document";
+import { pickPhotoDocument } from "@/features/editor/photo/pickPhoto";
 import { editorReducer, initialEditorState } from "./editorReducer";
 
 /**

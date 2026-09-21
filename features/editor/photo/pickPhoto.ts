@@ -2,7 +2,7 @@ import * as ImagePicker from "expo-image-picker";
 import {
 	createDocumentFromImage,
 	type EditorDocument,
-} from "../model/document";
+} from "@/features/editor/model/document";
 import { normalizePickedImage } from "./normalizePickedImage";
 
 export type PickPhotoResult =

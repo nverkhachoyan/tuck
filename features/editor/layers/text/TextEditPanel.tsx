@@ -1,6 +1,9 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { BOTTOM_PANEL_HEIGHT, colors } from "../../../../theme";
-import type { FontSizeRange, TextLayer } from "../../model/document";
+import type {
+	FontSizeRange,
+	TextLayer,
+} from "@/features/editor/model/document";
+import { BOTTOM_PANEL_HEIGHT, colors } from "@/theme";
 
 const SWATCHES = [
 	"#FFFFFF",
