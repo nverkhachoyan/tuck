@@ -51,8 +51,10 @@ describe("createTextLayer", () => {
 		const layer = createTextLayer(document, "hello", "left");
 		assert.equal(layer.transform.x, 2000);
 		assert.equal(layer.transform.y, 1500);
+		assert.equal(layer.font, "classic");
 		assert.equal(layer.color, defaultTextStyle.color);
 		assert.equal(layer.outlineColor, defaultTextStyle.outlineColor);
+		assert.equal(layer.backgroundColor, null);
 		assert.equal(layer.align, "left");
 		assert.equal(layer.maxWidth, 3600);
 		assert.equal(layer.hidden, false);

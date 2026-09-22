@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { TextLayer } from "@/model/document";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { TEXT_FONTS } from "@/layers/fonts";
+import type { TextFont, TextLayer, TextLayerEdit } from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 
@@ -13,12 +14,26 @@ const SWATCHES = [
 	"#0A84FF",
 ];
 
-type ColorTarget = "fill" | "outline";
+const FONT_LABELS: Record<TextFont, string> = {
+	classic: "Classic",
+	modern: "Modern",
+	serif: "Serif",
+	marker: "Marker",
+	typewriter: "Typewriter",
+};
+
+type Tab = "font" | "color" | "outline" | "background";
+
+const TABS: { tab: Tab; label: string }[] = [
+	{ tab: "font", label: "Font" },
+	{ tab: "color", label: "Color" },
+	{ tab: "outline", label: "Outline" },
+	{ tab: "background", label: "Background" },
+];
 
 type TextEditPanelProps = {
 	layer: TextLayer;
-	onChangeColor: (color: string) => void;
-	onChangeOutlineColor: (color: string | null) => void;
+	onChange: (patch: TextLayerEdit) => void;
 	onDuplicate: () => void;
 	onDelete: () => void;
 };
@@ -26,35 +41,36 @@ type TextEditPanelProps = {
 /**
  * Styling for the selected text layer. The text itself is edited full-screen
  * (tap the selected layer) and resized on the canvas (pinch or the corner
- * handles), so this is only color and outline. There's no Done button:
- * tapping anywhere on the canvas off the text deselects it.
+ * handles), so this is font and colors. There's no Done button: tapping
+ * anywhere on the canvas off the text deselects it.
  */
 export function TextEditPanel({
 	layer,
-	onChangeColor,
-	onChangeOutlineColor,
+	onChange,
 	onDuplicate,
 	onDelete,
 }: TextEditPanelProps) {
-	const [target, setTarget] = useState<ColorTarget>("fill");
-	const current = target === "fill" ? layer.color : layer.outlineColor;
-	const pick = target === "fill" ? onChangeColor : onChangeOutlineColor;
+	const [tab, setTab] = useState<Tab>("font");
 
 	return (
 		<View style={styles.container}>
 			<View style={styles.row}>
-				<View style={styles.tabs}>
-					<Tab
-						label="Color"
-						active={target === "fill"}
-						onPress={() => setTarget("fill")}
-					/>
-					<Tab
-						label="Outline"
-						active={target === "outline"}
-						onPress={() => setTarget("outline")}
-					/>
-				</View>
+				{/* Scrolls when a narrow screen can't fit every tab. */}
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					style={styles.tabsScroll}
+					contentContainerStyle={styles.tabs}
+				>
+					{TABS.map(({ tab: value, label }) => (
+						<Tab
+							key={value}
+							label={label}
+							active={tab === value}
+							onPress={() => setTab(value)}
+						/>
+					))}
+				</ScrollView>
 				<View style={styles.actions}>
 					<IconButton
 						icon="copy-outline"
@@ -70,26 +86,52 @@ export function TextEditPanel({
 				</View>
 			</View>
 
-			<View style={styles.swatches}>
-				{/* Text always has a fill; only the outline can be turned off. */}
-				{target === "outline" && (
-					<Swatch
-						color={null}
-						selected={current === null}
-						onPress={() => onChangeOutlineColor(null)}
-					/>
-				)}
-				{SWATCHES.map((swatch) => (
-					<Swatch
-						key={swatch}
-						color={swatch}
-						selected={current === swatch}
-						onPress={() => pick(swatch)}
-					/>
-				))}
+			<View style={styles.content}>
+				<TabContent tab={tab} layer={layer} onChange={onChange} />
 			</View>
 		</View>
 	);
+}
+
+function TabContent({
+	tab,
+	layer,
+	onChange,
+}: {
+	tab: Tab;
+	layer: TextLayer;
+	onChange: (patch: TextLayerEdit) => void;
+}) {
+	switch (tab) {
+		case "font":
+			return (
+				<FontPicker value={layer.font} onPick={(font) => onChange({ font })} />
+			);
+		// Text always has a fill; only the outline and background can be off.
+		case "color":
+			return (
+				<Swatches
+					value={layer.color}
+					onPick={(color) => color && onChange({ color })}
+				/>
+			);
+		case "outline":
+			return (
+				<Swatches
+					value={layer.outlineColor}
+					noneLabel="No outline"
+					onPick={(outlineColor) => onChange({ outlineColor })}
+				/>
+			);
+		case "background":
+			return (
+				<Swatches
+					value={layer.backgroundColor}
+					noneLabel="No background"
+					onPick={(backgroundColor) => onChange({ backgroundColor })}
+				/>
+			);
+	}
 }
 
 function Tab({
@@ -115,13 +157,90 @@ function Tab({
 	);
 }
 
+/** Each font's name, drawn in that font. */
+function FontPicker({
+	value,
+	onPick,
+}: {
+	value: TextFont;
+	onPick: (font: TextFont) => void;
+}) {
+	return (
+		<ScrollView
+			horizontal
+			showsHorizontalScrollIndicator={false}
+			style={styles.bleed}
+			contentContainerStyle={styles.fonts}
+		>
+			{(Object.keys(FONT_LABELS) as TextFont[]).map((font) => {
+				const selected = font === value;
+				return (
+					<Pressable
+						key={font}
+						hitSlop={4}
+						onPress={() => onPick(font)}
+						accessibilityRole="button"
+						accessibilityLabel={FONT_LABELS[font]}
+						accessibilityState={{ selected }}
+						style={[styles.fontChip, selected && styles.fontChipSelected]}
+					>
+						<Text
+							style={[
+								styles.fontLabel,
+								{ fontFamily: TEXT_FONTS[font].family },
+							]}
+						>
+							{FONT_LABELS[font]}
+						</Text>
+					</Pressable>
+				);
+			})}
+		</ScrollView>
+	);
+}
+
+/** The color swatches, led by a "none" swatch when `noneLabel` is given. */
+function Swatches({
+	value,
+	noneLabel,
+	onPick,
+}: {
+	value: string | null;
+	noneLabel?: string;
+	onPick: (color: string | null) => void;
+}) {
+	return (
+		<View style={styles.swatches}>
+			{noneLabel && (
+				<Swatch
+					color={null}
+					label={noneLabel}
+					selected={value === null}
+					onPress={() => onPick(null)}
+				/>
+			)}
+			{SWATCHES.map((swatch) => (
+				<Swatch
+					key={swatch}
+					color={swatch}
+					label={swatch}
+					selected={value === swatch}
+					onPress={() => onPick(swatch)}
+				/>
+			))}
+		</View>
+	);
+}
+
 /** A color choice; `null` is the "none" swatch, drawn with a slash. */
 function Swatch({
 	color,
+	label,
 	selected,
 	onPress,
 }: {
 	color: string | null;
+	label: string;
 	selected: boolean;
 	onPress: () => void;
 }) {
@@ -131,7 +250,7 @@ function Swatch({
 			hitSlop={4}
 			onPress={onPress}
 			accessibilityRole="button"
-			accessibilityLabel={color ?? "No outline"}
+			accessibilityLabel={label}
 			accessibilityState={{ selected }}
 			style={[
 				styles.swatch,
@@ -154,15 +273,16 @@ const styles = StyleSheet.create({
 	row: {
 		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "space-between",
 		gap: 12,
 	},
+	tabsScroll: {
+		flex: 1,
+	},
 	tabs: {
-		flexDirection: "row",
-		gap: 20,
+		gap: 16,
 	},
 	tabLabel: {
-		fontSize: 15,
+		fontSize: 14,
 		fontWeight: "600",
 		color: colors.textSecondary,
 	},
@@ -172,6 +292,36 @@ const styles = StyleSheet.create({
 	actions: {
 		flexDirection: "row",
 		gap: 24,
+	},
+	// One height for every tab, so switching tabs never shifts the row above.
+	content: {
+		height: 34,
+		justifyContent: "center",
+	},
+	// Scrolls edge to edge, past the panel's padding.
+	bleed: {
+		marginHorizontal: -20,
+	},
+	fonts: {
+		gap: 8,
+		paddingHorizontal: 20,
+	},
+	fontChip: {
+		height: 34,
+		paddingHorizontal: 14,
+		borderRadius: 17,
+		borderWidth: 1,
+		borderColor: colors.border,
+		backgroundColor: colors.surface,
+		justifyContent: "center",
+	},
+	fontChipSelected: {
+		borderWidth: 2,
+		borderColor: colors.accent,
+	},
+	fontLabel: {
+		fontSize: 16,
+		color: colors.textPrimary,
 	},
 	swatches: {
 		flexDirection: "row",

@@ -9,8 +9,8 @@ import {
 	type TextStyle,
 	View,
 } from "react-native";
-import { TEXT_FONT_FAMILY } from "@/layers/fonts";
-import type { TextAlign } from "@/model/document";
+import { TEXT_FONTS } from "@/layers/fonts";
+import type { TextAlign, TextFont } from "@/model/document";
 import { colors } from "@/theme";
 import { TextButton } from "@/ui/TextButton";
 
@@ -23,6 +23,7 @@ const NEXT_ALIGN: Record<TextAlign, TextAlign> = {
 type TextEditorProps = {
 	initialText: string;
 	initialAlign: TextAlign;
+	font: TextFont;
 	color: string;
 	outlineColor: string | null;
 	// Called with the final text, which may be empty.
@@ -38,6 +39,7 @@ type TextEditorProps = {
 export function TextEditor({
 	initialText,
 	initialAlign,
+	font,
 	color,
 	outlineColor,
 	onDone,
@@ -98,7 +100,11 @@ export function TextEditor({
 						multiline
 						placeholder="Type something"
 						placeholderTextColor={colors.textSecondary}
-						style={[styles.input, { color, textAlign: align }, outlineStyle]}
+						style={[
+							styles.input,
+							{ fontFamily: TEXT_FONTS[font].family, color, textAlign: align },
+							outlineStyle,
+						]}
 					/>
 				</Pressable>
 			</KeyboardAvoidingView>
@@ -141,11 +147,10 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		paddingHorizontal: 24,
 	},
+	// The layer's own font (set inline), so the text doesn't change face when
+	// editing ends. No fontWeight: Android drops a custom font asked for in a
+	// weight it wasn't registered with.
 	input: {
-		// The canvas's font, so the text doesn't change face when editing ends.
-		// No fontWeight: Android drops a custom font asked for in a weight it
-		// wasn't registered with.
-		fontFamily: TEXT_FONT_FAMILY,
 		fontSize: 34,
 		// Browsers ring a focused input; here the caret already shows focus.
 		// React Native's types lack "none", which only web understands.

@@ -1,4 +1,4 @@
-import { Paragraph } from "@shopify/react-native-skia";
+import { Paragraph, Path } from "@shopify/react-native-skia";
 import type { TextLayer } from "@/model/document";
 import { layoutTextLayer } from "./textLayerLayout";
 
@@ -8,9 +8,12 @@ import { layoutTextLayer } from "./textLayerLayout";
  * above that, so this never deals with screen coordinates.
  */
 export function TextLayerView({ layer }: { layer: TextLayer }) {
-	const { outline, fill, width, height } = layoutTextLayer(layer);
+	const { background, outline, fill, width, height } = layoutTextLayer(layer);
 	return (
 		<>
+			{background && layer.backgroundColor && (
+				<Path path={background} color={layer.backgroundColor} />
+			)}
 			{outline && (
 				<Paragraph
 					paragraph={outline}

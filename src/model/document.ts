@@ -17,15 +17,21 @@ export type ImageLayer = LayerBase & {
 
 export type TextAlign = "left" | "center" | "right";
 
+// Named for how they look; `layers/fonts.ts` maps each to its bundled font.
+export type TextFont = "classic" | "modern" | "serif" | "marker" | "typewriter";
+
 // transform.x/y is the center of the text block in document space. Lines wrap
 // at `maxWidth` (in the layer's own, unscaled space), and `\n` breaks a line.
 export type TextLayer = LayerBase & {
 	type: "text";
 	text: string;
+	font: TextFont;
 	fontSize: number;
 	color: string;
 	// null draws the text without an outline.
 	outlineColor: string | null;
+	// A filled box behind each line; null draws none.
+	backgroundColor: string | null;
 	align: TextAlign;
 	maxWidth: number;
 };
@@ -35,7 +41,10 @@ export type TextLayer = LayerBase & {
  * at creation (`fontSize`); resizing it afterwards goes through its transform.
  */
 export type TextLayerEdit = Partial<
-	Pick<TextLayer, "text" | "align" | "color" | "outlineColor">
+	Pick<
+		TextLayer,
+		"text" | "align" | "font" | "color" | "outlineColor" | "backgroundColor"
+	>
 >;
 
 // BlurLayer | DrawingLayer join this union in later stages.
@@ -95,12 +104,17 @@ export function initialFontSize(document: EditorDocument): number {
 	return Math.round(Math.min(document.width, document.height) * 0.08);
 }
 
-/** Classic meme text: white fill, black outline, centered. */
+/** Classic meme text: white fill, black outline, no box, centered. */
 export const defaultTextStyle = {
+	font: "classic",
 	color: "#FFFFFF",
 	outlineColor: "#000000",
+	backgroundColor: null,
 	align: "center",
-} as const satisfies Pick<TextLayer, "color" | "outlineColor" | "align">;
+} as const satisfies Pick<
+	TextLayer,
+	"font" | "color" | "outlineColor" | "backgroundColor" | "align"
+>;
 
 export function createTextLayer(
 	document: EditorDocument,

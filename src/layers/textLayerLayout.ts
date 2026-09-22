@@ -3,21 +3,30 @@ import {
 	Skia,
 	type SkPaint,
 	type SkParagraph,
+	type SkPath,
 	TextAlign as SkTextAlign,
 	StrokeJoin,
 } from "@shopify/react-native-skia";
 import type { TextAlign, TextLayer } from "@/model/document";
 import type { Box } from "@/model/geometry";
-import { getFontProvider, TEXT_FONT_FAMILY } from "./fonts";
+import { getFontProvider, TEXT_FONTS } from "./fonts";
 
 export type TextLayerLayout = {
-	// Drawn first, so the outline sits behind the fill; null when disabled.
+	// Drawn first, behind the text: a box around each line; null when disabled.
+	background: SkPath | null;
+	// Drawn next, so the outline sits behind the fill; null when disabled.
 	outline: SkParagraph | null;
 	fill: SkParagraph;
 	// The laid-out text block in the layer's local space, centered on the origin.
 	width: number;
 	height: number;
 };
+
+// In font sizes: how far a background box reaches past each line's text,
+// how round its corners are, and the gap from what's drawn to the selection.
+const BOX_PADDING = { x: 0.3, y: 0.08 };
+const BOX_RADIUS = 0.2;
+const SELECTION_GAP = 0.2;
 
 const skTextAlign: Record<TextAlign, SkTextAlign> = {
 	left: SkTextAlign.Left,
@@ -52,17 +61,52 @@ export function layoutTextLayer(layer: TextLayer): TextLayerLayout {
 	const width = Math.min(Math.ceil(fill.getLongestLine()), layer.maxWidth);
 	fill.layout(width);
 	outline?.layout(width);
+	const height = fill.getHeight();
+	const background =
+		layer.backgroundColor === null
+			? null
+			: lineBoxes(layer, fill, width, height);
 
-	const layout = { outline, fill, width, height: fill.getHeight() };
+	const layout = { background, outline, fill, width, height };
 	layouts.set(layer, layout);
 	return layout;
 }
 
-/** A text layer's laid-out text plus padding; see `layerBounds`. */
+/** A text layer's laid-out text, and box if any, plus padding; see `layerBounds`. */
 export function textLayerBounds(layer: TextLayer, minPadding = 0): Box {
 	const { width, height } = layoutTextLayer(layer);
-	const pad = Math.max(layer.fontSize * 0.2, minPadding);
-	return { halfWidth: width / 2 + pad, halfHeight: height / 2 + pad };
+	const box = layer.backgroundColor === null ? { x: 0, y: 0 } : BOX_PADDING;
+	const padX = Math.max((box.x + SELECTION_GAP) * layer.fontSize, minPadding);
+	const padY = Math.max((box.y + SELECTION_GAP) * layer.fontSize, minPadding);
+	return { halfWidth: width / 2 + padX, halfHeight: height / 2 + padY };
+}
+
+/**
+ * One rounded box per line, hugging that line's text, as a single path so
+ * the overlap between neighboring lines' boxes fills once. Blank lines get
+ * no box. Centered on the origin, like the text.
+ */
+function lineBoxes(
+	layer: TextLayer,
+	paragraph: SkParagraph,
+	width: number,
+	height: number,
+): SkPath {
+	const padX = BOX_PADDING.x * layer.fontSize;
+	const padY = BOX_PADDING.y * layer.fontSize;
+	const radius = BOX_RADIUS * layer.fontSize;
+	const builder = Skia.PathBuilder.Make();
+	for (const line of paragraph.getLineMetrics()) {
+		if (line.width < 1) continue;
+		const rect = Skia.XYWHRect(
+			line.left - padX - width / 2,
+			line.baseline - line.ascent - padY - height / 2,
+			line.width + padX * 2,
+			line.ascent + line.descent + padY * 2,
+		);
+		builder.addRRect(Skia.RRectXY(rect, radius, radius));
+	}
+	return builder.build();
 }
 
 function outlinePaint(layer: TextLayer, color: string): SkPaint {
@@ -84,9 +128,9 @@ function buildParagraph(layer: TextLayer, foreground?: SkPaint): SkParagraph {
 			.pushStyle(
 				{
 					color: Skia.Color(layer.color),
-					// Anton has a single, already-heavy weight; asking for bold
-					// would only get a synthesized, smeared version of it.
-					fontFamilies: [TEXT_FONT_FAMILY],
+					// Each font is registered in the one weight it's drawn in;
+					// asking for bold would only get a synthesized, smeared copy.
+					fontFamilies: [TEXT_FONTS[layer.font].family],
 					fontSize: layer.fontSize,
 				},
 				foreground,

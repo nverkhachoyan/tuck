@@ -193,10 +193,7 @@ export default function EditorRoute() {
 				) : selectedTextLayer ? (
 					<TextEditPanel
 						layer={selectedTextLayer}
-						onChangeColor={(color) => updateSelectedText({ color })}
-						onChangeOutlineColor={(outlineColor) =>
-							updateSelectedText({ outlineColor })
-						}
+						onChange={updateSelectedText}
 						onDuplicate={duplicateSelectedLayer}
 						onDelete={() => deleteLayer(selectedTextLayer.id)}
 					/>
@@ -215,6 +212,7 @@ export default function EditorRoute() {
 				<TextEditor
 					initialText=""
 					initialAlign={defaultTextStyle.align}
+					font={defaultTextStyle.font}
 					color={defaultTextStyle.color}
 					outlineColor={defaultTextStyle.outlineColor}
 					onDone={handleEditDone}
@@ -224,6 +222,7 @@ export default function EditorRoute() {
 				<TextEditor
 					initialText={selectedTextLayer.text}
 					initialAlign={selectedTextLayer.align}
+					font={selectedTextLayer.font}
 					color={selectedTextLayer.color}
 					outlineColor={selectedTextLayer.outlineColor}
 					onDone={handleEditDone}

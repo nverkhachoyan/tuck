@@ -119,6 +119,18 @@ describe("editorSlice", () => {
 		assert.equal(last.text, "BOTTOM");
 	});
 
+	test("font and background box are edited like the other styles", () => {
+		const { store, text } = storeWithText();
+		store.getState().updateSelectedText({ font: "marker" });
+		store.getState().updateSelectedText({ backgroundColor: "#000000" });
+		assert.equal(textLayers(store)[0].font, "marker");
+		assert.equal(textLayers(store)[0].backgroundColor, "#000000");
+
+		store.getState().undo();
+		store.getState().undo();
+		assert.deepEqual(textLayers(store), [text]);
+	});
+
 	test("transforms apply by id, not to whatever is selected now", () => {
 		const { store, text } = storeWithText();
 		store.getState().selectLayer(null);
