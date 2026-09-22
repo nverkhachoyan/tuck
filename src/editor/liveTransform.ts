@@ -11,7 +11,8 @@ const MAX_LAYER_SCALE = 8;
  * value when the gesture ends. While `activeId` matches a layer, that layer's
  * node renders from these values instead of its document transform.
  * `halfWidth`/`halfHeight` are its selection box, so the UI thread can find
- * and draw its handles without laying out text.
+ * and draw its handles without laying out text. `centeredX`/`centeredY` say
+ * whether a drag has snapped its center onto the document's center lines.
  */
 export type LiveTransform = {
 	activeId: SharedValue<string | null>;
@@ -21,6 +22,8 @@ export type LiveTransform = {
 	rotation: SharedValue<number>;
 	halfWidth: SharedValue<number>;
 	halfHeight: SharedValue<number>;
+	centeredX: SharedValue<boolean>;
+	centeredY: SharedValue<boolean>;
 };
 
 export function useLiveTransform(): LiveTransform {
@@ -31,9 +34,31 @@ export function useLiveTransform(): LiveTransform {
 	const rotation = useSharedValue(0);
 	const halfWidth = useSharedValue(0);
 	const halfHeight = useSharedValue(0);
+	const centeredX = useSharedValue(false);
+	const centeredY = useSharedValue(false);
 	return useMemo(
-		() => ({ activeId, x, y, scale, rotation, halfWidth, halfHeight }),
-		[activeId, x, y, scale, rotation, halfWidth, halfHeight],
+		() => ({
+			activeId,
+			x,
+			y,
+			scale,
+			rotation,
+			halfWidth,
+			halfHeight,
+			centeredX,
+			centeredY,
+		}),
+		[
+			activeId,
+			x,
+			y,
+			scale,
+			rotation,
+			halfWidth,
+			halfHeight,
+			centeredX,
+			centeredY,
+		],
 	);
 }
 

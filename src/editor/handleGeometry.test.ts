@@ -7,7 +7,6 @@ import {
 	handlePositions,
 	rotateByDrag,
 	scaleByDrag,
-	snapAngle,
 } from "./handleGeometry.ts";
 
 const near = (actual: number, expected: number) =>
@@ -100,14 +99,5 @@ describe("rotateByDrag", () => {
 			rotateByDrag(center, { x: 0, y: -10 }, { x: 10, y: 0 }, 0.1),
 			0.1 + Math.PI / 2,
 		);
-	});
-});
-
-describe("snapAngle", () => {
-	const quarter = Math.PI / 2;
-
-	test("snaps near a multiple of the step and leaves others alone", () => {
-		assert.equal(snapAngle(quarter + 0.01, quarter, 0.05), quarter);
-		assert.equal(snapAngle(0.3, quarter, 0.05), 0.3);
 	});
 });

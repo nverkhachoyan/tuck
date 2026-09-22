@@ -53,6 +53,7 @@ export function EditorScene({
 						return assertNever(layer);
 				}
 			})}
+			<CenterGuides document={document} viewScale={viewScale} live={live} />
 			{selectedLayerId !== null && selectedLayerId !== hiddenLayerId && (
 				<SelectionHandles live={live} viewScale={viewScale} />
 			)}
@@ -105,6 +106,40 @@ function LiveTextLayer({
 			layer={layer}
 			transform={transform}
 			selectionStroke={selected ? selectionStroke : undefined}
+		/>
+	);
+}
+
+/** The document's center lines that the dragged layer has snapped onto. */
+function CenterGuides({
+	document,
+	viewScale,
+	live,
+}: {
+	document: EditorDocument;
+	viewScale: number;
+	live: LiveTransform;
+}) {
+	const { width, height } = document;
+	const path = useDerivedValue(() => {
+		const builder = Skia.PathBuilder.Make();
+		if (live.centeredX.value) {
+			builder.moveTo(width / 2, 0);
+			builder.lineTo(width / 2, height);
+		}
+		if (live.centeredY.value) {
+			builder.moveTo(0, height / 2);
+			builder.lineTo(width, height / 2);
+		}
+		return builder.build();
+	}, [width, height]);
+
+	return (
+		<Path
+			path={path}
+			color={colors.accent}
+			style="stroke"
+			strokeWidth={SELECTION_STROKE_PX / viewScale}
 		/>
 	);
 }

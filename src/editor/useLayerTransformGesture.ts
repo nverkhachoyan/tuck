@@ -1,25 +1,34 @@
+import * as Haptics from "expo-haptics";
 import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
-import { useSharedValue } from "react-native-reanimated";
+import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import type { Transform } from "@/model/geometry";
-import {
-	type Handle,
-	rotateByDrag,
-	scaleByDrag,
-	snapAngle,
-} from "./handleGeometry";
+import type { Size, Transform } from "@/model/geometry";
+import { type Handle, rotateByDrag, scaleByDrag } from "./handleGeometry";
 import {
 	clampScale,
 	type LiveTransform,
 	readLiveBox,
 	readLiveTransform,
 } from "./liveTransform";
+import {
+	continueTravel,
+	type PointerTravel,
+	startTravel,
+} from "./pointerTravel";
 import { handleUnder, hasFinePointer } from "./selectionHandles";
+import { snapAngle, snapTo } from "./snapping";
 import { type DocumentViewport, viewPointToDocument } from "./viewport";
 
-// Rotating by the knob settles on upright and quarter turns when this close.
+// Rotation settles on upright and quarter turns when this close.
 const ROTATION_SNAP = (4 * Math.PI) / 180;
+// A dragged layer's center snaps to the document's center lines from this
+// many screen pixels away.
+const CENTER_SNAP_PX = 8;
+
+const tick = () => {
+	void Haptics.selectionAsync();
+};
 
 /**
  * Tap selects, and while a layer is selected pan / pinch / rotate transform
@@ -35,6 +44,9 @@ const ROTATION_SNAP = (4 * Math.PI) / 180;
  * twitch in the meantime, and then applies the whole drag so far, keeping
  * the point the finger grabbed under the finger.
  *
+ * Moving snaps the layer's center onto the document's center lines, and
+ * rotating settles on quarter turns, with a haptic tick as each snap lands.
+ *
  * However many gestures take part, the result is committed once, when the
  * last of them ends, and only if the layer actually moved. With a mouse,
  * hovering reports the pointer (`onHover`) so the canvas can show cursors.
@@ -42,6 +54,7 @@ const ROTATION_SNAP = (4 * Math.PI) / 180;
 export function useLayerTransformGesture({
 	live,
 	viewport,
+	documentSize,
 	onTap,
 	onDragStart,
 	onCommit,
@@ -50,6 +63,7 @@ export function useLayerTransformGesture({
 }: {
 	live: LiveTransform;
 	viewport: DocumentViewport;
+	documentSize: Size;
 	onTap: (screenX: number, screenY: number) => void;
 	onDragStart: (screenX: number, screenY: number) => boolean;
 	onCommit: (id: string, transform: Transform) => void;
@@ -62,12 +76,14 @@ export function useLayerTransformGesture({
 	const startY = useSharedValue(0);
 	const startScale = useSharedValue(1);
 	const startRotation = useSharedValue(0);
-	// Where the finger went down, and how far it had moved before the pan's
-	// translation started counting (the activation distance).
+	// Where the pan began, and how far its pointers have moved since. Not the
+	// pan's own translation: on iOS that skips the activation distance, and
+	// it's measured from the fingers' midpoint, which jumps as a finger lands.
 	const downX = useSharedValue(0);
 	const downY = useSharedValue(0);
-	const slackX = useSharedValue(0);
-	const slackY = useSharedValue(0);
+	const travel = useSharedValue<PointerTravel>(
+		startTravel({ x: 0, y: 0, numberOfPointers: 0 }),
+	);
 	// The layer this drag is moving, and whether it's settled on one yet.
 	const dragId = useSharedValue<string | null>(null);
 	const dragReady = useSharedValue(false);
@@ -89,6 +105,42 @@ export function useLayerTransformGesture({
 		const toDocument = (screenX: number, screenY: number) => {
 			"worklet";
 			return viewPointToDocument(viewport, { x: screenX, y: screenY });
+		};
+
+		// Ticks when a value lands on its snap, not on every frame it stays there.
+		const settle = (
+			value: SharedValue<number>,
+			raw: number,
+			snapped: number | null,
+		) => {
+			"worklet";
+			if (snapped !== null && snapped !== value.value) scheduleOnRN(tick);
+			value.value = snapped ?? raw;
+			return snapped !== null;
+		};
+
+		const moveTo = (x: number, y: number) => {
+			"worklet";
+			const tolerance = CENTER_SNAP_PX / viewport.scale;
+			live.centeredX.value = settle(
+				live.x,
+				x,
+				snapTo(x, documentSize.width / 2, tolerance),
+			);
+			live.centeredY.value = settle(
+				live.y,
+				y,
+				snapTo(y, documentSize.height / 2, tolerance),
+			);
+		};
+
+		const rotateTo = (angle: number) => {
+			"worklet";
+			settle(
+				live.rotation,
+				angle,
+				snapAngle(angle, Math.PI / 2, ROTATION_SNAP),
+			);
 		};
 
 		const gestureStarted = () => {
@@ -117,6 +169,7 @@ export function useLayerTransformGesture({
 			.onBegin((event) => {
 				downX.value = event.x;
 				downY.value = event.y;
+				travel.value = startTravel(event);
 				dragHandle.value =
 					live.activeId.value === null
 						? null
@@ -128,6 +181,7 @@ export function useLayerTransformGesture({
 							);
 			})
 			.onStart((event) => {
+				travel.value = continueTravel(travel.value, event);
 				gestureStarted();
 				startX.value = live.x.value;
 				startY.value = live.y.value;
@@ -139,13 +193,12 @@ export function useLayerTransformGesture({
 					dragReady.value = true;
 					return;
 				}
-				// Zero if translation already counts from touch-down.
-				slackX.value = event.x - event.translationX - downX.value;
-				slackY.value = event.y - event.translationY - downY.value;
 				dragReady.value = false;
 				scheduleOnRN(handleDragStart, downX.value, downY.value);
 			})
 			.onUpdate((event) => {
+				travel.value = continueTravel(travel.value, event);
+				const { dx, dy } = travel.value;
 				const id = live.activeId.value;
 				if (id === null) return;
 
@@ -153,13 +206,9 @@ export function useLayerTransformGesture({
 				if (handle !== null) {
 					const center = { x: startX.value, y: startY.value };
 					const from = toDocument(downX.value, downY.value);
-					const to = toDocument(event.x, event.y);
+					const to = toDocument(downX.value + dx, downY.value + dy);
 					if (handle === "rotate") {
-						live.rotation.value = snapAngle(
-							rotateByDrag(center, from, to, handleStartRotation.value),
-							Math.PI / 2,
-							ROTATION_SNAP,
-						);
+						rotateTo(rotateByDrag(center, from, to, handleStartRotation.value));
 					} else {
 						live.scale.value = clampScale(
 							scaleByDrag(center, from, to, handleStartScale.value),
@@ -177,15 +226,17 @@ export function useLayerTransformGesture({
 					dragReady.value = true;
 				}
 				if (!dragReady.value) return;
-				live.x.value =
-					startX.value + (event.translationX + slackX.value) / viewport.scale;
-				live.y.value =
-					startY.value + (event.translationY + slackY.value) / viewport.scale;
+				moveTo(
+					startX.value + dx / viewport.scale,
+					startY.value + dy / viewport.scale,
+				);
 				moved.value = true;
 			})
 			.onEnd(gestureEnded)
 			.onFinalize(() => {
 				dragHandle.value = null;
+				live.centeredX.value = false;
+				live.centeredY.value = false;
 			});
 
 		// Pinch and rotate stand aside while a handle is being dragged, so a
@@ -209,7 +260,7 @@ export function useLayerTransformGesture({
 			})
 			.onUpdate((event) => {
 				if (live.activeId.value === null || dragHandle.value !== null) return;
-				live.rotation.value = startRotation.value + event.rotation;
+				rotateTo(startRotation.value + event.rotation);
 				moved.value = true;
 			})
 			.onEnd(gestureEnded);
@@ -234,6 +285,7 @@ export function useLayerTransformGesture({
 	}, [
 		live,
 		viewport,
+		documentSize,
 		onTap,
 		onDragStart,
 		onCommit,
@@ -241,8 +293,7 @@ export function useLayerTransformGesture({
 		onHoverEnd,
 		downX,
 		downY,
-		slackX,
-		slackY,
+		travel,
 		dragId,
 		dragReady,
 		dragHandle,

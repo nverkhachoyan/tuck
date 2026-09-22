@@ -74,14 +74,15 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 			setSize({ width, height });
 		};
 
-		// Stable between renders: the gesture captures it, and rebuilds when it changes.
+		// Stable between renders: the gesture captures these, and rebuilds when
+		// they change.
+		const documentSize = useMemo(
+			() => ({ width: document.width, height: document.height }),
+			[document.width, document.height],
+		);
 		const viewport = useMemo(
-			() =>
-				fitDocumentToView(
-					{ width: document.width, height: document.height },
-					size,
-				),
-			[document.width, document.height, size],
+			() => fitDocumentToView(documentSize, size),
+			[documentSize, size],
 		);
 		const { scale, offsetX, offsetY } = viewport;
 
@@ -184,6 +185,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 		const gesture = useLayerTransformGesture({
 			live,
 			viewport,
+			documentSize,
 			onTap: handleTap,
 			onDragStart: handleDragStart,
 			onCommit: handleCommit,

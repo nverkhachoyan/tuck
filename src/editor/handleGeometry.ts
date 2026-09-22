@@ -105,17 +105,3 @@ export function rotateByDrag(
 	const angle = Math.atan2(to.y - center.y, to.x - center.x);
 	return startRotation + angle - startAngle;
 }
-
-/**
- * Pulls an angle onto the nearest multiple of `step` when it's within
- * `tolerance` of it (all in radians), so upright is easy to hit exactly.
- */
-export function snapAngle(
-	angle: number,
-	step: number,
-	tolerance: number,
-): number {
-	"worklet";
-	const snapped = Math.round(angle / step) * step;
-	return Math.abs(angle - snapped) <= tolerance ? snapped : angle;
-}
