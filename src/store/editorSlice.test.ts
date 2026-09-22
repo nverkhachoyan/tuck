@@ -176,11 +176,20 @@ describe("editorSlice", () => {
 		assert.equal(store.getState().selectedLayerId, selectedLayerId);
 	});
 
-	test("the photo can't be moved, hidden, or deleted", () => {
+	test("nudging moves a layer by a document-space offset", () => {
+		const { store, text } = storeWithText();
+		store.getState().nudgeLayer(text.id, 5, -3);
+		const { x, y } = textLayers(store)[0].transform;
+		assert.equal(x, text.transform.x + 5);
+		assert.equal(y, text.transform.y - 3);
+	});
+
+	test("the photo can't be moved, nudged, hidden, or deleted", () => {
 		const { store } = storeWithText();
 		const before = store.getState();
 		const photoId = before.document?.layers[0].id ?? "";
 		before.moveLayer(photoId, 1);
+		before.nudgeLayer(photoId, 1, 0);
 		before.setLayerHidden(photoId, true);
 		before.deleteLayer(photoId);
 		assert.equal(store.getState(), before);
@@ -193,6 +202,7 @@ describe("editorSlice", () => {
 		before.updateSelectedText({ text: "y" });
 		before.duplicateSelectedLayer();
 		before.moveLayer("x", 1);
+		before.nudgeLayer("x", 1, 0);
 		before.setLayerHidden("x", true);
 		before.deleteLayer("x");
 		before.undo();
@@ -250,6 +260,42 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().document, before);
 		});
 
+		test("a run of nudges to one layer is a single undo step", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			const { past } = store.getState();
+			for (let i = 0; i < 5; i++) store.getState().nudgeLayer(text.id, 1, 0);
+			assert.equal(store.getState().past.length, past.length + 1);
+			assert.equal(textLayers(store)[0].transform.x, text.transform.x + 5);
+
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
+		});
+
+		test("any other change ends a run of nudges", () => {
+			const { store, text } = storeWithText();
+			store.getState().addTextLayer("OTHER", "center");
+			const other = textLayers(store)[1];
+			const { past } = store.getState();
+
+			store.getState().nudgeLayer(text.id, 1, 0);
+			store.getState().nudgeLayer(other.id, 1, 0);
+			store.getState().updateSelectedText({ color: "#FF3B30" });
+			store.getState().nudgeLayer(other.id, 1, 0);
+			store.getState().undo();
+			store.getState().nudgeLayer(other.id, 1, 0);
+			assert.equal(store.getState().past.length, past.length + 4);
+		});
+
+		test("a nudge that joins a run still clears the redo stack", () => {
+			const { store, text } = storeWithText();
+			store.getState().nudgeLayer(text.id, 1, 0);
+			store.getState().updateSelectedText({ color: "#FF3B30" });
+			store.getState().undo();
+			store.getState().nudgeLayer(text.id, 1, 0);
+			assert.deepEqual(store.getState().future, []);
+		});
+
 		test("undo restores the exact earlier document", () => {
 			const { store, text } = storeWithText();
 			const before = store.getState().document;
@@ -285,6 +331,7 @@ describe("editorSlice", () => {
 				.getState()
 				.updateSelectedText({ text: text.text, align: text.align });
 			store.getState().moveLayer(text.id, 1);
+			store.getState().nudgeLayer(text.id, 0, 0);
 			store.getState().setLayerHidden(text.id, false);
 			store.getState().deleteLayer("missing");
 			assert.equal(store.getState().past, past);

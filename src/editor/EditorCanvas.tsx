@@ -35,10 +35,14 @@ type EditorCanvasProps = {
 	// A tap on the layer that's already selected (the editor opens its text).
 	onTapSelectedLayer?: () => void;
 	onCommitTransform?: (id: string, transform: Transform) => void;
+	// Moves a layer by a document-space offset (see `nudgeSelection`).
+	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
 };
 
 export type EditorCanvasHandle = {
 	flushPendingTransform: () => void;
+	// Moves the selected layer by an on-screen distance, in pixels.
+	nudgeSelection: (dx: number, dy: number) => void;
 };
 
 /**
@@ -61,6 +65,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 			onSelectLayer,
 			onTapSelectedLayer,
 			onCommitTransform,
+			onNudgeLayer,
 		},
 		ref,
 	) {
@@ -197,9 +202,19 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 			live,
 			onCommit: handleCommit,
 		});
-		useImperativeHandle(ref, () => ({ flushPendingTransform }), [
-			flushPendingTransform,
-		]);
+		const nudgeSelection = useCallback(
+			(dx: number, dy: number) => {
+				flushPendingTransform();
+				if (!selectedLayer || scale === 0) return;
+				onNudgeLayer?.(selectedLayer.id, dx / scale, dy / scale);
+			},
+			[flushPendingTransform, selectedLayer, scale, onNudgeLayer],
+		);
+		useImperativeHandle(
+			ref,
+			() => ({ flushPendingTransform, nudgeSelection }),
+			[flushPendingTransform, nudgeSelection],
+		);
 
 		return (
 			<GestureDetector gesture={gesture}>

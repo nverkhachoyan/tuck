@@ -29,6 +29,7 @@ export type EditorSlice = {
 	duplicateSelectedLayer: () => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
+	nudgeLayer: (id: string, dx: number, dy: number) => void;
 	moveLayer: (id: string, toIndex: number) => void;
 	setLayerHidden: (id: string, hidden: boolean) => void;
 	deleteLayer: (id: string) => void;
@@ -80,6 +81,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	// Never the pinned photo at index 0.
 	const findUnpinnedLayer = (id: string) =>
 		get().document?.layers.find((layer, index) => index > 0 && layer.id === id);
+
+	// The document the last nudge produced. While it's still the current one,
+	// nothing else has changed since, so the next nudge joins its undo step.
+	let lastNudge: { document: EditorDocument; id: string } | null = null;
 
 	return {
 		document: null,
@@ -135,6 +140,33 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 					layer.id === id ? { ...layer, transform } : layer,
 				),
 			);
+		},
+
+		// Moves a layer by a document-space offset. A run of nudges to the same
+		// layer, like holding an arrow key, is a single undo step.
+		nudgeLayer: (id, dx, dy) => {
+			const target = findUnpinnedLayer(id);
+			const { document } = get();
+			if (!target || !document || (dx === 0 && dy === 0)) return;
+			const { x, y } = target.transform;
+			const moved = {
+				...target,
+				transform: { ...target.transform, x: x + dx, y: y + dy },
+			};
+			const layers = document.layers.map((layer) =>
+				layer === target ? moved : layer,
+			);
+			if (lastNudge?.document === document && lastNudge.id === id) {
+				set(
+					{ document: { ...document, layers }, future: [] },
+					false,
+					"editor/nudgeLayer",
+				);
+			} else {
+				setLayers("editor/nudgeLayer", () => layers);
+			}
+			const nudged = get().document;
+			lastNudge = nudged && { document: nudged, id };
 		},
 
 		moveLayer: (id, toIndex) => {

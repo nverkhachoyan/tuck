@@ -3,10 +3,12 @@ import { useCallback, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { EditorCanvas, type EditorCanvasHandle } from "@/editor/EditorCanvas";
 import { LayersPanel } from "@/editor/LayersPanel";
+import type { Shortcut } from "@/editor/shortcuts";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
 import { useDiscardGuard } from "@/editor/useDiscardGuard";
-import { useUndoShortcuts } from "@/editor/useUndoShortcuts";
+import { useEditorShortcuts } from "@/editor/useEditorShortcuts";
+import { assertNever } from "@/lib/assertNever";
 import { defaultTextStyle, type TextAlign } from "@/model/document";
 import { useStore } from "@/store";
 import {
@@ -32,6 +34,7 @@ export default function EditorRoute() {
 	);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const transformLayer = useStore((state) => state.transformLayer);
+	const nudgeLayer = useStore((state) => state.nudgeLayer);
 	const moveLayer = useStore((state) => state.moveLayer);
 	const setLayerHidden = useStore((state) => state.setLayerHidden);
 	const deleteLayer = useStore((state) => state.deleteLayer);
@@ -58,10 +61,57 @@ export default function EditorRoute() {
 		redo();
 	}, [redo]);
 
-	useUndoShortcuts({
+	const handleShortcut = useCallback(
+		(shortcut: Shortcut) => {
+			if (shortcut.type === "undo") {
+				handleUndo();
+				return true;
+			}
+			if (shortcut.type === "redo") {
+				handleRedo();
+				return true;
+			}
+			if (!document || !selectedLayer) return false;
+			canvasRef.current?.flushPendingTransform();
+			switch (shortcut.type) {
+				case "delete":
+					deleteLayer(selectedLayer.id);
+					return true;
+				case "deselect":
+					selectLayer(null);
+					return true;
+				case "duplicate":
+					duplicateSelectedLayer();
+					return true;
+				case "reorder": {
+					const index = document.layers.findIndex(
+						(layer) => layer.id === selectedLayer.id,
+					);
+					moveLayer(selectedLayer.id, index + shortcut.step);
+					return true;
+				}
+				case "nudge":
+					canvasRef.current?.nudgeSelection(shortcut.dx, shortcut.dy);
+					return true;
+				default:
+					return assertNever(shortcut);
+			}
+		},
+		[
+			handleUndo,
+			handleRedo,
+			document,
+			selectedLayer,
+			deleteLayer,
+			selectLayer,
+			duplicateSelectedLayer,
+			moveLayer,
+		],
+	);
+
+	useEditorShortcuts({
 		enabled: editing === null,
-		onUndo: handleUndo,
-		onRedo: handleRedo,
+		onShortcut: handleShortcut,
 	});
 
 	// The stack guard unmounts this route once the document closes.
@@ -126,6 +176,7 @@ export default function EditorRoute() {
 						selectedTextLayer ? () => setEditing("selected") : undefined
 					}
 					onCommitTransform={transformLayer}
+					onNudgeLayer={nudgeLayer}
 				/>
 			</View>
 
