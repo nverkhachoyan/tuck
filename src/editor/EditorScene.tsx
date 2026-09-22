@@ -1,8 +1,14 @@
-import { Group, Path, Rect, Skia, useImage } from "@shopify/react-native-skia";
+import {
+	Fill,
+	Group,
+	Path,
+	rect,
+	Skia,
+	useImage,
+} from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import { useDerivedValue } from "react-native-reanimated";
 import { ImageLayerView } from "@/layers/ImageLayerView";
-import { layerBounds } from "@/layers/layerBounds";
 import { toTransformList } from "@/layers/layerTransform";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
@@ -25,7 +31,8 @@ type EditorSceneProps = {
 /**
  * The editor's counterpart to `ExportScene`: draws every layer in document
  * space, but loads images asynchronously, lets the selected layer follow
- * the live gesture values, and draws its handles above everything.
+ * the live gesture values, fades whatever export will crop, and draws the
+ * selection above everything.
  */
 export function EditorScene({
 	document,
@@ -38,17 +45,14 @@ export function EditorScene({
 		<Group>
 			{document.layers.map((layer) =>
 				layer.hidden || layer.id === hiddenLayerId ? null : (
-					<LiveLayer
-						key={layer.id}
-						layer={layer}
-						viewScale={viewScale}
-						live={live}
-						selected={layer.id === selectedLayerId}
-					>
+					<LiveLayer key={layer.id} layer={layer} live={live}>
 						<LayerContent layer={layer} />
 					</LiveLayer>
 				),
 			)}
+			<Group clip={rect(0, 0, document.width, document.height)} invertClip>
+				<Fill color={colors.background} opacity={0.7} />
+			</Group>
 			<CenterGuides document={document} viewScale={viewScale} live={live} />
 			{selectedLayerId !== null && selectedLayerId !== hiddenLayerId && (
 				<SelectionHandles live={live} viewScale={viewScale} />
@@ -77,20 +81,15 @@ function AsyncImage({ layer }: { layer: ImageLayer }) {
 
 /**
  * Positions a layer's content with its transform, except while a gesture is
- * moving it: then the gesture-driven values win over the document. Draws the
- * selection outline over the selected layer.
+ * moving it: then the gesture-driven values win over the document.
  */
 function LiveLayer({
 	layer,
-	viewScale,
 	live,
-	selected,
 	children,
 }: {
 	layer: Layer;
-	viewScale: number;
 	live: LiveTransform;
-	selected: boolean;
 	children: ReactNode;
 }) {
 	const transform = useDerivedValue(() => {
@@ -105,32 +104,7 @@ function LiveLayer({
 		});
 	}, [layer.id, layer.transform]);
 
-	// Keep the selection outline a constant on-screen thickness at any scale.
-	const selectionStroke = useDerivedValue(() => {
-		const scale =
-			live.activeId.value === layer.id
-				? live.scale.value
-				: layer.transform.scaleX;
-		return SELECTION_STROKE_PX / (viewScale * scale);
-	}, [layer.id, layer.transform, viewScale]);
-
-	const box = selected ? layerBounds(layer) : null;
-	return (
-		<Group transform={transform}>
-			{children}
-			{box && (
-				<Rect
-					x={-box.halfWidth}
-					y={-box.halfHeight}
-					width={box.halfWidth * 2}
-					height={box.halfHeight * 2}
-					color={colors.accent}
-					style="stroke"
-					strokeWidth={selectionStroke}
-				/>
-			)}
-		</Group>
-	);
+	return <Group transform={transform}>{children}</Group>;
 }
 
 /** The document's center lines that the dragged layer has snapped onto. */
@@ -168,10 +142,10 @@ function CenterGuides({
 }
 
 /**
- * The selected layer's corner (scale) and knob (rotate) handles, drawn from
- * the live values so they follow gestures. The group translates and rotates
- * with the layer but doesn't scale: the scale moves the corners instead, so
- * handles stay the same size on screen.
+ * The selected layer's outline and its corner (scale) and knob (rotate)
+ * handles, drawn from the live values so they follow gestures. The group
+ * translates and rotates with the layer but doesn't scale: the scale moves
+ * the corners instead, so handles stay the same size on screen.
  */
 function SelectionHandles({
 	live,
@@ -190,20 +164,22 @@ function SelectionHandles({
 		}),
 	);
 
-	// The corner squares and knob as one path, and the stem up to the knob.
+	// The outline and the stem up to the knob as one path, and the corner
+	// squares and knob as another.
 	const shapes = useDerivedValue(() => {
+		const lines = Skia.PathBuilder.Make();
 		const handles = Skia.PathBuilder.Make();
-		const stem = Skia.PathBuilder.Make();
 		const box = {
 			halfWidth: live.halfWidth.value,
 			halfHeight: live.halfHeight.value,
 		};
-		if (!handlesVisible(box, live.scale.value, viewScale)) {
-			return { handles: handles.build(), stem: stem.build() };
-		}
-
 		const w = box.halfWidth * live.scale.value;
 		const h = box.halfHeight * live.scale.value;
+		lines.addRect(Skia.XYWHRect(-w, -h, w * 2, h * 2));
+		if (!handlesVisible(box, live.scale.value, viewScale)) {
+			return { lines: lines.build(), handles: handles.build() };
+		}
+
 		const size = handleMetrics.size / viewScale;
 		const knobY = -h - handleMetrics.knobOffset / viewScale;
 		const knobRadius = size * 0.6;
@@ -216,18 +192,18 @@ function SelectionHandles({
 			handles.addRect(Skia.XYWHRect(x - size / 2, y - size / 2, size, size));
 		}
 		handles.addCircle(0, knobY, knobRadius);
-		stem.moveTo(0, -h);
-		stem.lineTo(0, knobY + knobRadius);
-		return { handles: handles.build(), stem: stem.build() };
+		lines.moveTo(0, -h);
+		lines.lineTo(0, knobY + knobRadius);
+		return { lines: lines.build(), handles: handles.build() };
 	}, [viewScale]);
+	const lines = useDerivedValue(() => shapes.value.lines);
 	const handles = useDerivedValue(() => shapes.value.handles);
-	const stem = useDerivedValue(() => shapes.value.stem);
 
 	const strokeWidth = SELECTION_STROKE_PX / viewScale;
 	return (
 		<Group transform={transform}>
 			<Path
-				path={stem}
+				path={lines}
 				color={colors.accent}
 				style="stroke"
 				strokeWidth={strokeWidth}

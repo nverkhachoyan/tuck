@@ -6,18 +6,24 @@ export type DocumentViewport = {
 	offsetY: number;
 };
 
-/** Describes how a document is centered and aspect-fitted inside a view. */
+/**
+ * Describes how a document is centered and aspect-fitted inside a view,
+ * at least `inset` from each edge.
+ */
 export function fitDocumentToView(
 	documentSize: Size,
 	viewSize: Size,
+	inset = 0,
 ): DocumentViewport {
-	if (viewSize.width <= 0 || viewSize.height <= 0) {
+	const width = viewSize.width - inset * 2;
+	const height = viewSize.height - inset * 2;
+	if (width <= 0 || height <= 0) {
 		return { scale: 0, offsetX: 0, offsetY: 0 };
 	}
 
 	const scale = Math.min(
-		viewSize.width / documentSize.width,
-		viewSize.height / documentSize.height,
+		width / documentSize.width,
+		height / documentSize.height,
 	);
 	return {
 		scale,

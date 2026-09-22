@@ -14,6 +14,17 @@ describe("fitDocumentToView", () => {
 		assert.equal(viewport.offsetY, 250);
 	});
 
+	test("keeps the inset clear around the photo", () => {
+		const viewport = fitDocumentToView(
+			{ width: 4000, height: 3000 },
+			{ width: 432, height: 800 },
+			16,
+		);
+		assert.equal(viewport.scale, 0.1);
+		assert.equal(viewport.offsetX, 16);
+		assert.equal(viewport.offsetY, 250);
+	});
+
 	test("reports scale 0 before the view has been measured", () => {
 		assert.equal(
 			fitDocumentToView({ width: 100, height: 100 }, { width: 0, height: 0 })

@@ -26,6 +26,10 @@ import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { useTrackpadPinch } from "./useTrackpadPinch";
 import { fitDocumentToView, viewPointToDocument } from "./viewport";
 
+// Inside the canvas rather than around it, so layers past the photo's edge
+// and their handles still have room to draw.
+const PHOTO_INSET = 16;
+
 type EditorCanvasProps = {
 	document: EditorDocument;
 	selectedLayer?: Layer;
@@ -86,7 +90,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 			[document.width, document.height],
 		);
 		const viewport = useMemo(
-			() => fitDocumentToView(documentSize, size),
+			() => fitDocumentToView(documentSize, size, PHOTO_INSET),
 			[documentSize, size],
 		);
 		const { scale, offsetX, offsetY } = viewport;

@@ -163,22 +163,20 @@ export default function EditorRoute() {
 				}
 			/>
 
-			<View style={styles.canvasArea}>
-				<EditorCanvas
-					ref={canvasRef}
-					document={document}
-					selectedLayer={selectedLayer}
-					hiddenLayerId={
-						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
-					}
-					onSelectLayer={selectLayer}
-					onTapSelectedLayer={
-						selectedTextLayer ? () => setEditing("selected") : undefined
-					}
-					onCommitTransform={transformLayer}
-					onNudgeLayer={nudgeLayer}
-				/>
-			</View>
+			<EditorCanvas
+				ref={canvasRef}
+				document={document}
+				selectedLayer={selectedLayer}
+				hiddenLayerId={
+					editing === "selected" ? (selectedTextLayer?.id ?? null) : null
+				}
+				onSelectLayer={selectLayer}
+				onTapSelectedLayer={
+					selectedTextLayer ? () => setEditing("selected") : undefined
+				}
+				onCommitTransform={transformLayer}
+				onNudgeLayer={nudgeLayer}
+			/>
 
 			<View style={[styles.bottomPanel, layersOpen && styles.layersPanel]}>
 				{layersOpen ? (
@@ -240,10 +238,6 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 24,
-	},
-	canvasArea: {
-		flex: 1,
-		padding: 16,
 	},
 	// Toolbar and text panel share one fixed height so the canvas above never
 	// resizes when the selection changes.
