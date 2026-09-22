@@ -133,14 +133,14 @@ function SelectionHandles({
 
 	// The corner squares and knob as one path, and the stem up to the knob.
 	const shapes = useDerivedValue(() => {
-		const handles = Skia.Path.Make();
-		const stem = Skia.Path.Make();
+		const handles = Skia.PathBuilder.Make();
+		const stem = Skia.PathBuilder.Make();
 		const box = {
 			halfWidth: live.halfWidth.value,
 			halfHeight: live.halfHeight.value,
 		};
 		if (!handlesVisible(box, live.scale.value, viewScale)) {
-			return { handles, stem };
+			return { handles: handles.build(), stem: stem.build() };
 		}
 
 		const w = box.halfWidth * live.scale.value;
@@ -159,7 +159,7 @@ function SelectionHandles({
 		handles.addCircle(0, knobY, knobRadius);
 		stem.moveTo(0, -h);
 		stem.lineTo(0, knobY + knobRadius);
-		return { handles, stem };
+		return { handles: handles.build(), stem: stem.build() };
 	}, [viewScale]);
 	const handles = useDerivedValue(() => shapes.value.handles);
 	const stem = useDerivedValue(() => shapes.value.stem);

@@ -45,6 +45,21 @@ export function TextEditor({
 	const [text, setText] = useState(initialText);
 	const [align, setAlign] = useState(initialAlign);
 	const done = () => onDone(text, align);
+	const outlineStyle =
+		outlineColor === null
+			? undefined
+			: Platform.select<TextStyle>({
+					// React Native Web deprecated the split textShadow* props in
+					// favor of the CSS shorthand; native still uses the split props.
+					web: {
+						textShadow: `0px 0px 4px ${outlineColor}`,
+					} as unknown as TextStyle,
+					default: {
+						textShadowColor: outlineColor,
+						textShadowOffset: { width: 0, height: 0 },
+						textShadowRadius: 4,
+					},
+				});
 
 	// Android's back button finishes editing rather than leaving the editor.
 	useEffect(() => {
@@ -83,14 +98,7 @@ export function TextEditor({
 						multiline
 						placeholder="Type something"
 						placeholderTextColor={colors.textSecondary}
-						style={[
-							styles.input,
-							{ color, textAlign: align },
-							outlineColor !== null && {
-								textShadowColor: outlineColor,
-								textShadowRadius: 4,
-							},
-						]}
+						style={[styles.input, { color, textAlign: align }, outlineStyle]}
 					/>
 				</Pressable>
 			</KeyboardAvoidingView>
@@ -144,9 +152,6 @@ const styles = StyleSheet.create({
 		...Platform.select({
 			web: { outlineStyle: "none" } as unknown as TextStyle,
 		}),
-		// React Native can't stroke text, so a tight shadow stands in for the
-		// outline while typing.
-		textShadowOffset: { width: 0, height: 0 },
 	},
 	alignIcon: {
 		width: 22,
