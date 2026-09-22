@@ -8,6 +8,12 @@ export type Size = {
 	height: number;
 };
 
+/** A box centered on its layer's origin, in the layer's local units. */
+export type Box = {
+	halfWidth: number;
+	halfHeight: number;
+};
+
 export type Transform = {
 	x: number;
 	y: number;
@@ -36,19 +42,17 @@ export function toLayerSpace(transform: Transform, point: Point): Point {
 	};
 }
 
-/**
- * Whether a document-space point lands inside a layer's local-space box
- * (centered on the origin, `halfWidth` × `halfHeight` in each direction).
- */
+/** Whether a document-space point lands inside a layer's local-space box. */
 export function hitTestBox(
 	transform: Transform,
-	halfWidth: number,
-	halfHeight: number,
+	box: Box,
 	point: Point,
 ): boolean {
 	"worklet";
 	const local = toLayerSpace(transform, point);
-	return Math.abs(local.x) <= halfWidth && Math.abs(local.y) <= halfHeight;
+	return (
+		Math.abs(local.x) <= box.halfWidth && Math.abs(local.y) <= box.halfHeight
+	);
 }
 
 /** The inverse of `toLayerSpace`: a layer-local point in document space. */
@@ -63,12 +67,6 @@ export function toDocumentSpace(transform: Transform, point: Point): Point {
 		y: transform.y + x * sin + y * cos,
 	};
 }
-
-/** A box centered on its layer's origin, in the layer's local units. */
-export type Box = {
-	halfWidth: number;
-	halfHeight: number;
-};
 
 export function transformsEqual(left: Transform, right: Transform): boolean {
 	return (

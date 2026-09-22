@@ -18,11 +18,11 @@ export function findLayerAt(
 	for (let i = document.layers.length - 1; i >= 0; i--) {
 		const layer = document.layers[i];
 		if (layer.type !== "text") continue;
-		const { halfWidth, halfHeight } = selectionBox(
+		const box = selectionBox(
 			layer,
 			HIT_PADDING_PX / (viewScale * layer.transform.scaleX),
 		);
-		if (hitTestBox(layer.transform, halfWidth, halfHeight, point)) {
+		if (hitTestBox(layer.transform, box, point)) {
 			return layer.id;
 		}
 	}

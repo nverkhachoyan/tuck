@@ -1,4 +1,4 @@
-import type { Transform } from "./geometry";
+import type { Transform } from "./geometry.ts";
 
 export type ImageLayer = {
 	type: "image";

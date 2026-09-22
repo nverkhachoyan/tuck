@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import type { Box, Point, Transform } from "@/model/geometry";
-import { type Handle, handleAt } from "@/model/handles";
+import { type Handle, handleAt } from "./handleGeometry";
 
 /**
  * How the selected layer's corner (scale) and knob (rotate) handles look and

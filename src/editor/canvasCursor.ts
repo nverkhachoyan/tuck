@@ -1,5 +1,5 @@
 import { Platform, type ViewStyle } from "react-native";
-import type { Handle } from "@/model/handles";
+import type { Handle } from "./handleGeometry";
 
 // With a mouse, the canvas cursor shows what a press at the pointer would do.
 

@@ -1,14 +1,14 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { Transform } from "./geometry.ts";
+import type { Transform } from "../model/geometry.ts";
 import {
 	handleAt,
 	handlePositions,
 	rotateByDrag,
 	scaleByDrag,
 	snapAngle,
-} from "./handles.ts";
+} from "./handleGeometry.ts";
 
 const near = (actual: number, expected: number) =>
 	assert.ok(

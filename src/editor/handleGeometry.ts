@@ -4,11 +4,11 @@ import {
 	type Point,
 	type Transform,
 	toDocumentSpace,
-} from "./geometry.ts";
+} from "../model/geometry.ts";
 
 // The selection's corner (scale) and knob (rotate) handles, and the drags
-// that grab them. Worklets, like `geometry.ts`, so gestures run them on the
-// UI thread.
+// that grab them. Worklets, like `model/geometry.ts`, so gestures run them on
+// the UI thread.
 
 export type Handle =
 	| "top-left"

@@ -1,7 +1,8 @@
 import { Group, Path, Skia, useImage } from "@shopify/react-native-skia";
 import { useDerivedValue } from "react-native-reanimated";
 import { ImageLayerView } from "@/layers/ImageLayerView";
-import { TextLayerView, toTransformList } from "@/layers/TextLayerView";
+import { toTransformList } from "@/layers/layerTransform";
+import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { EditorDocument, ImageLayer, TextLayer } from "@/model/document";
 import { colors } from "@/theme";

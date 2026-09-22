@@ -1,27 +1,9 @@
 import { Group, Paragraph, Rect as SkiaRect } from "@shopify/react-native-skia";
 import type { SharedValue } from "react-native-reanimated";
 import type { TextLayer } from "@/model/document";
-import type { Transform } from "@/model/geometry";
 import { colors } from "@/theme";
+import type { TransformList } from "./layerTransform";
 import { layoutTextLayer, selectionBox } from "./textLayerLayout";
-
-type Transforms = ReturnType<typeof toTransformList>;
-
-/**
- * Skia's transform list for a layer's document-space transform. Marked as a
- * worklet because `LiveTextLayer` (in EditorScene) calls it from a `useDerivedValue`, which
- * re-runs on the UI thread and can't call plain JS functions.
- */
-export function toTransformList(t: Transform) {
-	"worklet";
-	return [
-		{ translateX: t.x },
-		{ translateY: t.y },
-		{ rotate: t.rotation },
-		{ scaleX: t.scaleX },
-		{ scaleY: t.scaleY },
-	];
-}
 
 /**
  * Draws a text layer in document space, centered on its transform origin.
@@ -36,7 +18,7 @@ export function TextLayerView({
 	selectionStroke,
 }: {
 	layer: TextLayer;
-	transform: Transforms | SharedValue<Transforms>;
+	transform: TransformList | SharedValue<TransformList>;
 	selectionStroke?: number | SharedValue<number>;
 }) {
 	const { outline, fill, width, height } = layoutTextLayer(layer);

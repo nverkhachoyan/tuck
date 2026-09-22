@@ -33,17 +33,18 @@ describe("toLayerSpace", () => {
 
 describe("hitTestBox", () => {
 	const wide: Transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+	const box = { halfWidth: 50, halfHeight: 10 };
 
 	test("accepts points inside the box and rejects points outside", () => {
-		assert.ok(hitTestBox(wide, 50, 10, { x: 49, y: 9 }));
-		assert.ok(!hitTestBox(wide, 50, 10, { x: 51, y: 0 }));
+		assert.ok(hitTestBox(wide, box, { x: 49, y: 9 }));
+		assert.ok(!hitTestBox(wide, box, { x: 51, y: 0 }));
 	});
 
 	test("follows the layer's rotation", () => {
 		const upright = { ...wide, rotation: Math.PI / 2 };
 		// Rotated 90°, the 100×20 box now runs vertically.
-		assert.ok(hitTestBox(upright, 50, 10, { x: 0, y: 49 }));
-		assert.ok(!hitTestBox(upright, 50, 10, { x: 49, y: 0 }));
+		assert.ok(hitTestBox(upright, box, { x: 0, y: 49 }));
+		assert.ok(!hitTestBox(upright, box, { x: 49, y: 0 }));
 	});
 });
 

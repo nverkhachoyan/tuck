@@ -8,7 +8,7 @@ import {
 	rotateByDrag,
 	scaleByDrag,
 	snapAngle,
-} from "@/model/handles";
+} from "./handleGeometry";
 import {
 	clampScale,
 	type LiveTransform,
