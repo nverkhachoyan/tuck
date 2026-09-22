@@ -1,95 +1,25 @@
-import { type RefObject, useCallback, useEffect, useMemo, useRef } from "react";
-import { Platform, type View } from "react-native";
+import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
-import { type SharedValue, useSharedValue } from "react-native-reanimated";
+import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import {
-	type Box,
 	type Handle,
 	rotateByDrag,
 	scaleByDrag,
 	snapAngle,
 	type Transform,
 } from "@/model/geometry";
+import {
+	clampScale,
+	type LiveTransform,
+	readLiveBox,
+	readLiveTransform,
+} from "./liveTransform";
 import { handleUnder, hasFinePointer } from "./selectionHandles";
 import { type DocumentViewport, viewPointToDocument } from "./viewport";
 
-export const MIN_LAYER_SCALE = 0.2;
-export const MAX_LAYER_SCALE = 8;
-
 // Rotating by the knob settles on upright and quarter turns when this close.
 const ROTATION_SNAP = (4 * Math.PI) / 180;
-
-/**
- * High-frequency transform state for the selected layer. Gestures write here
- * every frame (no React rerenders); the document only receives the final
- * value when the gesture ends. While `activeId` matches a layer, that layer's
- * node renders from these values instead of its document transform.
- * `halfWidth`/`halfHeight` are its selection box, so the UI thread can find
- * and draw its handles without laying out text.
- */
-export type LiveTransform = {
-	activeId: SharedValue<string | null>;
-	x: SharedValue<number>;
-	y: SharedValue<number>;
-	scale: SharedValue<number>;
-	rotation: SharedValue<number>;
-	halfWidth: SharedValue<number>;
-	halfHeight: SharedValue<number>;
-};
-
-export function useLiveTransform(): LiveTransform {
-	const activeId = useSharedValue<string | null>(null);
-	const x = useSharedValue(0);
-	const y = useSharedValue(0);
-	const scale = useSharedValue(1);
-	const rotation = useSharedValue(0);
-	const halfWidth = useSharedValue(0);
-	const halfHeight = useSharedValue(0);
-	return useMemo(
-		() => ({ activeId, x, y, scale, rotation, halfWidth, halfHeight }),
-		[activeId, x, y, scale, rotation, halfWidth, halfHeight],
-	);
-}
-
-export function syncLiveTransform(
-	live: LiveTransform,
-	id: string | null,
-	transform: Transform | undefined,
-	box: Box | undefined,
-) {
-	if (id && transform && box) {
-		live.x.value = transform.x;
-		live.y.value = transform.y;
-		live.scale.value = transform.scaleX;
-		live.rotation.value = transform.rotation;
-		live.halfWidth.value = box.halfWidth;
-		live.halfHeight.value = box.halfHeight;
-	}
-	live.activeId.value = id;
-}
-
-/** The live values as a document transform (layers scale uniformly). */
-export function readLiveTransform(live: LiveTransform): Transform {
-	"worklet";
-	return {
-		x: live.x.value,
-		y: live.y.value,
-		scaleX: live.scale.value,
-		scaleY: live.scale.value,
-		rotation: live.rotation.value,
-	};
-}
-
-function readLiveBox(live: LiveTransform): Box {
-	"worklet";
-	return { halfWidth: live.halfWidth.value, halfHeight: live.halfHeight.value };
-}
-
-function clampScale(scale: number) {
-	"worklet";
-	return Math.min(MAX_LAYER_SCALE, Math.max(MIN_LAYER_SCALE, scale));
-}
 
 /**
  * Tap selects, and while a layer is selected pan / pinch / rotate transform
@@ -325,67 +255,4 @@ export function useLayerTransformGesture({
 		startScale,
 		startRotation,
 	]);
-}
-
-/**
- * Scales the selected layer with a trackpad pinch on web, which browsers
- * report as wheel events with `ctrlKey` set (so does Ctrl + mouse wheel).
- * A pinch has no end event, so the result commits once the wheel goes quiet.
- */
-export function useTrackpadPinch({
-	target,
-	live,
-	onCommit,
-}: {
-	target: RefObject<View | null>;
-	live: LiveTransform;
-	onCommit: (id: string, transform: Transform) => void;
-}) {
-	const commitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-		undefined,
-	);
-	const pendingCommit = useRef<{
-		id: string;
-		transform: Transform;
-	} | null>(null);
-
-	const flushPendingCommit = useCallback(() => {
-		clearTimeout(commitTimer.current);
-		commitTimer.current = undefined;
-		const pending = pendingCommit.current;
-		pendingCommit.current = null;
-		if (pending) onCommit(pending.id, pending.transform);
-	}, [onCommit]);
-
-	useEffect(() => {
-		// On web, a View's ref is its DOM element.
-		const element = target.current as unknown as HTMLElement | null;
-		if (Platform.OS !== "web" || !element) return;
-
-		const handleWheel = (event: WheelEvent) => {
-			if (!event.ctrlKey) return;
-			// Otherwise the browser zooms the whole page.
-			event.preventDefault();
-			const id = live.activeId.value;
-			if (id === null) return;
-			live.scale.value = clampScale(
-				live.scale.value * Math.exp(-event.deltaY * 0.01),
-			);
-			// Captured now: by the time the timer fires, a new selection may have
-			// replaced the live values.
-			pendingCommit.current = { id, transform: readLiveTransform(live) };
-			clearTimeout(commitTimer.current);
-			commitTimer.current = setTimeout(flushPendingCommit, 250);
-		};
-
-		element.addEventListener("wheel", handleWheel, { passive: false });
-		return () => {
-			element.removeEventListener("wheel", handleWheel);
-			clearTimeout(commitTimer.current);
-			commitTimer.current = undefined;
-			pendingCommit.current = null;
-		};
-	}, [target, live, flushPendingCommit]);
-
-	return flushPendingCommit;
 }

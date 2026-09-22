@@ -5,8 +5,8 @@ import { TextLayerView, toTransformList } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { EditorDocument, ImageLayer, TextLayer } from "@/model/document";
 import { colors } from "@/theme";
+import type { LiveTransform } from "./liveTransform";
 import { handleMetrics, handlesVisible } from "./selectionHandles";
-import type { LiveTransform } from "./useLayerTransformGesture";
 
 const SELECTION_STROKE_PX = 1.5;
 

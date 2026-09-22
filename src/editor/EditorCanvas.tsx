@@ -14,6 +14,7 @@ import type { EditorDocument, TextLayer } from "@/model/document";
 import type { Transform } from "@/model/geometry";
 import { EditorScene } from "./EditorScene";
 import { findLayerAt } from "./hitTest";
+import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -21,12 +22,8 @@ import {
 	handleUnder,
 	selectionBox,
 } from "./selectionHandles";
-import {
-	syncLiveTransform,
-	useLayerTransformGesture,
-	useLiveTransform,
-	useTrackpadPinch,
-} from "./useLayerTransformGesture";
+import { useLayerTransformGesture } from "./useLayerTransformGesture";
+import { useTrackpadPinch } from "./useTrackpadPinch";
 import { fitDocumentToView, viewPointToDocument } from "./viewport";
 
 type EditorCanvasProps = {
