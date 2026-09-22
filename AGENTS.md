@@ -37,4 +37,4 @@
 
 ## Code Checks
 
-- After code changes, run `npm run check` to verify formatting and linting, and `npm test` when touching `model/`, the reducer, or other pure modules. Use `npm run format` to apply formatting fixes, and run `npm run lint` when checking lint rules only.
+- After code changes, run `npm run check` to verify formatting and linting, `npm run typecheck` for TypeScript, and `npm test` when touching `model/`, store slices, or other pure modules. CI runs all three. Use `npm run format` to apply formatting fixes, and run `npm run lint` when checking lint rules only.

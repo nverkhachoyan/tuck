@@ -967,3 +967,9 @@ Save or share
 ```
 
 Do not expand scope until this workflow feels fast, predictable, and polished on both iOS and Android.
+
+## Status
+
+The Stage 1 workflow is implemented; what remains is confirming save and share on real iOS and Android devices.
+
+A few Stage 5 items were built early, alongside Stage 1: undo/redo, a small bundled font set, and a simple layers panel. They are part of the app now; this doesn't mean the rest of Stage 5 has started.

@@ -29,20 +29,21 @@ Run the repository's formatting and lint checks before committing:
 npm run check
 ```
 
-Unit tests for the plain-TypeScript modules (model, reducer, viewport) run on
-Node's built-in test runner, with no extra framework:
+Unit tests for the plain-TypeScript modules (model, store slices, editor
+geometry) run on Node's built-in test runner, with no extra framework:
 
 ```sh
 npm test
 ```
 
-TypeScript can be checked separately with:
+TypeScript is checked separately with:
 
 ```sh
-npx tsc --noEmit
+npm run typecheck
 ```
 
-Use `npm run format` to apply Biome formatting fixes.
+Use `npm run format` to apply Biome formatting fixes. CI runs all three checks
+on every push to `main` and on pull requests.
 
 ## Architecture
 
@@ -57,11 +58,11 @@ Key areas:
 - `src/app/` holds the routes only (expo-router treats every file here as a route).
 - `src/model/` defines the document, layers, and geometry as plain data: no React.
 - `src/layers/` draws each layer type in document space; shared by editor and export.
-- `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, and the full-screen `TextEditor`.
-- `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, and every edit that mutates them.
+- `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, the full-screen `TextEditor`, the layers panel, and keyboard shortcuts on web.
+- `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, undo history, and every edit that mutates them.
 - `src/import/` picks a photo and turns it into a document.
 - `src/export/` renders the document offscreen with `ExportScene`, then saves it to Photos or shares it.
-- `src/layers/fonts.ts` bundles the one text font (Anton) so text renders identically on iOS, Android, and web.
+- `src/layers/fonts.ts` bundles the text fonts so text renders identically on iOS, Android, and web.
 - `src/ui/` and `src/theme.ts` hold controls and colors shared across screens.
 - `src/lib/` holds platform shims and small language helpers.
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.

@@ -97,8 +97,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 
 		const selectedLayerId = selectedLayer?.id ?? null;
 
-		// Keep the gesture-driven values in step with whichever layer is selected,
-		// however it got selected (tap, add, delete).
+		// Keep the gesture-driven values in step with the selected layer: when the
+		// selection changes, and when that layer does (a commit, undo, restyle).
 		useLayoutEffect(() => {
 			syncLiveTransform(
 				live,
@@ -106,8 +106,6 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 				selectedLayer?.transform,
 				selectedLayer && layerBounds(selectedLayer),
 			);
-			// While a gesture runs, the live values are the source of truth. When the
-			// layer list changes, synchronize it with the latest document state.
 		}, [live, selectedLayer, selectedLayerId]);
 
 		// The selected layer's handle under a point reported by the view.
