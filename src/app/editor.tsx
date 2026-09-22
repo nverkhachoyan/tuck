@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { EditorCanvas, type EditorCanvasHandle } from "@/editor/EditorCanvas";
+import { LayersPanel } from "@/editor/LayersPanel";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
 import { useDiscardGuard } from "@/editor/useDiscardGuard";
@@ -22,6 +23,7 @@ import { ToolButton } from "@/ui/ToolButton";
 export default function EditorRoute() {
 	const router = useRouter();
 	const document = useStore((state) => state.document);
+	const selectedLayerId = useStore((state) => state.selectedLayerId);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const addTextLayer = useStore((state) => state.addTextLayer);
 	const duplicateSelectedText = useStore(
@@ -29,7 +31,9 @@ export default function EditorRoute() {
 	);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const transformLayer = useStore((state) => state.transformLayer);
-	const deleteSelectedLayer = useStore((state) => state.deleteSelectedLayer);
+	const moveLayer = useStore((state) => state.moveLayer);
+	const setLayerHidden = useStore((state) => state.setLayerHidden);
+	const deleteLayer = useStore((state) => state.deleteLayer);
 	const selectLayer = useStore((state) => state.selectLayer);
 	const undo = useStore((state) => state.undo);
 	const redo = useStore((state) => state.redo);
@@ -39,6 +43,7 @@ export default function EditorRoute() {
 	// What the full-screen text editor is open for: a layer that doesn't exist
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
+	const [layersOpen, setLayersOpen] = useState(false);
 
 	// The photo alone isn't an edit.
 	useDiscardGuard((document?.layers.length ?? 0) > 1);
@@ -68,8 +73,8 @@ export default function EditorRoute() {
 			if (text) addTextLayer(text, align);
 		} else if (text) {
 			updateSelectedText({ text, align });
-		} else {
-			deleteSelectedLayer();
+		} else if (selectedTextLayer) {
+			deleteLayer(selectedTextLayer.id);
 		}
 		setEditing(null);
 	};
@@ -80,6 +85,12 @@ export default function EditorRoute() {
 				onBack={() => router.back()}
 				action={
 					<View style={styles.headerActions}>
+						<IconButton
+							icon="layers-outline"
+							label="Layers"
+							selected={layersOpen}
+							onPress={() => setLayersOpen((open) => !open)}
+						/>
 						<IconButton
 							icon="arrow-undo-outline"
 							label="Undo"
@@ -115,8 +126,17 @@ export default function EditorRoute() {
 				/>
 			</View>
 
-			<View style={styles.bottomPanel}>
-				{selectedTextLayer ? (
+			<View style={[styles.bottomPanel, layersOpen && styles.layersPanel]}>
+				{layersOpen ? (
+					<LayersPanel
+						layers={document.layers}
+						selectedLayerId={selectedLayerId}
+						onSelect={selectLayer}
+						onMove={moveLayer}
+						onSetHidden={setLayerHidden}
+						onDelete={deleteLayer}
+					/>
+				) : selectedTextLayer ? (
 					<TextEditPanel
 						layer={selectedTextLayer}
 						onChangeColor={(color) => updateSelectedText({ color })}
@@ -124,7 +144,7 @@ export default function EditorRoute() {
 							updateSelectedText({ outlineColor })
 						}
 						onDuplicate={duplicateSelectedText}
-						onDelete={deleteSelectedLayer}
+						onDelete={() => deleteLayer(selectedTextLayer.id)}
 					/>
 				) : (
 					<View style={styles.toolbar}>
@@ -178,6 +198,12 @@ const styles = StyleSheet.create({
 		height: 120,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
+	},
+	// Pushes the canvas up rather than covering it, so the whole photo stays in
+	// view while layers are rearranged. A little over four rows tall, which
+	// hints that longer lists scroll.
+	layersPanel: {
+		height: 256,
 	},
 	// Tools sit centered as a group; more tools join the row later.
 	toolbar: {

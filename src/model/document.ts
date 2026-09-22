@@ -1,21 +1,25 @@
 import type { Transform } from "./geometry.ts";
 
-export type ImageLayer = {
-	type: "image";
+type LayerBase = {
 	id: string;
+	transform: Transform;
+	// Left out of the editor, hit testing, and export.
+	hidden: boolean;
+};
+
+export type ImageLayer = LayerBase & {
+	type: "image";
 	uri: string;
 	width: number;
 	height: number;
-	transform: Transform;
 };
 
 export type TextAlign = "left" | "center" | "right";
 
 // transform.x/y is the center of the text block in document space. Lines wrap
 // at `maxWidth` (in the layer's own, unscaled space), and `\n` breaks a line.
-export type TextLayer = {
+export type TextLayer = LayerBase & {
 	type: "text";
-	id: string;
 	text: string;
 	fontSize: number;
 	color: string;
@@ -23,7 +27,6 @@ export type TextLayer = {
 	outlineColor: string | null;
 	align: TextAlign;
 	maxWidth: number;
-	transform: Transform;
 };
 
 /**
@@ -40,6 +43,8 @@ export type Layer = ImageLayer | TextLayer;
 export type EditorDocument = {
 	width: number;
 	height: number;
+	// Bottom to top. The first is the photo the document was made from, pinned
+	// at the bottom: it can't be moved, hidden, or deleted.
 	layers: Layer[];
 };
 
@@ -74,6 +79,7 @@ export function createDocumentFromImage(
 				width,
 				height,
 				transform: identityTransform,
+				hidden: false,
 			},
 		],
 	};
@@ -114,6 +120,7 @@ export function createTextLayer(
 			x: document.width / 2,
 			y: document.height / 2,
 		},
+		hidden: false,
 	};
 }
 
@@ -132,4 +139,21 @@ export function duplicateTextLayer(layer: TextLayer): TextLayer {
 			y: layer.transform.y + offset,
 		},
 	};
+}
+
+/**
+ * `layers` with one layer moved to `toIndex`, clamped to stay above the
+ * pinned photo. Returns `layers` itself when nothing would change.
+ */
+export function reorderLayer(
+	layers: Layer[],
+	id: string,
+	toIndex: number,
+): Layer[] {
+	const from = layers.findIndex((layer) => layer.id === id);
+	const to = Math.min(Math.max(toIndex, 1), layers.length - 1);
+	if (from < 1 || from === to) return layers;
+	const next = layers.filter((layer) => layer.id !== id);
+	next.splice(to, 0, layers[from]);
+	return next;
 }

@@ -5,6 +5,7 @@ import {
 	duplicateTextLayer,
 	type EditorDocument,
 	type Layer,
+	reorderLayer,
 	type TextAlign,
 	type TextLayer,
 	type TextLayerEdit,
@@ -28,7 +29,9 @@ export type EditorSlice = {
 	duplicateSelectedText: () => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
-	deleteSelectedLayer: () => void;
+	moveLayer: (id: string, toIndex: number) => void;
+	setLayerHidden: (id: string, hidden: boolean) => void;
+	deleteLayer: (id: string) => void;
 	selectLayer: (id: string | null) => void;
 	undo: () => void;
 	redo: () => void;
@@ -69,6 +72,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 	const addOnTop = (action: string, layer: Layer) =>
 		setLayers(action, (layers) => [...layers, layer], layer.id);
+
+	// Never the pinned photo at index 0.
+	const findUnpinnedLayer = (id: string) =>
+		get().document?.layers.find((layer, index) => index > 0 && layer.id === id);
 
 	return {
 		document: null,
@@ -126,13 +133,36 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
-		deleteSelectedLayer: () => {
+		moveLayer: (id, toIndex) => {
+			const layers = get().document?.layers;
+			if (!layers) return;
+			const reordered = reorderLayer(layers, id, toIndex);
+			if (reordered === layers) return;
+			setLayers("editor/moveLayer", () => reordered);
+		},
+
+		// A hidden layer can't be selected, so hiding the selection clears it.
+		setLayerHidden: (id, hidden) => {
+			const target = findUnpinnedLayer(id);
+			if (!target || target.hidden === hidden) return;
 			const { selectedLayerId } = get();
-			if (!selectedLayerId) return;
 			setLayers(
-				"editor/deleteSelectedLayer",
-				(layers) => layers.filter((layer) => layer.id !== selectedLayerId),
-				null,
+				hidden ? "editor/hideLayer" : "editor/showLayer",
+				(layers) =>
+					layers.map((layer) =>
+						layer === target ? { ...target, hidden } : layer,
+					),
+				hidden && selectedLayerId === id ? null : selectedLayerId,
+			);
+		},
+
+		deleteLayer: (id) => {
+			if (!findUnpinnedLayer(id)) return;
+			const { selectedLayerId } = get();
+			setLayers(
+				"editor/deleteLayer",
+				(layers) => layers.filter((layer) => layer.id !== id),
+				selectedLayerId === id ? null : selectedLayerId,
 			);
 		},
 

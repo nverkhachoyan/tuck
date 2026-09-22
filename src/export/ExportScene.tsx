@@ -20,6 +20,7 @@ export function ExportScene({
 	return (
 		<Group>
 			{document.layers.map((layer) => {
+				if (layer.hidden) return null;
 				switch (layer.type) {
 					case "image": {
 						const image = images.get(layer.id);

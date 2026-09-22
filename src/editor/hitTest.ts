@@ -17,7 +17,7 @@ export function findLayerAt(
 ): string | null {
 	for (let i = document.layers.length - 1; i >= 0; i--) {
 		const layer = document.layers[i];
-		if (layer.type !== "text") continue;
+		if (layer.type !== "text" || layer.hidden) continue;
 		const box = selectionBox(
 			layer,
 			HIT_PADDING_PX / (viewScale * layer.transform.scaleX),

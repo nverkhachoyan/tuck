@@ -35,7 +35,7 @@ export function EditorScene({
 	return (
 		<Group>
 			{document.layers.map((layer) => {
-				if (layer.id === hiddenLayerId) return null;
+				if (layer.hidden || layer.id === hiddenLayerId) return null;
 				switch (layer.type) {
 					case "image":
 						return <AsyncImageLayer key={layer.id} layer={layer} />;

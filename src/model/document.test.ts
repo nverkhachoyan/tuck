@@ -6,7 +6,9 @@ import {
 	createTextLayer,
 	defaultTextStyle,
 	duplicateTextLayer,
+	type EditorDocument,
 	initialFontSize,
+	reorderLayer,
 } from "./document.ts";
 
 const landscape = () =>
@@ -19,6 +21,7 @@ describe("createDocumentFromImage", () => {
 		assert.equal(document.height, 3000);
 		assert.equal(document.layers.length, 1);
 		assert.equal(document.layers[0].type, "image");
+		assert.equal(document.layers[0].hidden, false);
 	});
 });
 
@@ -40,6 +43,7 @@ describe("createTextLayer", () => {
 		assert.equal(layer.outlineColor, defaultTextStyle.outlineColor);
 		assert.equal(layer.align, "left");
 		assert.equal(layer.maxWidth, 3600);
+		assert.equal(layer.hidden, false);
 	});
 
 	test("gives every layer a unique id", () => {
@@ -71,5 +75,69 @@ describe("duplicateTextLayer", () => {
 				transform: { ...original.transform, x: 100 + offset, y: 200 + offset },
 			},
 		);
+	});
+});
+
+describe("reorderLayer", () => {
+	// The photo plus text layers named a, b, c, bottom to top.
+	const stack = (): EditorDocument["layers"] => {
+		const document = landscape();
+		return [
+			...document.layers,
+			...["a", "b", "c"].map((id) => ({
+				...createTextLayer(document, id, "center"),
+				id,
+			})),
+		];
+	};
+	const ids = (layers: EditorDocument["layers"]) =>
+		layers.map((layer) => layer.id);
+
+	test("moves a layer up or down the stack", () => {
+		assert.deepEqual(ids(reorderLayer(stack(), "a", 3)), [
+			"background",
+			"b",
+			"c",
+			"a",
+		]);
+		assert.deepEqual(ids(reorderLayer(stack(), "c", 1)), [
+			"background",
+			"c",
+			"a",
+			"b",
+		]);
+	});
+
+	test("keeps the photo at the bottom", () => {
+		assert.deepEqual(ids(reorderLayer(stack(), "b", 0)), [
+			"background",
+			"b",
+			"a",
+			"c",
+		]);
+		const layers = stack();
+		assert.equal(reorderLayer(layers, "background", 2), layers);
+	});
+
+	test("clamps past the top", () => {
+		assert.deepEqual(ids(reorderLayer(stack(), "a", 99)), [
+			"background",
+			"b",
+			"c",
+			"a",
+		]);
+	});
+
+	test("returns the same array when nothing moves", () => {
+		const layers = stack();
+		assert.equal(reorderLayer(layers, "b", 2), layers);
+		assert.equal(reorderLayer(layers, "missing", 1), layers);
+	});
+
+	test("never mutates the input", () => {
+		const layers = stack();
+		const before = [...layers];
+		reorderLayer(layers, "a", 3);
+		assert.deepEqual(layers, before);
 	});
 });

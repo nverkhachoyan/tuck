@@ -8,26 +8,30 @@ type IconButtonTone = "default" | "danger";
 
 /**
  * A borderless icon-only button. `label` is required because it's the only
- * name a screen reader gets.
+ * name a screen reader gets. `selected` shows a toggle that's on.
  */
 export function IconButton({
 	icon,
 	label,
 	tone = "default",
 	disabled = false,
+	selected = false,
 	onPress,
 }: {
 	icon: IconName;
 	label: string;
 	tone?: IconButtonTone;
 	disabled?: boolean;
+	selected?: boolean;
 	onPress: () => void;
 }) {
 	const color = disabled
 		? colors.textSecondary
-		: tone === "danger"
-			? colors.danger
-			: colors.textPrimary;
+		: selected
+			? colors.accent
+			: tone === "danger"
+				? colors.danger
+				: colors.textPrimary;
 	return (
 		<Pressable
 			hitSlop={10}
@@ -35,7 +39,7 @@ export function IconButton({
 			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={label}
-			accessibilityState={{ disabled }}
+			accessibilityState={{ disabled, selected }}
 			style={({ pressed }) => pressed && styles.pressed}
 		>
 			<Ionicons name={icon} size={22} color={color} />

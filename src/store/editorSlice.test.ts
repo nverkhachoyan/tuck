@@ -98,13 +98,60 @@ describe("editorSlice", () => {
 		assert.equal(store.getState().selectedLayerId, null);
 	});
 
-	test("deleting removes the selected layer and clears selection", () => {
+	test("deleting the selected layer removes it and clears selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().deleteSelectedLayer();
+		store.getState().deleteLayer(text.id);
 		const { document, selectedLayerId } = store.getState();
 		assert.ok(!document?.layers.some((layer) => layer.id === text.id));
 		assert.equal(document?.layers.length, 1, "the photo stays");
 		assert.equal(selectedLayerId, null);
+	});
+
+	test("deleting another layer keeps the selection", () => {
+		const { store, text } = storeWithText();
+		store.getState().addTextLayer("BOTTOM", "center");
+		const { selectedLayerId } = store.getState();
+		store.getState().deleteLayer(text.id);
+		assert.equal(textLayers(store).length, 1);
+		assert.equal(store.getState().selectedLayerId, selectedLayerId);
+	});
+
+	test("moving a layer reorders the stack and keeps the selection", () => {
+		const { store, text } = storeWithText();
+		store.getState().addTextLayer("BOTTOM", "center");
+		const { selectedLayerId } = store.getState();
+		store.getState().moveLayer(text.id, 2);
+		assert.equal(textLayers(store).at(-1)?.id, text.id);
+		assert.equal(store.getState().selectedLayerId, selectedLayerId);
+	});
+
+	test("hiding the selected layer clears selection; showing doesn't select", () => {
+		const { store, text } = storeWithText();
+		store.getState().setLayerHidden(text.id, true);
+		assert.equal(textLayers(store)[0].hidden, true);
+		assert.equal(store.getState().selectedLayerId, null);
+
+		store.getState().setLayerHidden(text.id, false);
+		assert.equal(textLayers(store)[0].hidden, false);
+		assert.equal(store.getState().selectedLayerId, null);
+	});
+
+	test("hiding another layer keeps the selection", () => {
+		const { store, text } = storeWithText();
+		store.getState().addTextLayer("BOTTOM", "center");
+		const { selectedLayerId } = store.getState();
+		store.getState().setLayerHidden(text.id, true);
+		assert.equal(store.getState().selectedLayerId, selectedLayerId);
+	});
+
+	test("the photo can't be moved, hidden, or deleted", () => {
+		const { store } = storeWithText();
+		const before = store.getState();
+		const photoId = before.document?.layers[0].id ?? "";
+		before.moveLayer(photoId, 1);
+		before.setLayerHidden(photoId, true);
+		before.deleteLayer(photoId);
+		assert.equal(store.getState(), before);
 	});
 
 	test("edits without a document are ignored", () => {
@@ -113,7 +160,9 @@ describe("editorSlice", () => {
 		before.addTextLayer("x", "center");
 		before.updateSelectedText({ text: "y" });
 		before.duplicateSelectedText();
-		before.deleteSelectedLayer();
+		before.moveLayer("x", 1);
+		before.setLayerHidden("x", true);
+		before.deleteLayer("x");
 		before.undo();
 		before.redo();
 		assert.equal(store.getState(), before);
@@ -123,8 +172,12 @@ describe("editorSlice", () => {
 		const { store } = storeWithText();
 		const document = store.getState().document;
 		const snapshot = structuredClone(document);
+		const id = store.getState().selectedLayerId ?? "";
 		store.getState().updateSelectedText({ text: "changed" });
-		store.getState().deleteSelectedLayer();
+		store.getState().addTextLayer("more", "center");
+		store.getState().moveLayer(id, 2);
+		store.getState().setLayerHidden(id, true);
+		store.getState().deleteLayer(id);
 		assert.deepEqual(document, snapshot);
 	});
 
@@ -142,10 +195,27 @@ describe("editorSlice", () => {
 
 		test("undoing a delete brings the layer back selected", () => {
 			const { store, text } = storeWithText();
-			store.getState().deleteSelectedLayer();
+			store.getState().deleteLayer(text.id);
 			store.getState().undo();
 			assert.deepEqual(textLayers(store), [text]);
 			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("undoing a hide shows the layer selected again", () => {
+			const { store, text } = storeWithText();
+			store.getState().setLayerHidden(text.id, true);
+			store.getState().undo();
+			assert.deepEqual(textLayers(store), [text]);
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("undoing a move restores the order", () => {
+			const { store, text } = storeWithText();
+			store.getState().addTextLayer("BOTTOM", "center");
+			const before = store.getState().document;
+			store.getState().moveLayer(text.id, 2);
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
 		});
 
 		test("undo restores the exact earlier document", () => {
@@ -182,6 +252,9 @@ describe("editorSlice", () => {
 			store
 				.getState()
 				.updateSelectedText({ text: text.text, align: text.align });
+			store.getState().moveLayer(text.id, 1);
+			store.getState().setLayerHidden(text.id, false);
+			store.getState().deleteLayer("missing");
 			assert.equal(store.getState().past, past);
 		});
 
