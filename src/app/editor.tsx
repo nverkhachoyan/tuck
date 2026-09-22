@@ -12,6 +12,7 @@ import { useStore } from "@/store";
 import {
 	selectCanRedo,
 	selectCanUndo,
+	selectSelectedLayer,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
 import { colors } from "@/theme";
@@ -23,11 +24,11 @@ import { ToolButton } from "@/ui/ToolButton";
 export default function EditorRoute() {
 	const router = useRouter();
 	const document = useStore((state) => state.document);
-	const selectedLayerId = useStore((state) => state.selectedLayerId);
+	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const addTextLayer = useStore((state) => state.addTextLayer);
-	const duplicateSelectedText = useStore(
-		(state) => state.duplicateSelectedText,
+	const duplicateSelectedLayer = useStore(
+		(state) => state.duplicateSelectedLayer,
 	);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const transformLayer = useStore((state) => state.transformLayer);
@@ -116,12 +117,14 @@ export default function EditorRoute() {
 				<EditorCanvas
 					ref={canvasRef}
 					document={document}
-					selectedLayer={selectedTextLayer}
+					selectedLayer={selectedLayer}
 					hiddenLayerId={
 						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
 					}
 					onSelectLayer={selectLayer}
-					onTapSelectedLayer={() => setEditing("selected")}
+					onTapSelectedLayer={
+						selectedTextLayer ? () => setEditing("selected") : undefined
+					}
 					onCommitTransform={transformLayer}
 				/>
 			</View>
@@ -130,7 +133,7 @@ export default function EditorRoute() {
 				{layersOpen ? (
 					<LayersPanel
 						layers={document.layers}
-						selectedLayerId={selectedLayerId}
+						selectedLayerId={selectedLayer?.id ?? null}
 						onSelect={selectLayer}
 						onMove={moveLayer}
 						onSetHidden={setLayerHidden}
@@ -143,7 +146,7 @@ export default function EditorRoute() {
 						onChangeOutlineColor={(outlineColor) =>
 							updateSelectedText({ outlineColor })
 						}
-						onDuplicate={duplicateSelectedText}
+						onDuplicate={duplicateSelectedLayer}
 						onDelete={() => deleteLayer(selectedTextLayer.id)}
 					/>
 				) : (

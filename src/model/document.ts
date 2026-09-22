@@ -7,6 +7,7 @@ type LayerBase = {
 	hidden: boolean;
 };
 
+// transform.x/y is the image's center in document space.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
@@ -78,7 +79,7 @@ export function createDocumentFromImage(
 				uri,
 				width,
 				height,
-				transform: identityTransform,
+				transform: { ...identityTransform, x: width / 2, y: height / 2 },
 				hidden: false,
 			},
 		],
@@ -125,20 +126,30 @@ export function createTextLayer(
 }
 
 /**
- * A copy of a text layer with a new id, nudged down and right by half a
- * line so it's visibly separate from the original instead of hiding it.
+ * A copy of a layer with a new id, nudged down and right so it's visibly
+ * separate from the original instead of hiding it.
  */
-export function duplicateTextLayer(layer: TextLayer): TextLayer {
-	const offset = layer.fontSize * layer.transform.scaleX * 0.5;
+export function duplicateLayer<T extends Layer>(layer: T): T {
+	const offset = duplicateOffset(layer) * layer.transform.scaleX;
 	return {
 		...layer,
-		id: createLayerId("text"),
+		id: createLayerId(layer.type),
 		transform: {
 			...layer.transform,
 			x: layer.transform.x + offset,
 			y: layer.transform.y + offset,
 		},
 	};
+}
+
+// In the layer's own units: half a line of text, or a tenth of an image.
+function duplicateOffset(layer: Layer): number {
+	switch (layer.type) {
+		case "text":
+			return layer.fontSize * 0.5;
+		case "image":
+			return Math.min(layer.width, layer.height) * 0.1;
+	}
 }
 
 /**

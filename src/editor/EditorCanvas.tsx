@@ -10,8 +10,8 @@ import {
 } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
-import { selectionBox } from "@/layers/textLayerLayout";
-import type { EditorDocument, TextLayer } from "@/model/document";
+import { layerBounds } from "@/layers/layerBounds";
+import type { EditorDocument, Layer } from "@/model/document";
 import type { Transform } from "@/model/geometry";
 import {
 	type CanvasCursor,
@@ -28,7 +28,7 @@ import { fitDocumentToView, viewPointToDocument } from "./viewport";
 
 type EditorCanvasProps = {
 	document: EditorDocument;
-	selectedLayer?: TextLayer;
+	selectedLayer?: Layer;
 	// Not drawn, e.g. while its text is open in the full-screen editor.
 	hiddenLayerId?: string | null;
 	onSelectLayer?: (id: string | null) => void;
@@ -95,7 +95,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 				live,
 				selectedLayerId,
 				selectedLayer?.transform,
-				selectedLayer && selectionBox(selectedLayer),
+				selectedLayer && layerBounds(selectedLayer),
 			);
 			// While a gesture runs, the live values are the source of truth. When the
 			// layer list changes, synchronize it with the latest document state.
@@ -107,7 +107,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 				selectedLayer
 					? handleUnder(
 							selectedLayer.transform,
-							selectionBox(selectedLayer),
+							layerBounds(selectedLayer),
 							viewPointToDocument(viewport, { x: screenX, y: screenY }),
 							scale,
 						)
@@ -161,7 +161,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 			[layerAt, onSelectLayer, scale, selectedLayerId],
 		);
 
-		// What a press at the pointer would do: grab a handle, move text, or
+		// What a press at the pointer would do: grab a handle, move a layer, or
 		// nothing. Renders only when that changes, not on every pointer move.
 		const handleHover = useCallback(
 			(screenX: number, screenY: number) => {

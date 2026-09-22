@@ -3,7 +3,7 @@ import { ImageLayerView } from "@/layers/ImageLayerView";
 import { toTransformList } from "@/layers/layerTransform";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
-import type { EditorDocument } from "@/model/document";
+import type { EditorDocument, Layer } from "@/model/document";
 
 /**
  * The document's layers in document space, with no selection chrome or
@@ -19,27 +19,32 @@ export function ExportScene({
 }) {
 	return (
 		<Group>
-			{document.layers.map((layer) => {
-				if (layer.hidden) return null;
-				switch (layer.type) {
-					case "image": {
-						const image = images.get(layer.id);
-						return image ? (
-							<ImageLayerView key={layer.id} layer={layer} image={image} />
-						) : null;
-					}
-					case "text":
-						return (
-							<TextLayerView
-								key={layer.id}
-								layer={layer}
-								transform={toTransformList(layer.transform)}
-							/>
-						);
-					default:
-						return assertNever(layer);
-				}
-			})}
+			{document.layers.map((layer) =>
+				layer.hidden ? null : (
+					<Group key={layer.id} transform={toTransformList(layer.transform)}>
+						<LayerContent layer={layer} images={images} />
+					</Group>
+				),
+			)}
 		</Group>
 	);
+}
+
+function LayerContent({
+	layer,
+	images,
+}: {
+	layer: Layer;
+	images: Map<string, SkImage>;
+}) {
+	switch (layer.type) {
+		case "image": {
+			const image = images.get(layer.id);
+			return image ? <ImageLayerView layer={layer} image={image} /> : null;
+		}
+		case "text":
+			return <TextLayerView layer={layer} />;
+		default:
+			return assertNever(layer);
+	}
 }

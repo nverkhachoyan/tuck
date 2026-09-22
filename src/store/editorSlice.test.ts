@@ -3,8 +3,16 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { devtools } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
-import { createDocumentFromImage, type TextLayer } from "../model/document.ts";
-import { createEditorSlice, selectSelectedTextLayer } from "./editorSlice.ts";
+import {
+	createDocumentFromImage,
+	type ImageLayer,
+	type TextLayer,
+} from "../model/document.ts";
+import {
+	createEditorSlice,
+	selectSelectedLayer,
+	selectSelectedTextLayer,
+} from "./editorSlice.ts";
 import type { StoreState } from "./index.ts";
 
 const photo = () => createDocumentFromImage("file:///photo.jpg", 4000, 3000);
@@ -68,12 +76,36 @@ describe("editorSlice", () => {
 
 	test("duplicating copies the selected text on top and selects the copy", () => {
 		const { store, text } = storeWithText();
-		store.getState().duplicateSelectedText();
+		store.getState().duplicateSelectedLayer();
 		const [original, copy] = textLayers(store);
 		assert.equal(original, text);
 		assert.notEqual(copy.id, text.id);
 		assert.equal(copy.text, text.text);
 		assert.equal(store.getState().selectedLayerId, copy.id);
+	});
+
+	test("any layer type can be selected and duplicated", () => {
+		const store = createTestStore();
+		const document = photo();
+		const sticker: ImageLayer = {
+			...(document.layers[0] as ImageLayer),
+			id: "sticker",
+			width: 400,
+			height: 400,
+		};
+		store
+			.getState()
+			.openDocument({ ...document, layers: [...document.layers, sticker] });
+
+		store.getState().selectLayer(sticker.id);
+		assert.equal(selectSelectedLayer(store.getState()), sticker);
+		assert.equal(selectSelectedTextLayer(store.getState()), undefined);
+
+		store.getState().duplicateSelectedLayer();
+		const copy = store.getState().document?.layers.at(-1);
+		assert.equal(copy?.type, "image");
+		assert.notEqual(copy?.id, sticker.id);
+		assert.equal(store.getState().selectedLayerId, copy?.id);
 	});
 
 	test("updating text patches only the selected text layer", () => {
@@ -159,7 +191,7 @@ describe("editorSlice", () => {
 		const before = store.getState();
 		before.addTextLayer("x", "center");
 		before.updateSelectedText({ text: "y" });
-		before.duplicateSelectedText();
+		before.duplicateSelectedLayer();
 		before.moveLayer("x", 1);
 		before.setLayerHidden("x", true);
 		before.deleteLayer("x");
@@ -273,7 +305,7 @@ describe("editorSlice", () => {
 
 		test("opening or closing a document clears history", () => {
 			const { store } = storeWithText();
-			store.getState().duplicateSelectedText();
+			store.getState().duplicateSelectedLayer();
 			store.getState().undo();
 			store.getState().openDocument(photo());
 			assert.deepEqual(store.getState().past, []);

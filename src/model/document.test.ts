@@ -5,8 +5,9 @@ import {
 	createDocumentFromImage,
 	createTextLayer,
 	defaultTextStyle,
-	duplicateTextLayer,
+	duplicateLayer,
 	type EditorDocument,
+	type ImageLayer,
 	initialFontSize,
 	reorderLayer,
 } from "./document.ts";
@@ -22,6 +23,17 @@ describe("createDocumentFromImage", () => {
 		assert.equal(document.layers.length, 1);
 		assert.equal(document.layers[0].type, "image");
 		assert.equal(document.layers[0].hidden, false);
+	});
+
+	test("centers the photo's transform, so it covers the document", () => {
+		const { transform } = landscape().layers[0];
+		assert.deepEqual(transform, {
+			x: 2000,
+			y: 1500,
+			scaleX: 1,
+			scaleY: 1,
+			rotation: 0,
+		});
 	});
 });
 
@@ -58,13 +70,13 @@ describe("createTextLayer", () => {
 	});
 });
 
-describe("duplicateTextLayer", () => {
-	test("copies everything but the id, nudged by half a scaled line", () => {
+describe("duplicateLayer", () => {
+	test("copies text with a new id, nudged by half a scaled line", () => {
 		const original = {
 			...createTextLayer(landscape(), "copy me", "right"),
 			transform: { x: 100, y: 200, scaleX: 2, scaleY: 2, rotation: 0.3 },
 		};
-		const copy = duplicateTextLayer(original);
+		const copy = duplicateLayer(original);
 		const offset = original.fontSize * 2 * 0.5;
 
 		assert.notEqual(copy.id, original.id);
@@ -75,6 +87,22 @@ describe("duplicateTextLayer", () => {
 				transform: { ...original.transform, x: 100 + offset, y: 200 + offset },
 			},
 		);
+	});
+	test("copies an image with a new id, nudged by a tenth of its scaled size", () => {
+		const original: ImageLayer = {
+			type: "image",
+			id: "sticker",
+			uri: "file:///sticker.png",
+			width: 400,
+			height: 200,
+			transform: { x: 100, y: 200, scaleX: 3, scaleY: 3, rotation: 0 },
+			hidden: false,
+		};
+		const copy = duplicateLayer(original);
+		assert.notEqual(copy.id, original.id);
+		assert.equal(copy.uri, original.uri);
+		assert.equal(copy.transform.x, 100 + 60);
+		assert.equal(copy.transform.y, 200 + 60);
 	});
 });
 

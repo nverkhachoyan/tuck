@@ -2,7 +2,7 @@
 // this slice loadable by Node's test runner.
 import {
 	createTextLayer,
-	duplicateTextLayer,
+	duplicateLayer,
 	type EditorDocument,
 	type Layer,
 	reorderLayer,
@@ -26,7 +26,7 @@ export type EditorSlice = {
 	openDocument: (document: EditorDocument) => void;
 	closeDocument: () => void;
 	addTextLayer: (text: string, align: TextAlign) => void;
-	duplicateSelectedText: () => void;
+	duplicateSelectedLayer: () => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
 	moveLayer: (id: string, toIndex: number) => void;
@@ -37,14 +37,18 @@ export type EditorSlice = {
 	redo: () => void;
 };
 
-export const selectSelectedTextLayer = ({
+export const selectSelectedLayer = ({
 	document,
 	selectedLayerId,
-}: EditorSlice): TextLayer | undefined =>
-	document?.layers.find(
-		(layer): layer is TextLayer =>
-			layer.type === "text" && layer.id === selectedLayerId,
-	);
+}: EditorSlice): Layer | undefined =>
+	document?.layers.find((layer) => layer.id === selectedLayerId);
+
+export const selectSelectedTextLayer = (
+	state: EditorSlice,
+): TextLayer | undefined => {
+	const layer = selectSelectedLayer(state);
+	return layer?.type === "text" ? layer : undefined;
+};
 
 export const selectCanUndo = ({ past }: EditorSlice) => past.length > 0;
 
@@ -103,10 +107,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			addOnTop("editor/addTextLayer", createTextLayer(document, text, align));
 		},
 
-		duplicateSelectedText: () => {
-			const layer = selectSelectedTextLayer(get());
+		duplicateSelectedLayer: () => {
+			const layer = selectSelectedLayer(get());
 			if (!layer) return;
-			addOnTop("editor/duplicateSelectedText", duplicateTextLayer(layer));
+			addOnTop("editor/duplicateSelectedLayer", duplicateLayer(layer));
 		},
 
 		updateSelectedText: (patch) => {

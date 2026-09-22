@@ -1,10 +1,12 @@
-import { Group, Path, Skia, useImage } from "@shopify/react-native-skia";
+import { Group, Path, Rect, Skia, useImage } from "@shopify/react-native-skia";
+import type { ReactNode } from "react";
 import { useDerivedValue } from "react-native-reanimated";
 import { ImageLayerView } from "@/layers/ImageLayerView";
+import { layerBounds } from "@/layers/layerBounds";
 import { toTransformList } from "@/layers/layerTransform";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
-import type { EditorDocument, ImageLayer, TextLayer } from "@/model/document";
+import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
 import { colors } from "@/theme";
 import type { LiveTransform } from "./liveTransform";
 import { handleMetrics, handlesVisible } from "./selectionHandles";
@@ -34,25 +36,19 @@ export function EditorScene({
 }: EditorSceneProps) {
 	return (
 		<Group>
-			{document.layers.map((layer) => {
-				if (layer.hidden || layer.id === hiddenLayerId) return null;
-				switch (layer.type) {
-					case "image":
-						return <AsyncImageLayer key={layer.id} layer={layer} />;
-					case "text":
-						return (
-							<LiveTextLayer
-								key={layer.id}
-								layer={layer}
-								viewScale={viewScale}
-								live={live}
-								selected={layer.id === selectedLayerId}
-							/>
-						);
-					default:
-						return assertNever(layer);
-				}
-			})}
+			{document.layers.map((layer) =>
+				layer.hidden || layer.id === hiddenLayerId ? null : (
+					<LiveLayer
+						key={layer.id}
+						layer={layer}
+						viewScale={viewScale}
+						live={live}
+						selected={layer.id === selectedLayerId}
+					>
+						<LayerContent layer={layer} />
+					</LiveLayer>
+				),
+			)}
 			<CenterGuides document={document} viewScale={viewScale} live={live} />
 			{selectedLayerId !== null && selectedLayerId !== hiddenLayerId && (
 				<SelectionHandles live={live} viewScale={viewScale} />
@@ -61,24 +57,41 @@ export function EditorScene({
 	);
 }
 
+function LayerContent({ layer }: { layer: Layer }) {
+	switch (layer.type) {
+		case "image":
+			return <AsyncImage layer={layer} />;
+		case "text":
+			return <TextLayerView layer={layer} />;
+		default:
+			return assertNever(layer);
+	}
+}
+
 /** Draws nothing until the image has decoded. */
-function AsyncImageLayer({ layer }: { layer: ImageLayer }) {
+function AsyncImage({ layer }: { layer: ImageLayer }) {
 	const image = useImage(layer.uri);
 	if (!image) return null;
 	return <ImageLayerView layer={layer} image={image} />;
 }
 
-/** While a layer is being dragged, the gesture-driven values win over the document. */
-function LiveTextLayer({
+/**
+ * Positions a layer's content with its transform, except while a gesture is
+ * moving it: then the gesture-driven values win over the document. Draws the
+ * selection outline over the selected layer.
+ */
+function LiveLayer({
 	layer,
 	viewScale,
 	live,
 	selected,
+	children,
 }: {
-	layer: TextLayer;
+	layer: Layer;
 	viewScale: number;
 	live: LiveTransform;
 	selected: boolean;
+	children: ReactNode;
 }) {
 	const transform = useDerivedValue(() => {
 		const active = live.activeId.value === layer.id;
@@ -101,12 +114,22 @@ function LiveTextLayer({
 		return SELECTION_STROKE_PX / (viewScale * scale);
 	}, [layer.id, layer.transform, viewScale]);
 
+	const box = selected ? layerBounds(layer) : null;
 	return (
-		<TextLayerView
-			layer={layer}
-			transform={transform}
-			selectionStroke={selected ? selectionStroke : undefined}
-		/>
+		<Group transform={transform}>
+			{children}
+			{box && (
+				<Rect
+					x={-box.halfWidth}
+					y={-box.halfHeight}
+					width={box.halfWidth * 2}
+					height={box.halfHeight * 2}
+					color={colors.accent}
+					style="stroke"
+					strokeWidth={selectionStroke}
+				/>
+			)}
+		</Group>
 	);
 }
 

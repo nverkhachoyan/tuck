@@ -58,13 +58,8 @@ export function layoutTextLayer(layer: TextLayer): TextLayerLayout {
 	return layout;
 }
 
-/**
- * The selection box around a text layer: its laid-out text plus padding, in
- * local units. The outline, the handles, and hit-testing all use it, so they
- * agree on where the layer is. `minPadding` widens the padding, never
- * narrows it (hit-testing uses it to keep small text tappable).
- */
-export function selectionBox(layer: TextLayer, minPadding = 0): Box {
+/** A text layer's laid-out text plus padding; see `layerBounds`. */
+export function textLayerBounds(layer: TextLayer, minPadding = 0): Box {
 	const { width, height } = layoutTextLayer(layer);
 	const pad = Math.max(layer.fontSize * 0.2, minPadding);
 	return { halfWidth: width / 2 + pad, halfHeight: height / 2 + pad };

@@ -103,7 +103,7 @@ export function LayersPanel({
 			<View style={styles.row}>
 				<View style={styles.main}>
 					<LayerThumbnail layer={photo} />
-					<Text style={styles.label}>{layerLabel(photo)}</Text>
+					<Text style={styles.label}>Photo</Text>
 				</View>
 				<View style={styles.trailing}>
 					<Ionicons
@@ -281,7 +281,7 @@ function LayerThumbnail({ layer }: { layer: Layer }) {
 function layerLabel(layer: Layer): string {
 	switch (layer.type) {
 		case "image":
-			return "Photo";
+			return "Image";
 		case "text":
 			return layer.text.replace(/\s+/g, " ");
 		default:
