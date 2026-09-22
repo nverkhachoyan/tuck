@@ -17,6 +17,8 @@
 - Skia paragraphs on web throw without an `SkTypefaceFontProvider` (CanvasKit has no system fonts). Build every paragraph with `getFontProvider()` from `layers/fonts.ts`.
 - React Native Web's `Alert.alert` is a no-op. Use `showAlert` from `lib/`. A plain `Alert` inside `usePreventRemove` blocks navigation on web with no way out.
 - To test the photo picker in the browser pane, don't patch `input.click()`: `expo-image-picker` dispatches a synthetic click event, which opens a real file dialog that the pane cancels. Watch for the `<input type=file>` being added (a `MutationObserver`), `preventDefault` its click, then set `files` and dispatch `change`.
+- Geometry that gestures need on the UI thread (in `model/geometry.ts`, `editor/viewport.ts`, `editor/selectionHandles.ts`) is marked `"worklet"`. A worklet can only call other worklets, so a new helper called from one needs the directive too. It's just a string, so `model/` stays free of React Native.
+- React Native's style types don't allow web-only CSS values (`cursor: "nwse-resize"`, `outlineStyle: "none"`), so those need an `as unknown as ViewStyle`/`TextStyle` cast. Keep it inside a `Platform.OS === "web"` branch.
 - Tests import the module under test with an explicit `.ts` extension and start with `/// <reference types="node" />`: Node's type stripping needs the extension, and TypeScript 6 no longer includes installed `@types` packages by default. Only modules whose imports are all type-only (like `model/`) can be tested this way, since Node can't resolve the `@/` alias.
 
 ## Project Structure

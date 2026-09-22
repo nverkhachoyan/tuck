@@ -26,11 +26,15 @@ export function fitDocumentToView(
 	};
 }
 
-/** Converts a point reported by the view into document-space coordinates. */
+/**
+ * Converts a point reported by the view into document-space coordinates.
+ * A worklet, so gestures can convert touch points on the UI thread.
+ */
 export function viewPointToDocument(
 	viewport: DocumentViewport,
 	point: Point,
 ): Point {
+	"worklet";
 	return {
 		x: (point.x - viewport.offsetX) / viewport.scale,
 		y: (point.y - viewport.offsetY) / viewport.scale,

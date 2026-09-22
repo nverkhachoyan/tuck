@@ -1,17 +1,32 @@
-import { useMemo } from "react";
+import { type RefObject, useEffect, useMemo } from "react";
+import { Platform, type View } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import type { Transform } from "@/model/geometry";
+import {
+	type Box,
+	type Handle,
+	rotateByDrag,
+	scaleByDrag,
+	snapAngle,
+	type Transform,
+} from "@/model/geometry";
+import { handleUnder, hasFinePointer } from "./selectionHandles";
+import { type DocumentViewport, viewPointToDocument } from "./viewport";
 
 export const MIN_LAYER_SCALE = 0.2;
 export const MAX_LAYER_SCALE = 8;
+
+// Rotating by the knob settles on upright and quarter turns when this close.
+const ROTATION_SNAP = (4 * Math.PI) / 180;
 
 /**
  * High-frequency transform state for the selected layer. Gestures write here
  * every frame (no React rerenders); the document only receives the final
  * value when the gesture ends. While `activeId` matches a layer, that layer's
  * node renders from these values instead of its document transform.
+ * `halfWidth`/`halfHeight` are its selection box, so the UI thread can find
+ * and draw its handles without laying out text.
  */
 export type LiveTransform = {
 	activeId: SharedValue<string | null>;
@@ -19,6 +34,8 @@ export type LiveTransform = {
 	y: SharedValue<number>;
 	scale: SharedValue<number>;
 	rotation: SharedValue<number>;
+	halfWidth: SharedValue<number>;
+	halfHeight: SharedValue<number>;
 };
 
 export function useLiveTransform(): LiveTransform {
@@ -27,9 +44,11 @@ export function useLiveTransform(): LiveTransform {
 	const y = useSharedValue(0);
 	const scale = useSharedValue(1);
 	const rotation = useSharedValue(0);
+	const halfWidth = useSharedValue(0);
+	const halfHeight = useSharedValue(0);
 	return useMemo(
-		() => ({ activeId, x, y, scale, rotation }),
-		[activeId, x, y, scale, rotation],
+		() => ({ activeId, x, y, scale, rotation, halfWidth, halfHeight }),
+		[activeId, x, y, scale, rotation, halfWidth, halfHeight],
 	);
 }
 
@@ -37,20 +56,48 @@ export function syncLiveTransform(
 	live: LiveTransform,
 	id: string | null,
 	transform: Transform | undefined,
+	box: Box | undefined,
 ) {
-	if (id && transform) {
+	if (id && transform && box) {
 		live.x.value = transform.x;
 		live.y.value = transform.y;
 		live.scale.value = transform.scaleX;
 		live.rotation.value = transform.rotation;
+		live.halfWidth.value = box.halfWidth;
+		live.halfHeight.value = box.halfHeight;
 	}
 	live.activeId.value = id;
 }
 
+/** The live values as a document transform (layers scale uniformly). */
+export function readLiveTransform(live: LiveTransform): Transform {
+	"worklet";
+	return {
+		x: live.x.value,
+		y: live.y.value,
+		scaleX: live.scale.value,
+		scaleY: live.scale.value,
+		rotation: live.rotation.value,
+	};
+}
+
+function readLiveBox(live: LiveTransform): Box {
+	"worklet";
+	return { halfWidth: live.halfWidth.value, halfHeight: live.halfHeight.value };
+}
+
+function clampScale(scale: number) {
+	"worklet";
+	return Math.min(MAX_LAYER_SCALE, Math.max(MIN_LAYER_SCALE, scale));
+}
+
 /**
  * Tap selects, and while a layer is selected pan / pinch / rotate transform
- * it about its center. `viewScale` converts screen-pixel pan distances into
- * document units.
+ * it about its center.
+ *
+ * A pan that starts on one of the selected layer's handles scales (corners)
+ * or rotates (knob) it instead of moving it, about its center like a pinch.
+ * That's decided at touch-down, on the UI thread, from the live values.
  *
  * A drag can also pick its own layer: `onDragStart` gets the touch-down point
  * and returns true when it selected a different layer. The drag then holds
@@ -58,21 +105,26 @@ export function syncLiveTransform(
  * twitch in the meantime, and then applies the whole drag so far, keeping
  * the point the finger grabbed under the finger.
  *
- * However many of pan / pinch / rotate take part, the result is committed
- * once, when the last of them ends, and only if the layer actually moved.
+ * However many gestures take part, the result is committed once, when the
+ * last of them ends, and only if the layer actually moved. With a mouse,
+ * hovering reports the pointer (`onHover`) so the canvas can show cursors.
  */
 export function useLayerTransformGesture({
 	live,
-	viewScale,
+	viewport,
 	onTap,
 	onDragStart,
 	onCommit,
+	onHover,
+	onHoverEnd,
 }: {
 	live: LiveTransform;
-	viewScale: number;
+	viewport: DocumentViewport;
 	onTap: (screenX: number, screenY: number) => void;
 	onDragStart: (screenX: number, screenY: number) => boolean;
 	onCommit: (id: string, transform: Transform) => void;
+	onHover: (screenX: number, screenY: number) => void;
+	onHoverEnd: () => void;
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
 	// variables captured by worklets are copied, so writes wouldn't persist.
@@ -89,6 +141,11 @@ export function useLayerTransformGesture({
 	// The layer this drag is moving, and whether it's settled on one yet.
 	const dragId = useSharedValue<string | null>(null);
 	const dragReady = useSharedValue(false);
+	// The handle this pan grabbed, if any, and the layer's state when it did.
+	// Separate from the pinch/rotate snapshots, which run alongside.
+	const dragHandle = useSharedValue<Handle | null>(null);
+	const handleStartScale = useSharedValue(1);
+	const handleStartRotation = useSharedValue(0);
 	// How many of pan / pinch / rotate are running, and whether any moved.
 	const activeCount = useSharedValue(0);
 	const moved = useSharedValue(false);
@@ -97,6 +154,11 @@ export function useLayerTransformGesture({
 		// Runs on the JS thread, where hit-testing (and Skia text layout) lives.
 		const handleDragStart = (screenX: number, screenY: number) => {
 			if (!onDragStart(screenX, screenY)) dragReady.value = true;
+		};
+
+		const toDocument = (screenX: number, screenY: number) => {
+			"worklet";
+			return viewPointToDocument(viewport, { x: screenX, y: screenY });
 		};
 
 		const gestureStarted = () => {
@@ -110,13 +172,7 @@ export function useLayerTransformGesture({
 			activeCount.value = Math.max(0, activeCount.value - 1);
 			const id = live.activeId.value;
 			if (activeCount.value > 0 || !moved.value || id === null) return;
-			scheduleOnRN(onCommit, id, {
-				x: live.x.value,
-				y: live.y.value,
-				scaleX: live.scale.value,
-				scaleY: live.scale.value,
-				rotation: live.rotation.value,
-			});
+			scheduleOnRN(onCommit, id, readLiveTransform(live));
 		};
 
 		const tap = Gesture.Tap()
@@ -131,21 +187,58 @@ export function useLayerTransformGesture({
 			.onBegin((event) => {
 				downX.value = event.x;
 				downY.value = event.y;
+				dragHandle.value =
+					live.activeId.value === null
+						? null
+						: handleUnder(
+								readLiveTransform(live),
+								readLiveBox(live),
+								toDocument(event.x, event.y),
+								viewport.scale,
+							);
 			})
 			.onStart((event) => {
 				gestureStarted();
-				// Zero if translation already counts from touch-down.
-				slackX.value = event.x - event.translationX - downX.value;
-				slackY.value = event.y - event.translationY - downY.value;
 				startX.value = live.x.value;
 				startY.value = live.y.value;
 				dragId.value = live.activeId.value;
+				if (dragHandle.value !== null) {
+					// The selected layer's own handle: no selection to wait for.
+					handleStartScale.value = live.scale.value;
+					handleStartRotation.value = live.rotation.value;
+					dragReady.value = true;
+					return;
+				}
+				// Zero if translation already counts from touch-down.
+				slackX.value = event.x - event.translationX - downX.value;
+				slackY.value = event.y - event.translationY - downY.value;
 				dragReady.value = false;
 				scheduleOnRN(handleDragStart, downX.value, downY.value);
 			})
 			.onUpdate((event) => {
 				const id = live.activeId.value;
 				if (id === null) return;
+
+				const handle = dragHandle.value;
+				if (handle !== null) {
+					const center = { x: startX.value, y: startY.value };
+					const from = toDocument(downX.value, downY.value);
+					const to = toDocument(event.x, event.y);
+					if (handle === "rotate") {
+						live.rotation.value = snapAngle(
+							rotateByDrag(center, from, to, handleStartRotation.value),
+							Math.PI / 2,
+							ROTATION_SNAP,
+						);
+					} else {
+						live.scale.value = clampScale(
+							scaleByDrag(center, from, to, handleStartScale.value),
+						);
+					}
+					moved.value = true;
+					return;
+				}
+
 				// The drag's own selection just landed; anchor to that layer.
 				if (id !== dragId.value) {
 					dragId.value = id;
@@ -155,24 +248,26 @@ export function useLayerTransformGesture({
 				}
 				if (!dragReady.value) return;
 				live.x.value =
-					startX.value + (event.translationX + slackX.value) / viewScale;
+					startX.value + (event.translationX + slackX.value) / viewport.scale;
 				live.y.value =
-					startY.value + (event.translationY + slackY.value) / viewScale;
+					startY.value + (event.translationY + slackY.value) / viewport.scale;
 				moved.value = true;
 			})
-			.onEnd(gestureEnded);
+			.onEnd(gestureEnded)
+			.onFinalize(() => {
+				dragHandle.value = null;
+			});
 
+		// Pinch and rotate stand aside while a handle is being dragged, so a
+		// second finger can't fight the handle over the same values.
 		const pinch = Gesture.Pinch()
 			.onStart(() => {
 				gestureStarted();
 				startScale.value = live.scale.value;
 			})
 			.onUpdate((event) => {
-				if (live.activeId.value === null) return;
-				live.scale.value = Math.min(
-					MAX_LAYER_SCALE,
-					Math.max(MIN_LAYER_SCALE, startScale.value * event.scale),
-				);
+				if (live.activeId.value === null || dragHandle.value !== null) return;
+				live.scale.value = clampScale(startScale.value * event.scale);
 				moved.value = true;
 			})
 			.onEnd(gestureEnded);
@@ -183,25 +278,46 @@ export function useLayerTransformGesture({
 				startRotation.value = live.rotation.value;
 			})
 			.onUpdate((event) => {
-				if (live.activeId.value === null) return;
+				if (live.activeId.value === null || dragHandle.value !== null) return;
 				live.rotation.value = startRotation.value + event.rotation;
 				moved.value = true;
 			})
 			.onEnd(gestureEnded);
 
-		return Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotate));
+		// Only a mouse hovers; the canvas turns positions into cursors.
+		const hover = Gesture.Hover()
+			.enabled(hasFinePointer)
+			.onBegin((event) => {
+				scheduleOnRN(onHover, event.x, event.y);
+			})
+			.onUpdate((event) => {
+				scheduleOnRN(onHover, event.x, event.y);
+			})
+			.onEnd(() => {
+				scheduleOnRN(onHoverEnd);
+			});
+
+		return Gesture.Simultaneous(
+			hover,
+			Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotate)),
+		);
 	}, [
 		live,
-		viewScale,
+		viewport,
 		onTap,
 		onDragStart,
 		onCommit,
+		onHover,
+		onHoverEnd,
 		downX,
 		downY,
 		slackX,
 		slackY,
 		dragId,
 		dragReady,
+		dragHandle,
+		handleStartScale,
+		handleStartRotation,
 		activeCount,
 		moved,
 		startX,
@@ -209,4 +325,48 @@ export function useLayerTransformGesture({
 		startScale,
 		startRotation,
 	]);
+}
+
+/**
+ * Scales the selected layer with a trackpad pinch on web, which browsers
+ * report as wheel events with `ctrlKey` set (so does Ctrl + mouse wheel).
+ * A pinch has no end event, so the result commits once the wheel goes quiet.
+ */
+export function useTrackpadPinch({
+	target,
+	live,
+	onCommit,
+}: {
+	target: RefObject<View | null>;
+	live: LiveTransform;
+	onCommit: (id: string, transform: Transform) => void;
+}) {
+	useEffect(() => {
+		// On web, a View's ref is its DOM element.
+		const element = target.current as unknown as HTMLElement | null;
+		if (Platform.OS !== "web" || !element) return;
+
+		let commitTimer: ReturnType<typeof setTimeout> | undefined;
+		const handleWheel = (event: WheelEvent) => {
+			if (!event.ctrlKey) return;
+			// Otherwise the browser zooms the whole page.
+			event.preventDefault();
+			const id = live.activeId.value;
+			if (id === null) return;
+			live.scale.value = clampScale(
+				live.scale.value * Math.exp(-event.deltaY * 0.01),
+			);
+			// Captured now: by the time the timer fires, a new selection may have
+			// replaced the live values.
+			const transform = readLiveTransform(live);
+			clearTimeout(commitTimer);
+			commitTimer = setTimeout(() => onCommit(id, transform), 250);
+		};
+
+		element.addEventListener("wheel", handleWheel, { passive: false });
+		return () => {
+			element.removeEventListener("wheel", handleWheel);
+			clearTimeout(commitTimer);
+		};
+	}, [target, live, onCommit]);
 }

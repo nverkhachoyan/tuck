@@ -57,7 +57,7 @@ Key areas:
 - `src/app/` holds the routes only (expo-router treats every file here as a route).
 - `src/model/` defines the document, layers, and geometry as plain data: no React.
 - `src/layers/` draws each layer type in document space; shared by editor and export.
-- `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the text panel, and the full-screen `TextEditor`.
+- `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, and the full-screen `TextEditor`.
 - `src/editor/state/` owns the document, selection, and every command that mutates them.
 - `src/import/` picks a photo and turns it into a document.
 - `src/export/` renders the document offscreen with `ExportScene`, then saves it to Photos or shares it.
