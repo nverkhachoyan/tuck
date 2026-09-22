@@ -19,7 +19,7 @@ export function ScreenHeader({
 	return (
 		<View style={styles.container}>
 			{title && (
-				<View style={styles.titleContainer} pointerEvents="none">
+				<View style={styles.titleContainer}>
 					<Text style={styles.title}>{title}</Text>
 				</View>
 			)}
@@ -44,6 +44,7 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFill,
 		alignItems: "center",
 		justifyContent: "center",
+		pointerEvents: "none",
 	},
 	title: {
 		fontSize: 16,

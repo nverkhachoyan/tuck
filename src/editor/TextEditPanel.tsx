@@ -6,12 +6,12 @@ import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 
 const SWATCHES = [
-	"#FFFFFF",
-	"#000000",
-	"#FF3B30",
-	"#FFD60A",
-	"#34C759",
-	"#0A84FF",
+	{ color: "#FFFFFF", name: "White" },
+	{ color: "#000000", name: "Black" },
+	{ color: "#FF3B30", name: "Red" },
+	{ color: "#FFD60A", name: "Yellow" },
+	{ color: "#34C759", name: "Green" },
+	{ color: "#0A84FF", name: "Blue" },
 ];
 
 const FONT_LABELS: Record<TextFont, string> = {
@@ -219,13 +219,13 @@ function Swatches({
 					onPress={() => onPick(null)}
 				/>
 			)}
-			{SWATCHES.map((swatch) => (
+			{SWATCHES.map(({ color, name }) => (
 				<Swatch
-					key={swatch}
-					color={swatch}
-					label={swatch}
-					selected={value === swatch}
-					onPress={() => onPick(swatch)}
+					key={color}
+					color={color}
+					label={name}
+					selected={value === color}
+					onPress={() => onPick(color)}
 				/>
 			))}
 		</View>

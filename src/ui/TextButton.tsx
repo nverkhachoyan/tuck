@@ -14,7 +14,7 @@ export function TextButton({
 	onPress: () => void;
 }) {
 	return (
-		<Pressable hitSlop={8} onPress={onPress}>
+		<Pressable hitSlop={8} onPress={onPress} accessibilityRole="button">
 			<Text style={[styles.label, tone !== "default" && styles[tone]]}>
 				{label}
 			</Text>

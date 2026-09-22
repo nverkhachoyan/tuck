@@ -22,6 +22,7 @@ export function Button({
 	return (
 		<Pressable
 			hitSlop={8}
+			accessibilityRole="button"
 			{...props}
 			style={({ pressed }) => [
 				styles.base,
