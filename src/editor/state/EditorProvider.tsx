@@ -12,6 +12,7 @@ import {
 	type EditorDocument,
 	type TextAlign,
 	type TextLayer,
+	type TextLayerEdit,
 } from "@/model/document";
 import type { Transform } from "@/model/geometry";
 import { editorReducer, initialEditorState } from "./editorReducer";
@@ -72,7 +73,7 @@ function useEditorState() {
 	);
 
 	const updateSelectedText = useCallback(
-		(patch: Partial<TextLayer>) =>
+		(patch: TextLayerEdit) =>
 			dispatch({ type: "selected-text-updated", patch }),
 		[],
 	);

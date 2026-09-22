@@ -7,11 +7,7 @@ import { useEditor } from "@/editor/state/EditorProvider";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
 import { showAlert } from "@/lib/showAlert";
-import {
-	defaultTextStyle,
-	getFontSizeRange,
-	type TextAlign,
-} from "@/model/document";
+import { defaultTextStyle, type TextAlign } from "@/model/document";
 import { colors } from "@/theme";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
@@ -96,10 +92,6 @@ export default function EditorRoute() {
 				{selectedTextLayer ? (
 					<TextEditPanel
 						layer={selectedTextLayer}
-						fontSizeRange={getFontSizeRange(document)}
-						onChangeFontSize={(fontSize) =>
-							editor.updateSelectedText({ fontSize })
-						}
 						onChangeColor={(color) => editor.updateSelectedText({ color })}
 						onChangeOutlineColor={(outlineColor) =>
 							editor.updateSelectedText({ outlineColor })

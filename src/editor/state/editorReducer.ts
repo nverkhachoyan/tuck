@@ -1,4 +1,8 @@
-import type { EditorDocument, TextLayer } from "@/model/document";
+import type {
+	EditorDocument,
+	TextLayer,
+	TextLayerEdit,
+} from "@/model/document";
 import type { Transform } from "@/model/geometry";
 
 export type EditorState = {
@@ -10,7 +14,7 @@ export type EditorAction =
 	| { type: "document-opened"; document: EditorDocument }
 	| { type: "document-closed" }
 	| { type: "text-layer-added"; layer: TextLayer }
-	| { type: "selected-text-updated"; patch: Partial<TextLayer> }
+	| { type: "selected-text-updated"; patch: TextLayerEdit }
 	| { type: "layer-transformed"; id: string; transform: Transform }
 	| { type: "selected-layer-deleted" }
 	| { type: "layer-selected"; id: string | null };

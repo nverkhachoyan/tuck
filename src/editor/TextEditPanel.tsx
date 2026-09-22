@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { FontSizeRange, TextLayer } from "@/model/document";
+import type { TextLayer } from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 
@@ -17,8 +17,6 @@ type ColorTarget = "fill" | "outline";
 
 type TextEditPanelProps = {
 	layer: TextLayer;
-	fontSizeRange: FontSizeRange;
-	onChangeFontSize: (fontSize: number) => void;
 	onChangeColor: (color: string) => void;
 	onChangeOutlineColor: (color: string | null) => void;
 	onDuplicate: () => void;
@@ -27,13 +25,12 @@ type TextEditPanelProps = {
 
 /**
  * Styling for the selected text layer. The text itself is edited full-screen
- * (tap the selected layer), so this is only color, outline, and size. There's
- * no Done button: tapping anywhere on the canvas off the text deselects it.
+ * (tap the selected layer) and resized on the canvas (pinch or the corner
+ * handles), so this is only color and outline. There's no Done button:
+ * tapping anywhere on the canvas off the text deselects it.
  */
 export function TextEditPanel({
 	layer,
-	fontSizeRange,
-	onChangeFontSize,
 	onChangeColor,
 	onChangeOutlineColor,
 	onDuplicate,
@@ -73,50 +70,23 @@ export function TextEditPanel({
 				</View>
 			</View>
 
-			<View style={styles.row}>
-				<View style={styles.swatches}>
-					{/* Text always has a fill; only the outline can be turned off. */}
-					{target === "outline" && (
-						<Swatch
-							color={null}
-							selected={current === null}
-							onPress={() => onChangeOutlineColor(null)}
-						/>
-					)}
-					{SWATCHES.map((swatch) => (
-						<Swatch
-							key={swatch}
-							color={swatch}
-							selected={current === swatch}
-							onPress={() => pick(swatch)}
-						/>
-					))}
-				</View>
-
-				<View style={styles.sizeControls}>
-					<SizeButton
-						label="A-"
-						onPress={() =>
-							onChangeFontSize(
-								Math.max(
-									fontSizeRange.min,
-									layer.fontSize - fontSizeRange.step,
-								),
-							)
-						}
+			<View style={styles.swatches}>
+				{/* Text always has a fill; only the outline can be turned off. */}
+				{target === "outline" && (
+					<Swatch
+						color={null}
+						selected={current === null}
+						onPress={() => onChangeOutlineColor(null)}
 					/>
-					<SizeButton
-						label="A+"
-						onPress={() =>
-							onChangeFontSize(
-								Math.min(
-									fontSizeRange.max,
-									layer.fontSize + fontSizeRange.step,
-								),
-							)
-						}
+				)}
+				{SWATCHES.map((swatch) => (
+					<Swatch
+						key={swatch}
+						color={swatch}
+						selected={current === swatch}
+						onPress={() => pick(swatch)}
 					/>
-				</View>
+				))}
 			</View>
 		</View>
 	);
@@ -174,20 +144,6 @@ function Swatch({
 	);
 }
 
-function SizeButton({
-	label,
-	onPress,
-}: {
-	label: string;
-	onPress: () => void;
-}) {
-	return (
-		<Pressable hitSlop={8} onPress={onPress} style={styles.sizeButton}>
-			<Text style={styles.sizeButtonLabel}>{label}</Text>
-		</Pressable>
-	);
-}
-
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
@@ -240,20 +196,5 @@ const styles = StyleSheet.create({
 		height: 2,
 		backgroundColor: colors.textSecondary,
 		transform: [{ rotate: "-45deg" }],
-	},
-	sizeControls: {
-		flexDirection: "row",
-		gap: 8,
-	},
-	sizeButton: {
-		paddingHorizontal: 10,
-		paddingVertical: 6,
-		borderRadius: 8,
-		backgroundColor: colors.surface,
-	},
-	sizeButtonLabel: {
-		color: colors.textPrimary,
-		fontSize: 13,
-		fontWeight: "600",
 	},
 });

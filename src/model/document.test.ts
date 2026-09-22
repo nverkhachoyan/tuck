@@ -6,7 +6,7 @@ import {
 	createTextLayer,
 	defaultTextStyle,
 	duplicateTextLayer,
-	getFontSizeRange,
+	initialFontSize,
 } from "./document.ts";
 
 const landscape = () =>
@@ -22,12 +22,11 @@ describe("createDocumentFromImage", () => {
 	});
 });
 
-describe("getFontSizeRange", () => {
+describe("initialFontSize", () => {
 	test("scales with the photo's shorter side", () => {
-		const small = getFontSizeRange(createDocumentFromImage("a", 1000, 2000));
-		const large = getFontSizeRange(createDocumentFromImage("b", 4000, 3000));
-		assert.equal(large.initial / small.initial, 3);
-		assert.ok(small.min < small.initial && small.initial < small.max);
+		const small = initialFontSize(createDocumentFromImage("a", 1000, 2000));
+		const large = initialFontSize(createDocumentFromImage("b", 4000, 3000));
+		assert.equal(large / small, 3);
 	});
 });
 

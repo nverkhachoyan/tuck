@@ -26,6 +26,14 @@ export type TextLayer = {
 	transform: Transform;
 };
 
+/**
+ * What editing can change on an existing text layer. Its size is set once
+ * at creation (`fontSize`); resizing it afterwards goes through its transform.
+ */
+export type TextLayerEdit = Partial<
+	Pick<TextLayer, "text" | "align" | "color" | "outlineColor">
+>;
+
 // BlurLayer | DrawingLayer join this union in later stages.
 export type Layer = ImageLayer | TextLayer;
 
@@ -72,24 +80,12 @@ export function createDocumentFromImage(
 }
 
 /**
- * Font sizing is relative to the photo's shorter side so text looks the same
- * on a 1080px screenshot and a 4000px camera photo.
+ * A new text layer's font size, relative to the photo's shorter side so text
+ * starts out looking the same on a 1080px screenshot and a 4000px camera
+ * photo. It's fixed from then on: the layer's scale resizes it.
  */
-export type FontSizeRange = {
-	min: number;
-	max: number;
-	step: number;
-	initial: number;
-};
-
-export function getFontSizeRange(document: EditorDocument): FontSizeRange {
-	const base = Math.min(document.width, document.height);
-	return {
-		min: Math.round(base * 0.02),
-		max: Math.round(base * 0.4),
-		step: Math.round(base * 0.015),
-		initial: Math.round(base * 0.08),
-	};
+export function initialFontSize(document: EditorDocument): number {
+	return Math.round(Math.min(document.width, document.height) * 0.08);
 }
 
 /** Classic meme text: white fill, black outline, centered. */
@@ -108,7 +104,7 @@ export function createTextLayer(
 		type: "text",
 		id: createLayerId("text"),
 		text,
-		fontSize: getFontSizeRange(document).initial,
+		fontSize: initialFontSize(document),
 		...defaultTextStyle,
 		align,
 		// Meme captions span most of the photo before wrapping.
