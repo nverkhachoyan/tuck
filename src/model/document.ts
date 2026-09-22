@@ -104,6 +104,12 @@ export function initialFontSize(document: EditorDocument): number {
 	return Math.round(Math.min(document.width, document.height) * 0.08);
 }
 
+/** How a text layer's text looks, apart from its size. */
+export type TextLayerStyle = Pick<
+	TextLayer,
+	"font" | "color" | "outlineColor" | "backgroundColor" | "align"
+>;
+
 /** Classic meme text: white fill, black outline, no box, centered. */
 export const defaultTextStyle = {
 	font: "classic",
@@ -111,10 +117,7 @@ export const defaultTextStyle = {
 	outlineColor: "#000000",
 	backgroundColor: null,
 	align: "center",
-} as const satisfies Pick<
-	TextLayer,
-	"font" | "color" | "outlineColor" | "backgroundColor" | "align"
->;
+} as const satisfies TextLayerStyle;
 
 export function createTextLayer(
 	document: EditorDocument,

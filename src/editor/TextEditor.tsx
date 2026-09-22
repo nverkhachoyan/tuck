@@ -10,7 +10,7 @@ import {
 	View,
 } from "react-native";
 import { TEXT_FONTS } from "@/layers/fonts";
-import type { TextAlign, TextFont } from "@/model/document";
+import type { TextAlign, TextLayerStyle } from "@/model/document";
 import { colors } from "@/theme";
 import { TextButton } from "@/ui/TextButton";
 
@@ -22,10 +22,8 @@ const NEXT_ALIGN: Record<TextAlign, TextAlign> = {
 
 type TextEditorProps = {
 	initialText: string;
-	initialAlign: TextAlign;
-	font: TextFont;
-	color: string;
-	outlineColor: string | null;
+	// Of the style, only the alignment can change here.
+	layerStyle: TextLayerStyle;
 	// Called with the final text, which may be empty.
 	onDone: (text: string, align: TextAlign) => void;
 };
@@ -38,14 +36,12 @@ type TextEditorProps = {
  */
 export function TextEditor({
 	initialText,
-	initialAlign,
-	font,
-	color,
-	outlineColor,
+	layerStyle,
 	onDone,
 }: TextEditorProps) {
+	const { font, color, outlineColor, backgroundColor } = layerStyle;
 	const [text, setText] = useState(initialText);
-	const [align, setAlign] = useState(initialAlign);
+	const [align, setAlign] = useState(layerStyle.align);
 	const done = () => onDone(text, align);
 	const outlineStyle =
 		outlineColor === null
@@ -103,6 +99,7 @@ export function TextEditor({
 						style={[
 							styles.input,
 							{ fontFamily: TEXT_FONTS[font].family, color, textAlign: align },
+							backgroundColor !== null && [styles.box, { backgroundColor }],
 							outlineStyle,
 						]}
 					/>
@@ -157,6 +154,11 @@ const styles = StyleSheet.create({
 		...Platform.select({
 			web: { outlineStyle: "none" } as unknown as TextStyle,
 		}),
+	},
+	box: {
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		borderRadius: 8,
 	},
 	alignIcon: {
 		width: 22,

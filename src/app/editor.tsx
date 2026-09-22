@@ -209,20 +209,14 @@ export default function EditorRoute() {
 			{editing === "new" && (
 				<TextEditor
 					initialText=""
-					initialAlign={defaultTextStyle.align}
-					font={defaultTextStyle.font}
-					color={defaultTextStyle.color}
-					outlineColor={defaultTextStyle.outlineColor}
+					layerStyle={defaultTextStyle}
 					onDone={handleEditDone}
 				/>
 			)}
 			{editing === "selected" && selectedTextLayer && (
 				<TextEditor
 					initialText={selectedTextLayer.text}
-					initialAlign={selectedTextLayer.align}
-					font={selectedTextLayer.font}
-					color={selectedTextLayer.color}
-					outlineColor={selectedTextLayer.outlineColor}
+					layerStyle={selectedTextLayer}
 					onDone={handleEditDone}
 				/>
 			)}
