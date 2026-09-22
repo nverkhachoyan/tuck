@@ -52,9 +52,18 @@ export async function shareImage(image: SkImage): Promise<boolean> {
 	return true;
 }
 
+// Earlier exports are done with by the next one: saved into Photos, or read
+// by the app they were shared to.
 function writeJpeg(image: SkImage): File {
+	for (const entry of Paths.cache.list()) {
+		if (entry instanceof File && isExportFile(entry.name)) entry.delete();
+	}
 	const file = new File(Paths.cache, `export-${Date.now()}.jpg`);
 	file.create({ overwrite: true });
 	file.write(image.encodeToBytes(ImageFormat.JPEG, 95));
 	return file;
+}
+
+function isExportFile(name: string) {
+	return name.startsWith("export-") && name.endsWith(".jpg");
 }
