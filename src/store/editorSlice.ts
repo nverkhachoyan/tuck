@@ -9,7 +9,7 @@ import {
 	type TextLayer,
 	type TextLayerEdit,
 } from "../model/document.ts";
-import type { Transform } from "../model/geometry.ts";
+import { type Transform, transformsEqual } from "../model/geometry.ts";
 import type { SliceCreator } from "./index.ts";
 
 export type EditorSnapshot = {
@@ -46,16 +46,6 @@ export const selectSelectedTextLayer = ({
 export const selectCanUndo = ({ past }: EditorSlice) => past.length > 0;
 
 export const selectCanRedo = ({ future }: EditorSlice) => future.length > 0;
-
-function transformsEqual(left: Transform, right: Transform): boolean {
-	return (
-		left.x === right.x &&
-		left.y === right.y &&
-		left.scaleX === right.scaleX &&
-		left.scaleY === right.scaleY &&
-		left.rotation === right.rotation
-	);
-}
 
 export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	const setLayers = (

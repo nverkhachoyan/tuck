@@ -7,6 +7,7 @@ import {
 	StrokeJoin,
 } from "@shopify/react-native-skia";
 import type { TextAlign, TextLayer } from "@/model/document";
+import type { Box } from "@/model/geometry";
 import { getFontProvider, TEXT_FONT_FAMILY } from "./fonts";
 
 export type TextLayerLayout = {
@@ -28,10 +29,6 @@ const skTextAlign: Record<TextAlign, SkTextAlign> = {
 // renderer and hit-testing ask for the same layer's layout on every frame and
 // tap; the WeakMap lets replaced layers (and their paragraphs) be collected.
 const layouts = new WeakMap<TextLayer, TextLayerLayout>();
-
-export function selectionPadding(layer: TextLayer): number {
-	return layer.fontSize * 0.2;
-}
 
 /**
  * Wraps, aligns, and measures a TextLayer in document space, ignoring its
@@ -59,6 +56,18 @@ export function layoutTextLayer(layer: TextLayer): TextLayerLayout {
 	const layout = { outline, fill, width, height: fill.getHeight() };
 	layouts.set(layer, layout);
 	return layout;
+}
+
+/**
+ * The selection box around a text layer: its laid-out text plus padding, in
+ * local units. The outline, the handles, and hit-testing all use it, so they
+ * agree on where the layer is. `minPadding` widens the padding, never
+ * narrows it (hit-testing uses it to keep small text tappable).
+ */
+export function selectionBox(layer: TextLayer, minPadding = 0): Box {
+	const { width, height } = layoutTextLayer(layer);
+	const pad = Math.max(layer.fontSize * 0.2, minPadding);
+	return { halfWidth: width / 2 + pad, halfHeight: height / 2 + pad };
 }
 
 function outlinePaint(layer: TextLayer, color: string): SkPaint {

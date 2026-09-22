@@ -1,11 +1,11 @@
-import { useFocusEffect, useNavigation, useRouter } from "expo-router";
-import { usePreventRemove } from "expo-router/react-navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { EditorCanvas, type EditorCanvasHandle } from "@/editor/EditorCanvas";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
-import { showAlert } from "@/lib/showAlert";
+import { useDiscardGuard } from "@/editor/useDiscardGuard";
+import { useUndoShortcuts } from "@/editor/useUndoShortcuts";
 import { defaultTextStyle, type TextAlign } from "@/model/document";
 import { useStore } from "@/store";
 import {
@@ -40,29 +40,8 @@ export default function EditorRoute() {
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 
-	// Leaving by any route (Back, iOS swipe, Android back) discards the edits,
-	// so ask first once there's anything to lose. The photo alone isn't an edit.
-	const navigation = useNavigation();
-	const hasEdits = (document?.layers.length ?? 0) > 1;
-	usePreventRemove(hasEdits, ({ data }) => {
-		showAlert("Discard edits?", "Your changes to this photo will be lost.", [
-			{ text: "Keep Editing", style: "cancel" },
-			{
-				text: "Discard",
-				style: "destructive",
-				onPress: () => navigation.dispatch(data.action),
-			},
-		]);
-	});
-
-	// On web, a reload or closing the tab also loses the edits, and no route
-	// is removed to catch it; the browser's own leave-page prompt covers it.
-	useEffect(() => {
-		if (Platform.OS !== "web" || !hasEdits) return;
-		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-		window.addEventListener("beforeunload", warn);
-		return () => window.removeEventListener("beforeunload", warn);
-	}, [hasEdits]);
+	// The photo alone isn't an edit.
+	useDiscardGuard((document?.layers.length ?? 0) > 1);
 
 	const handleUndo = useCallback(() => {
 		canvasRef.current?.flushPendingTransform();
@@ -73,23 +52,11 @@ export default function EditorRoute() {
 		redo();
 	}, [redo]);
 
-	// The text editor's own input keeps the browser's undo for typing. Route
-	// focus keeps these global shortcuts from changing the document on Export.
-	useFocusEffect(
-		useCallback(() => {
-			if (Platform.OS !== "web" || editing !== null) return;
-			const handleKeyDown = (event: KeyboardEvent) => {
-				if (!(event.metaKey || event.ctrlKey)) return;
-				const key = event.key.toLowerCase();
-				if (key === "z" && !event.shiftKey) handleUndo();
-				else if ((key === "z" && event.shiftKey) || key === "y") handleRedo();
-				else return;
-				event.preventDefault();
-			};
-			window.addEventListener("keydown", handleKeyDown);
-			return () => window.removeEventListener("keydown", handleKeyDown);
-		}, [editing, handleUndo, handleRedo]),
-	);
+	useUndoShortcuts({
+		enabled: editing === null,
+		onUndo: handleUndo,
+		onRedo: handleRedo,
+	});
 
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
@@ -138,7 +105,7 @@ export default function EditorRoute() {
 				<EditorCanvas
 					ref={canvasRef}
 					document={document}
-					selectedLayerId={selectedTextLayer?.id ?? null}
+					selectedLayer={selectedTextLayer}
 					hiddenLayerId={
 						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
 					}

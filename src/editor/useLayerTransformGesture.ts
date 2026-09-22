@@ -2,13 +2,13 @@ import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import type { Transform } from "@/model/geometry";
 import {
 	type Handle,
 	rotateByDrag,
 	scaleByDrag,
 	snapAngle,
-	type Transform,
-} from "@/model/geometry";
+} from "@/model/handles";
 import {
 	clampScale,
 	type LiveTransform,

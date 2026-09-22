@@ -10,25 +10,25 @@ import {
 } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
+import { selectionBox } from "@/layers/textLayerLayout";
 import type { EditorDocument, TextLayer } from "@/model/document";
 import type { Transform } from "@/model/geometry";
-import { EditorScene } from "./EditorScene";
-import { findLayerAt } from "./hitTest";
-import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import {
 	type CanvasCursor,
 	cursorForHandle,
 	cursorStyle,
-	handleUnder,
-	selectionBox,
-} from "./selectionHandles";
+} from "./canvasCursor";
+import { EditorScene } from "./EditorScene";
+import { findLayerAt } from "./hitTest";
+import { syncLiveTransform, useLiveTransform } from "./liveTransform";
+import { handleUnder } from "./selectionHandles";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { useTrackpadPinch } from "./useTrackpadPinch";
 import { fitDocumentToView, viewPointToDocument } from "./viewport";
 
 type EditorCanvasProps = {
 	document: EditorDocument;
-	selectedLayerId?: string | null;
+	selectedLayer?: TextLayer;
 	// Not drawn, e.g. while its text is open in the full-screen editor.
 	hiddenLayerId?: string | null;
 	onSelectLayer?: (id: string | null) => void;
@@ -56,7 +56,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 	function EditorCanvas(
 		{
 			document,
-			selectedLayerId = null,
+			selectedLayer,
 			hiddenLayerId = null,
 			onSelectLayer,
 			onTapSelectedLayer,
@@ -85,27 +85,20 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 		);
 		const { scale, offsetX, offsetY } = viewport;
 
-		const selectedLayer = useMemo(
-			() =>
-				document.layers.find(
-					(layer): layer is TextLayer =>
-						layer.type === "text" && layer.id === selectedLayerId,
-				),
-			[document.layers, selectedLayerId],
-		);
+		const selectedLayerId = selectedLayer?.id ?? null;
 
 		// Keep the gesture-driven values in step with whichever layer is selected,
 		// however it got selected (tap, add, delete).
 		useLayoutEffect(() => {
 			syncLiveTransform(
 				live,
-				selectedLayer?.id ?? null,
+				selectedLayerId,
 				selectedLayer?.transform,
 				selectedLayer && selectionBox(selectedLayer),
 			);
 			// While a gesture runs, the live values are the source of truth. When the
 			// layer list changes, synchronize it with the latest document state.
-		}, [live, selectedLayer]);
+		}, [live, selectedLayer, selectedLayerId]);
 
 		// The selected layer's handle under a point reported by the view.
 		const handleAt = useCallback(

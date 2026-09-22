@@ -3,7 +3,7 @@ import type { SharedValue } from "react-native-reanimated";
 import type { TextLayer } from "@/model/document";
 import type { Transform } from "@/model/geometry";
 import { colors } from "@/theme";
-import { layoutTextLayer, selectionPadding } from "./textLayerLayout";
+import { layoutTextLayer, selectionBox } from "./textLayerLayout";
 
 type Transforms = ReturnType<typeof toTransformList>;
 
@@ -40,16 +40,16 @@ export function TextLayerView({
 	selectionStroke?: number | SharedValue<number>;
 }) {
 	const { outline, fill, width, height } = layoutTextLayer(layer);
-	const pad = selectionPadding(layer);
+	const box = selectionBox(layer);
 
 	return (
 		<Group transform={transform}>
 			{selectionStroke !== undefined && (
 				<SkiaRect
-					x={-width / 2 - pad}
-					y={-height / 2 - pad}
-					width={width + pad * 2}
-					height={height + pad * 2}
+					x={-box.halfWidth}
+					y={-box.halfHeight}
+					width={box.halfWidth * 2}
+					height={box.halfHeight * 2}
 					color={colors.accent}
 					style="stroke"
 					strokeWidth={selectionStroke}
