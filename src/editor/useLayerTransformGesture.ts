@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useMemo } from "react";
+import { type RefObject, useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, type View } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
@@ -341,12 +341,27 @@ export function useTrackpadPinch({
 	live: LiveTransform;
 	onCommit: (id: string, transform: Transform) => void;
 }) {
+	const commitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+		undefined,
+	);
+	const pendingCommit = useRef<{
+		id: string;
+		transform: Transform;
+	} | null>(null);
+
+	const flushPendingCommit = useCallback(() => {
+		clearTimeout(commitTimer.current);
+		commitTimer.current = undefined;
+		const pending = pendingCommit.current;
+		pendingCommit.current = null;
+		if (pending) onCommit(pending.id, pending.transform);
+	}, [onCommit]);
+
 	useEffect(() => {
 		// On web, a View's ref is its DOM element.
 		const element = target.current as unknown as HTMLElement | null;
 		if (Platform.OS !== "web" || !element) return;
 
-		let commitTimer: ReturnType<typeof setTimeout> | undefined;
 		const handleWheel = (event: WheelEvent) => {
 			if (!event.ctrlKey) return;
 			// Otherwise the browser zooms the whole page.
@@ -358,15 +373,19 @@ export function useTrackpadPinch({
 			);
 			// Captured now: by the time the timer fires, a new selection may have
 			// replaced the live values.
-			const transform = readLiveTransform(live);
-			clearTimeout(commitTimer);
-			commitTimer = setTimeout(() => onCommit(id, transform), 250);
+			pendingCommit.current = { id, transform: readLiveTransform(live) };
+			clearTimeout(commitTimer.current);
+			commitTimer.current = setTimeout(flushPendingCommit, 250);
 		};
 
 		element.addEventListener("wheel", handleWheel, { passive: false });
 		return () => {
 			element.removeEventListener("wheel", handleWheel);
-			clearTimeout(commitTimer);
+			clearTimeout(commitTimer.current);
+			commitTimer.current = undefined;
+			pendingCommit.current = null;
 		};
-	}, [target, live, onCommit]);
+	}, [target, live, flushPendingCommit]);
+
+	return flushPendingCommit;
 }

@@ -114,6 +114,8 @@ describe("editorSlice", () => {
 		before.updateSelectedText({ text: "y" });
 		before.duplicateSelectedText();
 		before.deleteSelectedLayer();
+		before.undo();
+		before.redo();
 		assert.equal(store.getState(), before);
 	});
 
@@ -124,5 +126,98 @@ describe("editorSlice", () => {
 		store.getState().updateSelectedText({ text: "changed" });
 		store.getState().deleteSelectedLayer();
 		assert.deepEqual(document, snapshot);
+	});
+
+	describe("history", () => {
+		test("undoing an add removes the text and restores the selection", () => {
+			const { store, text } = storeWithText();
+			store.getState().undo();
+			assert.equal(textLayers(store).length, 0);
+			assert.equal(store.getState().selectedLayerId, null);
+
+			store.getState().redo();
+			assert.deepEqual(textLayers(store), [text]);
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("undoing a delete brings the layer back selected", () => {
+			const { store, text } = storeWithText();
+			store.getState().deleteSelectedLayer();
+			store.getState().undo();
+			assert.deepEqual(textLayers(store), [text]);
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("undo restores the exact earlier document", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			store.getState().updateSelectedText({ color: "#FF3B30" });
+			store
+				.getState()
+				.transformLayer(text.id, { ...text.transform, x: 1, rotation: 1 });
+			const after = store.getState().document;
+
+			store.getState().undo();
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
+
+			store.getState().redo();
+			store.getState().redo();
+			assert.equal(store.getState().document, after);
+		});
+
+		test("a new edit after undo clears the redo stack", () => {
+			const { store } = storeWithText();
+			store.getState().updateSelectedText({ color: "#FF3B30" });
+			store.getState().undo();
+			store.getState().updateSelectedText({ color: "#34C759" });
+			assert.deepEqual(store.getState().future, []);
+		});
+
+		test("selecting and no-op edits aren't recorded", () => {
+			const { store, text } = storeWithText();
+			const { past } = store.getState();
+			store.getState().selectLayer(null);
+			store.getState().selectLayer(text.id);
+			store
+				.getState()
+				.updateSelectedText({ text: text.text, align: text.align });
+			assert.equal(store.getState().past, past);
+		});
+
+		test("no-op transforms preserve history and redo", () => {
+			const { store, text } = storeWithText();
+			store.getState().updateSelectedText({ color: "#FF3B30" });
+			store.getState().undo();
+			const before = store.getState();
+
+			before.transformLayer(text.id, text.transform);
+			assert.equal(store.getState(), before);
+
+			before.transformLayer("missing", { ...text.transform, x: 1 });
+			assert.equal(store.getState(), before);
+		});
+
+		test("opening or closing a document clears history", () => {
+			const { store } = storeWithText();
+			store.getState().duplicateSelectedText();
+			store.getState().undo();
+			store.getState().openDocument(photo());
+			assert.deepEqual(store.getState().past, []);
+			assert.deepEqual(store.getState().future, []);
+
+			store.getState().addTextLayer("x", "center");
+			store.getState().closeDocument();
+			assert.deepEqual(store.getState().past, []);
+		});
+
+		test("undo and redo with nothing to step to change nothing", () => {
+			const store = createTestStore();
+			store.getState().openDocument(photo());
+			const before = store.getState();
+			before.undo();
+			before.redo();
+			assert.equal(store.getState(), before);
+		});
 	});
 });

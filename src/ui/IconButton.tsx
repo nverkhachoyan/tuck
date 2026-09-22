@@ -14,26 +14,31 @@ export function IconButton({
 	icon,
 	label,
 	tone = "default",
+	disabled = false,
 	onPress,
 }: {
 	icon: IconName;
 	label: string;
 	tone?: IconButtonTone;
+	disabled?: boolean;
 	onPress: () => void;
 }) {
+	const color = disabled
+		? colors.textSecondary
+		: tone === "danger"
+			? colors.danger
+			: colors.textPrimary;
 	return (
 		<Pressable
 			hitSlop={10}
+			disabled={disabled}
 			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={label}
+			accessibilityState={{ disabled }}
 			style={({ pressed }) => pressed && styles.pressed}
 		>
-			<Ionicons
-				name={icon}
-				size={22}
-				color={tone === "danger" ? colors.danger : colors.textPrimary}
-			/>
+			<Ionicons name={icon} size={22} color={color} />
 		</Pressable>
 	);
 }

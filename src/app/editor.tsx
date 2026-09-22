@@ -1,15 +1,20 @@
-import { useNavigation, useRouter } from "expo-router";
+import { useFocusEffect, useNavigation, useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { EditorCanvas } from "@/editor/EditorCanvas";
+import { EditorCanvas, type EditorCanvasHandle } from "@/editor/EditorCanvas";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
 import { showAlert } from "@/lib/showAlert";
 import { defaultTextStyle, type TextAlign } from "@/model/document";
 import { useStore } from "@/store";
-import { selectSelectedTextLayer } from "@/store/editorSlice";
+import {
+	selectCanRedo,
+	selectCanUndo,
+	selectSelectedTextLayer,
+} from "@/store/editorSlice";
 import { colors } from "@/theme";
+import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
 import { ToolButton } from "@/ui/ToolButton";
@@ -26,6 +31,11 @@ export default function EditorRoute() {
 	const transformLayer = useStore((state) => state.transformLayer);
 	const deleteSelectedLayer = useStore((state) => state.deleteSelectedLayer);
 	const selectLayer = useStore((state) => state.selectLayer);
+	const undo = useStore((state) => state.undo);
+	const redo = useStore((state) => state.redo);
+	const canUndo = useStore(selectCanUndo);
+	const canRedo = useStore(selectCanRedo);
+	const canvasRef = useRef<EditorCanvasHandle>(null);
 	// What the full-screen text editor is open for: a layer that doesn't exist
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
@@ -54,6 +64,33 @@ export default function EditorRoute() {
 		return () => window.removeEventListener("beforeunload", warn);
 	}, [hasEdits]);
 
+	const handleUndo = useCallback(() => {
+		canvasRef.current?.flushPendingTransform();
+		undo();
+	}, [undo]);
+	const handleRedo = useCallback(() => {
+		canvasRef.current?.flushPendingTransform();
+		redo();
+	}, [redo]);
+
+	// The text editor's own input keeps the browser's undo for typing. Route
+	// focus keeps these global shortcuts from changing the document on Export.
+	useFocusEffect(
+		useCallback(() => {
+			if (Platform.OS !== "web" || editing !== null) return;
+			const handleKeyDown = (event: KeyboardEvent) => {
+				if (!(event.metaKey || event.ctrlKey)) return;
+				const key = event.key.toLowerCase();
+				if (key === "z" && !event.shiftKey) handleUndo();
+				else if ((key === "z" && event.shiftKey) || key === "y") handleRedo();
+				else return;
+				event.preventDefault();
+			};
+			window.addEventListener("keydown", handleKeyDown);
+			return () => window.removeEventListener("keydown", handleKeyDown);
+		}, [editing, handleUndo, handleRedo]),
+	);
+
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
 
@@ -75,16 +112,31 @@ export default function EditorRoute() {
 			<ScreenHeader
 				onBack={() => router.back()}
 				action={
-					<TextButton
-						label="Export"
-						tone="accent"
-						onPress={() => router.push("/export")}
-					/>
+					<View style={styles.headerActions}>
+						<IconButton
+							icon="arrow-undo-outline"
+							label="Undo"
+							disabled={!canUndo}
+							onPress={handleUndo}
+						/>
+						<IconButton
+							icon="arrow-redo-outline"
+							label="Redo"
+							disabled={!canRedo}
+							onPress={handleRedo}
+						/>
+						<TextButton
+							label="Export"
+							tone="accent"
+							onPress={() => router.push("/export")}
+						/>
+					</View>
 				}
 			/>
 
 			<View style={styles.canvasArea}>
 				<EditorCanvas
+					ref={canvasRef}
 					document={document}
 					selectedLayerId={selectedTextLayer?.id ?? null}
 					hiddenLayerId={
@@ -143,6 +195,11 @@ export default function EditorRoute() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+	},
+	headerActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 24,
 	},
 	canvasArea: {
 		flex: 1,
