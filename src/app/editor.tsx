@@ -3,20 +3,29 @@ import { usePreventRemove } from "expo-router/react-navigation";
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { EditorCanvas } from "@/editor/EditorCanvas";
-import { useEditor } from "@/editor/state/EditorProvider";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
 import { showAlert } from "@/lib/showAlert";
 import { defaultTextStyle, type TextAlign } from "@/model/document";
+import { useStore } from "@/store";
+import { selectSelectedTextLayer } from "@/store/editorSlice";
 import { colors } from "@/theme";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
 import { ToolButton } from "@/ui/ToolButton";
 
 export default function EditorRoute() {
-	const editor = useEditor();
 	const router = useRouter();
-	const { document, selectedTextLayer } = editor;
+	const document = useStore((state) => state.document);
+	const selectedTextLayer = useStore(selectSelectedTextLayer);
+	const addTextLayer = useStore((state) => state.addTextLayer);
+	const duplicateSelectedText = useStore(
+		(state) => state.duplicateSelectedText,
+	);
+	const updateSelectedText = useStore((state) => state.updateSelectedText);
+	const transformLayer = useStore((state) => state.transformLayer);
+	const deleteSelectedLayer = useStore((state) => state.deleteSelectedLayer);
+	const selectLayer = useStore((state) => state.selectLayer);
 	// What the full-screen text editor is open for: a layer that doesn't exist
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
@@ -52,11 +61,11 @@ export default function EditorRoute() {
 	const handleEditDone = (rawText: string, align: TextAlign) => {
 		const text = rawText.trim();
 		if (editing === "new") {
-			if (text) editor.addTextLayer(text, align);
+			if (text) addTextLayer(text, align);
 		} else if (text) {
-			editor.updateSelectedText({ text, align });
+			updateSelectedText({ text, align });
 		} else {
-			editor.deleteSelectedLayer();
+			deleteSelectedLayer();
 		}
 		setEditing(null);
 	};
@@ -81,10 +90,9 @@ export default function EditorRoute() {
 					hiddenLayerId={
 						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
 					}
-					onSelectLayer={editor.selectLayer}
-					// Like most story editors, tapping selected text edits it.
+					onSelectLayer={selectLayer}
 					onTapSelectedLayer={() => setEditing("selected")}
-					onCommitTransform={editor.transformLayer}
+					onCommitTransform={transformLayer}
 				/>
 			</View>
 
@@ -92,12 +100,12 @@ export default function EditorRoute() {
 				{selectedTextLayer ? (
 					<TextEditPanel
 						layer={selectedTextLayer}
-						onChangeColor={(color) => editor.updateSelectedText({ color })}
+						onChangeColor={(color) => updateSelectedText({ color })}
 						onChangeOutlineColor={(outlineColor) =>
-							editor.updateSelectedText({ outlineColor })
+							updateSelectedText({ outlineColor })
 						}
-						onDuplicate={editor.duplicateSelectedText}
-						onDelete={editor.deleteSelectedLayer}
+						onDuplicate={duplicateSelectedText}
+						onDelete={deleteSelectedLayer}
 					/>
 				) : (
 					<View style={styles.toolbar}>

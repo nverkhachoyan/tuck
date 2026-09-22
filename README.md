@@ -58,7 +58,7 @@ Key areas:
 - `src/model/` defines the document, layers, and geometry as plain data: no React.
 - `src/layers/` draws each layer type in document space; shared by editor and export.
 - `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, and the full-screen `TextEditor`.
-- `src/editor/state/` owns the document, selection, and every command that mutates them.
+- `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, and every edit that mutates them.
 - `src/import/` picks a photo and turns it into a document.
 - `src/export/` renders the document offscreen with `ExportScene`, then saves it to Photos or shares it.
 - `src/layers/fonts.ts` bundles the one text font (Anton) so text renders identically on iOS, Android, and web.
@@ -66,8 +66,8 @@ Key areas:
 - `src/lib/` holds platform shims and small language helpers.
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.
 
-Imports flow one way: `app` → `editor` / `import` / `export` → `layers` →
-`model`. `ui`, `theme`, and `lib` import nothing from the app. Adding a layer
+Imports flow one way: `app` → `editor` / `import` / `export` → `layers` /
+`store` → `model`. `ui`, `theme`, and `lib` import nothing from the app. Adding a layer
 type means a type in `model/document.ts`, a view in `layers/`, and a case in
 both `EditorScene` and `ExportScene` (`assertNever` flags any you miss).
 

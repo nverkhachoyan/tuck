@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import { StatusBar, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { EditorProvider, useEditor } from "@/editor/state/EditorProvider";
 import { LoadFonts } from "@/layers/fonts";
+import { useStore } from "@/store";
 import { colors } from "@/theme";
 
 export default function Layout() {
@@ -13,12 +13,10 @@ export default function Layout() {
 			<SafeAreaProvider>
 				<Suspense fallback={null}>
 					<LoadFonts />
-					<EditorProvider>
-						<StatusBar barStyle="light-content" />
-						<SafeAreaView style={styles.container}>
-							<Routes />
-						</SafeAreaView>
-					</EditorProvider>
+					<StatusBar barStyle="light-content" />
+					<SafeAreaView style={styles.container}>
+						<Routes />
+					</SafeAreaView>
 				</Suspense>
 			</SafeAreaProvider>
 		</GestureHandlerRootView>
@@ -26,7 +24,7 @@ export default function Layout() {
 }
 
 function Routes() {
-	const { document } = useEditor();
+	const hasDocument = useStore((state) => state.document !== null);
 
 	return (
 		<Stack
@@ -36,8 +34,7 @@ function Routes() {
 			}}
 		>
 			<Stack.Screen name="index" />
-			{/* Reloads, deep links, and closing the document all drop these routes. */}
-			<Stack.Protected guard={!!document}>
+			<Stack.Protected guard={hasDocument}>
 				<Stack.Screen name="editor" />
 				<Stack.Screen name="export" />
 			</Stack.Protected>

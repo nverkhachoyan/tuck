@@ -9,7 +9,6 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { useEditor } from "@/editor/state/EditorProvider";
 import {
 	canShareImages,
 	saveImage,
@@ -19,14 +18,14 @@ import {
 import { useRenderedDocument } from "@/export/useRenderedDocument";
 import { showAlert } from "@/lib/showAlert";
 import type { EditorDocument } from "@/model/document";
+import { useStore } from "@/store";
 import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 
 export default function ExportRoute() {
-	const { document } = useEditor();
+	const document = useStore((state) => state.document);
 
-	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
 
 	return <ExportScreen document={document} />;
