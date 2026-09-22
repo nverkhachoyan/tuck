@@ -1,11 +1,12 @@
 import { useNavigation, useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
-import { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import { EditorCanvas } from "@/editor/EditorCanvas";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
+import { showAlert } from "@/lib/showAlert";
 import {
 	defaultTextStyle,
 	getFontSizeRange,
@@ -29,7 +30,7 @@ export default function EditorRoute() {
 	const navigation = useNavigation();
 	const hasEdits = (document?.layers.length ?? 0) > 1;
 	usePreventRemove(hasEdits, ({ data }) => {
-		Alert.alert("Discard edits?", "Your changes to this photo will be lost.", [
+		showAlert("Discard edits?", "Your changes to this photo will be lost.", [
 			{ text: "Keep Editing", style: "cancel" },
 			{
 				text: "Discard",
@@ -38,6 +39,15 @@ export default function EditorRoute() {
 			},
 		]);
 	});
+
+	// On web, a reload or closing the tab also loses the edits, and no route
+	// is removed to catch it; the browser's own leave-page prompt covers it.
+	useEffect(() => {
+		if (Platform.OS !== "web" || !hasEdits) return;
+		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+		window.addEventListener("beforeunload", warn);
+		return () => window.removeEventListener("beforeunload", warn);
+	}, [hasEdits]);
 
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;

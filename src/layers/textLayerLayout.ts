@@ -1,5 +1,4 @@
 import {
-	FontWeight,
 	PaintStyle,
 	Skia,
 	type SkPaint,
@@ -8,6 +7,7 @@ import {
 	StrokeJoin,
 } from "@shopify/react-native-skia";
 import type { TextAlign, TextLayer } from "@/model/document";
+import { getFontProvider, TEXT_FONT_FAMILY } from "./fonts";
 
 export type TextLayerLayout = {
 	// Drawn first, so the outline sits behind the fill; null when disabled.
@@ -73,13 +73,17 @@ function outlinePaint(layer: TextLayer, color: string): SkPaint {
 
 function buildParagraph(layer: TextLayer, foreground?: SkPaint): SkParagraph {
 	return (
-		Skia.ParagraphBuilder.Make({ textAlign: skTextAlign[layer.align] })
+		Skia.ParagraphBuilder.Make(
+			{ textAlign: skTextAlign[layer.align] },
+			getFontProvider(),
+		)
 			.pushStyle(
 				{
 					color: Skia.Color(layer.color),
-					fontFamilies: ["System"],
+					// Anton has a single, already-heavy weight; asking for bold
+					// would only get a synthesized, smeared version of it.
+					fontFamilies: [TEXT_FONT_FAMILY],
 					fontSize: layer.fontSize,
-					fontStyle: { weight: FontWeight.Bold },
 				},
 				foreground,
 			)

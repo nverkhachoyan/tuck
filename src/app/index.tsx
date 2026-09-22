@@ -1,8 +1,9 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useEditor } from "@/editor/state/EditorProvider";
 import { pickPhotoDocument } from "@/import/pickPhoto";
+import { showAlert } from "@/lib/showAlert";
 import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
 
@@ -26,7 +27,7 @@ export default function WelcomeRoute() {
 				router.push("/editor");
 			}
 		} catch (error) {
-			Alert.alert("Couldn't open photo", String(error));
+			showAlert("Couldn't open photo", String(error));
 		} finally {
 			setOpening(false);
 		}

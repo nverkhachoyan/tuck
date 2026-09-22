@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import {
 	BackHandler,
 	KeyboardAvoidingView,
+	Platform,
 	Pressable,
 	StyleSheet,
 	TextInput,
+	type TextStyle,
 	View,
 } from "react-native";
+import { TEXT_FONT_FAMILY } from "@/layers/fonts";
 import type { TextAlign } from "@/model/document";
 import { colors } from "@/theme";
 import { TextButton } from "@/ui/TextButton";
@@ -131,8 +134,16 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 24,
 	},
 	input: {
+		// The canvas's font, so the text doesn't change face when editing ends.
+		// No fontWeight: Android drops a custom font asked for in a weight it
+		// wasn't registered with.
+		fontFamily: TEXT_FONT_FAMILY,
 		fontSize: 34,
-		fontWeight: "700",
+		// Browsers ring a focused input; here the caret already shows focus.
+		// React Native's types lack "none", which only web understands.
+		...Platform.select({
+			web: { outlineStyle: "none" } as unknown as TextStyle,
+		}),
 		// React Native can't stroke text, so a tight shadow stands in for the
 		// outline while typing.
 		textShadowOffset: { width: 0, height: 0 },

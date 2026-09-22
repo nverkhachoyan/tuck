@@ -3,17 +3,21 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
 	ActivityIndicator,
-	Alert,
 	type LayoutChangeEvent,
 	Linking,
-	Platform,
 	StyleSheet,
 	Text,
 	View,
 } from "react-native";
 import { useEditor } from "@/editor/state/EditorProvider";
-import { saveToPhotos, shareImage } from "@/export/saveImage";
+import {
+	canShareImages,
+	saveImage,
+	saveLabels,
+	shareImage,
+} from "@/export/saveImage";
 import { useRenderedDocument } from "@/export/useRenderedDocument";
+import { showAlert } from "@/lib/showAlert";
 import type { EditorDocument } from "@/model/document";
 import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
@@ -34,6 +38,7 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 	const [busy, setBusy] = useState<"saving" | "sharing" | null>(null);
 	const [saved, setSaved] = useState(false);
 	const [size, setSize] = useState({ width: 0, height: 0 });
+	const [canShare] = useState(canShareImages);
 
 	const handleLayout = (event: LayoutChangeEvent) => {
 		const { width, height } = event.nativeEvent.layout;
@@ -44,11 +49,11 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 		if (state.status !== "ready") return;
 		setBusy("saving");
 		try {
-			const result = await saveToPhotos(state.image);
+			const result = await saveImage(state.image);
 			if (result.status === "saved") {
 				setSaved(true);
 			} else {
-				Alert.alert(
+				showAlert(
 					"Photos access needed",
 					"Allow this app to add photos in Settings to save your edit.",
 					[
@@ -58,7 +63,7 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 				);
 			}
 		} catch (error) {
-			Alert.alert("Save failed", String(error));
+			showAlert("Save failed", String(error));
 		} finally {
 			setBusy(null);
 		}
@@ -69,10 +74,10 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 		setBusy("sharing");
 		try {
 			if (!(await shareImage(state.image))) {
-				Alert.alert("Sharing unavailable", "This device can't share files.");
+				showAlert("Sharing unavailable", "This device can't share files.");
 			}
 		} catch (error) {
-			Alert.alert("Share failed", String(error));
+			showAlert("Share failed", String(error));
 		} finally {
 			setBusy(null);
 		}
@@ -117,29 +122,28 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 				<Text style={styles.details}>
 					{document.width} × {document.height} · JPEG
 				</Text>
-				{/* The photo library isn't reachable from a browser. */}
-				{Platform.OS !== "web" && (
+				<Button
+					label={
+						saved
+							? saveLabels.done
+							: busy === "saving"
+								? saveLabels.busy
+								: saveLabels.idle
+					}
+					variant="primary"
+					size="large"
+					disabled={state.status !== "ready" || busy !== null || saved}
+					onPress={handleSave}
+				/>
+				{/* Most desktop browsers can't share files. */}
+				{canShare && (
 					<Button
-						label={
-							saved
-								? "Saved to Photos"
-								: busy === "saving"
-									? "Saving…"
-									: "Save to Photos"
-						}
-						variant="primary"
+						label={busy === "sharing" ? "Opening…" : "Share"}
 						size="large"
-						disabled={state.status !== "ready" || busy !== null || saved}
-						onPress={handleSave}
+						disabled={state.status !== "ready" || busy !== null}
+						onPress={handleShare}
 					/>
 				)}
-				<Button
-					label={busy === "sharing" ? "Opening…" : "Share"}
-					variant={Platform.OS === "web" ? "primary" : "secondary"}
-					size="large"
-					disabled={state.status !== "ready" || busy !== null}
-					onPress={handleShare}
-				/>
 			</View>
 		</View>
 	);

@@ -28,7 +28,9 @@
 					"granularPermissions": ["photo"]
 				}
 			],
-			"expo-sharing"
+			"expo-sharing",
+			"expo-asset",
+			"expo-font"
 		],
 		"name": "photo-editor",
 		"slug": "photo-editor"

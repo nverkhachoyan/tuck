@@ -4,7 +4,7 @@ import { StatusBar, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { EditorProvider, useEditor } from "@/editor/state/EditorProvider";
-import { AsyncSkia } from "@/lib/AsyncSkia";
+import { LoadFonts } from "@/layers/fonts";
 import { colors } from "@/theme";
 
 export default function Layout() {
@@ -12,7 +12,7 @@ export default function Layout() {
 		<GestureHandlerRootView style={styles.flex}>
 			<SafeAreaProvider>
 				<Suspense fallback={null}>
-					<AsyncSkia />
+					<LoadFonts />
 					<EditorProvider>
 						<StatusBar barStyle="light-content" />
 						<SafeAreaView style={styles.container}>

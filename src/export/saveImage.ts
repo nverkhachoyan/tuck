@@ -3,18 +3,25 @@ import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 
-export type SaveToPhotosResult =
+// `saveImage.web.ts` implements the same API for browsers.
+
+export type SaveImageResult =
 	| { status: "saved" }
 	| { status: "permission-denied" };
+
+/** The save button's label before, during, and after `saveImage`. */
+export const saveLabels = {
+	idle: "Save to Photos",
+	busy: "Saving…",
+	done: "Saved to Photos",
+};
 
 /**
  * Adds a rendered image to the user's photo library. Asks only for add-only
  * access: saving never needs to read the library. `Asset.create` checks the
  * permission but won't prompt for it, so the request has to come first.
  */
-export async function saveToPhotos(
-	image: SkImage,
-): Promise<SaveToPhotosResult> {
+export async function saveImage(image: SkImage): Promise<SaveImageResult> {
 	const permission = await MediaLibrary.requestPermissionsAsync(true, [
 		"photo",
 	]);
@@ -24,6 +31,11 @@ export async function saveToPhotos(
 
 	await MediaLibrary.Asset.create(writeJpeg(image).uri);
 	return { status: "saved" };
+}
+
+/** iOS and Android always have a share sheet. */
+export function canShareImages(): boolean {
+	return true;
 }
 
 /**
