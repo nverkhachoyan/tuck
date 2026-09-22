@@ -3,15 +3,13 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "npx",
+      "runtimeExecutable": "sh",
       "runtimeArgs": [
-        "expo",
-        "start",
-        "--web",
-        "--port",
-        "8082"
+        "-c",
+        "exec npx expo start --web --port \"${PORT:-8082}\""
       ],
-      "port": 8082
+      "port": 8082,
+      "autoPort": true
     }
   ]
 }
