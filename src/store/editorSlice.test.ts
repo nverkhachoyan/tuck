@@ -10,6 +10,7 @@ import {
 } from "../model/document.ts";
 import {
 	createEditorSlice,
+	MAX_HISTORY,
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 } from "./editorSlice.ts";
@@ -360,6 +361,23 @@ describe("editorSlice", () => {
 
 			before.transformLayer("missing", { ...text.transform, x: 1 });
 			assert.equal(store.getState(), before);
+		});
+
+		test("only the most recent steps can be undone", () => {
+			const { store, text } = storeWithText();
+			const documents = [store.getState().document];
+			for (let x = 1; x <= MAX_HISTORY + 5; x++) {
+				store.getState().transformLayer(text.id, { ...text.transform, x });
+				documents.push(store.getState().document);
+			}
+			assert.equal(store.getState().past.length, MAX_HISTORY);
+
+			while (store.getState().past.length > 0) store.getState().undo();
+			assert.equal(store.getState().document, documents.at(-1 - MAX_HISTORY));
+
+			while (store.getState().future.length > 0) store.getState().redo();
+			assert.equal(store.getState().document, documents.at(-1));
+			assert.equal(store.getState().past.length, MAX_HISTORY);
 		});
 
 		test("opening or closing a document clears history", () => {

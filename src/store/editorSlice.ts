@@ -13,6 +13,9 @@ import {
 import { type Transform, transformsEqual } from "../model/geometry.ts";
 import type { SliceCreator } from "./index.ts";
 
+// Undo steps kept; the oldest are dropped beyond this.
+export const MAX_HISTORY = 100;
+
 export type EditorSnapshot = {
 	document: EditorDocument;
 	selectedLayerId: string | null;
@@ -67,7 +70,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			{
 				document: { ...document, layers: update(document.layers) },
 				selectedLayerId: nextSelectedLayerId,
-				past: [...past, { document, selectedLayerId }],
+				past: [...past, { document, selectedLayerId }].slice(-MAX_HISTORY),
 				future: [],
 			},
 			false,
