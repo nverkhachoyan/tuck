@@ -1,6 +1,7 @@
 {
 	"expo": {
 		"scheme": "photo-editor",
+		"userInterfaceStyle": "dark",
 		"web": {
 			"output": "static"
 		},
