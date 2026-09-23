@@ -10,6 +10,7 @@ import {
 	PHOTO_FILE,
 	PROJECT_VERSION,
 	type ProjectSummary,
+	type ProjectThumbnail,
 	parseSavedProject,
 	projectLabel,
 	type SavedProject,
@@ -40,9 +41,15 @@ type OpenProject = {
 	// The document as last saved, so an unchanged one isn't written again
 	// (and doesn't move up the list).
 	savedJson: string | null;
+	// The saved file's `updatedAt`, and the thumbnail it carries.
+	updatedAt: number;
+	thumbnail: ProjectThumbnail | null;
 	// Autosaves and closing writes must finish in document order.
 	writing: Promise<void>;
 };
+
+/** Draws a document as a thumbnail's data URL; see `ProjectThumbnail`. */
+export type RenderThumbnail = (document: EditorDocument) => Promise<string>;
 
 const AUTOSAVE_DELAY_MS = 500;
 
@@ -148,11 +155,14 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			throw new Error("Project is already open");
 		try {
 			const photoUrl = await storage.storePhoto(id, photo.uri);
+			const createdAt = Date.now();
 			openProjects.set(id, {
 				photoUrl,
-				createdAt: Date.now(),
+				createdAt,
 				reopened: false,
 				savedJson: null,
+				updatedAt: createdAt,
+				thumbnail: null,
 				writing: Promise.resolve(),
 			});
 			setAutosaveError(null);
@@ -191,6 +201,8 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				createdAt: saved.createdAt,
 				reopened: true,
 				savedJson: JSON.stringify(saved.document),
+				updatedAt: saved.updatedAt,
+				thumbnail: saved.thumbnail ?? null,
 				writing: Promise.resolve(),
 			});
 			setAutosaveError(null);
@@ -223,9 +235,11 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				createdAt: project.createdAt,
 				updatedAt: Date.now(),
 				document: saved,
+				thumbnail: project.thumbnail ?? undefined,
 			};
 			await storage.writeProjectFile(id, JSON.stringify(file));
 			project.savedJson = savedJson;
+			project.updatedAt = file.updatedAt;
 		});
 		// Keep the queue usable after an autosave error; return the error to callers.
 		project.writing = written.catch(() => {});
@@ -233,11 +247,52 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	}
 
 	/**
+	 * Renders a thumbnail of the saved document when the one it carries is
+	 * missing or older. It only decorates the list, so a failure is logged.
+	 */
+	async function refreshThumbnail(
+		id: string,
+		document: EditorDocument,
+		render: RenderThumbnail,
+	) {
+		const project = openProjects.get(id);
+		if (!project || project.savedJson === null) return;
+		const { updatedAt } = project;
+		if (project.thumbnail?.updatedAt === updatedAt) return;
+		try {
+			const thumbnail = { url: await render(document), updatedAt };
+			const written = project.writing.then(async () => {
+				if (project.savedJson === null || project.updatedAt !== updatedAt) {
+					return;
+				}
+				const file: SavedProject = {
+					version: PROJECT_VERSION,
+					createdAt: project.createdAt,
+					updatedAt,
+					document: JSON.parse(project.savedJson),
+					thumbnail,
+				};
+				await storage.writeProjectFile(id, JSON.stringify(file));
+				project.thumbnail = thumbnail;
+			});
+			project.writing = written.catch(() => {});
+			await written;
+		} catch (error) {
+			console.warn("Couldn't update the project's thumbnail", error);
+		}
+	}
+
+	/**
 	 * Ends an editing session: saves the last changes, or removes the project
 	 * if it was started this session and is still just the photo. A reopened
-	 * project is kept even with every edit removed.
+	 * project is kept even with every edit removed. A kept project's thumbnail
+	 * is brought up to date with `renderThumbnail`, when given.
 	 */
-	function closeProject(id: string, document: EditorDocument): Promise<void> {
+	function closeProject(
+		id: string,
+		document: EditorDocument,
+		renderThumbnail?: RenderThumbnail,
+	): Promise<void> {
 		if (pendingSave?.id === id) {
 			clearTimeout(saveTimer);
 			pendingSave = null;
@@ -248,6 +303,9 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			await project.writing;
 			if (hasEdits(document) || project.reopened) {
 				await saveProject(id, document);
+				if (renderThumbnail) {
+					await refreshThumbnail(id, document, renderThumbnail);
+				}
 			} else {
 				await storage.removeProject(id);
 			}
@@ -299,8 +357,13 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 					if (!saved || !hasKnownImageUris(saved)) {
 						return { id, status: "unavailable" };
 					}
-					const label = projectLabel(saved.document);
-					return { id, status: "ready", updatedAt: saved.updatedAt, label };
+					return {
+						id,
+						status: "ready",
+						updatedAt: saved.updatedAt,
+						label: projectLabel(saved.document),
+						thumbnail: saved.thumbnail?.url ?? null,
+					};
 				}),
 		);
 		return projects

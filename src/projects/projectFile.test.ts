@@ -55,6 +55,18 @@ describe("parseSavedProject", () => {
 		assert.equal(project?.document.layers.length, 2);
 	});
 
+	test("keeps a thumbnail, and drops a malformed one but not the project", () => {
+		const thumbnail = { url: "data:image/jpeg;base64,AA", updatedAt: 2 };
+		assert.deepEqual(
+			parseSavedProject(savedJson({ thumbnail }))?.thumbnail,
+			thumbnail,
+		);
+		const malformed = { url: "file:///thumb.jpg", updatedAt: 2 };
+		const project = parseSavedProject(savedJson({ thumbnail: malformed }));
+		assert.ok(project);
+		assert.equal(project.thumbnail, undefined);
+	});
+
 	test("reads a photo-only marker after the last edit is removed", () => {
 		const photo = mapImageUris(documentWithText(), () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: photo }));

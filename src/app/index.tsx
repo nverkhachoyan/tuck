@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { renderThumbnail } from "@/export/renderDocument";
 import { pickPhoto } from "@/import/pickPhoto";
 import { showAlert } from "@/lib/showAlert";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
@@ -72,7 +73,7 @@ export default function WelcomeRoute() {
 		return run(document && projectId ? "saving" : "loading", async () => {
 			if (document && projectId) {
 				try {
-					await closeProject(projectId, document);
+					await closeProject(projectId, document, renderThumbnail);
 				} catch (error) {
 					showAlert("Couldn't save your edits", String(error));
 					return "saveFailed";

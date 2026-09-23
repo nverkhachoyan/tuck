@@ -61,7 +61,7 @@ Key areas:
 - `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, the full-screen `TextEditor`, the layers panel, and keyboard shortcuts on web.
 - `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, undo history, and every edit that mutates them.
 - `src/import/` picks a photo and re-encodes it as JPEG.
-- `src/projects/` keeps every editing session as a local project: the photo moves into it, edits autosave, and the welcome screen lists projects to reopen or delete. `projectFile.ts` is the saved format (versioned, with the photo's path relative to the project); `projectLifecycle.ts` opens, saves, and closes projects, with storage passed in so Node can test it.
+- `src/projects/` keeps every editing session as a local project: the photo moves into it, edits autosave, and the welcome screen lists projects to reopen or delete, each with a thumbnail rendered by export's renderer when its editor closes. `projectFile.ts` is the saved format (versioned, with the photo's path relative to the project); `projectLifecycle.ts` opens, saves, and closes projects, with storage passed in so Node can test it.
 - `src/export/` renders the document offscreen with `ExportScene`, then saves it to Photos or shares it.
 - `src/layers/fonts.ts` bundles the text fonts so text renders identically on iOS, Android, and web.
 - `src/ui/` and `src/theme.ts` hold controls and colors shared across screens.

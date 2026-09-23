@@ -1,4 +1,12 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import {
+	Image,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import type { ProjectSummary } from "./projectFile";
@@ -37,10 +45,13 @@ export function ProjectList({
 									pressed && styles.pressed,
 								]}
 							>
-								<Text style={styles.label} numberOfLines={1}>
-									{label}
-								</Text>
-								<Text style={styles.date}>{detail}</Text>
+								<Thumbnail url={unavailable ? null : project.thumbnail} />
+								<View style={styles.text}>
+									<Text style={styles.label} numberOfLines={1}>
+										{label}
+									</Text>
+									<Text style={styles.date}>{detail}</Text>
+								</View>
 							</Pressable>
 							<IconButton
 								icon="trash-outline"
@@ -53,6 +64,16 @@ export function ProjectList({
 					);
 				})}
 			</ScrollView>
+		</View>
+	);
+}
+
+/** The project's last closed look; a placeholder until it has one. */
+function Thumbnail({ url }: { url: string | null }) {
+	if (url) return <Image source={{ uri: url }} style={styles.thumbnail} />;
+	return (
+		<View style={styles.thumbnail}>
+			<Ionicons name="image-outline" size={20} color={colors.textSecondary} />
 		</View>
 	);
 }
@@ -90,11 +111,23 @@ const styles = StyleSheet.create({
 	},
 	open: {
 		flex: 1,
-		minHeight: 56,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 12,
+		paddingLeft: 8,
+		paddingVertical: 8,
+	},
+	thumbnail: {
+		width: 48,
+		height: 48,
+		borderRadius: 8,
+		alignItems: "center",
 		justifyContent: "center",
+		backgroundColor: colors.border,
+	},
+	text: {
+		flex: 1,
 		gap: 2,
-		paddingLeft: 16,
-		paddingVertical: 10,
 	},
 	pressed: {
 		opacity: 0.7,

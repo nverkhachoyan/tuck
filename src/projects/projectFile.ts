@@ -15,10 +15,23 @@ export type SavedProject = {
 	// Image layers' `uri` names a file in the project rather than a URL: where
 	// the project lives can change (on iOS, with every app update).
 	document: EditorDocument;
+	thumbnail?: ProjectThumbnail;
 };
 
+/**
+ * A small JPEG of the document as a data URL, and the `updatedAt` of the save
+ * it shows. Saves carry it over, so it can be older than the document.
+ */
+export type ProjectThumbnail = { url: string; updatedAt: number };
+
 export type ProjectSummary =
-	| { id: string; status: "ready"; updatedAt: number; label: string }
+	| {
+			id: string;
+			status: "ready";
+			updatedAt: number;
+			label: string;
+			thumbnail: string | null;
+	  }
 	| { id: string; status: "unavailable" };
 
 /** `document` with every image layer's `uri` passed through `map`. */
@@ -38,7 +51,10 @@ export function mapImageUris(
 export function parseSavedProject(json: string): SavedProject | null {
 	try {
 		const value: unknown = JSON.parse(json);
-		return isSavedProject(value) ? value : null;
+		if (!isSavedProject(value)) return null;
+		// A bad thumbnail only costs the thumbnail; closing makes a new one.
+		const { thumbnail, ...project } = value;
+		return isThumbnail(thumbnail) ? { ...project, thumbnail } : project;
 	} catch {
 		return null;
 	}
@@ -67,6 +83,15 @@ function isSavedProject(value: unknown): value is SavedProject {
 		typeof value.createdAt === "number" &&
 		typeof value.updatedAt === "number" &&
 		isDocument(value.document)
+	);
+}
+
+function isThumbnail(value: unknown): value is ProjectThumbnail {
+	return (
+		isFields(value) &&
+		typeof value.url === "string" &&
+		value.url.startsWith("data:image/") &&
+		typeof value.updatedAt === "number"
 	);
 }
 

@@ -216,6 +216,101 @@ describe("closing and reopening", () => {
 	});
 });
 
+describe("thumbnails", () => {
+	const render =
+		(url: string, drawn: EditorDocument[] = []) =>
+		async (document: EditorDocument) => {
+			drawn.push(document);
+			return url;
+		};
+
+	test("closing renders the saved edits, and the list shows them", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		const edited = addText(document, "CAPTION");
+		const drawn: EditorDocument[] = [];
+		await harness.projects.closeProject(
+			id,
+			edited,
+			render("data:image/a", drawn),
+		);
+
+		assert.deepEqual(drawn, [edited]);
+		const saved = savedProject(harness, id);
+		assert.deepEqual(saved.thumbnail, {
+			url: "data:image/a",
+			updatedAt: saved.updatedAt,
+		});
+		const [listed] = await harness.projects.listProjects();
+		assert.ok(listed.status === "ready");
+		assert.equal(listed.thumbnail, "data:image/a");
+	});
+
+	test("an up-to-date thumbnail isn't rendered again", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.closeProject(
+			id,
+			addText(document, "CAPTION"),
+			render("data:image/a"),
+		);
+		const reopened = await harness.projects.openProject(id);
+		assert.ok(reopened);
+		const drawn: EditorDocument[] = [];
+		await harness.projects.closeProject(
+			id,
+			reopened,
+			render("data:image/b", drawn),
+		);
+		assert.equal(drawn.length, 0);
+	});
+
+	test("saves keep the old thumbnail until closing replaces it", async (t) => {
+		let now = 0;
+		t.mock.method(Date, "now", () => (now += 1000));
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.closeProject(
+			id,
+			addText(document, "FIRST"),
+			render("data:image/a"),
+		);
+		const reopened = await harness.projects.openProject(id);
+		assert.ok(reopened);
+		const edited = addText(reopened, "SECOND");
+		harness.projects.queueAutosave(id, edited);
+		harness.projects.flushAutosave();
+		await tick();
+		const autosaved = savedProject(harness, id);
+		assert.equal(autosaved.thumbnail?.url, "data:image/a");
+		assert.notEqual(autosaved.thumbnail?.updatedAt, autosaved.updatedAt);
+
+		await harness.projects.closeProject(id, edited, render("data:image/b"));
+		const closed = savedProject(harness, id);
+		assert.deepEqual(closed.thumbnail, {
+			url: "data:image/b",
+			updatedAt: closed.updatedAt,
+		});
+	});
+
+	test("a thumbnail that fails to render doesn't stop closing", async (t) => {
+		t.mock.method(console, "warn", () => {});
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.closeProject(
+			id,
+			addText(document, "CAPTION"),
+			async () => {
+				throw new Error("Couldn't draw");
+			},
+		);
+		const [listed] = await harness.projects.listProjects();
+		assert.ok(listed.status === "ready");
+		assert.equal(listed.label, "CAPTION");
+		assert.equal(listed.thumbnail, null);
+	});
+});
+
 describe("listing and deleting", () => {
 	test("listing removes never-saved projects and keeps unreadable ones", async () => {
 		const harness = createHarness();
