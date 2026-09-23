@@ -60,21 +60,23 @@ Key areas:
 - `src/layers/` draws each layer type in document space; shared by editor and export.
 - `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, the full-screen `TextEditor`, the layers panel, and keyboard shortcuts on web.
 - `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, undo history, and every edit that mutates them.
-- `src/import/` picks a photo and turns it into a document.
+- `src/import/` picks a photo and re-encodes it as JPEG.
+- `src/projects/` keeps every editing session as a local project: the photo moves into it, edits autosave, and the welcome screen lists projects to reopen or delete. `projectFile.ts` is the saved format (versioned, with the photo's path relative to the project); `projectLifecycle.ts` opens, saves, and closes projects, with storage passed in so Node can test it.
 - `src/export/` renders the document offscreen with `ExportScene`, then saves it to Photos or shares it.
 - `src/layers/fonts.ts` bundles the text fonts so text renders identically on iOS, Android, and web.
 - `src/ui/` and `src/theme.ts` hold controls and colors shared across screens.
 - `src/lib/` holds platform shims and small language helpers.
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.
 
-Imports flow one way: `app` → `editor` / `import` / `export` → `layers` /
-`store` → `model`. `ui`, `theme`, and `lib` import nothing from the app. Adding a layer
+Imports flow one way: `app` → `editor` / `import` / `export` / `projects` →
+`layers` / `store` → `model`. `ui`, `theme`, and `lib` import nothing from the app. Adding a layer
 type means a type in `model/document.ts`, a view in `layers/`, and a case in
 both `EditorScene` and `ExportScene` (`assertNever` flags any you miss).
 
 Platform differences live in `.web.ts` files next to their native versions
-(`saveImage.web.ts` downloads instead of saving to Photos; `showAlert.web.ts`
-uses the browser's dialogs because React Native Web's `Alert` does nothing).
+(`saveImage.web.ts` downloads instead of saving to Photos; `projectStorage.web.ts`
+keeps projects in IndexedDB instead of files; `showAlert.web.ts` uses the
+browser's dialogs because React Native Web's `Alert` does nothing).
 
 Picked images are normalized to JPEG before reaching Skia because iPhone
 photos are commonly HEIC, which Skia cannot decode. See `AGENTS.md` for this

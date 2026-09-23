@@ -18,7 +18,14 @@ export type ImageLayer = LayerBase & {
 export type TextAlign = "left" | "center" | "right";
 
 // Named for how they look; `layers/fonts.ts` maps each to its bundled font.
-export type TextFont = "classic" | "modern" | "serif" | "marker" | "typewriter";
+export const textFonts = [
+	"classic",
+	"modern",
+	"serif",
+	"marker",
+	"typewriter",
+] as const;
+export type TextFont = (typeof textFonts)[number];
 
 // transform.x/y is the center of the text block in document space. Lines wrap
 // at `maxWidth` (in the layer's own, unscaled space), and `\n` breaks a line.
@@ -93,6 +100,11 @@ export function createDocumentFromImage(
 			},
 		],
 	};
+}
+
+/** Whether anything was added to the photo. The photo alone isn't an edit. */
+export function hasEdits(document: EditorDocument): boolean {
+	return document.layers.length > 1;
 }
 
 /**

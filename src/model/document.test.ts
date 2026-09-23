@@ -7,6 +7,7 @@ import {
 	defaultTextStyle,
 	duplicateLayer,
 	type EditorDocument,
+	hasEdits,
 	type ImageLayer,
 	initialFontSize,
 	reorderLayer,
@@ -34,6 +35,15 @@ describe("createDocumentFromImage", () => {
 			scaleY: 1,
 			rotation: 0,
 		});
+	});
+});
+
+describe("hasEdits", () => {
+	test("is false for the photo alone and true once a layer is added", () => {
+		const document = landscape();
+		assert.equal(hasEdits(document), false);
+		document.layers.push(createTextLayer(document, "TOP TEXT", "center"));
+		assert.equal(hasEdits(document), true);
 	});
 });
 

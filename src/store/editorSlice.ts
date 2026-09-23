@@ -23,10 +23,12 @@ export type EditorSnapshot = {
 
 export type EditorSlice = {
 	document: EditorDocument | null;
+	// The saved project the document belongs to; null if it couldn't be saved.
+	projectId: string | null;
 	selectedLayerId: string | null;
 	past: EditorSnapshot[];
 	future: EditorSnapshot[];
-	openDocument: (document: EditorDocument) => void;
+	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
 	addTextLayer: (text: string, align: TextAlign) => void;
 	duplicateSelectedLayer: () => void;
@@ -91,20 +93,27 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 	return {
 		document: null,
+		projectId: null,
 		selectedLayerId: null,
 		past: [],
 		future: [],
 
-		openDocument: (document) =>
+		openDocument: (document, projectId) =>
 			set(
-				{ document, selectedLayerId: null, past: [], future: [] },
+				{ document, projectId, selectedLayerId: null, past: [], future: [] },
 				false,
 				"editor/openDocument",
 			),
 
 		closeDocument: () =>
 			set(
-				{ document: null, selectedLayerId: null, past: [], future: [] },
+				{
+					document: null,
+					projectId: null,
+					selectedLayerId: null,
+					past: [],
+					future: [],
+				},
 				false,
 				"editor/closeDocument",
 			),

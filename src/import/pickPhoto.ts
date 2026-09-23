@@ -1,19 +1,20 @@
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import { createDocumentFromImage, type EditorDocument } from "@/model/document";
+
+export type PickedPhoto = { uri: string; width: number; height: number };
 
 export type PickPhotoResult =
-	| { status: "picked"; document: EditorDocument }
+	| { status: "picked"; photo: PickedPhoto }
 	| { status: "canceled" };
 
 /**
- * Lets the user pick a photo and builds an EditorDocument from it. The system
- * picker runs outside the app and returns only what the user chooses, so no
- * library permission is needed. Pure IO + data shaping — no UI feedback here,
+ * Lets the user pick a photo, re-encoded so the editor can always read it.
+ * The system picker runs outside the app and returns only what the user
+ * chooses, so no library permission is needed. Pure IO — no UI feedback here,
  * so callers decide how to react to each outcome. Throws if the photo can't
  * be read or re-encoded.
  */
-export async function pickPhotoDocument(): Promise<PickPhotoResult> {
+export async function pickPhoto(): Promise<PickPhotoResult> {
 	const result = await ImagePicker.launchImageLibraryAsync({
 		mediaTypes: ["images"],
 		quality: 1,
@@ -22,13 +23,8 @@ export async function pickPhotoDocument(): Promise<PickPhotoResult> {
 		return { status: "canceled" };
 	}
 
-	const photo = await reencodeAsJpeg(result.assets[0].uri);
-	const document = createDocumentFromImage(
-		photo.uri,
-		photo.width,
-		photo.height,
-	);
-	return { status: "picked", document };
+	const { uri, width, height } = await reencodeAsJpeg(result.assets[0].uri);
+	return { status: "picked", photo: { uri, width, height } };
 }
 
 /**

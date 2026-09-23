@@ -1,15 +1,15 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { EditorCanvas, type EditorCanvasHandle } from "@/editor/EditorCanvas";
 import { LayersPanel } from "@/editor/LayersPanel";
 import type { Shortcut } from "@/editor/shortcuts";
 import { TextEditor } from "@/editor/TextEditor";
 import { TextEditPanel } from "@/editor/TextEditPanel";
-import { useDiscardGuard } from "@/editor/useDiscardGuard";
 import { useEditorShortcuts } from "@/editor/useEditorShortcuts";
 import { assertNever } from "@/lib/assertNever";
 import { defaultTextStyle, type TextAlign } from "@/model/document";
+import { useAutosave } from "@/projects/projects";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -18,6 +18,7 @@ import {
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
 import { colors } from "@/theme";
+import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
@@ -26,6 +27,7 @@ import { ToolButton } from "@/ui/ToolButton";
 export default function EditorRoute() {
 	const router = useRouter();
 	const document = useStore((state) => state.document);
+	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const addTextLayer = useStore((state) => state.addTextLayer);
@@ -48,9 +50,25 @@ export default function EditorRoute() {
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 	const [layersOpen, setLayersOpen] = useState(false);
+	const prepareForBackgroundSave = useCallback(() => {
+		canvasRef.current?.flushPendingTransform();
+		return useStore.getState().document;
+	}, []);
 
-	// The photo alone isn't an edit.
-	useDiscardGuard((document?.layers.length ?? 0) > 1);
+	const { error: autosaveError, retry: retryAutosave } = useAutosave(
+		projectId,
+		document,
+		prepareForBackgroundSave,
+	);
+	const saveProblem =
+		projectId === null
+			? "This photo couldn't be saved, so your edits won't be kept."
+			: autosaveError;
+	// A web trackpad pinch commits after a short pause. Commit it before this
+	// screen loses focus so the session closes with the latest transform.
+	useFocusEffect(
+		useCallback(() => () => canvasRef.current?.flushPendingTransform(), []),
+	);
 
 	const handleUndo = useCallback(() => {
 		canvasRef.current?.flushPendingTransform();
@@ -133,7 +151,10 @@ export default function EditorRoute() {
 	return (
 		<View style={styles.container}>
 			<ScreenHeader
-				onBack={() => router.back()}
+				onBack={() => {
+					canvasRef.current?.flushPendingTransform();
+					router.back();
+				}}
 				action={
 					<View style={styles.headerActions}>
 						<IconButton
@@ -162,21 +183,30 @@ export default function EditorRoute() {
 					</View>
 				}
 			/>
-
-			<EditorCanvas
-				ref={canvasRef}
-				document={document}
-				selectedLayer={selectedLayer}
-				hiddenLayerId={
-					editing === "selected" ? (selectedTextLayer?.id ?? null) : null
-				}
-				onSelectLayer={selectLayer}
-				onTapSelectedLayer={
-					selectedTextLayer ? () => setEditing("selected") : undefined
-				}
-				onCommitTransform={transformLayer}
-				onNudgeLayer={nudgeLayer}
-			/>
+			<View style={styles.canvasArea}>
+				<EditorCanvas
+					ref={canvasRef}
+					document={document}
+					selectedLayer={selectedLayer}
+					hiddenLayerId={
+						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
+					}
+					onSelectLayer={selectLayer}
+					onTapSelectedLayer={
+						selectedTextLayer ? () => setEditing("selected") : undefined
+					}
+					onCommitTransform={transformLayer}
+					onNudgeLayer={nudgeLayer}
+				/>
+				{saveProblem && (
+					<View style={styles.saveError}>
+						<Text style={styles.saveErrorText}>{saveProblem}</Text>
+						{projectId !== null && (
+							<Button label="Retry Save" onPress={retryAutosave} />
+						)}
+					</View>
+				)}
+			</View>
 
 			<View style={[styles.bottomPanel, layersOpen && styles.layersPanel]}>
 				{layersOpen ? (
@@ -232,6 +262,28 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 24,
+	},
+	canvasArea: {
+		flex: 1,
+	},
+	// Over the canvas rather than above it, so showing it doesn't resize the
+	// canvas mid-gesture.
+	saveError: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: 12,
+		paddingHorizontal: 16,
+		paddingVertical: 8,
+		backgroundColor: colors.surface,
+	},
+	saveErrorText: {
+		flex: 1,
+		color: colors.textPrimary,
 	},
 	// Toolbar and text panel share one fixed height so the canvas above never
 	// resizes when the selection changes.

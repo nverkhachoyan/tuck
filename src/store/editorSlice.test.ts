@@ -28,7 +28,7 @@ function createTestStore() {
 
 function storeWithText() {
 	const store = createTestStore();
-	store.getState().openDocument(photo());
+	store.getState().openDocument(photo(), "project-1");
 	store.getState().addTextLayer("TOP TEXT", "center");
 	const text = store.getState().document?.layers.at(-1) as TextLayer;
 	return { store, text };
@@ -44,15 +44,17 @@ describe("editorSlice", () => {
 	test("opening a document replaces the previous one and clears selection", () => {
 		const { store } = storeWithText();
 		const next = photo();
-		store.getState().openDocument(next);
+		store.getState().openDocument(next, "project-2");
 		assert.equal(store.getState().document, next);
+		assert.equal(store.getState().projectId, "project-2");
 		assert.equal(store.getState().selectedLayerId, null);
 	});
 
-	test("closing clears the document and selection", () => {
+	test("closing clears the document, its project, and selection", () => {
 		const { store } = storeWithText();
 		store.getState().closeDocument();
 		assert.equal(store.getState().document, null);
+		assert.equal(store.getState().projectId, null);
 		assert.equal(store.getState().selectedLayerId, null);
 	});
 
@@ -96,7 +98,10 @@ describe("editorSlice", () => {
 		};
 		store
 			.getState()
-			.openDocument({ ...document, layers: [...document.layers, sticker] });
+			.openDocument(
+				{ ...document, layers: [...document.layers, sticker] },
+				"project-1",
+			);
 
 		store.getState().selectLayer(sticker.id);
 		assert.equal(selectSelectedLayer(store.getState()), sticker);
@@ -384,7 +389,7 @@ describe("editorSlice", () => {
 			const { store } = storeWithText();
 			store.getState().duplicateSelectedLayer();
 			store.getState().undo();
-			store.getState().openDocument(photo());
+			store.getState().openDocument(photo(), "project-1");
 			assert.deepEqual(store.getState().past, []);
 			assert.deepEqual(store.getState().future, []);
 
@@ -395,7 +400,7 @@ describe("editorSlice", () => {
 
 		test("undo and redo with nothing to step to change nothing", () => {
 			const store = createTestStore();
-			store.getState().openDocument(photo());
+			store.getState().openDocument(photo(), "project-1");
 			const before = store.getState();
 			before.undo();
 			before.redo();
