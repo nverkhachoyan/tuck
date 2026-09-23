@@ -28,7 +28,9 @@ export async function storePhoto(id: string, uri: string): Promise<string> {
 }
 
 export async function photoUrl(id: string): Promise<string> {
-	return new File(projectDirectory(id), PHOTO_FILE).uri;
+	const photo = new File(projectDirectory(id), PHOTO_FILE);
+	if (!photo.exists) throw new Error("This project's photo is missing.");
+	return photo.uri;
 }
 
 /** Nothing to free: the photo's URL is a file path. */

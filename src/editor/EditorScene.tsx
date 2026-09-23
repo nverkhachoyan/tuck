@@ -3,12 +3,12 @@ import {
 	Group,
 	Path,
 	rect,
+	type SkImage,
 	Skia,
-	useImage,
 } from "@shopify/react-native-skia";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useDerivedValue } from "react-native-reanimated";
-import { ImageLayerView } from "@/layers/ImageLayerView";
+import { decodeImage, ImageLayerView } from "@/layers/ImageLayerView";
 import { toTransformList } from "@/layers/layerTransform";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
@@ -26,6 +26,8 @@ type EditorSceneProps = {
 	// Screen pixels per document unit.
 	viewScale: number;
 	live: LiveTransform;
+	// An image layer's file couldn't be read or decoded. Must be stable.
+	onImageError: (error: unknown) => void;
 };
 
 /**
@@ -40,13 +42,14 @@ export function EditorScene({
 	hiddenLayerId,
 	viewScale,
 	live,
+	onImageError,
 }: EditorSceneProps) {
 	return (
 		<Group>
 			{document.layers.map((layer) =>
 				layer.hidden || layer.id === hiddenLayerId ? null : (
 					<LiveLayer key={layer.id} layer={layer} live={live}>
-						<LayerContent layer={layer} />
+						<LayerContent layer={layer} onImageError={onImageError} />
 					</LiveLayer>
 				),
 			)}
@@ -61,10 +64,16 @@ export function EditorScene({
 	);
 }
 
-function LayerContent({ layer }: { layer: Layer }) {
+function LayerContent({
+	layer,
+	onImageError,
+}: {
+	layer: Layer;
+	onImageError: (error: unknown) => void;
+}) {
 	switch (layer.type) {
 		case "image":
-			return <AsyncImage layer={layer} />;
+			return <AsyncImage layer={layer} onError={onImageError} />;
 		case "text":
 			return <TextLayerView layer={layer} />;
 		default:
@@ -72,9 +81,33 @@ function LayerContent({ layer }: { layer: Layer }) {
 	}
 }
 
-/** Draws nothing until the image has decoded. */
-function AsyncImage({ layer }: { layer: ImageLayer }) {
-	const image = useImage(layer.uri);
+/** Draws nothing until the image has decoded, or if it can't be. */
+function AsyncImage({
+	layer,
+	onError,
+}: {
+	layer: ImageLayer;
+	onError: (error: unknown) => void;
+}) {
+	const [image, setImage] = useState<SkImage | null>(null);
+
+	useEffect(() => {
+		let cancelled = false;
+		decodeImage(layer.uri).then(
+			(decoded) => {
+				// Never drawn, so it's safe to free now.
+				if (cancelled) decoded.dispose();
+				else setImage(decoded);
+			},
+			(error: unknown) => {
+				if (!cancelled) onError(error);
+			},
+		);
+		return () => {
+			cancelled = true;
+		};
+	}, [layer.uri, onError]);
+
 	if (!image) return null;
 	return <ImageLayerView layer={layer} image={image} />;
 }

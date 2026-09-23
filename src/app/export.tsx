@@ -16,6 +16,7 @@ import {
 	shareImage,
 } from "@/export/saveImage";
 import { useRenderedDocument } from "@/export/useRenderedDocument";
+import { errorMessage } from "@/lib/errorMessage";
 import { showAlert } from "@/lib/showAlert";
 import type { EditorDocument } from "@/model/document";
 import { useStore } from "@/store";
@@ -62,7 +63,7 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 				);
 			}
 		} catch (error) {
-			showAlert("Save failed", String(error));
+			showAlert("Save failed", errorMessage(error));
 		} finally {
 			setBusy(null);
 		}
@@ -76,7 +77,7 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 				showAlert("Sharing unavailable", "This device can't share files.");
 			}
 		} catch (error) {
-			showAlert("Share failed", String(error));
+			showAlert("Share failed", errorMessage(error));
 		} finally {
 			setBusy(null);
 		}

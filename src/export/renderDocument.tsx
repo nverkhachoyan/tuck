@@ -3,8 +3,8 @@ import {
 	Group,
 	ImageFormat,
 	type SkImage,
-	Skia,
 } from "@shopify/react-native-skia";
+import { decodeImage } from "@/layers/ImageLayerView";
 import type { EditorDocument } from "@/model/document";
 import { ExportScene } from "./ExportScene";
 
@@ -15,12 +15,7 @@ async function decodeImageLayers(document: EditorDocument) {
 	const images = new Map<string, SkImage>();
 	for (const layer of document.layers) {
 		if (layer.type !== "image" || layer.hidden) continue;
-		const data = await Skia.Data.fromURI(layer.uri);
-		const image = Skia.Image.MakeImageFromEncoded(data);
-		if (!image) {
-			throw new Error(`Could not decode image layer ${layer.id}`);
-		}
-		images.set(layer.id, image);
+		images.set(layer.id, await decodeImage(layer.uri));
 	}
 	return images;
 }

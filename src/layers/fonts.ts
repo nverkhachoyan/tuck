@@ -30,6 +30,7 @@ export const TEXT_FONTS: Record<TextFont, { family: string; source: number }> =
 
 let fontProvider: SkTypefaceFontProvider | null = null;
 let fontsPromise: Promise<void> | null = null;
+let fontsFailed = false;
 
 /** Registers the text fonts with Skia and React Native. Safe to call repeatedly. */
 export function loadFonts(): Promise<void> {
@@ -39,8 +40,25 @@ export function loadFonts(): Promise<void> {
 		Font.loadAsync(
 			Object.fromEntries(fonts.map(({ family, source }) => [family, source])),
 		),
-	]).then(() => undefined);
+	])
+		.then(() => undefined)
+		.catch((error: unknown) => {
+			fontsFailed = true;
+			throw error;
+		});
 	return fontsPromise;
+}
+
+/**
+ * Lets the next `loadFonts` try again after one failed. Until then it keeps
+ * returning the failed promise: `use` must see that reject to reach an error
+ * boundary, rather than suspend on a fresh attempt, forever if the failure
+ * persists.
+ */
+export function resetFailedFonts() {
+	if (!fontsFailed) return;
+	fontsFailed = false;
+	fontsPromise = null;
 }
 
 async function loadSkiaFonts() {

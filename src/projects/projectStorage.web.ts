@@ -109,7 +109,7 @@ export async function photoUrl(id: string): Promise<string> {
 	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
 		t.objectStore(PHOTOS).get(id),
 	);
-	if (!blob) throw new Error(`Project ${id} has no photo`);
+	if (!blob) throw new Error("This project's photo is missing.");
 	return URL.createObjectURL(blob);
 }
 

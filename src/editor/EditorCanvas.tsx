@@ -8,11 +8,12 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { type LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import { layerBounds } from "@/layers/layerBounds";
 import type { EditorDocument, Layer } from "@/model/document";
 import type { Transform } from "@/model/geometry";
+import { colors } from "@/theme";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -75,8 +76,14 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 	) {
 		const [size, setSize] = useState({ width: 0, height: 0 });
 		const [cursor, setCursor] = useState<CanvasCursor>("default");
+		const [imageFailed, setImageFailed] = useState(false);
 		const containerRef = useRef<View>(null);
 		const live = useLiveTransform();
+
+		const handleImageError = useCallback((error: unknown) => {
+			console.warn("Couldn't load an image layer", error);
+			setImageFailed(true);
+		}, []);
 
 		const handleLayout = (event: LayoutChangeEvent) => {
 			const { width, height } = event.nativeEvent.layout;
@@ -240,10 +247,22 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
 									hiddenLayerId={hiddenLayerId}
 									viewScale={scale}
 									live={live}
+									onImageError={handleImageError}
 								/>
 							</Group>
 						)}
 					</Canvas>
+					{/* At the bottom, clear of new text at the center and the editor's
+					    save banner at the top. Touches pass through to the canvas. */}
+					{imageFailed && (
+						<View style={styles.failure}>
+							<View style={styles.failurePill}>
+								<Text style={styles.failureText}>
+									This photo couldn't be loaded.
+								</Text>
+							</View>
+						</View>
+					)}
 				</View>
 			</GestureDetector>
 		);
@@ -256,5 +275,23 @@ const styles = StyleSheet.create({
 	},
 	canvas: {
 		flex: 1,
+	},
+	failure: {
+		position: "absolute",
+		left: PHOTO_INSET,
+		right: PHOTO_INSET,
+		bottom: PHOTO_INSET,
+		alignItems: "center",
+		pointerEvents: "none",
+	},
+	failurePill: {
+		paddingHorizontal: 14,
+		paddingVertical: 8,
+		borderRadius: 12,
+		backgroundColor: colors.surface,
+	},
+	failureText: {
+		fontSize: 14,
+		color: colors.textPrimary,
 	},
 });

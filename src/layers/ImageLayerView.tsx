@@ -1,5 +1,19 @@
-import { type SkImage, Image as SkiaImage } from "@shopify/react-native-skia";
+import {
+	type SkImage,
+	Skia,
+	Image as SkiaImage,
+} from "@shopify/react-native-skia";
 import type { ImageLayer } from "@/model/document";
+
+/**
+ * Reads and decodes an image layer's file. Unlike `useImage`, whose `onError`
+ * only covers decoding, this rejects when the file can't be read either.
+ */
+export async function decodeImage(uri: string): Promise<SkImage> {
+	const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
+	if (!image) throw new Error("Couldn't decode the image.");
+	return image;
+}
 
 /**
  * Draws an already-decoded image layer in its own space, centered on the

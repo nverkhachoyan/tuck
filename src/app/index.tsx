@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { renderThumbnail } from "@/export/renderDocument";
 import { pickPhoto } from "@/import/pickPhoto";
+import { errorMessage } from "@/lib/errorMessage";
 import { showAlert } from "@/lib/showAlert";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import { ProjectList } from "@/projects/ProjectList";
@@ -62,7 +63,7 @@ export default function WelcomeRoute() {
 		try {
 			setProjects(await listProjects());
 		} catch (error) {
-			showAlert("Couldn't load your projects", String(error));
+			showAlert("Couldn't load your projects", errorMessage(error));
 		}
 	}, []);
 
@@ -75,7 +76,7 @@ export default function WelcomeRoute() {
 				try {
 					await closeProject(projectId, document, renderThumbnail);
 				} catch (error) {
-					showAlert("Couldn't save your edits", String(error));
+					showAlert("Couldn't save your edits", errorMessage(error));
 					return "saveFailed";
 				}
 			}
@@ -100,7 +101,7 @@ export default function WelcomeRoute() {
 					router.push("/editor");
 				}
 			} catch (error) {
-				showAlert(failure, String(error));
+				showAlert(failure, errorMessage(error));
 				// The list may be out of date, as when another tab deleted a project.
 				await refreshProjects();
 			}
@@ -148,7 +149,7 @@ export default function WelcomeRoute() {
 							try {
 								await deleteProject(id);
 							} catch (error) {
-								showAlert("Couldn't delete project", String(error));
+								showAlert("Couldn't delete project", errorMessage(error));
 							}
 							await refreshProjects();
 						}),
