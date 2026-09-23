@@ -27,12 +27,36 @@ export async function pickPhoto(): Promise<PickPhotoResult> {
 	return { status: "picked", photo: { uri, width, height } };
 }
 
+// Larger photos are scaled down to this many pixels. The editor and export
+// each hold the photo decoded in full, so 48MP and larger camera modes can run
+// a phone out of memory; iPhone's default 24MP photos fit as they are.
+const MAX_PHOTO_PIXELS = 24_000_000;
+
+// Looks the same as 1, at about half the size on disk. Export uses 0.95.
+const JPEG_QUALITY = 0.92;
+
 /**
  * iOS photos are HEIC by default, which Skia's image codec cannot decode —
  * re-encoding here guarantees the editor can always load what the picker
- * returns, regardless of source format.
+ * returns, regardless of source format. Oversized photos shrink on the way.
  */
 async function reencodeAsJpeg(uri: string) {
-	const rendered = await ImageManipulator.manipulate(uri).renderAsync();
-	return rendered.saveAsync({ format: SaveFormat.JPEG, compress: 1 });
+	let image = await ImageManipulator.manipulate(uri).renderAsync();
+	// The rendered size already has the photo's EXIF rotation applied.
+	const scale = Math.sqrt(MAX_PHOTO_PIXELS / (image.width * image.height));
+	if (scale < 1) {
+		const full = image;
+		image = await ImageManipulator.manipulate(full)
+			.resize({ width: Math.floor(full.width * scale) })
+			.renderAsync();
+		full.release();
+	}
+	try {
+		return await image.saveAsync({
+			format: SaveFormat.JPEG,
+			compress: JPEG_QUALITY,
+		});
+	} finally {
+		image.release();
+	}
 }
