@@ -1,4 +1,4 @@
-# Photo Editor
+# Tuck
 
 A local-first Expo photo editor for quick edits such as adding text, making
 memes, and eventually blurring or redacting parts of an image. The product

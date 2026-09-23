@@ -1,8 +1,8 @@
-import * as Haptics from "expo-haptics";
 import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { hapticTick } from "@/lib/haptics";
 import type { Size, Transform } from "@/model/geometry";
 import { type Handle, rotateByDrag, scaleByDrag } from "./handleGeometry";
 import {
@@ -25,10 +25,6 @@ const ROTATION_SNAP = (4 * Math.PI) / 180;
 // A dragged layer's center snaps to the document's center lines from this
 // many screen pixels away.
 const CENTER_SNAP_PX = 8;
-
-const tick = () => {
-	void Haptics.selectionAsync();
-};
 
 /**
  * Tap selects, and while a layer is selected pan / pinch / rotate transform
@@ -114,7 +110,7 @@ export function useLayerTransformGesture({
 			snapped: number | null,
 		) => {
 			"worklet";
-			if (snapped !== null && snapped !== value.value) scheduleOnRN(tick);
+			if (snapped !== null && snapped !== value.value) scheduleOnRN(hapticTick);
 			value.value = snapped ?? raw;
 			return snapped !== null;
 		};

@@ -11,7 +11,9 @@
 			[
 				"expo-image-picker",
 				{
-					"photosPermission": "Allow access to photos.",
+					"photosPermission": "Used to open the photos you choose for editing. They stay on your device.",
+					"cameraPermission": false,
+					"microphonePermission": false,
 					"colors": {
 						"cropToolbarColor": "#000000"
 					},
@@ -25,8 +27,8 @@
 			[
 				"expo-media-library",
 				{
-					"photosPermission": "Allow access to photos.",
-					"savePhotosPermission": "Allow saving your edited photos.",
+					"photosPermission": "Used to open the photos you choose for editing. They stay on your device.",
+					"savePhotosPermission": "Used to save your edited photos to your library.",
 					"granularPermissions": ["photo"]
 				}
 			],
@@ -34,7 +36,7 @@
 			"expo-asset",
 			"expo-font"
 		],
-		"name": "photo-editor",
+		"name": "Tuck",
 		"slug": "photo-editor"
 	}
 }

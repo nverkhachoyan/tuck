@@ -164,9 +164,9 @@ export default function WelcomeRoute() {
 		<View style={styles.container}>
 			<View style={[styles.intro, !hasProjects && styles.fill]}>
 				<View style={styles.logoMark} />
-				<Text style={styles.title}>Photo Editor</Text>
+				<Text style={styles.title}>Tuck</Text>
 				<Text style={styles.subtitle}>
-					Open a photo, make your edit, and share it. No account, no waiting.
+					The last touch for photos and screenshots. No account, no waiting.
 				</Text>
 			</View>
 

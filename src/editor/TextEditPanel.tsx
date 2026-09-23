@@ -1,9 +1,19 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { TEXT_FONTS } from "@/layers/fonts";
-import type { TextFont, TextLayer, TextLayerEdit } from "@/model/document";
+import {
+	type TextFont,
+	type TextLayer,
+	type TextLayerEdit,
+	textFonts,
+} from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
+
+// The minimum comfortable touch target. Controls here are boxes this big,
+// not smaller views with `hitSlop`, which can't reach past a parent's bounds.
+const TARGET = 44;
+const SWATCH_SIZE = 28;
 
 const SWATCHES = [
 	{ color: "#FFFFFF", name: "White" },
@@ -149,6 +159,7 @@ function Tab({
 			onPress={onPress}
 			accessibilityRole="tab"
 			accessibilityState={{ selected: active }}
+			style={styles.target}
 		>
 			<Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
 				{label}
@@ -172,26 +183,31 @@ function FontPicker({
 			style={styles.bleed}
 			contentContainerStyle={styles.fonts}
 		>
-			{(Object.keys(FONT_LABELS) as TextFont[]).map((font) => {
+			{textFonts.map((font) => {
 				const selected = font === value;
 				return (
 					<Pressable
 						key={font}
+						// Half the gap between chips, so neighbors' targets meet.
 						hitSlop={4}
 						onPress={() => onPick(font)}
 						accessibilityRole="button"
 						accessibilityLabel={FONT_LABELS[font]}
 						accessibilityState={{ selected }}
-						style={[styles.fontChip, selected && styles.fontChipSelected]}
+						style={styles.target}
 					>
-						<Text
-							style={[
-								styles.fontLabel,
-								{ fontFamily: TEXT_FONTS[font].family },
-							]}
+						<View
+							style={[styles.fontChip, selected && styles.fontChipSelected]}
 						>
-							{FONT_LABELS[font]}
-						</Text>
+							<Text
+								style={[
+									styles.fontLabel,
+									{ fontFamily: TEXT_FONTS[font].family },
+								]}
+							>
+								{FONT_LABELS[font]}
+							</Text>
+						</View>
 					</Pressable>
 				);
 			})}
@@ -246,29 +262,33 @@ function Swatch({
 }) {
 	return (
 		<Pressable
-			// Half the gap between swatches, so neighbors' targets don't overlap.
-			hitSlop={4}
 			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={label}
 			accessibilityState={{ selected }}
-			style={[
-				styles.swatch,
-				color !== null && { backgroundColor: color },
-				selected && styles.swatchSelected,
-			]}
+			style={styles.swatchTarget}
 		>
-			{color === null && <View style={styles.swatchSlash} />}
+			<View
+				style={[
+					styles.swatch,
+					color !== null && { backgroundColor: color },
+					selected && styles.swatchSelected,
+				]}
+			>
+				{color === null && <View style={styles.swatchSlash} />}
+			</View>
 		</Pressable>
 	);
 }
 
 const styles = StyleSheet.create({
+	// Small, because the rows' touch targets already leave room around what's
+	// drawn in them.
 	container: {
 		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 20,
-		gap: 18,
+		gap: 2,
 	},
 	row: {
 		flexDirection: "row",
@@ -280,6 +300,12 @@ const styles = StyleSheet.create({
 	},
 	tabs: {
 		gap: 16,
+	},
+	// Rounded so a browser's focus ring hugs what's drawn inside.
+	target: {
+		height: TARGET,
+		borderRadius: TARGET / 2,
+		justifyContent: "center",
 	},
 	tabLabel: {
 		fontSize: 14,
@@ -295,7 +321,7 @@ const styles = StyleSheet.create({
 	},
 	// One height for every tab, so switching tabs never shifts the row above.
 	content: {
-		height: 34,
+		height: TARGET,
 		justifyContent: "center",
 	},
 	// Scrolls edge to edge, past the panel's padding.
@@ -323,14 +349,22 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		color: colors.textPrimary,
 	},
+	// Lines the first swatch up with the panel's edge, past its target's margin.
 	swatches: {
 		flexDirection: "row",
-		gap: 8,
+		marginHorizontal: -(TARGET - SWATCH_SIZE) / 2,
+	},
+	swatchTarget: {
+		width: TARGET,
+		height: TARGET,
+		borderRadius: TARGET / 2,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	swatch: {
-		width: 24,
-		height: 24,
-		borderRadius: 12,
+		width: SWATCH_SIZE,
+		height: SWATCH_SIZE,
+		borderRadius: SWATCH_SIZE / 2,
 		borderWidth: 1,
 		borderColor: colors.border,
 		alignItems: "center",
@@ -342,7 +376,7 @@ const styles = StyleSheet.create({
 		borderColor: colors.accent,
 	},
 	swatchSlash: {
-		width: 30,
+		width: 36,
 		height: 2,
 		backgroundColor: colors.textSecondary,
 		transform: [{ rotate: "-45deg" }],

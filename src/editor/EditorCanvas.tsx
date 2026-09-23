@@ -1,6 +1,6 @@
 import { Canvas, Group } from "@shopify/react-native-skia";
 import {
-	forwardRef,
+	type Ref,
 	useCallback,
 	useImperativeHandle,
 	useLayoutEffect,
@@ -32,6 +32,7 @@ import { fitDocumentToView, viewPointToDocument } from "./viewport";
 const PHOTO_INSET = 16;
 
 type EditorCanvasProps = {
+	ref?: Ref<EditorCanvasHandle>;
 	document: EditorDocument;
 	selectedLayer?: Layer;
 	// Not drawn, e.g. while its text is open in the full-screen editor.
@@ -61,213 +62,208 @@ export type EditorCanvasHandle = {
  * resolved by hit-testing in document space. With a mouse, the cursor shows
  * what a press at the pointer would do.
  */
-export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
-	function EditorCanvas(
-		{
-			document,
-			selectedLayer,
-			hiddenLayerId = null,
+export function EditorCanvas({
+	ref,
+	document,
+	selectedLayer,
+	hiddenLayerId = null,
+	onSelectLayer,
+	onTapSelectedLayer,
+	onCommitTransform,
+	onNudgeLayer,
+}: EditorCanvasProps) {
+	const [size, setSize] = useState({ width: 0, height: 0 });
+	const [cursor, setCursor] = useState<CanvasCursor>("default");
+	const [imageFailed, setImageFailed] = useState(false);
+	const containerRef = useRef<View>(null);
+	const live = useLiveTransform();
+
+	const handleImageError = useCallback((error: unknown) => {
+		console.warn("Couldn't load an image layer", error);
+		setImageFailed(true);
+	}, []);
+
+	const handleLayout = (event: LayoutChangeEvent) => {
+		const { width, height } = event.nativeEvent.layout;
+		setSize({ width, height });
+	};
+
+	// Stable between renders: the gesture captures these, and rebuilds when
+	// they change.
+	const documentSize = useMemo(
+		() => ({ width: document.width, height: document.height }),
+		[document.width, document.height],
+	);
+	const viewport = useMemo(
+		() => fitDocumentToView(documentSize, size, PHOTO_INSET),
+		[documentSize, size],
+	);
+	const { scale, offsetX, offsetY } = viewport;
+
+	const selectedLayerId = selectedLayer?.id ?? null;
+
+	// Keep the gesture-driven values in step with the selected layer: when the
+	// selection changes, and when that layer does (a commit, undo, restyle).
+	useLayoutEffect(() => {
+		syncLiveTransform(
+			live,
+			selectedLayerId,
+			selectedLayer?.transform,
+			selectedLayer && layerBounds(selectedLayer),
+		);
+	}, [live, selectedLayer, selectedLayerId]);
+
+	// The selected layer's handle under a point reported by the view.
+	const handleAt = useCallback(
+		(screenX: number, screenY: number) =>
+			selectedLayer
+				? handleUnder(
+						selectedLayer.transform,
+						layerBounds(selectedLayer),
+						viewPointToDocument(viewport, { x: screenX, y: screenY }),
+						scale,
+					)
+				: null,
+		[selectedLayer, viewport, scale],
+	);
+
+	// Topmost selectable layer under a point reported by the view.
+	const layerAt = useCallback(
+		(screenX: number, screenY: number) =>
+			findLayerAt(
+				document,
+				viewPointToDocument(viewport, { x: screenX, y: screenY }),
+				scale,
+			),
+		[document, viewport, scale],
+	);
+
+	const handleTap = useCallback(
+		(screenX: number, screenY: number) => {
+			// A click on a handle that didn't become a drag does nothing, rather
+			// than deselecting the layer that owns it.
+			if (scale === 0 || handleAt(screenX, screenY)) return;
+			const id = layerAt(screenX, screenY);
+			if (id !== null && id === selectedLayerId) {
+				onTapSelectedLayer?.();
+			} else {
+				onSelectLayer?.(id);
+			}
+		},
+		[
+			handleAt,
+			layerAt,
 			onSelectLayer,
 			onTapSelectedLayer,
-			onCommitTransform,
-			onNudgeLayer,
+			scale,
+			selectedLayerId,
+		],
+	);
+
+	// Dragging a layer that isn't selected selects it first. Dragging empty
+	// space keeps moving the current selection, which helps with small text.
+	const handleDragStart = useCallback(
+		(screenX: number, screenY: number) => {
+			if (scale === 0 || !onSelectLayer) return false;
+			const id = layerAt(screenX, screenY);
+			if (id === null || id === selectedLayerId) return false;
+			onSelectLayer(id);
+			return true;
 		},
-		ref,
-	) {
-		const [size, setSize] = useState({ width: 0, height: 0 });
-		const [cursor, setCursor] = useState<CanvasCursor>("default");
-		const [imageFailed, setImageFailed] = useState(false);
-		const containerRef = useRef<View>(null);
-		const live = useLiveTransform();
+		[layerAt, onSelectLayer, scale, selectedLayerId],
+	);
 
-		const handleImageError = useCallback((error: unknown) => {
-			console.warn("Couldn't load an image layer", error);
-			setImageFailed(true);
-		}, []);
+	// What a press at the pointer would do: grab a handle, move a layer, or
+	// nothing. Renders only when that changes, not on every pointer move.
+	const handleHover = useCallback(
+		(screenX: number, screenY: number) => {
+			if (scale === 0) return;
+			const handle = handleAt(screenX, screenY);
+			if (handle && selectedLayer) {
+				setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
+			} else {
+				setCursor(layerAt(screenX, screenY) === null ? "default" : "move");
+			}
+		},
+		[handleAt, layerAt, scale, selectedLayer],
+	);
+	const handleHoverEnd = useCallback(() => setCursor("default"), []);
 
-		const handleLayout = (event: LayoutChangeEvent) => {
-			const { width, height } = event.nativeEvent.layout;
-			setSize({ width, height });
-		};
+	const handleCommit = useCallback(
+		(id: string, transform: Transform) => onCommitTransform?.(id, transform),
+		[onCommitTransform],
+	);
 
-		// Stable between renders: the gesture captures these, and rebuilds when
-		// they change.
-		const documentSize = useMemo(
-			() => ({ width: document.width, height: document.height }),
-			[document.width, document.height],
-		);
-		const viewport = useMemo(
-			() => fitDocumentToView(documentSize, size, PHOTO_INSET),
-			[documentSize, size],
-		);
-		const { scale, offsetX, offsetY } = viewport;
+	const gesture = useLayerTransformGesture({
+		live,
+		viewport,
+		documentSize,
+		onTap: handleTap,
+		onDragStart: handleDragStart,
+		onCommit: handleCommit,
+		onHover: handleHover,
+		onHoverEnd: handleHoverEnd,
+	});
+	const flushPendingTransform = useTrackpadPinch({
+		target: containerRef,
+		live,
+		onCommit: handleCommit,
+	});
+	const nudgeSelection = useCallback(
+		(dx: number, dy: number) => {
+			flushPendingTransform();
+			if (!selectedLayer || scale === 0) return;
+			onNudgeLayer?.(selectedLayer.id, dx / scale, dy / scale);
+		},
+		[flushPendingTransform, selectedLayer, scale, onNudgeLayer],
+	);
+	useImperativeHandle(ref, () => ({ flushPendingTransform, nudgeSelection }), [
+		flushPendingTransform,
+		nudgeSelection,
+	]);
 
-		const selectedLayerId = selectedLayer?.id ?? null;
-
-		// Keep the gesture-driven values in step with the selected layer: when the
-		// selection changes, and when that layer does (a commit, undo, restyle).
-		useLayoutEffect(() => {
-			syncLiveTransform(
-				live,
-				selectedLayerId,
-				selectedLayer?.transform,
-				selectedLayer && layerBounds(selectedLayer),
-			);
-		}, [live, selectedLayer, selectedLayerId]);
-
-		// The selected layer's handle under a point reported by the view.
-		const handleAt = useCallback(
-			(screenX: number, screenY: number) =>
-				selectedLayer
-					? handleUnder(
-							selectedLayer.transform,
-							layerBounds(selectedLayer),
-							viewPointToDocument(viewport, { x: screenX, y: screenY }),
-							scale,
-						)
-					: null,
-			[selectedLayer, viewport, scale],
-		);
-
-		// Topmost selectable layer under a point reported by the view.
-		const layerAt = useCallback(
-			(screenX: number, screenY: number) =>
-				findLayerAt(
-					document,
-					viewPointToDocument(viewport, { x: screenX, y: screenY }),
-					scale,
-				),
-			[document, viewport, scale],
-		);
-
-		const handleTap = useCallback(
-			(screenX: number, screenY: number) => {
-				// A click on a handle that didn't become a drag does nothing, rather
-				// than deselecting the layer that owns it.
-				if (scale === 0 || handleAt(screenX, screenY)) return;
-				const id = layerAt(screenX, screenY);
-				if (id !== null && id === selectedLayerId) {
-					onTapSelectedLayer?.();
-				} else {
-					onSelectLayer?.(id);
-				}
-			},
-			[
-				handleAt,
-				layerAt,
-				onSelectLayer,
-				onTapSelectedLayer,
-				scale,
-				selectedLayerId,
-			],
-		);
-
-		// Dragging a layer that isn't selected selects it first. Dragging empty
-		// space keeps moving the current selection, which helps with small text.
-		const handleDragStart = useCallback(
-			(screenX: number, screenY: number) => {
-				if (scale === 0 || !onSelectLayer) return false;
-				const id = layerAt(screenX, screenY);
-				if (id === null || id === selectedLayerId) return false;
-				onSelectLayer(id);
-				return true;
-			},
-			[layerAt, onSelectLayer, scale, selectedLayerId],
-		);
-
-		// What a press at the pointer would do: grab a handle, move a layer, or
-		// nothing. Renders only when that changes, not on every pointer move.
-		const handleHover = useCallback(
-			(screenX: number, screenY: number) => {
-				if (scale === 0) return;
-				const handle = handleAt(screenX, screenY);
-				if (handle && selectedLayer) {
-					setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
-				} else {
-					setCursor(layerAt(screenX, screenY) === null ? "default" : "move");
-				}
-			},
-			[handleAt, layerAt, scale, selectedLayer],
-		);
-		const handleHoverEnd = useCallback(() => setCursor("default"), []);
-
-		const handleCommit = useCallback(
-			(id: string, transform: Transform) => onCommitTransform?.(id, transform),
-			[onCommitTransform],
-		);
-
-		const gesture = useLayerTransformGesture({
-			live,
-			viewport,
-			documentSize,
-			onTap: handleTap,
-			onDragStart: handleDragStart,
-			onCommit: handleCommit,
-			onHover: handleHover,
-			onHoverEnd: handleHoverEnd,
-		});
-		const flushPendingTransform = useTrackpadPinch({
-			target: containerRef,
-			live,
-			onCommit: handleCommit,
-		});
-		const nudgeSelection = useCallback(
-			(dx: number, dy: number) => {
-				flushPendingTransform();
-				if (!selectedLayer || scale === 0) return;
-				onNudgeLayer?.(selectedLayer.id, dx / scale, dy / scale);
-			},
-			[flushPendingTransform, selectedLayer, scale, onNudgeLayer],
-		);
-		useImperativeHandle(
-			ref,
-			() => ({ flushPendingTransform, nudgeSelection }),
-			[flushPendingTransform, nudgeSelection],
-		);
-
-		return (
-			<GestureDetector gesture={gesture}>
-				<View
-					ref={containerRef}
-					style={[styles.container, cursorStyle(cursor)]}
-					onLayout={handleLayout}
-				>
-					<Canvas style={styles.canvas}>
-						{scale > 0 && (
-							<Group
-								transform={[
-									{ translateX: offsetX },
-									{ translateY: offsetY },
-									{ scale },
-								]}
-							>
-								<EditorScene
-									document={document}
-									selectedLayerId={selectedLayerId}
-									hiddenLayerId={hiddenLayerId}
-									viewScale={scale}
-									live={live}
-									onImageError={handleImageError}
-								/>
-							</Group>
-						)}
-					</Canvas>
-					{/* At the bottom, clear of new text at the center and the editor's
-					    save banner at the top. Touches pass through to the canvas. */}
-					{imageFailed && (
-						<View style={styles.failure}>
-							<View style={styles.failurePill}>
-								<Text style={styles.failureText}>
-									This photo couldn't be loaded.
-								</Text>
-							</View>
-						</View>
+	return (
+		<GestureDetector gesture={gesture}>
+			<View
+				ref={containerRef}
+				style={[styles.container, cursorStyle(cursor)]}
+				onLayout={handleLayout}
+			>
+				<Canvas style={styles.canvas}>
+					{scale > 0 && (
+						<Group
+							transform={[
+								{ translateX: offsetX },
+								{ translateY: offsetY },
+								{ scale },
+							]}
+						>
+							<EditorScene
+								document={document}
+								selectedLayerId={selectedLayerId}
+								hiddenLayerId={hiddenLayerId}
+								viewScale={scale}
+								live={live}
+								onImageError={handleImageError}
+							/>
+						</Group>
 					)}
-				</View>
-			</GestureDetector>
-		);
-	},
-);
+				</Canvas>
+				{/* At the bottom, clear of new text at the center and the editor's
+					    save banner at the top. Touches pass through to the canvas. */}
+				{imageFailed && (
+					<View style={styles.failure}>
+						<View style={styles.failurePill}>
+							<Text style={styles.failureText}>
+								This photo couldn't be loaded.
+							</Text>
+						</View>
+					</View>
+				)}
+			</View>
+		</GestureDetector>
+	);
+}
 
 const styles = StyleSheet.create({
 	container: {

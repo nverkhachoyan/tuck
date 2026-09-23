@@ -1,4 +1,4 @@
-# Photo Editor — Product Vision
+# Tuck — Product Vision
 
 ## Vision
 
@@ -479,13 +479,9 @@ A user can open a screenshot, paint over sensitive information, undo mistakes, a
 
 Provide the common adjustments expected from a lightweight photo editor.
 
-## New dependency
+## Dependency
 
-Add when required:
-
-```bash
-npx expo install expo-image-manipulator
-```
+`expo-image-manipulator` is already installed: Stage 1 uses it to re-encode picked photos as JPEG, since Skia can't decode iPhone HEIC photos, and to shrink very large ones.
 
 ## Included
 

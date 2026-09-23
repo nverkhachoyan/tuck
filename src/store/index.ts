@@ -18,6 +18,6 @@ export const useStore = create<StoreState>()(
 			...createEditorSlice(...args),
 		}),
 		// The Redux DevTools extension only exists in a desktop browser.
-		{ name: "Photo Editor", enabled: __DEV__ && Platform.OS === "web" },
+		{ name: "Tuck", enabled: __DEV__ && Platform.OS === "web" },
 	),
 );

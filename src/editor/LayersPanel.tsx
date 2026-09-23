@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import * as Haptics from "expo-haptics";
 import { type RefObject, useLayoutEffect, useMemo, useRef } from "react";
 import {
 	type AccessibilityActionEvent,
@@ -25,6 +24,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { assertNever } from "@/lib/assertNever";
+import { hapticTick } from "@/lib/haptics";
 import type { Layer } from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
@@ -32,10 +32,6 @@ import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 const ROW_HEIGHT = 52;
 const SETTLE = { duration: 160 };
-
-const tick = () => {
-	void Haptics.selectionAsync();
-};
 
 type LayersPanelProps = {
 	layers: Layer[];
@@ -168,7 +164,7 @@ function LayerRow({
 					const current = order.value.indexOf(id);
 					if (next.slot !== current) {
 						order.value = moveItem(order.value, current, next.slot);
-						scheduleOnRN(tick);
+						scheduleOnRN(hapticTick);
 					}
 				})
 				.onFinalize(() => {
