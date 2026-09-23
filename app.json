@@ -2,6 +2,7 @@
 	"expo": {
 		"scheme": "photo-editor",
 		"userInterfaceStyle": "dark",
+		"orientation": "portrait",
 		"web": {
 			"output": "static"
 		},
