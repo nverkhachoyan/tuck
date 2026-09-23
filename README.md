@@ -42,8 +42,15 @@ TypeScript is checked separately with:
 npm run typecheck
 ```
 
-Use `npm run format` to apply Biome formatting fixes. CI runs all three checks
-on every push to `main` and on pull requests.
+A production web build catches imports only Metro resolves, which the checks
+above never see, such as the web entry's untyped `import()`:
+
+```sh
+npm run build:web
+```
+
+Use `npm run format` to apply Biome formatting fixes. CI runs all four on every
+push to `main` and on pull requests.
 
 ## Architecture
 
@@ -69,7 +76,8 @@ Key areas:
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.
 
 Imports flow one way: `app` → `editor` / `import` / `export` / `projects` →
-`layers` / `store` → `model`. `ui`, `theme`, and `lib` import nothing from the app. Adding a layer
+`layers` / `store` → `model`. `ui`, `theme`, and `lib` import nothing from the app.
+Lint rules in `biome.json` enforce these boundaries. Adding a layer
 type means a type in `model/document.ts`, a view in `layers/`, and a case in
 both `EditorScene` and `ExportScene` (`assertNever` flags any you miss).
 

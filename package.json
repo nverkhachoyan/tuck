@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\"",
     "postinstall": "node scripts/copy-canvaskit.mjs",
-    "deploy": "npx expo export -p web && npx eas-cli@latest deploy"
+    "build:web": "expo export -p web",
+    "deploy": "npm run build:web && npx eas-cli@latest deploy"
   },
   "dependencies": {
     "@expo-google-fonts/anton": "^0.4.2",

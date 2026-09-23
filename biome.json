@@ -39,6 +39,131 @@
 				"indentStyle": "space",
 				"indentWidth": 2
 			}
+		},
+		{
+			"includes": ["src/model/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["**", "!./*", "!node:*", "!node:*/**"],
+										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/layers/**", "src/store/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/**",
+											"../**",
+											"!@/model/**",
+											"!../model/**",
+											"!@/lib/**",
+											"!../lib/**",
+											"!@/ui/**",
+											"!../ui/**",
+											"!@/theme",
+											"!../theme",
+											"!../theme.ts"
+										],
+										"message": "layers/ and store/ import only model/, lib/, ui/, and theme.ts (not each other), and their own folder with ./. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/editor/**",
+				"src/import/**",
+				"src/export/**",
+				"src/projects/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/**",
+											"../**",
+											"!@/layers/**",
+											"!../layers/**",
+											"!@/store",
+											"!@/store/**",
+											"!../store",
+											"!../store/**",
+											"!@/model/**",
+											"!../model/**",
+											"!@/lib/**",
+											"!../lib/**",
+											"!@/ui/**",
+											"!../ui/**",
+											"!@/theme",
+											"!../theme",
+											"!../theme.ts"
+										],
+										"message": "editor/, import/, export/, and projects/ import only layers/, store/, model/, lib/, ui/, and theme.ts, and their own folder with ./. Not each other or routes: app/ wires them together. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/ui/**", "src/lib/**", "src/theme.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/**",
+											"../**",
+											"!@/lib/**",
+											"!../lib/**",
+											"!@/ui/**",
+											"!../ui/**",
+											"!@/theme",
+											"!../theme",
+											"!../theme.ts"
+										],
+										"message": "ui/, lib/, and theme.ts never import app code, only each other. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
 		}
 	]
 }

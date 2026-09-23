@@ -27,7 +27,7 @@
 
 ## Project Structure
 
-- Keep imports flowing one way: `app` → `editor` / `import` / `export` / `projects` → `layers` / `store` → `model`. `model/` stays plain TypeScript (no React, React Native, or Skia); `ui/`, `theme.ts`, and `lib/` never import app code.
+- Keep imports flowing one way: `app` → `editor` / `import` / `export` / `projects` → `layers` / `store` → `model`. Folders on the same level don't import each other; a route wires them together (the welcome screen hands export's `renderThumbnail` to `closeProject`). `model/` stays plain TypeScript (no React, React Native, or Skia); `ui/`, `theme.ts`, and `lib/` never import app code. `noRestrictedImports` overrides in `biome.json` enforce all of this, for `@/` and relative imports alike; update them along with this rule if a folder is added.
 - `model/` is the document and the geometry it's built from. Pure logic that only the editor uses (`viewport.ts`, `handleGeometry.ts`) lives in `editor/`, with its test beside it.
 - `store/` holds only state shared across screens, as Zustand slices combined in `store/index.ts`; state local to one screen stays in `useState`. `layers/` takes plain props and never reads the store, so export can render any document. Select the narrowest value a component needs.
 - Only routes go in `src/app/` — expo-router turns every file there into a screen.
@@ -40,4 +40,4 @@
 
 ## Code Checks
 
-- After code changes, run `npm run check` to verify formatting and linting, `npm run typecheck` for TypeScript, and `npm test` when touching `model/`, store slices, or other pure modules. CI runs all three. Use `npm run format` to apply formatting fixes, and run `npm run lint` when checking lint rules only.
+- After code changes, run `npm run check` to verify formatting and linting, `npm run typecheck` for TypeScript, and `npm test` when touching `model/`, store slices, or other pure modules. Run `npm run build:web` after changing platform files (`.web.ts`), the entry files, or imports TypeScript doesn't check (assets, untyped imports): it bundles with Metro, which catches an import that won't resolve. It doesn't run the app, since the static export renders only an empty shell. CI runs all four. Use `npm run format` to apply formatting fixes, and run `npm run lint` when checking lint rules only.

@@ -21,3 +21,7 @@ jobs:
       - run: npm run check
       - run: npm run typecheck
       - run: npm test
+      # Bundles the web app with Metro, which the checks above never run, so an
+      # import only Metro resolves (a `.web.ts` file's, an asset, the entry's
+      # untyped `import()`) fails here instead of at deploy.
+      - run: npm run build:web
