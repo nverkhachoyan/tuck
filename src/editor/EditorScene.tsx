@@ -2,22 +2,27 @@ import {
 	Fill,
 	Group,
 	Path,
+	Rect,
 	rect,
-	type SkImage,
 	Skia,
+	type SkRect,
 } from "@shopify/react-native-skia";
-import { type ReactNode, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useDerivedValue } from "react-native-reanimated";
-import { decodeImage, ImageLayerView } from "@/layers/ImageLayerView";
+import { ImageLayerView } from "@/layers/ImageLayerView";
 import { toTransformList } from "@/layers/layerTransform";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
 import { colors } from "@/theme";
+import { Checkerboard } from "@/ui/Checkerboard";
 import type { LiveTransform } from "./liveTransform";
 import { handleMetrics, handlesVisible } from "./selectionHandles";
+import { useDecodedImage } from "./useDecodedImage";
 
 const SELECTION_STROKE_PX = 1.5;
+// A transparency checkerboard square's side, in screen pixels.
+const CHECKER_PX = 8;
 
 type EditorSceneProps = {
 	document: EditorDocument;
@@ -34,7 +39,10 @@ type EditorSceneProps = {
  * The editor's counterpart to `ExportScene`: draws every layer in document
  * space, but loads images asynchronously, lets the selected layer follow
  * the live gesture values, fades whatever export will crop, and draws the
- * selection above everything.
+ * selection above everything. A transparent canvas shows a checkerboard.
+ *
+ * The photo is cut off at the canvas's edge while it's locked, like a crop.
+ * Once unlocked it moves like any layer, so it fades past the edge instead.
  */
 export function EditorScene({
 	document,
@@ -44,16 +52,27 @@ export function EditorScene({
 	live,
 	onImageError,
 }: EditorSceneProps) {
+	const canvas = rect(0, 0, document.width, document.height);
 	return (
 		<Group>
-			{document.layers.map((layer) =>
+			<CanvasBackground
+				bounds={canvas}
+				background={document.background}
+				viewScale={viewScale}
+			/>
+			{document.layers.map((layer, index) =>
 				layer.hidden || layer.id === hiddenLayerId ? null : (
-					<LiveLayer key={layer.id} layer={layer} live={live}>
-						<LayerContent layer={layer} onImageError={onImageError} />
-					</LiveLayer>
+					<Group
+						key={layer.id}
+						clip={index === 0 && layer.locked ? canvas : undefined}
+					>
+						<LiveLayer layer={layer} live={live}>
+							<LayerContent layer={layer} onImageError={onImageError} />
+						</LiveLayer>
+					</Group>
 				),
 			)}
-			<Group clip={rect(0, 0, document.width, document.height)} invertClip>
+			<Group clip={canvas} invertClip>
 				<Fill color={colors.background} opacity={0.7} />
 			</Group>
 			<CenterGuides document={document} viewScale={viewScale} live={live} />
@@ -64,7 +83,25 @@ export function EditorScene({
 	);
 }
 
-function LayerContent({
+/** The canvas's fill, or a checkerboard where it's transparent. */
+export function CanvasBackground({
+	bounds,
+	background,
+	viewScale,
+}: {
+	bounds: SkRect;
+	background: string | null;
+	// Screen pixels per unit of `bounds`.
+	viewScale: number;
+}) {
+	if (background === null) {
+		return <Checkerboard bounds={bounds} cell={CHECKER_PX / viewScale} />;
+	}
+	return <Rect rect={bounds} color={background} />;
+}
+
+/** A layer's content in its own space, loading images asynchronously. */
+export function LayerContent({
 	layer,
 	onImageError,
 }: {
@@ -89,25 +126,7 @@ function AsyncImage({
 	layer: ImageLayer;
 	onError: (error: unknown) => void;
 }) {
-	const [image, setImage] = useState<SkImage | null>(null);
-
-	useEffect(() => {
-		let cancelled = false;
-		decodeImage(layer.uri).then(
-			(decoded) => {
-				// Never drawn, so it's safe to free now.
-				if (cancelled) decoded.dispose();
-				else setImage(decoded);
-			},
-			(error: unknown) => {
-				if (!cancelled) onError(error);
-			},
-		);
-		return () => {
-			cancelled = true;
-		};
-	}, [layer.uri, onError]);
-
+	const image = useDecodedImage(layer.uri, onError);
 	if (!image) return null;
 	return <ImageLayerView layer={layer} image={image} />;
 }

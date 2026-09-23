@@ -7,18 +7,18 @@ const HIT_PADDING_PX = 14;
 
 /**
  * Returns the id of the topmost selectable layer under a document-space
- * point, or null. The pinned photo and hidden layers aren't selectable.
- * `viewScale` (screen pixels per document unit) keeps small layers
- * comfortably tappable on screen.
+ * point, or null. Locked and hidden layers aren't selectable. `viewScale`
+ * (screen pixels per document unit) keeps small layers comfortably tappable
+ * on screen.
  */
 export function findLayerAt(
 	document: EditorDocument,
 	point: Point,
 	viewScale: number,
 ): string | null {
-	for (let i = document.layers.length - 1; i > 0; i--) {
+	for (let i = document.layers.length - 1; i >= 0; i--) {
 		const layer = document.layers[i];
-		if (layer.hidden) continue;
+		if (layer.hidden || layer.locked) continue;
 		const box = layerBounds(
 			layer,
 			HIT_PADDING_PX / (viewScale * layer.transform.scaleX),

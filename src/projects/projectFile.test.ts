@@ -67,6 +67,22 @@ describe("parseSavedProject", () => {
 		assert.equal(project.thumbnail, undefined);
 	});
 
+	test("reads version 1, from before backgrounds, locks, and flips", () => {
+		const current = mapImageUris(documentWithText("TOP"), () => "original.jpg");
+		const { background, ...document } = current;
+		const layers = document.layers.map((layer) => {
+			const { locked, ...rest } = layer;
+			if (rest.type !== "image") return rest;
+			const { flipped, ...image } = rest;
+			return image;
+		});
+		const project = parseSavedProject(
+			savedJson({ version: 1, document: { ...document, layers } } as never),
+		);
+		assert.equal(project?.version, PROJECT_VERSION);
+		assert.deepEqual(project?.document, current);
+	});
+
 	test("reads a photo-only marker after the last edit is removed", () => {
 		const photo = mapImageUris(documentWithText(), () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: photo }));
@@ -81,6 +97,7 @@ describe("parseSavedProject", () => {
 			savedJson({ version: PROJECT_VERSION + 1 }),
 			savedJson({ document: { ...photo, layers: [] } }),
 			savedJson({ document: { ...photo, width: 0 } }),
+			savedJson({ document: { ...photo, background: 1 } } as never),
 			savedJson({
 				document: {
 					...photo,

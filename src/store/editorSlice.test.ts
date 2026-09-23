@@ -8,6 +8,7 @@ import {
 	type ImageLayer,
 	type TextLayer,
 } from "../model/document.ts";
+import { documentFraming } from "../model/framing.ts";
 import {
 	createEditorSlice,
 	MAX_HISTORY,
@@ -95,6 +96,7 @@ describe("editorSlice", () => {
 			id: "sticker",
 			width: 400,
 			height: 400,
+			locked: false,
 		};
 		store
 			.getState()
@@ -202,15 +204,70 @@ describe("editorSlice", () => {
 		assert.equal(y, text.transform.y - 3);
 	});
 
-	test("the photo can't be moved, nudged, hidden, or deleted", () => {
+	test("the photo can't be reordered, hidden, or deleted, or moved while locked", () => {
 		const { store } = storeWithText();
 		const before = store.getState();
 		const photoId = before.document?.layers[0].id ?? "";
 		before.moveLayer(photoId, 1);
 		before.nudgeLayer(photoId, 1, 0);
+		before.transformLayer(photoId, {
+			x: 0,
+			y: 0,
+			scaleX: 1,
+			scaleY: 1,
+			rotation: 0,
+		});
 		before.setLayerHidden(photoId, true);
 		before.deleteLayer(photoId);
 		assert.equal(store.getState(), before);
+
+		before.setLayerLocked(photoId, false);
+		const unlocked = store.getState();
+		unlocked.moveLayer(photoId, 1);
+		unlocked.setLayerHidden(photoId, true);
+		unlocked.deleteLayer(photoId);
+		assert.equal(store.getState(), unlocked);
+	});
+
+	test("an unlocked photo moves; locking it again clears its selection", () => {
+		const { store } = storeWithText();
+		const photoId = store.getState().document?.layers[0].id ?? "";
+		store.getState().setLayerLocked(photoId, false);
+		store.getState().selectLayer(photoId);
+		store.getState().nudgeLayer(photoId, 10, 0);
+		const moved = store.getState().document?.layers[0];
+		assert.equal(moved?.transform.x, 2010);
+
+		store.getState().setLayerLocked(photoId, true);
+		assert.equal(store.getState().document?.layers[0].locked, true);
+		assert.equal(store.getState().selectedLayerId, null);
+		store.getState().undo();
+		assert.equal(store.getState().selectedLayerId, photoId);
+	});
+
+	test("reframing is one undo step, and an unchanged framing isn't one", () => {
+		const { store } = storeWithText();
+		const before = store.getState();
+		const framing = documentFraming(before.document ?? photo());
+		before.reframe(framing, false);
+		assert.equal(store.getState(), before);
+
+		before.reframe({ ...framing, width: 2000, height: 1000 }, false);
+		assert.equal(store.getState().document?.width, 2000);
+		assert.equal(store.getState().document?.height, 1000);
+		store.getState().undo();
+		assert.equal(store.getState().document, before.document);
+	});
+
+	test("the background can be set and undone", () => {
+		const { store } = storeWithText();
+		const before = store.getState();
+		before.setBackground(null);
+		assert.equal(store.getState(), before);
+		before.setBackground("#FFFFFF");
+		assert.equal(store.getState().document?.background, "#FFFFFF");
+		store.getState().undo();
+		assert.equal(store.getState().document?.background, null);
 	});
 
 	test("edits without a document are ignored", () => {

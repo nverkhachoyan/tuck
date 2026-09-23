@@ -1,7 +1,8 @@
-import { ImageFormat, type SkImage } from "@shopify/react-native-skia";
+import type { SkImage } from "@shopify/react-native-skia";
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
+import { type ExportFormat, encodeImage, exportFormats } from "./exportFormat";
 
 // `saveImage.web.ts` implements the same API for browsers.
 
@@ -21,7 +22,10 @@ export const saveLabels = {
  * access: saving never needs to read the library. `Asset.create` checks the
  * permission but won't prompt for it, so the request has to come first.
  */
-export async function saveImage(image: SkImage): Promise<SaveImageResult> {
+export async function saveImage(
+	image: SkImage,
+	format: ExportFormat,
+): Promise<SaveImageResult> {
 	const permission = await MediaLibrary.requestPermissionsAsync(true, [
 		"photo",
 	]);
@@ -29,7 +33,7 @@ export async function saveImage(image: SkImage): Promise<SaveImageResult> {
 		return { status: "permission-denied" };
 	}
 
-	await MediaLibrary.Asset.create(writeJpeg(image).uri);
+	await MediaLibrary.Asset.create(writeImage(image, format).uri);
 	return { status: "saved" };
 }
 
@@ -39,31 +43,41 @@ export function canShareImages(): boolean {
 }
 
 /**
- * Encodes a rendered image as JPEG and opens the system share sheet. Returns
- * false when sharing isn't available on this platform.
+ * Encodes a rendered image and opens the system share sheet. Returns false
+ * when sharing isn't available on this platform.
  */
-export async function shareImage(image: SkImage): Promise<boolean> {
+export async function shareImage(
+	image: SkImage,
+	format: ExportFormat,
+): Promise<boolean> {
 	if (!(await Sharing.isAvailableAsync())) return false;
 
-	await Sharing.shareAsync(writeJpeg(image).uri, {
-		mimeType: "image/jpeg",
-		UTI: "public.jpeg",
+	const { mimeType, uti } = exportFormats[format];
+	await Sharing.shareAsync(writeImage(image, format).uri, {
+		mimeType,
+		UTI: uti,
 	});
 	return true;
 }
 
 // Earlier exports are done with by the next one: saved into Photos, or read
 // by the app they were shared to.
-function writeJpeg(image: SkImage): File {
+function writeImage(image: SkImage, format: ExportFormat): File {
 	for (const entry of Paths.cache.list()) {
 		if (entry instanceof File && isExportFile(entry.name)) entry.delete();
 	}
-	const file = new File(Paths.cache, `export-${Date.now()}.jpg`);
+	const { extension } = exportFormats[format];
+	const file = new File(Paths.cache, `export-${Date.now()}.${extension}`);
 	file.create({ overwrite: true });
-	file.write(image.encodeToBytes(ImageFormat.JPEG, 95));
+	file.write(encodeImage(image, format));
 	return file;
 }
 
 function isExportFile(name: string) {
-	return name.startsWith("export-") && name.endsWith(".jpg");
+	return (
+		name.startsWith("export-") &&
+		Object.values(exportFormats).some(({ extension }) =>
+			name.endsWith(`.${extension}`),
+		)
+	);
 }

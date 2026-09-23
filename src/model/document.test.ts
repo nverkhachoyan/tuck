@@ -8,6 +8,7 @@ import {
 	duplicateLayer,
 	type EditorDocument,
 	hasEdits,
+	hasTransparency,
 	type ImageLayer,
 	initialFontSize,
 	reorderLayer,
@@ -24,6 +25,13 @@ describe("createDocumentFromImage", () => {
 		assert.equal(document.layers.length, 1);
 		assert.equal(document.layers[0].type, "image");
 		assert.equal(document.layers[0].hidden, false);
+		assert.equal(document.background, null);
+	});
+
+	test("locks the photo, and leaves new text unlocked", () => {
+		const document = landscape();
+		assert.equal(document.layers[0].locked, true);
+		assert.equal(createTextLayer(document, "x", "center").locked, false);
 	});
 
 	test("centers the photo's transform, so it covers the document", () => {
@@ -44,6 +52,62 @@ describe("hasEdits", () => {
 		assert.equal(hasEdits(document), false);
 		document.layers.push(createTextLayer(document, "TOP TEXT", "center"));
 		assert.equal(hasEdits(document), true);
+	});
+
+	test("counts a crop, a move, a flip, or a background", () => {
+		const photo = (document: EditorDocument) =>
+			document.layers[0] as ImageLayer;
+		const edits: ((document: EditorDocument) => void)[] = [
+			(document) => {
+				document.width = 3000;
+			},
+			(document) => {
+				photo(document).transform.rotation = 0.1;
+			},
+			(document) => {
+				photo(document).flipped = true;
+			},
+			(document) => {
+				document.background = "#FFFFFF";
+			},
+		];
+		for (const edit of edits) {
+			const document = landscape();
+			edit(document);
+			assert.equal(hasEdits(document), true);
+		}
+	});
+
+	test("doesn't count unlocking the photo", () => {
+		const document = landscape();
+		document.layers[0].locked = false;
+		assert.equal(hasEdits(document), false);
+	});
+});
+
+describe("hasTransparency", () => {
+	test("is false while the photo covers the canvas", () => {
+		const document = landscape();
+		assert.equal(hasTransparency(document), false);
+		// A crop inside the photo, turned a quarter turn.
+		document.width = 1000;
+		document.height = 2000;
+		document.layers[0].transform = {
+			x: 500,
+			y: 1000,
+			scaleX: 1,
+			scaleY: 1,
+			rotation: Math.PI / 2,
+		};
+		assert.equal(hasTransparency(document), false);
+	});
+
+	test("is true where the canvas reaches past the photo, unless filled", () => {
+		const document = landscape();
+		document.height = 3600;
+		assert.equal(hasTransparency(document), true);
+		document.background = "#000000";
+		assert.equal(hasTransparency(document), false);
 	});
 });
 
@@ -109,6 +173,8 @@ describe("duplicateLayer", () => {
 			height: 200,
 			transform: { x: 100, y: 200, scaleX: 3, scaleY: 3, rotation: 0 },
 			hidden: false,
+			locked: false,
+			flipped: false,
 		};
 		const copy = duplicateLayer(original);
 		assert.notEqual(copy.id, original.id);
@@ -135,13 +201,13 @@ describe("reorderLayer", () => {
 
 	test("moves a layer up or down the stack", () => {
 		assert.deepEqual(ids(reorderLayer(stack(), "a", 3)), [
-			"background",
+			"photo",
 			"b",
 			"c",
 			"a",
 		]);
 		assert.deepEqual(ids(reorderLayer(stack(), "c", 1)), [
-			"background",
+			"photo",
 			"c",
 			"a",
 			"b",
@@ -150,18 +216,18 @@ describe("reorderLayer", () => {
 
 	test("keeps the photo at the bottom", () => {
 		assert.deepEqual(ids(reorderLayer(stack(), "b", 0)), [
-			"background",
+			"photo",
 			"b",
 			"a",
 			"c",
 		]);
 		const layers = stack();
-		assert.equal(reorderLayer(layers, "background", 2), layers);
+		assert.equal(reorderLayer(layers, "photo", 2), layers);
 	});
 
 	test("clamps past the top", () => {
 		assert.deepEqual(ids(reorderLayer(stack(), "a", 99)), [
-			"background",
+			"photo",
 			"b",
 			"c",
 			"a",

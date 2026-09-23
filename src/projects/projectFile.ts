@@ -2,8 +2,9 @@
 import { type EditorDocument, textFonts } from "../model/document.ts";
 
 // Bump when the saved format changes, and teach `parseSavedProject` to read
-// the older one.
-export const PROJECT_VERSION = 1;
+// the older one. 2 added the canvas's background, layers' `locked`, and
+// image layers' `flipped`.
+export const PROJECT_VERSION = 2;
 
 // The photo's file in a project, which saved image layers name as their `uri`.
 export const PHOTO_FILE = "original.jpg";
@@ -19,8 +20,9 @@ export type SavedProject = {
 };
 
 /**
- * A small JPEG of the document as a data URL, and the `updatedAt` of the save
- * it shows. Saves carry it over, so it can be older than the document.
+ * A small image of the document as a data URL (a JPEG, or a PNG when some of
+ * the canvas is transparent), and the `updatedAt` of the save it shows. Saves
+ * carry it over, so it can be older than the document.
  */
 export type ProjectThumbnail = { url: string; updatedAt: number };
 
@@ -50,7 +52,7 @@ export function mapImageUris(
 /** A saved project read back from JSON, or null if it isn't one this app can open. */
 export function parseSavedProject(json: string): SavedProject | null {
 	try {
-		const value: unknown = JSON.parse(json);
+		const value = upgradeProject(JSON.parse(json));
 		if (!isSavedProject(value)) return null;
 		// A bad thumbnail only costs the thumbnail; closing makes a new one.
 		const { thumbnail, ...project } = value;
@@ -74,6 +76,39 @@ type Fields = Record<string, unknown>;
 
 function isFields(value: unknown): value is Fields {
 	return typeof value === "object" && value !== null;
+}
+
+/**
+ * A version 1 project as version 2 would have saved it: no background, only
+ * the photo locked, and nothing flipped. Anything else is returned as is.
+ */
+function upgradeProject(value: unknown): unknown {
+	if (
+		!isFields(value) ||
+		value.version !== 1 ||
+		!isFields(value.document) ||
+		!Array.isArray(value.document.layers)
+	) {
+		return value;
+	}
+	const layers: unknown[] = value.document.layers;
+	return {
+		...value,
+		version: 2,
+		document: {
+			...value.document,
+			background: null,
+			layers: layers.map((layer, index) =>
+				isFields(layer)
+					? {
+							...layer,
+							locked: index === 0,
+							...(layer.type === "image" && { flipped: false }),
+						}
+					: layer,
+			),
+		},
+	};
 }
 
 function isSavedProject(value: unknown): value is SavedProject {
@@ -101,6 +136,7 @@ function isDocument(value: unknown): boolean {
 	return (
 		isPositive(value.width) &&
 		isPositive(value.height) &&
+		isColorOrNull(value.background) &&
 		isFields(photo) &&
 		photo.type === "image" &&
 		value.layers.every(isLayer)
@@ -112,6 +148,7 @@ function isLayer(value: unknown): boolean {
 		!isFields(value) ||
 		typeof value.id !== "string" ||
 		typeof value.hidden !== "boolean" ||
+		typeof value.locked !== "boolean" ||
 		!isTransform(value.transform)
 	) {
 		return false;
@@ -121,7 +158,8 @@ function isLayer(value: unknown): boolean {
 			return (
 				typeof value.uri === "string" &&
 				isPositive(value.width) &&
-				isPositive(value.height)
+				isPositive(value.height) &&
+				typeof value.flipped === "boolean"
 			);
 		case "text":
 			return (

@@ -1,4 +1,4 @@
-import type { Point, Size } from "../model/geometry.ts";
+import type { Point, Rect, Size } from "../model/geometry.ts";
 
 export type DocumentViewport = {
 	scale: number;
@@ -32,6 +32,24 @@ export function fitDocumentToView(
 	};
 }
 
+/** `fitDocumentToView` for a rectangle anywhere, not only at the origin. */
+export function fitRectToView(
+	bounds: Rect,
+	viewSize: Size,
+	inset = 0,
+): DocumentViewport {
+	const { scale, offsetX, offsetY } = fitDocumentToView(
+		bounds,
+		viewSize,
+		inset,
+	);
+	return {
+		scale,
+		offsetX: offsetX - bounds.x * scale,
+		offsetY: offsetY - bounds.y * scale,
+	};
+}
+
 /**
  * Converts a point reported by the view into document-space coordinates.
  * A worklet, so gestures can convert touch points on the UI thread.
@@ -44,5 +62,21 @@ export function viewPointToDocument(
 	return {
 		x: (point.x - viewport.offsetX) / viewport.scale,
 		y: (point.y - viewport.offsetY) / viewport.scale,
+	};
+}
+
+/** The part of document space visible inside a view, optionally inset. */
+export function viewRectToDocument(
+	viewport: DocumentViewport,
+	viewSize: Size,
+	inset = 0,
+): Rect {
+	"worklet";
+	const { scale, offsetX, offsetY } = viewport;
+	return {
+		x: (inset - offsetX) / scale,
+		y: (inset - offsetY) / scale,
+		width: (viewSize.width - inset * 2) / scale,
+		height: (viewSize.height - inset * 2) / scale,
 	};
 }

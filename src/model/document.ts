@@ -1,18 +1,22 @@
-import type { Transform } from "./geometry.ts";
+import { hitTestBox, type Transform, transformsEqual } from "./geometry.ts";
 
 type LayerBase = {
 	id: string;
 	transform: Transform;
 	// Left out of the editor, hit testing, and export.
 	hidden: boolean;
+	// Can't be selected, and so can't be moved, on the canvas.
+	locked: boolean;
 };
 
-// transform.x/y is the image's center in document space.
+// transform.x/y is the image's center in document space. `flipped` mirrors
+// it within its own space, which keeps its transform's scale positive.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
 	width: number;
 	height: number;
+	flipped: boolean;
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -57,11 +61,16 @@ export type TextLayerEdit = Partial<
 // BlurLayer | DrawingLayer join this union in later stages.
 export type Layer = ImageLayer | TextLayer;
 
+// The canvas is the document itself: its size is the exported image's, and
+// layers outside it are cropped.
 export type EditorDocument = {
 	width: number;
 	height: number;
+	// Fills the canvas behind every layer; null leaves it transparent.
+	background: string | null;
 	// Bottom to top. The first is the photo the document was made from, pinned
-	// at the bottom: it can't be moved, hidden, or deleted.
+	// at the bottom: it can't be reordered, hidden, or deleted. It starts
+	// locked, so the crop tool places it, until it's unlocked to move freely.
 	layers: Layer[];
 };
 
@@ -88,23 +97,75 @@ export function createDocumentFromImage(
 	return {
 		width,
 		height,
+		background: null,
 		layers: [
 			{
 				type: "image",
-				id: "background",
+				id: "photo",
 				uri,
 				width,
 				height,
-				transform: { ...identityTransform, x: width / 2, y: height / 2 },
+				flipped: false,
+				transform: centeredTransform(width, height),
 				hidden: false,
+				locked: true,
 			},
 		],
 	};
 }
 
-/** Whether anything was added to the photo. The photo alone isn't an edit. */
+function centeredTransform(width: number, height: number): Transform {
+	return { ...identityTransform, x: width / 2, y: height / 2 };
+}
+
+/** The photo the document was made from: always its first layer. */
+export function photoLayer(document: EditorDocument): ImageLayer {
+	const [photo] = document.layers;
+	if (photo?.type !== "image") throw new Error("The document has no photo.");
+	return photo;
+}
+
+/**
+ * Whether the document would export as anything but the photo it was made
+ * from. Unlocking the photo isn't an edit until it's moved.
+ */
 export function hasEdits(document: EditorDocument): boolean {
-	return document.layers.length > 1;
+	const photo = photoLayer(document);
+	return (
+		document.layers.length > 1 ||
+		document.background !== null ||
+		document.width !== photo.width ||
+		document.height !== photo.height ||
+		photo.flipped ||
+		!transformsEqual(
+			photo.transform,
+			centeredTransform(photo.width, photo.height),
+		)
+	);
+}
+
+// In the photo's pixels: gaps this small between its edge and the canvas's
+// are floating-point error, not transparency.
+const COVER_TOLERANCE = 0.01;
+
+/**
+ * Whether any of the canvas would export transparent: it has no background
+ * and the photo doesn't cover all of it. Such a document exports as PNG.
+ */
+export function hasTransparency(document: EditorDocument): boolean {
+	if (document.background !== null) return false;
+	const { transform, width, height } = photoLayer(document);
+	const box = {
+		halfWidth: width / 2 + COVER_TOLERANCE,
+		halfHeight: height / 2 + COVER_TOLERANCE,
+	};
+	const corners = [
+		{ x: 0, y: 0 },
+		{ x: document.width, y: 0 },
+		{ x: document.width, y: document.height },
+		{ x: 0, y: document.height },
+	];
+	return !corners.every((corner) => hitTestBox(transform, box, corner));
 }
 
 /**
@@ -151,6 +212,7 @@ export function createTextLayer(
 			y: document.height / 2,
 		},
 		hidden: false,
+		locked: false,
 	};
 }
 

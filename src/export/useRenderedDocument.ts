@@ -9,11 +9,11 @@ export type RenderState =
 	| { status: "failed"; error: unknown };
 
 /**
- * Renders the document at full resolution as soon as it's available, and
- * frees the result when the document changes or the caller unmounts. A render
+ * Renders the document at `scale` times its size as soon as it's available,
+ * and frees the result when either changes or the caller unmounts. A render
  * that finishes after it's been superseded is disposed instead of shown.
  */
-export function useRenderedDocument(document: EditorDocument) {
+export function useRenderedDocument(document: EditorDocument, scale: number) {
 	const [state, setState] = useState<RenderState>({ status: "rendering" });
 	const [attempt, setAttempt] = useState(0);
 
@@ -24,7 +24,7 @@ export function useRenderedDocument(document: EditorDocument) {
 		let rendered: SkImage | null = null;
 
 		setState({ status: "rendering" });
-		renderDocument(document).then(
+		renderDocument(document, scale).then(
 			(image) => {
 				if (cancelled) {
 					image.dispose();
@@ -42,7 +42,7 @@ export function useRenderedDocument(document: EditorDocument) {
 			cancelled = true;
 			rendered?.dispose();
 		};
-	}, [document, attempt]);
+	}, [document, scale, attempt]);
 
 	const retry = useCallback(() => setAttempt((n) => n + 1), []);
 

@@ -1,4 +1,5 @@
 import {
+	Group,
 	type SkImage,
 	Skia,
 	Image as SkiaImage,
@@ -15,9 +16,12 @@ export async function decodeImage(uri: string): Promise<SkImage> {
 	return image;
 }
 
+const MIRRORED = [{ scaleX: -1 }];
+
 /**
  * Draws an already-decoded image layer in its own space, centered on the
- * origin. Callers position it with the layer's transform.
+ * origin, and mirrored there if it's flipped. Callers position it with the
+ * layer's transform.
  */
 export function ImageLayerView({
 	layer,
@@ -27,13 +31,15 @@ export function ImageLayerView({
 	image: SkImage;
 }) {
 	return (
-		<SkiaImage
-			image={image}
-			x={-layer.width / 2}
-			y={-layer.height / 2}
-			width={layer.width}
-			height={layer.height}
-			fit="fill"
-		/>
+		<Group transform={layer.flipped ? MIRRORED : undefined}>
+			<SkiaImage
+				image={image}
+				x={-layer.width / 2}
+				y={-layer.height / 2}
+				width={layer.width}
+				height={layer.height}
+				fit="fill"
+			/>
+		</Group>
 	);
 }

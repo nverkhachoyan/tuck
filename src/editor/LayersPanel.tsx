@@ -28,6 +28,7 @@ import { hapticTick } from "@/lib/haptics";
 import type { Layer } from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
+import { BackgroundPicker } from "./BackgroundPicker";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 const ROW_HEIGHT = 52;
@@ -35,16 +36,21 @@ const SETTLE = { duration: 160 };
 
 type LayersPanelProps = {
 	layers: Layer[];
+	background: string | null;
 	selectedLayerId: string | null;
 	onSelect: (id: string) => void;
 	onMove: (id: string, toIndex: number) => void;
 	onSetHidden: (id: string, hidden: boolean) => void;
+	onSetLocked: (id: string, locked: boolean) => void;
 	onDelete: (id: string) => void;
+	onSetBackground: (background: string | null) => void;
 };
 
 /**
- * The document's layers, top first, with the photo pinned at the bottom.
- * Tapping a row selects its layer; dragging its handle reorders it.
+ * The document's layers, top first, with the photo pinned at the bottom and
+ * the canvas's background under it. Tapping a row selects its layer;
+ * dragging its handle reorders it. The photo can't be reordered, but it can
+ * be unlocked to select and move it on the canvas.
  *
  * Rows sit at absolute positions taken from `order`, the UI thread's copy of
  * the row order. A drag rearranges `order` as it goes, so the other rows
@@ -53,11 +59,14 @@ type LayersPanelProps = {
  */
 export function LayersPanel({
 	layers,
+	background,
 	selectedLayerId,
 	onSelect,
 	onMove,
 	onSetHidden,
+	onSetLocked,
 	onDelete,
+	onSetBackground,
 }: LayersPanelProps) {
 	const photo = layers[0];
 	const rows = useMemo(() => layers.slice(1).reverse(), [layers]);
@@ -96,21 +105,55 @@ export function LayersPanel({
 			{rows.length === 0 && (
 				<Text style={styles.empty}>Text you add appears here.</Text>
 			)}
+			<PhotoRow
+				photo={photo}
+				selected={photo.id === selectedLayerId}
+				onSelect={onSelect}
+				onSetLocked={onSetLocked}
+			/>
 			<View style={styles.row}>
-				<View style={styles.main}>
-					<LayerThumbnail layer={photo} />
-					<Text style={styles.label}>Photo</Text>
-				</View>
-				<View style={styles.trailing}>
-					<Ionicons
-						name="lock-closed-outline"
-						size={18}
-						color={colors.textSecondary}
-						accessibilityLabel="Pinned"
-					/>
-				</View>
+				<Text style={styles.label}>Background</Text>
+				<BackgroundPicker value={background} onPick={onSetBackground} />
 			</View>
 		</ScrollView>
+	);
+}
+
+/** Selectable only while unlocked, since only then can it be moved. */
+function PhotoRow({
+	photo,
+	selected,
+	onSelect,
+	onSetLocked,
+}: {
+	photo: Layer;
+	selected: boolean;
+	onSelect: (id: string) => void;
+	onSetLocked: (id: string, locked: boolean) => void;
+}) {
+	const { id, locked } = photo;
+	return (
+		<View style={[styles.row, selected && styles.rowSelected]}>
+			<Pressable
+				style={styles.main}
+				disabled={locked}
+				onPress={() => onSelect(id)}
+				accessibilityRole="button"
+				accessibilityLabel="Photo"
+				accessibilityState={{ selected, disabled: locked }}
+			>
+				<LayerThumbnail layer={photo} />
+				<Text style={styles.label}>Photo</Text>
+			</Pressable>
+			<View style={styles.trailing}>
+				<IconButton
+					icon={locked ? "lock-closed-outline" : "lock-open-outline"}
+					label={locked ? "Unlock photo" : "Lock photo"}
+					selected={!locked}
+					onPress={() => onSetLocked(id, !locked)}
+				/>
+			</View>
+		</View>
 	);
 }
 
@@ -134,7 +177,10 @@ function LayerRow({
 	dragId: SharedValue<string | null>;
 	scrollRef: RefObject<ScrollView | null>;
 	selected: boolean;
-} & Omit<LayersPanelProps, "layers" | "selectedLayerId">) {
+} & Pick<
+	LayersPanelProps,
+	"onSelect" | "onMove" | "onSetHidden" | "onDelete"
+>) {
 	const { id, hidden } = layer;
 	const label = layerLabel(layer);
 	const startSlot = useSharedValue(0);

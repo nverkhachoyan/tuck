@@ -9,4 +9,7 @@ export const colors = {
 	danger: "#FF453A",
 	// Dims the canvas behind modal editing UI.
 	scrim: "rgba(0, 0, 0, 0.65)",
+	// The checkerboard that stands for transparency.
+	checkerDark: "#2E2E33",
+	checkerLight: "#45454B",
 };

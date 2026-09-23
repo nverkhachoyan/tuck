@@ -10,6 +10,12 @@ import {
 	type TextLayer,
 	type TextLayerEdit,
 } from "../model/document.ts";
+import {
+	documentFraming,
+	type Framing,
+	framingsEqual,
+	reframeDocument,
+} from "../model/framing.ts";
 import { type Transform, transformsEqual } from "../model/geometry.ts";
 import type { SliceCreator } from "./index.ts";
 
@@ -35,8 +41,11 @@ export type EditorSlice = {
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
 	nudgeLayer: (id: string, dx: number, dy: number) => void;
+	reframe: (framing: Framing, turnLayers: boolean) => void;
+	setBackground: (background: string | null) => void;
 	moveLayer: (id: string, toIndex: number) => void;
 	setLayerHidden: (id: string, hidden: boolean) => void;
+	setLayerLocked: (id: string, locked: boolean) => void;
 	deleteLayer: (id: string) => void;
 	selectLayer: (id: string | null) => void;
 	undo: () => void;
@@ -61,16 +70,16 @@ export const selectCanUndo = ({ past }: EditorSlice) => past.length > 0;
 export const selectCanRedo = ({ future }: EditorSlice) => future.length > 0;
 
 export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
-	const setLayers = (
+	const setDocument = (
 		action: string,
-		update: (layers: Layer[]) => Layer[],
+		update: (document: EditorDocument) => EditorDocument,
 		nextSelectedLayerId = get().selectedLayerId,
 	) => {
 		const { document, selectedLayerId, past } = get();
 		if (!document) return;
 		set(
 			{
-				document: { ...document, layers: update(document.layers) },
+				document: update(document),
 				selectedLayerId: nextSelectedLayerId,
 				past: [...past, { document, selectedLayerId }].slice(-MAX_HISTORY),
 				future: [],
@@ -80,12 +89,26 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		);
 	};
 
+	const setLayers = (
+		action: string,
+		update: (layers: Layer[]) => Layer[],
+		nextSelectedLayerId?: string | null,
+	) =>
+		setDocument(
+			action,
+			(document) => ({ ...document, layers: update(document.layers) }),
+			nextSelectedLayerId,
+		);
+
 	const addOnTop = (action: string, layer: Layer) =>
 		setLayers(action, (layers) => [...layers, layer], layer.id);
 
 	// Never the pinned photo at index 0.
 	const findUnpinnedLayer = (id: string) =>
 		get().document?.layers.find((layer, index) => index > 0 && layer.id === id);
+
+	const findUnlockedLayer = (id: string) =>
+		get().document?.layers.find((layer) => !layer.locked && layer.id === id);
 
 	// The document the last nudge produced. While it's still the current one,
 	// nothing else has changed since, so the next nudge joins its undo step.
@@ -145,7 +168,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		// By id rather than "the selected layer": a gesture can end just as the
 		// selection moves on, and its result belongs to the layer it moved.
 		transformLayer: (id, transform) => {
-			const layer = get().document?.layers.find((layer) => layer.id === id);
+			const layer = findUnlockedLayer(id);
 			if (!layer || transformsEqual(layer.transform, transform)) return;
 			setLayers("editor/transformLayer", (layers) =>
 				layers.map((layer) =>
@@ -157,7 +180,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		// Moves a layer by a document-space offset. A run of nudges to the same
 		// layer, like holding an arrow key, is a single undo step.
 		nudgeLayer: (id, dx, dy) => {
-			const target = findUnpinnedLayer(id);
+			const target = findUnlockedLayer(id);
 			const { document } = get();
 			if (!target || !document || (dx === 0 && dy === 0)) return;
 			const { x, y } = target.transform;
@@ -181,6 +204,24 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			lastNudge = nudged && { document: nudged, id };
 		},
 
+		reframe: (framing, turnLayers) => {
+			const { document } = get();
+			if (!document || framingsEqual(documentFraming(document), framing)) {
+				return;
+			}
+			setDocument("editor/reframe", (document) =>
+				reframeDocument(document, framing, turnLayers),
+			);
+		},
+
+		setBackground: (background) => {
+			if (get().document?.background === background) return;
+			setDocument("editor/setBackground", (document) => ({
+				...document,
+				background,
+			}));
+		},
+
 		moveLayer: (id, toIndex) => {
 			const layers = get().document?.layers;
 			if (!layers) return;
@@ -201,6 +242,21 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 						layer === target ? { ...target, hidden } : layer,
 					),
 				hidden && selectedLayerId === id ? null : selectedLayerId,
+			);
+		},
+
+		// A locked layer can't be selected, so locking the selection clears it.
+		setLayerLocked: (id, locked) => {
+			const target = get().document?.layers.find((layer) => layer.id === id);
+			if (!target || target.locked === locked) return;
+			const { selectedLayerId } = get();
+			setLayers(
+				locked ? "editor/lockLayer" : "editor/unlockLayer",
+				(layers) =>
+					layers.map((layer) =>
+						layer === target ? { ...target, locked } : layer,
+					),
+				locked && selectedLayerId === id ? null : selectedLayerId,
 			);
 		},
 

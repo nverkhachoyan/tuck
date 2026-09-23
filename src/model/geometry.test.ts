@@ -2,10 +2,16 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+	applyMatrix,
+	cosSin,
 	hitTestBox,
+	invertMatrix,
+	multiplyMatrices,
+	normalizeAngle,
 	type Transform,
 	toDocumentSpace,
 	toLayerSpace,
+	transformMatrix,
 	transformsEqual,
 } from "./geometry.ts";
 
@@ -79,5 +85,67 @@ describe("transformsEqual", () => {
 		assert.ok(transformsEqual(transform, { ...transform }));
 		assert.ok(!transformsEqual(transform, { ...transform, rotation: 0 }));
 		assert.ok(!transformsEqual(transform, { ...transform, scaleY: 1 }));
+	});
+});
+
+describe("cosSin", () => {
+	test("is exact for quarter turns, in either direction", () => {
+		assert.deepEqual(cosSin(Math.PI / 2), { cos: 0, sin: 1 });
+		assert.deepEqual(cosSin(Math.PI), { cos: -1, sin: 0 });
+		assert.deepEqual(cosSin(-Math.PI / 2), { cos: 0, sin: -1 });
+		assert.deepEqual(cosSin(4 * Math.PI), { cos: 1, sin: 0 });
+	});
+
+	test("matches Math between quarter turns", () => {
+		assert.deepEqual(cosSin(0.3), { cos: Math.cos(0.3), sin: Math.sin(0.3) });
+	});
+});
+
+describe("normalizeAngle", () => {
+	test("wraps into (−π, π]", () => {
+		near(normalizeAngle(3 * Math.PI), Math.PI);
+		near(normalizeAngle(-Math.PI), Math.PI);
+		near(normalizeAngle(2 * Math.PI + 0.5), 0.5);
+		near(normalizeAngle(-2 * Math.PI - 0.5), -0.5);
+	});
+
+	test("lands exactly on quarter turns that are off by rounding", () => {
+		const fourTurns = [1, 2, 3, 4].reduce((angle) => angle + Math.PI / 2, 0);
+		assert.equal(normalizeAngle(fourTurns), 0);
+		assert.equal(normalizeAngle(Math.PI / 2 + 1e-12), Math.PI / 2);
+	});
+});
+
+describe("transformMatrix", () => {
+	const transform: Transform = {
+		x: 30,
+		y: -20,
+		scaleX: 1.5,
+		scaleY: 1.5,
+		rotation: 0.7,
+	};
+
+	test("maps points like toDocumentSpace", () => {
+		const point = { x: 12, y: 34 };
+		const mapped = applyMatrix(transformMatrix(transform), point);
+		const expected = toDocumentSpace(transform, point);
+		near(mapped.x, expected.x);
+		near(mapped.y, expected.y);
+	});
+
+	test("composes and inverts", () => {
+		const other: Transform = { ...transform, x: 5, rotation: -1.2 };
+		const both = multiplyMatrices(
+			transformMatrix(other),
+			transformMatrix(transform),
+		);
+		const point = { x: 7, y: -3 };
+		const once = applyMatrix(both, point);
+		const twice = toDocumentSpace(other, toDocumentSpace(transform, point));
+		near(once.x, twice.x);
+		near(once.y, twice.y);
+		const back = applyMatrix(invertMatrix(both), once);
+		near(back.x, point.x);
+		near(back.y, point.y);
 	});
 });

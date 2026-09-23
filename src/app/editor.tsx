@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { CropTool } from "@/editor/CropTool";
 import { EditorCanvas, type EditorCanvasHandle } from "@/editor/EditorCanvas";
 import { LayersPanel } from "@/editor/LayersPanel";
 import type { Shortcut } from "@/editor/shortcuts";
@@ -39,6 +40,9 @@ export default function EditorRoute() {
 	const nudgeLayer = useStore((state) => state.nudgeLayer);
 	const moveLayer = useStore((state) => state.moveLayer);
 	const setLayerHidden = useStore((state) => state.setLayerHidden);
+	const setLayerLocked = useStore((state) => state.setLayerLocked);
+	const setBackground = useStore((state) => state.setBackground);
+	const reframe = useStore((state) => state.reframe);
 	const deleteLayer = useStore((state) => state.deleteLayer);
 	const selectLayer = useStore((state) => state.selectLayer);
 	const undo = useStore((state) => state.undo);
@@ -49,6 +53,7 @@ export default function EditorRoute() {
 	// What the full-screen text editor is open for: a layer that doesn't exist
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
+	const [cropping, setCropping] = useState(false);
 	const [layersOpen, setLayersOpen] = useState(false);
 	const prepareForBackgroundSave = useCallback(() => {
 		canvasRef.current?.flushPendingTransform();
@@ -128,9 +133,11 @@ export default function EditorRoute() {
 	);
 
 	useEditorShortcuts({
-		enabled: editing === null,
+		enabled: editing === null && !cropping,
 		onShortcut: handleShortcut,
 	});
+
+	const closeCrop = useCallback(() => setCropping(false), []);
 
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
@@ -212,11 +219,14 @@ export default function EditorRoute() {
 				{layersOpen ? (
 					<LayersPanel
 						layers={document.layers}
+						background={document.background}
 						selectedLayerId={selectedLayer?.id ?? null}
 						onSelect={selectLayer}
 						onMove={moveLayer}
 						onSetHidden={setLayerHidden}
+						onSetLocked={setLayerLocked}
 						onDelete={deleteLayer}
+						onSetBackground={setBackground}
 					/>
 				) : selectedTextLayer ? (
 					<TextEditPanel
@@ -232,10 +242,28 @@ export default function EditorRoute() {
 							icon="format-text"
 							onPress={() => setEditing("new")}
 						/>
+						<ToolButton
+							label="Crop"
+							icon="crop-rotate"
+							onPress={() => {
+								canvasRef.current?.flushPendingTransform();
+								setCropping(true);
+							}}
+						/>
 					</View>
 				)}
 			</View>
 
+			{cropping && (
+				<CropTool
+					document={document}
+					onCancel={closeCrop}
+					onDone={(framing, turnLayers) => {
+						reframe(framing, turnLayers);
+						closeCrop();
+					}}
+				/>
+			)}
 			{editing === "new" && (
 				<TextEditor
 					initialText=""

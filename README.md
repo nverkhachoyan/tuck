@@ -63,13 +63,13 @@ committed to the document when the gesture ends.
 Key areas:
 
 - `src/app/` holds the routes only (expo-router treats every file here as a route).
-- `src/model/` defines the document, layers, and geometry as plain data: no React.
+- `src/model/` defines the document, layers, and geometry as plain data: no React. The document is the canvas (its size, and a background fill or transparency); the photo is its bottom layer, locked by default, with a transform of its own. `framing.ts` moves the photo to a new place on a new canvas and keeps every other layer over the same spot, which is all cropping, turning, and flipping are.
 - `src/layers/` draws each layer type in document space; shared by editor and export.
-- `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, the full-screen `TextEditor`, the layers panel, and keyboard shortcuts on web.
+- `src/editor/` is the interactive canvas: `EditorScene`, gestures, hit-testing, the selection's scale/rotate handles (`selectionHandles.ts`), the text panel, the full-screen `TextEditor`, the layers panel (where the photo is unlocked and the background picked), and keyboard shortcuts on web. `CropTool` crops, turns, flips, and straightens the photo and expands the canvas around it; its geometry is in `cropGeometry.ts`.
 - `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, undo history, and every edit that mutates them.
 - `src/import/` picks a photo and re-encodes it as JPEG.
 - `src/projects/` keeps every editing session as a local project: the photo moves into it, edits autosave, and the welcome screen lists projects to reopen or delete, each with a thumbnail rendered by export's renderer when its editor closes. `projectFile.ts` is the saved format (versioned, with the photo's path relative to the project); `projectLifecycle.ts` opens, saves, and closes projects, with storage passed in so Node can test it.
-- `src/export/` renders the document offscreen with `ExportScene`, then saves it to Photos or shares it.
+- `src/export/` renders the document offscreen with `ExportScene`, at full size or a smaller preset, then saves it to Photos or shares it: as JPEG, or as PNG when some of the canvas is transparent.
 - `src/layers/fonts.ts` bundles the text fonts so text renders identically on iOS, Android, and web.
 - `src/ui/` and `src/theme.ts` hold controls and colors shared across screens.
 - `src/lib/` holds platform shims and small language helpers.

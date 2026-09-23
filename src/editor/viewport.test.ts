@@ -1,7 +1,12 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { fitDocumentToView, viewPointToDocument } from "./viewport.ts";
+import {
+	fitDocumentToView,
+	fitRectToView,
+	viewPointToDocument,
+	viewRectToDocument,
+} from "./viewport.ts";
 
 describe("fitDocumentToView", () => {
 	test("fits a landscape photo to a portrait view's width and centers it", () => {
@@ -44,5 +49,27 @@ describe("viewPointToDocument", () => {
 			x: 2000,
 			y: 1500,
 		});
+	});
+});
+
+describe("fitRectToView", () => {
+	test("fits a rectangle that doesn't start at the origin", () => {
+		const viewport = fitRectToView(
+			{ x: -2000, y: -1500, width: 4000, height: 3000 },
+			{ width: 400, height: 800 },
+		);
+		assert.equal(viewport.scale, 0.1);
+		// The rectangle's center lands in the view's.
+		assert.equal(viewport.offsetX, 200);
+		assert.equal(viewport.offsetY, 400);
+	});
+
+	test("leaves the fit inset available as outward drag room", () => {
+		const bounds = { x: -2000, y: -1500, width: 4000, height: 3000 };
+		const viewSize = { width: 440, height: 800 };
+		const viewport = fitRectToView(bounds, viewSize, 20);
+		const visible = viewRectToDocument(viewport, viewSize);
+		assert.ok(visible.x < bounds.x);
+		assert.ok(visible.x + visible.width > bounds.x + bounds.width);
 	});
 });

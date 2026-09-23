@@ -969,3 +969,5 @@ Do not expand scope until this workflow feels fast, predictable, and polished on
 The Stage 1 workflow is implemented; what remains is confirming save and share on real iOS and Android devices.
 
 A few Stage 5 items were built early, alongside Stage 1: undo/redo, a small bundled font set, a simple layers panel, and saved projects (each session autosaves as a local project, listed on the welcome screen to reopen; on web too, in IndexedDB). They are part of the app now; this doesn't mean the rest of Stage 5 has started.
+
+Stage 3's geometry was also built early: a crop tool with aspect presets, quarter turns, flipping, and straightening. It keeps the photo whole and moves it under the canvas instead of re-encoding it, so every crop can be undone or widened again later. Along with it, the canvas became its own thing: it can be expanded past the photo and filled with white, black, or transparency (exported as PNG), and the photo can be unlocked to move like any layer. Export offers smaller sizes. Stage 3's adjustments haven't started.
