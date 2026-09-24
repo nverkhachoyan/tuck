@@ -194,13 +194,21 @@ export default function WelcomeRoute() {
 				</View>
 			)}
 
-			<Button
-				label={choosePhotoLabels[status]}
-				variant="primary"
-				size="large"
-				disabled={blocked}
-				onPress={handleChoosePhoto}
-			/>
+			<View style={styles.actions}>
+				<Button
+					label={choosePhotoLabels[status]}
+					variant="primary"
+					size="large"
+					disabled={blocked}
+					onPress={handleChoosePhoto}
+				/>
+				<Button
+					label="Create"
+					size="large"
+					disabled={blocked}
+					onPress={() => router.push("/create")}
+				/>
+			</View>
 		</View>
 	);
 }
@@ -225,6 +233,9 @@ const styles = StyleSheet.create({
 	// on web, `flex: 0` would let it shrink to nothing.
 	fill: {
 		flex: 1,
+	},
+	actions: {
+		gap: 12,
 	},
 	saveRecovery: {
 		gap: 12,

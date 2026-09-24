@@ -70,7 +70,7 @@ export default function EditorRoute() {
 	);
 	const saveProblem =
 		projectId === null
-			? "This photo couldn't be saved, so your edits won't be kept."
+			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
 	// A web trackpad pinch commits after a short pause. Commit it before this
 	// screen loses focus so the session closes with the latest transform.

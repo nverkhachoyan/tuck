@@ -27,8 +27,8 @@ type EditorSceneProps = {
  * the live gesture values, fades whatever export will crop, and draws the
  * selection above everything. A transparent canvas shows a checkerboard.
  *
- * The photo is cut off at the canvas's edge while it's locked, like a crop.
- * Once unlocked it moves like any layer, so it fades past the edge instead.
+ * A locked image is cut off at the canvas's edge, like a crop. Once unlocked
+ * it moves like any layer, so it fades past the edge instead.
  */
 export function EditorScene({
 	document,
@@ -46,11 +46,11 @@ export function EditorScene({
 				background={document.background}
 				viewScale={viewScale}
 			/>
-			{document.layers.map((layer, index) =>
+			{document.layers.map((layer) =>
 				layer.hidden || layer.id === hiddenLayerId ? null : (
 					<Group
 						key={layer.id}
-						clip={index === 0 && layer.locked ? canvas : undefined}
+						clip={layer.type === "image" && layer.locked ? canvas : undefined}
 					>
 						<LiveLayer layer={layer} live={live}>
 							<LayerContent layer={layer} onImageError={onImageError} />

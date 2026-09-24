@@ -1,5 +1,6 @@
 // Browsers give the app no file system to keep projects in, so they live in
-// IndexedDB: each project's JSON in one store, its photo's bytes in another.
+// IndexedDB: each project's JSON in one store, and its photo's bytes, if it
+// has one, in another.
 // A transaction either completes or leaves nothing, so saves need no draft.
 
 const DATABASE = "photo-editor";
@@ -116,6 +117,10 @@ export async function photoUrl(id: string): Promise<string> {
 /** Frees a URL from `storePhoto` or `photoUrl` once nothing shows it. */
 export function releasePhoto(url: string) {
 	URL.revokeObjectURL(url);
+}
+
+export async function removePhoto(id: string) {
+	await run([PHOTOS], "readwrite", (t) => t.objectStore(PHOTOS).delete(id));
 }
 
 /** The project's JSON, or null if it was never saved. */

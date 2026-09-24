@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+	createBlankDocument,
 	createDocumentFromImage,
 	createTextLayer,
 	type EditorDocument,
@@ -83,6 +84,33 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, current);
 	});
 
+	test("reads version 2, when the photo was always first", () => {
+		const document = mapImageUris(
+			documentWithText("TOP"),
+			() => "original.jpg",
+		);
+		const project = parseSavedProject(savedJson({ version: 2, document }));
+		assert.equal(project?.version, PROJECT_VERSION);
+		assert.deepEqual(project?.document, document);
+	});
+
+	test("reads a blank canvas, and a photo that isn't first", () => {
+		const blank = createBlankDocument(1080, 1920, "#000000");
+		assert.deepEqual(
+			parseSavedProject(savedJson({ document: blank }))?.document,
+			blank,
+		);
+		const withText = mapImageUris(
+			documentWithText("TOP"),
+			() => "original.jpg",
+		);
+		const reordered = { ...withText, layers: withText.layers.toReversed() };
+		assert.deepEqual(
+			parseSavedProject(savedJson({ document: reordered }))?.document,
+			reordered,
+		);
+	});
+
 	test("reads a photo-only marker after the last edit is removed", () => {
 		const photo = mapImageUris(documentWithText(), () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: photo }));
@@ -95,7 +123,7 @@ describe("parseSavedProject", () => {
 			"{ not json",
 			"null",
 			savedJson({ version: PROJECT_VERSION + 1 }),
-			savedJson({ document: { ...photo, layers: [] } }),
+			savedJson({ document: { ...photo, layers: null } } as never),
 			savedJson({ document: { ...photo, width: 0 } }),
 			savedJson({ document: { ...photo, background: 1 } } as never),
 			savedJson({
@@ -138,5 +166,12 @@ describe("projectLabel", () => {
 
 	test("falls back when there's no text", () => {
 		assert.equal(projectLabel(documentWithText()), "Untitled");
+		assert.equal(projectLabel(createBlankDocument(100, 100, null)), "Untitled");
+	});
+
+	test("reads text at the bottom of the stack", () => {
+		const document = createBlankDocument(1080, 1080, "#FFFFFF");
+		document.layers.push(createTextLayer(document, "ONLY", "center"));
+		assert.equal(projectLabel(document), "ONLY");
 	});
 });

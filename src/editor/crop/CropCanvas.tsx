@@ -15,8 +15,12 @@ import {
 	useDerivedValue,
 } from "react-native-reanimated";
 import { toTransformList } from "@/layers/layerTransform";
-import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
-import { type PhotoPlacement, rebaseTransform } from "@/model/framing";
+import type { EditorDocument, Layer } from "@/model/document";
+import {
+	type FramingAnchor,
+	type PhotoPlacement,
+	rebaseTransform,
+} from "@/model/framing";
 import type { Size } from "@/model/geometry";
 import { colors } from "@/theme";
 import { type CanvasCursor, cursorStyle } from "../canvasCursor";
@@ -45,7 +49,7 @@ const CURSORS: Record<CropHandle, CanvasCursor> = {
 
 type CropCanvasProps = {
 	document: EditorDocument;
-	photo: ImageLayer;
+	anchor: FramingAnchor;
 	crop: SharedValue<CropState>;
 	viewport: DerivedValue<DocumentViewport>;
 	ratio: SharedValue<number | null>;
@@ -64,11 +68,11 @@ type CropCanvasProps = {
  * The crop tool's canvas: the photo in crop space, turned and flipped as
  * it'll be, with the document's other layers where they'll land. Outside the
  * box is dimmed; inside it shows the canvas's background where the photo
- * doesn't reach.
+ * doesn't reach. With no photo, nothing is drawn for the anchor.
  */
 export function CropCanvas({
 	document,
-	photo,
+	anchor,
 	crop,
 	viewport,
 	ratio,
@@ -83,8 +87,8 @@ export function CropCanvas({
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [cursor, setCursor] = useState<CanvasCursor>("default");
 	const photoSize = useMemo(
-		() => ({ width: photo.width, height: photo.height }),
-		[photo.width, photo.height],
+		() => ({ width: anchor.width, height: anchor.height }),
+		[anchor.width, anchor.height],
 	);
 
 	const handleLayout = (event: LayoutChangeEvent) => {
@@ -123,7 +127,11 @@ export function CropCanvas({
 		{ rotate: cropAngle(crop.value) },
 		{ scaleX: crop.value.flipped ? -1 : 1 },
 	]);
-	const unflipped = useMemo(() => ({ ...photo, flipped: false }), [photo]);
+	const photo = anchor.layer;
+	const unflipped = useMemo(
+		() => photo && { ...photo, flipped: false },
+		[photo],
+	);
 	const handleImageError = useCallback((error: unknown) => {
 		console.warn("Couldn't load an image layer", error);
 	}, []);
@@ -146,18 +154,20 @@ export function CropCanvas({
 									viewScale={viewScale}
 								/>
 							</Group>
-							<Group transform={photoTransform}>
-								<LayerContent
-									layer={unflipped}
-									onImageError={handleImageError}
-								/>
-							</Group>
+							{unflipped && (
+								<Group transform={photoTransform}>
+									<LayerContent
+										layer={unflipped}
+										onImageError={handleImageError}
+									/>
+								</Group>
+							)}
 							{document.layers.map((layer) =>
 								layer === photo || layer.hidden ? null : (
 									<CropLayer
 										key={layer.id}
 										layer={layer}
-										photo={photo}
+										anchor={anchor}
 										crop={crop}
 										turn={turnLayers}
 										onImageError={handleImageError}
@@ -178,24 +188,24 @@ export function CropCanvas({
 
 /**
  * A layer where it'll land once the crop is applied: `rebaseTransform` into
- * crop space, where the photo sits at the origin at one unit per pixel.
+ * crop space, where the anchor sits at the origin at one unit per pixel.
  */
 function CropLayer({
 	layer,
-	photo,
+	anchor,
 	crop,
 	turn,
 	onImageError,
 }: {
 	layer: Layer;
-	photo: PhotoPlacement;
+	anchor: PhotoPlacement;
 	crop: SharedValue<CropState>;
 	turn: boolean;
 	onImageError: (error: unknown) => void;
 }) {
 	const from = useMemo(
-		() => ({ transform: photo.transform, flipped: photo.flipped }),
-		[photo.transform, photo.flipped],
+		() => ({ transform: anchor.transform, flipped: anchor.flipped }),
+		[anchor.transform, anchor.flipped],
 	);
 	const transform = useDerivedValue(() => {
 		const to = {

@@ -2,7 +2,8 @@ import { Directory, File, Paths } from "expo-file-system";
 import { PHOTO_FILE } from "./projectFile";
 
 // `projectStorage.web.ts` implements the same API for browsers. Each project
-// is a folder holding its photo and, once it has been saved, its JSON.
+// is a folder holding its photo, if it has one, and once it has been saved,
+// its JSON.
 
 const PROJECT = "project.json";
 const PROJECT_DRAFT = "project.json.tmp";
@@ -36,6 +37,11 @@ export async function photoUrl(id: string): Promise<string> {
 /** Nothing to free: the photo's URL is a file path. */
 export function releasePhoto(_url: string) {}
 
+export async function removePhoto(id: string) {
+	const photo = new File(projectDirectory(id), PHOTO_FILE);
+	if (photo.exists) photo.delete();
+}
+
 /** The project's JSON, or null if it was never saved. */
 export async function readProjectFile(id: string): Promise<string | null> {
 	const directory = projectDirectory(id);
@@ -50,6 +56,8 @@ export async function readProjectFile(id: string): Promise<string | null> {
 /** Writes a draft first, so a save that's cut short can't leave half a file. */
 export async function writeProjectFile(id: string, json: string) {
 	const directory = projectDirectory(id);
+	// A blank canvas's project has no photo to have made it already.
+	directory.create({ intermediates: true, idempotent: true });
 	const draft = new File(directory, PROJECT_DRAFT);
 	draft.create({ overwrite: true });
 	draft.write(json);

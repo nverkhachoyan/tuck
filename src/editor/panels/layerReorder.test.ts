@@ -26,9 +26,9 @@ describe("dragRow", () => {
 });
 
 describe("layerIndexForSlot", () => {
-	test("maps the top row to the last layer and the bottom row above the photo", () => {
-		// The photo and three layers: slots 0..2 are layers 3..1.
-		assert.equal(layerIndexForSlot(0, 3), 3);
-		assert.equal(layerIndexForSlot(2, 3), 1);
+	test("maps the top row to the last layer and the bottom row to the first", () => {
+		// Three layers: slots 0..2 are layers 2..0.
+		assert.equal(layerIndexForSlot(0, 3), 2);
+		assert.equal(layerIndexForSlot(2, 3), 0);
 	});
 });

@@ -45,6 +45,9 @@ function createHarness(
 			return `blob:${id}`;
 		},
 		releasePhoto() {},
+		async removePhoto(id) {
+			photos.delete(id);
+		},
 		async readProjectFile(id) {
 			return files.get(id) ?? null;
 		},
@@ -73,6 +76,7 @@ function createHarness(
 }
 
 const photo = { uri: "picked", width: 400, height: 300 };
+const canvas = { width: 1080, height: 1080, background: "#FFFFFF" };
 
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -205,6 +209,44 @@ describe("closing and reopening", () => {
 		const [listed] = await harness.projects.listProjects();
 		assert.ok(listed.status === "ready");
 		assert.equal(listed.label, "Untitled");
+	});
+
+	test("a blank canvas is a project once edited, with no photo", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createBlankProject(canvas);
+		assert.deepEqual(document.layers, []);
+		await harness.projects.closeProject(id, addText(document, "CAPTION"));
+		assert.equal(harness.photos.size, 0);
+		const [listed] = await harness.projects.listProjects();
+		assert.ok(listed.status === "ready");
+		assert.equal(listed.label, "CAPTION");
+
+		const reopened = await harness.projects.openProject(id);
+		assert.equal(reopened?.layers.length, 1);
+		assert.equal(reopened?.background, "#FFFFFF");
+	});
+
+	test("closing a blank canvas that was never edited removes it", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createBlankProject(canvas);
+		await harness.projects.closeProject(id, document);
+		assert.equal(harness.files.size, 0);
+		assert.deepEqual(await harness.projects.listProjects(), []);
+	});
+
+	test("a deleted photo's file goes once the project closes", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		const withoutPhoto = addText({ ...document, layers: [] }, "CAPTION");
+		harness.projects.queueAutosave(id, withoutPhoto);
+		harness.projects.flushAutosave();
+		await tick();
+		assert.ok(harness.photos.has(id), "undo can still bring it back");
+
+		await harness.projects.closeProject(id, withoutPhoto);
+		assert.equal(harness.photos.has(id), false);
+		const reopened = await harness.projects.openProject(id);
+		assert.equal(reopened?.layers.length, 1);
 	});
 
 	test("opening a project that no longer exists fails", async () => {

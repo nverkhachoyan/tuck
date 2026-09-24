@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+	createBlankDocument,
 	createDocumentFromImage,
 	createTextLayer,
 	defaultTextStyle,
@@ -46,6 +47,17 @@ describe("createDocumentFromImage", () => {
 	});
 });
 
+describe("createBlankDocument", () => {
+	test("is an empty canvas of the given size and fill", () => {
+		assert.deepEqual(createBlankDocument(1080, 1920, "#FFFFFF"), {
+			width: 1080,
+			height: 1920,
+			background: "#FFFFFF",
+			layers: [],
+		});
+	});
+});
+
 describe("hasEdits", () => {
 	test("is false for the photo alone and true once a layer is added", () => {
 		const document = landscape();
@@ -83,6 +95,21 @@ describe("hasEdits", () => {
 		document.layers[0].locked = false;
 		assert.equal(hasEdits(document), false);
 	});
+
+	test("counts hiding the photo, but not deleting it", () => {
+		const document = landscape();
+		document.layers[0].hidden = true;
+		assert.equal(hasEdits(document), true);
+		document.layers = [];
+		assert.equal(hasEdits(document), false);
+	});
+
+	test("is false for an empty canvas, whatever its fill", () => {
+		const document = createBlankDocument(1080, 1080, "#000000");
+		assert.equal(hasEdits(document), false);
+		document.layers.push(createTextLayer(document, "HELLO", "center"));
+		assert.equal(hasEdits(document), true);
+	});
 });
 
 describe("hasTransparency", () => {
@@ -107,6 +134,26 @@ describe("hasTransparency", () => {
 		document.height = 3600;
 		assert.equal(hasTransparency(document), true);
 		document.background = "#000000";
+		assert.equal(hasTransparency(document), false);
+	});
+
+	test("is true with the photo hidden or gone, unless filled", () => {
+		const document = landscape();
+		document.layers[0].hidden = true;
+		assert.equal(hasTransparency(document), true);
+		assert.equal(hasTransparency(createBlankDocument(10, 10, null)), true);
+		assert.equal(
+			hasTransparency(createBlankDocument(10, 10, "#FFFFFF")),
+			false,
+		);
+	});
+
+	test("is false while any visible image covers the canvas", () => {
+		const document = landscape();
+		const [photo] = document.layers;
+		const text = createTextLayer(document, "TOP", "center");
+		document.layers = [text, { ...photo, id: "copy" }, photo];
+		document.layers[2].hidden = true;
 		assert.equal(hasTransparency(document), false);
 	});
 });
@@ -214,18 +261,28 @@ describe("reorderLayer", () => {
 		]);
 	});
 
-	test("keeps the photo at the bottom", () => {
+	test("moves the photo like any layer", () => {
 		assert.deepEqual(ids(reorderLayer(stack(), "b", 0)), [
-			"photo",
 			"b",
+			"photo",
 			"a",
 			"c",
 		]);
-		const layers = stack();
-		assert.equal(reorderLayer(layers, "photo", 2), layers);
+		assert.deepEqual(ids(reorderLayer(stack(), "photo", 2)), [
+			"a",
+			"b",
+			"photo",
+			"c",
+		]);
 	});
 
-	test("clamps past the top", () => {
+	test("clamps past either end", () => {
+		assert.deepEqual(ids(reorderLayer(stack(), "c", -5)), [
+			"c",
+			"photo",
+			"a",
+			"b",
+		]);
 		assert.deepEqual(ids(reorderLayer(stack(), "a", 99)), [
 			"photo",
 			"b",

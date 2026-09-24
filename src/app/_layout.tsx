@@ -66,6 +66,7 @@ function Routes() {
 			}}
 		>
 			<Stack.Screen name="index" />
+			<Stack.Screen name="create" />
 			<Stack.Protected guard={hasDocument}>
 				<Stack.Screen name="editor" />
 				<Stack.Screen name="export" />

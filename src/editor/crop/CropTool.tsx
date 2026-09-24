@@ -22,8 +22,8 @@ import {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { type EditorDocument, photoLayer } from "@/model/document";
-import { documentFraming, type Framing } from "@/model/framing";
+import type { EditorDocument } from "@/model/document";
+import { documentFraming, type Framing, framingAnchor } from "@/model/framing";
 import type { Size } from "@/model/geometry";
 import { colors } from "@/theme";
 import { AngleDial } from "@/ui/AngleDial";
@@ -86,14 +86,15 @@ type CropToolProps = {
 /**
  * Crops, turns, flips, and straightens the photo, and sizes and fills the
  * canvas around it, over the editor until Done or Cancel. The box is the
- * canvas-to-be: dragging it past the photo's edges expands the canvas.
+ * canvas-to-be: dragging it past the photo's edges expands the canvas. With
+ * no photo, the canvas itself is cropped and turned, and its layers with it.
  * Nothing changes in the document until Done, which is one undo step.
  */
 export function CropTool({ document, onCancel, onDone }: CropToolProps) {
-	const photo = photoLayer(document);
+	const anchor = useMemo(() => framingAnchor(document), [document]);
 	const photoSize = useMemo(
-		() => ({ width: photo.width, height: photo.height }),
-		[photo.width, photo.height],
+		() => ({ width: anchor.width, height: anchor.height }),
+		[anchor.width, anchor.height],
 	);
 	const [initial] = useState(() => startCrop(document));
 	const crop = useSharedValue<CropState>(initial);
@@ -107,10 +108,10 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	const straightenStart = useSharedValue<CropState>(initial);
 	const [viewSize, setViewSize] = useState<Size>({ width: 0, height: 0 });
 	const hasOtherLayers = document.layers.some(
-		(layer) => layer !== photo && !layer.hidden,
+		(layer) => layer !== anchor.layer && !layer.hidden,
 	);
 	const onlyText = document.layers.every(
-		(layer) => layer === photo || layer.type === "text",
+		(layer) => layer === anchor.layer || layer.type === "text",
 	);
 
 	// Fits the photo and the box, easing there when the box grows past it.
@@ -191,7 +192,7 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 		onDone(
 			cropsEqual(initial, final)
 				? { ...documentFraming(document), background }
-				: cropFraming(final, photoSize, photo.transform.scaleX, background),
+				: cropFraming(final, photoSize, anchor.transform.scaleX, background),
 			turnLayers,
 		);
 	};
@@ -256,7 +257,7 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 
 			<CropCanvas
 				document={document}
-				photo={photo}
+				anchor={anchor}
 				crop={crop}
 				viewport={viewport}
 				ratio={ratio}
@@ -270,14 +271,17 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 			/>
 
 			<View style={styles.panel}>
-				<AngleDial
-					value={straighten}
-					max={MAX_STRAIGHTEN}
-					label="Straighten"
-					onBegin={handleStraightenBegin}
-					onChange={handleStraighten}
-					onEnd={handleStraightenEnd}
-				/>
+				{/* Levels a tilted photo; a canvas alone has nothing to level. */}
+				{anchor.layer && (
+					<AngleDial
+						value={straighten}
+						max={MAX_STRAIGHTEN}
+						label="Straighten"
+						onBegin={handleStraightenBegin}
+						onChange={handleStraighten}
+						onEnd={handleStraightenEnd}
+					/>
+				)}
 				<ScrollView
 					horizontal
 					showsHorizontalScrollIndicator={false}

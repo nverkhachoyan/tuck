@@ -2,7 +2,9 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+	createBlankDocument,
 	createDocumentFromImage,
+	createTextLayer,
 	type EditorDocument,
 	hasEdits,
 } from "../../model/document.ts";
@@ -53,6 +55,28 @@ describe("startCrop", () => {
 			box: { x: -1000, y: -1500, width: 2000, height: 2500 },
 		};
 		assert.deepEqual(startCrop(applyCrop(landscape(), state)), state);
+	});
+
+	test("starts a canvas without a photo at the whole canvas", () => {
+		const canvas = { width: 1080, height: 1920 };
+		const document = createBlankDocument(1080, 1920, null);
+		assert.deepEqual(startCrop(document), resetCrop(canvas));
+
+		// Turned, the canvas stands in afresh: nothing is left to remember.
+		document.layers.push(createTextLayer(document, "HI", "center"));
+		const framing = cropFraming(
+			rotateLeft(startCrop(document)),
+			canvas,
+			1,
+			null,
+		);
+		const turned = reframeDocument(document, framing, false);
+		assert.equal(turned.width, 1920);
+		assert.equal(turned.height, 1080);
+		assert.deepEqual(
+			startCrop(turned),
+			resetCrop({ width: 1920, height: 1080 }),
+		);
 	});
 });
 

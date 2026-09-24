@@ -68,9 +68,8 @@ export type EditorDocument = {
 	height: number;
 	// Fills the canvas behind every layer; null leaves it transparent.
 	background: string | null;
-	// Bottom to top. The first is the photo the document was made from, pinned
-	// at the bottom: it can't be reordered, hidden, or deleted. It starts
-	// locked, so the crop tool places it, until it's unlocked to move freely.
+	// Bottom to top, and possibly none: a blank canvas starts empty, and any
+	// layer can be deleted.
 	layers: Layer[];
 };
 
@@ -89,6 +88,11 @@ export function createLayerId(prefix: string): string {
 	return `${prefix}-${Date.now().toString(36)}-${nextLayerId}`;
 }
 
+/**
+ * A canvas the size of the photo, with the photo as its only layer. The
+ * photo starts locked, so the crop tool places it, until it's unlocked to
+ * move freely.
+ */
 export function createDocumentFromImage(
 	uri: string,
 	width: number,
@@ -114,58 +118,69 @@ export function createDocumentFromImage(
 	};
 }
 
-function centeredTransform(width: number, height: number): Transform {
+/** An empty canvas, filled with `background` (null for transparent). */
+export function createBlankDocument(
+	width: number,
+	height: number,
+	background: string | null,
+): EditorDocument {
+	return { width, height, background, layers: [] };
+}
+
+/** Places something of this size centered on a canvas of the same size. */
+export function centeredTransform(width: number, height: number): Transform {
 	return { ...identityTransform, x: width / 2, y: height / 2 };
 }
 
-/** The photo the document was made from: always its first layer. */
-export function photoLayer(document: EditorDocument): ImageLayer {
-	const [photo] = document.layers;
-	if (photo?.type !== "image") throw new Error("The document has no photo.");
-	return photo;
-}
-
 /**
- * Whether the document would export as anything but the photo it was made
- * from. Unlocking the photo isn't an edit until it's moved.
+ * Whether the document is worth keeping as a project: it's neither an empty
+ * canvas nor the untouched photo it was made from. Unlocking the photo isn't
+ * an edit until it's moved.
  */
 export function hasEdits(document: EditorDocument): boolean {
-	const photo = photoLayer(document);
+	const [first, ...rest] = document.layers;
+	if (!first) return false;
 	return (
-		document.layers.length > 1 ||
+		rest.length > 0 ||
+		first.type !== "image" ||
+		first.hidden ||
 		document.background !== null ||
-		document.width !== photo.width ||
-		document.height !== photo.height ||
-		photo.flipped ||
+		document.width !== first.width ||
+		document.height !== first.height ||
+		first.flipped ||
 		!transformsEqual(
-			photo.transform,
-			centeredTransform(photo.width, photo.height),
+			first.transform,
+			centeredTransform(first.width, first.height),
 		)
 	);
 }
 
-// In the photo's pixels: gaps this small between its edge and the canvas's
+// In an image's pixels: gaps this small between its edge and the canvas's
 // are floating-point error, not transparency.
 const COVER_TOLERANCE = 0.01;
 
 /**
  * Whether any of the canvas would export transparent: it has no background
- * and the photo doesn't cover all of it. Such a document exports as PNG.
+ * and no visible image covers all of it (picked photos are JPEGs, so opaque).
+ * Images that only cover it together count as transparent too, which costs a
+ * larger file, never a wrong one. Such a document exports as PNG.
  */
 export function hasTransparency(document: EditorDocument): boolean {
 	if (document.background !== null) return false;
-	const { transform, width, height } = photoLayer(document);
-	const box = {
-		halfWidth: width / 2 + COVER_TOLERANCE,
-		halfHeight: height / 2 + COVER_TOLERANCE,
-	};
 	const corners = [
 		{ x: 0, y: 0 },
 		{ x: document.width, y: 0 },
 		{ x: document.width, y: document.height },
 		{ x: 0, y: document.height },
 	];
-	return !corners.every((corner) => hitTestBox(transform, box, corner));
+	return !document.layers.some((layer) => {
+		if (layer.type !== "image" || layer.hidden) return false;
+		const box = {
+			halfWidth: layer.width / 2 + COVER_TOLERANCE,
+			halfHeight: layer.height / 2 + COVER_TOLERANCE,
+		};
+		return corners.every((corner) => hitTestBox(layer.transform, box, corner));
+	});
 }
 
 /**
@@ -244,8 +259,8 @@ function duplicateOffset(layer: Layer): number {
 }
 
 /**
- * `layers` with one layer moved to `toIndex`, clamped to stay above the
- * pinned photo. Returns `layers` itself when nothing would change.
+ * `layers` with one layer moved to `toIndex`, clamped to the stack. Returns
+ * `layers` itself when nothing would change.
  */
 export function reorderLayer(
 	layers: Layer[],
@@ -253,8 +268,8 @@ export function reorderLayer(
 	toIndex: number,
 ): Layer[] {
 	const from = layers.findIndex((layer) => layer.id === id);
-	const to = Math.min(Math.max(toIndex, 1), layers.length - 1);
-	if (from < 1 || from === to) return layers;
+	const to = Math.min(Math.max(toIndex, 0), layers.length - 1);
+	if (from < 0 || from === to) return layers;
 	const next = layers.filter((layer) => layer.id !== id);
 	next.splice(to, 0, layers[from]);
 	return next;

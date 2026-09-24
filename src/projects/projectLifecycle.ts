@@ -1,6 +1,7 @@
 // Relative `.ts` imports, and storage passed in, keep this loadable by Node's
 // test runner. `projects.ts` creates the app's instance.
 import {
+	createBlankDocument,
 	createDocumentFromImage,
 	type EditorDocument,
 	hasEdits,
@@ -23,6 +24,7 @@ export type ProjectStorage = {
 	storePhoto(id: string, uri: string): Promise<string>;
 	photoUrl(id: string): Promise<string>;
 	releasePhoto(url: string): void;
+	removePhoto(id: string): Promise<void>;
 	readProjectFile(id: string): Promise<string | null>;
 	writeProjectFile(id: string, json: string): Promise<void>;
 	removeProject(id: string): Promise<void>;
@@ -34,9 +36,10 @@ export type ProjectStorage = {
 };
 
 type OpenProject = {
-	photoUrl: string;
+	// null when the document doesn't use a photo, as a blank canvas doesn't.
+	photoUrl: string | null;
 	createdAt: number;
-	// Opened from the list, rather than started from a photo this session.
+	// Opened from the list, rather than started this session.
 	reopened: boolean;
 	// The document as last saved, so an unchanged one isn't written again
 	// (and doesn't move up the list).
@@ -55,6 +58,10 @@ const AUTOSAVE_DELAY_MS = 500;
 
 function createProjectId() {
 	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function hasImages(document: EditorDocument): boolean {
+	return document.layers.some((layer) => layer.type === "image");
 }
 
 function hasKnownImageUris(saved: SavedProject): boolean {
@@ -144,17 +151,44 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	}
 
 	/** Starts a project from a picked photo, which moves into it. */
-	async function createProject(photo: {
+	function createProject(photo: {
 		uri: string;
 		width: number;
 		height: number;
 	}): Promise<{ id: string; document: EditorDocument }> {
+		return startProject(async (id) => {
+			const photoUrl = await storage.storePhoto(id, photo.uri);
+			return {
+				photoUrl,
+				document: createDocumentFromImage(photoUrl, photo.width, photo.height),
+			};
+		});
+	}
+
+	/** Starts a project from an empty canvas. */
+	function createBlankProject(canvas: {
+		width: number;
+		height: number;
+		background: string | null;
+	}): Promise<{ id: string; document: EditorDocument }> {
+		const { width, height, background } = canvas;
+		return startProject(async () => ({
+			photoUrl: null,
+			document: createBlankDocument(width, height, background),
+		}));
+	}
+
+	async function startProject(
+		start: (
+			id: string,
+		) => Promise<{ photoUrl: string | null; document: EditorDocument }>,
+	): Promise<{ id: string; document: EditorDocument }> {
 		await closing;
 		const id = createProjectId();
 		if (!(await storage.claimProject(id)))
 			throw new Error("Project is already open");
 		try {
-			const photoUrl = await storage.storePhoto(id, photo.uri);
+			const { photoUrl, document } = await start(id);
 			const createdAt = Date.now();
 			openProjects.set(id, {
 				photoUrl,
@@ -166,11 +200,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				writing: Promise.resolve(),
 			});
 			setAutosaveError(null);
-			const document = createDocumentFromImage(
-				photoUrl,
-				photo.width,
-				photo.height,
-			);
 			return { id, document };
 		} catch (error) {
 			await storage.removeProject(id).catch(() => {});
@@ -194,8 +223,13 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			if (json === null) throw new Error("This project no longer exists.");
 			const saved = parseSavedProject(json);
 			if (!saved || !hasKnownImageUris(saved)) return null;
-			const photoUrl = await storage.photoUrl(id);
-			const document = mapImageUris(saved.document, () => photoUrl);
+			const photoUrl = hasImages(saved.document)
+				? await storage.photoUrl(id)
+				: null;
+			const document =
+				photoUrl === null
+					? saved.document
+					: mapImageUris(saved.document, () => photoUrl);
 			openProjects.set(id, {
 				photoUrl,
 				createdAt: saved.createdAt,
@@ -284,9 +318,11 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 
 	/**
 	 * Ends an editing session: saves the last changes, or removes the project
-	 * if it was started this session and is still just the photo. A reopened
-	 * project is kept even with every edit removed. A kept project's thumbnail
-	 * is brought up to date with `renderThumbnail`, when given.
+	 * if it was started this session and is still just the photo or an empty
+	 * canvas. A reopened project is kept even with every edit removed. A kept
+	 * project's thumbnail is brought up to date with `renderThumbnail`, when
+	 * given, and its photo removed once nothing shows it: undo can't bring it
+	 * back after closing.
 	 */
 	function closeProject(
 		id: string,
@@ -303,6 +339,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			await project.writing;
 			if (hasEdits(document) || project.reopened) {
 				await saveProject(id, document);
+				if (!hasImages(document)) await storage.removePhoto(id);
 				if (renderThumbnail) {
 					await refreshThumbnail(id, document, renderThumbnail);
 				}
@@ -313,7 +350,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			openProjects.delete(id);
 			if (pendingSave?.id === id) pendingSave = null;
 			setAutosaveError(null);
-			storage.releasePhoto(project.photoUrl);
+			if (project.photoUrl !== null) storage.releasePhoto(project.photoUrl);
 			await storage.releaseProject(id);
 		});
 		closing = closed.catch(() => {});
@@ -382,6 +419,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		queueAutosave,
 		flushAutosave,
 		createProject,
+		createBlankProject,
 		openProject,
 		closeProject,
 		deleteProject,

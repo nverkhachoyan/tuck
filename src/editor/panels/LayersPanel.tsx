@@ -47,10 +47,9 @@ type LayersPanelProps = {
 };
 
 /**
- * The document's layers, top first, with the photo pinned at the bottom and
- * the canvas's background under it. Tapping a row selects its layer;
- * dragging its handle reorders it. The photo can't be reordered, but it can
- * be unlocked to select and move it on the canvas.
+ * The document's layers, top first, with the canvas's background under them.
+ * Tapping a row selects its layer, unless it's hidden or locked; dragging its
+ * handle reorders it.
  *
  * Rows sit at absolute positions taken from `order`, the UI thread's copy of
  * the row order. A drag rearranges `order` as it goes, so the other rows
@@ -68,8 +67,7 @@ export function LayersPanel({
 	onDelete,
 	onSetBackground,
 }: LayersPanelProps) {
-	const photo = layers[0];
-	const rows = useMemo(() => layers.slice(1).reverse(), [layers]);
+	const rows = useMemo(() => layers.slice().reverse(), [layers]);
 	const order = useSharedValue(rows.map((layer) => layer.id));
 	const dragId = useSharedValue<string | null>(null);
 	const scrollRef = useRef<ScrollView>(null);
@@ -98,6 +96,7 @@ export function LayersPanel({
 						onSelect={onSelect}
 						onMove={onMove}
 						onSetHidden={onSetHidden}
+						onSetLocked={onSetLocked}
 						onDelete={onDelete}
 					/>
 				))}
@@ -105,55 +104,11 @@ export function LayersPanel({
 			{rows.length === 0 && (
 				<Text style={styles.empty}>Text you add appears here.</Text>
 			)}
-			<PhotoRow
-				photo={photo}
-				selected={photo.id === selectedLayerId}
-				onSelect={onSelect}
-				onSetLocked={onSetLocked}
-			/>
 			<View style={styles.row}>
 				<Text style={styles.label}>Background</Text>
 				<BackgroundPicker value={background} onPick={onSetBackground} />
 			</View>
 		</ScrollView>
-	);
-}
-
-/** Selectable only while unlocked, since only then can it be moved. */
-function PhotoRow({
-	photo,
-	selected,
-	onSelect,
-	onSetLocked,
-}: {
-	photo: Layer;
-	selected: boolean;
-	onSelect: (id: string) => void;
-	onSetLocked: (id: string, locked: boolean) => void;
-}) {
-	const { id, locked } = photo;
-	return (
-		<View style={[styles.row, selected && styles.rowSelected]}>
-			<Pressable
-				style={styles.main}
-				disabled={locked}
-				onPress={() => onSelect(id)}
-				accessibilityRole="button"
-				accessibilityLabel="Photo"
-				accessibilityState={{ selected, disabled: locked }}
-			>
-				<LayerThumbnail layer={photo} />
-				<Text style={styles.label}>Photo</Text>
-			</Pressable>
-			<View style={styles.trailing}>
-				<IconButton
-					icon={locked ? "lock-closed-outline" : "lock-open-outline"}
-					label={locked ? "Unlock photo" : "Lock photo"}
-					selected={!locked}
-					onPress={() => onSetLocked(id, !locked)}
-				/>
-			</View>
-		</View>
 	);
 }
 
@@ -168,6 +123,7 @@ function LayerRow({
 	onSelect,
 	onMove,
 	onSetHidden,
+	onSetLocked,
 	onDelete,
 }: {
 	layer: Layer;
@@ -179,9 +135,9 @@ function LayerRow({
 	selected: boolean;
 } & Pick<
 	LayersPanelProps,
-	"onSelect" | "onMove" | "onSetHidden" | "onDelete"
+	"onSelect" | "onMove" | "onSetHidden" | "onSetLocked" | "onDelete"
 >) {
-	const { id, hidden } = layer;
+	const { id, hidden, locked } = layer;
 	const label = layerLabel(layer);
 	const startSlot = useSharedValue(0);
 	const dragTop = useSharedValue(0);
@@ -257,11 +213,11 @@ function LayerRow({
 		>
 			<Pressable
 				style={[styles.main, hidden && styles.dimmed]}
-				disabled={hidden}
+				disabled={hidden || locked}
 				onPress={() => onSelect(id)}
 				accessibilityRole="button"
 				accessibilityLabel={label}
-				accessibilityState={{ selected, disabled: hidden }}
+				accessibilityState={{ selected, disabled: hidden || locked }}
 				accessibilityActions={[
 					{ name: "moveUp", label: "Move up" },
 					{ name: "moveDown", label: "Move down" },
@@ -278,6 +234,11 @@ function LayerRow({
 					icon={hidden ? "eye-off-outline" : "eye-outline"}
 					label={hidden ? `Show ${label}` : `Hide ${label}`}
 					onPress={() => onSetHidden(id, !hidden)}
+				/>
+				<IconButton
+					icon={locked ? "lock-closed-outline" : "lock-open-outline"}
+					label={locked ? `Unlock ${label}` : `Lock ${label}`}
+					onPress={() => onSetLocked(id, !locked)}
 				/>
 				<IconButton
 					icon="trash-outline"
@@ -323,7 +284,7 @@ function LayerThumbnail({ layer }: { layer: Layer }) {
 function layerLabel(layer: Layer): string {
 	switch (layer.type) {
 		case "image":
-			return "Image";
+			return "Photo";
 		case "text":
 			return layer.text.replace(/\s+/g, " ");
 		default:
@@ -390,7 +351,7 @@ const styles = StyleSheet.create({
 		gap: 22,
 		paddingLeft: 12,
 	},
-	// Wide enough to grab comfortably, and the photo's lock lines up with it.
+	// Wide enough to grab comfortably.
 	trailing: {
 		width: 60,
 		alignSelf: "stretch",

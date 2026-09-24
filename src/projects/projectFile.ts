@@ -3,8 +3,9 @@ import { type EditorDocument, textFonts } from "../model/document.ts";
 
 // Bump when the saved format changes, and teach `parseSavedProject` to read
 // the older one. 2 added the canvas's background, layers' `locked`, and
-// image layers' `flipped`.
-export const PROJECT_VERSION = 2;
+// image layers' `flipped`. 3 stopped pinning the photo as the first layer:
+// there may be none. An app that expects it there can't open these.
+export const PROJECT_VERSION = 3;
 
 // The photo's file in a project, which saved image layers name as their `uri`.
 export const PHOTO_FILE = "original.jpg";
@@ -64,7 +65,7 @@ export function parseSavedProject(json: string): SavedProject | null {
 
 /** What a project is listed as: its top text, since that's what it's remembered by. */
 export function projectLabel(document: EditorDocument): string {
-	for (let i = document.layers.length - 1; i > 0; i--) {
+	for (let i = document.layers.length - 1; i >= 0; i--) {
 		const layer = document.layers[i];
 		const text = layer.type === "text" ? layer.text.replace(/\s+/g, " ") : "";
 		if (!layer.hidden && text.trim()) return text.trim();
@@ -78,11 +79,20 @@ function isFields(value: unknown): value is Fields {
 	return typeof value === "object" && value !== null;
 }
 
+/** An older project as this version would have saved it. */
+function upgradeProject(value: unknown): unknown {
+	const upgraded = upgradeFromVersion1(value);
+	// Every version 2 project is also a version 3 one, with the photo first.
+	return isFields(upgraded) && upgraded.version === 2
+		? { ...upgraded, version: 3 }
+		: upgraded;
+}
+
 /**
  * A version 1 project as version 2 would have saved it: no background, only
  * the photo locked, and nothing flipped. Anything else is returned as is.
  */
-function upgradeProject(value: unknown): unknown {
+function upgradeFromVersion1(value: unknown): unknown {
 	if (
 		!isFields(value) ||
 		value.version !== 1 ||
@@ -131,14 +141,12 @@ function isThumbnail(value: unknown): value is ProjectThumbnail {
 }
 
 function isDocument(value: unknown): boolean {
-	if (!isFields(value) || !Array.isArray(value.layers)) return false;
-	const [photo] = value.layers;
 	return (
+		isFields(value) &&
+		Array.isArray(value.layers) &&
 		isPositive(value.width) &&
 		isPositive(value.height) &&
 		isColorOrNull(value.background) &&
-		isFields(photo) &&
-		photo.type === "image" &&
 		value.layers.every(isLayer)
 	);
 }

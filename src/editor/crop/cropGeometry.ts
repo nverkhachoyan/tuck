@@ -1,6 +1,6 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
-import { type EditorDocument, photoLayer } from "../../model/document.ts";
-import type { Framing } from "../../model/framing.ts";
+import type { EditorDocument } from "../../model/document.ts";
+import { type Framing, framingAnchor } from "../../model/framing.ts";
 import {
 	cosSin,
 	normalizeAngle,
@@ -10,7 +10,8 @@ import {
 } from "../../model/geometry.ts";
 
 // The crop tool's geometry, in "crop space": the photo's own pixels, centered
-// on the origin, turned and mirrored the way the canvas will show them. The
+// on the origin, turned and mirrored the way the canvas will show them. With
+// no photo, the canvas stands in for one (see `framingAnchor`). The
 // canvas-to-be is `box`, upright in that space; dragging it is in
 // `cropDrag.ts`. Worklets, like `model/geometry.ts`, so gestures run them on
 // the UI thread.
@@ -30,7 +31,7 @@ export type CropState = {
 
 /** The crop that reproduces the document's current framing. */
 export function startCrop(document: EditorDocument): CropState {
-	const photo = photoLayer(document);
+	const photo = framingAnchor(document);
 	const { x, y, scaleX: scale, rotation } = photo.transform;
 	const turns = Math.round(rotation / QUARTER_TURN);
 	return {

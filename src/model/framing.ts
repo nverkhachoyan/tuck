@@ -1,4 +1,8 @@
-import { type EditorDocument, photoLayer } from "./document.ts";
+import {
+	centeredTransform,
+	type EditorDocument,
+	type ImageLayer,
+} from "./document.ts";
 import {
 	applyMatrix,
 	invertMatrix,
@@ -10,14 +14,47 @@ import {
 	transformsEqual,
 } from "./geometry.ts";
 
-/** Where the photo sits on the canvas, and whether it's mirrored. */
+/**
+ * Where the photo, or the anchor standing in for one, sits on the canvas, and
+ * whether it's mirrored.
+ */
 export type PhotoPlacement = {
 	transform: Transform;
 	flipped: boolean;
 };
 
 /**
- * The canvas's size and fill, and the photo's place on it: everything the
+ * What the canvas is framed around: the lowest visible image, or with none,
+ * the canvas itself, standing in for a photo its own size. The crop tool
+ * crops it, and every other layer follows it.
+ */
+export type FramingAnchor = PhotoPlacement & {
+	width: number;
+	height: number;
+	// null when the canvas stands in.
+	layer: ImageLayer | null;
+};
+
+export function framingAnchor(document: EditorDocument): FramingAnchor {
+	const layer = document.layers.find(
+		(layer): layer is ImageLayer => layer.type === "image" && !layer.hidden,
+	);
+	if (layer) {
+		const { width, height, transform, flipped } = layer;
+		return { layer, width, height, transform, flipped };
+	}
+	const { width, height } = document;
+	return {
+		layer: null,
+		width,
+		height,
+		transform: centeredTransform(width, height),
+		flipped: false,
+	};
+}
+
+/**
+ * The canvas's size and fill, and the anchor's place on it: everything the
  * crop tool changes.
  */
 export type Framing = PhotoPlacement & {
@@ -27,7 +64,7 @@ export type Framing = PhotoPlacement & {
 };
 
 export function documentFraming(document: EditorDocument): Framing {
-	const { transform, flipped } = photoLayer(document);
+	const { transform, flipped } = framingAnchor(document);
 	const { width, height, background } = document;
 	return { width, height, background, transform, flipped };
 }
@@ -77,20 +114,20 @@ export function rebaseTransform(
 }
 
 /**
- * The document with a new framing. Every other layer follows the photo, as
+ * The document with a new framing. Every layer but the anchor follows it, as
  * `rebaseTransform` describes; `turnLayers` turns them along with it. If the
- * photo stays put, so does everything else, exactly.
+ * anchor stays put, so does everything else, exactly.
  */
 export function reframeDocument(
 	document: EditorDocument,
 	framing: Framing,
 	turnLayers: boolean,
 ): EditorDocument {
-	const photo = photoLayer(document);
+	const anchor = framingAnchor(document);
 	const { width, height, background, ...to } = framing;
 	const moved =
-		photo.flipped !== to.flipped ||
-		!transformsEqual(photo.transform, to.transform);
+		anchor.flipped !== to.flipped ||
+		!transformsEqual(anchor.transform, to.transform);
 	return {
 		...document,
 		width,
@@ -99,13 +136,13 @@ export function reframeDocument(
 		layers: !moved
 			? document.layers
 			: document.layers.map((layer) =>
-					layer === photo
-						? { ...photo, ...to }
+					layer === anchor.layer
+						? { ...layer, ...to }
 						: {
 								...layer,
 								transform: rebaseTransform(
 									layer.transform,
-									photo,
+									anchor,
 									to,
 									turnLayers,
 								),

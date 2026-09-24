@@ -8,6 +8,7 @@ const projects = createProjectLifecycle(storage);
 
 export const {
 	createProject,
+	createBlankProject,
 	openProject,
 	closeProject,
 	deleteProject,

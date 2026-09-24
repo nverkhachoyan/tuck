@@ -204,11 +204,10 @@ describe("editorSlice", () => {
 		assert.equal(y, text.transform.y - 3);
 	});
 
-	test("the photo can't be reordered, hidden, or deleted, or moved while locked", () => {
+	test("a locked photo can't be moved on the canvas", () => {
 		const { store } = storeWithText();
 		const before = store.getState();
 		const photoId = before.document?.layers[0].id ?? "";
-		before.moveLayer(photoId, 1);
 		before.nudgeLayer(photoId, 1, 0);
 		before.transformLayer(photoId, {
 			x: 0,
@@ -217,16 +216,27 @@ describe("editorSlice", () => {
 			scaleY: 1,
 			rotation: 0,
 		});
-		before.setLayerHidden(photoId, true);
-		before.deleteLayer(photoId);
 		assert.equal(store.getState(), before);
+	});
 
-		before.setLayerLocked(photoId, false);
-		const unlocked = store.getState();
-		unlocked.moveLayer(photoId, 1);
-		unlocked.setLayerHidden(photoId, true);
-		unlocked.deleteLayer(photoId);
-		assert.equal(store.getState(), unlocked);
+	test("the photo reorders, hides, and deletes like any layer", () => {
+		const { store, text } = storeWithText();
+		const photoId = store.getState().document?.layers[0].id ?? "";
+		const ids = () =>
+			store.getState().document?.layers.map((layer) => layer.id);
+
+		store.getState().moveLayer(photoId, 1);
+		assert.deepEqual(ids(), [text.id, photoId]);
+		store.getState().setLayerHidden(photoId, true);
+		assert.equal(store.getState().document?.layers[1].hidden, true);
+		store.getState().deleteLayer(photoId);
+		assert.deepEqual(ids(), [text.id]);
+		store.getState().deleteLayer(text.id);
+		assert.deepEqual(ids(), []);
+
+		store.getState().undo();
+		store.getState().undo();
+		assert.deepEqual(ids(), [text.id, photoId]);
 	});
 
 	test("an unlocked photo moves; locking it again clears its selection", () => {

@@ -2,15 +2,17 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+	createBlankDocument,
 	createDocumentFromImage,
 	createTextLayer,
 	type EditorDocument,
+	type ImageLayer,
 	type Layer,
-	photoLayer,
 } from "./document.ts";
 import {
 	documentFraming,
 	type Framing,
+	framingAnchor,
 	framingsEqual,
 	rebaseTransform,
 	reframeDocument,
@@ -32,6 +34,8 @@ function documentWithText(): EditorDocument {
 	return document;
 }
 
+const photoLayer = (document: EditorDocument) =>
+	document.layers[0] as ImageLayer;
 const text = (document: EditorDocument): Layer => document.layers[1];
 
 // The whole canvas turned a quarter turn counterclockwise: what was at the
@@ -146,6 +150,69 @@ describe("reframeDocument", () => {
 		const filled = reframeDocument(document, framing, true);
 		assert.equal(filled.background, "#FFFFFF");
 		assert.equal(filled.layers, document.layers);
+	});
+});
+
+describe("framingAnchor", () => {
+	test("is the lowest visible image, wherever it is in the stack", () => {
+		const document = documentWithText();
+		assert.equal(framingAnchor(document).layer, document.layers[0]);
+		const reordered = { ...document, layers: document.layers.toReversed() };
+		assert.equal(framingAnchor(reordered).layer, document.layers[0]);
+	});
+
+	test("is the canvas, centered on itself, with no visible image", () => {
+		const document = documentWithText();
+		document.layers[0].hidden = true;
+		assert.deepEqual(framingAnchor(document), {
+			layer: null,
+			width: 4000,
+			height: 3000,
+			transform: { x: 2000, y: 1500, scaleX: 1, scaleY: 1, rotation: 0 },
+			flipped: false,
+		});
+	});
+});
+
+describe("reframing a canvas without a photo", () => {
+	function blankWithText(): EditorDocument {
+		const document = createBlankDocument(1080, 1920, "#FFFFFF");
+		const caption = createTextLayer(document, "CAPTION", "center");
+		caption.transform = { ...caption.transform, x: 540, y: 200 };
+		document.layers.push(caption);
+		return document;
+	}
+
+	test("crops the canvas, keeping text over the same spot", () => {
+		const document = blankWithText();
+		// The top half.
+		const framing: Framing = {
+			...documentFraming(document),
+			height: 960,
+		};
+		const cropped = reframeDocument(document, framing, false);
+		assert.equal(cropped.height, 960);
+		assert.deepEqual(cropped.layers[0].transform, {
+			...document.layers[0].transform,
+			y: 200,
+		});
+	});
+
+	test("turns text's position with the canvas", () => {
+		const document = blankWithText();
+		const turned = reframeDocument(document, turnLeft(document), false);
+		assert.equal(turned.width, 1920);
+		assert.equal(turned.height, 1080);
+		assert.equal(turned.layers[0].transform.x, 200);
+		assert.equal(turned.layers[0].transform.y, 540);
+		// The next framing starts from the turned canvas.
+		assert.deepEqual(documentFraming(turned).transform, {
+			x: 960,
+			y: 540,
+			scaleX: 1,
+			scaleY: 1,
+			rotation: 0,
+		});
 	});
 });
 

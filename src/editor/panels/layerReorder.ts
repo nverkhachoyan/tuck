@@ -1,6 +1,5 @@
 // Worklets, like `model/geometry.ts`, so the layers panel's drag runs them
-// on the UI thread. The panel lists the layers above the photo top first,
-// one slot per row.
+// on the UI thread. The panel lists the layers top first, one slot per row.
 
 /** `items` with the one at `from` moved to `to`. */
 export function moveItem<T>(
@@ -34,10 +33,10 @@ export function dragRow(
 }
 
 /**
- * The index in `document.layers` of the row at `slot`: slot 0 is the top
- * layer, and the photo at index 0 has no slot.
+ * The index in `document.layers` of the row at `slot`, of `count` rows: slot
+ * 0 is the top layer.
  */
 export function layerIndexForSlot(slot: number, count: number): number {
 	"worklet";
-	return count - slot;
+	return count - 1 - slot;
 }

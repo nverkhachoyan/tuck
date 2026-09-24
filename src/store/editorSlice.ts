@@ -103,9 +103,8 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	const addOnTop = (action: string, layer: Layer) =>
 		setLayers(action, (layers) => [...layers, layer], layer.id);
 
-	// Never the pinned photo at index 0.
-	const findUnpinnedLayer = (id: string) =>
-		get().document?.layers.find((layer, index) => index > 0 && layer.id === id);
+	const findLayer = (id: string) =>
+		get().document?.layers.find((layer) => layer.id === id);
 
 	const findUnlockedLayer = (id: string) =>
 		get().document?.layers.find((layer) => !layer.locked && layer.id === id);
@@ -232,7 +231,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// A hidden layer can't be selected, so hiding the selection clears it.
 		setLayerHidden: (id, hidden) => {
-			const target = findUnpinnedLayer(id);
+			const target = findLayer(id);
 			if (!target || target.hidden === hidden) return;
 			const { selectedLayerId } = get();
 			setLayers(
@@ -247,7 +246,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// A locked layer can't be selected, so locking the selection clears it.
 		setLayerLocked: (id, locked) => {
-			const target = get().document?.layers.find((layer) => layer.id === id);
+			const target = findLayer(id);
 			if (!target || target.locked === locked) return;
 			const { selectedLayerId } = get();
 			setLayers(
@@ -261,7 +260,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		},
 
 		deleteLayer: (id) => {
-			if (!findUnpinnedLayer(id)) return;
+			if (!findLayer(id)) return;
 			const { selectedLayerId } = get();
 			setLayers(
 				"editor/deleteLayer",
