@@ -1,13 +1,16 @@
+import { InstrumentSerif_400Regular } from "@expo-google-fonts/instrument-serif/400Regular";
+import { InstrumentSerif_400Regular_Italic } from "@expo-google-fonts/instrument-serif/400Regular_Italic";
+import * as Font from "expo-font";
 import { type ErrorBoundaryProps, Stack } from "expo-router";
 import Head from "expo-router/head";
-import { Suspense } from "react";
+import { Suspense, use } from "react";
 import { Platform, StatusBar, StyleSheet, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { LoadFonts, resetFailedFonts } from "@/layers/fonts";
 import { errorMessage } from "@/lib/errorMessage";
 import { useStore } from "@/store";
-import { colors } from "@/theme";
+import { colors, fonts } from "@/theme";
 import { Button } from "@/ui/Button";
 
 export default function Layout() {
@@ -23,6 +26,7 @@ export default function Layout() {
 				)}
 				<Suspense fallback={null}>
 					<LoadFonts />
+					<LoadDisplayFonts />
 					<StatusBar barStyle="light-content" />
 					<SafeAreaView style={styles.container}>
 						<Routes />
@@ -53,6 +57,27 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 			<Button label="Try Again" onPress={handleRetry} />
 		</SafeAreaView>
 	);
+}
+
+let displayFonts: Promise<void> | null = null;
+
+/**
+ * Suspends until the wordmark's and titles' typeface loads, so they don't
+ * swap faces as the app appears. If it can't load, the system font stands
+ * in: not worth stopping the app for.
+ */
+function LoadDisplayFonts() {
+	// No fonts to load while exporting the static site in Node.
+	if (typeof window === "undefined") return null;
+
+	displayFonts ??= Font.loadAsync({
+		[fonts.display]: InstrumentSerif_400Regular,
+		[fonts.displayItalic]: InstrumentSerif_400Regular_Italic,
+	}).catch((error: unknown) => {
+		console.warn("Couldn't load the display font", error);
+	});
+	use(displayFonts);
+	return null;
 }
 
 function Routes() {

@@ -1,4 +1,12 @@
-import { Fill, Group, Path, rect, Skia } from "@shopify/react-native-skia";
+import {
+	Fill,
+	Group,
+	Path,
+	Rect,
+	rect,
+	Shadow,
+	Skia,
+} from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import { useDerivedValue } from "react-native-reanimated";
 import { toTransformList } from "@/layers/layerTransform";
@@ -9,6 +17,11 @@ import { CanvasBackground, LayerContent } from "../SceneParts";
 import type { LiveTransform } from "./liveTransform";
 
 const SELECTION_STROKE_PX = 1.5;
+// The canvas's shadow on the well around it, and the hairline at its edge
+// that keeps a black canvas visible, in screen pixels.
+const SHADOW_OFFSET_PX = 6;
+const SHADOW_BLUR_PX = 18;
+const EDGE_PX = 1;
 
 type EditorSceneProps = {
 	document: EditorDocument;
@@ -28,7 +41,8 @@ type EditorSceneProps = {
  * selection above everything. A transparent canvas shows a checkerboard.
  *
  * A locked image is cut off at the canvas's edge, like a crop. Once unlocked
- * it moves like any layer, so it fades past the edge instead.
+ * it moves like any layer, so it fades past the edge instead. The canvas
+ * sits on the well like a print, with a shadow and an edge around it.
  */
 export function EditorScene({
 	document,
@@ -59,7 +73,23 @@ export function EditorScene({
 				),
 			)}
 			<Group clip={canvas} invertClip>
-				<Fill color={colors.background} opacity={0.7} />
+				<Fill color={colors.canvasWell} opacity={0.7} />
+				<Rect rect={canvas} color="black">
+					<Shadow
+						dx={0}
+						dy={SHADOW_OFFSET_PX / viewScale}
+						blur={SHADOW_BLUR_PX / viewScale}
+						color="rgba(0, 0, 0, 0.6)"
+						shadowOnly
+					/>
+				</Rect>
+				{/* Doubled, as the canvas clips away its inner half. */}
+				<Rect
+					rect={canvas}
+					style="stroke"
+					strokeWidth={(EDGE_PX * 2) / viewScale}
+					color={colors.hoverOverlay}
+				/>
 			</Group>
 			<CenterGuides document={document} viewScale={viewScale} live={live} />
 			{selectedLayerId !== null && selectedLayerId !== hiddenLayerId && (

@@ -1,6 +1,12 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type RefObject, useLayoutEffect, useMemo, useRef } from "react";
+import {
+	type RefObject,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	type AccessibilityActionEvent,
 	Image,
@@ -141,6 +147,8 @@ function LayerRow({
 	const label = layerLabel(layer);
 	const startSlot = useSharedValue(0);
 	const dragTop = useSharedValue(0);
+	// A mouse over the row, on web.
+	const [hovered, setHovered] = useState(false);
 
 	// The scroll view waits for the handle, so dragging it never scrolls.
 	const pan = useMemo(
@@ -188,11 +196,16 @@ function LayerRow({
 				? dragTop.value
 				: withTiming((index === -1 ? slot : index) * ROW_HEIGHT, SETTLE),
 			zIndex: dragging ? 1 : 0,
-			backgroundColor:
-				dragging || selected ? colors.surface : colors.background,
+			backgroundColor: dragging
+				? colors.surfaceHover
+				: selected
+					? colors.accentSoft
+					: hovered
+						? colors.surface
+						: colors.background,
 			transform: [{ scale: withTiming(dragging ? 1.02 : 1, SETTLE) }],
 		};
-	}, [id, slot, selected]);
+	}, [id, slot, selected, hovered]);
 
 	const move = (event: AccessibilityActionEvent) => {
 		const index = layerIndexForSlot(slot, count);
@@ -210,6 +223,10 @@ function LayerRow({
 				selected && styles.rowSelected,
 				position,
 			]}
+			onPointerEnter={(event) => {
+				if (event.nativeEvent.pointerType === "mouse") setHovered(true);
+			}}
+			onPointerLeave={() => setHovered(false)}
 		>
 			<Pressable
 				style={[styles.main, hidden && styles.dimmed]}
@@ -321,7 +338,7 @@ const styles = StyleSheet.create({
 		right: 0,
 	},
 	rowSelected: {
-		borderColor: colors.accent,
+		borderColor: colors.accentBorder,
 	},
 	main: {
 		flex: 1,

@@ -25,8 +25,10 @@ import { scheduleOnRN } from "react-native-worklets";
 import type { EditorDocument } from "@/model/document";
 import { documentFraming, type Framing, framingAnchor } from "@/model/framing";
 import type { Size } from "@/model/geometry";
-import { colors } from "@/theme";
+import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
 import { AngleDial } from "@/ui/AngleDial";
+import { Button } from "@/ui/Button";
+import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
 import { BackgroundPicker } from "../BackgroundPicker";
 import { blendViewports, fitRectToView } from "../viewport";
@@ -252,8 +254,17 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 		<View style={styles.container}>
 			<View style={styles.header}>
 				<TextButton label="Cancel" onPress={onCancel} />
-				{changed && <TextButton label="Reset" onPress={handleReset} />}
-				<TextButton label="Done" tone="accent" onPress={handleDone} />
+				{changed && (
+					<View style={styles.reset}>
+						<TextButton label="Reset" onPress={handleReset} />
+					</View>
+				)}
+				<Button
+					label="Done"
+					variant="primary"
+					size="small"
+					onPress={handleDone}
+				/>
 			</View>
 
 			<CropCanvas
@@ -300,9 +311,29 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 								accessibilityState={{ selected }}
 								style={styles.target}
 							>
-								<View style={[styles.chip, selected && styles.chipSelected]}>
-									<Text style={styles.chipLabel}>{label}</Text>
-								</View>
+								{(state) => {
+									const { pressed, hovered } = interaction(state);
+									return (
+										<View
+											style={[
+												styles.chip,
+												webTransition,
+												hovered && styles.chipHovered,
+												selected && styles.chipSelected,
+												pressed && styles.chipPressed,
+											]}
+										>
+											<Text
+												style={[
+													styles.chipLabel,
+													selected && styles.chipLabelSelected,
+												]}
+											>
+												{label}
+											</Text>
+										</View>
+									);
+								}}
 							</Pressable>
 						);
 					})}
@@ -370,10 +401,27 @@ function ActionButton({
 			accessibilityState={
 				selected === undefined ? undefined : { checked: selected }
 			}
-			style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+			style={styles.action}
 		>
-			<MaterialCommunityIcons name={icon} size={24} color={color} />
-			<Text style={[styles.actionLabel, { color }]}>{label}</Text>
+			{(state) => {
+				const { pressed, hovered } = interaction(state);
+				return (
+					<>
+						<View
+							style={[
+								styles.actionIcon,
+								webTransition,
+								selected && styles.actionIconSelected,
+								hovered && styles.actionIconHovered,
+								pressed && styles.actionIconPressed,
+							]}
+						>
+							<MaterialCommunityIcons name={icon} size={22} color={color} />
+						</View>
+						<Text style={[styles.actionLabel, { color }]}>{label}</Text>
+					</>
+				);
+			}}
 		</Pressable>
 	);
 }
@@ -385,13 +433,20 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.background,
 	},
 	header: {
+		height: HEADER_HEIGHT,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		paddingHorizontal: 20,
-		paddingVertical: 14,
+		paddingHorizontal: 16,
 		borderBottomWidth: StyleSheet.hairlineWidth,
 		borderBottomColor: colors.border,
+	},
+	// Centered on the whole bar, whatever the buttons beside it measure.
+	reset: {
+		...StyleSheet.absoluteFill,
+		alignItems: "center",
+		justifyContent: "center",
+		pointerEvents: "box-none",
 	},
 	panel: {
 		gap: 4,
@@ -417,13 +472,25 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface,
 		justifyContent: "center",
 	},
+	chipHovered: {
+		borderColor: colors.borderStrong,
+		backgroundColor: colors.surfaceHover,
+	},
 	chipSelected: {
-		borderWidth: 2,
 		borderColor: colors.accent,
+		backgroundColor: colors.accentSoft,
+	},
+	chipPressed: {
+		transform: [{ scale: 0.96 }],
 	},
 	chipLabel: {
 		fontSize: 14,
+		fontVariant: ["tabular-nums"],
+		color: colors.textSecondary,
+	},
+	chipLabelSelected: {
 		color: colors.textPrimary,
+		fontWeight: "600",
 	},
 	actions: {
 		flexDirection: "row",
@@ -433,14 +500,28 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 	},
 	action: {
-		minWidth: 44,
+		minWidth: 56,
 		minHeight: 44,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 2,
 	},
-	pressed: {
-		opacity: 0.5,
+	actionIcon: {
+		width: 36,
+		height: 36,
+		borderRadius: 18,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	actionIconHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	actionIconSelected: {
+		backgroundColor: colors.accentSoft,
+	},
+	actionIconPressed: {
+		backgroundColor: colors.pressedOverlay,
+		transform: [{ scale: 0.92 }],
 	},
 	actionLabel: {
 		fontSize: 11,

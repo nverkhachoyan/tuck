@@ -7,13 +7,18 @@ import {
 	type TextLayerEdit,
 	textFonts,
 } from "@/model/document";
-import { colors } from "@/theme";
+import { colors, webTransition } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
+import { interaction } from "@/ui/interaction";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.
 const TARGET = 44;
-const SWATCH_SIZE = 28;
+// The ring that marks the chosen color, and the swatch inside it.
+const RING = 36;
+const SWATCH_SIZE = 26;
+// The tabs' track, inside their targets.
+const TRACK = 34;
 
 const SWATCHES = [
 	{ color: "#FFFFFF", name: "White" },
@@ -38,25 +43,28 @@ const TABS: { tab: Tab; label: string }[] = [
 	{ tab: "font", label: "Font" },
 	{ tab: "color", label: "Color" },
 	{ tab: "outline", label: "Outline" },
-	{ tab: "background", label: "Background" },
+	// Short, so every tab fits beside the actions on a phone.
+	{ tab: "background", label: "Box" },
 ];
 
 type TextEditPanelProps = {
 	layer: TextLayer;
 	onChange: (patch: TextLayerEdit) => void;
+	onEdit: () => void;
 	onDuplicate: () => void;
 	onDelete: () => void;
 };
 
 /**
  * Styling for the selected text layer. The text itself is edited full-screen
- * (tap the selected layer) and resized on the canvas (pinch or the corner
- * handles), so this is font and colors. There's no Done button: tapping
- * anywhere on the canvas off the text deselects it.
+ * (Edit, or tap the selected layer) and resized on the canvas (pinch or the
+ * corner handles), so this is font and colors. There's no Done button:
+ * tapping anywhere on the canvas off the text deselects it.
  */
 export function TextEditPanel({
 	layer,
 	onChange,
+	onEdit,
 	onDuplicate,
 	onDelete,
 }: TextEditPanelProps) {
@@ -72,6 +80,7 @@ export function TextEditPanel({
 					style={styles.tabsScroll}
 					contentContainerStyle={styles.tabs}
 				>
+					<View style={styles.track} />
 					{TABS.map(({ tab: value, label }) => (
 						<Tab
 							key={value}
@@ -83,13 +92,20 @@ export function TextEditPanel({
 				</ScrollView>
 				<View style={styles.actions}>
 					<IconButton
+						icon="create-outline"
+						label="Edit text"
+						onPress={onEdit}
+					/>
+					<IconButton
 						icon="copy-outline"
 						label="Duplicate"
+						shortcut="mod+D"
 						onPress={onDuplicate}
 					/>
 					<IconButton
 						icon="trash-outline"
 						label="Delete"
+						shortcut="Delete"
 						tone="danger"
 						onPress={onDelete}
 					/>
@@ -144,6 +160,7 @@ function TabContent({
 	}
 }
 
+/** One segment of the tabs' track; the active one is raised out of it. */
 function Tab({
 	label,
 	active,
@@ -155,15 +172,32 @@ function Tab({
 }) {
 	return (
 		<Pressable
-			hitSlop={8}
 			onPress={onPress}
 			accessibilityRole="tab"
 			accessibilityState={{ selected: active }}
 			style={styles.target}
 		>
-			<Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-				{label}
-			</Text>
+			{(state) => {
+				const { hovered } = interaction(state);
+				return (
+					<View
+						style={[
+							styles.segment,
+							webTransition,
+							active && styles.segmentActive,
+						]}
+					>
+						<Text
+							style={[
+								styles.tabLabel,
+								(active || hovered) && styles.tabLabelActive,
+							]}
+						>
+							{label}
+						</Text>
+					</View>
+				);
+			}}
 		</Pressable>
 	);
 }
@@ -196,18 +230,29 @@ function FontPicker({
 						accessibilityState={{ selected }}
 						style={styles.target}
 					>
-						<View
-							style={[styles.fontChip, selected && styles.fontChipSelected]}
-						>
-							<Text
-								style={[
-									styles.fontLabel,
-									{ fontFamily: TEXT_FONTS[font].family },
-								]}
-							>
-								{FONT_LABELS[font]}
-							</Text>
-						</View>
+						{(state) => {
+							const { pressed, hovered } = interaction(state);
+							return (
+								<View
+									style={[
+										styles.fontChip,
+										webTransition,
+										hovered && styles.fontChipHovered,
+										selected && styles.fontChipSelected,
+										pressed && styles.fontChipPressed,
+									]}
+								>
+									<Text
+										style={[
+											styles.fontLabel,
+											{ fontFamily: TEXT_FONTS[font].family },
+										]}
+									>
+										{FONT_LABELS[font]}
+									</Text>
+								</View>
+							);
+						}}
 					</Pressable>
 				);
 			})}
@@ -268,15 +313,29 @@ function Swatch({
 			accessibilityState={{ selected }}
 			style={styles.swatchTarget}
 		>
-			<View
-				style={[
-					styles.swatch,
-					color !== null && { backgroundColor: color },
-					selected && styles.swatchSelected,
-				]}
-			>
-				{color === null && <View style={styles.swatchSlash} />}
-			</View>
+			{(state) => {
+				const { pressed, hovered } = interaction(state);
+				return (
+					<View
+						style={[
+							styles.ring,
+							webTransition,
+							hovered && styles.ringHovered,
+							selected && styles.ringSelected,
+							pressed && styles.ringPressed,
+						]}
+					>
+						<View
+							style={[
+								styles.swatch,
+								color !== null && { backgroundColor: color },
+							]}
+						>
+							{color === null && <View style={styles.swatchSlash} />}
+						</View>
+					</View>
+				);
+			}}
 		</Pressable>
 	);
 }
@@ -288,18 +347,31 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 20,
-		gap: 2,
+		gap: 4,
 	},
 	row: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 12,
+		gap: 16,
 	},
 	tabsScroll: {
 		flex: 1,
 	},
 	tabs: {
-		gap: 16,
+		paddingHorizontal: (TARGET - TRACK) / 2,
+	},
+	// Behind the tabs, which are taller to be easy to hit. As wide as the
+	// content, not the scroll view.
+	track: {
+		position: "absolute",
+		top: (TARGET - TRACK) / 2,
+		bottom: (TARGET - TRACK) / 2,
+		left: 0,
+		right: 0,
+		borderRadius: TRACK / 2,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
+		backgroundColor: colors.surface,
 	},
 	// Rounded so a browser's focus ring hugs what's drawn inside.
 	target: {
@@ -307,8 +379,18 @@ const styles = StyleSheet.create({
 		borderRadius: TARGET / 2,
 		justifyContent: "center",
 	},
+	segment: {
+		height: TRACK - 6,
+		paddingHorizontal: 11,
+		borderRadius: (TRACK - 6) / 2,
+		justifyContent: "center",
+	},
+	segmentActive: {
+		backgroundColor: colors.surfacePressed,
+		boxShadow: "0 1px 3px rgba(0, 0, 0, 0.4)",
+	},
 	tabLabel: {
-		fontSize: 14,
+		fontSize: 13,
 		fontWeight: "600",
 		color: colors.textSecondary,
 	},
@@ -317,7 +399,7 @@ const styles = StyleSheet.create({
 	},
 	actions: {
 		flexDirection: "row",
-		gap: 24,
+		gap: 18,
 	},
 	// One height for every tab, so switching tabs never shifts the row above.
 	content: {
@@ -341,9 +423,16 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface,
 		justifyContent: "center",
 	},
+	fontChipHovered: {
+		borderColor: colors.borderStrong,
+		backgroundColor: colors.surfaceHover,
+	},
 	fontChipSelected: {
-		borderWidth: 2,
 		borderColor: colors.accent,
+		backgroundColor: colors.accentSoft,
+	},
+	fontChipPressed: {
+		transform: [{ scale: 0.96 }],
 	},
 	fontLabel: {
 		fontSize: 16,
@@ -361,19 +450,33 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 	},
+	ring: {
+		width: RING,
+		height: RING,
+		borderRadius: RING / 2,
+		borderWidth: 2,
+		borderColor: "transparent",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	ringHovered: {
+		borderColor: colors.borderStrong,
+	},
+	ringSelected: {
+		borderColor: colors.accent,
+	},
+	ringPressed: {
+		transform: [{ scale: 0.92 }],
+	},
 	swatch: {
 		width: SWATCH_SIZE,
 		height: SWATCH_SIZE,
 		borderRadius: SWATCH_SIZE / 2,
-		borderWidth: 1,
-		borderColor: colors.border,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.borderStrong,
 		alignItems: "center",
 		justifyContent: "center",
 		overflow: "hidden",
-	},
-	swatchSelected: {
-		borderWidth: 2,
-		borderColor: colors.accent,
 	},
 	swatchSlash: {
 		width: 36,

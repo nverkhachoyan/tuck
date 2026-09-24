@@ -38,6 +38,23 @@ export async function pickPhoto({
 	return { status: "picked", photo: { uri, width, height } };
 }
 
+/**
+ * An image from elsewhere, as a URI (a pasted or dropped file's blob URL on
+ * web), made ready for the editor like a picked photo. Throws if it can't be
+ * read or re-encoded.
+ */
+export async function importPhoto(
+	uri: string,
+	{ maxShortSide }: PickPhotoOptions = {},
+): Promise<PickedPhoto> {
+	const {
+		width,
+		height,
+		uri: encoded,
+	} = await reencodeAsJpeg(uri, maxShortSide);
+	return { uri: encoded, width, height };
+}
+
 // Looks the same as 1, at about half the size on disk. Export uses 0.95.
 const JPEG_QUALITY = 0.92;
 

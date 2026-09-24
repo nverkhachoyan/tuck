@@ -1,4 +1,5 @@
-import { Canvas, Image, rect } from "@shopify/react-native-skia";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Canvas, Image, Rect, rect, Shadow } from "@shopify/react-native-skia";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -8,6 +9,7 @@ import {
 	Pressable,
 	StyleSheet,
 	Text,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import { exportFormatFor, exportFormats } from "@/export/exportFormat";
@@ -23,9 +25,10 @@ import { errorMessage } from "@/lib/errorMessage";
 import { showAlert } from "@/lib/showAlert";
 import type { EditorDocument } from "@/model/document";
 import { useStore } from "@/store";
-import { colors } from "@/theme";
+import { colors, radii, webTransition } from "@/theme";
 import { Button } from "@/ui/Button";
 import { Checkerboard } from "@/ui/Checkerboard";
+import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 
 // A transparency checkerboard square's side, in screen pixels.
@@ -111,18 +114,37 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 		}
 	};
 
+	const ready = state.status === "ready";
+	// Side by side only with room for "Save to Photos" beside Share.
+	const wide = useWindowDimensions().width >= 420;
+
 	return (
 		<View style={styles.container}>
-			<ScreenHeader title="Export" onBack={() => router.back()} />
+			<ScreenHeader
+				title="Export"
+				backLabel="Edit"
+				onBack={() => router.back()}
+			/>
 
 			<View style={styles.previewArea}>
 				{/* Canvas has no onLayout on Fabric, so measure a wrapper instead. */}
 				<View style={styles.preview} onLayout={handleLayout}>
 					<Canvas style={styles.preview}>
-						{state.status === "ready" && format === "png" && (
+						{ready && (
+							<Rect rect={imageBounds} color="black">
+								<Shadow
+									dx={0}
+									dy={8}
+									blur={24}
+									color="rgba(0, 0, 0, 0.6)"
+									shadowOnly
+								/>
+							</Rect>
+						)}
+						{ready && format === "png" && (
 							<Checkerboard bounds={imageBounds} cell={CHECKER_PX} />
 						)}
-						{state.status === "ready" && (
+						{ready && (
 							<Image image={state.image} rect={imageBounds} fit="fill" />
 						)}
 					</Canvas>
@@ -136,6 +158,11 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 				)}
 				{state.status === "failed" && (
 					<View style={styles.overlay}>
+						<Ionicons
+							name="alert-circle-outline"
+							size={28}
+							color={colors.textSecondary}
+						/>
 						<Text style={styles.status}>Couldn't render the image.</Text>
 						<Button label="Try Again" onPress={retry} />
 					</View>
@@ -143,59 +170,88 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 			</View>
 
 			<View style={styles.footer}>
-				{sizes.length > 1 && (
-					<View style={styles.sizes}>
-						{sizes.map(({ width, height, scale }, index) => {
-							const selected = index === sizeIndex;
-							return (
-								<Pressable
-									key={scale}
-									hitSlop={4}
-									disabled={busy !== null}
-									onPress={() => pickSize(index)}
-									accessibilityRole="button"
-									accessibilityLabel={`${width} by ${height} pixels`}
-									accessibilityState={{ selected, disabled: busy !== null }}
-									style={[styles.sizeChip, selected && styles.sizeChipSelected]}
-								>
-									<Text style={styles.sizeLabel}>
-										{width} × {height}
-									</Text>
-								</Pressable>
-							);
-						})}
+				<View style={styles.footerContent}>
+					{sizes.length > 1 && (
+						<View style={styles.sizes}>
+							{sizes.map(({ width, height, scale }, index) => {
+								const selected = index === sizeIndex;
+								return (
+									<Pressable
+										key={scale}
+										hitSlop={4}
+										disabled={busy !== null}
+										onPress={() => pickSize(index)}
+										accessibilityRole="button"
+										accessibilityLabel={`${width} by ${height} pixels`}
+										accessibilityState={{ selected, disabled: busy !== null }}
+										style={(pressable) => {
+											const { pressed, hovered } = interaction(pressable);
+											return [
+												styles.sizeChip,
+												webTransition,
+												hovered && styles.sizeChipHovered,
+												selected && styles.sizeChipSelected,
+												pressed && styles.sizeChipPressed,
+											];
+										}}
+									>
+										<Text
+											style={[
+												styles.sizeLabel,
+												selected && styles.sizeLabelSelected,
+											]}
+										>
+											{width} × {height}
+										</Text>
+									</Pressable>
+								);
+							})}
+						</View>
+					)}
+					<Text style={styles.details}>
+						{sizes.length > 1
+							? ""
+							: `${exportSize.width} × ${exportSize.height} · `}
+						{format === "png"
+							? `${exportFormats.png.label}, to keep the transparent areas`
+							: exportFormats.jpeg.label}
+					</Text>
+					<View style={[styles.actions, wide && styles.actionsWide]}>
+						<View style={wide && styles.actionWide}>
+							{saved ? (
+								<View style={styles.saved} accessibilityLiveRegion="polite">
+									<Ionicons
+										name="checkmark-circle"
+										size={22}
+										color={colors.accent}
+									/>
+									<Text style={styles.savedLabel}>{saveLabels.done}</Text>
+								</View>
+							) : (
+								<Button
+									label={busy === "saving" ? saveLabels.busy : saveLabels.idle}
+									icon="download-outline"
+									variant="primary"
+									size="large"
+									disabled={!ready || busy !== null}
+									onPress={handleSave}
+								/>
+							)}
+						</View>
+						{/* Most desktop browsers can't share files. */}
+						{canShare && (
+							<View style={wide && styles.actionWide}>
+								<Button
+									label={busy === "sharing" ? "Opening…" : "Share"}
+									icon="share-outline"
+									size="large"
+									disabled={!ready || busy !== null}
+									onPress={handleShare}
+								/>
+							</View>
+						)}
 					</View>
-				)}
-				<Text style={styles.details}>
-					{sizes.length > 1
-						? ""
-						: `${exportSize.width} × ${exportSize.height} · `}
-					{format === "png"
-						? `${exportFormats.png.label}, to keep the transparent areas`
-						: exportFormats.jpeg.label}
-				</Text>
-				<Button
-					label={
-						saved
-							? saveLabels.done
-							: busy === "saving"
-								? saveLabels.busy
-								: saveLabels.idle
-					}
-					variant="primary"
-					size="large"
-					disabled={state.status !== "ready" || busy !== null || saved}
-					onPress={handleSave}
-				/>
-				{/* Most desktop browsers can't share files. */}
-				{canShare && (
-					<Button
-						label={busy === "sharing" ? "Opening…" : "Share"}
-						size="large"
-						disabled={state.status !== "ready" || busy !== null}
-						onPress={handleShare}
-					/>
-				)}
+				</View>
 			</View>
 		</View>
 	);
@@ -207,7 +263,8 @@ const styles = StyleSheet.create({
 	},
 	previewArea: {
 		flex: 1,
-		padding: 16,
+		padding: 24,
+		backgroundColor: colors.canvasWell,
 	},
 	preview: {
 		flex: 1,
@@ -223,12 +280,19 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	footer: {
-		gap: 12,
 		paddingHorizontal: 20,
 		paddingTop: 16,
 		paddingBottom: 24,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
+	},
+	// A phone-width column, so a wide browser window doesn't stretch the
+	// buttons across it.
+	footerContent: {
+		width: "100%",
+		maxWidth: 480,
+		alignSelf: "center",
+		gap: 14,
 	},
 	details: {
 		fontSize: 13,
@@ -251,13 +315,51 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface,
 		justifyContent: "center",
 	},
+	sizeChipHovered: {
+		borderColor: colors.borderStrong,
+		backgroundColor: colors.surfaceHover,
+	},
 	sizeChipSelected: {
-		borderWidth: 2,
 		borderColor: colors.accent,
+		backgroundColor: colors.accentSoft,
+	},
+	sizeChipPressed: {
+		transform: [{ scale: 0.96 }],
 	},
 	sizeLabel: {
 		fontSize: 13,
 		fontVariant: ["tabular-nums"],
+		color: colors.textSecondary,
+	},
+	sizeLabelSelected: {
+		fontWeight: "600",
+		color: colors.textPrimary,
+	},
+	actions: {
+		gap: 12,
+	},
+	actionsWide: {
+		flexDirection: "row",
+	},
+	// Only in a row: in a column, the buttons keep their own height.
+	actionWide: {
+		flex: 1,
+	},
+	// Where the save button was, the same size, so nothing shifts.
+	saved: {
+		height: 56,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 8,
+		borderRadius: radii.large,
+		borderWidth: 1,
+		borderColor: colors.accentBorder,
+		backgroundColor: colors.accentSoft,
+	},
+	savedLabel: {
+		fontSize: 17,
+		fontWeight: "600",
 		color: colors.textPrimary,
 	},
 });

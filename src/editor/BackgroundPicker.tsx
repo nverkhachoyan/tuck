@@ -1,9 +1,13 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { colors } from "@/theme";
+import { colors, webTransition } from "@/theme";
+import { CheckerFill } from "@/ui/CheckerFill";
+import { interaction } from "@/ui/interaction";
 
-// The minimum comfortable touch target, and the swatch drawn inside it.
+// The minimum comfortable touch target, the ring that marks the choice, and
+// the swatch drawn inside it.
 const TARGET = 44;
-const SWATCH_SIZE = 28;
+const RING = 36;
+const SWATCH_SIZE = 26;
 
 const BACKGROUNDS = [
 	{ color: null, label: "Transparent background" },
@@ -32,33 +36,38 @@ export function BackgroundPicker({
 						accessibilityState={{ selected }}
 						style={styles.target}
 					>
-						<View
-							style={[
-								styles.swatch,
-								color !== null && { backgroundColor: color },
-								selected && styles.swatchSelected,
-							]}
-						>
-							{color === null && <Checker />}
-						</View>
+						{(state) => {
+							const { pressed, hovered } = interaction(state);
+							return (
+								<View
+									style={[
+										styles.ring,
+										webTransition,
+										hovered && styles.ringHovered,
+										selected && styles.ringSelected,
+										pressed && styles.ringPressed,
+									]}
+								>
+									<View
+										style={[
+											styles.swatch,
+											color !== null && { backgroundColor: color },
+										]}
+									>
+										{color === null && (
+											<CheckerFill
+												width={SWATCH_SIZE}
+												height={SWATCH_SIZE}
+												cell={SWATCH_SIZE / 2}
+											/>
+										)}
+									</View>
+								</View>
+							);
+						}}
 					</Pressable>
 				);
 			})}
-		</View>
-	);
-}
-
-function Checker() {
-	return (
-		<View style={styles.checker}>
-			<View style={styles.checkerRow}>
-				<View style={[styles.cell, styles.light]} />
-				<View style={styles.cell} />
-			</View>
-			<View style={styles.checkerRow}>
-				<View style={styles.cell} />
-				<View style={[styles.cell, styles.light]} />
-			</View>
 		</View>
 	);
 }
@@ -74,30 +83,30 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 	},
+	ring: {
+		width: RING,
+		height: RING,
+		borderRadius: RING / 2,
+		borderWidth: 2,
+		borderColor: "transparent",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	ringHovered: {
+		borderColor: colors.borderStrong,
+	},
+	ringSelected: {
+		borderColor: colors.accent,
+	},
+	ringPressed: {
+		transform: [{ scale: 0.92 }],
+	},
 	swatch: {
 		width: SWATCH_SIZE,
 		height: SWATCH_SIZE,
 		borderRadius: SWATCH_SIZE / 2,
-		borderWidth: 1,
-		borderColor: colors.border,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.borderStrong,
 		overflow: "hidden",
-	},
-	swatchSelected: {
-		borderWidth: 2,
-		borderColor: colors.accent,
-	},
-	checker: {
-		flex: 1,
-		backgroundColor: colors.checkerDark,
-	},
-	checkerRow: {
-		flex: 1,
-		flexDirection: "row",
-	},
-	cell: {
-		flex: 1,
-	},
-	light: {
-		backgroundColor: colors.checkerLight,
 	},
 });

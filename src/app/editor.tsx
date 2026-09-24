@@ -1,4 +1,5 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
@@ -7,11 +8,13 @@ import {
 } from "@/editor/canvas/EditorCanvas";
 import { CropTool } from "@/editor/crop/CropTool";
 import { LayersPanel } from "@/editor/panels/LayersPanel";
+import { PhotoPanel } from "@/editor/panels/PhotoPanel";
 import { TextEditor } from "@/editor/panels/TextEditor";
 import { TextEditPanel } from "@/editor/panels/TextEditPanel";
 import type { Shortcut } from "@/editor/shortcuts";
 import { useEditorShortcuts } from "@/editor/useEditorShortcuts";
-import { pickPhoto } from "@/import/pickPhoto";
+import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/pickPhoto";
+import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { assertNever } from "@/lib/assertNever";
 import { errorMessage } from "@/lib/errorMessage";
 import { showAlert } from "@/lib/showAlert";
@@ -28,11 +31,11 @@ import {
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
-import { colors } from "@/theme";
+import { colors, radii } from "@/theme";
 import { Button } from "@/ui/Button";
+import { DropOverlay } from "@/ui/DropOverlay";
 import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
-import { TextButton } from "@/ui/TextButton";
 import { ToolButton } from "@/ui/ToolButton";
 
 export default function EditorRoute() {
@@ -157,16 +160,16 @@ export default function EditorRoute() {
 	// The photo shrinks to what this canvas can use, then moves into the
 	// project, so autosave knows its file. Without a project, it's used where
 	// the picker left it.
-	const handleAddPhoto = async () => {
+	const addPhoto = async (
+		load: (maxShortSide: number) => Promise<PickedPhoto | null>,
+	) => {
 		if (addingPhoto.current || !document) return;
 		addingPhoto.current = true;
 		setPhotoBusy(true);
 		try {
-			const result = await pickPhoto({
-				maxShortSide: maxNewImageShortSide(document),
-			});
-			if (result.status === "canceled") return;
-			const { uri, width, height } = result.photo;
+			const photo = await load(maxNewImageShortSide(document));
+			if (!photo) return;
+			const { uri, width, height } = photo;
 			const url = projectId === null ? uri : await addImage(projectId, uri);
 			canvasRef.current?.flushPendingTransform();
 			addImageLayer(url, width, height);
@@ -177,6 +180,20 @@ export default function EditorRoute() {
 			setPhotoBusy(false);
 		}
 	};
+	const handleAddPhoto = () =>
+		addPhoto(async (maxShortSide) => {
+			const result = await pickPhoto({ maxShortSide });
+			return result.status === "canceled" ? null : result.photo;
+		});
+
+	// On web, an image pasted or dropped onto the editor joins the canvas,
+	// unless another screen or tool is in front of it.
+	const focused = useIsFocused();
+	const { dragging } = usePhotoDrop({
+		enabled: focused && editing === null && !cropping,
+		onPhoto: (uri) =>
+			addPhoto((maxShortSide) => importPhoto(uri, { maxShortSide })),
+	});
 
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
@@ -194,12 +211,25 @@ export default function EditorRoute() {
 		setEditing(null);
 	};
 
+	const selectedIndex = selectedLayer
+		? document.layers.indexOf(selectedLayer)
+		: -1;
+	const moveSelected = (step: 1 | -1) => {
+		if (!selectedLayer) return;
+		canvasRef.current?.flushPendingTransform();
+		moveLayer(selectedLayer.id, selectedIndex + step);
+	};
+
 	return (
 		<View style={styles.container}>
 			<ScreenHeader
+				backLabel="Projects"
 				onBack={() => {
 					canvasRef.current?.flushPendingTransform();
-					router.back();
+					// Opened from a link to the create screen, there's nothing
+					// behind the editor; the welcome screen still ends the session.
+					if (router.canGoBack()) router.back();
+					else router.replace("/");
 				}}
 				action={
 					<View style={styles.headerActions}>
@@ -212,18 +242,22 @@ export default function EditorRoute() {
 						<IconButton
 							icon="arrow-undo-outline"
 							label="Undo"
+							shortcut="mod+Z"
 							disabled={!canUndo}
 							onPress={handleUndo}
 						/>
 						<IconButton
 							icon="arrow-redo-outline"
 							label="Redo"
+							shortcut="mod+shift+Z"
 							disabled={!canRedo}
 							onPress={handleRedo}
 						/>
-						<TextButton
+						<Button
 							label="Export"
-							tone="accent"
+							icon="share-outline"
+							variant="primary"
+							size="small"
 							onPress={() => router.push("/export")}
 						/>
 					</View>
@@ -245,11 +279,18 @@ export default function EditorRoute() {
 					onNudgeLayer={nudgeLayer}
 				/>
 				{saveProblem && (
-					<View style={styles.saveError}>
-						<Text style={styles.saveErrorText}>{saveProblem}</Text>
-						{projectId !== null && (
-							<Button label="Retry Save" onPress={retryAutosave} />
-						)}
+					<View style={styles.saveErrorArea}>
+						<View style={styles.saveError}>
+							<Ionicons
+								name="cloud-offline-outline"
+								size={20}
+								color={colors.accent}
+							/>
+							<Text style={styles.saveErrorText}>{saveProblem}</Text>
+							{projectId !== null && (
+								<Button label="Retry" size="small" onPress={retryAutosave} />
+							)}
+						</View>
 					</View>
 				)}
 			</View>
@@ -271,8 +312,21 @@ export default function EditorRoute() {
 					<TextEditPanel
 						layer={selectedTextLayer}
 						onChange={updateSelectedText}
+						onEdit={() => setEditing("selected")}
 						onDuplicate={duplicateSelectedLayer}
 						onDelete={() => deleteLayer(selectedTextLayer.id)}
+					/>
+				) : selectedLayer ? (
+					<PhotoPanel
+						canMoveForward={selectedIndex < document.layers.length - 1}
+						canMoveBackward={selectedIndex > 0}
+						onMoveForward={() => moveSelected(1)}
+						onMoveBackward={() => moveSelected(-1)}
+						onDuplicate={() => {
+							canvasRef.current?.flushPendingTransform();
+							duplicateSelectedLayer();
+						}}
+						onDelete={() => deleteLayer(selectedLayer.id)}
 					/>
 				) : (
 					<View style={styles.toolbar}>
@@ -284,7 +338,7 @@ export default function EditorRoute() {
 						<ToolButton
 							label="Photo"
 							icon="image-plus"
-							disabled={photoBusy}
+							busy={photoBusy}
 							onPress={() => void handleAddPhoto()}
 						/>
 						<ToolButton
@@ -299,6 +353,7 @@ export default function EditorRoute() {
 				)}
 			</View>
 
+			{dragging && <DropOverlay label="Drop to add to the canvas" />}
 			{cropping && (
 				<CropTool
 					document={document}
@@ -334,34 +389,47 @@ const styles = StyleSheet.create({
 	headerActions: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 24,
+		gap: 22,
 	},
 	canvasArea: {
 		flex: 1,
+		backgroundColor: colors.canvasWell,
 	},
 	// Over the canvas rather than above it, so showing it doesn't resize the
 	// canvas mid-gesture.
-	saveError: {
+	saveErrorArea: {
 		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
+		top: 12,
+		left: 12,
+		right: 12,
+		alignItems: "center",
+		pointerEvents: "box-none",
+	},
+	saveError: {
+		width: "100%",
+		maxWidth: 560,
 		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "space-between",
 		gap: 12,
-		paddingHorizontal: 16,
+		paddingLeft: 14,
+		paddingRight: 8,
 		paddingVertical: 8,
+		borderRadius: radii.medium,
+		borderWidth: 1,
+		borderColor: colors.accentSoft,
 		backgroundColor: colors.surface,
+		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
 	},
 	saveErrorText: {
 		flex: 1,
+		fontSize: 14,
+		lineHeight: 19,
 		color: colors.textPrimary,
 	},
 	// Toolbar and text panel share one fixed height so the canvas above never
 	// resizes when the selection changes.
 	bottomPanel: {
-		height: 120,
+		height: 124,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},

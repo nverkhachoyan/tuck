@@ -5,21 +5,23 @@ import { BackgroundPicker } from "@/editor/BackgroundPicker";
 import { createBlankDocument } from "@/model/document";
 import { createBlankProject } from "@/projects/projects";
 import { useStore } from "@/store";
-import { colors } from "@/theme";
+import { colors, radii, webTransition } from "@/theme";
+import { CheckerFill } from "@/ui/CheckerFill";
+import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 
 // Common sizes for posts and stories. The crop tool reshapes a canvas later.
 const PRESETS = [
-	{ name: "Square", width: 1080, height: 1080 },
-	{ name: "Portrait", width: 1080, height: 1350 },
-	{ name: "Story", width: 1080, height: 1920 },
-	{ name: "Landscape", width: 1920, height: 1080 },
+	{ name: "Square", ratio: "1:1", width: 1080, height: 1080 },
+	{ name: "Portrait", ratio: "4:5", width: 1080, height: 1350 },
+	{ name: "Story", ratio: "9:16", width: 1080, height: 1920 },
+	{ name: "Landscape", ratio: "16:9", width: 1920, height: 1080 },
 ] as const;
 type Preset = (typeof PRESETS)[number];
 
 // The longer side of a preset's preview, and a transparency square's side.
 const PREVIEW_SIZE = 88;
-const CHECKER_CELL = 11;
+const CHECKER_CELL = 8;
 
 /** Starts an empty canvas at a picked size and fill. */
 export default function CreateRoute() {
@@ -60,10 +62,18 @@ export default function CreateRoute() {
 
 	return (
 		<View style={styles.screen}>
-			<ScreenHeader title="New Canvas" onBack={() => router.back()} />
+			<ScreenHeader
+				title="New Canvas"
+				onBack={() =>
+					router.canGoBack() ? router.back() : router.replace("/")
+				}
+			/>
 			<ScrollView contentContainerStyle={styles.content}>
 				<View style={styles.fill}>
-					<Text style={styles.fillLabel}>Fill</Text>
+					<View style={styles.fillText}>
+						<Text style={styles.fillLabel}>Fill</Text>
+						<Text style={styles.fillValue}>{fillName(background)}</Text>
+					</View>
 					<BackgroundPicker value={background} onPick={setBackground} />
 				</View>
 				<View style={styles.grid}>
@@ -82,6 +92,11 @@ export default function CreateRoute() {
 	);
 }
 
+function fillName(background: string | null) {
+	if (background === null) return "Transparent";
+	return background === "#000000" ? "Black" : "White";
+}
+
 function PresetTile({
 	preset,
 	background,
@@ -93,7 +108,7 @@ function PresetTile({
 	disabled: boolean;
 	onPress: () => void;
 }) {
-	const { name, width, height } = preset;
+	const { name, ratio, width, height } = preset;
 	const scale = PREVIEW_SIZE / Math.max(width, height);
 	const size = { width: width * scale, height: height * scale };
 	return (
@@ -102,49 +117,44 @@ function PresetTile({
 			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={`${name}, ${width} by ${height}`}
-			style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+			style={(state) => {
+				const { pressed, hovered } = interaction(state);
+				return [
+					styles.tile,
+					webTransition,
+					hovered && styles.tileHovered,
+					pressed && styles.tilePressed,
+				];
+			}}
 		>
-			<View style={styles.previewArea}>
-				<View
-					style={[
-						styles.preview,
-						size,
-						background !== null && { backgroundColor: background },
-					]}
-				>
-					{background === null && <Checker {...size} />}
-				</View>
-			</View>
-			<Text style={styles.name}>{name}</Text>
-			<Text style={styles.size}>
-				{width} × {height}
-			</Text>
+			{(state) => {
+				const { hovered } = interaction(state);
+				return (
+					<>
+						<Text style={styles.ratio}>{ratio}</Text>
+						<View style={styles.previewArea}>
+							<View
+								style={[
+									styles.preview,
+									size,
+									webTransition,
+									background !== null && { backgroundColor: background },
+									hovered && styles.previewLifted,
+								]}
+							>
+								{background === null && (
+									<CheckerFill {...size} cell={CHECKER_CELL} />
+								)}
+							</View>
+						</View>
+						<Text style={styles.name}>{name}</Text>
+						<Text style={styles.size}>
+							{width} × {height}
+						</Text>
+					</>
+				);
+			}}
 		</Pressable>
-	);
-}
-
-/** The checkerboard that stands for transparency, in plain views. */
-function Checker({ width, height }: { width: number; height: number }) {
-	const rows = Math.ceil(height / CHECKER_CELL);
-	const columns = Math.ceil(width / CHECKER_CELL);
-	return (
-		<View style={styles.checker}>
-			{Array.from({ length: rows }, (_, row) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: a fixed grid
-				<View key={row} style={styles.checkerRow}>
-					{Array.from({ length: columns }, (_, column) => (
-						<View
-							// biome-ignore lint/suspicious/noArrayIndexKey: a fixed grid
-							key={column}
-							style={[
-								styles.cell,
-								(row + column) % 2 === 1 && styles.cellLight,
-							]}
-						/>
-					))}
-				</View>
-			))}
-		</View>
 	);
 }
 
@@ -164,10 +174,25 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
+		paddingLeft: 16,
+		paddingRight: 8,
+		paddingVertical: 4,
+		borderRadius: radii.large,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
+		backgroundColor: colors.surface,
+	},
+	fillText: {
+		gap: 1,
 	},
 	fillLabel: {
 		fontSize: 15,
+		fontWeight: "600",
 		color: colors.textPrimary,
+	},
+	fillValue: {
+		fontSize: 13,
+		color: colors.textSecondary,
 	},
 	grid: {
 		flexDirection: "row",
@@ -178,27 +203,49 @@ const styles = StyleSheet.create({
 		flexBasis: "40%",
 		flexGrow: 1,
 		alignItems: "center",
-		gap: 4,
-		paddingVertical: 16,
+		gap: 2,
+		paddingTop: 20,
+		paddingBottom: 16,
 		paddingHorizontal: 12,
-		borderRadius: 16,
+		borderRadius: radii.large,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
 		backgroundColor: colors.surface,
 	},
-	pressed: {
-		opacity: 0.7,
+	tileHovered: {
+		borderColor: colors.borderStrong,
+		backgroundColor: colors.surfaceHover,
+	},
+	tilePressed: {
+		backgroundColor: colors.surfacePressed,
+		transform: [{ scale: 0.98 }],
+	},
+	ratio: {
+		position: "absolute",
+		top: 10,
+		left: 12,
+		fontSize: 11,
+		fontWeight: "600",
+		fontVariant: ["tabular-nums"],
+		color: colors.textTertiary,
 	},
 	previewArea: {
 		width: PREVIEW_SIZE,
 		height: PREVIEW_SIZE,
 		alignItems: "center",
 		justifyContent: "center",
-		marginBottom: 8,
+		marginBottom: 12,
 	},
 	preview: {
-		borderRadius: 4,
-		borderWidth: 1,
-		borderColor: colors.border,
+		borderRadius: 3,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.borderStrong,
 		overflow: "hidden",
+		boxShadow: "0 4px 12px rgba(0, 0, 0, 0.45)",
+	},
+	previewLifted: {
+		transform: [{ translateY: -3 }],
+		boxShadow: "0 10px 20px rgba(0, 0, 0, 0.55)",
 	},
 	name: {
 		fontSize: 15,
@@ -207,20 +254,7 @@ const styles = StyleSheet.create({
 	},
 	size: {
 		fontSize: 13,
+		fontVariant: ["tabular-nums"],
 		color: colors.textSecondary,
-	},
-	checker: {
-		...StyleSheet.absoluteFill,
-		backgroundColor: colors.checkerDark,
-	},
-	checkerRow: {
-		flexDirection: "row",
-	},
-	cell: {
-		width: CHECKER_CELL,
-		height: CHECKER_CELL,
-	},
-	cellLight: {
-		backgroundColor: colors.checkerLight,
 	},
 });

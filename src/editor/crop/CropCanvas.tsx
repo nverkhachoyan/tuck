@@ -310,8 +310,10 @@ function CropFrame({
 }
 
 const styles = StyleSheet.create({
+	// The editor's well, so the photo doesn't jump in shade entering the tool.
 	container: {
 		flex: 1,
+		backgroundColor: colors.canvasWell,
 	},
 	canvas: {
 		flex: 1,

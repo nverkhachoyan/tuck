@@ -9,8 +9,9 @@ import { type EditorDocument, hasTransparency } from "@/model/document";
 import { decodeImageLayers } from "./decodeImageLayers";
 import { ExportScene } from "./ExportScene";
 
-// A thumbnail's shorter side, in pixels: a list row's image at 3x.
-const THUMBNAIL_SIZE = 160;
+// A thumbnail's shorter side, in pixels: a project card's print on a phone
+// at 3x.
+const THUMBNAIL_SIZE = 360;
 
 /**
  * Renders the document at its full logical resolution (1 unit = 1 pixel), or

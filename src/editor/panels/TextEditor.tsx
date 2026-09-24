@@ -11,8 +11,9 @@ import {
 } from "react-native";
 import { TEXT_FONTS } from "@/layers/fonts";
 import type { TextAlign, TextLayerStyle } from "@/model/document";
-import { colors } from "@/theme";
-import { TextButton } from "@/ui/TextButton";
+import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
+import { Button } from "@/ui/Button";
+import { interaction } from "@/ui/interaction";
 
 const NEXT_ALIGN: Record<TextAlign, TextAlign> = {
 	center: "left",
@@ -77,14 +78,23 @@ export function TextEditor({
 			<KeyboardAvoidingView behavior="padding" style={styles.flex}>
 				<View style={styles.toolbar}>
 					<Pressable
-						hitSlop={12}
+						hitSlop={4}
 						onPress={() => setAlign(NEXT_ALIGN[align])}
 						accessibilityRole="button"
 						accessibilityLabel={`Text alignment: ${align}`}
+						style={(state) => {
+							const { pressed, hovered } = interaction(state);
+							return [
+								styles.alignButton,
+								webTransition,
+								hovered && styles.alignButtonHovered,
+								pressed && styles.alignButtonPressed,
+							];
+						}}
 					>
 						<AlignIcon align={align} />
 					</Pressable>
-					<TextButton label="Done" tone="accent" onPress={done} />
+					<Button label="Done" variant="primary" size="small" onPress={done} />
 				</View>
 
 				<View style={styles.inputArea}>
@@ -134,12 +144,27 @@ const styles = StyleSheet.create({
 	},
 	// Opaque, so the screen header underneath doesn't show through.
 	toolbar: {
+		height: HEADER_HEIGHT,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		paddingHorizontal: 20,
-		paddingVertical: 14,
+		paddingHorizontal: 16,
 		backgroundColor: colors.background,
+	},
+	// A halo around the icon, overhanging so the bar keeps its spacing.
+	alignButton: {
+		width: 40,
+		height: 40,
+		margin: -9,
+		borderRadius: 20,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	alignButtonHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	alignButtonPressed: {
+		backgroundColor: colors.pressedOverlay,
 	},
 	inputArea: {
 		flex: 1,

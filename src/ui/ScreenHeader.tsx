@@ -1,18 +1,22 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { colors } from "@/theme";
-import { TextButton } from "./TextButton";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, fonts, HEADER_HEIGHT, webTransition } from "@/theme";
+import { interaction } from "./interaction";
 
 /**
  * Top bar with a Back action, an optional centered title, and an optional
- * trailing action (keep it text-sized so every header has the same height).
+ * trailing action. `backLabel` names where Back goes, when that says more
+ * than "Back".
  */
 export function ScreenHeader({
 	title,
+	backLabel = "Back",
 	onBack,
 	action,
 }: {
 	title?: string;
+	backLabel?: string;
 	onBack: () => void;
 	action?: ReactNode;
 }) {
@@ -20,22 +24,53 @@ export function ScreenHeader({
 		<View style={styles.container}>
 			{title && (
 				<View style={styles.titleContainer}>
-					<Text style={styles.title}>{title}</Text>
+					<Text style={styles.title} accessibilityRole="header">
+						{title}
+					</Text>
 				</View>
 			)}
-			<TextButton label="Back" onPress={onBack} />
+			<BackButton label={backLabel} onPress={onBack} />
 			{action}
 		</View>
 	);
 }
 
+function BackButton({
+	label,
+	onPress,
+}: {
+	label: string;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			hitSlop={6}
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			style={(state) => {
+				const { pressed, hovered } = interaction(state);
+				return [
+					styles.back,
+					webTransition,
+					hovered && styles.backHovered,
+					pressed && styles.backPressed,
+				];
+			}}
+		>
+			<Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+			<Text style={styles.backLabel}>{label}</Text>
+		</Pressable>
+	);
+}
+
 const styles = StyleSheet.create({
 	container: {
+		height: HEADER_HEIGHT,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		paddingHorizontal: 20,
-		paddingVertical: 14,
+		paddingHorizontal: 16,
 		borderBottomWidth: StyleSheet.hairlineWidth,
 		borderBottomColor: colors.border,
 	},
@@ -47,8 +82,29 @@ const styles = StyleSheet.create({
 		pointerEvents: "none",
 	},
 	title: {
+		fontFamily: fonts.display,
+		fontSize: 26,
+		color: colors.textPrimary,
+	},
+	// The chevron's own side bearing does for the highlight's left padding.
+	back: {
+		flexDirection: "row",
+		alignItems: "center",
+		height: 36,
+		paddingLeft: 4,
+		paddingRight: 12,
+		marginLeft: -6,
+		borderRadius: 18,
+	},
+	backHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	backPressed: {
+		backgroundColor: colors.pressedOverlay,
+	},
+	backLabel: {
 		fontSize: 16,
-		fontWeight: "600",
+		fontWeight: "500",
 		color: colors.textPrimary,
 	},
 });
