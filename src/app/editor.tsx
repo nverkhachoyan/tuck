@@ -15,7 +15,11 @@ import { pickPhoto } from "@/import/pickPhoto";
 import { assertNever } from "@/lib/assertNever";
 import { errorMessage } from "@/lib/errorMessage";
 import { showAlert } from "@/lib/showAlert";
-import { defaultTextStyle, type TextAlign } from "@/model/document";
+import {
+	defaultTextStyle,
+	maxNewImageShortSide,
+	type TextAlign,
+} from "@/model/document";
 import { addImage, useAutosave } from "@/projects/projects";
 import { useStore } from "@/store";
 import {
@@ -150,14 +154,17 @@ export default function EditorRoute() {
 
 	const closeCrop = useCallback(() => setCropping(false), []);
 
-	// The photo moves into the project first, so autosave knows its file.
-	// Without a project, it's used where the picker left it.
+	// The photo shrinks to what this canvas can use, then moves into the
+	// project, so autosave knows its file. Without a project, it's used where
+	// the picker left it.
 	const handleAddPhoto = async () => {
-		if (addingPhoto.current) return;
+		if (addingPhoto.current || !document) return;
 		addingPhoto.current = true;
 		setPhotoBusy(true);
 		try {
-			const result = await pickPhoto();
+			const result = await pickPhoto({
+				maxShortSide: maxNewImageShortSide(document),
+			});
 			if (result.status === "canceled") return;
 			const { uri, width, height } = result.photo;
 			const url = projectId === null ? uri : await addImage(projectId, uri);

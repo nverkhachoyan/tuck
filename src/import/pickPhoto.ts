@@ -1,11 +1,17 @@
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import { photoScale } from "./photoScale";
 
 export type PickedPhoto = { uri: string; width: number; height: number };
 
 export type PickPhotoResult =
 	| { status: "picked"; photo: PickedPhoto }
 	| { status: "canceled" };
+
+export type PickPhotoOptions = {
+	// Shrinks the photo so its shorter side is at most this many pixels.
+	maxShortSide?: number;
+};
 
 /**
  * Lets the user pick a photo, re-encoded so the editor can always read it.
@@ -14,7 +20,9 @@ export type PickPhotoResult =
  * so callers decide how to react to each outcome. Throws if the photo can't
  * be read or re-encoded.
  */
-export async function pickPhoto(): Promise<PickPhotoResult> {
+export async function pickPhoto({
+	maxShortSide,
+}: PickPhotoOptions = {}): Promise<PickPhotoResult> {
 	const result = await ImagePicker.launchImageLibraryAsync({
 		mediaTypes: ["images"],
 		quality: 1,
@@ -23,7 +31,10 @@ export async function pickPhoto(): Promise<PickPhotoResult> {
 		return { status: "canceled" };
 	}
 
-	const { uri, width, height } = await reencodeAsJpeg(result.assets[0].uri);
+	const { uri, width, height } = await reencodeAsJpeg(
+		result.assets[0].uri,
+		maxShortSide,
+	);
 	return { status: "picked", photo: { uri, width, height } };
 }
 
@@ -40,10 +51,10 @@ const JPEG_QUALITY = 0.92;
  * re-encoding here guarantees the editor can always load what the picker
  * returns, regardless of source format. Oversized photos shrink on the way.
  */
-async function reencodeAsJpeg(uri: string) {
+async function reencodeAsJpeg(uri: string, maxShortSide?: number) {
 	let image = await ImageManipulator.manipulate(uri).renderAsync();
 	// The rendered size already has the photo's EXIF rotation applied.
-	const scale = Math.sqrt(MAX_PHOTO_PIXELS / (image.width * image.height));
+	const scale = photoScale(image, MAX_PHOTO_PIXELS, maxShortSide);
 	if (scale < 1) {
 		const full = image;
 		image = await ImageManipulator.manipulate(full)

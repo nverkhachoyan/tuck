@@ -234,6 +234,22 @@ export function createTextLayer(
 // How much of the canvas a new image layer may take up, either way.
 const NEW_IMAGE_FIT = 0.8;
 
+// How far a new image layer can be enlarged past covering the canvas before
+// it blurs.
+const NEW_IMAGE_HEADROOM = 1.5;
+
+/**
+ * The longest a new image layer's shorter side is worth being, in pixels:
+ * enough to cover the canvas turned either way, with `NEW_IMAGE_HEADROOM` to
+ * spare. Past that, pixels only cost memory: the editor and export each hold
+ * every image decoded in full.
+ */
+export function maxNewImageShortSide(document: EditorDocument): number {
+	return Math.ceil(
+		Math.max(document.width, document.height) * NEW_IMAGE_HEADROOM,
+	);
+}
+
 /**
  * A photo as a new layer, centered and shrunk to sit well inside the canvas,
  * but never enlarged past its own pixels, which would blur it. It starts

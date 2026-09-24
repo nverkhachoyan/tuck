@@ -13,6 +13,7 @@ import {
 	hasTransparency,
 	type ImageLayer,
 	initialFontSize,
+	maxNewImageShortSide,
 	reorderLayer,
 } from "./document.ts";
 
@@ -240,6 +241,38 @@ describe("createImageLayer", () => {
 		const document = createBlankDocument(1080, 1080, null);
 		document.layers.push(createImageLayer(document, "a", 1080, 1080));
 		assert.equal(hasEdits(document), true);
+	});
+});
+
+describe("maxNewImageShortSide", () => {
+	test("covers the canvas turned either way, with room to enlarge", () => {
+		// A landscape photo filling a Story canvas needs a shorter side of 1920.
+		assert.equal(
+			maxNewImageShortSide(createBlankDocument(1080, 1920, null)),
+			2880,
+		);
+		assert.equal(
+			maxNewImageShortSide(createBlankDocument(1920, 1080, null)),
+			2880,
+		);
+		assert.equal(
+			maxNewImageShortSide(createBlankDocument(1081, 1081, null)),
+			1622,
+		);
+	});
+
+	test("keeps enough that a photo shrunk to it lands as the original would", () => {
+		const document = createBlankDocument(1080, 1350, "#FFFFFF");
+		assert.equal(maxNewImageShortSide(document), 2025);
+		// A 24MP camera photo, and the same photo with its shorter side at 2025.
+		for (const [width, height] of [
+			[5712, 4284],
+			[2700, 2025],
+		]) {
+			const { transform } = createImageLayer(document, "a", width, height);
+			assert.equal(Math.round(width * transform.scaleX), 864);
+			assert.equal(Math.round(height * transform.scaleY), 648);
+		}
 	});
 });
 
