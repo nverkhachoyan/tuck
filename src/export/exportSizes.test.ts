@@ -28,9 +28,14 @@ describe("exportSizes", () => {
 		assert.deepEqual(sizes(800, 600), [[800, 600]]);
 	});
 
+	test("exports an iPhone 24MP photo at its own size", () => {
+		assert.deepEqual(sizes(5712, 4284)[0], [5712, 4284]);
+		assert.deepEqual(sizes(4284, 5712)[0], [4284, 5712]);
+	});
+
 	test("shrinks a huge canvas to what export can hold", () => {
-		// √24,000,000 ≈ 4899.
-		assert.deepEqual(sizes(8000, 8000)[0], [4899, 4899]);
+		// √25,000,000 = 5000.
+		assert.deepEqual(sizes(8000, 8000)[0], [5000, 5000]);
 		const [long] = exportSizes({ width: 12000, height: 1000 });
 		assert.equal(long.width, 8192);
 	});

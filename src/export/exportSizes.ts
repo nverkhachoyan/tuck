@@ -2,8 +2,9 @@
 import type { Size } from "../model/geometry.ts";
 
 // The largest image export renders. A canvas expanded past a big photo can
-// ask for more than a phone can hold while encoding it.
-const MAX_PIXELS = 24_000_000;
+// ask for more than a phone can hold while encoding it. Matches the photo
+// picker's limit, so a photo exported at full size isn't resampled.
+const MAX_PIXELS = 25_000_000;
 const MAX_SIDE = 8192;
 
 // Smaller sizes offered, by their longer side: common for sharing online.

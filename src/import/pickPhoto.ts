@@ -1,6 +1,6 @@
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import { photoScale } from "./photoScale";
+import { MAX_PHOTO_PIXELS, photoScale } from "./photoScale";
 
 export type PickedPhoto = { uri: string; width: number; height: number };
 
@@ -37,11 +37,6 @@ export async function pickPhoto({
 	);
 	return { status: "picked", photo: { uri, width, height } };
 }
-
-// Larger photos are scaled down to this many pixels. The editor and export
-// each hold the photo decoded in full, so 48MP and larger camera modes can run
-// a phone out of memory; iPhone's default 24MP photos fit as they are.
-const MAX_PHOTO_PIXELS = 24_000_000;
 
 // Looks the same as 1, at about half the size on disk. Export uses 0.95.
 const JPEG_QUALITY = 0.92;

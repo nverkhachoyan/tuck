@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { photoScale } from "./photoScale.ts";
+import { MAX_PHOTO_PIXELS, photoScale } from "./photoScale.ts";
 
 const MP = 1_000_000;
 
@@ -21,6 +21,20 @@ describe("photoScale", () => {
 	test("shrinks the shorter side to its limit, either way round", () => {
 		assert.equal(photoScale({ width: 4000, height: 3000 }, 24 * MP, 1500), 0.5);
 		assert.equal(photoScale({ width: 3000, height: 4000 }, 24 * MP, 1500), 0.5);
+	});
+
+	test("keeps iPhone's 12MP and 24MP photos as they are, and shrinks 48MP ones", () => {
+		for (const [width, height] of [
+			[4032, 3024],
+			[5712, 4284],
+		]) {
+			assert.equal(photoScale({ width, height }, MAX_PHOTO_PIXELS), 1);
+			assert.equal(
+				photoScale({ width: height, height: width }, MAX_PHOTO_PIXELS),
+				1,
+			);
+		}
+		assert.ok(photoScale({ width: 8064, height: 6048 }, MAX_PHOTO_PIXELS) < 1);
 	});
 
 	test("takes whichever limit shrinks the photo more", () => {
