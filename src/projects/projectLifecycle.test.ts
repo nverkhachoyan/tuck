@@ -93,7 +93,7 @@ function createHarness(
 	};
 }
 
-const photo = { uri: "picked", width: 400, height: 300 };
+const photo = { uri: "picked", width: 400, height: 300, opaque: true };
 const canvas = { width: 1080, height: 1080, background: "#FFFFFF" };
 
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -108,7 +108,10 @@ function addText(document: EditorDocument, text: string): EditorDocument {
 function addPhoto(document: EditorDocument, url: string): EditorDocument {
 	return {
 		...document,
-		layers: [...document.layers, createImageLayer(document, url, 400, 300)],
+		layers: [
+			...document.layers,
+			createImageLayer(document, url, 400, 300, true),
+		],
 	};
 }
 
@@ -282,6 +285,23 @@ describe("closing and reopening", () => {
 		assert.equal(reopened?.layers.length, 1);
 	});
 
+	test("a transparent photo is kept as a PNG, not in the photo's file", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject({
+			...photo,
+			opaque: false,
+		});
+		assert.equal(imageLayers(document)[0].opaque, false);
+		await harness.projects.closeProject(id, addText(document, "CAPTION"));
+
+		const [saved] = imageLayers(savedProject(harness, id).document);
+		assert.notEqual(saved.uri, PHOTO_FILE);
+		assert.match(saved.uri, /\.png$/);
+		assert.deepEqual([...(harness.images.get(id) ?? [])], [saved.uri]);
+		const [reopened] = imageLayers(await harness.projects.openProject(id));
+		assert.equal(reopened.opaque, false);
+	});
+
 	test("opening a project that no longer exists fails", async () => {
 		const harness = createHarness();
 		await assert.rejects(
@@ -296,7 +316,7 @@ describe("added photos", () => {
 		const harness = createHarness();
 		const { projects } = harness;
 		const { id, document } = await projects.createProject(photo);
-		const url = await projects.addImage(id, "picked-2");
+		const url = await projects.addImage(id, "picked-2", true);
 		await projects.closeProject(id, addPhoto(document, url));
 
 		const files = imageLayers(savedProject(harness, id).document).map(
@@ -314,12 +334,29 @@ describe("added photos", () => {
 		);
 	});
 
+	test("a transparent one is saved as a PNG, and reopens as one", async () => {
+		const harness = createHarness();
+		const { projects } = harness;
+		const { id, document } = await projects.createBlankProject(canvas);
+		const url = await projects.addImage(id, "picked", false);
+		await projects.closeProject(id, {
+			...document,
+			layers: [createImageLayer(document, url, 400, 300, false)],
+		});
+
+		const [saved] = imageLayers(savedProject(harness, id).document);
+		assert.match(saved.uri, /\.png$/);
+		assert.ok(isImageFile(saved.uri), saved.uri);
+		const [reopened] = imageLayers(await projects.openProject(id));
+		assert.equal(reopened.opaque, false);
+	});
+
 	test("a blank canvas can hold several", async () => {
 		const harness = createHarness();
 		const { projects } = harness;
 		const { id, document } = await projects.createBlankProject(canvas);
-		const first = await projects.addImage(id, "picked-1");
-		const second = await projects.addImage(id, "picked-2");
+		const first = await projects.addImage(id, "picked-1", true);
+		const second = await projects.addImage(id, "picked-2", true);
 		assert.notEqual(first, second);
 		await projects.closeProject(
 			id,
@@ -334,7 +371,7 @@ describe("added photos", () => {
 		const harness = createHarness();
 		const { projects } = harness;
 		const { id, document } = await projects.createBlankProject(canvas);
-		const url = await projects.addImage(id, "picked");
+		const url = await projects.addImage(id, "picked", true);
 		// A duplicate shares its original's file.
 		const copies = addPhoto(addPhoto(document, url), url);
 		await projects.closeProject(id, {
@@ -369,7 +406,7 @@ describe("added photos", () => {
 		const harness = createHarness();
 		const { projects } = harness;
 		const { id, document } = await projects.createProject(photo);
-		const url = await projects.addImage(id, "picked");
+		const url = await projects.addImage(id, "picked", true);
 		await projects.closeProject(id, addPhoto(document, url));
 		assert.deepEqual(
 			harness.released.toSorted(),
@@ -381,7 +418,7 @@ describe("added photos", () => {
 		const harness = createHarness();
 		const { projects } = harness;
 		const { id, document } = await projects.createProject(photo);
-		const url = await projects.addImage(id, "picked");
+		const url = await projects.addImage(id, "picked", true);
 		await projects.closeProject(id, addPhoto(document, url));
 		harness.released.length = 0;
 		harness.images.get(id)?.delete(url.slice(`blob:${id}/`.length));
@@ -408,10 +445,13 @@ describe("added photos", () => {
 	test("adding to a project that isn't open fails", async () => {
 		const harness = createHarness();
 		const { projects } = harness;
-		await assert.rejects(projects.addImage("missing", "picked"), /isn't open/);
+		await assert.rejects(
+			projects.addImage("missing", "picked", true),
+			/isn't open/,
+		);
 		const { id, document } = await projects.createBlankProject(canvas);
 		await projects.closeProject(id, document);
-		await assert.rejects(projects.addImage(id, "picked"), /isn't open/);
+		await assert.rejects(projects.addImage(id, "picked", true), /isn't open/);
 	});
 
 	test("a project naming image files this version doesn't write is unavailable", async () => {

@@ -166,12 +166,16 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		uri: string;
 		width: number;
 		height: number;
+		opaque: boolean;
 	}): Promise<{ id: string; document: EditorDocument }> {
+		const { uri, width, height, opaque } = photo;
 		return startProject(async (id) => {
-			const url = await storage.storeImage(id, PHOTO_FILE, photo.uri);
+			// `PHOTO_FILE` is a JPEG, so a PNG gets a name of its own.
+			const file = opaque ? PHOTO_FILE : newImageFile(opaque);
+			const url = await storage.storeImage(id, file, uri);
 			return {
-				images: new Map([[url, PHOTO_FILE]]),
-				document: createDocumentFromImage(url, photo.width, photo.height),
+				images: new Map([[url, file]]),
+				document: createDocumentFromImage(url, width, height, opaque),
 			};
 		});
 	}
@@ -346,10 +350,14 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	 * Moves a picked photo into an open project as a file of its own, and
 	 * returns its URL there, for a new image layer's `uri`.
 	 */
-	async function addImage(id: string, uri: string): Promise<string> {
+	async function addImage(
+		id: string,
+		uri: string,
+		opaque: boolean,
+	): Promise<string> {
 		const project = openProjects.get(id);
 		if (!project) throw new Error("This project isn't open.");
-		const file = newImageFile();
+		const file = newImageFile(opaque);
 		const url = await storage.storeImage(id, file, uri);
 		// Closed meanwhile: the unused file goes when the project next closes,
 		// or with the project, if it wasn't kept.

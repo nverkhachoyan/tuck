@@ -28,7 +28,12 @@ const near = (actual: number, expected: number) =>
 
 // A 4000×3000 photo with text near its top-left corner, tilted a little.
 function documentWithText(): EditorDocument {
-	const document = createDocumentFromImage("file:///photo.jpg", 4000, 3000);
+	const document = createDocumentFromImage(
+		"file:///photo.jpg",
+		4000,
+		3000,
+		true,
+	);
 	const text = createTextLayer(document, "TOP TEXT", "center");
 	text.transform = { ...text.transform, x: 1000, y: 500, rotation: 0.2 };
 	document.layers.push(text);
@@ -164,12 +169,20 @@ describe("framingAnchor", () => {
 
 	test("passes over unlocked images: added photos follow the canvas", () => {
 		const document = documentWithText();
-		const added = createImageLayer(document, "file:///added.jpg", 400, 300);
+		const added = createImageLayer(
+			document,
+			"file:///added.jpg",
+			400,
+			300,
+			true,
+		);
 		document.layers.unshift(added);
 		assert.equal(framingAnchor(document).layer, document.layers[1]);
 
 		const blank = createBlankDocument(1080, 1080, "#FFFFFF");
-		blank.layers.push(createImageLayer(blank, "file:///added.jpg", 400, 300));
+		blank.layers.push(
+			createImageLayer(blank, "file:///added.jpg", 400, 300, true),
+		);
 		assert.equal(framingAnchor(blank).layer, null);
 		blank.layers[0].locked = true;
 		assert.equal(framingAnchor(blank).layer, blank.layers[0]);
@@ -220,7 +233,13 @@ describe("reframing a canvas without a photo", () => {
 
 	test("moves an unlocked photo along like any layer", () => {
 		const document = blankWithText();
-		const added = createImageLayer(document, "file:///added.jpg", 400, 300);
+		const added = createImageLayer(
+			document,
+			"file:///added.jpg",
+			400,
+			300,
+			true,
+		);
 		document.layers.push(added);
 		// The bottom half.
 		const current = documentFraming(document);

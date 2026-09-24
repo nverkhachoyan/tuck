@@ -1,8 +1,15 @@
+import { AlphaType, ColorType, Skia } from "@shopify/react-native-skia";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { MAX_PHOTO_PIXELS, photoScale } from "./photoScale";
 
-export type PickedPhoto = { uri: string; width: number; height: number };
+export type PickedPhoto = {
+	uri: string;
+	width: number;
+	height: number;
+	// A JPEG if every pixel is opaque, else a PNG, which keeps transparency.
+	opaque: boolean;
+};
 
 export type PickPhotoResult =
 	| { status: "picked"; photo: PickedPhoto }
@@ -31,11 +38,8 @@ export async function pickPhoto({
 		return { status: "canceled" };
 	}
 
-	const { uri, width, height } = await reencodeAsJpeg(
-		result.assets[0].uri,
-		maxShortSide,
-	);
-	return { status: "picked", photo: { uri, width, height } };
+	const photo = await reencode(result.assets[0].uri, maxShortSide);
+	return { status: "picked", photo };
 }
 
 /**
@@ -47,12 +51,7 @@ export async function importPhoto(
 	uri: string,
 	{ maxShortSide }: PickPhotoOptions = {},
 ): Promise<PickedPhoto> {
-	const {
-		width,
-		height,
-		uri: encoded,
-	} = await reencodeAsJpeg(uri, maxShortSide);
-	return { uri: encoded, width, height };
+	return reencode(uri, maxShortSide);
 }
 
 // Looks the same as 1, at about half the size on disk. Export uses 0.95.
@@ -62,8 +61,13 @@ const JPEG_QUALITY = 0.92;
  * iOS photos are HEIC by default, which Skia's image codec cannot decode —
  * re-encoding here guarantees the editor can always load what the picker
  * returns, regardless of source format. Oversized photos shrink on the way.
+ * JPEG can't hold transparency, so an image with any becomes a PNG.
  */
-async function reencodeAsJpeg(uri: string, maxShortSide?: number) {
+async function reencode(
+	uri: string,
+	maxShortSide?: number,
+): Promise<PickedPhoto> {
+	const opaque = await isOpaque(uri);
 	let image = await ImageManipulator.manipulate(uri).renderAsync();
 	// The rendered size already has the photo's EXIF rotation applied.
 	const scale = photoScale(image, MAX_PHOTO_PIXELS, maxShortSide);
@@ -75,11 +79,54 @@ async function reencodeAsJpeg(uri: string, maxShortSide?: number) {
 		full.release();
 	}
 	try {
-		return await image.saveAsync({
-			format: SaveFormat.JPEG,
-			compress: JPEG_QUALITY,
-		});
+		const {
+			width,
+			height,
+			uri: encoded,
+		} = await image.saveAsync(
+			opaque
+				? { format: SaveFormat.JPEG, compress: JPEG_QUALITY }
+				: { format: SaveFormat.PNG },
+		);
+		return { uri: encoded, width, height, opaque };
 	} finally {
 		image.release();
+	}
+}
+
+// How many pixels `isOpaque` copies out at a time, so a large image's
+// aren't all copied at once.
+const SCAN_PIXELS = 1 << 20;
+
+/**
+ * Whether every pixel of an image is opaque. Most images' formats say so;
+ * one with an alpha channel, as screenshots often have, is checked pixel by
+ * pixel. An image Skia can't decode, like an iPhone's HEIC photos, counts as
+ * opaque.
+ */
+async function isOpaque(uri: string): Promise<boolean> {
+	const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
+	if (!image) return true;
+	try {
+		const { width, height, alphaType } = image.getImageInfo();
+		if (alphaType === AlphaType.Opaque) return true;
+		const rows = Math.max(1, Math.floor(SCAN_PIXELS / width));
+		for (let y = 0; y < height; y += rows) {
+			// Web's Skia reads only RGBA, not the alpha channel alone.
+			const pixels = image.readPixels(0, y, {
+				width,
+				height: Math.min(rows, height - y),
+				colorType: ColorType.RGBA_8888,
+				alphaType: AlphaType.Premul,
+			});
+			// Unchecked counts as transparent: a PNG costs space, never pixels.
+			if (!pixels) return false;
+			for (let alpha = 3; alpha < pixels.length; alpha += 4) {
+				if (pixels[alpha] < 255) return false;
+			}
+		}
+		return true;
+	} finally {
+		image.dispose();
 	}
 }

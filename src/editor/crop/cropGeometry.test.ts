@@ -36,7 +36,7 @@ const near = (actual: number, expected: number, tolerance = 1e-9) =>
 
 const photo = { width: 4000, height: 3000 };
 const landscape = () =>
-	createDocumentFromImage("file:///photo.jpg", 4000, 3000);
+	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true);
 
 // Applies a finished crop the way the crop tool's Done does.
 function applyCrop(document: EditorDocument, state: CropState) {

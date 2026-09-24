@@ -7,24 +7,29 @@ import { type EditorDocument, textFonts } from "../model/document.ts";
 // there may be none. An app that expects it there can't open these.
 // Photos added later, each in a file of its own, kept version 3: builds from
 // before them open only image layers naming `PHOTO_FILE`, and list the rest
-// as unavailable.
+// as unavailable. So did image layers' `opaque`: builds from before it save
+// only JPEGs, so a layer without it is opaque, and they don't open PNGs.
 export const PROJECT_VERSION = 3;
 
 // The file of the photo a project was made from. Saved image layers name a
 // file in the project as their `uri`: this one, or an added photo's.
 export const PHOTO_FILE = "original.jpg";
 
-const ADDED_PHOTO_FILE = /^image-[a-z0-9-]+\.jpg$/;
+const ADDED_PHOTO_FILE = /^image-[a-z0-9-]+\.(jpg|png)$/;
 
-/** A new file name for a photo added to a project. */
-export function newImageFile(): string {
+/**
+ * A new file name for a photo added to a project: a JPEG's, or a PNG's if
+ * it isn't opaque (see `PickedPhoto`).
+ */
+export function newImageFile(opaque: boolean): string {
 	const random = Math.random().toString(36).slice(2, 8);
-	return `image-${Date.now().toString(36)}-${random}.jpg`;
+	return `image-${Date.now().toString(36)}-${random}.${opaque ? "jpg" : "png"}`;
 }
 
 /**
- * Whether a saved image layer's `uri` names a file this version writes. Only
- * JPEGs, which it can take to be opaque (see `hasTransparency`).
+ * Whether a saved image layer's `uri` names a file this version writes.
+ * Builds from before transparent images know only the JPEGs, which they take
+ * to be opaque (see `hasTransparency`), so they can't open a PNG's project.
  */
 export function isImageFile(uri: string): boolean {
 	return uri === PHOTO_FILE || ADDED_PHOTO_FILE.test(uri);
@@ -103,9 +108,37 @@ function isFields(value: unknown): value is Fields {
 function upgradeProject(value: unknown): unknown {
 	const upgraded = upgradeFromVersion1(value);
 	// Every version 2 project is also a version 3 one, with the photo first.
-	return isFields(upgraded) && upgraded.version === 2
-		? { ...upgraded, version: 3 }
-		: upgraded;
+	return upgradeImageOpacity(
+		isFields(upgraded) && upgraded.version === 2
+			? { ...upgraded, version: 3 }
+			: upgraded,
+	);
+}
+
+/**
+ * A project with each image layer saved before transparent images marked
+ * opaque, since it's a JPEG. Anything else is returned as is.
+ */
+function upgradeImageOpacity(value: unknown): unknown {
+	if (
+		!isFields(value) ||
+		!isFields(value.document) ||
+		!Array.isArray(value.document.layers)
+	) {
+		return value;
+	}
+	const layers: unknown[] = value.document.layers;
+	return {
+		...value,
+		document: {
+			...value.document,
+			layers: layers.map((layer) =>
+				isFields(layer) && layer.type === "image" && !("opaque" in layer)
+					? { ...layer, opaque: true }
+					: layer,
+			),
+		},
+	};
 }
 
 /**
@@ -187,7 +220,8 @@ function isLayer(value: unknown): boolean {
 				typeof value.uri === "string" &&
 				isPositive(value.width) &&
 				isPositive(value.height) &&
-				typeof value.flipped === "boolean"
+				typeof value.flipped === "boolean" &&
+				typeof value.opaque === "boolean"
 			);
 		case "text":
 			return (

@@ -18,7 +18,8 @@ import {
 } from "./editorSlice.ts";
 import type { StoreState } from "./index.ts";
 
-const photo = () => createDocumentFromImage("file:///photo.jpg", 4000, 3000);
+const photo = () =>
+	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true);
 
 function createTestStore() {
 	return createStore<StoreState>()(
@@ -70,7 +71,7 @@ describe("editorSlice", () => {
 
 	test("adding a photo puts it on top, fitted and unlocked, and selects it", () => {
 		const { store, text } = storeWithText();
-		store.getState().addImageLayer("file:///added.jpg", 8000, 6000);
+		store.getState().addImageLayer("file:///added.jpg", 8000, 6000, true);
 		const added = store.getState().document?.layers.at(-1);
 		assert.ok(added?.type === "image");
 		assert.equal(added.uri, "file:///added.jpg");
@@ -90,8 +91,8 @@ describe("editorSlice", () => {
 		store
 			.getState()
 			.openDocument(createBlankDocument(1080, 1080, null), "project-1");
-		store.getState().addImageLayer("file:///a.jpg", 400, 300);
-		store.getState().addImageLayer("file:///b.jpg", 400, 300);
+		store.getState().addImageLayer("file:///a.jpg", 400, 300, true);
+		store.getState().addImageLayer("file:///b.jpg", 400, 300, true);
 		const [first, second] = store.getState().document?.layers ?? [];
 		assert.equal(store.getState().selectedLayerId, second.id);
 		store.getState().nudgeLayer(first.id, 10, 0);
@@ -315,7 +316,7 @@ describe("editorSlice", () => {
 		const store = createTestStore();
 		const before = store.getState();
 		before.addTextLayer("x", "center");
-		before.addImageLayer("x", 1, 1);
+		before.addImageLayer("x", 1, 1, true);
 		before.updateSelectedText({ text: "y" });
 		before.duplicateSelectedLayer();
 		before.moveLayer("x", 1);

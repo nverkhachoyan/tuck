@@ -38,7 +38,12 @@ export type EditorSlice = {
 	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
 	addTextLayer: (text: string, align: TextAlign) => void;
-	addImageLayer: (uri: string, width: number, height: number) => void;
+	addImageLayer: (
+		uri: string,
+		width: number,
+		height: number,
+		opaque: boolean,
+	) => void;
 	duplicateSelectedLayer: () => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
@@ -148,12 +153,12 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			addOnTop("editor/addTextLayer", createTextLayer(document, text, align));
 		},
 
-		addImageLayer: (uri, width, height) => {
+		addImageLayer: (uri, width, height, opaque) => {
 			const { document } = get();
 			if (!document) return;
 			addOnTop(
 				"editor/addImageLayer",
-				createImageLayer(document, uri, width, height),
+				createImageLayer(document, uri, width, height, opaque),
 			);
 		},
 

@@ -18,7 +18,7 @@ import {
 } from "./document.ts";
 
 const landscape = () =>
-	createDocumentFromImage("file:///photo.jpg", 4000, 3000);
+	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true);
 
 describe("createDocumentFromImage", () => {
 	test("is sized to the photo, with the photo as its only layer", () => {
@@ -150,6 +150,16 @@ describe("hasTransparency", () => {
 		);
 	});
 
+	test("is true while only a transparent image covers the canvas", () => {
+		const document = landscape();
+		const [photo] = document.layers;
+		const cutout = { ...photo, id: "cutout", opaque: false };
+		document.layers = [cutout];
+		assert.equal(hasTransparency(document), true);
+		document.layers = [photo, cutout];
+		assert.equal(hasTransparency(document), false);
+	});
+
 	test("is false while any visible image covers the canvas", () => {
 		const document = landscape();
 		const [photo] = document.layers;
@@ -162,8 +172,12 @@ describe("hasTransparency", () => {
 
 describe("initialFontSize", () => {
 	test("scales with the photo's shorter side", () => {
-		const small = initialFontSize(createDocumentFromImage("a", 1000, 2000));
-		const large = initialFontSize(createDocumentFromImage("b", 4000, 3000));
+		const small = initialFontSize(
+			createDocumentFromImage("a", 1000, 2000, true),
+		);
+		const large = initialFontSize(
+			createDocumentFromImage("b", 4000, 3000, true),
+		);
 		assert.equal(large / small, 3);
 	});
 });
@@ -198,7 +212,13 @@ describe("createTextLayer", () => {
 describe("createImageLayer", () => {
 	test("centers a large photo, shrunk to fit well inside the canvas", () => {
 		const document = createBlankDocument(1080, 1920, "#FFFFFF");
-		const layer = createImageLayer(document, "file:///added.jpg", 4000, 3000);
+		const layer = createImageLayer(
+			document,
+			"file:///added.jpg",
+			4000,
+			3000,
+			true,
+		);
 		const scale = (1080 * 0.8) / 4000;
 		assert.deepEqual(layer, {
 			type: "image",
@@ -207,6 +227,7 @@ describe("createImageLayer", () => {
 			width: 4000,
 			height: 3000,
 			flipped: false,
+			opaque: true,
 			transform: { x: 540, y: 960, scaleX: scale, scaleY: scale, rotation: 0 },
 			hidden: false,
 			locked: false,
@@ -214,14 +235,14 @@ describe("createImageLayer", () => {
 	});
 
 	test("fits by whichever side is tighter", () => {
-		const layer = createImageLayer(landscape(), "a", 1000, 3000);
+		const layer = createImageLayer(landscape(), "a", 1000, 3000, true);
 		assert.equal(layer.transform.scaleX, (3000 * 0.8) / 3000);
-		const wide = createImageLayer(landscape(), "b", 8000, 1000);
+		const wide = createImageLayer(landscape(), "b", 8000, 1000, true);
 		assert.equal(wide.transform.scaleX, (4000 * 0.8) / 8000);
 	});
 
 	test("never enlarges a small photo", () => {
-		const layer = createImageLayer(landscape(), "a", 300, 200);
+		const layer = createImageLayer(landscape(), "a", 300, 200, true);
 		assert.equal(layer.transform.scaleX, 1);
 		assert.equal(layer.transform.scaleY, 1);
 	});
@@ -231,7 +252,7 @@ describe("createImageLayer", () => {
 		const ids = new Set(
 			Array.from(
 				{ length: 50 },
-				() => createImageLayer(document, "a", 10, 10).id,
+				() => createImageLayer(document, "a", 10, 10, true).id,
 			),
 		);
 		assert.equal(ids.size, 50);
@@ -239,7 +260,7 @@ describe("createImageLayer", () => {
 
 	test("counts as an edit, even on a transparent canvas its own size", () => {
 		const document = createBlankDocument(1080, 1080, null);
-		document.layers.push(createImageLayer(document, "a", 1080, 1080));
+		document.layers.push(createImageLayer(document, "a", 1080, 1080, true));
 		assert.equal(hasEdits(document), true);
 	});
 });
@@ -269,7 +290,13 @@ describe("maxNewImageShortSide", () => {
 			[5712, 4284],
 			[2700, 2025],
 		]) {
-			const { transform } = createImageLayer(document, "a", width, height);
+			const { transform } = createImageLayer(
+				document,
+				"a",
+				width,
+				height,
+				true,
+			);
 			assert.equal(Math.round(width * transform.scaleX), 864);
 			assert.equal(Math.round(height * transform.scaleY), 648);
 		}
@@ -301,6 +328,7 @@ describe("duplicateLayer", () => {
 			uri: "file:///sticker.png",
 			width: 400,
 			height: 200,
+			opaque: false,
 			transform: { x: 100, y: 200, scaleX: 3, scaleY: 3, rotation: 0 },
 			hidden: false,
 			locked: false,

@@ -19,7 +19,12 @@ import {
 } from "./projectFile.ts";
 
 function documentWithText(...texts: string[]): EditorDocument {
-	const document = createDocumentFromImage("file:///photo.jpg", 4000, 3000);
+	const document = createDocumentFromImage(
+		"file:///photo.jpg",
+		4000,
+		3000,
+		true,
+	);
 	for (const text of texts) {
 		document.layers.push(createTextLayer(document, text, "center"));
 	}
@@ -54,7 +59,9 @@ describe("mapImageUris", () => {
 
 describe("image files", () => {
 	test("the photo's file and new ones are known, and new ones differ", () => {
-		const names = new Set(Array.from({ length: 50 }, newImageFile));
+		const names = new Set(
+			Array.from({ length: 50 }, (_, i) => newImageFile(i % 2 === 0)),
+		);
 		assert.equal(names.size, 50);
 		assert.ok(!names.has(PHOTO_FILE));
 		for (const name of [PHOTO_FILE, ...names]) {
@@ -62,13 +69,19 @@ describe("image files", () => {
 		}
 	});
 
+	test("a new file is a JPEG's for an opaque image, else a PNG's", () => {
+		assert.match(newImageFile(true), /\.jpg$/);
+		assert.match(newImageFile(false), /\.png$/);
+	});
+
 	test("anything else isn't, such as a path or another format", () => {
 		const unknown = [
 			"",
 			"file:///original.jpg",
 			"../original.jpg",
+			"original.png",
 			"image-a/b.jpg",
-			"image-a.png",
+			"image-a.webp",
 			"stickers/cat.png",
 		];
 		for (const name of unknown) {
@@ -102,7 +115,7 @@ describe("parseSavedProject", () => {
 		const layers = document.layers.map((layer) => {
 			const { locked, ...rest } = layer;
 			if (rest.type !== "image") return rest;
-			const { flipped, ...image } = rest;
+			const { flipped, opaque, ...image } = rest;
 			return image;
 		});
 		const project = parseSavedProject(
@@ -120,6 +133,19 @@ describe("parseSavedProject", () => {
 		const project = parseSavedProject(savedJson({ version: 2, document }));
 		assert.equal(project?.version, PROJECT_VERSION);
 		assert.deepEqual(project?.document, document);
+	});
+
+	test("reads image layers from before transparent images as opaque", () => {
+		const current = mapImageUris(documentWithText("TOP"), () => "original.jpg");
+		const layers = current.layers.map((layer) => {
+			if (layer.type !== "image") return layer;
+			const { opaque, ...image } = layer;
+			return image;
+		});
+		const project = parseSavedProject(
+			savedJson({ document: { ...current, layers } } as never),
+		);
+		assert.deepEqual(project?.document, current);
 	});
 
 	test("reads a blank canvas, and a photo that isn't first", () => {
@@ -193,6 +219,9 @@ describe("parseSavedProject", () => {
 						},
 					],
 				},
+			} as unknown as Partial<SavedProject>),
+			savedJson({
+				document: { ...photo, layers: [{ ...photo.layers[0], opaque: 1 }] },
 			} as unknown as Partial<SavedProject>),
 		];
 		for (const json of unreadable) {

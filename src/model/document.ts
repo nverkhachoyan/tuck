@@ -11,12 +11,14 @@ type LayerBase = {
 
 // transform.x/y is the image's center in document space. `flipped` mirrors
 // it within its own space, which keeps its transform's scale positive.
+// `opaque` is whether every pixel is: photos are, a PNG may not be.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
 	width: number;
 	height: number;
 	flipped: boolean;
+	opaque: boolean;
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -97,6 +99,7 @@ export function createDocumentFromImage(
 	uri: string,
 	width: number,
 	height: number,
+	opaque: boolean,
 ): EditorDocument {
 	return {
 		width,
@@ -110,6 +113,7 @@ export function createDocumentFromImage(
 				width,
 				height,
 				flipped: false,
+				opaque,
 				transform: centeredTransform(width, height),
 				hidden: false,
 				locked: true,
@@ -161,9 +165,9 @@ const COVER_TOLERANCE = 0.01;
 
 /**
  * Whether any of the canvas would export transparent: it has no background
- * and no visible image covers all of it (picked photos are JPEGs, so opaque).
- * Images that only cover it together count as transparent too, which costs a
- * larger file, never a wrong one. Such a document exports as PNG.
+ * and no visible opaque image covers all of it. Images that only cover it
+ * together count as transparent too, which costs a larger file, never a
+ * wrong one. Such a document exports as PNG.
  */
 export function hasTransparency(document: EditorDocument): boolean {
 	if (document.background !== null) return false;
@@ -174,7 +178,7 @@ export function hasTransparency(document: EditorDocument): boolean {
 		{ x: 0, y: document.height },
 	];
 	return !document.layers.some((layer) => {
-		if (layer.type !== "image" || layer.hidden) return false;
+		if (layer.type !== "image" || layer.hidden || !layer.opaque) return false;
 		const box = {
 			halfWidth: layer.width / 2 + COVER_TOLERANCE,
 			halfHeight: layer.height / 2 + COVER_TOLERANCE,
@@ -260,6 +264,7 @@ export function createImageLayer(
 	uri: string,
 	width: number,
 	height: number,
+	opaque: boolean,
 ): ImageLayer {
 	const scale = Math.min(
 		1,
@@ -273,6 +278,7 @@ export function createImageLayer(
 		width,
 		height,
 		flipped: false,
+		opaque,
 		transform: {
 			...centeredTransform(document.width, document.height),
 			scaleX: scale,

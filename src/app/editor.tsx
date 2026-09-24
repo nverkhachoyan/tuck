@@ -169,10 +169,11 @@ export default function EditorRoute() {
 		try {
 			const photo = await load(maxNewImageShortSide(document));
 			if (!photo) return;
-			const { uri, width, height } = photo;
-			const url = projectId === null ? uri : await addImage(projectId, uri);
+			const { uri, width, height, opaque } = photo;
+			const url =
+				projectId === null ? uri : await addImage(projectId, uri, opaque);
 			canvasRef.current?.flushPendingTransform();
-			addImageLayer(url, width, height);
+			addImageLayer(url, width, height, opaque);
 		} catch (error) {
 			showAlert("Couldn't add photo", errorMessage(error));
 		} finally {

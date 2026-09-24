@@ -23,7 +23,7 @@ const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("decodeImageLayers", () => {
 	test("shares a decode between layers with the same URI", async () => {
-		const document = createDocumentFromImage("photo.jpg", 100, 80);
+		const document = createDocumentFromImage("photo.jpg", 100, 80, true);
 		const photo = document.layers[0] as ImageLayer;
 		const copy = duplicateLayer({ ...photo, locked: false });
 		document.layers.push(copy);
@@ -46,7 +46,7 @@ describe("decodeImageLayers", () => {
 	});
 
 	test("reuses an image another holder has decoded, and leaves it to them", async () => {
-		const document = createDocumentFromImage("photo.jpg", 100, 80);
+		const document = createDocumentFromImage("photo.jpg", 100, 80, true);
 		const photo = document.layers[0] as ImageLayer;
 		const decoded = fakeImage();
 		let calls = 0;
@@ -70,7 +70,7 @@ describe("decodeImageLayers", () => {
 	});
 
 	test("releases earlier images when a later decode fails", async () => {
-		const document = createDocumentFromImage("first.jpg", 100, 80);
+		const document = createDocumentFromImage("first.jpg", 100, 80, true);
 		const first = fakeImage();
 		const second = {
 			...(document.layers[0] as ImageLayer),

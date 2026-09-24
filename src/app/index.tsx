@@ -129,10 +129,10 @@ export default function WelcomeRoute() {
 	const openPhoto = (photo: PickedPhoto) =>
 		createProject(photo).catch((error: unknown) => {
 			console.warn("Couldn't save the photo as a project", error);
-			const { uri, width, height } = photo;
+			const { uri, width, height, opaque } = photo;
 			return {
 				id: null,
-				document: createDocumentFromImage(uri, width, height),
+				document: createDocumentFromImage(uri, width, height, opaque),
 			};
 		});
 
