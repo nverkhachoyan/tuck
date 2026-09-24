@@ -231,6 +231,42 @@ export function createTextLayer(
 	};
 }
 
+// How much of the canvas a new image layer may take up, either way.
+const NEW_IMAGE_FIT = 0.8;
+
+/**
+ * A photo as a new layer, centered and shrunk to sit well inside the canvas,
+ * but never enlarged past its own pixels, which would blur it. It starts
+ * unlocked, so it moves on the canvas and the crop tool doesn't frame it.
+ */
+export function createImageLayer(
+	document: EditorDocument,
+	uri: string,
+	width: number,
+	height: number,
+): ImageLayer {
+	const scale = Math.min(
+		1,
+		(document.width * NEW_IMAGE_FIT) / width,
+		(document.height * NEW_IMAGE_FIT) / height,
+	);
+	return {
+		type: "image",
+		id: createLayerId("image"),
+		uri,
+		width,
+		height,
+		flipped: false,
+		transform: {
+			...centeredTransform(document.width, document.height),
+			scaleX: scale,
+			scaleY: scale,
+		},
+		hidden: false,
+		locked: false,
+	};
+}
+
 /**
  * A copy of a layer with a new id, nudged down and right so it's visibly
  * separate from the original instead of hiding it.

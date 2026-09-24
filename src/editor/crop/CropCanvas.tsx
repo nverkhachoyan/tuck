@@ -68,7 +68,7 @@ type CropCanvasProps = {
  * The crop tool's canvas: the photo in crop space, turned and flipped as
  * it'll be, with the document's other layers where they'll land. Outside the
  * box is dimmed; inside it shows the canvas's background where the photo
- * doesn't reach. With no photo, nothing is drawn for the anchor.
+ * doesn't reach. With no locked photo, nothing is drawn for the anchor.
  */
 export function CropCanvas({
 	document,

@@ -1,9 +1,8 @@
 import { Directory, File, Paths } from "expo-file-system";
-import { PHOTO_FILE } from "./projectFile";
 
 // `projectStorage.web.ts` implements the same API for browsers. Each project
-// is a folder holding its photo, if it has one, and once it has been saved,
-// its JSON.
+// is a folder holding its image files, if it has any, and once it has been
+// saved, its JSON.
 
 const PROJECT = "project.json";
 const PROJECT_DRAFT = "project.json.tmp";
@@ -19,27 +18,48 @@ export async function claimProject(_id: string): Promise<boolean> {
 
 export async function releaseProject(_id: string) {}
 
-/** Moves a picked photo into a new project, and returns its URL there. */
-export async function storePhoto(id: string, uri: string): Promise<string> {
+/** Moves a picked photo into a project as `file`, and returns its URL there. */
+export async function storeImage(
+	id: string,
+	file: string,
+	uri: string,
+): Promise<string> {
 	const directory = projectDirectory(id);
 	directory.create({ intermediates: true, idempotent: true });
-	const photo = new File(directory, PHOTO_FILE);
-	await new File(uri).move(photo, { overwrite: true });
-	return photo.uri;
+	const image = new File(directory, file);
+	await new File(uri).move(image, { overwrite: true });
+	return image.uri;
 }
 
-export async function photoUrl(id: string): Promise<string> {
-	const photo = new File(projectDirectory(id), PHOTO_FILE);
-	if (!photo.exists) throw new Error("This project's photo is missing.");
-	return photo.uri;
+export async function imageUrl(id: string, file: string): Promise<string> {
+	const image = new File(projectDirectory(id), file);
+	if (!image.exists) {
+		throw new Error("One of this project's photos is missing.");
+	}
+	return image.uri;
 }
 
-/** Nothing to free: the photo's URL is a file path. */
-export function releasePhoto(_url: string) {}
+/** Nothing to free: an image's URL is a file path. */
+export function releaseImage(_url: string) {}
 
-export async function removePhoto(id: string) {
-	const photo = new File(projectDirectory(id), PHOTO_FILE);
-	if (photo.exists) photo.delete();
+/** The project's image files: every file in its folder but its JSON. */
+export async function listImages(id: string): Promise<string[]> {
+	const directory = projectDirectory(id);
+	if (!directory.exists) return [];
+	return directory
+		.list()
+		.filter(
+			(entry) =>
+				entry instanceof File &&
+				entry.name !== PROJECT &&
+				entry.name !== PROJECT_DRAFT,
+		)
+		.map((entry) => entry.name);
+}
+
+export async function removeImage(id: string, file: string) {
+	const image = new File(projectDirectory(id), file);
+	if (image.exists) image.delete();
 }
 
 /** The project's JSON, or null if it was never saved. */
@@ -56,7 +76,7 @@ export async function readProjectFile(id: string): Promise<string | null> {
 /** Writes a draft first, so a save that's cut short can't leave half a file. */
 export async function writeProjectFile(id: string, json: string) {
 	const directory = projectDirectory(id);
-	// A blank canvas's project has no photo to have made it already.
+	// A blank canvas's project may have no image to have made it already.
 	directory.create({ intermediates: true, idempotent: true });
 	const draft = new File(directory, PROJECT_DRAFT);
 	draft.create({ overwrite: true });

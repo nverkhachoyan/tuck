@@ -255,7 +255,7 @@ export function EditorCanvas({
 					<View style={styles.failure}>
 						<View style={styles.failurePill}>
 							<Text style={styles.failureText}>
-								This photo couldn't be loaded.
+								A photo couldn't be loaded.
 							</Text>
 						</View>
 					</View>

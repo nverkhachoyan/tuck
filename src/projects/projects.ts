@@ -10,6 +10,7 @@ export const {
 	createProject,
 	createBlankProject,
 	openProject,
+	addImage,
 	closeProject,
 	deleteProject,
 	listProjects,

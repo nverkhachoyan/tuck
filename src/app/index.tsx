@@ -138,7 +138,7 @@ export default function WelcomeRoute() {
 	const handleDeleteProject = (id: string) =>
 		showAlert(
 			"Delete project?",
-			"Its photo and edits will be removed from this device.",
+			"Its photos and edits will be removed from this device.",
 			[
 				{ text: "Cancel", style: "cancel" },
 				{

@@ -1,11 +1,26 @@
+import { PHOTO_FILE } from "./projectFile";
+
 // Browsers give the app no file system to keep projects in, so they live in
-// IndexedDB: each project's JSON in one store, and its photo's bytes, if it
-// has one, in another.
+// IndexedDB: each project's JSON in one store, and its image files' bytes,
+// if it has any, in another.
 // A transaction either completes or leaves nothing, so saves need no draft.
 
 const DATABASE = "photo-editor";
 const PROJECTS = "projects";
 const PHOTOS = "photos";
+
+// Where an image file is kept in PHOTOS. A project's `PHOTO_FILE` is under
+// its id, where builds from before added photos look for it; any other file
+// is under [id, file].
+function imageKey(id: string, file: string): IDBValidKey {
+	return file === PHOTO_FILE ? id : [id, file];
+}
+
+// Every [id, file] key of one project: arrays sort after strings, so [id, []]
+// comes after all of them.
+function addedImageKeys(id: string): IDBKeyRange {
+	return IDBKeyRange.bound([id], [id, []]);
+}
 
 let database: Promise<IDBDatabase> | null = null;
 let askedToPersist = false;
@@ -97,30 +112,51 @@ async function run<T>(
 	});
 }
 
-/** Copies a picked photo into a new project, and returns a URL for it. */
-export async function storePhoto(id: string, uri: string): Promise<string> {
+/** Copies a picked photo into a project as `file`, and returns a URL for it. */
+export async function storeImage(
+	id: string,
+	file: string,
+	uri: string,
+): Promise<string> {
 	const blob = await (await fetch(uri)).blob();
-	await run([PHOTOS], "readwrite", (t) => t.objectStore(PHOTOS).put(blob, id));
+	await run([PHOTOS], "readwrite", (t) =>
+		t.objectStore(PHOTOS).put(blob, imageKey(id, file)),
+	);
 	// The picker's URL keeps its own copy of the photo alive until revoked.
 	if (uri.startsWith("blob:")) URL.revokeObjectURL(uri);
 	return URL.createObjectURL(blob);
 }
 
-export async function photoUrl(id: string): Promise<string> {
+export async function imageUrl(id: string, file: string): Promise<string> {
 	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
-		t.objectStore(PHOTOS).get(id),
+		t.objectStore(PHOTOS).get(imageKey(id, file)),
 	);
-	if (!blob) throw new Error("This project's photo is missing.");
+	if (!blob) throw new Error("One of this project's photos is missing.");
 	return URL.createObjectURL(blob);
 }
 
-/** Frees a URL from `storePhoto` or `photoUrl` once nothing shows it. */
-export function releasePhoto(url: string) {
+/** Frees a URL from `storeImage` or `imageUrl` once nothing shows it. */
+export function releaseImage(url: string) {
 	URL.revokeObjectURL(url);
 }
 
-export async function removePhoto(id: string) {
-	await run([PHOTOS], "readwrite", (t) => t.objectStore(PHOTOS).delete(id));
+export async function listImages(id: string): Promise<string[]> {
+	const [photos, added] = await Promise.all([
+		run([PHOTOS], "readonly", (t) => t.objectStore(PHOTOS).count(id)),
+		run([PHOTOS], "readonly", (t) =>
+			t.objectStore(PHOTOS).getAllKeys(addedImageKeys(id)),
+		),
+	]);
+	return [
+		...(photos > 0 ? [PHOTO_FILE] : []),
+		...added.flatMap((key) => (Array.isArray(key) ? [String(key[1])] : [])),
+	];
+}
+
+export async function removeImage(id: string, file: string) {
+	await run([PHOTOS], "readwrite", (t) =>
+		t.objectStore(PHOTOS).delete(imageKey(id, file)),
+	);
 }
 
 /** The project's JSON, or null if it was never saved. */
@@ -146,7 +182,8 @@ export async function writeProjectFile(id: string, json: string) {
 export async function removeProject(id: string) {
 	await run([PROJECTS, PHOTOS], "readwrite", (t) => {
 		t.objectStore(PROJECTS).delete(id);
-		return t.objectStore(PHOTOS).delete(id);
+		t.objectStore(PHOTOS).delete(id);
+		return t.objectStore(PHOTOS).delete(addedImageKeys(id));
 	});
 }
 
@@ -174,5 +211,10 @@ export async function listProjectIds(): Promise<string[]> {
 			run([store], "readonly", (t) => t.objectStore(store).getAllKeys()),
 		),
 	);
-	return [...new Set(keys.flat().map(String))];
+	// Older builds delete only a project's own key, leaving its [id, file]
+	// images behind; listing them finds the project to clean up.
+	const ids = keys
+		.flat()
+		.map((key) => String(Array.isArray(key) ? key[0] : key));
+	return [...new Set(ids)];
 }

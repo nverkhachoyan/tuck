@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import { devtools } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import {
+	createBlankDocument,
 	createDocumentFromImage,
 	type ImageLayer,
 	type TextLayer,
@@ -65,6 +66,36 @@ describe("editorSlice", () => {
 		assert.equal(text.text, "TOP TEXT");
 		assert.equal(store.getState().selectedLayerId, text.id);
 		assert.equal(selectSelectedTextLayer(store.getState()), text);
+	});
+
+	test("adding a photo puts it on top, fitted and unlocked, and selects it", () => {
+		const { store, text } = storeWithText();
+		store.getState().addImageLayer("file:///added.jpg", 8000, 6000);
+		const added = store.getState().document?.layers.at(-1);
+		assert.ok(added?.type === "image");
+		assert.equal(added.uri, "file:///added.jpg");
+		assert.equal(added.locked, false);
+		assert.equal(added.transform.scaleX, (4000 * 0.8) / 8000);
+		assert.equal(store.getState().selectedLayerId, added.id);
+
+		store.getState().undo();
+		assert.equal(store.getState().document?.layers.length, 2);
+		assert.equal(store.getState().selectedLayerId, text.id);
+		store.getState().redo();
+		assert.equal(store.getState().document?.layers.at(-1), added);
+	});
+
+	test("a blank canvas takes photos, and they move", () => {
+		const store = createTestStore();
+		store
+			.getState()
+			.openDocument(createBlankDocument(1080, 1080, null), "project-1");
+		store.getState().addImageLayer("file:///a.jpg", 400, 300);
+		store.getState().addImageLayer("file:///b.jpg", 400, 300);
+		const [first, second] = store.getState().document?.layers ?? [];
+		assert.equal(store.getState().selectedLayerId, second.id);
+		store.getState().nudgeLayer(first.id, 10, 0);
+		assert.equal(store.getState().document?.layers[0].transform.x, 550);
 	});
 
 	test("selecting a layer updates the selected text layer", () => {
@@ -284,6 +315,7 @@ describe("editorSlice", () => {
 		const store = createTestStore();
 		const before = store.getState();
 		before.addTextLayer("x", "center");
+		before.addImageLayer("x", 1, 1);
 		before.updateSelectedText({ text: "y" });
 		before.duplicateSelectedLayer();
 		before.moveLayer("x", 1);

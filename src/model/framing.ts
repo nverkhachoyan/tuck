@@ -24,9 +24,11 @@ export type PhotoPlacement = {
 };
 
 /**
- * What the canvas is framed around: the lowest visible image, or with none,
- * the canvas itself, standing in for a photo its own size. The crop tool
- * crops it, and every other layer follows it.
+ * What the canvas is framed around: the lowest visible locked image, which
+ * only the crop tool places, or with none, the canvas itself, standing in
+ * for a photo its own size. The crop tool crops it, and every other layer
+ * follows it. A document's own photo starts locked and added ones don't, so
+ * photos added to a blank canvas follow the canvas.
  */
 export type FramingAnchor = PhotoPlacement & {
 	width: number;
@@ -37,7 +39,8 @@ export type FramingAnchor = PhotoPlacement & {
 
 export function framingAnchor(document: EditorDocument): FramingAnchor {
 	const layer = document.layers.find(
-		(layer): layer is ImageLayer => layer.type === "image" && !layer.hidden,
+		(layer): layer is ImageLayer =>
+			layer.type === "image" && layer.locked && !layer.hidden,
 	);
 	if (layer) {
 		const { width, height, transform, flipped } = layer;

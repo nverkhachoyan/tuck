@@ -11,7 +11,7 @@ import {
 
 // The crop tool's geometry, in "crop space": the photo's own pixels, centered
 // on the origin, turned and mirrored the way the canvas will show them. With
-// no photo, the canvas stands in for one (see `framingAnchor`). The
+// no locked photo, the canvas stands in for one (see `framingAnchor`). The
 // canvas-to-be is `box`, upright in that space; dragging it is in
 // `cropDrag.ts`. Worklets, like `model/geometry.ts`, so gestures run them on
 // the UI thread.

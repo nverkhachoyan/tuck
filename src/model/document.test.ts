@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
+	createImageLayer,
 	createTextLayer,
 	defaultTextStyle,
 	duplicateLayer,
@@ -190,6 +191,55 @@ describe("createTextLayer", () => {
 			),
 		);
 		assert.equal(ids.size, 50);
+	});
+});
+
+describe("createImageLayer", () => {
+	test("centers a large photo, shrunk to fit well inside the canvas", () => {
+		const document = createBlankDocument(1080, 1920, "#FFFFFF");
+		const layer = createImageLayer(document, "file:///added.jpg", 4000, 3000);
+		const scale = (1080 * 0.8) / 4000;
+		assert.deepEqual(layer, {
+			type: "image",
+			id: layer.id,
+			uri: "file:///added.jpg",
+			width: 4000,
+			height: 3000,
+			flipped: false,
+			transform: { x: 540, y: 960, scaleX: scale, scaleY: scale, rotation: 0 },
+			hidden: false,
+			locked: false,
+		});
+	});
+
+	test("fits by whichever side is tighter", () => {
+		const layer = createImageLayer(landscape(), "a", 1000, 3000);
+		assert.equal(layer.transform.scaleX, (3000 * 0.8) / 3000);
+		const wide = createImageLayer(landscape(), "b", 8000, 1000);
+		assert.equal(wide.transform.scaleX, (4000 * 0.8) / 8000);
+	});
+
+	test("never enlarges a small photo", () => {
+		const layer = createImageLayer(landscape(), "a", 300, 200);
+		assert.equal(layer.transform.scaleX, 1);
+		assert.equal(layer.transform.scaleY, 1);
+	});
+
+	test("gives every layer a unique id", () => {
+		const document = landscape();
+		const ids = new Set(
+			Array.from(
+				{ length: 50 },
+				() => createImageLayer(document, "a", 10, 10).id,
+			),
+		);
+		assert.equal(ids.size, 50);
+	});
+
+	test("counts as an edit, even on a transparent canvas its own size", () => {
+		const document = createBlankDocument(1080, 1080, null);
+		document.layers.push(createImageLayer(document, "a", 1080, 1080));
+		assert.equal(hasEdits(document), true);
 	});
 });
 

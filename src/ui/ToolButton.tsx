@@ -11,19 +11,27 @@ type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 export function ToolButton({
 	label,
 	icon,
+	disabled = false,
 	onPress,
 }: {
 	label: string;
 	icon: ToolIconName;
+	disabled?: boolean;
 	onPress: () => void;
 }) {
 	return (
 		<Pressable
 			hitSlop={8}
+			disabled={disabled}
 			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={label}
-			style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+			accessibilityState={{ disabled }}
+			style={({ pressed }) => [
+				styles.container,
+				pressed && styles.pressed,
+				disabled && styles.disabled,
+			]}
 		>
 			<View style={styles.tile}>
 				<MaterialCommunityIcons
@@ -44,6 +52,9 @@ const styles = StyleSheet.create({
 	},
 	pressed: {
 		opacity: 0.6,
+	},
+	disabled: {
+		opacity: 0.4,
 	},
 	tile: {
 		width: 52,

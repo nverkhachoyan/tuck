@@ -7,7 +7,9 @@ import {
 	hasEdits,
 } from "../model/document.ts";
 import {
+	isImageFile,
 	mapImageUris,
+	newImageFile,
 	PHOTO_FILE,
 	PROJECT_VERSION,
 	type ProjectSummary,
@@ -21,10 +23,11 @@ import {
 export type ProjectStorage = {
 	claimProject(id: string): Promise<boolean>;
 	releaseProject(id: string): Promise<void>;
-	storePhoto(id: string, uri: string): Promise<string>;
-	photoUrl(id: string): Promise<string>;
-	releasePhoto(url: string): void;
-	removePhoto(id: string): Promise<void>;
+	storeImage(id: string, file: string, uri: string): Promise<string>;
+	imageUrl(id: string, file: string): Promise<string>;
+	releaseImage(url: string): void;
+	listImages(id: string): Promise<string[]>;
+	removeImage(id: string, file: string): Promise<void>;
 	readProjectFile(id: string): Promise<string | null>;
 	writeProjectFile(id: string, json: string): Promise<void>;
 	removeProject(id: string): Promise<void>;
@@ -36,8 +39,10 @@ export type ProjectStorage = {
 };
 
 type OpenProject = {
-	// null when the document doesn't use a photo, as a blank canvas doesn't.
-	photoUrl: string | null;
+	// The file behind each image URL the document may use: every file the
+	// project had when opened, or has been given since. They're kept until it
+	// closes, so undo can bring back a layer that used one.
+	images: Map<string, string>;
 	createdAt: number;
 	// Opened from the list, rather than started this session.
 	reopened: boolean;
@@ -60,13 +65,18 @@ function createProjectId() {
 	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function hasImages(document: EditorDocument): boolean {
-	return document.layers.some((layer) => layer.type === "image");
+/** The distinct `uri`s of a document's image layers. */
+function imageUris(document: EditorDocument): Set<string> {
+	return new Set(
+		document.layers.flatMap((layer) =>
+			layer.type === "image" ? [layer.uri] : [],
+		),
+	);
 }
 
 function hasKnownImageUris(saved: SavedProject): boolean {
 	return saved.document.layers.every(
-		(layer) => layer.type !== "image" || layer.uri === PHOTO_FILE,
+		(layer) => layer.type !== "image" || isImageFile(layer.uri),
 	);
 }
 
@@ -106,10 +116,11 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		const project = openProjects.get(id);
 		if (!project) return null;
 		return mapImageUris(document, (uri) => {
-			if (uri !== project.photoUrl) {
+			const file = project.images.get(uri);
+			if (file === undefined) {
 				throw new Error(`${uri} isn't part of project ${id}`);
 			}
-			return PHOTO_FILE;
+			return file;
 		});
 	}
 
@@ -157,10 +168,10 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		height: number;
 	}): Promise<{ id: string; document: EditorDocument }> {
 		return startProject(async (id) => {
-			const photoUrl = await storage.storePhoto(id, photo.uri);
+			const url = await storage.storeImage(id, PHOTO_FILE, photo.uri);
 			return {
-				photoUrl,
-				document: createDocumentFromImage(photoUrl, photo.width, photo.height),
+				images: new Map([[url, PHOTO_FILE]]),
+				document: createDocumentFromImage(url, photo.width, photo.height),
 			};
 		});
 	}
@@ -173,7 +184,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	}): Promise<{ id: string; document: EditorDocument }> {
 		const { width, height, background } = canvas;
 		return startProject(async () => ({
-			photoUrl: null,
+			images: new Map(),
 			document: createBlankDocument(width, height, background),
 		}));
 	}
@@ -181,17 +192,17 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	async function startProject(
 		start: (
 			id: string,
-		) => Promise<{ photoUrl: string | null; document: EditorDocument }>,
+		) => Promise<{ images: Map<string, string>; document: EditorDocument }>,
 	): Promise<{ id: string; document: EditorDocument }> {
 		await closing;
 		const id = createProjectId();
 		if (!(await storage.claimProject(id)))
 			throw new Error("Project is already open");
 		try {
-			const { photoUrl, document } = await start(id);
+			const { images, document } = await start(id);
 			const createdAt = Date.now();
 			openProjects.set(id, {
-				photoUrl,
+				images,
 				createdAt,
 				reopened: false,
 				savedJson: null,
@@ -204,6 +215,23 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		} catch (error) {
 			await storage.removeProject(id).catch(() => {});
 			await storage.releaseProject(id);
+			throw error;
+		}
+	}
+
+	/** A URL for each of a project's image files, by file name. */
+	async function imageUrls(
+		id: string,
+		files: Set<string>,
+	): Promise<Map<string, string>> {
+		const urls = new Map<string, string>();
+		try {
+			for (const file of files) {
+				urls.set(file, await storage.imageUrl(id, file));
+			}
+			return urls;
+		} catch (error) {
+			for (const url of urls.values()) storage.releaseImage(url);
 			throw error;
 		}
 	}
@@ -223,15 +251,13 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			if (json === null) throw new Error("This project no longer exists.");
 			const saved = parseSavedProject(json);
 			if (!saved || !hasKnownImageUris(saved)) return null;
-			const photoUrl = hasImages(saved.document)
-				? await storage.photoUrl(id)
-				: null;
-			const document =
-				photoUrl === null
-					? saved.document
-					: mapImageUris(saved.document, () => photoUrl);
+			const urls = await imageUrls(id, imageUris(saved.document));
+			const document = mapImageUris(
+				saved.document,
+				(file) => urls.get(file) ?? file,
+			);
 			openProjects.set(id, {
-				photoUrl,
+				images: new Map([...urls].map(([file, url]) => [url, file])),
 				createdAt: saved.createdAt,
 				reopened: true,
 				savedJson: JSON.stringify(saved.document),
@@ -317,12 +343,49 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	}
 
 	/**
+	 * Moves a picked photo into an open project as a file of its own, and
+	 * returns its URL there, for a new image layer's `uri`.
+	 */
+	async function addImage(id: string, uri: string): Promise<string> {
+		const project = openProjects.get(id);
+		if (!project) throw new Error("This project isn't open.");
+		const file = newImageFile();
+		const url = await storage.storeImage(id, file, uri);
+		// Closed meanwhile: the unused file goes when the project next closes,
+		// or with the project, if it wasn't kept.
+		if (openProjects.get(id) !== project) {
+			storage.releaseImage(url);
+			throw new Error("This project was closed.");
+		}
+		project.images.set(url, file);
+		return url;
+	}
+
+	/**
+	 * Removes a closing project's image files that no layer uses, including
+	 * any a session that ended early left behind. They only take space, and a
+	 * later close tries again, so a failure is logged.
+	 */
+	async function removeUnusedImages(id: string, document: EditorDocument) {
+		try {
+			const saved = savedDocument(id, document);
+			if (!saved) return;
+			const used = imageUris(saved);
+			for (const file of await storage.listImages(id)) {
+				if (!used.has(file)) await storage.removeImage(id, file);
+			}
+		} catch (error) {
+			console.warn("Couldn't remove unused images", error);
+		}
+	}
+
+	/**
 	 * Ends an editing session: saves the last changes, or removes the project
 	 * if it was started this session and is still just the photo or an empty
 	 * canvas. A reopened project is kept even with every edit removed. A kept
 	 * project's thumbnail is brought up to date with `renderThumbnail`, when
-	 * given, and its photo removed once nothing shows it: undo can't bring it
-	 * back after closing.
+	 * given, and image files no layer uses are removed: undo can't bring
+	 * them back after closing.
 	 */
 	function closeProject(
 		id: string,
@@ -339,18 +402,18 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			await project.writing;
 			if (hasEdits(document) || project.reopened) {
 				await saveProject(id, document);
-				if (!hasImages(document)) await storage.removePhoto(id);
 				if (renderThumbnail) {
 					await refreshThumbnail(id, document, renderThumbnail);
 				}
+				await removeUnusedImages(id, document);
 			} else {
 				await storage.removeProject(id);
 			}
-			// A failed close leaves the document and photo available for a retry.
+			// A failed close leaves the document and images available for a retry.
 			openProjects.delete(id);
 			if (pendingSave?.id === id) pendingSave = null;
 			setAutosaveError(null);
-			if (project.photoUrl !== null) storage.releasePhoto(project.photoUrl);
+			for (const url of project.images.keys()) storage.releaseImage(url);
 			await storage.releaseProject(id);
 		});
 		closing = closed.catch(() => {});
@@ -421,6 +484,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		createProject,
 		createBlankProject,
 		openProject,
+		addImage,
 		closeProject,
 		deleteProject,
 		listProjects,

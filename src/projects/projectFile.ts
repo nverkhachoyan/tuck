@@ -5,10 +5,30 @@ import { type EditorDocument, textFonts } from "../model/document.ts";
 // the older one. 2 added the canvas's background, layers' `locked`, and
 // image layers' `flipped`. 3 stopped pinning the photo as the first layer:
 // there may be none. An app that expects it there can't open these.
+// Photos added later, each in a file of its own, kept version 3: builds from
+// before them open only image layers naming `PHOTO_FILE`, and list the rest
+// as unavailable.
 export const PROJECT_VERSION = 3;
 
-// The photo's file in a project, which saved image layers name as their `uri`.
+// The file of the photo a project was made from. Saved image layers name a
+// file in the project as their `uri`: this one, or an added photo's.
 export const PHOTO_FILE = "original.jpg";
+
+const ADDED_PHOTO_FILE = /^image-[a-z0-9-]+\.jpg$/;
+
+/** A new file name for a photo added to a project. */
+export function newImageFile(): string {
+	const random = Math.random().toString(36).slice(2, 8);
+	return `image-${Date.now().toString(36)}-${random}.jpg`;
+}
+
+/**
+ * Whether a saved image layer's `uri` names a file this version writes. Only
+ * JPEGs, which it can take to be opaque (see `hasTransparency`).
+ */
+export function isImageFile(uri: string): boolean {
+	return uri === PHOTO_FILE || ADDED_PHOTO_FILE.test(uri);
+}
 
 export type SavedProject = {
 	version: number;

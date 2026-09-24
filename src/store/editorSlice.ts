@@ -1,6 +1,7 @@
 // Relative `.ts` imports, and only types from zustand and `./index.ts`, keep
 // this slice loadable by Node's test runner.
 import {
+	createImageLayer,
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
@@ -37,6 +38,7 @@ export type EditorSlice = {
 	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
 	addTextLayer: (text: string, align: TextAlign) => void;
+	addImageLayer: (uri: string, width: number, height: number) => void;
 	duplicateSelectedLayer: () => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
@@ -144,6 +146,15 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			const { document } = get();
 			if (!document) return;
 			addOnTop("editor/addTextLayer", createTextLayer(document, text, align));
+		},
+
+		addImageLayer: (uri, width, height) => {
+			const { document } = get();
+			if (!document) return;
+			addOnTop(
+				"editor/addImageLayer",
+				createImageLayer(document, uri, width, height),
+			);
 		},
 
 		duplicateSelectedLayer: () => {

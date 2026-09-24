@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
+	createImageLayer,
 	createTextLayer,
 	type EditorDocument,
 	type ImageLayer,
@@ -154,11 +155,30 @@ describe("reframeDocument", () => {
 });
 
 describe("framingAnchor", () => {
-	test("is the lowest visible image, wherever it is in the stack", () => {
+	test("is the lowest visible locked image, wherever it is in the stack", () => {
 		const document = documentWithText();
 		assert.equal(framingAnchor(document).layer, document.layers[0]);
 		const reordered = { ...document, layers: document.layers.toReversed() };
 		assert.equal(framingAnchor(reordered).layer, document.layers[0]);
+	});
+
+	test("passes over unlocked images: added photos follow the canvas", () => {
+		const document = documentWithText();
+		const added = createImageLayer(document, "file:///added.jpg", 400, 300);
+		document.layers.unshift(added);
+		assert.equal(framingAnchor(document).layer, document.layers[1]);
+
+		const blank = createBlankDocument(1080, 1080, "#FFFFFF");
+		blank.layers.push(createImageLayer(blank, "file:///added.jpg", 400, 300));
+		assert.equal(framingAnchor(blank).layer, null);
+		blank.layers[0].locked = true;
+		assert.equal(framingAnchor(blank).layer, blank.layers[0]);
+	});
+
+	test("is the canvas once the photo is unlocked", () => {
+		const document = documentWithText();
+		document.layers[0].locked = false;
+		assert.equal(framingAnchor(document).layer, null);
 	});
 
 	test("is the canvas, centered on itself, with no visible image", () => {
@@ -195,6 +215,24 @@ describe("reframing a canvas without a photo", () => {
 		assert.deepEqual(cropped.layers[0].transform, {
 			...document.layers[0].transform,
 			y: 200,
+		});
+	});
+
+	test("moves an unlocked photo along like any layer", () => {
+		const document = blankWithText();
+		const added = createImageLayer(document, "file:///added.jpg", 400, 300);
+		document.layers.push(added);
+		// The bottom half.
+		const current = documentFraming(document);
+		const framing: Framing = {
+			...current,
+			height: 960,
+			transform: { ...current.transform, y: 0 },
+		};
+		const cropped = reframeDocument(document, framing, false);
+		assert.deepEqual(cropped.layers[1].transform, {
+			...added.transform,
+			y: 0,
 		});
 	});
 

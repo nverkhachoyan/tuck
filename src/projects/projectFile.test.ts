@@ -8,7 +8,10 @@ import {
 	type EditorDocument,
 } from "../model/document.ts";
 import {
+	isImageFile,
 	mapImageUris,
+	newImageFile,
+	PHOTO_FILE,
 	PROJECT_VERSION,
 	parseSavedProject,
 	projectLabel,
@@ -46,6 +49,31 @@ describe("mapImageUris", () => {
 			mapImageUris(saved, () => "file:///photo.jpg"),
 			document,
 		);
+	});
+});
+
+describe("image files", () => {
+	test("the photo's file and new ones are known, and new ones differ", () => {
+		const names = new Set(Array.from({ length: 50 }, newImageFile));
+		assert.equal(names.size, 50);
+		assert.ok(!names.has(PHOTO_FILE));
+		for (const name of [PHOTO_FILE, ...names]) {
+			assert.ok(isImageFile(name), name);
+		}
+	});
+
+	test("anything else isn't, such as a path or another format", () => {
+		const unknown = [
+			"",
+			"file:///original.jpg",
+			"../original.jpg",
+			"image-a/b.jpg",
+			"image-a.png",
+			"stickers/cat.png",
+		];
+		for (const name of unknown) {
+			assert.equal(isImageFile(name), false, name);
+		}
 	});
 });
 
@@ -108,6 +136,23 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(
 			parseSavedProject(savedJson({ document: reordered }))?.document,
 			reordered,
+		);
+	});
+
+	test("reads several image layers, sharing files or not", () => {
+		const document = documentWithText("TOP");
+		const [photo] = document.layers;
+		const added = "image-abc-123.jpg";
+		document.layers.push({ ...photo, id: "copy" }, { ...photo, id: "added" });
+		const saved = mapImageUris(document, (uri) => uri);
+		saved.layers = saved.layers.map((layer) =>
+			layer.type === "image"
+				? { ...layer, uri: layer.id === "added" ? added : PHOTO_FILE }
+				: layer,
+		);
+		assert.deepEqual(
+			parseSavedProject(savedJson({ document: saved }))?.document,
+			saved,
 		);
 	});
 

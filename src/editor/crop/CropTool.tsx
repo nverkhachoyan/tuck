@@ -84,10 +84,11 @@ type CropToolProps = {
 };
 
 /**
- * Crops, turns, flips, and straightens the photo, and sizes and fills the
- * canvas around it, over the editor until Done or Cancel. The box is the
- * canvas-to-be: dragging it past the photo's edges expands the canvas. With
- * no photo, the canvas itself is cropped and turned, and its layers with it.
+ * Crops, turns, flips, and straightens the photo (the lowest locked one, see
+ * `framingAnchor`), and sizes and fills the canvas around it, over the editor
+ * until Done or Cancel. The box is the canvas-to-be: dragging it past the
+ * photo's edges expands the canvas. With no locked photo, the canvas itself
+ * is cropped and turned, and its layers with it.
  * Nothing changes in the document until Done, which is one undo step.
  */
 export function CropTool({ document, onCancel, onDone }: CropToolProps) {

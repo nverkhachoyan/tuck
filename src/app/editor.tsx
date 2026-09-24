@@ -11,9 +11,12 @@ import { TextEditor } from "@/editor/panels/TextEditor";
 import { TextEditPanel } from "@/editor/panels/TextEditPanel";
 import type { Shortcut } from "@/editor/shortcuts";
 import { useEditorShortcuts } from "@/editor/useEditorShortcuts";
+import { pickPhoto } from "@/import/pickPhoto";
 import { assertNever } from "@/lib/assertNever";
+import { errorMessage } from "@/lib/errorMessage";
+import { showAlert } from "@/lib/showAlert";
 import { defaultTextStyle, type TextAlign } from "@/model/document";
-import { useAutosave } from "@/projects/projects";
+import { addImage, useAutosave } from "@/projects/projects";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -35,6 +38,7 @@ export default function EditorRoute() {
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const addTextLayer = useStore((state) => state.addTextLayer);
+	const addImageLayer = useStore((state) => state.addImageLayer);
 	const duplicateSelectedLayer = useStore(
 		(state) => state.duplicateSelectedLayer,
 	);
@@ -58,6 +62,10 @@ export default function EditorRoute() {
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 	const [cropping, setCropping] = useState(false);
 	const [layersOpen, setLayersOpen] = useState(false);
+	// Picking and re-encoding a large photo takes a few seconds. Set at once,
+	// so a second tap meanwhile can't open another picker.
+	const addingPhoto = useRef(false);
+	const [photoBusy, setPhotoBusy] = useState(false);
 	const prepareForBackgroundSave = useCallback(() => {
 		canvasRef.current?.flushPendingTransform();
 		return useStore.getState().document;
@@ -141,6 +149,27 @@ export default function EditorRoute() {
 	});
 
 	const closeCrop = useCallback(() => setCropping(false), []);
+
+	// The photo moves into the project first, so autosave knows its file.
+	// Without a project, it's used where the picker left it.
+	const handleAddPhoto = async () => {
+		if (addingPhoto.current) return;
+		addingPhoto.current = true;
+		setPhotoBusy(true);
+		try {
+			const result = await pickPhoto();
+			if (result.status === "canceled") return;
+			const { uri, width, height } = result.photo;
+			const url = projectId === null ? uri : await addImage(projectId, uri);
+			canvasRef.current?.flushPendingTransform();
+			addImageLayer(url, width, height);
+		} catch (error) {
+			showAlert("Couldn't add photo", errorMessage(error));
+		} finally {
+			addingPhoto.current = false;
+			setPhotoBusy(false);
+		}
+	};
 
 	// The stack guard unmounts this route once the document closes.
 	if (!document) return null;
@@ -244,6 +273,12 @@ export default function EditorRoute() {
 							label="Text"
 							icon="format-text"
 							onPress={() => setEditing("new")}
+						/>
+						<ToolButton
+							label="Photo"
+							icon="image-plus"
+							disabled={photoBusy}
+							onPress={() => void handleAddPhoto()}
 						/>
 						<ToolButton
 							label="Crop"
