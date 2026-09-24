@@ -5,6 +5,7 @@ import {
 	Image as SkiaImage,
 } from "@shopify/react-native-skia";
 import type { ImageLayer } from "@/model/document";
+import { createImageCache } from "./imageCache";
 
 /**
  * Reads and decodes an image layer's file. Unlike `useImage`, whose `onError`
@@ -15,6 +16,13 @@ export async function decodeImage(uri: string): Promise<SkImage> {
 	if (!image) throw new Error("Couldn't decode the image.");
 	return image;
 }
+
+/**
+ * Image layers' decoded images, one copy per file: the canvas, the crop tool,
+ * duplicated photos, and export (while the editor stays mounted under it)
+ * all draw the same one.
+ */
+export const decodedImages = createImageCache(decodeImage);
 
 const MIRRORED = [{ scaleX: -1 }];
 

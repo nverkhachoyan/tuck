@@ -4,7 +4,7 @@ import {
 	ImageFormat,
 	type SkImage,
 } from "@shopify/react-native-skia";
-import { decodeImage } from "@/layers/ImageLayerView";
+import { decodedImages } from "@/layers/ImageLayerView";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { decodeImageLayers } from "./decodeImageLayers";
 import { ExportScene } from "./ExportScene";
@@ -20,7 +20,7 @@ export async function renderDocument(
 	document: EditorDocument,
 	scale = 1,
 ): Promise<SkImage> {
-	const decoded = await decodeImageLayers(document.layers, decodeImage);
+	const decoded = await decodeImageLayers(document.layers, decodedImages);
 	try {
 		const result = await drawAsImage(
 			<Group transform={[{ scale }]}>
@@ -36,9 +36,9 @@ export async function renderDocument(
 		}
 		return result;
 	} finally {
-		// Camera photos are large; free the decoded copies right away instead of
-		// waiting for garbage collection.
-		decoded.dispose();
+		// Camera photos are large; let go of them right away, so the ones the
+		// editor isn't drawing are freed instead of waiting for garbage collection.
+		decoded.release();
 	}
 }
 
