@@ -87,8 +87,10 @@ export function TextEditor({
 					<TextButton label="Done" tone="accent" onPress={done} />
 				</View>
 
-				{/* Tapping anywhere outside the text also finishes. */}
-				<Pressable style={styles.inputArea} onPress={done}>
+				<View style={styles.inputArea}>
+					{/* Tapping anywhere outside the text also finishes. Behind the
+					    input, not around it: on web, clicks on the input would bubble. */}
+					<Pressable style={StyleSheet.absoluteFill} onPress={done} />
 					<TextInput
 						value={text}
 						onChangeText={setText}
@@ -103,7 +105,7 @@ export function TextEditor({
 							outlineStyle,
 						]}
 					/>
-				</Pressable>
+				</View>
 			</KeyboardAvoidingView>
 		</View>
 	);
@@ -149,6 +151,9 @@ const styles = StyleSheet.create({
 	// weight it wasn't registered with.
 	input: {
 		fontSize: 34,
+		// Native's default, but React Native Web leaves the textarea static,
+		// which CSS paints under the absolutely positioned backdrop.
+		position: "relative",
 		// Browsers ring a focused input; here the caret already shows focus.
 		// React Native's types lack "none", which only web understands.
 		...Platform.select({
