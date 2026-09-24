@@ -1,6 +1,6 @@
-// Worklets, like `snapping.ts`, so the layers panel's drag runs them on the
-// UI thread. The panel lists the layers above the photo top first, one slot
-// per row.
+// Worklets, like `model/geometry.ts`, so the layers panel's drag runs them
+// on the UI thread. The panel lists the layers above the photo top first,
+// one slot per row.
 
 /** `items` with the one at `from` moved to `to`. */
 export function moveItem<T>(

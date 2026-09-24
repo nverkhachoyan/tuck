@@ -8,7 +8,8 @@ import {
 
 // The selection's corner (scale) and knob (rotate) handles, and the drags
 // that grab them. Worklets, like `model/geometry.ts`, so gestures run them on
-// the UI thread.
+// the UI thread. Sizes come in as arguments: `handleMetrics.ts` picks them
+// for the platform, which keeps this file free of React Native and testable.
 
 export type Handle =
 	| "top-left"

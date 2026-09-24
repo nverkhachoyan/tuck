@@ -136,6 +136,84 @@
 			}
 		},
 		{
+			"includes": ["src/editor/*"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/**",
+											"../**",
+											"./*/**",
+											"!@/layers/**",
+											"!../layers/**",
+											"!@/store",
+											"!@/store/**",
+											"!../store",
+											"!../store/**",
+											"!@/model/**",
+											"!../model/**",
+											"!@/lib/**",
+											"!../lib/**",
+											"!@/ui/**",
+											"!../ui/**",
+											"!@/theme",
+											"!../theme",
+											"!../theme.ts"
+										],
+										"message": "The editor/ root imports only its own files with ./, and layers/, store/, model/, lib/, ui/, and theme.ts. Not its subfolders: they import the root, not the other way around. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/*/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/layers/**",
+											"!../../layers/**",
+											"!@/store",
+											"!@/store/**",
+											"!../../store",
+											"!../../store/**",
+											"!@/model/**",
+											"!../../model/**",
+											"!@/lib/**",
+											"!../../lib/**",
+											"!@/ui/**",
+											"!../../ui/**",
+											"!@/theme",
+											"!../../theme",
+											"!../../theme.ts"
+										],
+										"message": "An editor/ subfolder imports only its own files with ./, the editor/ root with ../, and layers/, store/, model/, lib/, ui/, and theme.ts. Not another subfolder: what two of them share lives at the editor/ root. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/ui/**", "src/lib/**", "src/theme.ts"],
 			"linter": {
 				"rules": {

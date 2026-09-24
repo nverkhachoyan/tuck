@@ -1,28 +1,14 @@
-import {
-	Fill,
-	Group,
-	Path,
-	Rect,
-	rect,
-	Skia,
-	type SkRect,
-} from "@shopify/react-native-skia";
+import { Fill, Group, Path, rect, Skia } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import { useDerivedValue } from "react-native-reanimated";
-import { ImageLayerView } from "@/layers/ImageLayerView";
 import { toTransformList } from "@/layers/layerTransform";
-import { TextLayerView } from "@/layers/TextLayerView";
-import { assertNever } from "@/lib/assertNever";
-import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
+import type { EditorDocument, Layer } from "@/model/document";
 import { colors } from "@/theme";
-import { Checkerboard } from "@/ui/Checkerboard";
+import { handleMetrics, handlesVisible } from "../handleMetrics";
+import { CanvasBackground, LayerContent } from "../SceneParts";
 import type { LiveTransform } from "./liveTransform";
-import { handleMetrics, handlesVisible } from "./selectionHandles";
-import { useDecodedImage } from "./useDecodedImage";
 
 const SELECTION_STROKE_PX = 1.5;
-// A transparency checkerboard square's side, in screen pixels.
-const CHECKER_PX = 8;
 
 type EditorSceneProps = {
 	document: EditorDocument;
@@ -81,54 +67,6 @@ export function EditorScene({
 			)}
 		</Group>
 	);
-}
-
-/** The canvas's fill, or a checkerboard where it's transparent. */
-export function CanvasBackground({
-	bounds,
-	background,
-	viewScale,
-}: {
-	bounds: SkRect;
-	background: string | null;
-	// Screen pixels per unit of `bounds`.
-	viewScale: number;
-}) {
-	if (background === null) {
-		return <Checkerboard bounds={bounds} cell={CHECKER_PX / viewScale} />;
-	}
-	return <Rect rect={bounds} color={background} />;
-}
-
-/** A layer's content in its own space, loading images asynchronously. */
-export function LayerContent({
-	layer,
-	onImageError,
-}: {
-	layer: Layer;
-	onImageError: (error: unknown) => void;
-}) {
-	switch (layer.type) {
-		case "image":
-			return <AsyncImage layer={layer} onError={onImageError} />;
-		case "text":
-			return <TextLayerView layer={layer} />;
-		default:
-			return assertNever(layer);
-	}
-}
-
-/** Draws nothing until the image has decoded, or if it can't be. */
-function AsyncImage({
-	layer,
-	onError,
-}: {
-	layer: ImageLayer;
-	onError: (error: unknown) => void;
-}) {
-	const image = useDecodedImage(layer.uri, onError);
-	if (!image) return null;
-	return <ImageLayerView layer={layer} image={image} />;
 }
 
 /**

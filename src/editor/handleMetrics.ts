@@ -2,6 +2,9 @@ import { Platform } from "react-native";
 import type { Box, Point, Transform } from "@/model/geometry";
 import { type Handle, handleAt } from "./handleGeometry";
 
+// The selection handles' platform-dependent side: their sizes for a mouse or
+// a finger, and whether they show. The math is in `handleGeometry.ts`.
+
 /**
  * How the selected layer's corner (scale) and knob (rotate) handles look and
  * respond, shared by the gesture, the renderer, and the pointer cursor.

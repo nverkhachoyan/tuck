@@ -19,11 +19,12 @@ import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
 import { type PhotoPlacement, rebaseTransform } from "@/model/framing";
 import type { Size } from "@/model/geometry";
 import { colors } from "@/theme";
-import { type CanvasCursor, cursorStyle } from "./canvasCursor";
-import { type CropHandle, type CropState, cropAngle } from "./cropGeometry";
-import { CanvasBackground, LayerContent } from "./EditorScene";
+import { type CanvasCursor, cursorStyle } from "../canvasCursor";
+import { CanvasBackground, LayerContent } from "../SceneParts";
+import type { DocumentViewport } from "../viewport";
+import type { CropHandle } from "./cropDrag";
+import { type CropState, cropAngle } from "./cropGeometry";
 import { useCropGesture } from "./useCropGesture";
-import type { DocumentViewport } from "./viewport";
 
 // In screen pixels.
 const FRAME_STROKE_PX = 1;

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+	blendViewports,
 	fitDocumentToView,
 	fitRectToView,
 	viewPointToDocument,
@@ -71,5 +72,19 @@ describe("fitRectToView", () => {
 		const visible = viewRectToDocument(viewport, viewSize);
 		assert.ok(visible.x < bounds.x);
 		assert.ok(visible.x + visible.width > bounds.x + bounds.width);
+	});
+});
+
+describe("blendViewports", () => {
+	test("goes from the first viewport to the second", () => {
+		const from = { scale: 1, offsetX: 0, offsetY: 100 };
+		const to = { scale: 3, offsetX: 40, offsetY: 0 };
+		assert.deepEqual(blendViewports(from, to, 0), from);
+		assert.deepEqual(blendViewports(from, to, 1), to);
+		assert.deepEqual(blendViewports(from, to, 0.5), {
+			scale: 2,
+			offsetX: 20,
+			offsetY: 50,
+		});
 	});
 });

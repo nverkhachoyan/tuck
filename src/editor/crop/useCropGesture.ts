@@ -8,21 +8,15 @@ import {
 import { scheduleOnRN } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
 import type { Rect, Size } from "@/model/geometry";
-import {
-	type CropHandle,
-	type CropState,
-	cropAngle,
-	cropHandleAt,
-	dragCrop,
-} from "./cropGeometry";
-import { handleMetrics, hasFinePointer } from "./selectionHandles";
-import { type DocumentViewport, viewRectToDocument } from "./viewport";
+import { handleMetrics, hasFinePointer } from "../handleMetrics";
+import { type DocumentViewport, viewRectToDocument } from "../viewport";
+import { type CropHandle, cropHandleAt, dragCrop } from "./cropDrag";
+import { type CropState, cropAngle } from "./cropGeometry";
 
-// In screen pixels: the smallest the box gets, how close its edges come to
-// the photo's before snapping, and the inset used when fitting the content.
+// In screen pixels: the smallest the box gets, and how close its edges come
+// to the photo's before snapping.
 const MIN_BOX_PX = 48;
 const SNAP_PX = 10;
-export const CROP_INSET_PX = 20;
 
 /**
  * Dragging the crop box's corners and sides resizes it, and dragging inside
@@ -102,9 +96,10 @@ export function useCropGesture({
 						angle: cropAngle(state),
 						ratio: ratio.value,
 						minSize: MIN_BOX_PX / scale,
-						// The content is fitted with CROP_INSET_PX around it. Using
-						// the whole visible view here leaves that inset as room to drag
-						// an edge outward before the view refits after the gesture.
+						// The crop tool fits the content with an inset around it.
+						// Using the whole visible view here leaves that inset as room
+						// to drag an edge outward before the view refits after the
+						// gesture.
 						bounds: viewRectToDocument(viewport.value, viewSize),
 						tolerance: SNAP_PX / scale,
 					},

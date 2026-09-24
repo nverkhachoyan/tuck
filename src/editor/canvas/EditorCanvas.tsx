@@ -18,14 +18,14 @@ import {
 	type CanvasCursor,
 	cursorForHandle,
 	cursorStyle,
-} from "./canvasCursor";
+} from "../canvasCursor";
+import { handleUnder } from "../handleMetrics";
+import { fitDocumentToView, viewPointToDocument } from "../viewport";
 import { EditorScene } from "./EditorScene";
 import { findLayerAt } from "./hitTest";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
-import { handleUnder } from "./selectionHandles";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { useTrackpadPinch } from "./useTrackpadPinch";
-import { fitDocumentToView, viewPointToDocument } from "./viewport";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.

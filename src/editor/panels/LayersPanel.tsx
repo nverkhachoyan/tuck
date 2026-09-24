@@ -28,7 +28,7 @@ import { hapticTick } from "@/lib/haptics";
 import type { Layer } from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
-import { BackgroundPicker } from "./BackgroundPicker";
+import { BackgroundPicker } from "../BackgroundPicker";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 const ROW_HEIGHT = 52;

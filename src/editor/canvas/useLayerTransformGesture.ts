@@ -4,7 +4,9 @@ import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
 import type { Size, Transform } from "@/model/geometry";
-import { type Handle, rotateByDrag, scaleByDrag } from "./handleGeometry";
+import { type Handle, rotateByDrag, scaleByDrag } from "../handleGeometry";
+import { handleUnder, hasFinePointer } from "../handleMetrics";
+import { type DocumentViewport, viewPointToDocument } from "../viewport";
 import {
 	clampScale,
 	type LiveTransform,
@@ -16,9 +18,7 @@ import {
 	type PointerTravel,
 	startTravel,
 } from "./pointerTravel";
-import { handleUnder, hasFinePointer } from "./selectionHandles";
 import { snapAngle, snapTo } from "./snapping";
-import { type DocumentViewport, viewPointToDocument } from "./viewport";
 
 // Rotation settles on upright and quarter turns when this close.
 const ROTATION_SNAP = (4 * Math.PI) / 180;

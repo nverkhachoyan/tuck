@@ -1,12 +1,15 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { CropTool } from "@/editor/CropTool";
-import { EditorCanvas, type EditorCanvasHandle } from "@/editor/EditorCanvas";
-import { LayersPanel } from "@/editor/LayersPanel";
+import {
+	EditorCanvas,
+	type EditorCanvasHandle,
+} from "@/editor/canvas/EditorCanvas";
+import { CropTool } from "@/editor/crop/CropTool";
+import { LayersPanel } from "@/editor/panels/LayersPanel";
+import { TextEditor } from "@/editor/panels/TextEditor";
+import { TextEditPanel } from "@/editor/panels/TextEditPanel";
 import type { Shortcut } from "@/editor/shortcuts";
-import { TextEditor } from "@/editor/TextEditor";
-import { TextEditPanel } from "@/editor/TextEditPanel";
 import { useEditorShortcuts } from "@/editor/useEditorShortcuts";
 import { assertNever } from "@/lib/assertNever";
 import { defaultTextStyle, type TextAlign } from "@/model/document";

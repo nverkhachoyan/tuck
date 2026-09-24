@@ -28,7 +28,8 @@ import type { Size } from "@/model/geometry";
 import { colors } from "@/theme";
 import { AngleDial } from "@/ui/AngleDial";
 import { TextButton } from "@/ui/TextButton";
-import { BackgroundPicker } from "./BackgroundPicker";
+import { BackgroundPicker } from "../BackgroundPicker";
+import { blendViewports, fitRectToView } from "../viewport";
 import { CropCanvas } from "./CropCanvas";
 import {
 	boxWithRatio,
@@ -44,10 +45,11 @@ import {
 	straightenTo,
 	turnedSize,
 } from "./cropGeometry";
-import { CROP_INSET_PX } from "./useCropGesture";
-import { type DocumentViewport, fitRectToView } from "./viewport";
 
 const REFIT = { duration: 220 };
+// Room around the photo and box when fitting them to the view, in screen
+// pixels. The crop gesture lets the box be dragged out into it.
+const CROP_INSET_PX = 20;
 
 // Width / height, or "original" for the photo's own. Each fixed ratio's
 // turned counterpart is listed too, so turning the photo keeps one selected.
@@ -369,20 +371,6 @@ function ActionButton({
 			<Text style={[styles.actionLabel, { color }]}>{label}</Text>
 		</Pressable>
 	);
-}
-
-function blendViewports(
-	from: DocumentViewport,
-	to: DocumentViewport,
-	progress: number,
-): DocumentViewport {
-	"worklet";
-	const blend = (a: number, b: number) => a + (b - a) * progress;
-	return {
-		scale: blend(from.scale, to.scale),
-		offsetX: blend(from.offsetX, to.offsetX),
-		offsetY: blend(from.offsetY, to.offsetY),
-	};
 }
 
 const styles = StyleSheet.create({

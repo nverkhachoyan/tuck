@@ -65,6 +65,21 @@ export function viewPointToDocument(
 	};
 }
 
+/** The viewport `progress` (0 to 1) of the way from `from` to `to`. */
+export function blendViewports(
+	from: DocumentViewport,
+	to: DocumentViewport,
+	progress: number,
+): DocumentViewport {
+	"worklet";
+	const blend = (a: number, b: number) => a + (b - a) * progress;
+	return {
+		scale: blend(from.scale, to.scale),
+		offsetX: blend(from.offsetX, to.offsetX),
+		offsetY: blend(from.offsetY, to.offsetY),
+	};
+}
+
 /** The part of document space visible inside a view, optionally inset. */
 export function viewRectToDocument(
 	viewport: DocumentViewport,
