@@ -135,7 +135,11 @@ const OTHER_MODIFIERS: [string, string][] = [
 	["alt", "Alt"],
 	["shift", "Shift"],
 ];
-const MAC_KEYS: Record<string, string> = { Delete: "⌫", Escape: "esc" };
+const MAC_KEYS: Record<string, string> = {
+	Delete: "⌫",
+	Enter: "↩",
+	Escape: "esc",
+};
 const OTHER_KEYS: Record<string, string> = { Delete: "Del", Escape: "Esc" };
 
 /** "mod+shift+Z" as this platform writes it: ⇧⌘Z on a Mac, Ctrl+Shift+Z elsewhere. */

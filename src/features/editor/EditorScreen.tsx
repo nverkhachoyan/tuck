@@ -7,16 +7,13 @@ import {
 } from "@/features/editor/canvas/EditorCanvas";
 import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
+import { Dock, DockButton, useDockInset } from "@/features/editor/Dock";
 import {
 	type BrushSettings,
 	brushFor,
 	defaultBrushSettings,
 } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
-import {
-	BottomPanel,
-	useBottomPanelInset,
-} from "@/features/editor/panels/BottomPanel";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
 import {
 	LAYERS_SIDEBAR_INSET,
@@ -124,7 +121,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const fullScreenToolOpen = editing !== null || cropping;
 	const [layersOpen, setLayersOpen] = useState(false);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
-	const panelInset = useBottomPanelInset();
+	const dockInset = useDockInset();
 	// The tool dragging on the canvas uses in place of moving layers. While
 	// drawing, strokes go into the selected drawing, or a new one; while
 	// redacting, into the selected brushed redaction, or a new one.
@@ -337,11 +334,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 
-	// The sidebar stops above the bottom panel, which stays usable.
+	// The sidebar stops above the dock, which stays usable.
 	const layersPanel = (
 		<LayersPanel
 			layout={layersBeside ? "sidebar" : "sheet"}
-			bottomInset={panelInset}
+			bottomInset={dockInset}
 			open={layersOpen}
 			onClose={closeLayers}
 			layers={document.layers}
@@ -385,7 +382,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							disabled={!canRedo}
 							onPress={redo}
 						/>
-						{/* A tool is put down from the bottom panel. */}
+						{/* A tool is put down from the dock. */}
 						{!tool && (
 							<Button
 								label="Export"
@@ -398,7 +395,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					</View>
 				}
 			/>
-			{/* The bottom panel floats over the stage, which runs under it. */}
+			{/* The dock floats over the stage, which runs under it. */}
 			<CanvasStage toBottom>
 				<EditorCanvas
 					ref={canvasRef}
@@ -416,12 +413,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					tool={canvasTool}
 					onPaintStroke={handlePaintStroke}
 					onDrawBox={handleDrawBox}
-					bottomInset={panelInset}
+					bottomInset={dockInset}
 				/>
 				{tool === "draw" && toolOptionsOpen && (
 					<BrushOptions
 						settings={brushSettings}
-						bottomInset={panelInset}
+						bottomInset={dockInset}
 						onChange={setBrushSettings}
 						onClose={() => setToolOptionsOpen(false)}
 					/>
@@ -429,7 +426,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				{tool === "redact" && toolOptionsOpen && (
 					<RedactOptions
 						settings={redactSettings}
-						bottomInset={panelInset}
+						bottomInset={dockInset}
 						onChange={changeRedactSettings}
 						onClose={() => setToolOptionsOpen(false)}
 					/>
@@ -445,9 +442,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				)}
 				{layersBeside && layersPanel}
 
-				{/* After the tool's options, so taps on the panel reach it rather
+				{/* After the tool's options, so taps on the dock reach it rather
 				    than closing them. */}
-				<BottomPanel panel={panelKind} onBack={tool ? finishTool : undefined}>
+				<Dock
+					panel={panelKind}
+					start={
+						tool ? (
+							<DockButton
+								icon="chevron-back"
+								label="Back to tools"
+								shortcut="Escape"
+								onPress={finishTool}
+							/>
+						) : undefined
+					}
+				>
 					{tool === "draw" ? (
 						<DrawPanel
 							settings={brushSettings}
@@ -495,7 +504,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onCrop={startCrop}
 						/>
 					)}
-				</BottomPanel>
+				</Dock>
 			</CanvasStage>
 			{!layersBeside && layersPanel}
 

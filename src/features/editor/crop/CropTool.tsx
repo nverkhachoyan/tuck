@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, useEffect } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import {
 	BackHandler,
 	Platform,
@@ -9,19 +9,35 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeIn } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
 import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
-import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
+import { Dock, DockButton, useDockInset } from "../Dock";
+import { ToolButton, ToolRow } from "../ToolButton";
 import { AngleDial } from "./AngleDial";
 import { CropCanvas } from "./CropCanvas";
 import { MAX_STRAIGHTEN } from "./cropGeometry";
 import { ASPECTS, useCropController } from "./useCropController";
+
+type CropTab = "crop" | "rotate" | "canvas";
+
+const TABS: { tab: CropTab; label: string; icon: IconName }[] = [
+	{ tab: "crop", label: "Crop", icon: "crop" },
+	{ tab: "rotate", label: "Rotate", icon: "format-rotate-90" },
+	{ tab: "canvas", label: "Canvas", icon: "checkerboard" },
+];
+
+// Room for the tallest tab's controls, so the canvas holds still as tabs
+// change: Rotate's dial over its actions, or the actions alone when there's
+// no photo to level.
+const CONTROLS_WITH_DIAL = 120;
+const CONTROLS_WITHOUT_DIAL = 64;
+const TAB_IN = FadeIn.duration(160);
 
 type CropToolProps = {
 	document: EditorDocument;
@@ -37,12 +53,15 @@ type CropToolProps = {
  * until Done or Cancel. The box is the canvas-to-be: dragging it past the
  * photo's edges expands the canvas. With no locked photo, the canvas itself
  * is cropped and turned, and its layers with it.
- * Nothing changes in the document until Done, which is one undo step.
+ * Nothing changes in the document until Done, which is one undo step. Its
+ * controls are in tabs, picked in the dock between Cancel and Done, and shown
+ * just above it.
  */
 export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	const controller = useCropController(document, onDone);
 	const { anchor, aspect, background, turnLayers } = controller;
-	const { bottom } = useSafeAreaInsets();
+	const dockInset = useDockInset();
+	const [tab, setTab] = useState<CropTab>("crop");
 	// Redactions always turn with the photo (see `turnsWithPhoto`), so they
 	// have no say in whether the choice shows, or what it's called.
 	const choosable = document.layers.filter(
@@ -80,19 +99,11 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 
 	return (
 		<View style={styles.container}>
+			{/* As tall as the editor's header, so the canvas keeps its place. */}
 			<View style={styles.header}>
-				<TextButton label="Cancel" onPress={onCancel} />
 				{controller.changed && (
-					<View style={styles.reset}>
-						<TextButton label="Reset" onPress={controller.reset} />
-					</View>
+					<TextButton label="Reset" onPress={controller.reset} />
 				)}
-				<Button
-					label="Done"
-					variant="primary"
-					size="small"
-					onPress={controller.done}
-				/>
 			</View>
 
 			<CanvasStage>
@@ -112,91 +123,153 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 				/>
 			</CanvasStage>
 
-			<View style={[styles.panel, { paddingBottom: 12 + bottom }]}>
-				{/* Levels a tilted photo; a canvas alone has nothing to level. */}
-				{anchor.layer && (
-					<AngleDial
-						value={controller.straighten}
-						max={MAX_STRAIGHTEN}
-						label="Straighten"
-						onBegin={controller.straightenBegin}
-						onChange={controller.straightenChange}
-						onEnd={controller.straightenEnd}
-					/>
-				)}
-				<ScrollView
-					horizontal
-					showsHorizontalScrollIndicator={false}
-					contentContainerStyle={styles.aspects}
-				>
-					{ASPECTS.map(({ id, label }) => {
-						const selected = id === aspect;
-						return (
-							<Pressable
-								key={id}
-								hitSlop={4}
-								onPress={() => controller.pickAspect(id)}
-								accessibilityRole="button"
-								accessibilityLabel={`Aspect ratio ${label}`}
-								accessibilityState={{ selected }}
-								style={styles.target}
-							>
-								{(state) => {
-									const { pressed, hovered } = interaction(state);
-									return (
-										<View
-											style={[
-												styles.chip,
-												webTransition,
-												hovered && styles.chipHovered,
-												selected && styles.chipSelected,
-												pressed && styles.chipPressed,
-											]}
-										>
-											<Text
-												style={[
-													styles.chipLabel,
-													selected && styles.chipLabelSelected,
-												]}
-											>
-												{label}
-											</Text>
-										</View>
-									);
-								}}
-							</Pressable>
-						);
-					})}
-				</ScrollView>
-				<View style={styles.actions}>
-					<ActionButton
-						icon="rotate-left"
-						label="Rotate"
-						onPress={controller.rotate}
-					/>
-					<ActionButton
-						icon="flip-horizontal"
-						label="Flip"
-						onPress={controller.flip}
-					/>
-					{hasOtherLayers && (
-						<ActionButton
-							icon="format-text-rotation-angle-up"
-							label={onlyText ? "Turn text" : "Turn layers"}
-							selected={turnLayers}
-							onPress={controller.toggleTurnLayers}
-						/>
+			<View
+				style={[
+					styles.controls,
+					{
+						height: anchor.layer ? CONTROLS_WITH_DIAL : CONTROLS_WITHOUT_DIAL,
+						marginBottom: dockInset,
+					},
+				]}
+			>
+				<Animated.View key={tab} entering={TAB_IN} style={styles.tab}>
+					{tab === "crop" ? (
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.aspects}
+						>
+							{ASPECTS.map(({ id, label }) => (
+								<AspectChip
+									key={id}
+									label={label}
+									selected={id === aspect}
+									onPress={() => controller.pickAspect(id)}
+								/>
+							))}
+						</ScrollView>
+					) : tab === "rotate" ? (
+						<>
+							{/* Levels a tilted photo; a canvas alone has nothing to level. */}
+							{anchor.layer && (
+								<AngleDial
+									value={controller.straighten}
+									max={MAX_STRAIGHTEN}
+									label="Straighten"
+									onBegin={controller.straightenBegin}
+									onChange={controller.straightenChange}
+									onEnd={controller.straightenEnd}
+								/>
+							)}
+							<View style={styles.actions}>
+								<ActionButton
+									icon="rotate-left"
+									label="Rotate 90°"
+									onPress={controller.rotate}
+								/>
+								<ActionButton
+									icon="flip-horizontal"
+									label="Flip"
+									onPress={controller.flip}
+								/>
+								{hasOtherLayers && (
+									<ActionButton
+										icon="format-text-rotation-angle-up"
+										label={onlyText ? "Turn text" : "Turn layers"}
+										selected={turnLayers}
+										onPress={controller.toggleTurnLayers}
+									/>
+								)}
+							</View>
+						</>
+					) : (
+						<View style={styles.fill}>
+							<Text style={styles.fillLabel}>Fill</Text>
+							<BackgroundPicker
+								value={background}
+								onPick={controller.setBackground}
+							/>
+						</View>
 					)}
-				</View>
-				<View style={styles.fill}>
-					<Text style={styles.fillLabel}>Fill</Text>
-					<BackgroundPicker
-						value={background}
-						onPick={controller.setBackground}
-					/>
-				</View>
+				</Animated.View>
 			</View>
+
+			<Dock
+				panel="crop"
+				start={
+					<DockButton
+						icon="close"
+						label="Cancel"
+						shortcut="Escape"
+						onPress={onCancel}
+					/>
+				}
+				end={
+					<DockButton
+						icon="checkmark"
+						label="Done"
+						shortcut="Enter"
+						primary
+						onPress={controller.done}
+					/>
+				}
+			>
+				<ToolRow>
+					{TABS.map(({ tab: value, label, icon }) => (
+						<ToolButton
+							key={value}
+							label={label}
+							icon={icon}
+							selected={tab === value}
+							onPress={() => setTab(value)}
+						/>
+					))}
+				</ToolRow>
+			</Dock>
 		</View>
+	);
+}
+
+/** An aspect ratio to hold the box to. */
+function AspectChip({
+	label,
+	selected,
+	onPress,
+}: {
+	label: string;
+	selected: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			hitSlop={4}
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={`Aspect ratio ${label}`}
+			accessibilityState={{ selected }}
+			style={styles.target}
+		>
+			{(state) => {
+				const { pressed, hovered } = interaction(state);
+				return (
+					<View
+						style={[
+							styles.chip,
+							webTransition,
+							hovered && styles.chipHovered,
+							selected && styles.chipSelected,
+							pressed && styles.chipPressed,
+						]}
+					>
+						<Text
+							style={[styles.chipLabel, selected && styles.chipLabelSelected]}
+						>
+							{label}
+						</Text>
+					</View>
+				);
+			}}
+		</Pressable>
 	);
 }
 
@@ -270,21 +343,16 @@ const styles = StyleSheet.create({
 	},
 	header: {
 		height: HEADER_HEIGHT,
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingHorizontal: 16,
-	},
-	// Centered on the whole bar, whatever the buttons beside it measure.
-	reset: {
-		...StyleSheet.absoluteFill,
 		alignItems: "center",
 		justifyContent: "center",
-		pointerEvents: "box-none",
 	},
-	panel: {
+	// Each tab's controls sit on the dock, over any room they don't need.
+	controls: {
+		justifyContent: "flex-end",
+		paddingBottom: 8,
+	},
+	tab: {
 		gap: 4,
-		paddingTop: 8,
 	},
 	aspects: {
 		gap: 8,

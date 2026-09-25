@@ -1,6 +1,6 @@
 import { ToolButton, ToolRow } from "../ToolButton";
 
-/** The editing tools, in the bottom panel while no layer is selected. */
+/** The editing tools, in the dock while no layer is selected. */
 export function ToolsPanel({
 	photoBusy,
 	onAddText,

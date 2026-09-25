@@ -17,7 +17,7 @@ import { useTooltip } from "@/ui/Tooltip";
 type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /**
- * An editing tool in the bottom panel: an icon tile with a label under it.
+ * An editing tool in the dock: an icon tile with a label under it.
  * `busy` swaps the icon for a spinner while the tool's work runs, and blocks
  * a second press meanwhile. With a `shortcut`, web shows it on hover.
  * `selected` marks the tool in use, and `glyph`, when given, is drawn in
@@ -101,7 +101,7 @@ export function ToolButton({
 }
 
 /**
- * A bottom panel's row of `ToolButton`s, centered while they fit, and
+ * A dock panel's row of `ToolButton`s, centered while they fit, and
  * scrolling sideways once a narrow screen can't fit them all.
  */
 export function ToolRow({ children }: { children: ReactNode }) {

@@ -6,7 +6,7 @@ import { GlassView } from "@/ui/GlassView";
 
 /**
  * A tool's options, in a card over the canvas, `bottomInset` up from its
- * bottom, just above the panel. A tap anywhere else on the canvas closes it,
+ * bottom, just above the dock. A tap anywhere else on the canvas closes it,
  * rather than drawing.
  */
 export function ToolOptions({
