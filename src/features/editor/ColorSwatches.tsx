@@ -16,10 +16,14 @@ export const SWATCHES = [
 	{ color: "#0A84FF", name: "Blue" },
 ];
 
+/** Whether `value` is a color, but not one of the swatches'. */
+export function isCustomColor(value: string | null): value is string {
+	return value !== null && !SWATCHES.some((swatch) => swatch.color === value);
+}
+
 /**
- * A swatch that opens a color picker: a rainbow, around the color picked
- * with it last (`color`) once there is one. It's chosen whenever the value
- * isn't one of the swatches'.
+ * A swatch that opens a color picker: a rainbow, around a custom color
+ * (`color`) once there is one. It's chosen whenever the value is custom.
  */
 export type CustomSwatch = { color: string | null; onPress: () => void };
 
@@ -64,9 +68,7 @@ export function ColorSwatches({
 			{custom && (
 				<RingChoice
 					label="Custom color"
-					selected={
-						value !== null && !SWATCHES.some((swatch) => swatch.color === value)
-					}
+					selected={isCustomColor(value)}
 					onPress={custom.onPress}
 				>
 					<View style={[styles.swatch, styles.rainbow]}>

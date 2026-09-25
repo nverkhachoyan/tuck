@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
-import { ColorSwatches } from "../ColorSwatches";
+import { ColorOptions } from "../ColorPicker";
 import { ToolButton, ToolRow } from "../ToolButton";
 import {
 	SIZE_DOTS,
@@ -76,13 +76,18 @@ export function RedactPanel({
  */
 export function RedactOptions({
 	settings,
+	customColor,
 	bottomInset,
 	onChange,
+	onPickCustom,
 	onClose,
 }: {
 	settings: RedactSettings;
+	customColor: string | null;
 	bottomInset: number;
 	onChange: (settings: RedactSettings) => void;
+	// A color from the picker, which becomes the editor's custom color.
+	onPickCustom: (color: string) => void;
 	onClose: () => void;
 }) {
 	const { tool, effect } = settings;
@@ -121,9 +126,11 @@ export function RedactOptions({
 					</ToolOption>
 					{effect === "solid" ? (
 						<ToolOption label="Color">
-							<ColorSwatches
+							<ColorOptions
 								value={settings.color}
+								customColor={customColor}
 								onPick={(color) => color && onChange({ ...settings, color })}
+								onPickCustom={onPickCustom}
 							/>
 						</ToolOption>
 					) : (

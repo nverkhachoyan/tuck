@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { TEXT_FONTS } from "@/layers/fonts";
 import {
@@ -10,7 +10,9 @@ import {
 import { colors, webTransition } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
-import { ColorSwatches } from "../ColorSwatches";
+import { ColorPicker } from "../ColorPicker";
+import { ColorSwatches, isCustomColor } from "../ColorSwatches";
+import { ToolOption, ToolOptions } from "../ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.
@@ -38,9 +40,62 @@ const TABS: { tab: Tab; label: string }[] = [
 	{ tab: "background", label: "Box" },
 ];
 
+/** A text layer's colors, which its Color, Outline, and Box tabs pick. */
+export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
+
+const COLOR_NAMES: Record<TextColorKey, string> = {
+	color: "Text color",
+	outlineColor: "Outline",
+	backgroundColor: "Box",
+};
+
+/**
+ * A picker for one of a text layer's colors, in a card over the canvas (see
+ * `ToolOptions`), since the dock's panel has no room for one. The text
+ * takes the color once the finger lifts; the custom color does too.
+ */
+export function TextColorPicker({
+	layer,
+	colorKey,
+	bottomInset,
+	onChange,
+	onPickCustom,
+	onClose,
+}: {
+	layer: TextLayer;
+	colorKey: TextColorKey;
+	bottomInset: number;
+	onChange: (patch: TextLayerEdit) => void;
+	onPickCustom: (color: string) => void;
+	onClose: () => void;
+}) {
+	return (
+		<ToolOptions
+			closeLabel="Close color picker"
+			bottomInset={bottomInset}
+			onClose={onClose}
+		>
+			<ToolOption label={COLOR_NAMES[colorKey]}>
+				<ColorPicker
+					// An outline or box that's off starts from the text's fill.
+					value={layer[colorKey] ?? layer.color}
+					onChangeEnd={(color) => {
+						onChange({ [colorKey]: color });
+						onPickCustom(color);
+					}}
+				/>
+			</ToolOption>
+		</ToolOptions>
+	);
+}
+
 type TextStylePanelProps = {
 	layer: TextLayer;
+	// The editor's custom color, which the custom swatch shows.
+	customColor: string | null;
 	onChange: (patch: TextLayerEdit) => void;
+	// The custom swatch was tapped: open a picker for one of the colors.
+	onOpenPicker: (key: TextColorKey) => void;
 	onEdit: () => void;
 	onToggleResize: () => void;
 	onDuplicate: () => void;
@@ -55,7 +110,9 @@ type TextStylePanelProps = {
  */
 export function TextStylePanel({
 	layer,
+	customColor,
 	onChange,
+	onOpenPicker,
 	onEdit,
 	onToggleResize,
 	onDuplicate,
@@ -112,7 +169,13 @@ export function TextStylePanel({
 			</View>
 
 			<View style={styles.content}>
-				<TabContent tab={tab} layer={layer} onChange={onChange} />
+				<TabContent
+					tab={tab}
+					layer={layer}
+					customColor={customColor}
+					onChange={onChange}
+					onOpenPicker={onOpenPicker}
+				/>
 			</View>
 		</View>
 	);
@@ -121,12 +184,30 @@ export function TextStylePanel({
 function TabContent({
 	tab,
 	layer,
+	customColor,
 	onChange,
+	onOpenPicker,
 }: {
 	tab: Tab;
 	layer: TextLayer;
+	customColor: string | null;
 	onChange: (patch: TextLayerEdit) => void;
+	onOpenPicker: (key: TextColorKey) => void;
 }) {
+	// The custom swatch picks the custom color again, if the value isn't
+	// custom, and opens the picker over the canvas: the dock has no room.
+	const custom = (key: TextColorKey) => {
+		const value = layer[key];
+		return {
+			color: isCustomColor(value) ? value : customColor,
+			onPress: () => {
+				if (customColor && !isCustomColor(value)) {
+					onChange({ [key]: customColor });
+				}
+				onOpenPicker(key);
+			},
+		};
+	};
 	switch (tab) {
 		case "font":
 			return (
@@ -135,28 +216,54 @@ function TabContent({
 		// Text always has a fill; only the outline and background can be off.
 		case "color":
 			return (
-				<ColorSwatches
-					value={layer.color}
-					onPick={(color) => color && onChange({ color })}
-				/>
+				<SwatchRow>
+					<ColorSwatches
+						value={layer.color}
+						custom={custom("color")}
+						onPick={(color) => color && onChange({ color })}
+					/>
+				</SwatchRow>
 			);
 		case "outline":
 			return (
-				<ColorSwatches
-					value={layer.outlineColor}
-					noneLabel="No outline"
-					onPick={(outlineColor) => onChange({ outlineColor })}
-				/>
+				<SwatchRow>
+					<ColorSwatches
+						value={layer.outlineColor}
+						noneLabel="No outline"
+						custom={custom("outlineColor")}
+						onPick={(outlineColor) => onChange({ outlineColor })}
+					/>
+				</SwatchRow>
 			);
 		case "background":
 			return (
-				<ColorSwatches
-					value={layer.backgroundColor}
-					noneLabel="No background"
-					onPick={(backgroundColor) => onChange({ backgroundColor })}
-				/>
+				<SwatchRow>
+					<ColorSwatches
+						value={layer.backgroundColor}
+						noneLabel="No background"
+						custom={custom("backgroundColor")}
+						onPick={(backgroundColor) => onChange({ backgroundColor })}
+					/>
+				</SwatchRow>
 			);
 	}
+}
+
+/**
+ * A row of swatches, scrolling edge to edge like the fonts when a phone
+ * can't fit them all: with "none" and the custom one, there are eight.
+ */
+function SwatchRow({ children }: { children: ReactNode }) {
+	return (
+		<ScrollView
+			horizontal
+			showsHorizontalScrollIndicator={false}
+			style={styles.bleed}
+			contentContainerStyle={styles.swatches}
+		>
+			{children}
+		</ScrollView>
+	);
 }
 
 /** One segment of the tabs' track; the active one is raised out of it. */
@@ -331,6 +438,9 @@ const styles = StyleSheet.create({
 	},
 	fonts: {
 		gap: 8,
+		paddingHorizontal: PADDING,
+	},
+	swatches: {
 		paddingHorizontal: PADDING,
 	},
 	fontChip: {

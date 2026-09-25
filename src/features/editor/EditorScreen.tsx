@@ -50,7 +50,11 @@ import {
 	type ToolKey,
 } from "@/features/editor/shortcuts";
 import { TextEditor } from "@/features/editor/text/TextEditor";
-import { TextStylePanel } from "@/features/editor/text/TextStylePanel";
+import {
+	type TextColorKey,
+	TextColorPicker,
+	TextStylePanel,
+} from "@/features/editor/text/TextStylePanel";
 import { useAddPhoto } from "@/features/editor/useAddPhoto";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { assertNever } from "@/lib/assertNever";
@@ -178,6 +182,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const [chosenRedactSettings, setRedactSettings] = useState<RedactSettings>(
 		defaultRedactSettings,
 	);
+	// The last color picked from a color picker, which every custom swatch
+	// keeps while a preset is in use. Null until there's one.
+	const [customColor, setCustomColor] = useState<string | null>(null);
+	// Which of a text layer's colors has a picker open over the canvas. It
+	// belongs to that layer, and closes if another is selected.
+	const [textPicker, setTextPicker] = useState<{
+		layerId: string;
+		key: TextColorKey;
+	} | null>(null);
+	if (textPicker && (tool || textPicker.layerId !== selectedTextLayer?.id)) {
+		setTextPicker(null);
+	}
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
@@ -481,17 +497,37 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				{tool === "draw" && toolOptionsOpen && (
 					<BrushOptions
 						settings={brushSettings}
+						customColor={customColor}
 						bottomInset={dockInset}
 						onChange={setBrushSettings}
+						onPickCustom={(color) => {
+							setBrushSettings((settings) => ({ ...settings, color }));
+							setCustomColor(color);
+						}}
 						onClose={() => setToolOptionsOpen(false)}
 					/>
 				)}
 				{tool === "redact" && toolOptionsOpen && (
 					<RedactOptions
 						settings={redactSettings}
+						customColor={customColor}
 						bottomInset={dockInset}
 						onChange={changeRedactSettings}
+						onPickCustom={(color) => {
+							changeRedactSettings({ ...redactSettings, color });
+							setCustomColor(color);
+						}}
 						onClose={() => setToolOptionsOpen(false)}
+					/>
+				)}
+				{textPicker && selectedTextLayer && (
+					<TextColorPicker
+						layer={selectedTextLayer}
+						colorKey={textPicker.key}
+						bottomInset={dockInset}
+						onChange={updateSelectedText}
+						onPickCustom={setCustomColor}
+						onClose={() => setTextPicker(null)}
 					/>
 				)}
 				{saveProblem && (
@@ -536,7 +572,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					) : selectedTextLayer ? (
 						<TextStylePanel
 							layer={selectedTextLayer}
+							customColor={customColor}
 							onChange={updateSelectedText}
+							onOpenPicker={(key) =>
+								setTextPicker({ layerId: selectedTextLayer.id, key })
+							}
 							onEdit={() => setEditing("selected")}
 							onToggleResize={() =>
 								setLayerResizable(
