@@ -15,6 +15,7 @@ import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
 import { Button } from "@/ui/Button";
 import { FrostedBackdrop } from "@/ui/GlassView";
 import { interaction } from "@/ui/interaction";
+import { useTooltip } from "@/ui/Tooltip";
 
 const NEXT_ALIGN: Record<TextAlign, TextAlign> = {
 	center: "left",
@@ -45,6 +46,9 @@ export function TextEditor({
 	const [text, setText] = useState(initialText);
 	const [align, setAlign] = useState(layerStyle.align);
 	const done = () => onDone(text, align);
+	// Three bars alone read as a menu, so on web, hovering says what they do.
+	const alignLabel = `Text alignment: ${align}`;
+	const { anchor, tooltip } = useTooltip(alignLabel);
 	const outlineStyle =
 		outlineColor === null
 			? undefined
@@ -81,10 +85,11 @@ export function TextEditor({
 			<KeyboardAvoidingView behavior="padding" style={styles.flex}>
 				<View style={styles.toolbar}>
 					<Pressable
+						{...anchor}
 						hitSlop={4}
 						onPress={() => setAlign(NEXT_ALIGN[align])}
 						accessibilityRole="button"
-						accessibilityLabel={`Text alignment: ${align}`}
+						accessibilityLabel={alignLabel}
 						style={(state) => {
 							const { pressed, hovered } = interaction(state);
 							return [
@@ -97,6 +102,7 @@ export function TextEditor({
 					>
 						<AlignIcon align={align} />
 					</Pressable>
+					{tooltip}
 					<Button label="Done" variant="primary" size="small" onPress={done} />
 				</View>
 
