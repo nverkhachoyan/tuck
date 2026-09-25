@@ -58,7 +58,7 @@ export function LayerActionsPanel({
 }
 
 const styles = StyleSheet.create({
-	// Like the toolbar it replaces. Five tiles still fit a phone's width.
+	// Like ToolsPanel, which it replaces. Five tiles still fit a phone's width.
 	row: {
 		flex: 1,
 		flexDirection: "row",

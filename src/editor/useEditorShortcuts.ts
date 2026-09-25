@@ -1,5 +1,5 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useEffectEvent } from "react";
 import { Platform } from "react-native";
 import { type Shortcut, shortcutFor } from "./shortcuts";
 
@@ -20,6 +20,7 @@ export function useEditorShortcuts({
 	enabled: boolean;
 	onShortcut: (shortcut: Shortcut) => boolean;
 }) {
+	const handleShortcut = useEffectEvent(onShortcut);
 	useFocusEffect(
 		useCallback(() => {
 			if (Platform.OS !== "web" || !enabled) return;
@@ -27,12 +28,12 @@ export function useEditorShortcuts({
 				if (event.isComposing) return;
 				const shortcut = shortcutFor(event);
 				if (!shortcut) return;
-				if (onShortcut(shortcut) || event.metaKey || event.ctrlKey) {
+				if (handleShortcut(shortcut) || event.metaKey || event.ctrlKey) {
 					event.preventDefault();
 				}
 			};
 			window.addEventListener("keydown", handleKeyDown);
 			return () => window.removeEventListener("keydown", handleKeyDown);
-		}, [enabled, onShortcut]),
+		}, [enabled]),
 	);
 }

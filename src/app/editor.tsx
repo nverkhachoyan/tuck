@@ -1,13 +1,12 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/editor/canvas/EditorCanvas";
 import { CropTool } from "@/editor/crop/CropTool";
+import { BottomPanel } from "@/editor/panels/BottomPanel";
 import {
 	BrushOptions,
 	type BrushSettings,
@@ -19,18 +18,19 @@ import { LayerActionsPanel } from "@/editor/panels/LayerActionsPanel";
 import { LAYERS_SIDEBAR_INSET, LayersPanel } from "@/editor/panels/LayersPanel";
 import { TextEditor } from "@/editor/panels/TextEditor";
 import { TextEditPanel } from "@/editor/panels/TextEditPanel";
+import { ToolsPanel } from "@/editor/panels/ToolsPanel";
+import { SaveErrorBanner } from "@/editor/SaveErrorBanner";
 import type { Shortcut } from "@/editor/shortcuts";
 import { useEditorShortcuts } from "@/editor/useEditorShortcuts";
-import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/pickPhoto";
-import { usePhotoDrop } from "@/import/usePhotoDrop";
+import { useAddPhoto } from "@/import/useAddPhoto";
 import { assertNever } from "@/lib/assertNever";
-import { errorMessage } from "@/lib/errorMessage";
-import { showAlert } from "@/lib/showAlert";
 import {
 	defaultTextStyle,
+	type EditorDocument,
 	maxNewImageShortSide,
 	type TextAlign,
 } from "@/model/document";
+import type { Framing } from "@/model/framing";
 import { addImage, useAutosave } from "@/projects/projects";
 import { useStore } from "@/store";
 import {
@@ -39,25 +39,31 @@ import {
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
-import { colors, radii } from "@/theme";
+import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
-import { ToolButton } from "@/ui/ToolButton";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
-// Toolbar and text panel share one fixed height, above the home indicator,
-// so the canvas above never resizes when the selection changes.
-const BOTTOM_PANEL_HEIGHT = 124;
 
 export default function EditorRoute() {
-	const router = useRouter();
 	const document = useStore((state) => state.document);
+
+	// The stack guard unmounts this route once the document closes.
+	if (!document) return null;
+
+	return <EditorScreen document={document} />;
+}
+
+function EditorScreen({ document }: { document: EditorDocument }) {
+	const router = useRouter();
 	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
+	const canUndo = useStore(selectCanUndo);
+	const canRedo = useStore(selectCanRedo);
 	const addTextLayer = useStore((state) => state.addTextLayer);
 	const addImageLayer = useStore((state) => state.addImageLayer);
 	const duplicateSelectedLayer = useStore(
@@ -76,42 +82,42 @@ export default function EditorRoute() {
 	const selectLayer = useStore((state) => state.selectLayer);
 	const undo = useStore((state) => state.undo);
 	const redo = useStore((state) => state.redo);
-	const canUndo = useStore(selectCanUndo);
-	const canRedo = useStore(selectCanRedo);
+
 	const canvasRef = useRef<EditorCanvasHandle>(null);
+	// A web trackpad pinch commits after a short pause. Commit it before
+	// anything else changes the document, so undo steps keep their order.
+	const commitPendingPinch = useCallback(
+		() => canvasRef.current?.flushPendingTransform(),
+		[],
+	);
+
 	// What the full-screen text editor is open for: a layer that doesn't exist
 	// yet, or the selected one. The layer is only created or changed on Done.
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 	const [cropping, setCropping] = useState(false);
+	const fullScreenToolOpen = editing !== null || cropping;
 	const [layersOpen, setLayersOpen] = useState(false);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
-	const { bottom } = useSafeAreaInsets();
 	// While drawing, strokes go into the selected drawing, or a new one.
 	const [drawing, setDrawing] = useState(false);
 	const [brushSettings, setBrushSettings] =
 		useState<BrushSettings>(defaultBrushSettings);
 	const [brushOptionsOpen, setBrushOptionsOpen] = useState(false);
-	const documentWidth = document?.width ?? 0;
-	const documentHeight = document?.height ?? 0;
 	const brush = useMemo(
 		() =>
 			drawing
 				? brushFor(brushSettings, {
-						width: documentWidth,
-						height: documentHeight,
+						width: document.width,
+						height: document.height,
 					})
 				: null,
-		[drawing, brushSettings, documentWidth, documentHeight],
+		[drawing, brushSettings, document.width, document.height],
 	);
-	// Picking and re-encoding a large photo takes a few seconds. Set at once,
-	// so a second tap meanwhile can't open another picker.
-	const addingPhoto = useRef(false);
-	const [photoBusy, setPhotoBusy] = useState(false);
-	const prepareForBackgroundSave = useCallback(() => {
-		canvasRef.current?.flushPendingTransform();
-		return useStore.getState().document;
-	}, []);
 
+	const prepareForBackgroundSave = useCallback(() => {
+		commitPendingPinch();
+		return useStore.getState().document;
+	}, [commitPendingPinch]);
 	const { error: autosaveError, retry: retryAutosave } = useAutosave(
 		projectId,
 		document,
@@ -121,140 +127,42 @@ export default function EditorRoute() {
 		projectId === null
 			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
-	// A web trackpad pinch commits after a short pause. Commit it before this
-	// screen loses focus so the session closes with the latest transform.
-	useFocusEffect(
-		useCallback(() => () => canvasRef.current?.flushPendingTransform(), []),
-	);
+	// So the session closes with the latest transform.
+	useFocusEffect(useCallback(() => commitPendingPinch, [commitPendingPinch]));
 
-	const handleUndo = useCallback(() => {
-		canvasRef.current?.flushPendingTransform();
+	const handleUndo = () => {
+		commitPendingPinch();
 		undo();
-	}, [undo]);
-	const handleRedo = useCallback(() => {
-		canvasRef.current?.flushPendingTransform();
+	};
+	const handleRedo = () => {
+		commitPendingPinch();
 		redo();
-	}, [redo]);
+	};
+
+	const selectedIndex = selectedLayer
+		? document.layers.indexOf(selectedLayer)
+		: -1;
+	const moveSelected = (step: 1 | -1) => {
+		if (!selectedLayer) return;
+		commitPendingPinch();
+		moveLayer(selectedLayer.id, selectedIndex + step);
+	};
+	const duplicateSelected = () => {
+		commitPendingPinch();
+		duplicateSelectedLayer();
+	};
 
 	// Always with the pen, so the first stroke shows. Its color and sizes stay.
 	const startDrawing = () => {
-		canvasRef.current?.flushPendingTransform();
+		commitPendingPinch();
 		setLayersOpen(false);
 		setBrushSettings((settings) => ({ ...settings, tool: "pen" }));
 		setDrawing(true);
 	};
-	const finishDrawing = useCallback(() => {
+	const finishDrawing = () => {
 		setDrawing(false);
 		setBrushOptionsOpen(false);
-	}, []);
-
-	const handleShortcut = useCallback(
-		(shortcut: Shortcut) => {
-			if (shortcut.type === "undo") {
-				handleUndo();
-				return true;
-			}
-			if (shortcut.type === "redo") {
-				handleRedo();
-				return true;
-			}
-			// Escape puts the pen down; the rest act on a selection, which holds
-			// still while drawing.
-			if (drawing) {
-				if (shortcut.type !== "deselect") return false;
-				finishDrawing();
-				return true;
-			}
-			if (!document || !selectedLayer) return false;
-			canvasRef.current?.flushPendingTransform();
-			switch (shortcut.type) {
-				case "delete":
-					deleteLayer(selectedLayer.id);
-					return true;
-				case "deselect":
-					selectLayer(null);
-					return true;
-				case "duplicate":
-					duplicateSelectedLayer();
-					return true;
-				case "reorder": {
-					const index = document.layers.findIndex(
-						(layer) => layer.id === selectedLayer.id,
-					);
-					moveLayer(selectedLayer.id, index + shortcut.step);
-					return true;
-				}
-				case "nudge":
-					canvasRef.current?.nudgeSelection(shortcut.dx, shortcut.dy);
-					return true;
-				default:
-					return assertNever(shortcut);
-			}
-		},
-		[
-			handleUndo,
-			handleRedo,
-			drawing,
-			finishDrawing,
-			document,
-			selectedLayer,
-			deleteLayer,
-			selectLayer,
-			duplicateSelectedLayer,
-			moveLayer,
-		],
-	);
-
-	useEditorShortcuts({
-		enabled: editing === null && !cropping,
-		onShortcut: handleShortcut,
-	});
-
-	const closeCrop = useCallback(() => setCropping(false), []);
-	// Stable, so the layers sheet's swipe isn't rebuilt on every render.
-	const closeLayers = useCallback(() => setLayersOpen(false), []);
-
-	// The photo shrinks to what this canvas can use, then moves into the
-	// project, so autosave knows its file. Without a project, it's used where
-	// the picker left it.
-	const addPhoto = async (
-		load: (maxShortSide: number) => Promise<PickedPhoto | null>,
-	) => {
-		if (addingPhoto.current || !document) return;
-		addingPhoto.current = true;
-		setPhotoBusy(true);
-		try {
-			const photo = await load(maxNewImageShortSide(document));
-			if (!photo) return;
-			const { uri, width, height, opaque } = photo;
-			const url =
-				projectId === null ? uri : await addImage(projectId, uri, opaque);
-			canvasRef.current?.flushPendingTransform();
-			addImageLayer(url, width, height, opaque);
-		} catch (error) {
-			showAlert("Couldn't add photo", errorMessage(error));
-		} finally {
-			addingPhoto.current = false;
-			setPhotoBusy(false);
-		}
 	};
-	const handleAddPhoto = () =>
-		addPhoto(async (maxShortSide) => {
-			const result = await pickPhoto({ maxShortSide });
-			return result.status === "canceled" ? null : result.photo;
-		});
-
-	// On web, an image pasted or dropped onto the editor joins the canvas,
-	// unless another screen or tool is in front of it.
-	const focused = useIsFocused();
-	const { dragging } = usePhotoDrop({
-		enabled: focused && editing === null && !cropping,
-		onPhoto: (uri) =>
-			addPhoto((maxShortSide) => importPhoto(uri, { maxShortSide })),
-	});
-
-	// The stack guard unmounts this route once the document closes.
-	if (!document) return null;
 
 	// Finishing with no text discards a new layer and deletes an existing one.
 	const handleEditDone = (rawText: string, align: TextAlign) => {
@@ -269,14 +177,89 @@ export default function EditorRoute() {
 		setEditing(null);
 	};
 
-	const selectedIndex = selectedLayer
-		? document.layers.indexOf(selectedLayer)
-		: -1;
-	const moveSelected = (step: 1 | -1) => {
-		if (!selectedLayer) return;
-		canvasRef.current?.flushPendingTransform();
-		moveLayer(selectedLayer.id, selectedIndex + step);
+	const startCrop = () => {
+		commitPendingPinch();
+		setCropping(true);
 	};
+	const closeCrop = useCallback(() => setCropping(false), []);
+	const finishCrop = (framing: Framing, turnLayers: boolean) => {
+		reframe(framing, turnLayers);
+		closeCrop();
+	};
+
+	// Stable, so the layers sheet's swipe isn't rebuilt on every render.
+	const closeLayers = useCallback(() => setLayersOpen(false), []);
+
+	const goBack = () => {
+		commitPendingPinch();
+		// Opened from a link to the create screen, there's nothing behind the
+		// editor; the welcome screen still ends the session.
+		if (router.canGoBack()) router.back();
+		else router.replace("/");
+	};
+
+	const handleShortcut = (shortcut: Shortcut): boolean => {
+		if (shortcut.type === "undo") {
+			handleUndo();
+			return true;
+		}
+		if (shortcut.type === "redo") {
+			handleRedo();
+			return true;
+		}
+		// Escape puts the pen down; the rest act on a selection, which holds
+		// still while drawing.
+		if (drawing) {
+			if (shortcut.type !== "deselect") return false;
+			finishDrawing();
+			return true;
+		}
+		if (!selectedLayer) return false;
+		commitPendingPinch();
+		switch (shortcut.type) {
+			case "delete":
+				deleteLayer(selectedLayer.id);
+				return true;
+			case "deselect":
+				selectLayer(null);
+				return true;
+			case "duplicate":
+				duplicateSelected();
+				return true;
+			case "reorder":
+				moveSelected(shortcut.step);
+				return true;
+			case "nudge":
+				canvasRef.current?.nudgeSelection(shortcut.dx, shortcut.dy);
+				return true;
+			default:
+				return assertNever(shortcut);
+		}
+	};
+	useEditorShortcuts({
+		enabled: !fullScreenToolOpen,
+		onShortcut: handleShortcut,
+	});
+
+	const focused = useIsFocused();
+	const {
+		busy: photoBusy,
+		dragging,
+		pick: pickPhoto,
+	} = useAddPhoto({
+		// On web, an image pasted or dropped onto the editor joins the canvas,
+		// unless another screen or tool is in front of it.
+		enabled: focused && !fullScreenToolOpen,
+		maxShortSide: maxNewImageShortSide(document),
+		// The photo moves into the project, so autosave knows its file.
+		// Without a project, it's used where the picker left it.
+		onPhoto: async ({ uri, width, height, opaque }) => {
+			const url =
+				projectId === null ? uri : await addImage(projectId, uri, opaque);
+			commitPendingPinch();
+			addImageLayer(url, width, height, opaque);
+		},
+	});
 
 	// The sidebar covers only the canvas, so the bottom panel stays usable.
 	const layersPanel = (
@@ -300,13 +283,7 @@ export default function EditorRoute() {
 		<View style={styles.container}>
 			<ScreenHeader
 				backLabel="Projects"
-				onBack={() => {
-					canvasRef.current?.flushPendingTransform();
-					// Opened from a link to the create screen, there's nothing
-					// behind the editor; the welcome screen still ends the session.
-					if (router.canGoBack()) router.back();
-					else router.replace("/");
-				}}
+				onBack={goBack}
 				action={
 					<View style={styles.headerActions}>
 						{!drawing && (
@@ -375,34 +352,18 @@ export default function EditorRoute() {
 					/>
 				)}
 				{saveProblem && (
-					<View
-						style={[
-							styles.saveErrorArea,
-							layersBeside && layersOpen && { right: LAYERS_SIDEBAR_INSET },
-						]}
-					>
-						<View style={styles.saveError}>
-							<Ionicons
-								name="cloud-offline-outline"
-								size={20}
-								color={colors.accent}
-							/>
-							<Text style={styles.saveErrorText}>{saveProblem}</Text>
-							{projectId !== null && (
-								<Button label="Retry" size="small" onPress={retryAutosave} />
-							)}
-						</View>
-					</View>
+					<SaveErrorBanner
+						message={saveProblem}
+						onRetry={projectId !== null ? retryAutosave : undefined}
+						rightInset={
+							layersBeside && layersOpen ? LAYERS_SIDEBAR_INSET : undefined
+						}
+					/>
 				)}
 				{layersBeside && layersPanel}
 			</View>
 
-			<View
-				style={[
-					styles.bottomPanel,
-					{ height: BOTTOM_PANEL_HEIGHT + bottom, paddingBottom: bottom },
-				]}
-			>
+			<BottomPanel>
 				{drawing ? (
 					<DrawPanel
 						settings={brushSettings}
@@ -415,7 +376,7 @@ export default function EditorRoute() {
 						layer={selectedTextLayer}
 						onChange={updateSelectedText}
 						onEdit={() => setEditing("selected")}
-						onDuplicate={duplicateSelectedLayer}
+						onDuplicate={duplicateSelected}
 						onDelete={() => deleteLayer(selectedTextLayer.id)}
 					/>
 				) : selectedLayer ? (
@@ -425,37 +386,19 @@ export default function EditorRoute() {
 						onDraw={selectedLayer.type === "drawing" ? startDrawing : undefined}
 						onMoveForward={() => moveSelected(1)}
 						onMoveBackward={() => moveSelected(-1)}
-						onDuplicate={() => {
-							canvasRef.current?.flushPendingTransform();
-							duplicateSelectedLayer();
-						}}
+						onDuplicate={duplicateSelected}
 						onDelete={() => deleteLayer(selectedLayer.id)}
 					/>
 				) : (
-					<View style={styles.toolbar}>
-						<ToolButton
-							label="Text"
-							icon="format-text"
-							onPress={() => setEditing("new")}
-						/>
-						<ToolButton label="Draw" icon="draw" onPress={startDrawing} />
-						<ToolButton
-							label="Photo"
-							icon="image-plus"
-							busy={photoBusy}
-							onPress={() => void handleAddPhoto()}
-						/>
-						<ToolButton
-							label="Crop"
-							icon="crop-rotate"
-							onPress={() => {
-								canvasRef.current?.flushPendingTransform();
-								setCropping(true);
-							}}
-						/>
-					</View>
+					<ToolsPanel
+						photoBusy={photoBusy}
+						onAddText={() => setEditing("new")}
+						onDraw={startDrawing}
+						onAddPhoto={pickPhoto}
+						onCrop={startCrop}
+					/>
 				)}
-			</View>
+			</BottomPanel>
 			{!layersBeside && layersPanel}
 
 			{dragging && <DropOverlay label="Drop to add to the canvas" />}
@@ -463,10 +406,7 @@ export default function EditorRoute() {
 				<CropTool
 					document={document}
 					onCancel={closeCrop}
-					onDone={(framing, turnLayers) => {
-						reframe(framing, turnLayers);
-						closeCrop();
-					}}
+					onDone={finishCrop}
 				/>
 			)}
 			{editing === "new" && (
@@ -499,49 +439,5 @@ const styles = StyleSheet.create({
 	canvasArea: {
 		flex: 1,
 		backgroundColor: colors.canvasWell,
-	},
-	// Over the canvas rather than above it, so showing it doesn't resize the
-	// canvas mid-gesture.
-	saveErrorArea: {
-		position: "absolute",
-		top: 12,
-		left: 12,
-		right: 12,
-		alignItems: "center",
-		pointerEvents: "box-none",
-	},
-	saveError: {
-		width: "100%",
-		maxWidth: 560,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 12,
-		paddingLeft: 14,
-		paddingRight: 8,
-		paddingVertical: 8,
-		borderRadius: radii.medium,
-		borderWidth: 1,
-		borderColor: colors.accentSoft,
-		backgroundColor: colors.surface,
-		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
-	},
-	saveErrorText: {
-		flex: 1,
-		fontSize: 14,
-		lineHeight: 19,
-		color: colors.textPrimary,
-	},
-	bottomPanel: {
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
-	},
-	// Tools sit centered as a group; more tools join the row later.
-	toolbar: {
-		flex: 1,
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		gap: 28,
-		paddingHorizontal: 20,
 	},
 });
