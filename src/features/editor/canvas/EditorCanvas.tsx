@@ -223,11 +223,10 @@ export function EditorCanvas({
 	});
 	const nudgeSelection = useCallback(
 		(dx: number, dy: number) => {
-			flushPendingTransform();
 			if (!selectedLayer || scale === 0) return;
 			onNudgeLayer?.(selectedLayer.id, dx / scale, dy / scale);
 		},
-		[flushPendingTransform, selectedLayer, scale, onNudgeLayer],
+		[selectedLayer, scale, onNudgeLayer],
 	);
 
 	const strokePoints = useSharedValue<number[]>([]);

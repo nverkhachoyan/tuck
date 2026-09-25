@@ -7,10 +7,17 @@ import {
 	readLiveTransform,
 } from "./liveTransform";
 
+// Held for a pinch with Ctrl + mouse wheel, and repeated while held on
+// Windows, so they don't end one.
+const MODIFIER_KEYS = new Set(["Control", "Meta", "Shift", "Alt"]);
+
 /**
  * Scales the selected layer with a trackpad pinch on web, which browsers
  * report as wheel events with `ctrlKey` set (so does Ctrl + mouse wheel).
- * A pinch has no end event, so the result commits once the wheel goes quiet.
+ * A pinch has no end event, so the result commits once the wheel goes quiet,
+ * or sooner at the next press or key anywhere, before that input's own
+ * handlers run. Whatever it does then lands after the pinch, in the
+ * document and in undo.
  */
 export function useTrackpadPinch({
 	target,
@@ -58,9 +65,17 @@ export function useTrackpadPinch({
 			commitTimer.current = setTimeout(flushPendingCommit, 250);
 		};
 
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (!MODIFIER_KEYS.has(event.key)) flushPendingCommit();
+		};
+
 		element.addEventListener("wheel", handleWheel, { passive: false });
+		window.addEventListener("pointerdown", flushPendingCommit, true);
+		window.addEventListener("keydown", handleKeyDown, true);
 		return () => {
 			element.removeEventListener("wheel", handleWheel);
+			window.removeEventListener("pointerdown", flushPendingCommit, true);
+			window.removeEventListener("keydown", handleKeyDown, true);
 			clearTimeout(commitTimer.current);
 			commitTimer.current = undefined;
 			pendingCommit.current = null;

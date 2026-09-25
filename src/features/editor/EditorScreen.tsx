@@ -87,8 +87,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const redo = useStore((state) => state.redo);
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
-	// A web trackpad pinch commits after a short pause. Commit it before
-	// anything else changes the document, so undo steps keep their order.
+	// A web trackpad pinch commits after a short pause, or at the next press
+	// or key. Commit it too where no input comes first: a background save,
+	// leaving the screen, and a photo that finished loading.
 	const commitPendingPinch = useCallback(
 		() => canvasRef.current?.flushPendingTransform(),
 		[],
@@ -133,31 +134,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// So the session closes with the latest transform.
 	useFocusEffect(useCallback(() => commitPendingPinch, [commitPendingPinch]));
 
-	const handleUndo = () => {
-		commitPendingPinch();
-		undo();
-	};
-	const handleRedo = () => {
-		commitPendingPinch();
-		redo();
-	};
-
 	const selectedIndex = selectedLayer
 		? document.layers.indexOf(selectedLayer)
 		: -1;
 	const moveSelected = (step: 1 | -1) => {
 		if (!selectedLayer) return;
-		commitPendingPinch();
 		moveLayer(selectedLayer.id, selectedIndex + step);
-	};
-	const duplicateSelected = () => {
-		commitPendingPinch();
-		duplicateSelectedLayer();
 	};
 
 	// Always with the pen, so the first stroke shows. Its color and sizes stay.
 	const startDrawing = () => {
-		commitPendingPinch();
 		setLayersOpen(false);
 		setBrushSettings((settings) => ({ ...settings, tool: "pen" }));
 		setDrawing(true);
@@ -180,10 +166,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		setEditing(null);
 	};
 
-	const startCrop = () => {
-		commitPendingPinch();
-		setCropping(true);
-	};
+	const startCrop = () => setCropping(true);
 	const closeCrop = useCallback(() => setCropping(false), []);
 	const finishCrop = (framing: Framing, turnLayers: boolean) => {
 		reframe(framing, turnLayers);
@@ -194,7 +177,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const closeLayers = useCallback(() => setLayersOpen(false), []);
 
 	const goBack = () => {
-		commitPendingPinch();
 		// Opened from a link to the create screen, there's nothing behind the
 		// editor; the welcome screen still ends the session.
 		if (router.canGoBack()) router.back();
@@ -203,11 +185,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	const handleShortcut = (shortcut: Shortcut): boolean => {
 		if (shortcut.type === "undo") {
-			handleUndo();
+			undo();
 			return true;
 		}
 		if (shortcut.type === "redo") {
-			handleRedo();
+			redo();
 			return true;
 		}
 		// Escape puts the pen down; the rest act on a selection, which holds
@@ -218,7 +200,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			return true;
 		}
 		if (!selectedLayer) return false;
-		commitPendingPinch();
 		switch (shortcut.type) {
 			case "delete":
 				deleteLayer(selectedLayer.id);
@@ -227,7 +208,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				selectLayer(null);
 				return true;
 			case "duplicate":
-				duplicateSelected();
+				duplicateSelectedLayer();
 				return true;
 			case "reorder":
 				moveSelected(shortcut.step);
@@ -302,14 +283,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							label="Undo"
 							shortcut="mod+Z"
 							disabled={!canUndo}
-							onPress={handleUndo}
+							onPress={undo}
 						/>
 						<IconButton
 							icon="arrow-redo-outline"
 							label="Redo"
 							shortcut="mod+shift+Z"
 							disabled={!canRedo}
-							onPress={handleRedo}
+							onPress={redo}
 						/>
 						{drawing ? (
 							<Button
@@ -379,7 +360,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						layer={selectedTextLayer}
 						onChange={updateSelectedText}
 						onEdit={() => setEditing("selected")}
-						onDuplicate={duplicateSelected}
+						onDuplicate={duplicateSelectedLayer}
 						onDelete={() => deleteLayer(selectedTextLayer.id)}
 					/>
 				) : selectedLayer ? (
@@ -389,7 +370,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						onDraw={selectedLayer.type === "drawing" ? startDrawing : undefined}
 						onMoveForward={() => moveSelected(1)}
 						onMoveBackward={() => moveSelected(-1)}
-						onDuplicate={duplicateSelected}
+						onDuplicate={duplicateSelectedLayer}
 						onDelete={() => deleteLayer(selectedLayer.id)}
 					/>
 				) : (
