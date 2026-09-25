@@ -1,6 +1,6 @@
 import { Group, Path, Skia, type SkPath } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
-import type { Brush, DrawingLayer, Stroke } from "@/model/document";
+import type { Brush, DrawingLayer, MaskStroke } from "@/model/document";
 
 /**
  * A smooth line through flattened x, y pairs: curves through the midpoints
@@ -30,9 +30,9 @@ export function strokePath(points: number[]): SkPath {
 
 // A stroke's path never changes, and the editor and export draw the same
 // stroke objects, so each is built once.
-const paths = new WeakMap<Stroke, SkPath>();
+const paths = new WeakMap<MaskStroke, SkPath>();
 
-function pathFor(stroke: Stroke): SkPath {
+export function pathFor(stroke: MaskStroke): SkPath {
 	let path = paths.get(stroke);
 	if (!path) {
 		path = strokePath(stroke.points);

@@ -10,7 +10,7 @@ import { type EditorDocument, textFonts } from "../model/document.ts";
 // as unavailable. So did image layers' `opaque`: builds from before it save
 // only JPEGs, so a layer without it is opaque, and they don't open PNGs.
 // Drawings kept it too: builds from before them list a project that has one
-// as unavailable.
+// as unavailable. So did redactions, for the same reason.
 export const PROJECT_VERSION = 3;
 
 // The file of the photo a project was made from. Saved image layers name a
@@ -238,6 +238,27 @@ function isLayer(value: unknown): boolean {
 			);
 		case "drawing":
 			return Array.isArray(value.strokes) && value.strokes.every(isStroke);
+		case "redaction":
+			return isRedactionEffect(value.effect) && isRedactionShape(value);
+		default:
+			return false;
+	}
+}
+
+function isRedactionEffect(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		((value.type === "solid" && typeof value.color === "string") ||
+			(value.type === "blur" && isPositive(value.radius)))
+	);
+}
+
+function isRedactionShape(value: Fields): boolean {
+	switch (value.shape) {
+		case "box":
+			return isPositive(value.width) && isPositive(value.height);
+		case "strokes":
+			return Array.isArray(value.strokes) && value.strokes.every(isMaskStroke);
 		default:
 			return false;
 	}
@@ -245,9 +266,16 @@ function isLayer(value: unknown): boolean {
 
 function isStroke(value: unknown): boolean {
 	return (
+		isMaskStroke(value) &&
 		isFields(value) &&
-		(value.type === "eraser" ||
-			(value.type === "pen" && typeof value.color === "string")) &&
+		(value.type === "eraser" || typeof value.color === "string")
+	);
+}
+
+function isMaskStroke(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		(value.type === "pen" || value.type === "eraser") &&
 		isPositive(value.width) &&
 		Array.isArray(value.points) &&
 		value.points.length >= 2 &&

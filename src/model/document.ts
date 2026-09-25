@@ -1,5 +1,10 @@
 import { drawingBox, recenterDrawing } from "./drawing.ts";
-import { hitTestBox, type Transform, transformsEqual } from "./geometry.ts";
+import {
+	hitTestBox,
+	type Rect,
+	type Transform,
+	transformsEqual,
+} from "./geometry.ts";
 
 type LayerBase = {
 	id: string;
@@ -79,7 +84,50 @@ export type DrawingLayer = LayerBase & {
 	strokes: Stroke[];
 };
 
-export type Layer = ImageLayer | TextLayer | DrawingLayer;
+/**
+ * A redaction's stroke: a pen covers, and an eraser uncovers what the strokes
+ * before it covered. It has no color: the redaction's effect is what shows.
+ */
+export type MaskStroke = {
+	type: "pen" | "eraser";
+	width: number;
+	points: number[];
+};
+
+/**
+ * How a redaction hides what's under it: covered with a color, or blurred.
+ * `radius` is the blur's sigma in document pixels, however the layer is
+ * scaled, so resizing a blur never weakens it.
+ */
+export type RedactionEffect =
+	| { type: "solid"; color: string }
+	| { type: "blur"; radius: number };
+
+type RedactionBase = LayerBase & {
+	type: "redaction";
+	effect: RedactionEffect;
+};
+
+/** A redaction over a box `width` by `height`, centered on its origin. */
+export type RedactionBox = RedactionBase & {
+	shape: "box";
+	width: number;
+	height: number;
+};
+
+/**
+ * A redaction over strokes painted across what to hide, in its own space
+ * and centered like a drawing's (see `recenterDrawing`).
+ */
+export type RedactionStrokes = RedactionBase & {
+	shape: "strokes";
+	strokes: MaskStroke[];
+};
+
+/** Hides what's drawn under it, inside its box or strokes. */
+export type RedactionLayer = RedactionBox | RedactionStrokes;
+
+export type Layer = ImageLayer | TextLayer | DrawingLayer | RedactionLayer;
 
 // The canvas is the document itself: its size is the exported image's, and
 // layers outside it are cropped.
@@ -324,6 +372,45 @@ export function createDrawingLayer(
 	});
 }
 
+/** A redaction covering `rect`, a box in document space. */
+export function createRedactionBox(
+	rect: Rect,
+	effect: RedactionEffect,
+): RedactionBox {
+	return {
+		type: "redaction",
+		id: createLayerId("redaction"),
+		effect,
+		shape: "box",
+		width: rect.width,
+		height: rect.height,
+		transform: {
+			...identityTransform,
+			x: rect.x + rect.width / 2,
+			y: rect.y + rect.height / 2,
+		},
+		hidden: false,
+		locked: false,
+	};
+}
+
+/** A redaction begun by a pen stroke in document space, like a drawing. */
+export function createRedactionStrokes(
+	stroke: MaskStroke & { type: "pen" },
+	effect: RedactionEffect,
+): RedactionStrokes {
+	return recenterDrawing<RedactionStrokes>({
+		type: "redaction",
+		id: createLayerId("redaction"),
+		effect,
+		shape: "strokes",
+		strokes: [stroke],
+		transform: identityTransform,
+		hidden: false,
+		locked: false,
+	});
+}
+
 /**
  * A copy of a layer with a new id, nudged down and right so it's visibly
  * separate from the original instead of hiding it.
@@ -341,19 +428,27 @@ export function duplicateLayer<T extends Layer>(layer: T): T {
 	};
 }
 
-// In the layer's own units: half a line of text, a tenth of an image, or a
-// tenth of a drawing's longer side (a line drawn straight has no shorter one).
+// In the layer's own units: half a line of text, a tenth of an image or a
+// box, or a tenth of a drawing's longer side (a line drawn straight has no
+// shorter one).
 function duplicateOffset(layer: Layer): number {
 	switch (layer.type) {
 		case "text":
 			return layer.fontSize * 0.5;
 		case "image":
 			return Math.min(layer.width, layer.height) * 0.1;
-		case "drawing": {
-			const { halfWidth, halfHeight } = drawingBox(layer);
-			return Math.max(halfWidth, halfHeight) * 0.2;
-		}
+		case "drawing":
+			return strokesOffset(layer);
+		case "redaction":
+			return layer.shape === "box"
+				? Math.min(layer.width, layer.height) * 0.1
+				: strokesOffset(layer);
 	}
+}
+
+function strokesOffset(layer: { strokes: MaskStroke[] }): number {
+	const { halfWidth, halfHeight } = drawingBox(layer);
+	return Math.max(halfWidth, halfHeight) * 0.2;
 }
 
 /**

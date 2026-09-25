@@ -8,6 +8,8 @@ import {
 	createDocumentFromImage,
 	type DrawingLayer,
 	type ImageLayer,
+	type MaskStroke,
+	type RedactionLayer,
 	type Stroke,
 	type TextLayer,
 } from "../model/document.ts";
@@ -16,6 +18,7 @@ import {
 	createEditorSlice,
 	MAX_HISTORY,
 	selectSelectedLayer,
+	selectSelectedRedaction,
 	selectSelectedTextLayer,
 } from "./editorSlice.ts";
 import type { StoreState } from "./index.ts";
@@ -403,6 +406,85 @@ describe("editorSlice", () => {
 			store.getState().undo();
 			assert.equal(drawings(store).length, 0);
 			assert.equal(store.getState().selectedLayerId, null);
+		});
+	});
+
+	describe("redaction", () => {
+		const black = { type: "solid", color: "#000000" } as const;
+		const blur = { type: "blur", radius: 24 } as const;
+		const box = { x: 100, y: 200, width: 300, height: 50 };
+		const mask = (
+			points: number[],
+			type: MaskStroke["type"] = "pen",
+		): MaskStroke => ({ type, width: 40, points });
+
+		function redactions(store: ReturnType<typeof createTestStore>) {
+			return (store.getState().document?.layers ?? []).filter(
+				(layer): layer is RedactionLayer => layer.type === "redaction",
+			);
+		}
+
+		test("a box goes on top, centered on what it covers, and is selected", () => {
+			const { store } = storeWithText();
+			store.getState().addRedactionBox(box, black);
+			const [redaction] = redactions(store);
+			assert.equal(store.getState().document?.layers.at(-1), redaction);
+			assert.equal(selectSelectedRedaction(store.getState()), redaction);
+			assert.equal(redaction.shape === "box" && redaction.width, 300);
+			assert.deepEqual(
+				[redaction.transform.x, redaction.transform.y],
+				[250, 225],
+			);
+		});
+
+		test("an empty box is ignored", () => {
+			const { store } = storeWithText();
+			const before = store.getState().document;
+			store.getState().addRedactionBox({ ...box, height: 0 }, black);
+			assert.equal(store.getState().document, before);
+		});
+
+		test("restyling is one undo step, and the same style isn't one", () => {
+			const { store } = storeWithText();
+			store.getState().addRedactionBox(box, black);
+			const [redaction] = redactions(store);
+			const steps = store.getState().past.length;
+			store.getState().setRedactionEffect(redaction.id, { ...black });
+			assert.equal(store.getState().past.length, steps);
+
+			store.getState().setRedactionEffect(redaction.id, blur);
+			assert.deepEqual(redactions(store)[0].effect, blur);
+			store.getState().undo();
+			assert.deepEqual(redactions(store)[0].effect, black);
+		});
+
+		test("brush strokes join the selected brushed redaction", () => {
+			const { store } = storeWithText();
+			store.getState().paintRedaction(mask([0, 0, 100, 0]), blur);
+			store.getState().paintRedaction(mask([0, 50, 100, 50]), black);
+			store.getState().paintRedaction(mask([50, 0], "eraser"), black);
+			const [redaction] = redactions(store);
+			assert.equal(redactions(store).length, 1);
+			assert.deepEqual(redaction.effect, blur, "keeps its own style");
+			assert.deepEqual(
+				redaction.shape === "strokes" &&
+					redaction.strokes.map((stroke) => stroke.type),
+				["pen", "pen", "eraser"],
+			);
+		});
+
+		test("a brush over a selected box starts a new redaction; an eraser doesn't", () => {
+			const { store } = storeWithText();
+			store.getState().addRedactionBox(box, black);
+			const before = store.getState().document;
+			store.getState().paintRedaction(mask([0, 0], "eraser"), black);
+			assert.equal(store.getState().document, before);
+
+			store.getState().paintRedaction(mask([0, 0, 100, 0]), black);
+			assert.deepEqual(
+				redactions(store).map((layer) => layer.shape),
+				["box", "strokes"],
+			);
 		});
 	});
 

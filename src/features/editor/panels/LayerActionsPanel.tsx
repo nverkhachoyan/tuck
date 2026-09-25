@@ -2,14 +2,16 @@ import { StyleSheet, View } from "react-native";
 import { ToolButton } from "../ToolButton";
 
 /**
- * Actions for the selected photo or drawing, in place of the tools, as the
- * text panel is for text: it's moved and sized on the canvas, and tapping
- * the canvas off it deselects it. `onDraw` goes on drawing on it.
+ * Actions for the selected photo, drawing, or redaction, in place of the
+ * tools, as the text panel is for text: it's moved and sized on the canvas,
+ * and tapping the canvas off it deselects it. `onDraw` goes on drawing on
+ * a drawing, and `onRedact` restyles a redaction or paints on.
  */
 export function LayerActionsPanel({
 	canMoveForward,
 	canMoveBackward,
 	onDraw,
+	onRedact,
 	onMoveForward,
 	onMoveBackward,
 	onDuplicate,
@@ -18,6 +20,7 @@ export function LayerActionsPanel({
 	canMoveForward: boolean;
 	canMoveBackward: boolean;
 	onDraw?: () => void;
+	onRedact?: () => void;
 	onMoveForward: () => void;
 	onMoveBackward: () => void;
 	onDuplicate: () => void;
@@ -26,6 +29,7 @@ export function LayerActionsPanel({
 	return (
 		<View style={styles.row}>
 			{onDraw && <ToolButton label="Draw" icon="draw" onPress={onDraw} />}
+			{onRedact && <ToolButton label="Redact" icon="blur" onPress={onRedact} />}
 			<ToolButton
 				label="Forward"
 				icon="arrange-bring-forward"

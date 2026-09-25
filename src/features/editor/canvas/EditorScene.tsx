@@ -1,7 +1,9 @@
 import {
+	BackdropBlur,
 	Fill,
 	Group,
 	Path,
+	Picture,
 	Rect,
 	rect,
 	Shadow,
@@ -10,11 +12,21 @@ import {
 import type { ReactNode } from "react";
 import { type SharedValue, useDerivedValue } from "react-native-reanimated";
 import { brushPaint, strokePath } from "@/layers/DrawingLayerView";
+import { layerBounds } from "@/layers/layerBounds";
 import {
 	toInverseTransformList,
 	toTransformList,
 } from "@/layers/layerTransform";
-import type { Brush, EditorDocument, Layer } from "@/model/document";
+import { maskMarks, recordRedactionStrokes } from "@/layers/RedactionLayerView";
+import type {
+	Brush,
+	EditorDocument,
+	Layer,
+	MaskStroke,
+	RedactionEffect,
+	RedactionStrokes,
+} from "@/model/document";
+import { rectFromCorners } from "@/model/geometry";
 import { colors } from "@/theme";
 import { CanvasBackground, LayerContent } from "../EditorSceneParts";
 import { handleMetrics, handlesVisible } from "../handles/handleMetrics";
@@ -31,15 +43,29 @@ const SHADOW_BLUR_PX = 18;
 const EDGE_PX = 1;
 
 /**
- * A stroke being painted: its brush, its points so far in document space,
- * and its id. It's drawn into `targetId`'s drawing, or over everything when
- * it will start a new one. Once the document has it (`landedId`), the scene
- * stops drawing it live in the same update that draws it from the document.
- * Clearing `points` instead would blink: a shared value redraws the canvas
- * before the canvas's own renderer has the new document.
+ * What dragging on the canvas does in place of moving layers: draws with a
+ * brush, drags out a redaction's box, or paints a redaction's strokes.
+ */
+export type CanvasTool =
+	| { type: "draw"; brush: Brush }
+	| { type: "redactBox"; effect: RedactionEffect }
+	| {
+			type: "redactBrush";
+			brush: Omit<MaskStroke, "points">;
+			effect: RedactionEffect;
+	  };
+
+/**
+ * A stroke being painted with a tool: its points so far in document space,
+ * and its id. It's drawn into `targetId`'s layer, or over everything when
+ * it will start a new one; a box runs from its first point to its last.
+ * Once the document has it (`landedId`), the scene stops drawing it live in
+ * the same update that draws it from the document. Clearing `points`
+ * instead would blink: a shared value redraws the canvas before the
+ * canvas's own renderer has the new document.
  */
 export type LiveStroke = {
-	brush: Brush;
+	tool: CanvasTool;
 	points: SharedValue<number[]>;
 	id: SharedValue<number>;
 	landedId: number;
@@ -54,6 +80,8 @@ type EditorSceneProps = {
 	viewScale: number;
 	live: LiveTransform;
 	stroke: LiveStroke | null;
+	// Outlined without handles, as a tool's target: it holds still.
+	outlinedLayer: Layer | null;
 	// An image layer's file couldn't be read or decoded. Must be stable.
 	onImageError: (error: unknown) => void;
 };
@@ -75,6 +103,7 @@ export function EditorScene({
 	viewScale,
 	live,
 	stroke,
+	outlinedLayer,
 	onImageError,
 }: EditorSceneProps) {
 	const canvas = rect(0, 0, document.width, document.height);
@@ -92,24 +121,21 @@ export function EditorScene({
 						clip={layer.type === "image" && layer.locked ? canvas : undefined}
 					>
 						<LiveLayer layer={layer} live={live}>
-							<LayerContent
+							<StrokeTarget
 								layer={layer}
-								stroke={
-									stroke?.targetId === layer.id && (
-										<Group transform={toInverseTransformList(layer.transform)}>
-											<LivePath key={stroke.landedId} stroke={stroke} />
-										</Group>
-									)
-								}
+								stroke={stroke?.targetId === layer.id ? stroke : null}
 								onImageError={onImageError}
 							/>
 						</LiveLayer>
 					</Group>
 				),
 			)}
-			{/* An eraser has nothing to erase until there's a drawing. */}
-			{stroke?.targetId === null && stroke.brush.type === "pen" && (
-				<LivePath key={stroke.landedId} stroke={stroke} />
+			{stroke?.targetId === null && (
+				<NewLayerStroke
+					key={stroke.landedId}
+					stroke={stroke}
+					viewScale={viewScale}
+				/>
 			)}
 			<Group clip={canvas} invertClip>
 				<Fill color={colors.canvasWell} opacity={0.7} />
@@ -131,6 +157,9 @@ export function EditorScene({
 				/>
 			</Group>
 			<SnapGuides document={document} viewScale={viewScale} live={live} />
+			{outlinedLayer && (
+				<SelectionOutline layer={outlinedLayer} viewScale={viewScale} />
+			)}
 			{selectedLayerId !== null && selectedLayerId !== hiddenLayerId && (
 				<SelectionHandles live={live} viewScale={viewScale} />
 			)}
@@ -167,15 +196,201 @@ function LiveLayer({
 }
 
 /**
+ * A layer's content, with `stroke` joining it as it's painted when the
+ * layer is its target.
+ */
+function StrokeTarget({
+	layer,
+	stroke,
+	onImageError,
+}: {
+	layer: Layer;
+	stroke: LiveStroke | null;
+	onImageError: (error: unknown) => void;
+}) {
+	const tool = stroke?.tool;
+	if (
+		stroke &&
+		tool?.type === "redactBrush" &&
+		layer.type === "redaction" &&
+		layer.shape === "strokes"
+	) {
+		return <LiveRedactionStrokes layer={layer} stroke={stroke} tool={tool} />;
+	}
+	return (
+		<LayerContent
+			layer={layer}
+			stroke={
+				stroke &&
+				tool?.type === "draw" && (
+					<Group transform={toInverseTransformList(layer.transform)}>
+						<LivePath
+							key={stroke.landedId}
+							stroke={stroke}
+							brush={tool.brush}
+						/>
+					</Group>
+				)
+			}
+			onImageError={onImageError}
+		/>
+	);
+}
+
+/**
+ * A stroke that will start a new layer, over everything as it's painted.
+ * An eraser has nothing to erase until there's a layer.
+ */
+function NewLayerStroke({
+	stroke,
+	viewScale,
+}: {
+	stroke: LiveStroke;
+	viewScale: number;
+}) {
+	const { tool } = stroke;
+	switch (tool.type) {
+		case "draw":
+			return tool.brush.type === "pen" ? (
+				<LivePath stroke={stroke} brush={tool.brush} />
+			) : null;
+		case "redactBrush":
+			return tool.brush.type === "pen" ? (
+				<LiveRedactionStrokes layer={null} stroke={stroke} tool={tool} />
+			) : null;
+		case "redactBox":
+			return (
+				<LiveBox stroke={stroke} effect={tool.effect} viewScale={viewScale} />
+			);
+	}
+}
+
+// Whatever of a stroke is still to land in the document (see `LiveStroke`).
+// A worklet, as the live views below read it as the stroke grows.
+function unlanded(stroke: LiveStroke): number[] {
+	"worklet";
+	return stroke.id.value > stroke.landedId ? stroke.points.value : [];
+}
+
+/**
  * A stroke as it's being painted, in document space. Keyed by `landedId`, so
  * a landed stroke gives way to the document's copy in one update.
  */
-function LivePath({ stroke }: { stroke: LiveStroke }) {
-	const { points, id, landedId } = stroke;
-	const path = useDerivedValue(() =>
-		strokePath(id.value > landedId ? points.value : []),
+function LivePath({ stroke, brush }: { stroke: LiveStroke; brush: Brush }) {
+	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
+	return <Path path={path} {...brushPaint(brush)} />;
+}
+
+/**
+ * A redaction's strokes with one still being painted, in the layer's own
+ * space, or on its own in document space when it will start a new one
+ * (`layer` is null). Recorded again as the stroke grows.
+ */
+function LiveRedactionStrokes({
+	layer,
+	stroke,
+	tool,
+}: {
+	layer: RedactionStrokes | null;
+	stroke: LiveStroke;
+	tool: Extract<CanvasTool, { type: "redactBrush" }>;
+}) {
+	const { brush } = tool;
+	const effect = layer?.effect ?? tool.effect;
+	const transform = layer?.transform ?? null;
+	const marks = layer ? maskMarks(layer.strokes) : [];
+	const picture = useDerivedValue(() => {
+		const points = unlanded(stroke);
+		return recordRedactionStrokes(
+			effect,
+			transform?.scaleX ?? 1,
+			marks,
+			points.length === 0
+				? null
+				: {
+						mark: {
+							path: strokePath(points),
+							width: brush.width,
+							eraser: brush.type === "eraser",
+						},
+						layerTransform: transform,
+					},
+			null,
+		);
+	}, [effect, transform, marks, brush, stroke]);
+	return <Picture picture={picture} />;
+}
+
+/**
+ * A redaction's box as it's dragged out, in document space, outlined so a
+ * blur over a plain area still shows where it goes.
+ */
+function LiveBox({
+	stroke,
+	effect,
+	viewScale,
+}: {
+	stroke: LiveStroke;
+	effect: RedactionEffect;
+	viewScale: number;
+}) {
+	const box = useDerivedValue(() => {
+		const points = unlanded(stroke);
+		if (points.length === 0) return rect(0, 0, 0, 0);
+		return rectFromCorners(
+			{ x: points[0], y: points[1] },
+			{ x: points[points.length - 2], y: points[points.length - 1] },
+		);
+	});
+	return (
+		<Group>
+			{effect.type === "solid" ? (
+				<Rect rect={box} color={effect.color} />
+			) : (
+				<BackdropBlur clip={box} blur={effect.radius} />
+			)}
+			<Rect
+				rect={box}
+				color={colors.selection}
+				style="stroke"
+				strokeWidth={SELECTION_STROKE_PX / viewScale}
+			/>
+		</Group>
 	);
-	return <Path path={path} {...brushPaint(stroke.brush)} />;
+}
+
+/**
+ * A layer's selection outline where the document has it, with no handles:
+ * what a tool acts on, while gestures leave it be.
+ */
+function SelectionOutline({
+	layer,
+	viewScale,
+}: {
+	layer: Layer;
+	viewScale: number;
+}) {
+	const { transform } = layer;
+	const { halfWidth, halfHeight } = layerBounds(layer);
+	const w = halfWidth * transform.scaleX;
+	const h = halfHeight * transform.scaleY;
+	const box = rect(-w, -h, w * 2, h * 2);
+	return (
+		<Group transform={toTransformList({ ...transform, scaleX: 1, scaleY: 1 })}>
+			<Rect
+				rect={box}
+				color={SELECTION_HALO}
+				style="stroke"
+				strokeWidth={SELECTION_HALO_PX / viewScale}
+			/>
+			<Rect
+				rect={box}
+				color={colors.selection}
+				style="stroke"
+				strokeWidth={SELECTION_STROKE_PX / viewScale}
+			/>
+		</Group>
+	);
 }
 
 /** The document's edge or center lines the dragged layer has snapped onto. */

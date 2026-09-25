@@ -5,6 +5,8 @@ import {
 	createBlankDocument,
 	createDocumentFromImage,
 	createDrawingLayer,
+	createRedactionBox,
+	createRedactionStrokes,
 	createTextLayer,
 	type EditorDocument,
 } from "../model/document.ts";
@@ -202,6 +204,25 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
+	test("reads redactions: boxes and brushed strokes, solid and blurred", () => {
+		const document = documentWithText();
+		const strokes = createRedactionStrokes(
+			{ type: "pen", width: 40, points: [0, 0, 100, 0] },
+			{ type: "blur", radius: 24 },
+		);
+		strokes.strokes.push({ type: "eraser", width: 20, points: [50, 0] });
+		document.layers.push(
+			createRedactionBox(
+				{ x: 10, y: 20, width: 300, height: 80 },
+				{ type: "solid", color: "#000000" },
+			),
+			strokes,
+		);
+		const saved = mapImageUris(document, () => "original.jpg");
+		const project = parseSavedProject(savedJson({ document: saved }));
+		assert.deepEqual(project?.document, saved);
+	});
+
 	test("reads a photo-only marker after the last edit is removed", () => {
 		const photo = mapImageUris(documentWithText(), () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: photo }));
@@ -255,6 +276,34 @@ describe("parseSavedProject", () => {
 					document: {
 						...photo,
 						layers: [...photo.layers, { ...drawingLayer(), strokes: [stroke] }],
+					},
+				} as unknown as Partial<SavedProject>),
+			),
+			...[
+				{ effect: { type: "pixelate", size: 8 } },
+				{ effect: { type: "blur", radius: 0 } },
+				{ effect: { type: "solid" } },
+				{ width: 0 },
+				{ shape: "circle" },
+				{ shape: "strokes" },
+				{
+					shape: "strokes",
+					strokes: [{ type: "pencil", width: 4, points: [0, 0] }],
+				},
+			].map((patch) =>
+				savedJson({
+					document: {
+						...photo,
+						layers: [
+							...photo.layers,
+							{
+								...createRedactionBox(
+									{ x: 0, y: 0, width: 10, height: 10 },
+									{ type: "blur", radius: 8 },
+								),
+								...patch,
+							},
+						],
 					},
 				} as unknown as Partial<SavedProject>),
 			),

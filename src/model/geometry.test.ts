@@ -9,6 +9,7 @@ import {
 	invertMatrix,
 	multiplyMatrices,
 	normalizeAngle,
+	rectFromCorners,
 	type Transform,
 	toDocumentSpace,
 	toLayerSpace,
@@ -35,6 +36,15 @@ describe("toLayerSpace", () => {
 		const local = toLayerSpace(transform, { x: 100, y: 70 });
 		near(local.x, 10);
 		near(local.y, 0);
+	});
+});
+
+describe("rectFromCorners", () => {
+	test("is the same whichever way it's dragged", () => {
+		const rect = { x: 10, y: 20, width: 30, height: 40 };
+		assert.deepEqual(rectFromCorners({ x: 10, y: 20 }, { x: 40, y: 60 }), rect);
+		assert.deepEqual(rectFromCorners({ x: 40, y: 20 }, { x: 10, y: 60 }), rect);
+		assert.deepEqual(rectFromCorners({ x: 40, y: 60 }, { x: 10, y: 20 }), rect);
 	});
 });
 

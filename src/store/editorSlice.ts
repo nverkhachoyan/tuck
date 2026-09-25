@@ -3,10 +3,15 @@
 import {
 	createDrawingLayer,
 	createImageLayer,
+	createRedactionBox,
+	createRedactionStrokes,
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
 	type Layer,
+	type MaskStroke,
+	type RedactionEffect,
+	type RedactionLayer,
 	reorderLayer,
 	type Stroke,
 	type TextAlign,
@@ -20,7 +25,11 @@ import {
 	framingsEqual,
 	reframeDocument,
 } from "../model/framing.ts";
-import { type Transform, transformsEqual } from "../model/geometry.ts";
+import {
+	type Rect,
+	type Transform,
+	transformsEqual,
+} from "../model/geometry.ts";
 import type { SliceCreator } from "./index.ts";
 
 // Undo steps kept; the oldest are dropped beyond this.
@@ -49,6 +58,9 @@ export type EditorSlice = {
 	) => void;
 	duplicateSelectedLayer: () => void;
 	drawStroke: (stroke: Stroke) => void;
+	addRedactionBox: (rect: Rect, effect: RedactionEffect) => void;
+	paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) => void;
+	setRedactionEffect: (id: string, effect: RedactionEffect) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
 	nudgeLayer: (id: string, dx: number, dy: number) => void;
@@ -74,6 +86,13 @@ export const selectSelectedTextLayer = (
 ): TextLayer | undefined => {
 	const layer = selectSelectedLayer(state);
 	return layer?.type === "text" ? layer : undefined;
+};
+
+export const selectSelectedRedaction = (
+	state: EditorSlice,
+): RedactionLayer | undefined => {
+	const layer = selectSelectedLayer(state);
+	return layer?.type === "redaction" ? layer : undefined;
 };
 
 export const selectCanUndo = ({ past }: EditorSlice) => past.length > 0;
@@ -186,6 +205,48 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			} else if (stroke.type === "pen") {
 				addOnTop("editor/drawStroke", createDrawingLayer(stroke));
 			}
+		},
+
+		// A box in document space, on top and selected, so restyling it right
+		// after (see `setRedactionEffect`) changes it.
+		addRedactionBox: (rect, effect) => {
+			if (rect.width <= 0 || rect.height <= 0) return;
+			addOnTop("editor/addRedactionBox", createRedactionBox(rect, effect));
+		},
+
+		// Like `drawStroke`: a stroke joins the selected brushed redaction, or a
+		// pen starts a new one with `effect` on top.
+		paintRedaction: (stroke, effect) => {
+			if (stroke.points.length < 2) return;
+			const selected = selectSelectedLayer(get());
+			if (
+				selected?.type === "redaction" &&
+				selected.shape === "strokes" &&
+				!selected.locked
+			) {
+				setLayers("editor/paintRedaction", (layers) =>
+					layers.map((layer) =>
+						layer === selected ? addStroke(selected, stroke) : layer,
+					),
+				);
+			} else if (stroke.type === "pen") {
+				addOnTop(
+					"editor/paintRedaction",
+					createRedactionStrokes({ ...stroke, type: "pen" }, effect),
+				);
+			}
+		},
+
+		setRedactionEffect: (id, effect) => {
+			const target = findLayer(id);
+			if (target?.type !== "redaction" || effectsEqual(target.effect, effect)) {
+				return;
+			}
+			setLayers("editor/setRedactionEffect", (layers) =>
+				layers.map((layer) =>
+					layer === target ? { ...target, effect } : layer,
+				),
+			);
 		},
 
 		updateSelectedText: (patch) => {
@@ -339,3 +400,9 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		},
 	};
 };
+
+function effectsEqual(left: RedactionEffect, right: RedactionEffect): boolean {
+	return left.type === "solid"
+		? right.type === "solid" && left.color === right.color
+		: right.type === "blur" && left.radius === right.radius;
+}

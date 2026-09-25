@@ -85,6 +85,17 @@ export function toLayerSpace(transform: Transform, point: Point): Point {
 	};
 }
 
+/** The upright rectangle with `a` and `b` at opposite corners. */
+export function rectFromCorners(a: Point, b: Point): Rect {
+	"worklet";
+	return {
+		x: Math.min(a.x, b.x),
+		y: Math.min(a.y, b.y),
+		width: Math.abs(b.x - a.x),
+		height: Math.abs(b.y - a.y),
+	};
+}
+
 /** Whether a document-space point lands inside a layer's local-space box. */
 export function hitTestBox(
 	transform: Transform,

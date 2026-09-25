@@ -5,6 +5,7 @@ import {
 	createBlankDocument,
 	createDocumentFromImage,
 	createImageLayer,
+	createRedactionBox,
 	createTextLayer,
 	type EditorDocument,
 	type ImageLayer,
@@ -95,6 +96,18 @@ describe("reframeDocument", () => {
 		const document = documentWithText();
 		const turned = reframeDocument(document, turnLeft(document), true);
 		near(text(turned).transform.rotation, 0.2 - Math.PI / 2);
+	});
+
+	test("always turns a redaction with the photo, so it keeps covering", () => {
+		const document = documentWithText();
+		const box = createRedactionBox(
+			{ x: 900, y: 450, width: 200, height: 100 },
+			{ type: "solid", color: "#000000" },
+		);
+		document.layers.push(box);
+		const turned = reframeDocument(document, turnLeft(document), false);
+		near(turned.layers[2].transform.rotation, -Math.PI / 2);
+		near(text(turned).transform.rotation, 0.2);
 	});
 
 	test("comes back exactly after four quarter turns", () => {

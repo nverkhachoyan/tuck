@@ -12,8 +12,8 @@ import { type LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { layerBounds } from "@/layers/layerBounds";
-import type { Brush, EditorDocument, Layer, Stroke } from "@/model/document";
-import type { Transform } from "@/model/geometry";
+import type { EditorDocument, Layer } from "@/model/document";
+import { type Rect, rectFromCorners, type Transform } from "@/model/geometry";
 import { colors } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
 import {
@@ -23,7 +23,7 @@ import {
 } from "../handles/canvasCursor";
 import { handleUnder } from "../handles/handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
-import { EditorScene, type LiveStroke } from "./EditorScene";
+import { type CanvasTool, EditorScene, type LiveStroke } from "./EditorScene";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import { layerTargets } from "./layerTargets";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
@@ -34,6 +34,9 @@ import { useTrackpadPinch } from "./useTrackpadPinch";
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 16;
+// A box dragged no further than this either way, in screen pixels, was a
+// tap; one this thin in only one way hides nothing.
+const TAP_SLOP_PX = 6;
 
 type EditorCanvasProps = {
 	ref?: Ref<EditorCanvasHandle>;
@@ -47,11 +50,13 @@ type EditorCanvasProps = {
 	onCommitTransform?: (id: string, transform: Transform) => void;
 	// Moves a layer by a document-space offset (see `nudgeSelection`).
 	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
-	// While set, dragging paints with this brush instead of selecting and
-	// moving layers.
-	brush?: Brush | null;
-	// A finished stroke, in document space.
-	onPaintStroke?: (stroke: Stroke) => void;
+	// While set, dragging paints or drags out boxes with this tool instead of
+	// selecting and moving layers.
+	tool?: CanvasTool | null;
+	// A finished stroke's points, in document space.
+	onPaintStroke?: (points: number[]) => void;
+	// A finished redaction box, in document space.
+	onDrawBox?: (rect: Rect) => void;
 	// How much of the view's bottom is covered by panels floating over it.
 	// The document fits above them, and what's past its edges shows under.
 	bottomInset?: number;
@@ -75,8 +80,11 @@ export type EditorCanvasHandle = {
  * the UI thread shares so a drag can pick its layer there. With a mouse, the
  * cursor shows what a press at the pointer would do.
  *
- * With a `brush`, a single gesture paints instead, into the selected
- * drawing if there is one. The selection is then hidden and holds still.
+ * With a `tool`, a single gesture paints instead, into the selected layer
+ * if the tool can add to it, or drags out a redaction's box. The selection
+ * then holds still, and only a redaction's is outlined, to show what the
+ * redact tool's style changes. In box mode, a tap picks the redaction to
+ * change, or none.
  */
 export function EditorCanvas({
 	ref,
@@ -87,8 +95,9 @@ export function EditorCanvas({
 	onTapSelectedLayer,
 	onCommitTransform,
 	onNudgeLayer,
-	brush = null,
+	tool = null,
 	onPaintStroke,
+	onDrawBox,
 	bottomInset = 0,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
@@ -135,7 +144,7 @@ export function EditorCanvas({
 
 	const selectedLayerId = selectedLayer?.id ?? null;
 	// What gestures move: nothing while painting.
-	const movableLayer = brush ? undefined : selectedLayer;
+	const movableLayer = tool ? undefined : selectedLayer;
 
 	// Keep the gesture-driven values in step with the selected layer: when the
 	// selection changes, and when that layer does (a commit, undo, restyle).
@@ -247,11 +256,30 @@ export function EditorCanvas({
 	const [landedStrokeId, setLandedStrokeId] = useState(0);
 	const handleStroke = useCallback(
 		(points: number[], id: number) => {
-			if (!brush) return;
-			onPaintStroke?.({ ...brush, points });
+			if (!tool || points.length < 2) return;
 			setLandedStrokeId(id);
+			if (tool.type !== "redactBox") {
+				onPaintStroke?.(points);
+				return;
+			}
+			const start = { x: points[0], y: points[1] };
+			const box = rectFromCorners(start, {
+				x: points[points.length - 2],
+				y: points[points.length - 1],
+			});
+			// A box too thin to hide anything is dropped, rather than taken
+			// for a tap.
+			if (Math.max(box.width, box.height) * scale >= TAP_SLOP_PX) {
+				if (Math.min(box.width, box.height) * scale >= TAP_SLOP_PX) {
+					onDrawBox?.(box);
+				}
+				return;
+			}
+			const hit = findLayerAt(targets, start);
+			const tapped = document.layers.find((layer) => layer.id === hit?.id);
+			onSelectLayer?.(tapped?.type === "redaction" ? tapped.id : null);
 		},
-		[brush, onPaintStroke],
+		[tool, onPaintStroke, onDrawBox, onSelectLayer, scale, targets, document],
 	);
 	const paintGesture = usePaintGesture({
 		viewport,
@@ -261,15 +289,22 @@ export function EditorCanvas({
 	});
 	const liveStroke = useMemo<LiveStroke | null>(
 		() =>
-			brush && {
-				brush,
+			tool && {
+				tool,
 				points: strokePoints,
 				id: strokeId,
 				landedId: landedStrokeId,
-				targetId: selectedLayer?.type === "drawing" ? selectedLayer.id : null,
+				targetId:
+					selectedLayer && canAddTo(tool, selectedLayer)
+						? selectedLayer.id
+						: null,
 			},
-		[brush, strokePoints, strokeId, landedStrokeId, selectedLayer],
+		[tool, strokePoints, strokeId, landedStrokeId, selectedLayer],
 	);
+	const outlinedLayer =
+		tool && tool.type !== "draw" && selectedLayer?.type === "redaction"
+			? selectedLayer
+			: null;
 
 	useImperativeHandle(ref, () => ({ flushPendingTransform, nudgeSelection }), [
 		flushPendingTransform,
@@ -277,10 +312,10 @@ export function EditorCanvas({
 	]);
 
 	return (
-		<GestureDetector gesture={brush ? paintGesture : gesture}>
+		<GestureDetector gesture={tool ? paintGesture : gesture}>
 			<View
 				ref={containerRef}
-				style={[styles.container, cursorStyle(brush ? "crosshair" : cursor)]}
+				style={[styles.container, cursorStyle(tool ? "crosshair" : cursor)]}
 				onLayout={handleLayout}
 			>
 				<Canvas style={styles.canvas}>
@@ -294,11 +329,12 @@ export function EditorCanvas({
 						>
 							<EditorScene
 								document={document}
-								selectedLayerId={brush ? null : selectedLayerId}
+								selectedLayerId={tool ? null : selectedLayerId}
 								hiddenLayerId={hiddenLayerId}
 								viewScale={scale}
 								live={live}
 								stroke={liveStroke}
+								outlinedLayer={outlinedLayer}
 								onImageError={handleImageError}
 							/>
 						</Group>
@@ -321,6 +357,19 @@ export function EditorCanvas({
 			</View>
 		</GestureDetector>
 	);
+}
+
+/** Whether `tool`'s strokes join `layer`, rather than starting a new one. */
+function canAddTo(tool: CanvasTool, layer: Layer): boolean {
+	if (layer.locked) return false;
+	switch (tool.type) {
+		case "draw":
+			return layer.type === "drawing";
+		case "redactBrush":
+			return layer.type === "redaction" && layer.shape === "strokes";
+		case "redactBox":
+			return false;
+	}
 }
 
 const styles = StyleSheet.create({

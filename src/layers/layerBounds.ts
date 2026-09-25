@@ -15,18 +15,24 @@ export function layerBounds(layer: Layer, minPadding = 0): Box {
 		case "text":
 			return textLayerBounds(layer, minPadding);
 		case "image":
-			return {
-				halfWidth: layer.width / 2 + minPadding,
-				halfHeight: layer.height / 2 + minPadding,
-			};
-		case "drawing": {
-			const { halfWidth, halfHeight } = drawingBox(layer);
-			return {
-				halfWidth: halfWidth + minPadding,
-				halfHeight: halfHeight + minPadding,
-			};
-		}
+			return padded(
+				{ halfWidth: layer.width / 2, halfHeight: layer.height / 2 },
+				minPadding,
+			);
+		case "drawing":
+			return padded(drawingBox(layer), minPadding);
+		case "redaction":
+			return layer.shape === "box"
+				? padded(
+						{ halfWidth: layer.width / 2, halfHeight: layer.height / 2 },
+						minPadding,
+					)
+				: padded(drawingBox(layer), minPadding);
 		default:
 			return assertNever(layer);
 	}
+}
+
+function padded({ halfWidth, halfHeight }: Box, padding: number): Box {
+	return { halfWidth: halfWidth + padding, halfHeight: halfHeight + padding };
 }

@@ -1,5 +1,5 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
-import type { DrawingLayer } from "../../../model/document.ts";
+import type { MaskStroke } from "../../../model/document.ts";
 import { hitTestDrawing } from "../../../model/drawing.ts";
 import {
 	type Box,
@@ -23,16 +23,17 @@ export type LayerTarget = {
 	// the layer is locked and can't be selected.
 	hitBox: Box | null;
 	hitPadding: number;
-	// A drawing is only hit near what it drew.
-	drawing: DrawingLayer | null;
+	// A drawing, or a redaction painted with a brush, is only hit near what
+	// its strokes drew.
+	strokes: MaskStroke[] | null;
 	// A locked photo is cut off at the canvas's edge.
 	clipped: boolean;
 };
 
 /**
  * The topmost selectable layer under a document-space point, or null. A
- * drawing is only hit near what it drew, so a tap inside a circle drawn
- * around something reaches what's under it.
+ * layer of strokes is only hit near what it drew, so a tap inside a circle
+ * drawn around something reaches what's under it.
  */
 export function findLayerAt(
 	targets: readonly LayerTarget[],
@@ -44,9 +45,9 @@ export function findLayerAt(
 		if (!target.hitBox || !hitTestBox(target.transform, target.hitBox, point))
 			continue;
 		if (
-			!target.drawing ||
+			!target.strokes ||
 			hitTestDrawing(
-				target.drawing,
+				{ strokes: target.strokes },
 				toLayerSpace(target.transform, point),
 				target.hitPadding,
 			)

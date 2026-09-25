@@ -43,12 +43,13 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	const controller = useCropController(document, onDone);
 	const { anchor, aspect, background, turnLayers } = controller;
 	const { bottom } = useSafeAreaInsets();
-	const hasOtherLayers = document.layers.some(
-		(layer) => layer !== anchor.layer && !layer.hidden,
+	// Redactions always turn with the photo (see `turnsWithPhoto`), so they
+	// have no say in whether the choice shows, or what it's called.
+	const choosable = document.layers.filter(
+		(layer) => layer !== anchor.layer && layer.type !== "redaction",
 	);
-	const onlyText = document.layers.every(
-		(layer) => layer === anchor.layer || layer.type === "text",
-	);
+	const hasOtherLayers = choosable.some((layer) => !layer.hidden);
+	const onlyText = choosable.every((layer) => layer.type === "text");
 
 	// Android's back button cancels, as it would a dialog.
 	useEffect(() => {

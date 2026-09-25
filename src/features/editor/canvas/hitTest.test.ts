@@ -1,7 +1,10 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { DrawingLayer } from "../../../model/document.ts";
+import type {
+	DrawingLayer,
+	RedactionStrokes,
+} from "../../../model/document.ts";
 import type { Transform } from "../../../model/geometry.ts";
 import { findLayerAt, type LayerTarget } from "./hitTest.ts";
 
@@ -18,7 +21,10 @@ function target(
 	id: string,
 	x: number,
 	y: number,
-	options: { locked?: boolean; drawing?: DrawingLayer } = {},
+	options: {
+		locked?: boolean;
+		strokes?: DrawingLayer["strokes"] | RedactionStrokes["strokes"];
+	} = {},
 ): LayerTarget {
 	const box = { halfWidth: 50, halfHeight: 50 };
 	return {
@@ -27,7 +33,7 @@ function target(
 		box,
 		hitBox: options.locked ? null : box,
 		hitPadding: 0,
-		drawing: options.drawing ?? null,
+		strokes: options.strokes ?? null,
 		clipped: false,
 	};
 }
@@ -67,9 +73,20 @@ describe("findLayerAt", () => {
 	test("hits a drawing only near what it drew", () => {
 		const targets = [
 			target("photo", 0, 0),
-			target("drawing", 0, 0, { drawing: line }),
+			target("drawing", 0, 0, { strokes: line.strokes }),
 		];
 		assert.equal(findLayerAt(targets, { x: 10, y: 2 })?.id, "drawing");
+		assert.equal(findLayerAt(targets, { x: 10, y: 30 })?.id, "photo");
+	});
+
+	test("hits a brushed redaction only near its pens, as a drawing", () => {
+		const targets = [
+			target("photo", 0, 0),
+			target("redaction", 0, 0, {
+				strokes: [{ type: "pen", width: 10, points: [-50, 0, 50, 0] }],
+			}),
+		];
+		assert.equal(findLayerAt(targets, { x: 10, y: 2 })?.id, "redaction");
 		assert.equal(findLayerAt(targets, { x: 10, y: 30 })?.id, "photo");
 	});
 });

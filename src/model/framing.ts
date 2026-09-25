@@ -2,6 +2,7 @@ import {
 	centeredTransform,
 	type EditorDocument,
 	type ImageLayer,
+	type Layer,
 } from "./document.ts";
 import {
 	applyMatrix,
@@ -117,9 +118,18 @@ export function rebaseTransform(
 }
 
 /**
+ * Whether a layer turns with the photo when it's reframed. `turnLayers` is
+ * the crop tool's choice, but a redaction always turns: upright over text
+ * that turned, its corners would show what it hides.
+ */
+export function turnsWithPhoto(layer: Layer, turnLayers: boolean): boolean {
+	return turnLayers || layer.type === "redaction";
+}
+
+/**
  * The document with a new framing. Every layer but the anchor follows it, as
- * `rebaseTransform` describes; `turnLayers` turns them along with it. If the
- * anchor stays put, so does everything else, exactly.
+ * `rebaseTransform` describes, turning along with it as `turnsWithPhoto`
+ * says. If the anchor stays put, so does everything else, exactly.
  */
 export function reframeDocument(
 	document: EditorDocument,
@@ -147,7 +157,7 @@ export function reframeDocument(
 									layer.transform,
 									anchor,
 									to,
-									turnLayers,
+									turnsWithPhoto(layer, turnLayers),
 								),
 							},
 				),

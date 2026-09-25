@@ -20,6 +20,7 @@ import {
 	type FramingAnchor,
 	type PhotoPlacement,
 	rebaseTransform,
+	turnsWithPhoto,
 } from "@/model/framing";
 import type { Size } from "@/model/geometry";
 import { colors } from "@/theme";
@@ -169,7 +170,7 @@ export function CropCanvas({
 										layer={layer}
 										anchor={anchor}
 										crop={crop}
-										turn={turnLayers}
+										turn={turnsWithPhoto(layer, turnLayers)}
 										onImageError={handleImageError}
 									/>
 								),

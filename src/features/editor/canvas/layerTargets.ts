@@ -1,5 +1,5 @@
 import { layerBounds } from "@/layers/layerBounds";
-import type { EditorDocument } from "@/model/document";
+import type { EditorDocument, Layer, MaskStroke } from "@/model/document";
 import type { LayerTarget } from "./hitTest";
 
 // Minimum comfortable touch padding around a layer, in screen pixels.
@@ -23,8 +23,16 @@ export function layerTargets(
 				box: layerBounds(layer),
 				hitBox: layer.locked ? null : layerBounds(layer, hitPadding),
 				hitPadding,
-				drawing: layer.type === "drawing" && !layer.locked ? layer : null,
+				strokes: layer.locked ? null : layerStrokes(layer),
 				clipped: layer.type === "image" && layer.locked,
 			};
 		});
+}
+
+function layerStrokes(layer: Layer): MaskStroke[] | null {
+	if (layer.type === "drawing") return layer.strokes;
+	if (layer.type === "redaction" && layer.shape === "strokes") {
+		return layer.strokes;
+	}
+	return null;
 }

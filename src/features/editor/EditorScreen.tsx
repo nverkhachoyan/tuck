@@ -5,6 +5,7 @@ import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/features/editor/canvas/EditorCanvas";
+import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
 import {
 	type BrushSettings,
@@ -22,6 +23,18 @@ import {
 	LayersPanel,
 } from "@/features/editor/panels/LayersPanel";
 import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
+import {
+	RedactOptions,
+	RedactPanel,
+} from "@/features/editor/redact/RedactPanel";
+import {
+	defaultRedactSettings,
+	maskBrush,
+	type RedactSettings,
+	redactionEffect,
+	sameEffect,
+	withEffect,
+} from "@/features/editor/redact/redactSettings";
 import { SaveErrorBanner } from "@/features/editor/SaveErrorBanner";
 import type { Shortcut } from "@/features/editor/shortcuts";
 import { TextEditor } from "@/features/editor/text/TextEditor";
@@ -36,6 +49,7 @@ import {
 	type TextAlign,
 } from "@/model/document";
 import type { Framing } from "@/model/framing";
+import type { Rect } from "@/model/geometry";
 import { addImage } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
 import { useStore } from "@/store";
@@ -43,6 +57,7 @@ import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
+	selectSelectedRedaction,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
 import { Button } from "@/ui/Button";
@@ -68,6 +83,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
+	const selectedRedaction = useStore(selectSelectedRedaction);
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
 	const addTextLayer = useStore((state) => state.addTextLayer);
@@ -76,6 +92,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		(state) => state.duplicateSelectedLayer,
 	);
 	const drawStroke = useStore((state) => state.drawStroke);
+	const addRedactionBox = useStore((state) => state.addRedactionBox);
+	const paintRedaction = useStore((state) => state.paintRedaction);
+	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const transformLayer = useStore((state) => state.transformLayer);
 	const nudgeLayer = useStore((state) => state.nudgeLayer);
@@ -106,21 +125,65 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const [layersOpen, setLayersOpen] = useState(false);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
 	const panelInset = useBottomPanelInset();
-	// While drawing, strokes go into the selected drawing, or a new one.
-	const [drawing, setDrawing] = useState(false);
+	// The tool dragging on the canvas uses in place of moving layers. While
+	// drawing, strokes go into the selected drawing, or a new one; while
+	// redacting, into the selected brushed redaction, or a new one.
+	const [tool, setTool] = useState<"draw" | "redact" | null>(null);
+	const [toolOptionsOpen, setToolOptionsOpen] = useState(false);
 	const [brushSettings, setBrushSettings] =
 		useState<BrushSettings>(defaultBrushSettings);
-	const [brushOptionsOpen, setBrushOptionsOpen] = useState(false);
-	const brush = useMemo(
-		() =>
-			drawing
-				? brushFor(brushSettings, {
-						width: document.width,
-						height: document.height,
-					})
-				: null,
-		[drawing, brushSettings, document.width, document.height],
+	const [chosenRedactSettings, setRedactSettings] = useState<RedactSettings>(
+		defaultRedactSettings,
 	);
+	const documentSize = useMemo(
+		() => ({ width: document.width, height: document.height }),
+		[document.width, document.height],
+	);
+	// The style shows the selected redaction's, which new ones then share, so
+	// a redaction can be picked to match. Changing it restyles that one too.
+	const redactSettings = useMemo(
+		() =>
+			selectedRedaction
+				? withEffect(
+						chosenRedactSettings,
+						selectedRedaction.effect,
+						documentSize,
+					)
+				: chosenRedactSettings,
+		[chosenRedactSettings, selectedRedaction, documentSize],
+	);
+	const changeRedactSettings = (next: RedactSettings) => {
+		setRedactSettings(next);
+		if (selectedRedaction && !sameEffect(redactSettings, next)) {
+			setRedactionEffect(
+				selectedRedaction.id,
+				redactionEffect(next, documentSize),
+			);
+		}
+	};
+	const canvasTool = useMemo((): CanvasTool | null => {
+		if (tool === "draw") {
+			return { type: "draw", brush: brushFor(brushSettings, documentSize) };
+		}
+		if (tool !== "redact") return null;
+		const effect = redactionEffect(redactSettings, documentSize);
+		const brush = maskBrush(redactSettings, documentSize);
+		return brush
+			? { type: "redactBrush", brush, effect }
+			: { type: "redactBox", effect };
+	}, [tool, brushSettings, redactSettings, documentSize]);
+	const handlePaintStroke = (points: number[]) => {
+		if (canvasTool?.type === "draw") {
+			drawStroke({ ...canvasTool.brush, points });
+		} else if (canvasTool?.type === "redactBrush") {
+			paintRedaction({ ...canvasTool.brush, points }, canvasTool.effect);
+		}
+	};
+	const handleDrawBox = (rect: Rect) => {
+		if (canvasTool?.type === "redactBox") {
+			addRedactionBox(rect, canvasTool.effect);
+		}
+	};
 
 	const prepareForBackgroundSave = useCallback(() => {
 		commitPendingPinch();
@@ -150,11 +213,28 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const startDrawing = () => {
 		setLayersOpen(false);
 		setBrushSettings((settings) => ({ ...settings, tool: "pen" }));
-		setDrawing(true);
+		setTool("draw");
 	};
-	const finishDrawing = () => {
-		setDrawing(false);
-		setBrushOptionsOpen(false);
+	// With the tool that adds to the selected redaction, if there is one.
+	// Otherwise the last one used, but never the eraser, so the first drag
+	// shows.
+	const startRedacting = () => {
+		setLayersOpen(false);
+		setRedactSettings((settings) => ({
+			...settings,
+			tool: selectedRedaction
+				? selectedRedaction.shape === "box"
+					? "box"
+					: "brush"
+				: settings.tool === "eraser"
+					? "brush"
+					: settings.tool,
+		}));
+		setTool("redact");
+	};
+	const finishTool = () => {
+		setTool(null);
+		setToolOptionsOpen(false);
 	};
 
 	// Finishing with no text discards a new layer and deletes an existing one.
@@ -196,11 +276,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			redo();
 			return true;
 		}
-		// Escape puts the pen down; the rest act on a selection, which holds
-		// still while drawing.
-		if (drawing) {
+		// Escape puts the tool down; the rest act on a selection, which holds
+		// still while a tool is in use.
+		if (tool) {
 			if (shortcut.type !== "deselect") return false;
-			finishDrawing();
+			finishTool();
 			return true;
 		}
 		if (!selectedLayer) return false;
@@ -229,8 +309,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onShortcut: handleShortcut,
 	});
 
-	const panelKind = drawing
-		? "draw"
+	const panelKind = tool
+		? tool
 		: selectedTextLayer
 			? "text"
 			: selectedLayer
@@ -283,7 +363,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				onBack={goBack}
 				action={
 					<View style={styles.headerActions}>
-						{!drawing && (
+						{!tool && (
 							<IconButton
 								icon="layers-outline"
 								label="Layers"
@@ -305,12 +385,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							disabled={!canRedo}
 							onPress={redo}
 						/>
-						{drawing ? (
+						{tool ? (
 							<Button
 								label="Done"
 								variant="primary"
 								size="small"
-								onPress={finishDrawing}
+								onPress={finishTool}
 							/>
 						) : (
 							<Button
@@ -339,16 +419,25 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					}
 					onCommitTransform={transformLayer}
 					onNudgeLayer={nudgeLayer}
-					brush={brush}
-					onPaintStroke={drawStroke}
+					tool={canvasTool}
+					onPaintStroke={handlePaintStroke}
+					onDrawBox={handleDrawBox}
 					bottomInset={panelInset}
 				/>
-				{drawing && brushOptionsOpen && (
+				{tool === "draw" && toolOptionsOpen && (
 					<BrushOptions
 						settings={brushSettings}
 						bottomInset={panelInset}
 						onChange={setBrushSettings}
-						onClose={() => setBrushOptionsOpen(false)}
+						onClose={() => setToolOptionsOpen(false)}
+					/>
+				)}
+				{tool === "redact" && toolOptionsOpen && (
+					<RedactOptions
+						settings={redactSettings}
+						bottomInset={panelInset}
+						onChange={changeRedactSettings}
+						onClose={() => setToolOptionsOpen(false)}
 					/>
 				)}
 				{saveProblem && (
@@ -362,15 +451,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				)}
 				{layersBeside && layersPanel}
 
-				{/* After the brush options, so taps on the panel reach it rather
+				{/* After the tool's options, so taps on the panel reach it rather
 				    than closing them. */}
 				<BottomPanel panel={panelKind}>
-					{drawing ? (
+					{tool === "draw" ? (
 						<DrawPanel
 							settings={brushSettings}
-							optionsOpen={brushOptionsOpen}
+							optionsOpen={toolOptionsOpen}
 							onChange={setBrushSettings}
-							onToggleOptions={() => setBrushOptionsOpen((open) => !open)}
+							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
+						/>
+					) : tool === "redact" ? (
+						<RedactPanel
+							settings={redactSettings}
+							optionsOpen={toolOptionsOpen}
+							onChange={changeRedactSettings}
+							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
 						/>
 					) : selectedTextLayer ? (
 						<TextStylePanel
@@ -387,6 +483,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onDraw={
 								selectedLayer.type === "drawing" ? startDrawing : undefined
 							}
+							onRedact={
+								selectedLayer.type === "redaction" ? startRedacting : undefined
+							}
 							onMoveForward={() => moveSelected(1)}
 							onMoveBackward={() => moveSelected(-1)}
 							onDuplicate={duplicateSelectedLayer}
@@ -397,6 +496,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							photoBusy={photoBusy}
 							onAddText={() => setEditing("new")}
 							onDraw={startDrawing}
+							onRedact={startRedacting}
 							onAddPhoto={pickPhoto}
 							onCrop={startCrop}
 						/>

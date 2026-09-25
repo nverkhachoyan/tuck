@@ -213,6 +213,12 @@ function LayerThumbnail({ layer }: { layer: Layer }) {
 			return <IconThumbnail icon="format-text" />;
 		case "drawing":
 			return <IconThumbnail icon="draw" />;
+		case "redaction":
+			return (
+				<IconThumbnail
+					icon={layer.effect.type === "blur" ? "blur" : "square-rounded"}
+				/>
+			);
 		default:
 			return assertNever(layer);
 	}
@@ -242,6 +248,8 @@ function layerLabel(layer: Layer): string {
 			return layer.text.replace(/\s+/g, " ");
 		case "drawing":
 			return "Drawing";
+		case "redaction":
+			return layer.effect.type === "blur" ? "Blur" : "Redaction";
 		default:
 			return assertNever(layer);
 	}

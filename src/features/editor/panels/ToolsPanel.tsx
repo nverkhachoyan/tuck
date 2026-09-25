@@ -6,12 +6,14 @@ export function ToolsPanel({
 	photoBusy,
 	onAddText,
 	onDraw,
+	onRedact,
 	onAddPhoto,
 	onCrop,
 }: {
 	photoBusy: boolean;
 	onAddText: () => void;
 	onDraw: () => void;
+	onRedact: () => void;
 	onAddPhoto: () => void;
 	onCrop: () => void;
 }) {
@@ -19,6 +21,7 @@ export function ToolsPanel({
 		<View style={styles.row}>
 			<ToolButton label="Text" icon="format-text" onPress={onAddText} />
 			<ToolButton label="Draw" icon="draw" onPress={onDraw} />
+			<ToolButton label="Redact" icon="blur" onPress={onRedact} />
 			<ToolButton
 				label="Photo"
 				icon="image-plus"
@@ -31,13 +34,14 @@ export function ToolsPanel({
 }
 
 const styles = StyleSheet.create({
-	// Tools sit centered as a group; more tools join the row later.
+	// Tools sit centered as a group. Spaced like LayerActionsPanel, so five
+	// still fit a phone's width.
 	row: {
 		flex: 1,
 		flexDirection: "row",
 		justifyContent: "center",
 		alignItems: "center",
-		gap: 28,
-		paddingHorizontal: 20,
+		gap: 16,
+		paddingHorizontal: 12,
 	},
 });

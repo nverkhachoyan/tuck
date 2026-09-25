@@ -2,6 +2,7 @@ import { Rect, type SkRect } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import { DrawingLayerView } from "@/layers/DrawingLayerView";
 import { ImageLayerView } from "@/layers/ImageLayerView";
+import { RedactionLayerView } from "@/layers/RedactionLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { ImageLayer, Layer } from "@/model/document";
@@ -48,6 +49,8 @@ export function LayerContent({
 			return <TextLayerView layer={layer} />;
 		case "drawing":
 			return <DrawingLayerView layer={layer}>{stroke}</DrawingLayerView>;
+		case "redaction":
+			return <RedactionLayerView layer={layer} />;
 		default:
 			return assertNever(layer);
 	}

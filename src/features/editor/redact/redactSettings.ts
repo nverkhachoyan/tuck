@@ -1,0 +1,96 @@
+import type { MaskStroke, RedactionEffect } from "../../../model/document.ts";
+import type { Size } from "../../../model/geometry.ts";
+
+// Drags a box, paints strokes, or erases them.
+export type RedactTool = "box" | "brush" | "eraser";
+
+export type RedactSettings = {
+	tool: RedactTool;
+	effect: RedactionEffect["type"];
+	color: string;
+	// Indexes into `BLUR_STRENGTHS` and `REDACT_BRUSH_SIZES`; the brush and
+	// eraser each keep their own size.
+	strength: number;
+	brushSize: number;
+	eraserSize: number;
+};
+
+// Solid black: the one nothing can be read back from.
+export const defaultRedactSettings: RedactSettings = {
+	tool: "box",
+	effect: "solid",
+	color: "#000000",
+	strength: 1,
+	brushSize: 2,
+	eraserSize: 2,
+};
+
+// Blur sigmas and brush widths as a share of the canvas's shorter side, like
+// the draw tool's sizes, so they look the same on a screenshot as on a
+// camera photo. The lightest blur still leaves text in a screenshot
+// unreadable; brushes start at about a line of its text.
+export const BLUR_STRENGTHS = [0.008, 0.016, 0.03];
+export const REDACT_BRUSH_SIZES = [0.02, 0.035, 0.05, 0.075, 0.11];
+
+const shortSide = (size: Size) => Math.min(size.width, size.height);
+
+/** The effect the settings redact with on a canvas of `size`. */
+export function redactionEffect(
+	settings: RedactSettings,
+	size: Size,
+): RedactionEffect {
+	return settings.effect === "solid"
+		? { type: "solid", color: settings.color }
+		: {
+				type: "blur",
+				radius: BLUR_STRENGTHS[settings.strength] * shortSide(size),
+			};
+}
+
+/**
+ * What the brush or eraser paints with on a canvas of `size`, or null when
+ * the tool drags boxes.
+ */
+export function maskBrush(
+	settings: RedactSettings,
+	size: Size,
+): Omit<MaskStroke, "points"> | null {
+	if (settings.tool === "box") return null;
+	const index =
+		settings.tool === "brush" ? settings.brushSize : settings.eraserSize;
+	return {
+		type: settings.tool === "brush" ? "pen" : "eraser",
+		width: REDACT_BRUSH_SIZES[index] * shortSide(size),
+	};
+}
+
+/**
+ * The settings showing an existing redaction's effect: its color, or the
+ * strength closest to its blur, on a canvas of `size`.
+ */
+export function withEffect(
+	settings: RedactSettings,
+	effect: RedactionEffect,
+	size: Size,
+): RedactSettings {
+	if (effect.type === "solid") {
+		return { ...settings, effect: "solid", color: effect.color };
+	}
+	const share = effect.radius / shortSide(size);
+	let strength = 0;
+	BLUR_STRENGTHS.forEach((candidate, index) => {
+		if (
+			Math.abs(candidate - share) < Math.abs(BLUR_STRENGTHS[strength] - share)
+		) {
+			strength = index;
+		}
+	});
+	return { ...settings, effect: "blur", strength };
+}
+
+/** Whether two settings redact alike, whatever they paint with. */
+export function sameEffect(left: RedactSettings, right: RedactSettings) {
+	return left.effect === "solid"
+		? right.effect === "solid" && left.color === right.color
+		: right.effect === "blur" && left.strength === right.strength;
+}
