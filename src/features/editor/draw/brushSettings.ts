@@ -8,9 +8,6 @@ export type BrushSettings = {
 	tool: DrawTool;
 	// Every pen draws in it, whatever its tip.
 	color: string;
-	// The last color picked from the spectrum rather than a swatch, which
-	// its swatch keeps while another is in use. Null until there's one.
-	customColor: string | null;
 	// Indexes into each tool's `BRUSH_SIZES`; each keeps its own.
 	sizes: Record<DrawTool, number>;
 };
@@ -18,7 +15,6 @@ export type BrushSettings = {
 export const defaultBrushSettings: BrushSettings = {
 	tool: "pen",
 	color: "#FF3B30",
-	customColor: null,
 	sizes: { pen: 1, marker: 2, neon: 1, eraser: 3 },
 };
 

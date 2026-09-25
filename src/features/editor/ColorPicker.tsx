@@ -9,12 +9,74 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { type Hsv, hexToHsv, hsvToHex } from "@/lib/color";
 import { colors } from "@/theme";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
+import { ColorSwatches, isCustomColor } from "./ColorSwatches";
 
+// As wide as a row of seven swatches, so a picker on its own in a card is
+// the size of one under them.
+const MIN_WIDTH = 290;
 const FIELD_HEIGHT = 120;
 const BAR_HEIGHT = 24;
 const THUMB = 24;
 // How far one step of a screen reader's adjust moves the hue, in degrees.
 const HUE_STEP = 10;
+
+/**
+ * The swatches, and under them a picker for any color, which the custom
+ * swatch opens and closes, for a tool's options card. `customColor` is the
+ * editor's custom color: the custom swatch shows it, and picks it again
+ * when the value isn't custom. A color from the picker goes to
+ * `onPickCustom`, which should make it the custom color too.
+ */
+export function ColorOptions({
+	value,
+	customColor,
+	noneLabel,
+	onPick,
+	onPickCustom,
+}: {
+	value: string | null;
+	customColor: string | null;
+	noneLabel?: string;
+	onPick: (color: string | null) => void;
+	onPickCustom: (color: string) => void;
+}) {
+	const [pickerOpen, setPickerOpen] = useState(false);
+	// The picker's color while it's dragged, before it's picked.
+	const [draft, setDraft] = useState<string | null>(null);
+	const shown = draft ?? value;
+	const toggleCustom = () => {
+		if (!pickerOpen && customColor && !isCustomColor(value)) {
+			onPick(customColor);
+		}
+		setPickerOpen(!pickerOpen);
+	};
+	return (
+		<>
+			<ColorSwatches
+				value={shown}
+				noneLabel={noneLabel}
+				custom={{
+					color: isCustomColor(shown) ? shown : customColor,
+					onPress: toggleCustom,
+				}}
+				onPick={(color) => {
+					setPickerOpen(false);
+					onPick(color);
+				}}
+			/>
+			{pickerOpen && (
+				<ColorPicker
+					value={shown ?? customColor ?? "#FFFFFF"}
+					onChange={setDraft}
+					onChangeEnd={(color) => {
+						setDraft(null);
+						onPickCustom(color);
+					}}
+				/>
+			)}
+		</>
+	);
+}
 
 /**
  * Any color, picked from a field of the hue's shades (saturation across,
@@ -31,15 +93,17 @@ export function ColorPicker({
 	onChangeEnd,
 }: {
 	value: string;
-	onChange: (color: string) => void;
+	onChange?: (color: string) => void;
 	onChangeEnd: (color: string) => void;
 }) {
 	// The picker keeps HSV, not just `value`: a gray has no hue, and dragging
 	// through white or black would otherwise lose it.
 	const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? RED);
-	const [shown, setShown] = useState(value);
-	if (value !== shown) {
-		setShown(value);
+	// Only a change to `value` itself moves the picker: while a drag is under
+	// way, `value` is still the color before it, unless `onChange` feeds it.
+	const [lastValue, setLastValue] = useState(value);
+	if (value !== lastValue) {
+		setLastValue(value);
 		if (value !== hsvToHex(hsv)) setHsv(hexToHsv(value, hsv.hue) ?? hsv);
 	}
 
@@ -48,11 +112,9 @@ export function ColorPicker({
 	const latest = useRef(hsv);
 	latest.current = hsv;
 	const change = (next: Hsv) => {
-		const color = hsvToHex(next);
 		latest.current = next;
 		setHsv(next);
-		setShown(color);
-		onChange(color);
+		onChange?.(hsvToHex(next));
 	};
 	const end = () => onChangeEnd(hsvToHex(latest.current));
 	const field = useDrag(
@@ -156,6 +218,7 @@ function useDrag(onMove: (x: number, y: number) => void, onEnd: () => void) {
 const styles = StyleSheet.create({
 	picker: {
 		alignSelf: "stretch",
+		minWidth: MIN_WIDTH,
 		gap: 14,
 		paddingTop: 6,
 		paddingBottom: 4,

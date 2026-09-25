@@ -1,10 +1,8 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
-import { ColorPicker } from "../ColorPicker";
-import { ColorSwatches } from "../ColorSwatches";
+import { ColorOptions } from "../ColorPicker";
 import { ToolButton, ToolRow } from "../ToolButton";
 import {
 	SIZE_DOTS,
@@ -84,43 +82,26 @@ export function DrawPanel({
 
 /**
  * The brush's color and size, in a card over the canvas (see `ToolOptions`).
- * The custom swatch opens a picker for any color under the swatches, which
- * previews it as it's dragged and paints with it once the finger lifts.
+ * The custom swatch opens a picker for any color (see `ColorOptions`).
  */
 export function BrushOptions({
 	settings,
+	customColor,
 	bottomInset,
 	onChange,
+	onPickCustom,
 	onClose,
 }: {
 	settings: BrushSettings;
+	customColor: string | null;
 	bottomInset: number;
 	onChange: (settings: BrushSettings) => void;
+	// A color from the picker, which becomes the editor's custom color.
+	onPickCustom: (color: string) => void;
 	onClose: () => void;
 }) {
-	const [pickerOpen, setPickerOpen] = useState(false);
-	// The picker's color while it's dragged, before the brush takes it.
-	const [draft, setDraft] = useState<string | null>(null);
-	const color = draft ?? settings.color;
 	const eraser = settings.tool === "eraser";
 	const tip = penTip(settings.tool);
-
-	const pickSwatch = (swatch: string) => {
-		setPickerOpen(false);
-		onChange({ ...settings, color: swatch });
-	};
-	// Back to the last custom color, if there's one, or the picker starts at
-	// the brush's color.
-	const toggleCustom = () => {
-		if (!pickerOpen && settings.customColor) {
-			onChange({ ...settings, color: settings.customColor });
-		}
-		setPickerOpen(!pickerOpen);
-	};
-	const pickCustom = (custom: string) => {
-		setDraft(null);
-		onChange({ ...settings, color: custom, customColor: custom });
-	};
 	const pickSize = (size: number) =>
 		onChange({
 			...settings,
@@ -135,21 +116,12 @@ export function BrushOptions({
 		>
 			{!eraser && (
 				<ToolOption label="Color">
-					<ColorSwatches
-						value={color}
-						custom={{
-							color: draft ?? settings.customColor,
-							onPress: toggleCustom,
-						}}
-						onPick={(swatch) => swatch && pickSwatch(swatch)}
+					<ColorOptions
+						value={settings.color}
+						customColor={customColor}
+						onPick={(color) => color && onChange({ ...settings, color })}
+						onPickCustom={onPickCustom}
 					/>
-					{pickerOpen && (
-						<ColorPicker
-							value={color}
-							onChange={setDraft}
-							onChangeEnd={pickCustom}
-						/>
-					)}
 				</ToolOption>
 			)}
 			<ToolOption label="Size">
@@ -161,7 +133,11 @@ export function BrushOptions({
 							selected={index === brushSizeIndex(settings)}
 							onPress={() => pickSize(index)}
 						>
-							<SizeDot size={dot} color={eraser ? null : color} tip={tip} />
+							<SizeDot
+								size={dot}
+								color={eraser ? null : settings.color}
+								tip={tip}
+							/>
 						</RingChoice>
 					))}
 				</ToolChoices>
