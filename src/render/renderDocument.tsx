@@ -4,7 +4,7 @@ import {
 	ImageFormat,
 	type SkImage,
 } from "@shopify/react-native-skia";
-import { decodedImages } from "@/layers/ImageLayerView";
+import { decodedImages } from "@/layers/decodedImages";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodeImageLayers } from "./decodeImageLayers";

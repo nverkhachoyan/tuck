@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/pickPhoto";
+import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { errorMessage } from "@/lib/errorMessage";
 import { showAlert } from "@/lib/showAlert";

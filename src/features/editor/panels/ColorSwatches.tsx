@@ -19,7 +19,7 @@ export const SWATCHES = [
 ];
 
 /** The color swatches, led by a "none" swatch when `noneLabel` is given. */
-export function Swatches({
+export function ColorSwatches({
 	value,
 	noneLabel,
 	onPick,

@@ -10,7 +10,7 @@ import {
 import { colors, webTransition } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
-import { Swatches } from "./ColorSwatches";
+import { ColorSwatches } from "./ColorSwatches";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.
@@ -36,7 +36,7 @@ const TABS: { tab: Tab; label: string }[] = [
 	{ tab: "background", label: "Box" },
 ];
 
-type TextEditPanelProps = {
+type TextStylePanelProps = {
 	layer: TextLayer;
 	onChange: (patch: TextLayerEdit) => void;
 	onEdit: () => void;
@@ -50,13 +50,13 @@ type TextEditPanelProps = {
  * corner handles), so this is font and colors. There's no Done button:
  * tapping anywhere on the canvas off the text deselects it.
  */
-export function TextEditPanel({
+export function TextStylePanel({
 	layer,
 	onChange,
 	onEdit,
 	onDuplicate,
 	onDelete,
-}: TextEditPanelProps) {
+}: TextStylePanelProps) {
 	const [tab, setTab] = useState<Tab>("font");
 
 	return (
@@ -125,14 +125,14 @@ function TabContent({
 		// Text always has a fill; only the outline and background can be off.
 		case "color":
 			return (
-				<Swatches
+				<ColorSwatches
 					value={layer.color}
 					onPick={(color) => color && onChange({ color })}
 				/>
 			);
 		case "outline":
 			return (
-				<Swatches
+				<ColorSwatches
 					value={layer.outlineColor}
 					noneLabel="No outline"
 					onPick={(outlineColor) => onChange({ outlineColor })}
@@ -140,7 +140,7 @@ function TabContent({
 			);
 		case "background":
 			return (
-				<Swatches
+				<ColorSwatches
 					value={layer.backgroundColor}
 					noneLabel="No background"
 					onPick={(backgroundColor) => onChange({ backgroundColor })}

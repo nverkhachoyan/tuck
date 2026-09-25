@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createBlankDocument } from "@/model/document";
-import { createBlankProject } from "@/projects/projects";
+import { createBlankProject } from "@/projects/projectService";
 import { useStore } from "@/store";
 import { colors, radii, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";

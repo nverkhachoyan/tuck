@@ -2,25 +2,24 @@ import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import {
+	type BrushSettings,
+	brushFor,
+	defaultBrushSettings,
+} from "@/features/editor/brushSettings";
+import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/features/editor/canvas/EditorCanvas";
 import { CropTool } from "@/features/editor/crop/CropTool";
 import { BottomPanel } from "@/features/editor/panels/BottomPanel";
-import {
-	BrushOptions,
-	type BrushSettings,
-	brushFor,
-	DrawPanel,
-	defaultBrushSettings,
-} from "@/features/editor/panels/DrawPanel";
+import { BrushOptions, DrawPanel } from "@/features/editor/panels/DrawPanel";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
 import {
 	LAYERS_SIDEBAR_INSET,
 	LayersPanel,
 } from "@/features/editor/panels/LayersPanel";
 import { TextEditor } from "@/features/editor/panels/TextEditor";
-import { TextEditPanel } from "@/features/editor/panels/TextEditPanel";
+import { TextStylePanel } from "@/features/editor/panels/TextStylePanel";
 import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
 import { SaveErrorBanner } from "@/features/editor/SaveErrorBanner";
 import type { Shortcut } from "@/features/editor/shortcuts";
@@ -34,7 +33,8 @@ import {
 	type TextAlign,
 } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import { addImage, useAutosave } from "@/projects/projects";
+import { addImage } from "@/projects/projectService";
+import { useAutosave } from "@/projects/useAutosave";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -375,7 +375,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						onToggleOptions={() => setBrushOptionsOpen((open) => !open)}
 					/>
 				) : selectedTextLayer ? (
-					<TextEditPanel
+					<TextStylePanel
 						layer={selectedTextLayer}
 						onChange={updateSelectedText}
 						onEdit={() => setEditing("selected")}

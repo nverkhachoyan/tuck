@@ -1,20 +1,7 @@
 import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import { AppState, Platform } from "react-native";
 import { type EditorDocument, hasEdits } from "@/model/document";
-import { createProjectLifecycle } from "./projectLifecycle";
-import * as storage from "./projectStorage";
-
-const projects = createProjectLifecycle(storage);
-
-export const {
-	createProject,
-	createBlankProject,
-	openProject,
-	addImage,
-	closeProject,
-	deleteProject,
-	listProjects,
-} = projects;
+import { projects } from "./projectService";
 
 /**
  * Saves the open project once edits pause, and right away when the app

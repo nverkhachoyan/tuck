@@ -1,6 +1,6 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import { useEffect, useState } from "react";
-import { decodedImages } from "@/layers/ImageLayerView";
+import { decodedImages } from "@/layers/decodedImages";
 
 /**
  * An image file decoded for drawing, or null until it has decoded or if it

@@ -1,47 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { Brush } from "@/model/document";
-import type { Size } from "@/model/geometry";
 import { colors, radii } from "@/theme";
-import { RingChoice, Swatches } from "./ColorSwatches";
+import { type BrushSettings, brushSizeIndex } from "../brushSettings";
+import { ColorSwatches, RingChoice } from "./ColorSwatches";
 import { ToolButton } from "./ToolButton";
 
-export type BrushSettings = {
-	tool: Brush["type"];
-	color: string;
-	// Indexes into `BRUSH_SIZES`; the pen and eraser each keep their own.
-	penSize: number;
-	eraserSize: number;
-};
-
-export const defaultBrushSettings: BrushSettings = {
-	tool: "pen",
-	color: "#FF3B30",
-	penSize: 1,
-	eraserSize: 3,
-};
-
-// Brush widths as a share of the canvas's shorter side, like a new text's
-// size, so a size looks the same on a screenshot as on a camera photo.
-const BRUSH_SIZES = [0.005, 0.01, 0.02, 0.035, 0.06];
 // Each size's dot in the picker, in points: its order, not its true width.
 const SIZE_DOTS = [4, 7, 11, 16, 22];
-
-/** The brush the settings paint with on a canvas of `size`. */
-export function brushFor(settings: BrushSettings, size: Size): Brush {
-	const side = Math.min(size.width, size.height);
-	return settings.tool === "pen"
-		? {
-				type: "pen",
-				color: settings.color,
-				width: BRUSH_SIZES[settings.penSize] * side,
-			}
-		: { type: "eraser", width: BRUSH_SIZES[settings.eraserSize] * side };
-}
-
-function sizeOf(settings: BrushSettings): number {
-	return settings.tool === "pen" ? settings.penSize : settings.eraserSize;
-}
 
 /**
  * The drawing tools, in place of the toolbar while drawing: the pen, the
@@ -83,7 +49,7 @@ export function DrawPanel({
 				icon="palette-outline"
 				glyph={
 					<SizeDot
-						size={SIZE_DOTS[sizeOf(settings)]}
+						size={SIZE_DOTS[brushSizeIndex(settings)]}
 						color={pen ? settings.color : null}
 					/>
 				}
@@ -130,7 +96,7 @@ export function BrushOptions({
 					{pen && (
 						<View style={styles.option}>
 							<Text style={styles.optionLabel}>Color</Text>
-							<Swatches
+							<ColorSwatches
 								value={settings.color}
 								onPick={(color) => color && onChange({ ...settings, color })}
 							/>
@@ -143,7 +109,7 @@ export function BrushOptions({
 								<RingChoice
 									key={dot}
 									label={`Size ${index + 1} of ${SIZE_DOTS.length}`}
-									selected={index === sizeOf(settings)}
+									selected={index === brushSizeIndex(settings)}
 									onPress={() => pickSize(index)}
 								>
 									<SizeDot size={dot} color={pen ? settings.color : null} />
