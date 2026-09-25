@@ -33,7 +33,11 @@ import {
 	withEffect,
 } from "@/features/editor/redact/redactSettings";
 import { SaveErrorBanner } from "@/features/editor/SaveErrorBanner";
-import type { Shortcut } from "@/features/editor/shortcuts";
+import {
+	LAYERS_KEY,
+	type Shortcut,
+	type ToolKey,
+} from "@/features/editor/shortcuts";
 import { TextEditor } from "@/features/editor/text/TextEditor";
 import { TextStylePanel } from "@/features/editor/text/TextStylePanel";
 import { useAddPhoto } from "@/features/editor/useAddPhoto";
@@ -275,11 +279,19 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			redo();
 			return true;
 		}
-		// Escape puts the tool down; the rest act on a selection, which holds
-		// still while a tool is in use.
+		// Escape puts the tool down; the rest pick up another tool or act on
+		// a selection, which holds still while a tool is in use.
 		if (tool) {
 			if (shortcut.type !== "deselect") return false;
 			finishTool();
+			return true;
+		}
+		if (shortcut.type === "tool") {
+			startTool[shortcut.tool]();
+			return true;
+		}
+		if (shortcut.type === "layers") {
+			setLayersOpen((open) => !open);
 			return true;
 		}
 		if (!selectedLayer) return false;
@@ -336,6 +348,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 
+	// What each tool's key picks up, as its button in the dock would. A
+	// selected drawing or redaction takes the strokes, as its own Draw or
+	// Redact does.
+	const startTool: Record<ToolKey, () => void> = {
+		text: () => setEditing("new"),
+		draw: startDrawing,
+		redact: startRedacting,
+		photo: pickPhoto,
+		crop: startCrop,
+	};
+
 	// The sidebar stops above the dock, which stays usable.
 	const layersPanel = (
 		<LayersPanel
@@ -366,6 +389,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							<IconButton
 								icon="layers-outline"
 								label="Layers"
+								shortcut={LAYERS_KEY}
 								selected={layersOpen}
 								onPress={() => setLayersOpen((open) => !open)}
 							/>

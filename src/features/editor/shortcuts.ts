@@ -2,6 +2,23 @@
 const NUDGE_PX = 1;
 const NUDGE_FAR_PX = 10;
 
+export type ToolKey = "text" | "draw" | "redact" | "photo" | "crop";
+
+// A letter picks up a tool, and L shows or hides the layers. Each tool's
+// button shows its key on hover.
+export const TOOL_KEYS: Record<ToolKey, string> = {
+	text: "T",
+	draw: "D",
+	redact: "R",
+	photo: "P",
+	crop: "C",
+};
+export const LAYERS_KEY = "L";
+
+const TOOLS_BY_KEY = new Map(
+	Object.entries(TOOL_KEYS).map(([tool, key]) => [key, tool as ToolKey]),
+);
+
 export type Shortcut =
 	| { type: "undo" }
 	| { type: "redo" }
@@ -9,7 +26,9 @@ export type Shortcut =
 	| { type: "deselect" }
 	| { type: "duplicate" }
 	| { type: "reorder"; step: 1 | -1 }
-	| { type: "nudge"; dx: number; dy: number };
+	| { type: "nudge"; dx: number; dy: number }
+	| { type: "tool"; tool: ToolKey }
+	| { type: "layers" };
 
 export type KeyPress = {
 	key: string;
@@ -60,7 +79,11 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 			return { type: "delete" };
 		case "Escape":
 			return { type: "deselect" };
-		default:
-			return null;
 	}
+	// Shift is left alone, so a capital typed by mistake does nothing.
+	if (press.shiftKey) return null;
+	const letter = press.key.toUpperCase();
+	if (letter === LAYERS_KEY) return { type: "layers" };
+	const tool = TOOLS_BY_KEY.get(letter);
+	return tool ? { type: "tool", tool } : null;
 }
