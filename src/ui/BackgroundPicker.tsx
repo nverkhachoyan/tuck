@@ -1,10 +1,8 @@
-import { Pressable, StyleSheet, View } from "react-native";
-import { colors, webTransition } from "@/theme";
+import { StyleSheet, View } from "react-native";
+import { colors } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
-import { interaction } from "@/ui/interaction";
+import { RingChoice } from "@/ui/RingChoice";
 
-const TARGET = 44;
-const RING = 36;
 const SWATCH_SIZE = 26;
 
 const BACKGROUNDS = [
@@ -22,49 +20,29 @@ export function BackgroundPicker({
 }) {
 	return (
 		<View style={styles.row}>
-			{BACKGROUNDS.map(({ color, label }) => {
-				const selected = color === value;
-				return (
-					<Pressable
-						key={label}
-						onPress={() => onPick(color)}
-						accessibilityRole="button"
-						accessibilityLabel={label}
-						accessibilityState={{ selected }}
-						style={styles.target}
+			{BACKGROUNDS.map(({ color, label }) => (
+				<RingChoice
+					key={label}
+					label={label}
+					selected={color === value}
+					onPress={() => onPick(color)}
+				>
+					<View
+						style={[
+							styles.swatch,
+							color !== null && { backgroundColor: color },
+						]}
 					>
-						{(state) => {
-							const { pressed, hovered } = interaction(state);
-							return (
-								<View
-									style={[
-										styles.ring,
-										webTransition,
-										hovered && styles.ringHovered,
-										selected && styles.ringSelected,
-										pressed && styles.ringPressed,
-									]}
-								>
-									<View
-										style={[
-											styles.swatch,
-											color !== null && { backgroundColor: color },
-										]}
-									>
-										{color === null && (
-											<CheckerFill
-												width={SWATCH_SIZE}
-												height={SWATCH_SIZE}
-												cell={SWATCH_SIZE / 2}
-											/>
-										)}
-									</View>
-								</View>
-							);
-						}}
-					</Pressable>
-				);
-			})}
+						{color === null && (
+							<CheckerFill
+								width={SWATCH_SIZE}
+								height={SWATCH_SIZE}
+								cell={SWATCH_SIZE / 2}
+							/>
+						)}
+					</View>
+				</RingChoice>
+			))}
 		</View>
 	);
 }
@@ -72,31 +50,6 @@ export function BackgroundPicker({
 const styles = StyleSheet.create({
 	row: {
 		flexDirection: "row",
-	},
-	target: {
-		width: TARGET,
-		height: TARGET,
-		borderRadius: TARGET / 2,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	ring: {
-		width: RING,
-		height: RING,
-		borderRadius: RING / 2,
-		borderWidth: 2,
-		borderColor: "transparent",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	ringHovered: {
-		borderColor: colors.borderStrong,
-	},
-	ringSelected: {
-		borderColor: colors.accent,
-	},
-	ringPressed: {
-		transform: [{ scale: 0.92 }],
 	},
 	swatch: {
 		width: SWATCH_SIZE,

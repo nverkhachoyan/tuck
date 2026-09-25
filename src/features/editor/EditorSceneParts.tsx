@@ -5,13 +5,11 @@ import { ImageLayerView } from "@/layers/ImageLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { ImageLayer, Layer } from "@/model/document";
+import { CHECKER_CELL } from "@/theme";
 import { Checkerboard } from "@/ui/Checkerboard";
 import { useDecodedImage } from "./useDecodedImage";
 
 // What the editor's canvas and the crop tool's both draw.
-
-// A transparency checkerboard square's side, in screen pixels.
-const CHECKER_PX = 8;
 
 /** The canvas's fill, or a checkerboard where it's transparent. */
 export function CanvasBackground({
@@ -25,7 +23,7 @@ export function CanvasBackground({
 	viewScale: number;
 }) {
 	if (background === null) {
-		return <Checkerboard bounds={bounds} cell={CHECKER_PX / viewScale} />;
+		return <Checkerboard bounds={bounds} cell={CHECKER_CELL / viewScale} />;
 	}
 	return <Rect rect={bounds} color={background} />;
 }

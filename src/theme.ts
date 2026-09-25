@@ -55,6 +55,9 @@ export const fonts = {
 // shifts the content below.
 export const HEADER_HEIGHT = 56;
 
+// A transparency checkerboard square's side, in screen pixels.
+export const CHECKER_CELL = 8;
+
 /**
  * Eases hover and press changes on web. Native has no hover, and a press
  * there should answer at once. React Native's style types lack transitions,

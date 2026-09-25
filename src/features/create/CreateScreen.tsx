@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createBlankDocument } from "@/model/document";
 import { createBlankProject } from "@/projects/projectService";
 import { useStore } from "@/store";
-import { colors, radii, webTransition } from "@/theme";
+import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
@@ -20,7 +20,6 @@ const PRESETS = [
 type Preset = (typeof PRESETS)[number];
 
 const PREVIEW_SIZE = 88;
-const CHECKER_CELL = 8;
 
 export default function CreateScreen() {
 	const openDocument = useStore((state) => state.openDocument);

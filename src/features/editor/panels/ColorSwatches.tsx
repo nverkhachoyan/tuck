@@ -1,12 +1,7 @@
-import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { colors, webTransition } from "@/theme";
-import { interaction } from "@/ui/interaction";
+import { StyleSheet, View } from "react-native";
+import { colors } from "@/theme";
+import { RING_TARGET, RingChoice } from "@/ui/RingChoice";
 
-// The minimum comfortable touch target, and the ring that marks the chosen
-// option inside it.
-const TARGET = 44;
-const RING = 36;
 const SWATCH_SIZE = 26;
 
 export const SWATCHES = [
@@ -55,79 +50,11 @@ export function ColorSwatches({
 	);
 }
 
-/**
- * One of a row of round choices, like a color, ringed when it's the one
- * chosen. `children` is what it shows, at most `RING` across.
- */
-export function RingChoice({
-	label,
-	selected,
-	onPress,
-	children,
-}: {
-	label: string;
-	selected: boolean;
-	onPress: () => void;
-	children: ReactNode;
-}) {
-	return (
-		<Pressable
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={label}
-			accessibilityState={{ selected }}
-			style={styles.target}
-		>
-			{(state) => {
-				const { pressed, hovered } = interaction(state);
-				return (
-					<View
-						style={[
-							styles.ring,
-							webTransition,
-							hovered && styles.ringHovered,
-							selected && styles.ringSelected,
-							pressed && styles.ringPressed,
-						]}
-					>
-						{children}
-					</View>
-				);
-			}}
-		</Pressable>
-	);
-}
-
 const styles = StyleSheet.create({
 	// Lines the first swatch up with the panel's edge, past its target's margin.
 	swatches: {
 		flexDirection: "row",
-		marginHorizontal: -(TARGET - SWATCH_SIZE) / 2,
-	},
-	target: {
-		width: TARGET,
-		height: TARGET,
-		borderRadius: TARGET / 2,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	ring: {
-		width: RING,
-		height: RING,
-		borderRadius: RING / 2,
-		borderWidth: 2,
-		borderColor: "transparent",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	ringHovered: {
-		borderColor: colors.borderStrong,
-	},
-	ringSelected: {
-		borderColor: colors.accent,
-	},
-	ringPressed: {
-		transform: [{ scale: 0.92 }],
+		marginHorizontal: -(RING_TARGET - SWATCH_SIZE) / 2,
 	},
 	swatch: {
 		width: SWATCH_SIZE,

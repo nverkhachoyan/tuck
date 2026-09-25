@@ -17,7 +17,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import { showAlert } from "@/lib/showAlert";
 import type { EditorDocument } from "@/model/document";
 import { useStore } from "@/store";
-import { colors, radii, webTransition } from "@/theme";
+import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
 import { Button } from "@/ui/Button";
 import { Checkerboard } from "@/ui/Checkerboard";
 import { interaction } from "@/ui/interaction";
@@ -26,8 +26,6 @@ import { exportFormatFor, exportFormats } from "./exportFormat";
 import { exportSizes } from "./exportSizes";
 import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";
 import { useRenderedDocument } from "./useRenderedDocument";
-
-const CHECKER_PX = 8;
 
 export default function ExportScreen() {
 	const document = useStore((state) => state.document);
@@ -135,7 +133,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							</Rect>
 						)}
 						{ready && format === "png" && (
-							<Checkerboard bounds={imageBounds} cell={CHECKER_PX} />
+							<Checkerboard bounds={imageBounds} cell={CHECKER_CELL} />
 						)}
 						{ready && (
 							<Image image={state.image} rect={imageBounds} fit="fill" />

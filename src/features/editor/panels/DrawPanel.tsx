@@ -2,8 +2,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { Brush } from "@/model/document";
 import { colors, radii } from "@/theme";
+import { RingChoice } from "@/ui/RingChoice";
 import { type BrushSettings, brushSizeIndex } from "../brushSettings";
-import { ColorSwatches, RingChoice } from "./ColorSwatches";
+import { ColorSwatches } from "./ColorSwatches";
 import { ToolButton } from "./ToolButton";
 
 // Each size's dot in the picker, in points: its order, not its true width.
