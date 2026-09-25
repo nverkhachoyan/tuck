@@ -155,16 +155,15 @@ export function CropCanvas({
 									viewScale={viewScale}
 								/>
 							</Group>
-							{unflipped && (
-								<Group transform={photoTransform}>
-									<LayerContent
-										layer={unflipped}
-										onImageError={handleImageError}
-									/>
-								</Group>
-							)}
 							{document.layers.map((layer) =>
-								layer === photo || layer.hidden ? null : (
+								layer.hidden ? null : layer === photo && unflipped ? (
+									<Group key={layer.id} transform={photoTransform}>
+										<LayerContent
+											layer={unflipped}
+											onImageError={handleImageError}
+										/>
+									</Group>
+								) : (
 									<CropLayer
 										key={layer.id}
 										layer={layer}
