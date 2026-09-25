@@ -121,7 +121,7 @@ export function LayerRow({
 			backgroundColor: dragging
 				? colors.surfacePressed
 				: selected
-					? colors.accentSoft
+					? colors.selectionSoft
 					: hovered
 						? colors.hoverOverlay
 						: "transparent",
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
 		right: 0,
 	},
 	rowSelected: {
-		borderColor: colors.accentBorder,
+		borderColor: colors.selectionBorder,
 	},
 	main: {
 		flex: 1,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.border,
+		backgroundColor: colors.glassControlHover,
 	},
 	label: {
 		flex: 1,

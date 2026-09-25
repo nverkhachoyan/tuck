@@ -18,6 +18,7 @@ import type { EditorDocument } from "@/model/document";
 import { useStore } from "@/store";
 import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
 import { Button } from "@/ui/Button";
+import { CanvasStage } from "@/ui/CanvasStage";
 import { Checkerboard } from "@/ui/Checkerboard";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
@@ -117,48 +118,50 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				onBack={() => router.back()}
 			/>
 
-			<View style={styles.previewArea}>
-				{/* Canvas has no onLayout on Fabric, so measure a wrapper instead. */}
-				<View style={styles.preview} onLayout={handleLayout}>
-					<Canvas style={styles.preview}>
-						{ready && (
-							<Rect rect={imageBounds} color="black">
-								<Shadow
-									dx={0}
-									dy={8}
-									blur={24}
-									color="rgba(0, 0, 0, 0.6)"
-									shadowOnly
-								/>
-							</Rect>
-						)}
-						{ready && format === "png" && (
-							<Checkerboard bounds={imageBounds} cell={CHECKER_CELL} />
-						)}
-						{ready && (
-							<Image image={state.image} rect={imageBounds} fit="fill" />
-						)}
-					</Canvas>
-				</View>
+			<CanvasStage>
+				<View style={styles.previewArea}>
+					{/* Canvas has no onLayout on Fabric, so measure a wrapper instead. */}
+					<View style={styles.preview} onLayout={handleLayout}>
+						<Canvas style={styles.preview}>
+							{ready && (
+								<Rect rect={imageBounds} color="black">
+									<Shadow
+										dx={0}
+										dy={8}
+										blur={24}
+										color="rgba(0, 0, 0, 0.6)"
+										shadowOnly
+									/>
+								</Rect>
+							)}
+							{ready && format === "png" && (
+								<Checkerboard bounds={imageBounds} cell={CHECKER_CELL} />
+							)}
+							{ready && (
+								<Image image={state.image} rect={imageBounds} fit="fill" />
+							)}
+						</Canvas>
+					</View>
 
-				{state.status === "rendering" && (
-					<View style={styles.overlay}>
-						<ActivityIndicator color={colors.textSecondary} />
-						<Text style={styles.status}>Preparing full-size image…</Text>
-					</View>
-				)}
-				{state.status === "failed" && (
-					<View style={styles.overlay}>
-						<Ionicons
-							name="alert-circle-outline"
-							size={28}
-							color={colors.textSecondary}
-						/>
-						<Text style={styles.status}>Couldn't render the image.</Text>
-						<Button label="Try Again" onPress={retry} />
-					</View>
-				)}
-			</View>
+					{state.status === "rendering" && (
+						<View style={styles.overlay}>
+							<ActivityIndicator color={colors.textSecondary} />
+							<Text style={styles.status}>Preparing full-size image…</Text>
+						</View>
+					)}
+					{state.status === "failed" && (
+						<View style={styles.overlay}>
+							<Ionicons
+								name="alert-circle-outline"
+								size={28}
+								color={colors.textSecondary}
+							/>
+							<Text style={styles.status}>Couldn't render the image.</Text>
+							<Button label="Try Again" onPress={retry} />
+						</View>
+					)}
+				</View>
+			</CanvasStage>
 
 			<View style={[styles.footer, { paddingBottom: 24 + bottom }]}>
 				<View style={styles.footerContent}>
@@ -255,7 +258,6 @@ const styles = StyleSheet.create({
 	previewArea: {
 		flex: 1,
 		padding: 24,
-		backgroundColor: colors.canvasWell,
 	},
 	preview: {
 		flex: 1,
@@ -273,8 +275,6 @@ const styles = StyleSheet.create({
 	footer: {
 		paddingHorizontal: 20,
 		paddingTop: 16,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
 	},
 	// A phone-width column, so a wide browser window doesn't stretch the
 	// buttons across it.
@@ -300,18 +300,14 @@ const styles = StyleSheet.create({
 		height: 34,
 		paddingHorizontal: 12,
 		borderRadius: 17,
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
+		backgroundColor: colors.glassControl,
 		justifyContent: "center",
 	},
 	sizeChipHovered: {
-		borderColor: colors.borderStrong,
-		backgroundColor: colors.surfaceHover,
+		backgroundColor: colors.glassControlHover,
 	},
 	sizeChipSelected: {
-		borderColor: colors.accent,
-		backgroundColor: colors.accentSoft,
+		backgroundColor: colors.chosen,
 	},
 	sizeChipPressed: {
 		transform: [{ scale: 0.96 }],
@@ -323,7 +319,7 @@ const styles = StyleSheet.create({
 	},
 	sizeLabelSelected: {
 		fontWeight: "600",
-		color: colors.textPrimary,
+		color: colors.onChosen,
 	},
 	actions: {
 		gap: 12,

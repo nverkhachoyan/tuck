@@ -13,6 +13,7 @@ import { TEXT_FONTS } from "@/layers/fonts";
 import type { TextAlign, TextLayerStyle } from "@/model/document";
 import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
 import { Button } from "@/ui/Button";
+import { FrostedBackdrop } from "@/ui/GlassView";
 import { interaction } from "@/ui/interaction";
 
 const NEXT_ALIGN: Record<TextAlign, TextAlign> = {
@@ -73,7 +74,9 @@ export function TextEditor({
 	}, [onDone, text, align]);
 
 	return (
-		<View style={styles.scrim}>
+		<View style={StyleSheet.absoluteFill}>
+			{/* Below the toolbar, so the header it covers can't blur into view. */}
+			<FrostedBackdrop style={styles.backdrop} />
 			{/* The input is the only thing on screen the keyboard could cover. */}
 			<KeyboardAvoidingView behavior="padding" style={styles.flex}>
 				<View style={styles.toolbar}>
@@ -135,9 +138,8 @@ function AlignIcon({ align }: { align: TextAlign }) {
 }
 
 const styles = StyleSheet.create({
-	scrim: {
-		...StyleSheet.absoluteFill,
-		backgroundColor: colors.scrim,
+	backdrop: {
+		top: HEADER_HEIGHT,
 	},
 	flex: {
 		flex: 1,

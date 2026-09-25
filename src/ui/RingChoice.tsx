@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
 		borderColor: colors.borderStrong,
 	},
 	ringSelected: {
-		borderColor: colors.accent,
+		borderColor: colors.chosen,
 	},
 	ringPressed: {
 		transform: [{ scale: 0.92 }],

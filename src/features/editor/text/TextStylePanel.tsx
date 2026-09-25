@@ -17,6 +17,8 @@ import { ColorSwatches } from "../ColorSwatches";
 const TARGET = 44;
 // The tabs' track, inside their targets.
 const TRACK = 34;
+// Inside the panel's rounded corners.
+const PADDING = 16;
 
 const FONT_LABELS: Record<TextFont, string> = {
 	classic: "Classic",
@@ -235,6 +237,7 @@ function FontPicker({
 										style={[
 											styles.fontLabel,
 											{ fontFamily: TEXT_FONTS[font].family },
+											selected && styles.fontLabelSelected,
 										]}
 									>
 										{FONT_LABELS[font]}
@@ -255,8 +258,8 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		justifyContent: "center",
-		paddingHorizontal: 20,
-		gap: 4,
+		paddingHorizontal: PADDING,
+		gap: 2,
 	},
 	row: {
 		flexDirection: "row",
@@ -278,9 +281,7 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		borderRadius: TRACK / 2,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
+		backgroundColor: "rgba(0, 0, 0, 0.28)",
 	},
 	// Rounded so a browser's focus ring hugs what's drawn inside.
 	target: {
@@ -295,8 +296,8 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	segmentActive: {
-		backgroundColor: colors.surfacePressed,
-		boxShadow: "0 1px 3px rgba(0, 0, 0, 0.4)",
+		backgroundColor: colors.chosenSoft,
+		boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)",
 	},
 	tabLabel: {
 		fontSize: 13,
@@ -308,7 +309,8 @@ const styles = StyleSheet.create({
 	},
 	actions: {
 		flexDirection: "row",
-		gap: 18,
+		gap: 16,
+		paddingRight: 4,
 	},
 	// One height for every tab, so switching tabs never shifts the row above.
 	content: {
@@ -317,28 +319,24 @@ const styles = StyleSheet.create({
 	},
 	// Scrolls edge to edge, past the panel's padding.
 	bleed: {
-		marginHorizontal: -20,
+		marginHorizontal: -PADDING,
 	},
 	fonts: {
 		gap: 8,
-		paddingHorizontal: 20,
+		paddingHorizontal: PADDING,
 	},
 	fontChip: {
 		height: 34,
 		paddingHorizontal: 14,
 		borderRadius: 17,
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
+		backgroundColor: colors.glassControl,
 		justifyContent: "center",
 	},
 	fontChipHovered: {
-		borderColor: colors.borderStrong,
-		backgroundColor: colors.surfaceHover,
+		backgroundColor: colors.glassControlHover,
 	},
 	fontChipSelected: {
-		borderColor: colors.accent,
-		backgroundColor: colors.accentSoft,
+		backgroundColor: colors.chosen,
 	},
 	fontChipPressed: {
 		transform: [{ scale: 0.96 }],
@@ -346,5 +344,8 @@ const styles = StyleSheet.create({
 	fontLabel: {
 		fontSize: 16,
 		color: colors.textPrimary,
+	},
+	fontLabelSelected: {
+		color: colors.onChosen,
 	},
 });

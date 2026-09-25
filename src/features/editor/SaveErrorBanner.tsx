@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radii } from "@/theme";
 import { Button } from "@/ui/Button";
+import { GlassView } from "@/ui/GlassView";
 
 /**
  * Says why edits aren't being saved, across the top of the canvas, with a
@@ -21,7 +22,7 @@ export function SaveErrorBanner({
 		<View
 			style={[styles.area, rightInset !== undefined && { right: rightInset }]}
 		>
-			<View style={styles.banner}>
+			<GlassView style={styles.banner} contentStyle={styles.bannerContent}>
 				<Ionicons
 					name="cloud-offline-outline"
 					size={20}
@@ -29,7 +30,7 @@ export function SaveErrorBanner({
 				/>
 				<Text style={styles.message}>{message}</Text>
 				{onRetry && <Button label="Retry" size="small" onPress={onRetry} />}
-			</View>
+			</GlassView>
 		</View>
 	);
 }
@@ -48,17 +49,15 @@ const styles = StyleSheet.create({
 	banner: {
 		width: "100%",
 		maxWidth: 560,
+		borderRadius: radii.large,
+	},
+	bannerContent: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 12,
 		paddingLeft: 14,
 		paddingRight: 8,
 		paddingVertical: 8,
-		borderRadius: radii.medium,
-		borderWidth: 1,
-		borderColor: colors.accentSoft,
-		backgroundColor: colors.surface,
-		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
 	},
 	message: {
 		flex: 1,

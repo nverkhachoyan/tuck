@@ -16,7 +16,7 @@ import { useTooltip } from "@/ui/Tooltip";
 type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /**
- * An editing tool in the bottom toolbar: an icon tile with a label under it.
+ * An editing tool in the bottom panel: an icon tile with a label under it.
  * `busy` swaps the icon for a spinner while the tool's work runs, and blocks
  * a second press meanwhile. With a `shortcut`, web shows it on hover.
  * `selected` marks the tool in use, and `glyph`, when given, is drawn in
@@ -79,14 +79,8 @@ export function ToolButton({
 									(glyph ?? (
 										<MaterialCommunityIcons
 											name={icon}
-											size={26}
-											color={
-												danger
-													? colors.danger
-													: selected
-														? colors.accent
-														: colors.textPrimary
-											}
+											size={24}
+											color={danger ? colors.danger : colors.textPrimary}
 										/>
 									))
 								)}
@@ -107,43 +101,42 @@ export function ToolButton({
 
 const styles = StyleSheet.create({
 	container: {
+		minWidth: 56,
 		alignItems: "center",
-		gap: 7,
+		gap: 6,
 	},
 	disabled: {
-		opacity: 0.4,
+		opacity: 0.35,
 	},
 	tile: {
-		width: 54,
-		height: 54,
+		width: 48,
+		height: 48,
 		borderRadius: radii.large,
+		borderCurve: "continuous",
 		alignItems: "center",
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
+		backgroundColor: colors.glassControl,
 	},
 	tileSelected: {
-		borderColor: colors.accentBorder,
-		backgroundColor: colors.accentSoft,
+		backgroundColor: colors.chosenSoft,
+		boxShadow: `inset 0 0 0 1px ${colors.chosenSoft}`,
 	},
 	tileHovered: {
-		borderColor: colors.borderStrong,
-		backgroundColor: colors.surfaceHover,
-		transform: [{ translateY: -2 }],
+		backgroundColor: colors.glassControlHover,
+		transform: [{ translateY: -1 }],
 	},
 	tileDanger: {
-		borderColor: colors.dangerSoft,
 		backgroundColor: colors.dangerSoft,
-		transform: [{ translateY: -2 }],
+		transform: [{ translateY: -1 }],
 	},
 	tilePressed: {
-		backgroundColor: colors.surfacePressed,
-		transform: [{ scale: 0.94 }],
+		backgroundColor: colors.pressedOverlay,
+		transform: [{ scale: 0.92 }],
 	},
 	label: {
-		fontSize: 12,
+		fontSize: 11,
 		fontWeight: "500",
+		letterSpacing: 0.1,
 		color: colors.textSecondary,
 	},
 	labelLit: {

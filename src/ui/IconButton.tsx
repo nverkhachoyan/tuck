@@ -41,11 +41,9 @@ export function IconButton({
 	const { anchor, tooltip } = useTooltip(label, shortcut);
 	const color = disabled
 		? colors.textTertiary
-		: selected
-			? colors.accent
-			: tone === "danger"
-				? colors.danger
-				: colors.textPrimary;
+		: tone === "danger"
+			? colors.danger
+			: colors.textPrimary;
 	return (
 		<>
 			<Pressable
@@ -92,7 +90,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.dangerSoft,
 	},
 	selected: {
-		backgroundColor: colors.accentSoft,
+		backgroundColor: colors.chosenSoft,
 	},
 	pressed: {
 		backgroundColor: colors.pressedOverlay,

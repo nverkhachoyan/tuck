@@ -15,6 +15,7 @@ import type { Framing } from "@/model/framing";
 import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { Button } from "@/ui/Button";
+import { CanvasStage } from "@/ui/CanvasStage";
 import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
 import { AngleDial } from "./AngleDial";
@@ -93,20 +94,22 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 				/>
 			</View>
 
-			<CropCanvas
-				document={document}
-				anchor={anchor}
-				crop={controller.crop}
-				viewport={controller.viewport}
-				ratio={controller.ratio}
-				dragging={controller.dragging}
-				visible={controller.visible}
-				viewScale={controller.viewScale}
-				background={background}
-				turnLayers={turnLayers}
-				onLayout={controller.setViewSize}
-				onDragEnd={controller.settle}
-			/>
+			<CanvasStage>
+				<CropCanvas
+					document={document}
+					anchor={anchor}
+					crop={controller.crop}
+					viewport={controller.viewport}
+					ratio={controller.ratio}
+					dragging={controller.dragging}
+					visible={controller.visible}
+					viewScale={controller.viewScale}
+					background={background}
+					turnLayers={turnLayers}
+					onLayout={controller.setViewSize}
+					onDragEnd={controller.settle}
+				/>
+			</CanvasStage>
 
 			<View style={[styles.panel, { paddingBottom: 12 + bottom }]}>
 				{/* Levels a tilted photo; a canvas alone has nothing to level. */}
@@ -220,7 +223,6 @@ function ActionButton({
 	selected?: boolean;
 	onPress: () => void;
 }) {
-	const color = selected ? colors.accent : colors.textPrimary;
 	return (
 		<Pressable
 			hitSlop={6}
@@ -240,14 +242,18 @@ function ActionButton({
 							style={[
 								styles.actionIcon,
 								webTransition,
-								selected && styles.actionIconSelected,
 								hovered && styles.actionIconHovered,
+								selected && styles.actionIconSelected,
 								pressed && styles.actionIconPressed,
 							]}
 						>
-							<MaterialCommunityIcons name={icon} size={22} color={color} />
+							<MaterialCommunityIcons
+								name={icon}
+								size={22}
+								color={colors.textPrimary}
+							/>
 						</View>
-						<Text style={[styles.actionLabel, { color }]}>{label}</Text>
+						<Text style={styles.actionLabel}>{label}</Text>
 					</>
 				);
 			}}
@@ -267,8 +273,6 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		alignItems: "center",
 		paddingHorizontal: 16,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
 	},
 	// Centered on the whole bar, whatever the buttons beside it measure.
 	reset: {
@@ -280,8 +284,6 @@ const styles = StyleSheet.create({
 	panel: {
 		gap: 4,
 		paddingTop: 8,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
 	},
 	aspects: {
 		gap: 8,
@@ -295,18 +297,14 @@ const styles = StyleSheet.create({
 		height: 32,
 		paddingHorizontal: 14,
 		borderRadius: 16,
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
+		backgroundColor: colors.glassControl,
 		justifyContent: "center",
 	},
 	chipHovered: {
-		borderColor: colors.borderStrong,
-		backgroundColor: colors.surfaceHover,
+		backgroundColor: colors.glassControlHover,
 	},
 	chipSelected: {
-		borderColor: colors.accent,
-		backgroundColor: colors.accentSoft,
+		backgroundColor: colors.chosen,
 	},
 	chipPressed: {
 		transform: [{ scale: 0.96 }],
@@ -317,7 +315,7 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	chipLabelSelected: {
-		color: colors.textPrimary,
+		color: colors.onChosen,
 		fontWeight: "600",
 	},
 	actions: {
@@ -345,7 +343,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.hoverOverlay,
 	},
 	actionIconSelected: {
-		backgroundColor: colors.accentSoft,
+		backgroundColor: colors.chosenSoft,
 	},
 	actionIconPressed: {
 		backgroundColor: colors.pressedOverlay,
@@ -354,6 +352,7 @@ const styles = StyleSheet.create({
 	actionLabel: {
 		fontSize: 11,
 		fontWeight: "500",
+		color: colors.textPrimary,
 	},
 	// Its own row keeps the picker reachable beside all three actions on a
 	// narrow phone.

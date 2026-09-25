@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { colors, radii } from "@/theme";
 
@@ -29,7 +29,10 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFill,
 		zIndex: 10,
 		padding: 16,
-		backgroundColor: "rgba(10, 10, 11, 0.8)",
+		backgroundColor: colors.frostedScrim,
+		// Dragging files is web's alone, which also has backdrop filters,
+		// though React Native's style types lack them.
+		...({ backdropFilter: "blur(10px)" } as unknown as ViewStyle),
 		pointerEvents: "none",
 	},
 	frame: {

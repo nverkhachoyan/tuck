@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { Brush } from "@/model/document";
 import { colors, radii } from "@/theme";
+import { GlassView } from "@/ui/GlassView";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorSwatches } from "../ColorSwatches";
 import { ToolButton } from "../ToolButton";
@@ -62,15 +63,18 @@ export function DrawPanel({
 }
 
 /**
- * The brush's color and size, in a card over the bottom of the canvas. A
- * tap anywhere else on the canvas closes it, rather than drawing.
+ * The brush's color and size, in a card over the canvas, `bottomInset` up
+ * from its bottom, just above the panel. A tap anywhere else on the canvas
+ * closes it, rather than drawing.
  */
 export function BrushOptions({
 	settings,
+	bottomInset,
 	onChange,
 	onClose,
 }: {
 	settings: BrushSettings;
+	bottomInset: number;
 	onChange: (settings: BrushSettings) => void;
 	onClose: () => void;
 }) {
@@ -92,8 +96,8 @@ export function BrushOptions({
 				onPress={onClose}
 				accessibilityLabel="Close brush options"
 			/>
-			<View style={styles.cardArea}>
-				<View style={styles.card}>
+			<View style={[styles.cardArea, { bottom: bottomInset + 10 }]}>
+				<GlassView style={styles.card} contentStyle={styles.cardContent}>
 					{pen && (
 						<View style={styles.option}>
 							<Text style={styles.optionLabel}>Color</Text>
@@ -118,7 +122,7 @@ export function BrushOptions({
 							))}
 						</View>
 					</View>
-				</View>
+				</GlassView>
 			</View>
 		</Animated.View>
 	);
@@ -151,21 +155,18 @@ const styles = StyleSheet.create({
 	},
 	cardArea: {
 		position: "absolute",
-		left: 12,
-		right: 12,
-		bottom: 12,
+		left: 10,
+		right: 10,
 		alignItems: "center",
 		pointerEvents: "box-none",
 	},
 	card: {
+		borderRadius: radii.extraLarge,
+	},
+	cardContent: {
 		gap: 4,
 		paddingHorizontal: 20,
 		paddingVertical: 10,
-		borderRadius: radii.large,
-		borderWidth: 1,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
-		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
 	},
 	option: {
 		flexDirection: "row",

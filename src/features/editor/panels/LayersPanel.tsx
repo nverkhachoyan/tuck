@@ -21,6 +21,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import type { Layer } from "@/model/document";
 import { colors, radii } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
+import { GlassView } from "@/ui/GlassView";
 import { IconButton } from "@/ui/IconButton";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 
@@ -51,7 +52,8 @@ type LayerListProps = LayerRowActions & {
 /**
  * The layers list in a card floating over its parent, so opening it never
  * resizes the canvas, which stays usable around it. A "sidebar" sits at the
- * top right; a "sheet" along the bottom, up to half the parent's height.
+ * top right, down to `bottomInset` from the bottom; a "sheet" along the
+ * bottom, up to half the parent's height.
  *
  * Stays mounted while closed, so the card can animate out. The area around
  * the card is a plain View because `box-none` needs a class on web, and an
@@ -59,11 +61,13 @@ type LayerListProps = LayerRowActions & {
  */
 export function LayersPanel({
 	layout,
+	bottomInset,
 	open,
 	onClose,
 	...list
 }: LayerListProps & {
 	layout: "sidebar" | "sheet";
+	bottomInset: number;
 	open: boolean;
 	onClose: () => void;
 }) {
@@ -79,15 +83,19 @@ export function LayersPanel({
 		);
 	}
 	return (
-		<View style={styles.sidebarArea}>
+		<View
+			style={[styles.sidebarArea, { bottom: bottomInset + SIDEBAR_MARGIN }]}
+		>
 			{open && (
 				<Animated.View
 					entering={SIDEBAR_IN}
 					exiting={SIDEBAR_OUT}
-					style={[styles.card, styles.sidebar]}
+					style={styles.sidebar}
 				>
-					<PanelHeader onClose={onClose} />
-					<LayerList {...list} compact />
+					<GlassView style={styles.sidebarCard} contentStyle={styles.shrink}>
+						<PanelHeader onClose={onClose} />
+						<LayerList {...list} compact />
+					</GlassView>
 				</Animated.View>
 			)}
 		</View>
@@ -148,10 +156,15 @@ function LayersSheet({
 				onLayout={(event) => {
 					height.value = event.nativeEvent.layout.height;
 				}}
-				style={[styles.card, styles.sheet, { paddingBottom: bottom }, dragged]}
+				style={[styles.sheet, dragged]}
 			>
-				<PanelHeader onClose={onClose} swipe={swipe} />
-				{children}
+				<GlassView
+					style={styles.sheetCard}
+					contentStyle={[styles.shrink, { paddingBottom: bottom }]}
+				>
+					<PanelHeader onClose={onClose} swipe={swipe} />
+					{children}
+				</GlassView>
 			</Animated.View>
 		</Animated.View>
 	);
@@ -259,7 +272,6 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		top: SIDEBAR_MARGIN,
 		right: SIDEBAR_MARGIN,
-		bottom: SIDEBAR_MARGIN,
 		width: SIDEBAR_WIDTH,
 		pointerEvents: "box-none",
 	},
@@ -272,28 +284,30 @@ const styles = StyleSheet.create({
 		justifyContent: "flex-end",
 		pointerEvents: "box-none",
 	},
-	card: {
-		borderWidth: 1,
-		borderColor: colors.border,
-	},
-	// Sized to the list until it fills the area, then scrolls.
+	// Sized to the list until it fills the area, then scrolls: every view
+	// down to the list gives way.
 	sidebar: {
 		maxHeight: "100%",
-		borderRadius: radii.large,
-		backgroundColor: colors.surface,
-		paddingBottom: 4,
-		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
+	},
+	sidebarCard: {
+		flexShrink: 1,
+		borderRadius: radii.extraLarge,
+	},
+	shrink: {
+		flexShrink: 1,
 	},
 	sheetSlot: {
 		maxHeight: "100%",
 	},
 	sheet: {
 		flexShrink: 1,
-		borderBottomWidth: 0,
-		borderTopLeftRadius: radii.extraLarge,
-		borderTopRightRadius: radii.extraLarge,
-		backgroundColor: colors.background,
-		boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.45)",
+	},
+	sheetCard: {
+		flexShrink: 1,
+		borderTopLeftRadius: radii.panel,
+		borderTopRightRadius: radii.panel,
+		borderBottomLeftRadius: 0,
+		borderBottomRightRadius: 0,
 	},
 	column: {
 		width: "100%",
@@ -301,14 +315,14 @@ const styles = StyleSheet.create({
 		alignSelf: "center",
 	},
 	header: {
-		height: 48,
+		height: 52,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
 		paddingLeft: 20,
 		paddingRight: 22,
 		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
+		borderBottomColor: colors.glassBorder,
 	},
 	grabber: {
 		position: "absolute",

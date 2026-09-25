@@ -12,7 +12,10 @@ import {
 	defaultBrushSettings,
 } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
-import { BottomPanel } from "@/features/editor/panels/BottomPanel";
+import {
+	BottomPanel,
+	useBottomPanelInset,
+} from "@/features/editor/panels/BottomPanel";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
 import {
 	LAYERS_SIDEBAR_INSET,
@@ -42,8 +45,8 @@ import {
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
-import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
+import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
@@ -102,6 +105,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const fullScreenToolOpen = editing !== null || cropping;
 	const [layersOpen, setLayersOpen] = useState(false);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
+	const panelInset = useBottomPanelInset();
 	// While drawing, strokes go into the selected drawing, or a new one.
 	const [drawing, setDrawing] = useState(false);
 	const [brushSettings, setBrushSettings] =
@@ -225,6 +229,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onShortcut: handleShortcut,
 	});
 
+	const panelKind = drawing
+		? "draw"
+		: selectedTextLayer
+			? "text"
+			: selectedLayer
+				? "layer"
+				: "tools";
+
 	const focused = useIsFocused();
 	const {
 		busy: photoBusy,
@@ -245,10 +257,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 
-	// The sidebar covers only the canvas, so the bottom panel stays usable.
+	// The sidebar stops above the bottom panel, which stays usable.
 	const layersPanel = (
 		<LayersPanel
 			layout={layersBeside ? "sidebar" : "sheet"}
+			bottomInset={panelInset}
 			open={layersOpen}
 			onClose={closeLayers}
 			layers={document.layers}
@@ -311,7 +324,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					</View>
 				}
 			/>
-			<View style={styles.canvasArea}>
+			{/* The bottom panel floats over the stage, which runs under it. */}
+			<CanvasStage toBottom>
 				<EditorCanvas
 					ref={canvasRef}
 					document={document}
@@ -327,10 +341,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					onNudgeLayer={nudgeLayer}
 					brush={brush}
 					onPaintStroke={drawStroke}
+					bottomInset={panelInset}
 				/>
 				{drawing && brushOptionsOpen && (
 					<BrushOptions
 						settings={brushSettings}
+						bottomInset={panelInset}
 						onChange={setBrushSettings}
 						onClose={() => setBrushOptionsOpen(false)}
 					/>
@@ -345,44 +361,48 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					/>
 				)}
 				{layersBeside && layersPanel}
-			</View>
 
-			<BottomPanel>
-				{drawing ? (
-					<DrawPanel
-						settings={brushSettings}
-						optionsOpen={brushOptionsOpen}
-						onChange={setBrushSettings}
-						onToggleOptions={() => setBrushOptionsOpen((open) => !open)}
-					/>
-				) : selectedTextLayer ? (
-					<TextStylePanel
-						layer={selectedTextLayer}
-						onChange={updateSelectedText}
-						onEdit={() => setEditing("selected")}
-						onDuplicate={duplicateSelectedLayer}
-						onDelete={() => deleteLayer(selectedTextLayer.id)}
-					/>
-				) : selectedLayer ? (
-					<LayerActionsPanel
-						canMoveForward={selectedIndex < document.layers.length - 1}
-						canMoveBackward={selectedIndex > 0}
-						onDraw={selectedLayer.type === "drawing" ? startDrawing : undefined}
-						onMoveForward={() => moveSelected(1)}
-						onMoveBackward={() => moveSelected(-1)}
-						onDuplicate={duplicateSelectedLayer}
-						onDelete={() => deleteLayer(selectedLayer.id)}
-					/>
-				) : (
-					<ToolsPanel
-						photoBusy={photoBusy}
-						onAddText={() => setEditing("new")}
-						onDraw={startDrawing}
-						onAddPhoto={pickPhoto}
-						onCrop={startCrop}
-					/>
-				)}
-			</BottomPanel>
+				{/* After the brush options, so taps on the panel reach it rather
+				    than closing them. */}
+				<BottomPanel panel={panelKind}>
+					{drawing ? (
+						<DrawPanel
+							settings={brushSettings}
+							optionsOpen={brushOptionsOpen}
+							onChange={setBrushSettings}
+							onToggleOptions={() => setBrushOptionsOpen((open) => !open)}
+						/>
+					) : selectedTextLayer ? (
+						<TextStylePanel
+							layer={selectedTextLayer}
+							onChange={updateSelectedText}
+							onEdit={() => setEditing("selected")}
+							onDuplicate={duplicateSelectedLayer}
+							onDelete={() => deleteLayer(selectedTextLayer.id)}
+						/>
+					) : selectedLayer ? (
+						<LayerActionsPanel
+							canMoveForward={selectedIndex < document.layers.length - 1}
+							canMoveBackward={selectedIndex > 0}
+							onDraw={
+								selectedLayer.type === "drawing" ? startDrawing : undefined
+							}
+							onMoveForward={() => moveSelected(1)}
+							onMoveBackward={() => moveSelected(-1)}
+							onDuplicate={duplicateSelectedLayer}
+							onDelete={() => deleteLayer(selectedLayer.id)}
+						/>
+					) : (
+						<ToolsPanel
+							photoBusy={photoBusy}
+							onAddText={() => setEditing("new")}
+							onDraw={startDrawing}
+							onAddPhoto={pickPhoto}
+							onCrop={startCrop}
+						/>
+					)}
+				</BottomPanel>
+			</CanvasStage>
 			{!layersBeside && layersPanel}
 
 			{dragging && <DropOverlay label="Drop to add to the canvas" />}
@@ -419,9 +439,5 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 22,
-	},
-	canvasArea: {
-		flex: 1,
-		backgroundColor: colors.canvasWell,
 	},
 });

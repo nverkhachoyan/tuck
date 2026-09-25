@@ -71,8 +71,6 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		alignItems: "center",
 		paddingHorizontal: 16,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
 	},
 	// Centered on the whole bar rather than the space left of Back.
 	titleContainer: {

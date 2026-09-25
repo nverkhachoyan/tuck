@@ -1,4 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import {
+	Canvas,
+	Circle,
+	RadialGradient,
+	vec,
+} from "@shopify/react-native-skia";
 import { useIsFocused, useRouter } from "expo-router";
 import {
 	Platform,
@@ -71,7 +77,8 @@ export default function HomeScreen() {
 					{listed && (
 						<>
 							<Animated.View entering={FadeInDown.duration(500)}>
-								<LogoMark size={96} />
+								<Glow />
+								<LogoMark size={LOGO_SIZE} />
 							</Animated.View>
 							<Animated.Text
 								entering={FadeInDown.delay(80).duration(500)}
@@ -151,6 +158,27 @@ export default function HomeScreen() {
 	);
 }
 
+const LOGO_SIZE = 96;
+const GLOW_SIZE = 360;
+
+/** A soft light in the accent's color, behind the logo it's centered on. */
+function Glow() {
+	const center = vec(GLOW_SIZE / 2, GLOW_SIZE / 2);
+	return (
+		<Animated.View entering={FadeIn.duration(1200)} style={styles.glow}>
+			<Canvas style={styles.glowCanvas}>
+				<Circle c={center} r={GLOW_SIZE / 2}>
+					<RadialGradient
+						c={center}
+						r={GLOW_SIZE / 2}
+						colors={["rgba(255, 107, 74, 0.16)", "rgba(255, 107, 74, 0)"]}
+					/>
+				</Circle>
+			</Canvas>
+		</Animated.View>
+	);
+}
+
 const styles = StyleSheet.create({
 	// A phone-width column, or a little wider for the grid, so a wide browser
 	// window doesn't stretch it.
@@ -181,6 +209,16 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 6,
+	},
+	glow: {
+		position: "absolute",
+		top: (LOGO_SIZE - GLOW_SIZE) / 2,
+		left: (LOGO_SIZE - GLOW_SIZE) / 2,
+		pointerEvents: "none",
+	},
+	glowCanvas: {
+		width: GLOW_SIZE,
+		height: GLOW_SIZE,
 	},
 	wordmark: {
 		marginTop: 18,

@@ -21,6 +21,9 @@ import { handleMetrics, handlesVisible } from "../handles/handleMetrics";
 import type { LiveTransform } from "./liveTransform";
 
 const SELECTION_STROKE_PX = 1.5;
+// Under the selection's lines, so they read on light photos as on dark ones.
+const SELECTION_HALO_PX = 3.5;
+const SELECTION_HALO = "rgba(0, 0, 0, 0.22)";
 // The canvas's shadow on the well around it, and the hairline at its edge
 // that keeps a black canvas visible, in screen pixels.
 const SHADOW_OFFSET_PX = 6;
@@ -235,7 +238,7 @@ function SelectionHandles({
 	);
 
 	// The outline and the stem up to the knob as one path, and the corner
-	// squares and knob as another.
+	// dots and knob as another.
 	const shapes = useDerivedValue(() => {
 		const lines = Skia.PathBuilder.Make();
 		const handles = Skia.PathBuilder.Make();
@@ -250,20 +253,19 @@ function SelectionHandles({
 			return { lines: lines.build(), handles: handles.build() };
 		}
 
-		const size = handleMetrics.size / viewScale;
+		const radius = (handleMetrics.size / viewScale) * 0.6;
 		const knobY = -h - handleMetrics.knobOffset / viewScale;
-		const knobRadius = size * 0.6;
 		for (const [x, y] of [
 			[-w, -h],
 			[w, -h],
 			[w, h],
 			[-w, h],
 		]) {
-			handles.addRect(Skia.XYWHRect(x - size / 2, y - size / 2, size, size));
+			handles.addCircle(x, y, radius);
 		}
-		handles.addCircle(0, knobY, knobRadius);
+		handles.addCircle(0, knobY, radius);
 		lines.moveTo(0, -h);
-		lines.lineTo(0, knobY + knobRadius);
+		lines.lineTo(0, knobY + radius);
 		return { lines: lines.build(), handles: handles.build() };
 	}, [viewScale]);
 	const lines = useDerivedValue(() => shapes.value.lines);
@@ -274,14 +276,27 @@ function SelectionHandles({
 		<Group transform={transform}>
 			<Path
 				path={lines}
-				color={colors.accent}
+				color={SELECTION_HALO}
+				style="stroke"
+				strokeWidth={SELECTION_HALO_PX / viewScale}
+			/>
+			<Path
+				path={lines}
+				color={colors.selection}
 				style="stroke"
 				strokeWidth={strokeWidth}
 			/>
-			<Path path={handles} color="#FFFFFF" />
+			<Path path={handles} color="#FFFFFF">
+				<Shadow
+					dx={0}
+					dy={1 / viewScale}
+					blur={3 / viewScale}
+					color="rgba(0, 0, 0, 0.4)"
+				/>
+			</Path>
 			<Path
 				path={handles}
-				color={colors.accent}
+				color={colors.selection}
 				style="stroke"
 				strokeWidth={strokeWidth}
 			/>

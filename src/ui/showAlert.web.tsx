@@ -8,7 +8,7 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { colors } from "@/theme";
+import { colors, radii } from "@/theme";
 import { Button } from "@/ui/Button";
 
 /**
@@ -176,7 +176,8 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		padding: 24,
-		backgroundColor: "rgba(0, 0, 0, 0.55)",
+		backgroundColor: colors.frostedScrim,
+		backdropFilter: "blur(8px)",
 		animationKeyframes: [{ from: { opacity: 0 }, to: { opacity: 1 } }],
 		animationDuration: "140ms",
 		animationTimingFunction: "ease-out",
@@ -185,11 +186,13 @@ const styles = StyleSheet.create({
 		width: "100%",
 		maxWidth: 360,
 		padding: 22,
-		borderRadius: 20,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: "rgba(255, 255, 255, 0.1)",
-		backgroundColor: "#1C1C1F",
-		boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
+		borderRadius: radii.extraLarge,
+		borderWidth: 1,
+		borderColor: colors.glassBorder,
+		backgroundColor: "rgba(32, 32, 36, 0.82)",
+		backdropFilter: "blur(30px) saturate(160%)",
+		boxShadow:
+			"inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 60px rgba(0, 0, 0, 0.6)",
 		animationKeyframes: [
 			{
 				from: { opacity: 0, transform: "scale(0.96) translateY(6px)" },

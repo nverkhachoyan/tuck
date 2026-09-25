@@ -15,6 +15,7 @@ import { layerBounds } from "@/layers/layerBounds";
 import type { Brush, EditorDocument, Layer, Stroke } from "@/model/document";
 import type { Transform } from "@/model/geometry";
 import { colors } from "@/theme";
+import { GlassView } from "@/ui/GlassView";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -51,6 +52,9 @@ type EditorCanvasProps = {
 	brush?: Brush | null;
 	// A finished stroke, in document space.
 	onPaintStroke?: (stroke: Stroke) => void;
+	// How much of the view's bottom is covered by panels floating over it.
+	// The document fits above them, and what's past its edges shows under.
+	bottomInset?: number;
 };
 
 export type EditorCanvasHandle = {
@@ -85,6 +89,7 @@ export function EditorCanvas({
 	onNudgeLayer,
 	brush = null,
 	onPaintStroke,
+	bottomInset = 0,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [cursor, setCursor] = useState<CanvasCursor>("default");
@@ -109,8 +114,13 @@ export function EditorCanvas({
 		[document.width, document.height],
 	);
 	const viewport = useMemo(
-		() => fitDocumentToView(documentSize, size, PHOTO_INSET),
-		[documentSize, size],
+		() =>
+			fitDocumentToView(
+				documentSize,
+				{ width: size.width, height: size.height - bottomInset },
+				PHOTO_INSET,
+			),
+		[documentSize, size, bottomInset],
 	);
 	const { scale, offsetX, offsetY } = viewport;
 
@@ -297,12 +307,15 @@ export function EditorCanvas({
 				{/* At the bottom, clear of new text at the center and the editor's
 					    save banner at the top. Touches pass through to the canvas. */}
 				{imageFailed && (
-					<View style={styles.failure}>
-						<View style={styles.failurePill}>
+					<View style={[styles.failure, { bottom: bottomInset + PHOTO_INSET }]}>
+						<GlassView
+							style={styles.failurePill}
+							contentStyle={styles.failurePillContent}
+						>
 							<Text style={styles.failureText}>
 								A photo couldn't be loaded.
 							</Text>
-						</View>
+						</GlassView>
 					</View>
 				)}
 			</View>
@@ -321,15 +334,15 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		left: PHOTO_INSET,
 		right: PHOTO_INSET,
-		bottom: PHOTO_INSET,
 		alignItems: "center",
 		pointerEvents: "none",
 	},
 	failurePill: {
+		borderRadius: 18,
+	},
+	failurePillContent: {
 		paddingHorizontal: 14,
 		paddingVertical: 8,
-		borderRadius: 12,
-		backgroundColor: colors.surface,
 	},
 	failureText: {
 		fontSize: 14,
