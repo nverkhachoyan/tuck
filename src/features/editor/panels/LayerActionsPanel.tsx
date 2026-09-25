@@ -1,5 +1,4 @@
-import { StyleSheet, View } from "react-native";
-import { ToolButton } from "../ToolButton";
+import { ToolButton, ToolRow } from "../ToolButton";
 
 /**
  * Actions for the selected photo, drawing, or redaction, in place of the
@@ -27,7 +26,7 @@ export function LayerActionsPanel({
 	onDelete: () => void;
 }) {
 	return (
-		<View style={styles.row}>
+		<ToolRow>
 			{onDraw && <ToolButton label="Draw" icon="draw" onPress={onDraw} />}
 			{onRedact && <ToolButton label="Redact" icon="blur" onPress={onRedact} />}
 			<ToolButton
@@ -57,18 +56,6 @@ export function LayerActionsPanel({
 				tone="danger"
 				onPress={onDelete}
 			/>
-		</View>
+		</ToolRow>
 	);
 }
-
-const styles = StyleSheet.create({
-	// Like ToolsPanel, which it replaces. Five tiles still fit a phone's width.
-	row: {
-		flex: 1,
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		gap: 16,
-		paddingHorizontal: 12,
-	},
-});

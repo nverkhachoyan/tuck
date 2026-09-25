@@ -1,5 +1,4 @@
-import { StyleSheet, View } from "react-native";
-import { ToolButton } from "../ToolButton";
+import { ToolButton, ToolRow } from "../ToolButton";
 
 /** The editing tools, in the bottom panel while no layer is selected. */
 export function ToolsPanel({
@@ -18,7 +17,7 @@ export function ToolsPanel({
 	onCrop: () => void;
 }) {
 	return (
-		<View style={styles.row}>
+		<ToolRow>
 			<ToolButton label="Text" icon="format-text" onPress={onAddText} />
 			<ToolButton label="Draw" icon="draw" onPress={onDraw} />
 			<ToolButton label="Redact" icon="blur" onPress={onRedact} />
@@ -29,19 +28,6 @@ export function ToolsPanel({
 				onPress={onAddPhoto}
 			/>
 			<ToolButton label="Crop" icon="crop-rotate" onPress={onCrop} />
-		</View>
+		</ToolRow>
 	);
 }
-
-const styles = StyleSheet.create({
-	// Tools sit centered as a group. Spaced like LayerActionsPanel, so five
-	// still fit a phone's width.
-	row: {
-		flex: 1,
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		gap: 16,
-		paddingHorizontal: 12,
-	},
-});

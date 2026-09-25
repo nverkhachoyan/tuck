@@ -3,6 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
+	ScrollView,
 	StyleSheet,
 	Text,
 	View,
@@ -99,7 +100,36 @@ export function ToolButton({
 	);
 }
 
+/**
+ * A bottom panel's row of `ToolButton`s, centered while they fit, and
+ * scrolling sideways once a narrow screen can't fit them all.
+ */
+export function ToolRow({ children }: { children: ReactNode }) {
+	return (
+		<ScrollView
+			horizontal
+			showsHorizontalScrollIndicator={false}
+			style={styles.rowScroll}
+			contentContainerStyle={styles.row}
+		>
+			{children}
+		</ScrollView>
+	);
+}
+
 const styles = StyleSheet.create({
+	rowScroll: {
+		flex: 1,
+	},
+	// Grows to fill the panel rather than flexing, which would hold it to the
+	// panel's width, so it never scrolls. Five tools fit a 375pt phone.
+	row: {
+		flexGrow: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		gap: 12,
+		paddingHorizontal: 12,
+	},
 	container: {
 		minWidth: 56,
 		alignItems: "center",

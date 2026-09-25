@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { radii } from "@/theme";
+import { colors, radii } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
+import { IconButton } from "@/ui/IconButton";
 
 // Every panel shares one fixed height, so the canvas, fitted above the dock,
 // never moves when the selection changes.
@@ -33,13 +34,17 @@ function dockBottom(safeAreaBottom: number) {
 /**
  * The frosted dock floating over the bottom of the canvas, holding the panel
  * for the selection or tool. Changing `panel` cross-fades to the new one;
- * the same panel for another layer stays put.
+ * the same panel for another layer stays put. With `onBack`, a tool's panel
+ * leads with a way back to the tools, within reach of the thumb that's
+ * using it.
  */
 export function BottomPanel({
 	panel,
+	onBack,
 	children,
 }: {
 	panel: string;
+	onBack?: () => void;
 	children: ReactNode;
 }) {
 	const { bottom } = useSafeAreaInsets();
@@ -51,8 +56,18 @@ export function BottomPanel({
 					key={panel}
 					entering={PANEL_IN}
 					exiting={PANEL_OUT}
-					style={StyleSheet.absoluteFill}
+					style={[StyleSheet.absoluteFill, styles.content]}
 				>
+					{onBack && (
+						<View style={styles.back}>
+							<IconButton
+								icon="chevron-back"
+								label="Back to tools"
+								shortcut="Escape"
+								onPress={onBack}
+							/>
+						</View>
+					)}
 					{children}
 				</Animated.View>
 			</GlassView>
@@ -73,5 +88,17 @@ const styles = StyleSheet.create({
 		maxWidth: DOCK_MAX_WIDTH,
 		height: DOCK_HEIGHT,
 		borderRadius: radii.panel,
+	},
+	content: {
+		flexDirection: "row",
+	},
+	// Set off from the tools by a hairline, and wide enough to be easy to hit.
+	back: {
+		width: 56,
+		alignItems: "center",
+		justifyContent: "center",
+		borderRightWidth: StyleSheet.hairlineWidth,
+		borderRightColor: colors.borderStrong,
+		marginVertical: 20,
 	},
 });

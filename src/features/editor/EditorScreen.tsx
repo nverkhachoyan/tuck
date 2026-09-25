@@ -385,14 +385,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							disabled={!canRedo}
 							onPress={redo}
 						/>
-						{tool ? (
-							<Button
-								label="Done"
-								variant="primary"
-								size="small"
-								onPress={finishTool}
-							/>
-						) : (
+						{/* A tool is put down from the bottom panel. */}
+						{!tool && (
 							<Button
 								label="Export"
 								icon="share-outline"
@@ -453,7 +447,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 				{/* After the tool's options, so taps on the panel reach it rather
 				    than closing them. */}
-				<BottomPanel panel={panelKind}>
+				<BottomPanel panel={panelKind} onBack={tool ? finishTool : undefined}>
 					{tool === "draw" ? (
 						<DrawPanel
 							settings={brushSettings}

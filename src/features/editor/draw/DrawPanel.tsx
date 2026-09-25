@@ -1,8 +1,7 @@
-import { StyleSheet, View } from "react-native";
 import type { Brush } from "@/model/document";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorSwatches } from "../ColorSwatches";
-import { ToolButton } from "../ToolButton";
+import { ToolButton, ToolRow } from "../ToolButton";
 import {
 	SIZE_DOTS,
 	SizeDot,
@@ -34,7 +33,7 @@ export function DrawPanel({
 	};
 	const pen = settings.tool === "pen";
 	return (
-		<View style={styles.row}>
+		<ToolRow>
 			<ToolButton
 				label="Pen"
 				icon="draw-pen"
@@ -59,7 +58,7 @@ export function DrawPanel({
 				selected={optionsOpen}
 				onPress={onToggleOptions}
 			/>
-		</View>
+		</ToolRow>
 	);
 }
 
@@ -113,15 +112,3 @@ export function BrushOptions({
 		</ToolOptions>
 	);
 }
-
-const styles = StyleSheet.create({
-	// Like the toolbar it replaces.
-	row: {
-		flex: 1,
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		gap: 28,
-		paddingHorizontal: 20,
-	},
-});

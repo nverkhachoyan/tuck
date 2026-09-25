@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorSwatches } from "../ColorSwatches";
-import { ToolButton } from "../ToolButton";
+import { ToolButton, ToolRow } from "../ToolButton";
 import {
 	SIZE_DOTS,
 	SizeDot,
@@ -40,7 +40,7 @@ export function RedactPanel({
 		else onChange({ ...settings, tool });
 	};
 	return (
-		<View style={styles.row}>
+		<ToolRow>
 			<ToolButton
 				label="Box"
 				icon="rectangle-outline"
@@ -66,7 +66,7 @@ export function RedactPanel({
 				selected={optionsOpen}
 				onPress={onToggleOptions}
 			/>
-		</View>
+		</ToolRow>
 	);
 }
 
@@ -204,15 +204,6 @@ function StrengthDot({ strength }: { strength: number }) {
 }
 
 const styles = StyleSheet.create({
-	// Like the toolbar it replaces.
-	row: {
-		flex: 1,
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		gap: 28,
-		paddingHorizontal: 20,
-	},
 	solidTile: {
 		width: 22,
 		height: 22,
