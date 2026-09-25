@@ -1,3 +1,4 @@
+import { isHexColor } from "../../../lib/color.ts";
 import type { MaskStroke, RedactionEffect } from "../../../model/document.ts";
 import type { Size } from "../../../model/geometry.ts";
 
@@ -33,6 +34,41 @@ export const BLUR_STRENGTHS = [0.008, 0.016, 0.03];
 export const REDACT_BRUSH_SIZES = [0.02, 0.035, 0.05, 0.075, 0.11];
 
 const shortSide = (size: Size) => Math.min(size.width, size.height);
+
+const REDACT_TOOLS: RedactTool[] = ["box", "brush", "eraser"];
+
+/**
+ * Redact settings from what an earlier session saved, which may be from an
+ * older build, or damaged: each part that isn't valid is the default's.
+ */
+export function parseRedactSettings(saved: unknown): RedactSettings {
+	if (typeof saved !== "object" || saved === null) {
+		return defaultRedactSettings;
+	}
+	const fields = saved as Record<string, unknown>;
+	const indexOf = (
+		key: "strength" | "brushSize" | "eraserSize",
+		count: number,
+	) => {
+		const index = fields[key];
+		return typeof index === "number" &&
+			Number.isInteger(index) &&
+			index >= 0 &&
+			index < count
+			? index
+			: defaultRedactSettings[key];
+	};
+	return {
+		tool: REDACT_TOOLS.find((tool) => tool === fields.tool) ?? "box",
+		effect: fields.effect === "blur" ? "blur" : "solid",
+		color: isHexColor(fields.color)
+			? fields.color
+			: defaultRedactSettings.color,
+		strength: indexOf("strength", BLUR_STRENGTHS.length),
+		brushSize: indexOf("brushSize", REDACT_BRUSH_SIZES.length),
+		eraserSize: indexOf("eraserSize", REDACT_BRUSH_SIZES.length),
+	};
+}
 
 /** The effect the settings redact with on a canvas of `size`. */
 export function redactionEffect(

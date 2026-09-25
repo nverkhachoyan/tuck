@@ -5,6 +5,7 @@ import {
 	averageColor,
 	hexToHsv,
 	hsvToHex,
+	isHexColor,
 	mixColors,
 	parseTypedHex,
 } from "./color.ts";
@@ -61,6 +62,16 @@ describe("hexToHsv", () => {
 	test("is null for anything but #RRGGBB", () => {
 		for (const text of ["", "red", "#FFF", "#GGGGGG", "FF3B30"]) {
 			assert.equal(hexToHsv(text), null);
+		}
+	});
+});
+
+describe("isHexColor", () => {
+	test("is true only for #RRGGBB", () => {
+		assert.equal(isHexColor("#0A84FF"), true);
+		assert.equal(isHexColor("#0a84ff"), true);
+		for (const value of ["#FFF", "0A84FF", "red", "", null, 0x0a84ff]) {
+			assert.equal(isHexColor(value), false);
 		}
 	});
 });

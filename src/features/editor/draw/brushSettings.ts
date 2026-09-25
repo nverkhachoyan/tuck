@@ -1,3 +1,4 @@
+import { isHexColor } from "../../../lib/color.ts";
 import type { Brush, PenTip } from "../../../model/document.ts";
 import type { Size } from "../../../model/geometry.ts";
 
@@ -28,6 +29,39 @@ export const BRUSH_SIZES: Record<DrawTool, number[]> = {
 	neon: [0.012, 0.022, 0.038, 0.06, 0.09],
 	eraser: [0.005, 0.01, 0.02, 0.035, 0.06],
 };
+
+const DRAW_TOOLS: DrawTool[] = ["pen", "marker", "neon", "eraser"];
+
+/**
+ * Brush settings from what an earlier session saved, which may be from an
+ * older build, or damaged: each part that isn't valid is the default's.
+ */
+export function parseBrushSettings(saved: unknown): BrushSettings {
+	if (typeof saved !== "object" || saved === null) return defaultBrushSettings;
+	const { tool, color, sizes } = saved as Record<string, unknown>;
+	const savedSizes = (
+		typeof sizes === "object" && sizes !== null ? sizes : {}
+	) as Record<string, unknown>;
+	const sizeOf = (drawTool: DrawTool) => {
+		const size = savedSizes[drawTool];
+		return typeof size === "number" &&
+			Number.isInteger(size) &&
+			size >= 0 &&
+			size < BRUSH_SIZES[drawTool].length
+			? size
+			: defaultBrushSettings.sizes[drawTool];
+	};
+	return {
+		tool: DRAW_TOOLS.find((drawTool) => drawTool === tool) ?? "pen",
+		color: isHexColor(color) ? color : defaultBrushSettings.color,
+		sizes: {
+			pen: sizeOf("pen"),
+			marker: sizeOf("marker"),
+			neon: sizeOf("neon"),
+			eraser: sizeOf("eraser"),
+		},
+	};
+}
 
 /** The index into `BRUSH_SIZES` of the tool in use. */
 export function brushSizeIndex(settings: BrushSettings): number {

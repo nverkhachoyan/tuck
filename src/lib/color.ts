@@ -25,6 +25,11 @@ function toHex(rgb: Rgb): string {
 	return `#${channels.join("")}`.toUpperCase();
 }
 
+/** Whether `value` is a color as the app keeps them: `#RRGGBB`. */
+export function isHexColor(value: unknown): value is string {
+	return typeof value === "string" && HEX.test(value);
+}
+
 const TYPED_HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /**

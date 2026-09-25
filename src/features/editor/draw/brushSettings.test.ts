@@ -6,6 +6,7 @@ import {
 	brushFor,
 	brushSizeIndex,
 	defaultBrushSettings,
+	parseBrushSettings,
 } from "./brushSettings.ts";
 
 const sizes = { pen: 2, marker: 0, neon: 3, eraser: 4 };
@@ -63,4 +64,41 @@ describe("brushSizeIndex", () => {
 test("every tool has a size for each size dot", () => {
 	const counts = Object.values(BRUSH_SIZES).map((widths) => widths.length);
 	assert.deepEqual(new Set(counts), new Set([5]));
+});
+
+describe("parseBrushSettings", () => {
+	test("reads back settings saved as they are", () => {
+		const settings = {
+			tool: "neon" as const,
+			color: "#6B2FA0",
+			sizes: { pen: 0, marker: 4, neon: 2, eraser: 1 },
+		};
+		assert.deepEqual(
+			parseBrushSettings(JSON.parse(JSON.stringify(settings))),
+			settings,
+		);
+	});
+
+	test("is the default when nothing, or nothing like settings, was saved", () => {
+		for (const saved of [undefined, null, "pen", 3]) {
+			assert.deepEqual(parseBrushSettings(saved), defaultBrushSettings);
+		}
+	});
+
+	test("replaces only what isn't valid with the default's", () => {
+		// As an older build might save it: one size for pens, and no sizes
+		// for tools it doesn't have.
+		assert.deepEqual(
+			parseBrushSettings({
+				tool: "chalk",
+				color: "#ff3b3",
+				penSize: 4,
+				sizes: { pen: 4, marker: 5, neon: -1 },
+			}),
+			{
+				...defaultBrushSettings,
+				sizes: { ...defaultBrushSettings.sizes, pen: 4 },
+			},
+		);
+	});
 });
