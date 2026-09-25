@@ -52,15 +52,16 @@ const CORNERS_AND_KNOB: readonly Handle[] = [...CORNERS, "rotate"];
  */
 export function shownHandles(
 	box: Box,
-	scale: number,
+	scaleX: number,
+	scaleY: number,
 	viewScale: number,
 	resizable: boolean,
 ): readonly Handle[] {
 	"worklet";
 	if (hasFinePointer) return resizable ? ALL_HANDLES : CORNERS_AND_KNOB;
 	const target = 2 * handleMetrics.hitRadius;
-	const width = 2 * box.halfWidth * scale * viewScale;
-	const height = 2 * box.halfHeight * scale * viewScale;
+	const width = 2 * box.halfWidth * scaleX * viewScale;
+	const height = 2 * box.halfHeight * scaleY * viewScale;
 	const handles: Handle[] =
 		Math.min(width, height) >= target ? [...CORNERS_AND_KNOB] : [];
 	if (resizable && height >= target * 2) handles.push("top", "bottom");
@@ -86,6 +87,6 @@ export function handleUnder(
 		point,
 		handleMetrics.hitRadius / viewScale,
 		handleMetrics.knobOffset / viewScale,
-		shownHandles(box, transform.scaleX, viewScale, resizable),
+		shownHandles(box, transform.scaleX, transform.scaleY, viewScale, resizable),
 	);
 }

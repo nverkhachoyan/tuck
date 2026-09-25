@@ -8,6 +8,7 @@ import {
 	type Transform,
 	toLayerSpace,
 } from "../../../model/geometry.ts";
+import type { ResizeMode } from "./layerTargets.ts";
 
 /**
  * What gestures need to know about a visible layer on the UI thread, where
@@ -28,8 +29,8 @@ export type LayerTarget = {
 	strokes: MaskStroke[] | null;
 	// A locked photo is cut off at the canvas's edge.
 	clipped: boolean;
-	// Its box resizes freely, with side handles (see `resizesFreely`).
-	resizable: boolean;
+	// Its box's resize behavior, including whether it has side handles.
+	resizeMode: ResizeMode;
 };
 
 /**

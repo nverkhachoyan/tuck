@@ -13,6 +13,9 @@ type LayerBase = {
 	hidden: boolean;
 	// Can't be selected, and so can't be moved, on the canvas.
 	locked: boolean;
+	// When true, selection sides and corners stretch this layer instead of
+	// uniformly scaling it. Only images and text expose this in the UI.
+	resizable?: boolean;
 };
 
 // transform.x/y is the image's center in document space. `flipped` mirrors

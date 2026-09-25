@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnUI } from "react-native-worklets";
 import type { Box, Transform } from "@/model/geometry";
+import type { ResizeMode } from "./layerTargets";
 
 const MIN_LAYER_SCALE = 0.2;
 const MAX_LAYER_SCALE = 8;
@@ -13,9 +14,8 @@ const MAX_LAYER_SCALE = 8;
  * value when the gesture ends. While `activeId` matches a layer, that layer's
  * node renders from these values instead of its document transform.
  * `halfWidth`/`halfHeight` are its selection box, so the UI thread can find
- * and draw its handles without laying out text, and `resizable` says the
- * box resizes freely, with side handles (a redaction's box, which then
- * draws at this size too). `guideX`/`guideY` are the
+ * and draw its handles without laying out text, and `resizeMode` says how
+ * the box resizes, with side handles. `guideX`/`guideY` are the
  * document's lines a drag has snapped it onto, if any: a vertical line at
  * x = `guideX`, a horizontal one at y = `guideY`.
  *
@@ -28,11 +28,12 @@ export type LiveTransform = {
 	heldId: SharedValue<string | null>;
 	x: SharedValue<number>;
 	y: SharedValue<number>;
-	scale: SharedValue<number>;
+	scaleX: SharedValue<number>;
+	scaleY: SharedValue<number>;
 	rotation: SharedValue<number>;
 	halfWidth: SharedValue<number>;
 	halfHeight: SharedValue<number>;
-	resizable: SharedValue<boolean>;
+	resizeMode: SharedValue<ResizeMode>;
 	guideX: SharedValue<number | null>;
 	guideY: SharedValue<number | null>;
 };
@@ -42,11 +43,12 @@ export function useLiveTransform(): LiveTransform {
 	const heldId = useSharedValue<string | null>(null);
 	const x = useSharedValue(0);
 	const y = useSharedValue(0);
-	const scale = useSharedValue(1);
+	const scaleX = useSharedValue(1);
+	const scaleY = useSharedValue(1);
 	const rotation = useSharedValue(0);
 	const halfWidth = useSharedValue(0);
 	const halfHeight = useSharedValue(0);
-	const resizable = useSharedValue(false);
+	const resizeMode = useSharedValue<ResizeMode>("none");
 	const guideX = useSharedValue<number | null>(null);
 	const guideY = useSharedValue<number | null>(null);
 	return useMemo(
@@ -55,11 +57,12 @@ export function useLiveTransform(): LiveTransform {
 			heldId,
 			x,
 			y,
-			scale,
+			scaleX,
+			scaleY,
 			rotation,
 			halfWidth,
 			halfHeight,
-			resizable,
+			resizeMode,
 			guideX,
 			guideY,
 		}),
@@ -68,11 +71,12 @@ export function useLiveTransform(): LiveTransform {
 			heldId,
 			x,
 			y,
-			scale,
+			scaleX,
+			scaleY,
 			rotation,
 			halfWidth,
 			halfHeight,
-			resizable,
+			resizeMode,
 			guideX,
 			guideY,
 		],
@@ -83,18 +87,19 @@ export function useLiveTransform(): LiveTransform {
 export type LiveLayerState = {
 	transform: Transform;
 	box: Box;
-	resizable: boolean;
+	resizeMode: ResizeMode;
 };
 
 function writeLayer(live: LiveTransform, layer: LiveLayerState) {
 	"worklet";
 	live.x.value = layer.transform.x;
 	live.y.value = layer.transform.y;
-	live.scale.value = layer.transform.scaleX;
+	live.scaleX.value = layer.transform.scaleX;
+	live.scaleY.value = layer.transform.scaleY;
 	live.rotation.value = layer.transform.rotation;
 	live.halfWidth.value = layer.box.halfWidth;
 	live.halfHeight.value = layer.box.halfHeight;
-	live.resizable.value = layer.resizable;
+	live.resizeMode.value = layer.resizeMode;
 }
 
 function applySync(
@@ -143,14 +148,14 @@ export function holdLayer(
 	live.heldId.value = id;
 }
 
-/** The live values as a document transform (layers scale uniformly). */
+/** The live values as a document transform. */
 export function readLiveTransform(live: LiveTransform): Transform {
 	"worklet";
 	return {
 		x: live.x.value,
 		y: live.y.value,
-		scaleX: live.scale.value,
-		scaleY: live.scale.value,
+		scaleX: live.scaleX.value,
+		scaleY: live.scaleY.value,
 		rotation: live.rotation.value,
 	};
 }

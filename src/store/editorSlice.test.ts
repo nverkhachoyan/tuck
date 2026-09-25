@@ -187,6 +187,23 @@ describe("editorSlice", () => {
 		assert.equal(store.getState().selectedLayerId, null);
 	});
 
+	test("enables free resize for text and image layers only", () => {
+		const { store, text } = storeWithText();
+		store.getState().setLayerResizable(text.id, true);
+		assert.equal(textLayers(store)[0].resizable, true);
+
+		store.getState().addImageLayer("file:///added.jpg", 400, 300, true);
+		const image = store.getState().document?.layers.at(-1);
+		assert.equal(image?.type, "image");
+		if (image?.type !== "image") return;
+		store.getState().setLayerResizable(image.id, true);
+		assert.equal(store.getState().document?.layers.at(-1)?.resizable, true);
+
+		store.getState().setLayerResizable("missing", true);
+		store.getState().setLayerResizable(text.id, true);
+		assert.equal(store.getState().past.length, 4, "no-ops do not add history");
+	});
+
 	test("deleting the selected layer removes it and clears selection", () => {
 		const { store, text } = storeWithText();
 		store.getState().deleteLayer(text.id);

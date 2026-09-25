@@ -2,6 +2,7 @@ import { Canvas, Group } from "@shopify/react-native-skia";
 import {
 	type Ref,
 	useCallback,
+	useEffect,
 	useImperativeHandle,
 	useLayoutEffect,
 	useMemo,
@@ -30,7 +31,7 @@ import { handleUnder } from "../handles/handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
 import { type CanvasTool, EditorScene, type LiveStroke } from "./EditorScene";
 import { findLayerAt, type LayerTarget } from "./hitTest";
-import { layerTargets, resizesFreely } from "./layerTargets";
+import { layerTargets, resizeMode } from "./layerTargets";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
@@ -118,6 +119,27 @@ export function EditorCanvas({
 	const [imageFailed, setImageFailed] = useState(false);
 	const containerRef = useRef<View>(null);
 	const live = useLiveTransform();
+	const aspectLocked = useSharedValue(false);
+
+	// React Native Gesture Handler does not expose keyboard modifiers on a Pan.
+	// Keep Shift in a shared value so the UI-thread resize gesture can read it.
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const setLock = (event: KeyboardEvent) => {
+			aspectLocked.value = event.shiftKey;
+		};
+		window.addEventListener("keydown", setLock);
+		window.addEventListener("keyup", setLock);
+		const clearLock = () => {
+			aspectLocked.value = false;
+		};
+		window.addEventListener("blur", clearLock);
+		return () => {
+			window.removeEventListener("keydown", setLock);
+			window.removeEventListener("keyup", setLock);
+			window.removeEventListener("blur", clearLock);
+		};
+	}, [aspectLocked]);
 
 	const handleImageError = useCallback((error: unknown) => {
 		console.warn("Couldn't load an image layer", error);
@@ -168,7 +190,7 @@ export function EditorCanvas({
 			movableLayer && {
 				transform: movableLayer.transform,
 				box: layerBounds(movableLayer),
-				resizable: resizesFreely(movableLayer),
+				resizeMode: resizeMode(movableLayer),
 			},
 		);
 	}, [live, movableLayer]);
@@ -180,7 +202,7 @@ export function EditorCanvas({
 				? handleUnder(
 						selectedLayer.transform,
 						layerBounds(selectedLayer),
-						resizesFreely(selectedLayer),
+						resizeMode(selectedLayer) !== "none",
 						viewPointToDocument(viewport, { x: screenX, y: screenY }),
 						scale,
 					)
@@ -248,6 +270,7 @@ export function EditorCanvas({
 
 	const gesture = useLayerTransformGesture({
 		live,
+		aspectLocked,
 		layers: sharedTargets,
 		viewport,
 		documentSize,

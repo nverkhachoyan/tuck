@@ -75,6 +75,7 @@ export type EditorSlice = {
 	moveLayer: (id: string, toIndex: number) => void;
 	setLayerHidden: (id: string, hidden: boolean) => void;
 	setLayerLocked: (id: string, locked: boolean) => void;
+	setLayerResizable: (id: string, resizable: boolean) => void;
 	deleteLayer: (id: string) => void;
 	selectLayer: (id: string | null) => void;
 	undo: () => void;
@@ -297,6 +298,21 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			setLayers("editor/resizeRedactionBox", (layers) =>
 				layers.map((layer) =>
 					layer === target ? { ...target, transform, width, height } : layer,
+				),
+			);
+		},
+
+		setLayerResizable: (id, resizable) => {
+			const target = findUnlockedLayer(id);
+			if (
+				(target?.type !== "image" && target?.type !== "text") ||
+				target.resizable === resizable
+			) {
+				return;
+			}
+			setLayers("editor/setLayerResizable", (layers) =>
+				layers.map((layer) =>
+					layer === target ? { ...target, resizable } : layer,
 				),
 			);
 		},

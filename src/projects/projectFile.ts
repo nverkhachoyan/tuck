@@ -212,6 +212,7 @@ function isLayer(value: unknown): boolean {
 		typeof value.id !== "string" ||
 		typeof value.hidden !== "boolean" ||
 		typeof value.locked !== "boolean" ||
+		(value.resizable !== undefined && typeof value.resizable !== "boolean") ||
 		!isTransform(value.transform)
 	) {
 		return false;

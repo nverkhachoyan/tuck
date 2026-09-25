@@ -55,9 +55,11 @@ export function useTrackpadPinch({
 			event.preventDefault();
 			const id = live.activeId.value;
 			if (id === null) return;
-			live.scale.value = clampScale(
-				live.scale.value * Math.exp(-event.deltaY * 0.01),
-			);
+			const priorScaleX = live.scaleX.value;
+			const priorScaleY = live.scaleY.value;
+			const scale = clampScale(priorScaleX * Math.exp(-event.deltaY * 0.01));
+			live.scaleX.value = scale;
+			live.scaleY.value = (priorScaleY / priorScaleX) * scale;
 			// Captured now: by the time the timer fires, a new selection may have
 			// replaced the live values.
 			pendingCommit.current = { id, transform: readLiveTransform(live) };

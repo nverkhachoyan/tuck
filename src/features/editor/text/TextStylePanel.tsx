@@ -42,6 +42,7 @@ type TextStylePanelProps = {
 	layer: TextLayer;
 	onChange: (patch: TextLayerEdit) => void;
 	onEdit: () => void;
+	onToggleResize: () => void;
 	onDuplicate: () => void;
 	onDelete: () => void;
 };
@@ -56,6 +57,7 @@ export function TextStylePanel({
 	layer,
 	onChange,
 	onEdit,
+	onToggleResize,
 	onDuplicate,
 	onDelete,
 }: TextStylePanelProps) {
@@ -86,6 +88,12 @@ export function TextStylePanel({
 						icon="create-outline"
 						label="Edit text"
 						onPress={onEdit}
+					/>
+					<IconButton
+						icon="resize-outline"
+						label="Stretch text with handles"
+						selected={layer.resizable === true}
+						onPress={onToggleResize}
 					/>
 					<IconButton
 						icon="copy-outline"

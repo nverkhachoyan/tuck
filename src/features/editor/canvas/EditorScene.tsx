@@ -199,8 +199,8 @@ function LiveLayer({
 			x: active ? live.x.value : t.x,
 			y: active ? live.y.value : t.y,
 			rotation: active ? live.rotation.value : t.rotation,
-			scaleX: active ? live.scale.value : t.scaleX,
-			scaleY: active ? live.scale.value : t.scaleY,
+			scaleX: active ? live.scaleX.value : t.scaleX,
+			scaleY: active ? live.scaleY.value : t.scaleY,
 		});
 	}, [layer.id, layer.transform]);
 
@@ -293,7 +293,7 @@ function LiveRedactionBox({
 	const radius = effect.type === "blur" ? effect.radius : 0;
 	const blur = useDerivedValue(() => {
 		const active = live.activeId.value === id;
-		return layerBlur(radius, active ? live.scale.value : transform.scaleX);
+		return layerBlur(radius, active ? live.scaleX.value : transform.scaleX);
 	}, [id, radius, transform.scaleX]);
 	return effect.type === "solid" ? (
 		<Rect rect={box} color={effect.color} />
@@ -319,7 +319,7 @@ function LiveBlurStrokes({
 	const box = drawingBox(layer);
 	const picture = useDerivedValue(() => {
 		const scale =
-			live.activeId.value === id ? live.scale.value : transform.scaleX;
+			live.activeId.value === id ? live.scaleX.value : transform.scaleX;
 		return scale === transform.scaleX
 			? committed
 			: recordLayerStrokes(effect, marks, box, scale);
@@ -552,8 +552,8 @@ function SelectionHandles({
 			halfWidth: live.halfWidth.value,
 			halfHeight: live.halfHeight.value,
 		};
-		const w = box.halfWidth * live.scale.value;
-		const h = box.halfHeight * live.scale.value;
+		const w = box.halfWidth * live.scaleX.value;
+		const h = box.halfHeight * live.scaleY.value;
 		lines.addRect(Skia.XYWHRect(-w, -h, w * 2, h * 2));
 		const radius = (handleMetrics.size / viewScale) * 0.6;
 		// Pills along the sides, so they read as pulling that side out.
@@ -561,9 +561,10 @@ function SelectionHandles({
 		const short = radius * 1.5;
 		const shown = shownHandles(
 			box,
-			live.scale.value,
+			live.scaleX.value,
+			live.scaleY.value,
 			viewScale,
-			live.resizable.value,
+			live.resizeMode.value !== "none",
 		);
 		for (const handle of shown) {
 			if (handle === "rotate") {

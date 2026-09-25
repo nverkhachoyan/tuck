@@ -99,6 +99,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const moveLayer = useStore((state) => state.moveLayer);
 	const setLayerHidden = useStore((state) => state.setLayerHidden);
 	const setLayerLocked = useStore((state) => state.setLayerLocked);
+	const setLayerResizable = useStore((state) => state.setLayerResizable);
 	const setBackground = useStore((state) => state.setBackground);
 	const reframe = useStore((state) => state.reframe);
 	const deleteLayer = useStore((state) => state.deleteLayer);
@@ -478,6 +479,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							layer={selectedTextLayer}
 							onChange={updateSelectedText}
 							onEdit={() => setEditing("selected")}
+							onToggleResize={() =>
+								setLayerResizable(
+									selectedTextLayer.id,
+									!selectedTextLayer.resizable,
+								)
+							}
 							onDuplicate={duplicateSelectedLayer}
 							onDelete={() => deleteLayer(selectedTextLayer.id)}
 						/>
@@ -490,6 +497,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							}
 							onRedact={
 								selectedLayer.type === "redaction" ? startRedacting : undefined
+							}
+							resizeEnabled={selectedLayer.resizable === true}
+							onToggleResize={
+								selectedLayer.type === "image"
+									? () =>
+											setLayerResizable(
+												selectedLayer.id,
+												!selectedLayer.resizable,
+											)
+									: undefined
 							}
 							onMoveForward={() => moveSelected(1)}
 							onMoveBackward={() => moveSelected(-1)}

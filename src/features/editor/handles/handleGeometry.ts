@@ -158,6 +158,40 @@ export function resizeByDrag(
 	};
 }
 
+/**
+ * Like `resizeByDrag`, but keeps the box's starting proportions. The dragged
+ * side keeps its opposite side fixed; an untouched axis grows about center.
+ */
+export function resizeLockedByDrag(
+	transform: Transform,
+	box: Box,
+	handle: ResizeHandle,
+	offset: Point,
+	minSize: number,
+): { transform: Transform; box: Box } {
+	"worklet";
+	const raw = resizeByDrag(transform, box, handle, offset, minSize);
+	const sides = HANDLE_SIDES[handle];
+	const scale =
+		sides.x === 0
+			? raw.box.halfHeight / box.halfHeight
+			: sides.y === 0
+				? raw.box.halfWidth / box.halfWidth
+				: Math.abs(raw.box.halfWidth / box.halfWidth - 1) >=
+						Math.abs(raw.box.halfHeight / box.halfHeight - 1)
+					? raw.box.halfWidth / box.halfWidth
+					: raw.box.halfHeight / box.halfHeight;
+	const next = {
+		halfWidth: box.halfWidth * scale,
+		halfHeight: box.halfHeight * scale,
+	};
+	const center = toDocumentSpace(transform, {
+		x: sides.x === 0 ? 0 : sides.x * (next.halfWidth - box.halfWidth),
+		y: sides.y === 0 ? 0 : sides.y * (next.halfHeight - box.halfHeight),
+	});
+	return { transform: { ...transform, x: center.x, y: center.y }, box: next };
+}
+
 /** The rotation after dragging from `from` to `to` around `center`. */
 export function rotateByDrag(
 	center: Point,

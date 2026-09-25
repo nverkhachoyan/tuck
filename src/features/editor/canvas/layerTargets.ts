@@ -25,7 +25,7 @@ export function layerTargets(
 				hitPadding,
 				strokes: layer.locked ? null : layerStrokes(layer),
 				clipped: layer.type === "image" && layer.locked,
-				resizable: resizesFreely(layer),
+				resizeMode: resizeMode(layer),
 			};
 		});
 }
@@ -34,8 +34,15 @@ export function layerTargets(
  * Whether dragging a layer's handles resizes its box, each side on its own,
  * rather than scaling it: a redaction's box, whose proportions mean nothing.
  */
-export function resizesFreely(layer: Layer): boolean {
-	return layer.type === "redaction" && layer.shape === "box";
+export type ResizeMode = "none" | "box" | "stretch";
+
+/** How the layer's selection handles resize it, if they should. */
+export function resizeMode(layer: Layer): ResizeMode {
+	if (layer.type === "redaction" && layer.shape === "box") return "box";
+	if ((layer.type === "image" || layer.type === "text") && layer.resizable) {
+		return "stretch";
+	}
+	return "none";
 }
 
 function layerStrokes(layer: Layer): MaskStroke[] | null {

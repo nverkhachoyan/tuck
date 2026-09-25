@@ -8,6 +8,7 @@ import {
 	handleAt,
 	handlePosition,
 	resizeByDrag,
+	resizeLockedByDrag,
 	rotateByDrag,
 	scaleByDrag,
 } from "./handleGeometry.ts";
@@ -165,6 +166,45 @@ describe("resizeByDrag", () => {
 		const held = resizeByDrag(transform, thin, "bottom", { x: 0, y: 0 }, 4);
 		assert.equal(held.box.halfHeight, 1);
 		near(held.transform.y, 100);
+	});
+});
+
+describe("resizeLockedByDrag", () => {
+	const box = { halfWidth: 50, halfHeight: 10 };
+	const transform: Transform = {
+		x: 100,
+		y: 100,
+		scaleX: 2,
+		scaleY: 2,
+		rotation: 0,
+	};
+
+	test("keeps a side resize at the box's original proportions", () => {
+		const resized = resizeLockedByDrag(
+			transform,
+			box,
+			"right",
+			{ x: 20, y: 0 },
+			1,
+		);
+		assert.deepEqual(resized.box, { halfWidth: 60, halfHeight: 12 });
+		// The left side stays put, while the height expands around its center.
+		near(resized.transform.x, 120);
+		near(resized.transform.y, 100);
+	});
+
+	test("uses the further relative corner drag to choose the locked size", () => {
+		const resized = resizeLockedByDrag(
+			transform,
+			box,
+			"bottom-right",
+			{ x: 10, y: 6 },
+			1,
+		);
+		assert.deepEqual(resized.box, { halfWidth: 65, halfHeight: 13 });
+		// The top-left remains fixed while the more-proportional size wins.
+		near(resized.transform.x - resized.box.halfWidth * 2, 0);
+		near(resized.transform.y - resized.box.halfHeight * 2, 80);
 	});
 });
 

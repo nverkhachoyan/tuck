@@ -11,6 +11,8 @@ export function LayerActionsPanel({
 	canMoveBackward,
 	onDraw,
 	onRedact,
+	resizeEnabled,
+	onToggleResize,
 	onMoveForward,
 	onMoveBackward,
 	onDuplicate,
@@ -20,6 +22,8 @@ export function LayerActionsPanel({
 	canMoveBackward: boolean;
 	onDraw?: () => void;
 	onRedact?: () => void;
+	resizeEnabled?: boolean;
+	onToggleResize?: () => void;
 	onMoveForward: () => void;
 	onMoveBackward: () => void;
 	onDuplicate: () => void;
@@ -29,6 +33,14 @@ export function LayerActionsPanel({
 		<ToolRow>
 			{onDraw && <ToolButton label="Draw" icon="draw" onPress={onDraw} />}
 			{onRedact && <ToolButton label="Redact" icon="blur" onPress={onRedact} />}
+			{onToggleResize && (
+				<ToolButton
+					label="Stretch"
+					icon="arrow-expand"
+					selected={resizeEnabled}
+					onPress={onToggleResize}
+				/>
+			)}
 			<ToolButton
 				label="Forward"
 				icon="arrange-bring-forward"
