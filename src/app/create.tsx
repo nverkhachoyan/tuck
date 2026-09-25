@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackgroundPicker } from "@/editor/BackgroundPicker";
 import { createBlankDocument } from "@/model/document";
 import { createBlankProject } from "@/projects/projects";
@@ -28,6 +29,7 @@ export default function CreateRoute() {
 	const openDocument = useStore((state) => state.openDocument);
 	const router = useRouter();
 	const [background, setBackground] = useState<string | null>("#FFFFFF");
+	const { bottom } = useSafeAreaInsets();
 	const [busy, setBusy] = useState(false);
 	// Set at once, so a second tap can't start another project meanwhile.
 	const creating = useRef(false);
@@ -68,7 +70,9 @@ export default function CreateRoute() {
 					router.canGoBack() ? router.back() : router.replace("/")
 				}
 			/>
-			<ScrollView contentContainerStyle={styles.content}>
+			<ScrollView
+				contentContainerStyle={[styles.content, { paddingBottom: 24 + bottom }]}
+			>
 				<View style={styles.fill}>
 					<View style={styles.fillText}>
 						<Text style={styles.fillLabel}>Fill</Text>

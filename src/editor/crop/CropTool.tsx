@@ -21,6 +21,7 @@ import {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import type { EditorDocument } from "@/model/document";
 import { documentFraming, type Framing, framingAnchor } from "@/model/framing";
@@ -110,6 +111,7 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	const dragging = useSharedValue(false);
 	const straightenStart = useSharedValue<CropState>(initial);
 	const [viewSize, setViewSize] = useState<Size>({ width: 0, height: 0 });
+	const { bottom } = useSafeAreaInsets();
 	const hasOtherLayers = document.layers.some(
 		(layer) => layer !== anchor.layer && !layer.hidden,
 	);
@@ -282,7 +284,7 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 				onDragEnd={settle}
 			/>
 
-			<View style={styles.panel}>
+			<View style={[styles.panel, { paddingBottom: 12 + bottom }]}>
 				{/* Levels a tilted photo; a canvas alone has nothing to level. */}
 				{anchor.layer && (
 					<AngleDial
@@ -451,7 +453,6 @@ const styles = StyleSheet.create({
 	panel: {
 		gap: 4,
 		paddingTop: 8,
-		paddingBottom: 12,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},

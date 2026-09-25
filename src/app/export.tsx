@@ -12,6 +12,7 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { exportFormatFor, exportFormats } from "@/export/exportFormat";
 import { exportSizes } from "@/export/exportSizes";
 import {
@@ -117,6 +118,7 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 	const ready = state.status === "ready";
 	// Side by side only with room for "Save to Photos" beside Share.
 	const wide = useWindowDimensions().width >= 420;
+	const { bottom } = useSafeAreaInsets();
 
 	return (
 		<View style={styles.container}>
@@ -169,7 +171,7 @@ function ExportScreen({ document }: { document: EditorDocument }) {
 				)}
 			</View>
 
-			<View style={styles.footer}>
+			<View style={[styles.footer, { paddingBottom: 24 + bottom }]}>
 				<View style={styles.footerContent}>
 					{sizes.length > 1 && (
 						<View style={styles.sizes}>
@@ -282,7 +284,6 @@ const styles = StyleSheet.create({
 	footer: {
 		paddingHorizontal: 20,
 		paddingTop: 16,
-		paddingBottom: 24,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},

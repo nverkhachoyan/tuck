@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	EditorCanvas,
 	type EditorCanvasHandle,
@@ -15,7 +16,7 @@ import {
 	defaultBrushSettings,
 } from "@/editor/panels/DrawPanel";
 import { LayerActionsPanel } from "@/editor/panels/LayerActionsPanel";
-import { LayersPanel } from "@/editor/panels/LayersPanel";
+import { LAYERS_SIDEBAR_INSET, LayersPanel } from "@/editor/panels/LayersPanel";
 import { TextEditor } from "@/editor/panels/TextEditor";
 import { TextEditPanel } from "@/editor/panels/TextEditPanel";
 import type { Shortcut } from "@/editor/shortcuts";
@@ -44,6 +45,12 @@ import { DropOverlay } from "@/ui/DropOverlay";
 import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { ToolButton } from "@/ui/ToolButton";
+
+// Wide enough to show layers in a sidebar rather than a bottom sheet.
+const SIDEBAR_MIN_WIDTH = 900;
+// Toolbar and text panel share one fixed height, above the home indicator,
+// so the canvas above never resizes when the selection changes.
+const BOTTOM_PANEL_HEIGHT = 124;
 
 export default function EditorRoute() {
 	const router = useRouter();
@@ -77,6 +84,8 @@ export default function EditorRoute() {
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 	const [cropping, setCropping] = useState(false);
 	const [layersOpen, setLayersOpen] = useState(false);
+	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
+	const { bottom } = useSafeAreaInsets();
 	// While drawing, strokes go into the selected drawing, or a new one.
 	const [drawing, setDrawing] = useState(false);
 	const [brushSettings, setBrushSettings] =
@@ -202,6 +211,8 @@ export default function EditorRoute() {
 	});
 
 	const closeCrop = useCallback(() => setCropping(false), []);
+	// Stable, so the layers sheet's swipe isn't rebuilt on every render.
+	const closeLayers = useCallback(() => setLayersOpen(false), []);
 
 	// The photo shrinks to what this canvas can use, then moves into the
 	// project, so autosave knows its file. Without a project, it's used where
@@ -266,6 +277,24 @@ export default function EditorRoute() {
 		canvasRef.current?.flushPendingTransform();
 		moveLayer(selectedLayer.id, selectedIndex + step);
 	};
+
+	// The sidebar covers only the canvas, so the bottom panel stays usable.
+	const layersPanel = (
+		<LayersPanel
+			layout={layersBeside ? "sidebar" : "sheet"}
+			open={layersOpen}
+			onClose={closeLayers}
+			layers={document.layers}
+			background={document.background}
+			selectedLayerId={selectedLayer?.id ?? null}
+			onSelect={selectLayer}
+			onMove={moveLayer}
+			onSetHidden={setLayerHidden}
+			onSetLocked={setLayerLocked}
+			onDelete={deleteLayer}
+			onSetBackground={setBackground}
+		/>
+	);
 
 	return (
 		<View style={styles.container}>
@@ -346,7 +375,12 @@ export default function EditorRoute() {
 					/>
 				)}
 				{saveProblem && (
-					<View style={styles.saveErrorArea}>
+					<View
+						style={[
+							styles.saveErrorArea,
+							layersBeside && layersOpen && { right: LAYERS_SIDEBAR_INSET },
+						]}
+					>
 						<View style={styles.saveError}>
 							<Ionicons
 								name="cloud-offline-outline"
@@ -360,27 +394,21 @@ export default function EditorRoute() {
 						</View>
 					</View>
 				)}
+				{layersBeside && layersPanel}
 			</View>
 
-			<View style={[styles.bottomPanel, layersOpen && styles.layersPanel]}>
+			<View
+				style={[
+					styles.bottomPanel,
+					{ height: BOTTOM_PANEL_HEIGHT + bottom, paddingBottom: bottom },
+				]}
+			>
 				{drawing ? (
 					<DrawPanel
 						settings={brushSettings}
 						optionsOpen={brushOptionsOpen}
 						onChange={setBrushSettings}
 						onToggleOptions={() => setBrushOptionsOpen((open) => !open)}
-					/>
-				) : layersOpen ? (
-					<LayersPanel
-						layers={document.layers}
-						background={document.background}
-						selectedLayerId={selectedLayer?.id ?? null}
-						onSelect={selectLayer}
-						onMove={moveLayer}
-						onSetHidden={setLayerHidden}
-						onSetLocked={setLayerLocked}
-						onDelete={deleteLayer}
-						onSetBackground={setBackground}
 					/>
 				) : selectedTextLayer ? (
 					<TextEditPanel
@@ -428,6 +456,7 @@ export default function EditorRoute() {
 					</View>
 				)}
 			</View>
+			{!layersBeside && layersPanel}
 
 			{dragging && <DropOverlay label="Drop to add to the canvas" />}
 			{cropping && (
@@ -502,18 +531,9 @@ const styles = StyleSheet.create({
 		lineHeight: 19,
 		color: colors.textPrimary,
 	},
-	// Toolbar and text panel share one fixed height so the canvas above never
-	// resizes when the selection changes.
 	bottomPanel: {
-		height: 124,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
-	},
-	// Pushes the canvas up rather than covering it, so the whole photo stays in
-	// view while layers are rearranged. A little over four rows tall, which
-	// hints that longer lists scroll.
-	layersPanel: {
-		height: 256,
 	},
 	// Tools sit centered as a group; more tools join the row later.
 	toolbar: {

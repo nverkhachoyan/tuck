@@ -9,6 +9,7 @@ import {
 	View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { renderThumbnail } from "@/export/renderDocument";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/pickPhoto";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
@@ -53,6 +54,7 @@ export default function WelcomeRoute() {
 	const [listed, setListed] = useState(false);
 	// Side by side once there's room for both labels.
 	const wide = useWindowDimensions().width >= 560;
+	const { bottom } = useSafeAreaInsets();
 	// Picking plus re-encoding a large photo takes a few seconds, and so can
 	// saving. Set at once, so a second tap meanwhile can't start more work
 	// before the status re-renders.
@@ -193,7 +195,7 @@ export default function WelcomeRoute() {
 	const blocked = status !== "idle";
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { paddingBottom: 24 + bottom }]}>
 			{hasProjects ? (
 				<Animated.View entering={FadeIn.duration(300)} style={styles.brand}>
 					<LogoMark size={34} />
@@ -297,7 +299,6 @@ const styles = StyleSheet.create({
 		gap: 24,
 		paddingHorizontal: 24,
 		paddingTop: 20,
-		paddingBottom: 24,
 	},
 	flex: {
 		flex: 1,

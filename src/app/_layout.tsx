@@ -28,7 +28,12 @@ export default function Layout() {
 					<LoadFonts />
 					<LoadDisplayFonts />
 					<StatusBar barStyle="light-content" />
-					<SafeAreaView style={styles.container}>
+					{/* Screens pad their own bottom, so a bar or sheet there can reach
+					    under the home indicator. */}
+					<SafeAreaView
+						edges={["top", "left", "right"]}
+						style={styles.container}
+					>
 						<Routes />
 					</SafeAreaView>
 				</Suspense>

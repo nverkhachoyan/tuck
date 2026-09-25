@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
 	type ComponentProps,
+	type ReactNode,
 	type RefObject,
 	useLayoutEffect,
 	useMemo,
@@ -21,27 +22,50 @@ import {
 import {
 	Gesture,
 	GestureDetector,
+	type PanGesture,
 	ScrollView,
 } from "react-native-gesture-handler";
 import Animated, {
+	Easing,
+	FadeInRight,
+	FadeOutRight,
 	type SharedValue,
+	SlideInDown,
+	SlideOutDown,
 	useAnimatedStyle,
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { assertNever } from "@/lib/assertNever";
 import { hapticTick } from "@/lib/haptics";
 import type { Layer } from "@/model/document";
-import { colors } from "@/theme";
+import { colors, radii } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import { BackgroundPicker } from "../BackgroundPicker";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 const ROW_HEIGHT = 52;
 const SETTLE = { duration: 160 };
+const SIDEBAR_WIDTH = 340;
+const SIDEBAR_MARGIN = 12;
+// `webTransition`'s curve, for arriving, and its mirror for leaving.
+const DECELERATE = Easing.bezier(0.2, 0, 0, 1);
+const ACCELERATE = Easing.bezier(0.3, 0, 1, 1);
+const SHEET_IN = SlideInDown.duration(280).easing(DECELERATE);
+const SHEET_OUT = SlideOutDown.duration(200).easing(ACCELERATE);
+const SIDEBAR_IN = FadeInRight.duration(200).easing(DECELERATE);
+const SIDEBAR_OUT = FadeOutRight.duration(150).easing(ACCELERATE);
+// A released sheet closes if its drag, carried on at the release speed for
+// this long (in seconds), would pass a third of its height.
+const SWIPE_MOMENTUM = 0.15;
+const SWIPE_SETTLE = { duration: 200, easing: DECELERATE };
 
-type LayersPanelProps = {
+// How far from the right an overlay beside the open sidebar should stop.
+export const LAYERS_SIDEBAR_INSET = SIDEBAR_WIDTH + SIDEBAR_MARGIN * 2;
+
+type LayerListProps = {
 	layers: Layer[];
 	background: string | null;
 	selectedLayerId: string | null;
@@ -54,16 +78,150 @@ type LayersPanelProps = {
 };
 
 /**
+ * The layers list in a card floating over its parent, so opening it never
+ * resizes the canvas, which stays usable around it. A "sidebar" sits at the
+ * top right; a "sheet" along the bottom, up to half the parent's height.
+ *
+ * Stays mounted while closed, so the card can animate out. The area around
+ * the card is a plain View because `box-none` needs a class on web, and an
+ * animated view's style goes inline there.
+ */
+export function LayersPanel({
+	layout,
+	open,
+	onClose,
+	...list
+}: LayerListProps & {
+	layout: "sidebar" | "sheet";
+	open: boolean;
+	onClose: () => void;
+}) {
+	if (layout === "sheet") {
+		return (
+			<View style={styles.sheetArea}>
+				{open && (
+					<LayersSheet onClose={onClose}>
+						<LayerList {...list} compact={false} />
+					</LayersSheet>
+				)}
+			</View>
+		);
+	}
+	return (
+		<View style={styles.sidebarArea}>
+			{open && (
+				<Animated.View
+					entering={SIDEBAR_IN}
+					exiting={SIDEBAR_OUT}
+					style={[styles.card, styles.sidebar]}
+				>
+					<PanelHeader onClose={onClose} />
+					<LayerList {...list} compact />
+				</Animated.View>
+			)}
+		</View>
+	);
+}
+
+/**
+ * The panel as a sheet, which its header drags down: released, it closes or
+ * settles back. The card moves inside the view that slides it in and out, so
+ * the two animations don't fight over one transform, and once swiped away,
+ * the exit slide runs out of sight.
+ */
+function LayersSheet({
+	onClose,
+	children,
+}: {
+	onClose: () => void;
+	children: ReactNode;
+}) {
+	const { bottom } = useSafeAreaInsets();
+	const drag = useSharedValue(0);
+	const height = useSharedValue(0);
+
+	const swipe = useMemo(
+		() =>
+			Gesture.Pan()
+				.activeOffsetY([-8, 8])
+				.onUpdate((event) => {
+					drag.value = Math.max(0, event.translationY);
+				})
+				.onEnd((event, success) => {
+					const coast = event.translationY + event.velocityY * SWIPE_MOMENTUM;
+					if (success && coast > height.value / 3) {
+						drag.value = withTiming(
+							Math.max(drag.value, height.value),
+							SWIPE_SETTLE,
+							(finished) => {
+								if (finished) scheduleOnRN(onClose);
+							},
+						);
+					} else {
+						drag.value = withTiming(0, SWIPE_SETTLE);
+					}
+				}),
+		[drag, height, onClose],
+	);
+	const dragged = useAnimatedStyle(() => ({
+		transform: [{ translateY: drag.value }],
+	}));
+
+	return (
+		<Animated.View
+			entering={SHEET_IN}
+			exiting={SHEET_OUT}
+			style={styles.sheetSlot}
+		>
+			<Animated.View
+				onLayout={(event) => {
+					height.value = event.nativeEvent.layout.height;
+				}}
+				style={[styles.card, styles.sheet, { paddingBottom: bottom }, dragged]}
+			>
+				<PanelHeader onClose={onClose} swipe={swipe} />
+				{children}
+			</Animated.View>
+		</Animated.View>
+	);
+}
+
+/** The panel's title and close button, with a grabber when it can be swiped. */
+function PanelHeader({
+	onClose,
+	swipe,
+}: {
+	onClose: () => void;
+	swipe?: PanGesture;
+}) {
+	const header = (
+		<View style={[styles.column, styles.header, swipe && handleCursor]}>
+			{swipe && <View style={styles.grabber} />}
+			<Text style={styles.title} accessibilityRole="header">
+				Layers
+			</Text>
+			<IconButton icon="close" label="Close layers" onPress={onClose} />
+		</View>
+	);
+	return swipe ? (
+		<GestureDetector gesture={swipe}>{header}</GestureDetector>
+	) : (
+		header
+	);
+}
+
+/**
  * The document's layers, top first, with the canvas's background under them.
  * Tapping a row selects its layer, unless it's hidden or locked; dragging its
- * handle reorders it.
+ * handle reorders it. `compact` rows space their controls for a pointer
+ * rather than a finger.
  *
  * Rows sit at absolute positions taken from `order`, the UI thread's copy of
  * the row order. A drag rearranges `order` as it goes, so the other rows
  * slide aside without React rendering, and the document is only reordered
  * once, when the drag ends.
  */
-export function LayersPanel({
+function LayerList({
 	layers,
 	background,
 	selectedLayerId,
@@ -73,7 +231,8 @@ export function LayersPanel({
 	onSetLocked,
 	onDelete,
 	onSetBackground,
-}: LayersPanelProps) {
+	compact,
+}: LayerListProps & { compact: boolean }) {
 	const rows = useMemo(() => layers.slice().reverse(), [layers]);
 	const order = useSharedValue(rows.map((layer) => layer.id));
 	const dragId = useSharedValue<string | null>(null);
@@ -86,8 +245,7 @@ export function LayersPanel({
 	return (
 		<ScrollView
 			ref={scrollRef}
-			style={styles.scroll}
-			contentContainerStyle={styles.content}
+			contentContainerStyle={[styles.column, styles.content]}
 		>
 			<View style={{ height: rows.length * ROW_HEIGHT }}>
 				{rows.map((layer, slot) => (
@@ -100,6 +258,7 @@ export function LayersPanel({
 						dragId={dragId}
 						scrollRef={scrollRef}
 						selected={layer.id === selectedLayerId}
+						compact={compact}
 						onSelect={onSelect}
 						onMove={onMove}
 						onSetHidden={onSetHidden}
@@ -109,7 +268,9 @@ export function LayersPanel({
 				))}
 			</View>
 			{rows.length === 0 && (
-				<Text style={styles.empty}>Text you add appears here.</Text>
+				<Text style={styles.empty}>
+					Text, drawings, and photos you add appear here.
+				</Text>
 			)}
 			<View style={styles.row}>
 				<Text style={styles.label}>Background</Text>
@@ -127,6 +288,7 @@ function LayerRow({
 	dragId,
 	scrollRef,
 	selected,
+	compact,
 	onSelect,
 	onMove,
 	onSetHidden,
@@ -140,8 +302,9 @@ function LayerRow({
 	dragId: SharedValue<string | null>;
 	scrollRef: RefObject<ScrollView | null>;
 	selected: boolean;
+	compact: boolean;
 } & Pick<
-	LayersPanelProps,
+	LayerListProps,
 	"onSelect" | "onMove" | "onSetHidden" | "onSetLocked" | "onDelete"
 >) {
 	const { id, hidden, locked } = layer;
@@ -198,12 +361,12 @@ function LayerRow({
 				: withTiming((index === -1 ? slot : index) * ROW_HEIGHT, SETTLE),
 			zIndex: dragging ? 1 : 0,
 			backgroundColor: dragging
-				? colors.surfaceHover
+				? colors.surfacePressed
 				: selected
 					? colors.accentSoft
 					: hovered
-						? colors.surface
-						: colors.background,
+						? colors.hoverOverlay
+						: "transparent",
 			transform: [{ scale: withTiming(dragging ? 1.02 : 1, SETTLE) }],
 		};
 	}, [id, slot, selected, hovered]);
@@ -247,7 +410,7 @@ function LayerRow({
 					{label}
 				</Text>
 			</Pressable>
-			<View style={styles.actions}>
+			<View style={[styles.actions, compact && styles.compactActions]}>
 				<IconButton
 					icon={hidden ? "eye-off-outline" : "eye-outline"}
 					label={hidden ? `Show ${label}` : `Hide ${label}`}
@@ -266,7 +429,11 @@ function LayerRow({
 			</View>
 			<GestureDetector gesture={pan}>
 				<View
-					style={[styles.trailing, handleCursor]}
+					style={[
+						styles.trailing,
+						compact && styles.compactTrailing,
+						handleCursor,
+					]}
 					accessibilityLabel={`Reorder ${label}`}
 				>
 					<Ionicons
@@ -326,13 +493,77 @@ const handleCursor =
 	Platform.OS === "web" ? ({ cursor: "grab" } as unknown as ViewStyle) : null;
 
 const styles = StyleSheet.create({
-	scroll: {
-		flex: 1,
+	sidebarArea: {
+		position: "absolute",
+		top: SIDEBAR_MARGIN,
+		right: SIDEBAR_MARGIN,
+		bottom: SIDEBAR_MARGIN,
+		width: SIDEBAR_WIDTH,
+		pointerEvents: "box-none",
 	},
-	content: {
+	sheetArea: {
+		position: "absolute",
+		top: "50%",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		justifyContent: "flex-end",
+		pointerEvents: "box-none",
+	},
+	card: {
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	// Sized to the list until it fills the area, then scrolls.
+	sidebar: {
+		maxHeight: "100%",
+		borderRadius: radii.large,
+		backgroundColor: colors.surface,
+		paddingBottom: 4,
+		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
+	},
+	sheetSlot: {
+		maxHeight: "100%",
+	},
+	sheet: {
+		flexShrink: 1,
+		borderBottomWidth: 0,
+		borderTopLeftRadius: radii.extraLarge,
+		borderTopRightRadius: radii.extraLarge,
+		backgroundColor: colors.background,
+		boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.45)",
+	},
+	column: {
 		width: "100%",
 		maxWidth: 560,
 		alignSelf: "center",
+	},
+	header: {
+		height: 48,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		paddingLeft: 20,
+		paddingRight: 22,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+	},
+	grabber: {
+		position: "absolute",
+		top: 6,
+		left: "50%",
+		width: 36,
+		height: 5,
+		marginLeft: -18,
+		borderRadius: 2.5,
+		backgroundColor: colors.borderStrong,
+	},
+	title: {
+		fontSize: 15,
+		fontWeight: "600",
+		color: colors.textPrimary,
+	},
+	content: {
 		paddingVertical: 8,
 	},
 	row: {
@@ -381,12 +612,18 @@ const styles = StyleSheet.create({
 		gap: 22,
 		paddingLeft: 12,
 	},
+	compactActions: {
+		gap: 14,
+	},
 	// Wide enough to grab comfortably.
 	trailing: {
 		width: 60,
 		alignSelf: "stretch",
 		alignItems: "center",
 		justifyContent: "center",
+	},
+	compactTrailing: {
+		width: 44,
 	},
 	empty: {
 		height: ROW_HEIGHT,
