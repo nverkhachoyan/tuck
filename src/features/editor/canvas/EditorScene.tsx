@@ -55,10 +55,12 @@ const EDGE_PX = 1;
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
- * brush, drags out a redaction's box, or paints a redaction's strokes.
+ * brush, drags out a redaction's box, paints a redaction's strokes, or picks
+ * a color where the finger lifts.
  */
 export type CanvasTool =
 	| { type: "draw"; brush: Brush }
+	| { type: "pickColor" }
 	| { type: "redactBox"; effect: RedactionEffect }
 	| {
 			type: "redactBrush";
@@ -352,6 +354,8 @@ function NewLayerStroke({
 			return (
 				<LiveBox stroke={stroke} effect={tool.effect} viewScale={viewScale} />
 			);
+		case "pickColor":
+			return null;
 	}
 }
 

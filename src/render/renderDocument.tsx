@@ -1,10 +1,13 @@
 import {
+	AlphaType,
+	ColorType,
 	drawAsImage,
 	Group,
 	ImageFormat,
 	type SkImage,
 } from "@shopify/react-native-skia";
 import { decodedImages } from "@/layers/decodedImages";
+import { averageColor } from "@/lib/color";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodeImageLayers } from "./decodeImageLayers";
@@ -39,6 +42,56 @@ export async function renderDocument(
 	} finally {
 		// Camera photos are large; let go of them right away, so the ones the
 		// editor isn't drawing are freed instead of waiting for garbage collection.
+		decoded.release();
+	}
+}
+
+// How far around a point the eyedropper averages, in document pixels: a
+// photo's noise makes any single pixel a poor sample of what's there.
+const SAMPLE_RADIUS = 2;
+
+/**
+ * The color the document shows around `point`, in document space, as
+ * `#RRGGBB`: what export would draw there, averaged over a few pixels.
+ * Null outside the canvas, or where it's transparent. Only those pixels
+ * are drawn, so it's quick whatever the document's size.
+ */
+export async function sampleColor(
+	document: EditorDocument,
+	point: { x: number; y: number },
+): Promise<string | null> {
+	if (
+		point.x < 0 ||
+		point.y < 0 ||
+		point.x >= document.width ||
+		point.y >= document.height
+	) {
+		return null;
+	}
+	const size = SAMPLE_RADIUS * 2 + 1;
+	const left = Math.floor(point.x) - SAMPLE_RADIUS;
+	const top = Math.floor(point.y) - SAMPLE_RADIUS;
+	const decoded = await decodeImageLayers(document.layers, decodedImages);
+	try {
+		const image = await drawAsImage(
+			<Group transform={[{ translateX: -left }, { translateY: -top }]}>
+				<DocumentRenderScene document={document} images={decoded.images} />
+			</Group>,
+			{ width: size, height: size },
+		);
+		if (!image) return null;
+		try {
+			const pixels = image.readPixels(0, 0, {
+				width: size,
+				height: size,
+				colorType: ColorType.RGBA_8888,
+				alphaType: AlphaType.Unpremul,
+			});
+			return pixels ? averageColor(pixels) : null;
+		} finally {
+			image.dispose();
+		}
+	} finally {
 		decoded.release();
 	}
 }

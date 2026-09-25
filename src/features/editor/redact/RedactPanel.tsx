@@ -80,6 +80,7 @@ export function RedactOptions({
 	bottomInset,
 	onChange,
 	onPickCustom,
+	onEyedropper,
 	onClose,
 }: {
 	settings: RedactSettings;
@@ -88,6 +89,8 @@ export function RedactOptions({
 	onChange: (settings: RedactSettings) => void;
 	// A color from the picker, which becomes the editor's custom color.
 	onPickCustom: (color: string) => void;
+	// Sets out to pick the redaction's color from the canvas.
+	onEyedropper: () => void;
 	onClose: () => void;
 }) {
 	const { tool, effect } = settings;
@@ -131,6 +134,7 @@ export function RedactOptions({
 								customColor={customColor}
 								onPick={(color) => color && onChange({ ...settings, color })}
 								onPickCustom={onPickCustom}
+								onEyedropper={onEyedropper}
 							/>
 						</ToolOption>
 					) : (

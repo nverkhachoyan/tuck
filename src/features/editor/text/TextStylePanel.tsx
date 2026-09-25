@@ -60,6 +60,7 @@ export function TextColorPicker({
 	bottomInset,
 	onChange,
 	onPickCustom,
+	onEyedropper,
 	onClose,
 }: {
 	layer: TextLayer;
@@ -67,6 +68,8 @@ export function TextColorPicker({
 	bottomInset: number;
 	onChange: (patch: TextLayerEdit) => void;
 	onPickCustom: (color: string) => void;
+	// Sets out to pick the color from the canvas.
+	onEyedropper: () => void;
 	onClose: () => void;
 }) {
 	return (
@@ -83,6 +86,7 @@ export function TextColorPicker({
 						onChange({ [colorKey]: color });
 						onPickCustom(color);
 					}}
+					onEyedropper={onEyedropper}
 				/>
 			</ToolOption>
 		</ToolOptions>

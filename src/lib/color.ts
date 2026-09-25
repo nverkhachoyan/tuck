@@ -84,6 +84,26 @@ export function hexToHsv(hex: string, fallbackHue = 0): Hsv | null {
 }
 
 /**
+ * The average of unpremultiplied RGBA pixels, 8 bits a channel, as
+ * `#RRGGBB`, or null if they're all transparent. Each pixel counts as
+ * much as it's opaque, so a see-through edge doesn't pull the average
+ * toward whatever color its invisible pixels hold.
+ */
+export function averageColor(pixels: ArrayLike<number>): string | null {
+	const sum: Rgb = [0, 0, 0];
+	let weight = 0;
+	for (let i = 0; i + 3 < pixels.length; i += 4) {
+		const alpha = pixels[i + 3];
+		sum[0] += pixels[i] * alpha;
+		sum[1] += pixels[i + 1] * alpha;
+		sum[2] += pixels[i + 2] * alpha;
+		weight += alpha;
+	}
+	if (weight === 0) return null;
+	return toHex(sum.map((channel) => channel / weight) as Rgb);
+}
+
+/**
  * `#RRGGBB` `amount` of the way from `from` to `to` (0 is `from`, 1 is
  * `to`). A color that isn't `#RRGGBB` comes back as it is.
  */
