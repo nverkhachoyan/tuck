@@ -1,4 +1,5 @@
 import { Fill, Group, Rect, type SkImage } from "@shopify/react-native-skia";
+import { DrawingLayerView } from "@/layers/DrawingLayerView";
 import { ImageLayerView } from "@/layers/ImageLayerView";
 import { toTransformList } from "@/layers/layerTransform";
 import { TextLayerView } from "@/layers/TextLayerView";
@@ -51,6 +52,8 @@ function LayerContent({
 		}
 		case "text":
 			return <TextLayerView layer={layer} />;
+		case "drawing":
+			return <DrawingLayerView layer={layer} />;
 		default:
 			return assertNever(layer);
 	}

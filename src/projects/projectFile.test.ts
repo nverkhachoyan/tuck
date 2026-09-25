@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
+	createDrawingLayer,
 	createTextLayer,
 	type EditorDocument,
 } from "../model/document.ts";
@@ -29,6 +30,15 @@ function documentWithText(...texts: string[]): EditorDocument {
 		document.layers.push(createTextLayer(document, text, "center"));
 	}
 	return document;
+}
+
+function drawingLayer() {
+	return createDrawingLayer({
+		type: "pen",
+		color: "#FF3B30",
+		width: 12,
+		points: [0, 0, 100, 50],
+	});
 }
 
 function savedJson(project: Partial<SavedProject> = {}) {
@@ -182,6 +192,16 @@ describe("parseSavedProject", () => {
 		);
 	});
 
+	test("reads a drawing, with pen and eraser strokes", () => {
+		const document = documentWithText();
+		const drawing = drawingLayer();
+		drawing.strokes.push({ type: "eraser", width: 30, points: [10, 10] });
+		document.layers.push(drawing);
+		const saved = mapImageUris(document, () => "original.jpg");
+		const project = parseSavedProject(savedJson({ document: saved }));
+		assert.deepEqual(project?.document, saved);
+	});
+
 	test("reads a photo-only marker after the last edit is removed", () => {
 		const photo = mapImageUris(documentWithText(), () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: photo }));
@@ -223,6 +243,21 @@ describe("parseSavedProject", () => {
 			savedJson({
 				document: { ...photo, layers: [{ ...photo.layers[0], opaque: 1 }] },
 			} as unknown as Partial<SavedProject>),
+			...[
+				{ type: "pen", width: 4, points: [0, 0] },
+				{ type: "pencil", color: "#000", width: 4, points: [0, 0] },
+				{ type: "eraser", width: 0, points: [0, 0] },
+				{ type: "eraser", width: 4, points: [] },
+				{ type: "eraser", width: 4, points: [0, 0, 1] },
+				{ type: "eraser", width: 4, points: [0, "1"] },
+			].map((stroke) =>
+				savedJson({
+					document: {
+						...photo,
+						layers: [...photo.layers, { ...drawingLayer(), strokes: [stroke] }],
+					},
+				} as unknown as Partial<SavedProject>),
+			),
 		];
 		for (const json of unreadable) {
 			assert.equal(parseSavedProject(json), null, json);

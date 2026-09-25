@@ -9,6 +9,8 @@ import { type EditorDocument, textFonts } from "../model/document.ts";
 // before them open only image layers naming `PHOTO_FILE`, and list the rest
 // as unavailable. So did image layers' `opaque`: builds from before it save
 // only JPEGs, so a layer without it is opaque, and they don't open PNGs.
+// Drawings kept it too: builds from before them list a project that has one
+// as unavailable.
 export const PROJECT_VERSION = 3;
 
 // The file of the photo a project was made from. Saved image layers name a
@@ -234,9 +236,24 @@ function isLayer(value: unknown): boolean {
 				isColorOrNull(value.backgroundColor) &&
 				["left", "center", "right"].includes(value.align as string)
 			);
+		case "drawing":
+			return Array.isArray(value.strokes) && value.strokes.every(isStroke);
 		default:
 			return false;
 	}
+}
+
+function isStroke(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		(value.type === "eraser" ||
+			(value.type === "pen" && typeof value.color === "string")) &&
+		isPositive(value.width) &&
+		Array.isArray(value.points) &&
+		value.points.length >= 2 &&
+		value.points.length % 2 === 0 &&
+		value.points.every(Number.isFinite)
+	);
 }
 
 function isTransform(value: unknown): boolean {

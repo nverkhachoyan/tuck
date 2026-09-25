@@ -1,14 +1,21 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/editor/canvas/EditorCanvas";
 import { CropTool } from "@/editor/crop/CropTool";
+import {
+	BrushOptions,
+	type BrushSettings,
+	brushFor,
+	DrawPanel,
+	defaultBrushSettings,
+} from "@/editor/panels/DrawPanel";
+import { LayerActionsPanel } from "@/editor/panels/LayerActionsPanel";
 import { LayersPanel } from "@/editor/panels/LayersPanel";
-import { PhotoPanel } from "@/editor/panels/PhotoPanel";
 import { TextEditor } from "@/editor/panels/TextEditor";
 import { TextEditPanel } from "@/editor/panels/TextEditPanel";
 import type { Shortcut } from "@/editor/shortcuts";
@@ -49,6 +56,7 @@ export default function EditorRoute() {
 	const duplicateSelectedLayer = useStore(
 		(state) => state.duplicateSelectedLayer,
 	);
+	const drawStroke = useStore((state) => state.drawStroke);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const transformLayer = useStore((state) => state.transformLayer);
 	const nudgeLayer = useStore((state) => state.nudgeLayer);
@@ -69,6 +77,23 @@ export default function EditorRoute() {
 	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
 	const [cropping, setCropping] = useState(false);
 	const [layersOpen, setLayersOpen] = useState(false);
+	// While drawing, strokes go into the selected drawing, or a new one.
+	const [drawing, setDrawing] = useState(false);
+	const [brushSettings, setBrushSettings] =
+		useState<BrushSettings>(defaultBrushSettings);
+	const [brushOptionsOpen, setBrushOptionsOpen] = useState(false);
+	const documentWidth = document?.width ?? 0;
+	const documentHeight = document?.height ?? 0;
+	const brush = useMemo(
+		() =>
+			drawing
+				? brushFor(brushSettings, {
+						width: documentWidth,
+						height: documentHeight,
+					})
+				: null,
+		[drawing, brushSettings, documentWidth, documentHeight],
+	);
 	// Picking and re-encoding a large photo takes a few seconds. Set at once,
 	// so a second tap meanwhile can't open another picker.
 	const addingPhoto = useRef(false);
@@ -102,6 +127,18 @@ export default function EditorRoute() {
 		redo();
 	}, [redo]);
 
+	// Always with the pen, so the first stroke shows. Its color and sizes stay.
+	const startDrawing = () => {
+		canvasRef.current?.flushPendingTransform();
+		setLayersOpen(false);
+		setBrushSettings((settings) => ({ ...settings, tool: "pen" }));
+		setDrawing(true);
+	};
+	const finishDrawing = useCallback(() => {
+		setDrawing(false);
+		setBrushOptionsOpen(false);
+	}, []);
+
 	const handleShortcut = useCallback(
 		(shortcut: Shortcut) => {
 			if (shortcut.type === "undo") {
@@ -110,6 +147,13 @@ export default function EditorRoute() {
 			}
 			if (shortcut.type === "redo") {
 				handleRedo();
+				return true;
+			}
+			// Escape puts the pen down; the rest act on a selection, which holds
+			// still while drawing.
+			if (drawing) {
+				if (shortcut.type !== "deselect") return false;
+				finishDrawing();
 				return true;
 			}
 			if (!document || !selectedLayer) return false;
@@ -141,6 +185,8 @@ export default function EditorRoute() {
 		[
 			handleUndo,
 			handleRedo,
+			drawing,
+			finishDrawing,
 			document,
 			selectedLayer,
 			deleteLayer,
@@ -234,12 +280,14 @@ export default function EditorRoute() {
 				}}
 				action={
 					<View style={styles.headerActions}>
-						<IconButton
-							icon="layers-outline"
-							label="Layers"
-							selected={layersOpen}
-							onPress={() => setLayersOpen((open) => !open)}
-						/>
+						{!drawing && (
+							<IconButton
+								icon="layers-outline"
+								label="Layers"
+								selected={layersOpen}
+								onPress={() => setLayersOpen((open) => !open)}
+							/>
+						)}
 						<IconButton
 							icon="arrow-undo-outline"
 							label="Undo"
@@ -254,13 +302,22 @@ export default function EditorRoute() {
 							disabled={!canRedo}
 							onPress={handleRedo}
 						/>
-						<Button
-							label="Export"
-							icon="share-outline"
-							variant="primary"
-							size="small"
-							onPress={() => router.push("/export")}
-						/>
+						{drawing ? (
+							<Button
+								label="Done"
+								variant="primary"
+								size="small"
+								onPress={finishDrawing}
+							/>
+						) : (
+							<Button
+								label="Export"
+								icon="share-outline"
+								variant="primary"
+								size="small"
+								onPress={() => router.push("/export")}
+							/>
+						)}
 					</View>
 				}
 			/>
@@ -278,7 +335,16 @@ export default function EditorRoute() {
 					}
 					onCommitTransform={transformLayer}
 					onNudgeLayer={nudgeLayer}
+					brush={brush}
+					onPaintStroke={drawStroke}
 				/>
+				{drawing && brushOptionsOpen && (
+					<BrushOptions
+						settings={brushSettings}
+						onChange={setBrushSettings}
+						onClose={() => setBrushOptionsOpen(false)}
+					/>
+				)}
 				{saveProblem && (
 					<View style={styles.saveErrorArea}>
 						<View style={styles.saveError}>
@@ -297,7 +363,14 @@ export default function EditorRoute() {
 			</View>
 
 			<View style={[styles.bottomPanel, layersOpen && styles.layersPanel]}>
-				{layersOpen ? (
+				{drawing ? (
+					<DrawPanel
+						settings={brushSettings}
+						optionsOpen={brushOptionsOpen}
+						onChange={setBrushSettings}
+						onToggleOptions={() => setBrushOptionsOpen((open) => !open)}
+					/>
+				) : layersOpen ? (
 					<LayersPanel
 						layers={document.layers}
 						background={document.background}
@@ -318,9 +391,10 @@ export default function EditorRoute() {
 						onDelete={() => deleteLayer(selectedTextLayer.id)}
 					/>
 				) : selectedLayer ? (
-					<PhotoPanel
+					<LayerActionsPanel
 						canMoveForward={selectedIndex < document.layers.length - 1}
 						canMoveBackward={selectedIndex > 0}
+						onDraw={selectedLayer.type === "drawing" ? startDrawing : undefined}
 						onMoveForward={() => moveSelected(1)}
 						onMoveBackward={() => moveSelected(-1)}
 						onDuplicate={() => {
@@ -336,6 +410,7 @@ export default function EditorRoute() {
 							icon="format-text"
 							onPress={() => setEditing("new")}
 						/>
+						<ToolButton label="Draw" icon="draw" onPress={startDrawing} />
 						<ToolButton
 							label="Photo"
 							icon="image-plus"

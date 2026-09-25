@@ -1,3 +1,4 @@
+import { drawingBox, recenterDrawing } from "./drawing.ts";
 import { hitTestBox, type Transform, transformsEqual } from "./geometry.ts";
 
 type LayerBase = {
@@ -60,8 +61,25 @@ export type TextLayerEdit = Partial<
 	>
 >;
 
-// BlurLayer | DrawingLayer join this union in later stages.
-export type Layer = ImageLayer | TextLayer;
+/**
+ * What a stroke draws with: a pen's color, or an eraser, which clears what
+ * the drawing's earlier strokes drew. `width` is the line's thickness.
+ */
+export type Brush =
+	| { type: "pen"; color: string; width: number }
+	| { type: "eraser"; width: number };
+
+// `points` is flattened x, y pairs, which keeps saved projects small.
+export type Stroke = Brush & { points: number[] };
+
+// Strokes are in the layer's own space, centered on what its pens drew (see
+// `recenterDrawing`), so its transform places it like any other layer.
+export type DrawingLayer = LayerBase & {
+	type: "drawing";
+	strokes: Stroke[];
+};
+
+export type Layer = ImageLayer | TextLayer | DrawingLayer;
 
 // The canvas is the document itself: its size is the exported image's, and
 // layers outside it are cropped.
@@ -290,6 +308,23 @@ export function createImageLayer(
 }
 
 /**
+ * A drawing begun by a pen stroke in document space. An eraser can't start
+ * one: there's nothing to erase yet.
+ */
+export function createDrawingLayer(
+	stroke: Stroke & { type: "pen" },
+): DrawingLayer {
+	return recenterDrawing({
+		type: "drawing",
+		id: createLayerId("drawing"),
+		strokes: [stroke],
+		transform: identityTransform,
+		hidden: false,
+		locked: false,
+	});
+}
+
+/**
  * A copy of a layer with a new id, nudged down and right so it's visibly
  * separate from the original instead of hiding it.
  */
@@ -306,13 +341,18 @@ export function duplicateLayer<T extends Layer>(layer: T): T {
 	};
 }
 
-// In the layer's own units: half a line of text, or a tenth of an image.
+// In the layer's own units: half a line of text, a tenth of an image, or a
+// tenth of a drawing's longer side (a line drawn straight has no shorter one).
 function duplicateOffset(layer: Layer): number {
 	switch (layer.type) {
 		case "text":
 			return layer.fontSize * 0.5;
 		case "image":
 			return Math.min(layer.width, layer.height) * 0.1;
+		case "drawing": {
+			const { halfWidth, halfHeight } = drawingBox(layer);
+			return Math.max(halfWidth, halfHeight) * 0.2;
+		}
 	}
 }
 

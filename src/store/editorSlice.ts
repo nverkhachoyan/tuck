@@ -1,16 +1,19 @@
 // Relative `.ts` imports, and only types from zustand and `./index.ts`, keep
 // this slice loadable by Node's test runner.
 import {
+	createDrawingLayer,
 	createImageLayer,
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
 	type Layer,
 	reorderLayer,
+	type Stroke,
 	type TextAlign,
 	type TextLayer,
 	type TextLayerEdit,
 } from "../model/document.ts";
+import { addStroke } from "../model/drawing.ts";
 import {
 	documentFraming,
 	type Framing,
@@ -45,6 +48,7 @@ export type EditorSlice = {
 		opaque: boolean,
 	) => void;
 	duplicateSelectedLayer: () => void;
+	drawStroke: (stroke: Stroke) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
 	nudgeLayer: (id: string, dx: number, dy: number) => void;
@@ -166,6 +170,22 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			const layer = selectSelectedLayer(get());
 			if (!layer) return;
 			addOnTop("editor/duplicateSelectedLayer", duplicateLayer(layer));
+		},
+
+		// A stroke in document space joins the selected drawing, or starts a new
+		// one on top. That one is selected, so the next stroke joins it too.
+		drawStroke: (stroke) => {
+			if (stroke.points.length < 2) return;
+			const selected = selectSelectedLayer(get());
+			if (selected?.type === "drawing" && !selected.locked) {
+				setLayers("editor/drawStroke", (layers) =>
+					layers.map((layer) =>
+						layer === selected ? addStroke(selected, stroke) : layer,
+					),
+				);
+			} else if (stroke.type === "pen") {
+				addOnTop("editor/drawStroke", createDrawingLayer(stroke));
+			}
 		},
 
 		updateSelectedText: (patch) => {

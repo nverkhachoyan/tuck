@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
+	type ComponentProps,
 	type RefObject,
 	useLayoutEffect,
 	useMemo,
@@ -284,18 +285,28 @@ function LayerThumbnail({ layer }: { layer: Layer }) {
 		case "image":
 			return <Image source={{ uri: layer.uri }} style={styles.thumbnail} />;
 		case "text":
-			return (
-				<View style={styles.thumbnail}>
-					<MaterialCommunityIcons
-						name="format-text"
-						size={20}
-						color={colors.textPrimary}
-					/>
-				</View>
-			);
+			return <IconThumbnail icon="format-text" />;
+		case "drawing":
+			return <IconThumbnail icon="draw" />;
 		default:
 			return assertNever(layer);
 	}
+}
+
+function IconThumbnail({
+	icon,
+}: {
+	icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+}) {
+	return (
+		<View style={styles.thumbnail}>
+			<MaterialCommunityIcons
+				name={icon}
+				size={20}
+				color={colors.textPrimary}
+			/>
+		</View>
+	);
 }
 
 function layerLabel(layer: Layer): string {
@@ -304,6 +315,8 @@ function layerLabel(layer: Layer): string {
 			return "Photo";
 		case "text":
 			return layer.text.replace(/\s+/g, " ");
+		case "drawing":
+			return "Drawing";
 		default:
 			return assertNever(layer);
 	}

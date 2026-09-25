@@ -17,3 +17,16 @@ export function toTransformList(t: Transform) {
 		{ scaleY: t.scaleY },
 	];
 }
+
+/**
+ * Undoes `toTransformList`: inside a layer, draws in document space again.
+ */
+export function toInverseTransformList(t: Transform) {
+	return [
+		{ scaleX: 1 / t.scaleX },
+		{ scaleY: 1 / t.scaleY },
+		{ rotate: -t.rotation },
+		{ translateX: -t.x },
+		{ translateY: -t.y },
+	];
+}

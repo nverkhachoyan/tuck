@@ -10,24 +10,13 @@ import {
 import { colors, webTransition } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
+import { Swatches } from "./ColorSwatches";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.
 const TARGET = 44;
-// The ring that marks the chosen color, and the swatch inside it.
-const RING = 36;
-const SWATCH_SIZE = 26;
 // The tabs' track, inside their targets.
 const TRACK = 34;
-
-const SWATCHES = [
-	{ color: "#FFFFFF", name: "White" },
-	{ color: "#000000", name: "Black" },
-	{ color: "#FF3B30", name: "Red" },
-	{ color: "#FFD60A", name: "Yellow" },
-	{ color: "#34C759", name: "Green" },
-	{ color: "#0A84FF", name: "Blue" },
-];
 
 const FONT_LABELS: Record<TextFont, string> = {
 	classic: "Classic",
@@ -260,86 +249,6 @@ function FontPicker({
 	);
 }
 
-/** The color swatches, led by a "none" swatch when `noneLabel` is given. */
-function Swatches({
-	value,
-	noneLabel,
-	onPick,
-}: {
-	value: string | null;
-	noneLabel?: string;
-	onPick: (color: string | null) => void;
-}) {
-	return (
-		<View style={styles.swatches}>
-			{noneLabel && (
-				<Swatch
-					color={null}
-					label={noneLabel}
-					selected={value === null}
-					onPress={() => onPick(null)}
-				/>
-			)}
-			{SWATCHES.map(({ color, name }) => (
-				<Swatch
-					key={color}
-					color={color}
-					label={name}
-					selected={value === color}
-					onPress={() => onPick(color)}
-				/>
-			))}
-		</View>
-	);
-}
-
-/** A color choice; `null` is the "none" swatch, drawn with a slash. */
-function Swatch({
-	color,
-	label,
-	selected,
-	onPress,
-}: {
-	color: string | null;
-	label: string;
-	selected: boolean;
-	onPress: () => void;
-}) {
-	return (
-		<Pressable
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={label}
-			accessibilityState={{ selected }}
-			style={styles.swatchTarget}
-		>
-			{(state) => {
-				const { pressed, hovered } = interaction(state);
-				return (
-					<View
-						style={[
-							styles.ring,
-							webTransition,
-							hovered && styles.ringHovered,
-							selected && styles.ringSelected,
-							pressed && styles.ringPressed,
-						]}
-					>
-						<View
-							style={[
-								styles.swatch,
-								color !== null && { backgroundColor: color },
-							]}
-						>
-							{color === null && <View style={styles.swatchSlash} />}
-						</View>
-					</View>
-				);
-			}}
-		</Pressable>
-	);
-}
-
 const styles = StyleSheet.create({
 	// Small, because the rows' touch targets already leave room around what's
 	// drawn in them.
@@ -437,51 +346,5 @@ const styles = StyleSheet.create({
 	fontLabel: {
 		fontSize: 16,
 		color: colors.textPrimary,
-	},
-	// Lines the first swatch up with the panel's edge, past its target's margin.
-	swatches: {
-		flexDirection: "row",
-		marginHorizontal: -(TARGET - SWATCH_SIZE) / 2,
-	},
-	swatchTarget: {
-		width: TARGET,
-		height: TARGET,
-		borderRadius: TARGET / 2,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	ring: {
-		width: RING,
-		height: RING,
-		borderRadius: RING / 2,
-		borderWidth: 2,
-		borderColor: "transparent",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	ringHovered: {
-		borderColor: colors.borderStrong,
-	},
-	ringSelected: {
-		borderColor: colors.accent,
-	},
-	ringPressed: {
-		transform: [{ scale: 0.92 }],
-	},
-	swatch: {
-		width: SWATCH_SIZE,
-		height: SWATCH_SIZE,
-		borderRadius: SWATCH_SIZE / 2,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.borderStrong,
-		alignItems: "center",
-		justifyContent: "center",
-		overflow: "hidden",
-	},
-	swatchSlash: {
-		width: 36,
-		height: 2,
-		backgroundColor: colors.textSecondary,
-		transform: [{ rotate: "-45deg" }],
 	},
 });

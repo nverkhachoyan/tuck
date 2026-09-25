@@ -1,5 +1,6 @@
 import { assertNever } from "@/lib/assertNever";
 import type { Layer } from "@/model/document";
+import { drawingBox } from "@/model/drawing";
 import type { Box } from "@/model/geometry";
 import { textLayerBounds } from "./textLayerLayout";
 
@@ -18,6 +19,13 @@ export function layerBounds(layer: Layer, minPadding = 0): Box {
 				halfWidth: layer.width / 2 + minPadding,
 				halfHeight: layer.height / 2 + minPadding,
 			};
+		case "drawing": {
+			const { halfWidth, halfHeight } = drawingBox(layer);
+			return {
+				halfWidth: halfWidth + minPadding,
+				halfHeight: halfHeight + minPadding,
+			};
+		}
 		default:
 			return assertNever(layer);
 	}

@@ -2,13 +2,14 @@ import { StyleSheet, View } from "react-native";
 import { ToolButton } from "@/ui/ToolButton";
 
 /**
- * Actions for the selected photo, in place of the tools, as the text panel
- * is for text: it's moved and sized on the canvas, and tapping the canvas
- * off it deselects it.
+ * Actions for the selected photo or drawing, in place of the tools, as the
+ * text panel is for text: it's moved and sized on the canvas, and tapping
+ * the canvas off it deselects it. `onDraw` goes on drawing on it.
  */
-export function PhotoPanel({
+export function LayerActionsPanel({
 	canMoveForward,
 	canMoveBackward,
+	onDraw,
 	onMoveForward,
 	onMoveBackward,
 	onDuplicate,
@@ -16,6 +17,7 @@ export function PhotoPanel({
 }: {
 	canMoveForward: boolean;
 	canMoveBackward: boolean;
+	onDraw?: () => void;
 	onMoveForward: () => void;
 	onMoveBackward: () => void;
 	onDuplicate: () => void;
@@ -23,6 +25,7 @@ export function PhotoPanel({
 }) {
 	return (
 		<View style={styles.row}>
+			{onDraw && <ToolButton label="Draw" icon="draw" onPress={onDraw} />}
 			<ToolButton
 				label="Forward"
 				icon="arrange-bring-forward"
@@ -55,13 +58,13 @@ export function PhotoPanel({
 }
 
 const styles = StyleSheet.create({
-	// Like the toolbar it replaces.
+	// Like the toolbar it replaces. Five tiles still fit a phone's width.
 	row: {
 		flex: 1,
 		flexDirection: "row",
 		justifyContent: "center",
 		alignItems: "center",
-		gap: 20,
-		paddingHorizontal: 16,
+		gap: 16,
+		paddingHorizontal: 12,
 	},
 });

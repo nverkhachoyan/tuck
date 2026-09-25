@@ -8,9 +8,13 @@ import {
 	Skia,
 } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
-import { useDerivedValue } from "react-native-reanimated";
-import { toTransformList } from "@/layers/layerTransform";
-import type { EditorDocument, Layer } from "@/model/document";
+import { type SharedValue, useDerivedValue } from "react-native-reanimated";
+import { brushPaint, strokePath } from "@/layers/DrawingLayerView";
+import {
+	toInverseTransformList,
+	toTransformList,
+} from "@/layers/layerTransform";
+import type { Brush, EditorDocument, Layer } from "@/model/document";
 import { colors } from "@/theme";
 import { handleMetrics, handlesVisible } from "../handleMetrics";
 import { CanvasBackground, LayerContent } from "../SceneParts";
@@ -23,6 +27,22 @@ const SHADOW_OFFSET_PX = 6;
 const SHADOW_BLUR_PX = 18;
 const EDGE_PX = 1;
 
+/**
+ * A stroke being painted: its brush, its points so far in document space,
+ * and its id. It's drawn into `targetId`'s drawing, or over everything when
+ * it will start a new one. Once the document has it (`landedId`), the scene
+ * stops drawing it live in the same update that draws it from the document.
+ * Clearing `points` instead would blink: a shared value redraws the canvas
+ * before the canvas's own renderer has the new document.
+ */
+export type LiveStroke = {
+	brush: Brush;
+	points: SharedValue<number[]>;
+	id: SharedValue<number>;
+	landedId: number;
+	targetId: string | null;
+};
+
 type EditorSceneProps = {
 	document: EditorDocument;
 	selectedLayerId: string | null;
@@ -30,6 +50,7 @@ type EditorSceneProps = {
 	// Screen pixels per document unit.
 	viewScale: number;
 	live: LiveTransform;
+	stroke: LiveStroke | null;
 	// An image layer's file couldn't be read or decoded. Must be stable.
 	onImageError: (error: unknown) => void;
 };
@@ -50,6 +71,7 @@ export function EditorScene({
 	hiddenLayerId,
 	viewScale,
 	live,
+	stroke,
 	onImageError,
 }: EditorSceneProps) {
 	const canvas = rect(0, 0, document.width, document.height);
@@ -67,10 +89,24 @@ export function EditorScene({
 						clip={layer.type === "image" && layer.locked ? canvas : undefined}
 					>
 						<LiveLayer layer={layer} live={live}>
-							<LayerContent layer={layer} onImageError={onImageError} />
+							<LayerContent
+								layer={layer}
+								stroke={
+									stroke?.targetId === layer.id && (
+										<Group transform={toInverseTransformList(layer.transform)}>
+											<LivePath key={stroke.landedId} stroke={stroke} />
+										</Group>
+									)
+								}
+								onImageError={onImageError}
+							/>
 						</LiveLayer>
 					</Group>
 				),
+			)}
+			{/* An eraser has nothing to erase until there's a drawing. */}
+			{stroke?.targetId === null && stroke.brush.type === "pen" && (
+				<LivePath key={stroke.landedId} stroke={stroke} />
 			)}
 			<Group clip={canvas} invertClip>
 				<Fill color={colors.canvasWell} opacity={0.7} />
@@ -125,6 +161,18 @@ function LiveLayer({
 	}, [layer.id, layer.transform]);
 
 	return <Group transform={transform}>{children}</Group>;
+}
+
+/**
+ * A stroke as it's being painted, in document space. Keyed by `landedId`, so
+ * a landed stroke gives way to the document's copy in one update.
+ */
+function LivePath({ stroke }: { stroke: LiveStroke }) {
+	const { points, id, landedId } = stroke;
+	const path = useDerivedValue(() =>
+		strokePath(id.value > landedId ? points.value : []),
+	);
+	return <Path path={path} {...brushPaint(stroke.brush)} />;
 }
 
 /** The document's center lines that the dragged layer has snapped onto. */

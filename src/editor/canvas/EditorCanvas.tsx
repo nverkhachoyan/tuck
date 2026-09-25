@@ -10,8 +10,9 @@ import {
 } from "react";
 import { type LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
+import { useSharedValue } from "react-native-reanimated";
 import { layerBounds } from "@/layers/layerBounds";
-import type { EditorDocument, Layer } from "@/model/document";
+import type { Brush, EditorDocument, Layer, Stroke } from "@/model/document";
 import type { Transform } from "@/model/geometry";
 import { colors } from "@/theme";
 import {
@@ -21,10 +22,11 @@ import {
 } from "../canvasCursor";
 import { handleUnder } from "../handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
-import { EditorScene } from "./EditorScene";
+import { EditorScene, type LiveStroke } from "./EditorScene";
 import { findLayerAt } from "./hitTest";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
+import { usePaintGesture } from "./usePaintGesture";
 import { useTrackpadPinch } from "./useTrackpadPinch";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
@@ -43,6 +45,11 @@ type EditorCanvasProps = {
 	onCommitTransform?: (id: string, transform: Transform) => void;
 	// Moves a layer by a document-space offset (see `nudgeSelection`).
 	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
+	// While set, dragging paints with this brush instead of selecting and
+	// moving layers.
+	brush?: Brush | null;
+	// A finished stroke, in document space.
+	onPaintStroke?: (stroke: Stroke) => void;
 };
 
 export type EditorCanvasHandle = {
@@ -61,6 +68,9 @@ export type EditorCanvasHandle = {
  * scale and rotate handles) is a single gesture on the canvas; selection is
  * resolved by hit-testing in document space. With a mouse, the cursor shows
  * what a press at the pointer would do.
+ *
+ * With a `brush`, a single gesture paints instead, into the selected
+ * drawing if there is one. The selection is then hidden and holds still.
  */
 export function EditorCanvas({
 	ref,
@@ -71,6 +81,8 @@ export function EditorCanvas({
 	onTapSelectedLayer,
 	onCommitTransform,
 	onNudgeLayer,
+	brush = null,
+	onPaintStroke,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [cursor, setCursor] = useState<CanvasCursor>("default");
@@ -101,17 +113,19 @@ export function EditorCanvas({
 	const { scale, offsetX, offsetY } = viewport;
 
 	const selectedLayerId = selectedLayer?.id ?? null;
+	// What gestures move: nothing while painting.
+	const movableLayer = brush ? undefined : selectedLayer;
 
 	// Keep the gesture-driven values in step with the selected layer: when the
 	// selection changes, and when that layer does (a commit, undo, restyle).
 	useLayoutEffect(() => {
 		syncLiveTransform(
 			live,
-			selectedLayerId,
-			selectedLayer?.transform,
-			selectedLayer && layerBounds(selectedLayer),
+			movableLayer?.id ?? null,
+			movableLayer?.transform,
+			movableLayer && layerBounds(movableLayer),
 		);
-	}, [live, selectedLayer, selectedLayerId]);
+	}, [live, movableLayer]);
 
 	// The selected layer's handle under a point reported by the view.
 	const handleAt = useCallback(
@@ -217,16 +231,49 @@ export function EditorCanvas({
 		},
 		[flushPendingTransform, selectedLayer, scale, onNudgeLayer],
 	);
+
+	const strokePoints = useSharedValue<number[]>([]);
+	const strokeId = useSharedValue(0);
+	// The last stroke handed to the document. It changes in the same render as
+	// the document, or the one after, so the scene stops drawing the stroke
+	// live only once it draws it from the document.
+	const [landedStrokeId, setLandedStrokeId] = useState(0);
+	const handleStroke = useCallback(
+		(points: number[], id: number) => {
+			if (!brush) return;
+			onPaintStroke?.({ ...brush, points });
+			setLandedStrokeId(id);
+		},
+		[brush, onPaintStroke],
+	);
+	const paintGesture = usePaintGesture({
+		viewport,
+		points: strokePoints,
+		strokeId,
+		onStroke: handleStroke,
+	});
+	const liveStroke = useMemo<LiveStroke | null>(
+		() =>
+			brush && {
+				brush,
+				points: strokePoints,
+				id: strokeId,
+				landedId: landedStrokeId,
+				targetId: selectedLayer?.type === "drawing" ? selectedLayer.id : null,
+			},
+		[brush, strokePoints, strokeId, landedStrokeId, selectedLayer],
+	);
+
 	useImperativeHandle(ref, () => ({ flushPendingTransform, nudgeSelection }), [
 		flushPendingTransform,
 		nudgeSelection,
 	]);
 
 	return (
-		<GestureDetector gesture={gesture}>
+		<GestureDetector gesture={brush ? paintGesture : gesture}>
 			<View
 				ref={containerRef}
-				style={[styles.container, cursorStyle(cursor)]}
+				style={[styles.container, cursorStyle(brush ? "crosshair" : cursor)]}
 				onLayout={handleLayout}
 			>
 				<Canvas style={styles.canvas}>
@@ -240,10 +287,11 @@ export function EditorCanvas({
 						>
 							<EditorScene
 								document={document}
-								selectedLayerId={selectedLayerId}
+								selectedLayerId={brush ? null : selectedLayerId}
 								hiddenLayerId={hiddenLayerId}
 								viewScale={scale}
 								live={live}
+								stroke={liveStroke}
 								onImageError={handleImageError}
 							/>
 						</Group>

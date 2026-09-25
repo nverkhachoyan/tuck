@@ -6,7 +6,9 @@ import { createStore } from "zustand/vanilla";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
+	type DrawingLayer,
 	type ImageLayer,
+	type Stroke,
 	type TextLayer,
 } from "../model/document.ts";
 import { documentFraming } from "../model/framing.ts";
@@ -339,6 +341,69 @@ describe("editorSlice", () => {
 		store.getState().setLayerHidden(id, true);
 		store.getState().deleteLayer(id);
 		assert.deepEqual(document, snapshot);
+	});
+
+	describe("drawing", () => {
+		const pen = (points: number[]): Stroke => ({
+			type: "pen",
+			color: "#FF3B30",
+			width: 10,
+			points,
+		});
+
+		function drawings(store: ReturnType<typeof createTestStore>) {
+			return (store.getState().document?.layers ?? []).filter(
+				(layer): layer is DrawingLayer => layer.type === "drawing",
+			);
+		}
+
+		test("a stroke starts a selected drawing on top, and the next joins it", () => {
+			const { store } = storeWithText();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			const [drawing] = drawings(store);
+			assert.equal(store.getState().document?.layers.at(-1), drawing);
+			assert.equal(store.getState().selectedLayerId, drawing.id);
+
+			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			assert.equal(drawings(store).length, 1);
+			assert.equal(drawings(store)[0].strokes.length, 2);
+		});
+
+		test("a stroke with another layer selected starts a new drawing", () => {
+			const { store, text } = storeWithText();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().selectLayer(text.id);
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			assert.equal(drawings(store).length, 2);
+		});
+
+		test("an eraser only erases the selected drawing", () => {
+			const { store } = storeWithText();
+			const eraser: Stroke = { type: "eraser", width: 30, points: [0, 0] };
+			store.getState().selectLayer(null);
+			const before = store.getState().document;
+			store.getState().drawStroke(eraser);
+			assert.equal(store.getState().document, before);
+
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().drawStroke(eraser);
+			assert.deepEqual(
+				drawings(store)[0].strokes.map((stroke) => stroke.type),
+				["pen", "eraser"],
+			);
+		});
+
+		test("each stroke is an undo step, back to no drawing at all", () => {
+			const { store } = storeWithText();
+			store.getState().selectLayer(null);
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			store.getState().undo();
+			assert.equal(drawings(store)[0].strokes.length, 1);
+			store.getState().undo();
+			assert.equal(drawings(store).length, 0);
+			assert.equal(store.getState().selectedLayerId, null);
+		});
 	});
 
 	describe("history", () => {

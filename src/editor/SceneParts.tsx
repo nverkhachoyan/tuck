@@ -1,4 +1,6 @@
 import { Rect, type SkRect } from "@shopify/react-native-skia";
+import type { ReactNode } from "react";
+import { DrawingLayerView } from "@/layers/DrawingLayerView";
 import { ImageLayerView } from "@/layers/ImageLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
@@ -28,12 +30,17 @@ export function CanvasBackground({
 	return <Rect rect={bounds} color={background} />;
 }
 
-/** A layer's content in its own space, loading images asynchronously. */
+/**
+ * A layer's content in its own space, loading images asynchronously.
+ * `stroke` is one still being drawn on a drawing layer.
+ */
 export function LayerContent({
 	layer,
+	stroke,
 	onImageError,
 }: {
 	layer: Layer;
+	stroke?: ReactNode;
 	onImageError: (error: unknown) => void;
 }) {
 	switch (layer.type) {
@@ -41,6 +48,8 @@ export function LayerContent({
 			return <AsyncImage layer={layer} onError={onImageError} />;
 		case "text":
 			return <TextLayerView layer={layer} />;
+		case "drawing":
+			return <DrawingLayerView layer={layer}>{stroke}</DrawingLayerView>;
 		default:
 			return assertNever(layer);
 	}

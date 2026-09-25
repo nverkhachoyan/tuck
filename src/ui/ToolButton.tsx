@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -19,21 +19,27 @@ type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
  * An editing tool in the bottom toolbar: an icon tile with a label under it.
  * `busy` swaps the icon for a spinner while the tool's work runs, and blocks
  * a second press meanwhile. With a `shortcut`, web shows it on hover.
+ * `selected` marks the tool in use, and `glyph`, when given, is drawn in
+ * place of the icon (which still names the tool to the type checker).
  */
 export function ToolButton({
 	label,
 	icon,
+	glyph,
 	shortcut,
 	tone = "default",
 	disabled = false,
+	selected,
 	busy = false,
 	onPress,
 }: {
 	label: string;
 	icon: ToolIconName;
+	glyph?: ReactNode;
 	shortcut?: string;
 	tone?: "default" | "danger";
 	disabled?: boolean;
+	selected?: boolean;
 	busy?: boolean;
 	onPress: () => void;
 }) {
@@ -49,7 +55,7 @@ export function ToolButton({
 				onPress={onPress}
 				accessibilityRole="button"
 				accessibilityLabel={label}
-				accessibilityState={{ disabled: inactive, busy }}
+				accessibilityState={{ disabled: inactive, busy, selected }}
 				style={[styles.container, disabled && styles.disabled]}
 			>
 				{(state) => {
@@ -62,20 +68,32 @@ export function ToolButton({
 									styles.tile,
 									webTransition,
 									lit && (danger ? styles.tileDanger : styles.tileHovered),
+									// Over the hover's colors, keeping its lift.
+									selected && styles.tileSelected,
 									!inactive && pressed && styles.tilePressed,
 								]}
 							>
 								{busy ? (
 									<ActivityIndicator color={colors.textPrimary} />
 								) : (
-									<MaterialCommunityIcons
-										name={icon}
-										size={26}
-										color={danger ? colors.danger : colors.textPrimary}
-									/>
+									(glyph ?? (
+										<MaterialCommunityIcons
+											name={icon}
+											size={26}
+											color={
+												danger
+													? colors.danger
+													: selected
+														? colors.accent
+														: colors.textPrimary
+											}
+										/>
+									))
 								)}
 							</View>
-							<Text style={[styles.label, lit && styles.labelLit]}>
+							<Text
+								style={[styles.label, (lit || selected) && styles.labelLit]}
+							>
 								{label}
 							</Text>
 						</>
@@ -104,6 +122,10 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 		backgroundColor: colors.surface,
+	},
+	tileSelected: {
+		borderColor: colors.accentBorder,
+		backgroundColor: colors.accentSoft,
 	},
 	tileHovered: {
 		borderColor: colors.borderStrong,
