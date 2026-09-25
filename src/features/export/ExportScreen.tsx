@@ -23,6 +23,7 @@ import { Checkerboard } from "@/ui/Checkerboard";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
+import { TextButton } from "@/ui/TextButton";
 import { exportFormatFor, exportFormats } from "./exportFormat";
 import { exportSizes } from "./exportSizes";
 import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";
@@ -116,6 +117,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				title="Export"
 				backLabel="Edit"
 				onBack={() => router.back()}
+				action={
+					// Saved, the edit is finished: straight back to the projects,
+					// which ends the session, rather than through the editor.
+					saved ? (
+						<TextButton
+							label="Done"
+							tone="accent"
+							onPress={() => router.dismissTo("/")}
+						/>
+					) : undefined
+				}
 			/>
 
 			<CanvasStage>
@@ -204,7 +216,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					)}
 					<Text style={styles.details}>
 						{sizes.length > 1
-							? ""
+							? `${sizeName(exportSize.scale, sizes.indexOf(exportSize))} · `
 							: `${exportSize.width} × ${exportSize.height} · `}
 						{format === "png"
 							? `${exportFormats.png.label}, to keep the transparent areas`
@@ -249,6 +261,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			</View>
 		</View>
 	);
+}
+
+/**
+ * What a size chip's pixels mean: the document's own size, or the largest
+ * export can hold when that's too big, or one smaller for sharing.
+ */
+function sizeName(scale: number, index: number) {
+	if (index > 0) return "Smaller file";
+	return scale === 1 ? "Original size" : "Largest size";
 }
 
 const styles = StyleSheet.create({
