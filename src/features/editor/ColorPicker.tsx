@@ -1,16 +1,21 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo, useRef, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
 	Platform,
 	StyleSheet,
+	Text,
 	TextInput,
 	View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
-import { colors } from "@/theme";
+import { colors, radii } from "@/theme";
+import { Button } from "@/ui/Button";
+import { GlassView } from "@/ui/GlassView";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
+import { IconButton } from "@/ui/IconButton";
 import { ColorSwatches, isCustomColor } from "./ColorSwatches";
 
 // As wide as a row of seven swatches, so a picker on its own in a card is
@@ -27,7 +32,8 @@ const HUE_STEP = 10;
  * swatch opens and closes, for a tool's options card. `customColor` is the
  * editor's custom color: the custom swatch shows it, and picks it again
  * when the value isn't custom. A color from the picker goes to
- * `onPickCustom`, which should make it the custom color too.
+ * `onPickCustom`, which should make it the custom color too, and so should
+ * one from the canvas, which `onEyedropper` sets out to pick.
  */
 export function ColorOptions({
 	value,
@@ -35,12 +41,14 @@ export function ColorOptions({
 	noneLabel,
 	onPick,
 	onPickCustom,
+	onEyedropper,
 }: {
 	value: string | null;
 	customColor: string | null;
 	noneLabel?: string;
 	onPick: (color: string | null) => void;
 	onPickCustom: (color: string) => void;
+	onEyedropper?: () => void;
 }) {
 	const [pickerOpen, setPickerOpen] = useState(false);
 	// The picker's color while it's dragged, before it's picked.
@@ -74,6 +82,7 @@ export function ColorOptions({
 						setDraft(null);
 						onPickCustom(color);
 					}}
+					onEyedropper={onEyedropper}
 				/>
 			)}
 		</>
@@ -87,16 +96,19 @@ export function ColorOptions({
  * `onChange` follows the finger, for a preview; `onChangeEnd` has the color
  * the finger left, for what's worth keeping, like a brush's color, so
  * dragging doesn't redraw the editor on every move. `value` can change
- * from outside too: the picker then shows it.
+ * from outside too: the picker then shows it. With `onEyedropper`, a
+ * button beside the hues sets out to pick a color from the canvas instead.
  */
 export function ColorPicker({
 	value,
 	onChange,
 	onChangeEnd,
+	onEyedropper,
 }: {
 	value: string;
 	onChange?: (color: string) => void;
 	onChangeEnd: (color: string) => void;
+	onEyedropper?: () => void;
 }) {
 	// The picker keeps HSV, not just `value`: a gray has no hue, and dragging
 	// through white or black would otherwise lose it.
@@ -165,6 +177,13 @@ export function ColorPicker({
 				</View>
 			</GestureDetector>
 			<View style={styles.row}>
+				{onEyedropper && (
+					<IconButton
+						icon="eyedrop-outline"
+						label="Pick a color from the canvas"
+						onPress={onEyedropper}
+					/>
+				)}
 				<GestureDetector gesture={bar.gesture}>
 					<View
 						onLayout={bar.onLayout}
@@ -235,6 +254,22 @@ function HexField({
 const RED: Hsv = { hue: 0, saturation: 1, value: 1 };
 
 /**
+ * Says the canvas is waiting to be tapped for a color, across its top, with
+ * a way out. It doesn't take the canvas's touches.
+ */
+export function EyedropperHint({ onCancel }: { onCancel: () => void }) {
+	return (
+		<View style={styles.hintArea}>
+			<GlassView style={styles.hint} contentStyle={styles.hintContent}>
+				<Ionicons name="eyedrop-outline" size={18} color={colors.textPrimary} />
+				<Text style={styles.hintText}>Tap the canvas to pick its color</Text>
+				<Button label="Cancel" size="small" onPress={onCancel} />
+			</GlassView>
+		</View>
+	);
+}
+
+/**
  * A drag across a view, reported as where the finger is, each from 0 to 1
  * across and down the view, from touch-down to lift. A tap counts too. It
  * runs on the JS thread: it only moves the picker's own state.
@@ -291,6 +326,29 @@ const styles = StyleSheet.create({
 	blackDown: gradientBackground(
 		"linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000)",
 	),
+	hintArea: {
+		position: "absolute",
+		top: 12,
+		left: 12,
+		right: 12,
+		alignItems: "center",
+		pointerEvents: "box-none",
+	},
+	hint: {
+		borderRadius: radii.large,
+	},
+	hintContent: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 10,
+		paddingLeft: 14,
+		paddingRight: 8,
+		paddingVertical: 8,
+	},
+	hintText: {
+		fontSize: 14,
+		color: colors.textPrimary,
+	},
 	row: {
 		flexDirection: "row",
 		alignItems: "center",

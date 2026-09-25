@@ -90,6 +90,7 @@ export function BrushOptions({
 	bottomInset,
 	onChange,
 	onPickCustom,
+	onEyedropper,
 	onClose,
 }: {
 	settings: BrushSettings;
@@ -98,6 +99,8 @@ export function BrushOptions({
 	onChange: (settings: BrushSettings) => void;
 	// A color from the picker, which becomes the editor's custom color.
 	onPickCustom: (color: string) => void;
+	// Sets out to pick the brush's color from the canvas.
+	onEyedropper: () => void;
 	onClose: () => void;
 }) {
 	const eraser = settings.tool === "eraser";
@@ -121,6 +124,7 @@ export function BrushOptions({
 						customColor={customColor}
 						onPick={(color) => color && onChange({ ...settings, color })}
 						onPickCustom={onPickCustom}
+						onEyedropper={onEyedropper}
 					/>
 				</ToolOption>
 			)}

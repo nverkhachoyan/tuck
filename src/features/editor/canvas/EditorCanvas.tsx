@@ -16,6 +16,7 @@ import { layerBounds } from "@/layers/layerBounds";
 import type { EditorDocument, Layer } from "@/model/document";
 import {
 	type Box,
+	type Point,
 	type Rect,
 	rectFromCorners,
 	type Transform,
@@ -70,6 +71,8 @@ type EditorCanvasProps = {
 	onPaintStroke?: (points: number[]) => void;
 	// A finished redaction box, in document space.
 	onDrawBox?: (rect: Rect) => void;
+	// Where a tap, or a drag's end, picks a color, in document space.
+	onPickPoint?: (point: Point) => void;
 	// How much of the view's bottom is covered by panels floating over it.
 	// The document fits above them, and what's past its edges shows under.
 	bottomInset?: number;
@@ -97,7 +100,7 @@ export type EditorCanvasHandle = {
  * if the tool can add to it, or drags out a redaction's box. The selection
  * then holds still, and only a redaction's is outlined, to show what the
  * redact tool's style changes. In box mode, a tap picks the redaction to
- * change, or none.
+ * change, or none. Picking a color, where the finger lifts is the point.
  */
 export function EditorCanvas({
 	ref,
@@ -112,6 +115,7 @@ export function EditorCanvas({
 	tool = null,
 	onPaintStroke,
 	onDrawBox,
+	onPickPoint,
 	bottomInset = 0,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
@@ -304,6 +308,11 @@ export function EditorCanvas({
 		(points: number[], id: number) => {
 			if (!tool || points.length < 2) return;
 			setLandedStrokeId(id);
+			if (tool.type === "pickColor") {
+				const end = points.length - 2;
+				onPickPoint?.({ x: points[end], y: points[end + 1] });
+				return;
+			}
 			if (tool.type !== "redactBox") {
 				onPaintStroke?.(points);
 				return;
@@ -325,7 +334,16 @@ export function EditorCanvas({
 			const tapped = document.layers.find((layer) => layer.id === hit?.id);
 			onSelectLayer?.(tapped?.type === "redaction" ? tapped.id : null);
 		},
-		[tool, onPaintStroke, onDrawBox, onSelectLayer, scale, targets, document],
+		[
+			tool,
+			onPaintStroke,
+			onDrawBox,
+			onPickPoint,
+			onSelectLayer,
+			scale,
+			targets,
+			document,
+		],
 	);
 	const paintGesture = usePaintGesture({
 		viewport,
@@ -348,7 +366,8 @@ export function EditorCanvas({
 		[tool, strokePoints, strokeId, landedStrokeId, selectedLayer],
 	);
 	const outlinedLayer =
-		tool && tool.type !== "draw" && selectedLayer?.type === "redaction"
+		(tool?.type === "redactBox" || tool?.type === "redactBrush") &&
+		selectedLayer?.type === "redaction"
 			? selectedLayer
 			: null;
 
@@ -414,6 +433,7 @@ function canAddTo(tool: CanvasTool, layer: Layer): boolean {
 		case "redactBrush":
 			return layer.type === "redaction" && layer.shape === "strokes";
 		case "redactBox":
+		case "pickColor":
 			return false;
 	}
 }

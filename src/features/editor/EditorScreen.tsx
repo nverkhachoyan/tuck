@@ -12,6 +12,8 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { EyedropperHint } from "@/features/editor/ColorPicker";
+import { isCustomColor } from "@/features/editor/ColorSwatches";
 import {
 	EditorCanvas,
 	type EditorCanvasHandle,
@@ -65,12 +67,12 @@ import {
 	type TextAlign,
 } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import type { Rect } from "@/model/geometry";
+import type { Point, Rect } from "@/model/geometry";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
 import { useProjectSession } from "@/projects/useProjectSession";
-import { renderThumbnail } from "@/render/renderDocument";
+import { renderThumbnail, sampleColor } from "@/render/renderDocument";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -194,6 +196,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	if (textPicker && (tool || textPicker.layerId !== selectedTextLayer?.id)) {
 		setTextPicker(null);
 	}
+	// While set, the canvas's next tap picks a color from what it shows, for
+	// `apply` to give to whatever asked for it. The picker it came from
+	// closes meanwhile, so the canvas is in view.
+	const [eyedropper, setEyedropper] = useState<{
+		apply: (color: string) => void;
+	} | null>(null);
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
@@ -221,6 +229,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 	};
 	const canvasTool = useMemo((): CanvasTool | null => {
+		if (eyedropper) return { type: "pickColor" };
 		if (tool === "draw") {
 			return { type: "draw", brush: brushFor(brushSettings, documentSize) };
 		}
@@ -230,13 +239,24 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		return brush
 			? { type: "redactBrush", brush, effect }
 			: { type: "redactBox", effect };
-	}, [tool, brushSettings, redactSettings, documentSize]);
+	}, [eyedropper, tool, brushSettings, redactSettings, documentSize]);
 	const handlePaintStroke = (points: number[]) => {
 		if (canvasTool?.type === "draw") {
 			drawStroke({ ...canvasTool.brush, points });
 		} else if (canvasTool?.type === "redactBrush") {
 			paintRedaction({ ...canvasTool.brush, points }, canvasTool.effect);
 		}
+	};
+	// A picked color becomes the custom color too, unless a swatch already
+	// has it. Where the canvas shows nothing, it keeps waiting for a tap.
+	const handlePickPoint = async (point: Point) => {
+		const target = eyedropper;
+		if (!target) return;
+		const color = await sampleColor(document, point).catch(() => null);
+		if (!color) return;
+		target.apply(color);
+		if (isCustomColor(color)) setCustomColor(color);
+		setEyedropper((current) => (current === target ? null : current));
 	};
 	const handleDrawBox = (rect: Rect) => {
 		if (canvasTool?.type === "redactBox") {
@@ -297,6 +317,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const finishTool = () => {
 		setTool(null);
 		setToolOptionsOpen(false);
+		setEyedropper(null);
 	};
 
 	// Finishing with no text discards a new layer and deletes an existing one.
@@ -331,8 +352,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			redo();
 			return true;
 		}
-		// Escape puts the tool down; the rest pick up another tool or act on
-		// a selection, which holds still while a tool is in use.
+		// Escape stops picking a color, or puts the tool down; the rest pick
+		// up another tool or act on a selection, which holds still while a
+		// tool is in use.
+		if (eyedropper) {
+			if (shortcut.type !== "deselect") return false;
+			setEyedropper(null);
+			return true;
+		}
 		if (tool) {
 			if (shortcut.type !== "deselect") return false;
 			finishTool();
@@ -492,6 +519,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					tool={canvasTool}
 					onPaintStroke={handlePaintStroke}
 					onDrawBox={handleDrawBox}
+					onPickPoint={handlePickPoint}
 					bottomInset={dockInset}
 				/>
 				{tool === "draw" && toolOptionsOpen && (
@@ -503,6 +531,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						onPickCustom={(color) => {
 							setBrushSettings((settings) => ({ ...settings, color }));
 							setCustomColor(color);
+						}}
+						onEyedropper={() => {
+							setToolOptionsOpen(false);
+							setEyedropper({
+								apply: (color) =>
+									setBrushSettings((settings) => ({ ...settings, color })),
+							});
 						}}
 						onClose={() => setToolOptionsOpen(false)}
 					/>
@@ -517,6 +552,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							changeRedactSettings({ ...redactSettings, color });
 							setCustomColor(color);
 						}}
+						onEyedropper={() => {
+							setToolOptionsOpen(false);
+							setEyedropper({
+								apply: (color) =>
+									changeRedactSettings({ ...redactSettings, color }),
+							});
+						}}
 						onClose={() => setToolOptionsOpen(false)}
 					/>
 				)}
@@ -527,9 +569,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						bottomInset={dockInset}
 						onChange={updateSelectedText}
 						onPickCustom={setCustomColor}
+						onEyedropper={() => {
+							const { key } = textPicker;
+							setTextPicker(null);
+							setEyedropper({
+								apply: (color) => updateSelectedText({ [key]: color }),
+							});
+						}}
 						onClose={() => setTextPicker(null)}
 					/>
 				)}
+				{eyedropper && <EyedropperHint onCancel={() => setEyedropper(null)} />}
 				{saveProblem && (
 					<SaveErrorBanner
 						message={saveProblem}

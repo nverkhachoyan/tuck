@@ -1,7 +1,13 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { hexToHsv, hsvToHex, mixColors, parseTypedHex } from "./color.ts";
+import {
+	averageColor,
+	hexToHsv,
+	hsvToHex,
+	mixColors,
+	parseTypedHex,
+} from "./color.ts";
 
 describe("hsvToHex", () => {
 	test("makes the primaries and secondaries around the hue circle", () => {
@@ -75,6 +81,24 @@ describe("parseTypedHex", () => {
 		for (const text of ["", "#", "#12345", "#1234567", "#GG0000", "red"]) {
 			assert.equal(parseTypedHex(text), null);
 		}
+	});
+});
+
+describe("averageColor", () => {
+	test("averages opaque pixels evenly", () => {
+		const pixels = [255, 0, 0, 255, 0, 0, 255, 255];
+		assert.equal(averageColor(pixels), "#800080");
+	});
+
+	test("counts each pixel as much as it's opaque", () => {
+		// A faint white pixel barely lightens an opaque black one.
+		const pixels = [0, 0, 0, 255, 255, 255, 255, 0, 255, 255, 255, 51];
+		assert.equal(averageColor(pixels), "#2B2B2B");
+	});
+
+	test("is null when every pixel is transparent", () => {
+		assert.equal(averageColor([255, 0, 0, 0, 0, 255, 0, 0]), null);
+		assert.equal(averageColor([]), null);
 	});
 });
 
