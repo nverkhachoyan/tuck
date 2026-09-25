@@ -17,7 +17,7 @@ import {
 import type { Brush, EditorDocument, Layer } from "@/model/document";
 import { colors } from "@/theme";
 import { CanvasBackground, LayerContent } from "../EditorSceneParts";
-import { handleMetrics, handlesVisible } from "../handleMetrics";
+import { handleMetrics, handlesVisible } from "../handles/handleMetrics";
 import type { LiveTransform } from "./liveTransform";
 
 const SELECTION_STROKE_PX = 1.5;

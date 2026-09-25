@@ -19,11 +19,12 @@ import {
 	type CanvasCursor,
 	cursorForHandle,
 	cursorStyle,
-} from "../canvasCursor";
-import { handleUnder } from "../handleMetrics";
+} from "../handles/canvasCursor";
+import { handleUnder } from "../handles/handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
 import { EditorScene, type LiveStroke } from "./EditorScene";
-import { findLayerAt, type LayerTarget, layerTargets } from "./hitTest";
+import { findLayerAt, type LayerTarget } from "./hitTest";
+import { layerTargets } from "./layerTargets";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";

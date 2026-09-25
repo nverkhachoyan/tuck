@@ -195,6 +195,7 @@
 											"@/**",
 											"../**",
 											"!../*",
+											"!../handles/*",
 											"!@/layers/**",
 											"!../../../layers/**",
 											"!@/store",
@@ -211,7 +212,7 @@
 											"!../../../theme",
 											"!../../../theme.ts"
 										],
-										"message": "Editor subfolders import only themselves, editor root helpers, and shared lower-level modules. See AGENTS.md."
+										"message": "Editor subfolders import only themselves, editor root helpers, handles/, and shared lower-level modules. See AGENTS.md."
 									}
 								]
 							}
@@ -296,7 +297,27 @@
 			}
 		},
 		{
-			"includes": ["src/ui/**", "src/lib/**", "src/theme.ts"],
+			"includes": ["src/lib/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["@/**", "../**", "!@/lib/**"],
+										"message": "lib/ holds plain helpers: it imports only other lib/ files. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/ui/**", "src/theme.ts"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -316,7 +337,7 @@
 											"!../theme",
 											"!../theme.ts"
 										],
-										"message": "ui/, lib/, and theme.ts never import app code, only each other. See AGENTS.md."
+										"message": "ui/ and theme.ts never import app code, only each other and lib/. See AGENTS.md."
 									}
 								]
 							}

@@ -2,7 +2,6 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
 import { errorMessage } from "@/lib/errorMessage";
-import { showAlert } from "@/lib/showAlert";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import type { ProjectSummary } from "@/projects/projectFile";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/projects/projectService";
 import { renderThumbnail } from "@/render/renderDocument";
 import { useStore } from "@/store";
+import { showAlert } from "@/ui/showAlert";
 
 // A null id edits a photo that couldn't be saved.
 type Opened = { id: string | null; document: EditorDocument } | null;

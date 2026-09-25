@@ -2,27 +2,27 @@ import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import {
-	type BrushSettings,
-	brushFor,
-	defaultBrushSettings,
-} from "@/features/editor/brushSettings";
-import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/features/editor/canvas/EditorCanvas";
 import { CropTool } from "@/features/editor/crop/CropTool";
+import {
+	type BrushSettings,
+	brushFor,
+	defaultBrushSettings,
+} from "@/features/editor/draw/brushSettings";
+import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
 import { BottomPanel } from "@/features/editor/panels/BottomPanel";
-import { BrushOptions, DrawPanel } from "@/features/editor/panels/DrawPanel";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
 import {
 	LAYERS_SIDEBAR_INSET,
 	LayersPanel,
 } from "@/features/editor/panels/LayersPanel";
-import { TextEditor } from "@/features/editor/panels/TextEditor";
-import { TextStylePanel } from "@/features/editor/panels/TextStylePanel";
 import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
 import { SaveErrorBanner } from "@/features/editor/SaveErrorBanner";
 import type { Shortcut } from "@/features/editor/shortcuts";
+import { TextEditor } from "@/features/editor/text/TextEditor";
+import { TextStylePanel } from "@/features/editor/text/TextStylePanel";
 import { useAddPhoto } from "@/features/editor/useAddPhoto";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { assertNever } from "@/lib/assertNever";

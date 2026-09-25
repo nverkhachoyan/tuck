@@ -10,7 +10,7 @@ import {
 import { colors, webTransition } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
-import { ColorSwatches } from "./ColorSwatches";
+import { ColorSwatches } from "../ColorSwatches";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.

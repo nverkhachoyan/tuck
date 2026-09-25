@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { errorMessage } from "@/lib/errorMessage";
-import { showAlert } from "@/lib/showAlert";
+import { showAlert } from "@/ui/showAlert";
 
 /**
  * Adds photos from the picker, or, on web while `enabled`, pasted or dropped

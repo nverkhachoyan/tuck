@@ -3,9 +3,9 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { Brush } from "@/model/document";
 import { colors, radii } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
-import { type BrushSettings, brushSizeIndex } from "../brushSettings";
-import { ColorSwatches } from "./ColorSwatches";
-import { ToolButton } from "./ToolButton";
+import { ColorSwatches } from "../ColorSwatches";
+import { ToolButton } from "../ToolButton";
+import { type BrushSettings, brushSizeIndex } from "./brushSettings";
 
 // Each size's dot in the picker, in points: its order, not its true width.
 const SIZE_DOTS = [4, 7, 11, 16, 22];

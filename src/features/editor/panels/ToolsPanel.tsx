@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import { ToolButton } from "./ToolButton";
+import { ToolButton } from "../ToolButton";
 
 /** The editing tools, in the bottom panel while no layer is selected. */
 export function ToolsPanel({

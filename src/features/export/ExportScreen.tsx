@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { errorMessage } from "@/lib/errorMessage";
-import { showAlert } from "@/lib/showAlert";
 import type { EditorDocument } from "@/model/document";
 import { useStore } from "@/store";
 import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
@@ -22,6 +21,7 @@ import { Button } from "@/ui/Button";
 import { Checkerboard } from "@/ui/Checkerboard";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
+import { showAlert } from "@/ui/showAlert";
 import { exportFormatFor, exportFormats } from "./exportFormat";
 import { exportSizes } from "./exportSizes";
 import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";

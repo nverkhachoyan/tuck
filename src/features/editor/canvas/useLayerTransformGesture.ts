@@ -4,8 +4,12 @@ import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
 import { boundingBox, type Size, type Transform } from "@/model/geometry";
-import { type Handle, rotateByDrag, scaleByDrag } from "../handleGeometry";
-import { handleUnder, hasFinePointer } from "../handleMetrics";
+import {
+	type Handle,
+	rotateByDrag,
+	scaleByDrag,
+} from "../handles/handleGeometry";
+import { handleUnder, hasFinePointer } from "../handles/handleMetrics";
 import { type DocumentViewport, viewPointToDocument } from "../viewport";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import {

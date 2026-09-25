@@ -1,5 +1,5 @@
-import type { Brush } from "../../model/document.ts";
-import type { Size } from "../../model/geometry.ts";
+import type { Brush } from "../../../model/document.ts";
+import type { Size } from "../../../model/geometry.ts";
 
 export type BrushSettings = {
 	tool: Brush["type"];
