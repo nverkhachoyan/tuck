@@ -1,13 +1,13 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
-import type { EditorDocument } from "../../model/document.ts";
-import { type Framing, framingAnchor } from "../../model/framing.ts";
+import type { EditorDocument } from "../../../model/document.ts";
+import { type Framing, framingAnchor } from "../../../model/framing.ts";
 import {
 	cosSin,
 	normalizeAngle,
 	type Point,
 	type Rect,
 	type Size,
-} from "../../model/geometry.ts";
+} from "../../../model/geometry.ts";
 
 // The crop tool's geometry, in "crop space": the photo's own pixels, centered
 // on the origin, turned and mirrored the way the canvas will show them. With

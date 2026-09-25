@@ -94,9 +94,9 @@
 		},
 		{
 			"includes": [
-				"src/editor/**",
+				"src/features/editor/**",
 				"src/import/**",
-				"src/export/**",
+				"src/render/**",
 				"src/projects/**"
 			],
 			"linter": {
@@ -112,12 +112,18 @@
 											"../**",
 											"!@/layers/**",
 											"!../layers/**",
+											"!../../layers/**",
+											"!../../../layers/**",
 											"!@/store",
 											"!@/store/**",
 											"!../store",
 											"!../store/**",
+											"!../../store/**",
+											"!../../../store/**",
 											"!@/model/**",
 											"!../model/**",
+											"!../../model/**",
+											"!../../../model/**",
 											"!@/lib/**",
 											"!../lib/**",
 											"!@/ui/**",
@@ -126,7 +132,7 @@
 											"!../theme",
 											"!../theme.ts"
 										],
-										"message": "editor/, import/, export/, and projects/ import only layers/, store/, model/, lib/, ui/, and theme.ts, and their own folder with ./. Not each other or routes: app/ wires them together. See AGENTS.md."
+										"message": "Editor helpers and the shared import/, render/, and projects/ folders may import only lower-level modules or files in their own folder. See AGENTS.md."
 									}
 								]
 							}
@@ -136,7 +142,7 @@
 			}
 		},
 		{
-			"includes": ["src/editor/*"],
+			"includes": ["src/features/editor/*"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -150,22 +156,23 @@
 											"../**",
 											"./*/**",
 											"!@/layers/**",
-											"!../layers/**",
+											"!../../layers/**",
 											"!@/store",
 											"!@/store/**",
-											"!../store",
-											"!../store/**",
+											"!../../store",
+											"!../../store/**",
 											"!@/model/**",
-											"!../model/**",
+											"!../../model/**",
+											"!@/import/**",
 											"!@/lib/**",
-											"!../lib/**",
+											"!../../lib/**",
 											"!@/ui/**",
-											"!../ui/**",
+											"!../../ui/**",
 											"!@/theme",
-											"!../theme",
-											"!../theme.ts"
+											"!../../theme",
+											"!../../theme.ts"
 										],
-										"message": "The editor/ root imports only its own files with ./, and layers/, store/, model/, lib/, ui/, and theme.ts. Not its subfolders: they import the root, not the other way around. See AGENTS.md."
+										"message": "Editor root helpers import only each other and shared lower-level modules. EditorScreen composes subfolders. See AGENTS.md."
 									}
 								]
 							}
@@ -175,7 +182,7 @@
 			}
 		},
 		{
-			"includes": ["src/editor/*/**"],
+			"includes": ["src/features/editor/*/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -189,22 +196,97 @@
 											"../**",
 											"!../*",
 											"!@/layers/**",
-											"!../../layers/**",
+											"!../../../layers/**",
 											"!@/store",
 											"!@/store/**",
-											"!../../store",
-											"!../../store/**",
+											"!../../../store",
+											"!../../../store/**",
 											"!@/model/**",
-											"!../../model/**",
+											"!../../../model/**",
 											"!@/lib/**",
-											"!../../lib/**",
+											"!../../../lib/**",
 											"!@/ui/**",
-											"!../../ui/**",
+											"!../../../ui/**",
 											"!@/theme",
-											"!../../theme",
-											"!../../theme.ts"
+											"!../../../theme",
+											"!../../../theme.ts"
 										],
-										"message": "An editor/ subfolder imports only its own files with ./, the editor/ root with ../, and layers/, store/, model/, lib/, ui/, and theme.ts. Not another subfolder: what two of them share lives at the editor/ root. See AGENTS.md."
+										"message": "Editor subfolders import only themselves, editor root helpers, and shared lower-level modules. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/features/editor/EditorScreen.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/app/**",
+											"@/features/**",
+											"../**",
+											"!@/features/editor/**"
+										],
+										"message": "An editor screen may compose its own feature and shared capabilities, but may not import routes or another feature. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/features/home/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/app/**",
+											"@/features/**",
+											"../**",
+											"!@/features/home/**"
+										],
+										"message": "Home may not import routes or another feature. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/features/create/**", "src/features/export/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/app/**",
+											"@/features/**",
+											"../**",
+											"!../../model/**"
+										],
+										"message": "Feature screens may not import routes or another feature. See AGENTS.md."
 									}
 								]
 							}

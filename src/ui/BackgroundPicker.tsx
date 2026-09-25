@@ -3,8 +3,6 @@ import { colors, webTransition } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
 
-// The minimum comfortable touch target, the ring that marks the choice, and
-// the swatch drawn inside it.
 const TARGET = 44;
 const RING = 36;
 const SWATCH_SIZE = 26;
@@ -15,7 +13,6 @@ const BACKGROUNDS = [
 	{ color: "#000000", label: "Black background" },
 ];
 
-/** The canvas's fill: transparent (a checkerboard swatch), white, or black. */
 export function BackgroundPicker({
 	value,
 	onPick,

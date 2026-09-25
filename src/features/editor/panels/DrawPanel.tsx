@@ -3,8 +3,8 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { Brush } from "@/model/document";
 import type { Size } from "@/model/geometry";
 import { colors, radii } from "@/theme";
-import { ToolButton } from "@/ui/ToolButton";
 import { RingChoice, Swatches } from "./ColorSwatches";
+import { ToolButton } from "./ToolButton";
 
 export type BrushSettings = {
 	tool: Brush["type"];

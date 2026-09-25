@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import { ToolButton } from "@/ui/ToolButton";
+import { ToolButton } from "./ToolButton";
 
 /**
  * Actions for the selected photo or drawing, in place of the tools, as the

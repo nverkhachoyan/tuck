@@ -27,12 +27,12 @@ import type { EditorDocument } from "@/model/document";
 import { documentFraming, type Framing, framingAnchor } from "@/model/framing";
 import type { Size } from "@/model/geometry";
 import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
-import { AngleDial } from "@/ui/AngleDial";
+import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { Button } from "@/ui/Button";
 import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
-import { BackgroundPicker } from "../BackgroundPicker";
 import { blendViewports, fitRectToView } from "../viewport";
+import { AngleDial } from "./AngleDial";
 import { CropCanvas } from "./CropCanvas";
 import {
 	boxWithRatio,

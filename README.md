@@ -62,24 +62,24 @@ committed to the document when the gesture ends.
 
 Key areas:
 
-- `src/app/` holds the routes only (expo-router treats every file here as a route). The welcome screen starts from a photo or, through Create, an empty canvas at a preset size. The editor's Photo tool adds more photos as layers, wiring import's picker to projects' storage.
+- `src/app/` holds thin Expo Router route files. `src/features/` owns the home, create, editor, and export screens. The home screen starts from a photo or, through Create, an empty canvas at a preset size. The editor's Photo tool adds more photos as layers, wiring import's picker to projects' storage.
 - `src/model/` defines the document, layers, and geometry as plain data: no React. The document is the canvas (its size, and a background fill or transparency) and its layers, which may be none. A photo is an image layer like any other: a document's own photo starts locked, and can be unlocked, reordered, hidden, or deleted; photos added later start unlocked. `framing.ts` moves the framing's anchor (the lowest visible locked image, or with none, the canvas itself) to a new place on a new canvas and keeps every other layer over the same spot, which is all cropping, turning, and flipping are.
 - `src/layers/` draws each layer type in document space; shared by editor and export.
-- `src/editor/` is the interactive editor, in a folder per part. `canvas/` draws the document (`EditorScene`) and handles gestures, hit-testing, and snapping. `crop/` holds `CropTool`, which crops, turns, flips, and straightens the photo (the lowest locked one, or just the canvas without one) and expands the canvas around it; its geometry is in `cropGeometry.ts` and its box dragging in `cropDrag.ts`. `panels/` holds the text panel, the full-screen `TextEditor`, and the layers panel, where any layer is hidden, locked, deleted, or reordered and the background picked. The root holds what they share, such as the viewport math, the selection's scale/rotate handles (`handleGeometry.ts`, `handleMetrics.ts`), and the background picker, plus keyboard shortcuts on web.
+- `src/features/editor/` is the interactive editor, in a folder per part. `canvas/` draws the document (`EditorScene`) and handles gestures, hit-testing, and snapping. `crop/` holds `CropTool`, which crops, turns, flips, and straightens the photo (the lowest locked one, or just the canvas without one) and expands the canvas around it; its geometry is in `cropGeometry.ts` and its box dragging in `cropDrag.ts`. `panels/` holds the text panel, the full-screen `TextEditor`, and the layers panel, where any layer is hidden, locked, deleted, or reordered. The editor root holds what those parts share, such as viewport math and selection handles, plus keyboard shortcuts on web. The background picker is in `src/ui/` because Create also uses it.
 - `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, undo history, and every edit that mutates them.
 - `src/import/` picks a photo and re-encodes it as JPEG.
-- `src/projects/` keeps every editing session as a local project: its photos move into it, each as a file of its own, edits autosave, and the welcome screen lists projects to reopen or delete, each with a thumbnail rendered by export's renderer when its editor closes. `projectFile.ts` is the saved format (versioned, with image layers naming their file in the project); `projectLifecycle.ts` opens, saves, and closes projects, removing files no layer uses once one closes, with storage passed in so Node can test it.
-- `src/export/` renders the document offscreen with `ExportScene`, at full size or a smaller preset, then saves it to Photos or shares it: as JPEG, or as PNG when some of the canvas is transparent.
+- `src/projects/` keeps every editing session as a local project: its photos move into it, each as a file of its own, edits autosave, and the welcome screen lists projects to reopen or delete, each with a thumbnail rendered when its editor closes. `projectFile.ts` is the saved format (versioned, with image layers naming their file in the project); `projectLifecycle.ts` opens, saves, and closes projects, removing files no layer uses once one closes, with storage passed in so Node can test it.
+- `src/render/` renders the document offscreen with `DocumentRenderScene` for both export and project thumbnails. `src/features/export/` chooses output sizes and format, then saves the image to Photos or shares it: as JPEG, or as PNG when some of the canvas is transparent.
 - `src/layers/fonts.ts` bundles the text fonts so text renders identically on iOS, Android, and web.
 - `src/ui/` and `src/theme.ts` hold controls and colors shared across screens.
 - `src/lib/` holds platform shims and small language helpers.
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.
 
-Imports flow one way: `app` → `editor` / `import` / `export` / `projects` →
-`layers` / `store` → `model`. `ui`, `theme`, and `lib` import nothing from the app.
+Imports flow one way: `app` → `features` → `import` / `render` / `projects` /
+`layers` / `store` → `model`. `ui`, `theme`, and `lib` import nothing from the screens.
 Lint rules in `biome.json` enforce these boundaries. Adding a layer
 type means a type in `model/document.ts`, a view in `layers/`, and a case in
-both `EditorScene` and `ExportScene` (`assertNever` flags any you miss).
+both `EditorScene` and `DocumentRenderScene` (`assertNever` flags any you miss).
 
 Platform differences live in `.web.ts` files next to their native versions
 (`saveImage.web.ts` downloads instead of saving to Photos; `projectStorage.web.ts`

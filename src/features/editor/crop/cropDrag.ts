@@ -1,5 +1,5 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
-import type { Point, Rect, Size } from "../../model/geometry.ts";
+import type { Point, Rect, Size } from "../../../model/geometry.ts";
 import { photoCorners } from "./cropGeometry.ts";
 
 // Dragging the crop box's handles, in crop space (see `cropGeometry.ts`).

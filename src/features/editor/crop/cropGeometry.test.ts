@@ -7,12 +7,12 @@ import {
 	createTextLayer,
 	type EditorDocument,
 	hasEdits,
-} from "../../model/document.ts";
+} from "../../../model/document.ts";
 import {
 	documentFraming,
 	framingsEqual,
 	reframeDocument,
-} from "../../model/framing.ts";
+} from "../../../model/framing.ts";
 import {
 	boxWithRatio,
 	type CropState,

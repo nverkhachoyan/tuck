@@ -6,8 +6,8 @@ import {
 } from "@shopify/react-native-skia";
 import { decodedImages } from "@/layers/ImageLayerView";
 import { type EditorDocument, hasTransparency } from "@/model/document";
+import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodeImageLayers } from "./decodeImageLayers";
-import { ExportScene } from "./ExportScene";
 
 // A thumbnail's shorter side, in pixels: a project card's print on a phone
 // at 3x.
@@ -25,7 +25,7 @@ export async function renderDocument(
 	try {
 		const result = await drawAsImage(
 			<Group transform={[{ scale }]}>
-				<ExportScene document={document} images={decoded.images} />
+				<DocumentRenderScene document={document} images={decoded.images} />
 			</Group>,
 			{
 				width: Math.round(document.width * scale),

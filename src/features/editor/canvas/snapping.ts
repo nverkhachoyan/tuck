@@ -4,7 +4,7 @@ import {
 	boundingBox,
 	type Size,
 	type Transform,
-} from "../../model/geometry.ts";
+} from "../../../model/geometry.ts";
 
 // Worklets, like `model/geometry.ts`, so gestures run them on the UI thread.
 

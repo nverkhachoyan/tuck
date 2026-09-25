@@ -1,7 +1,7 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import { useCallback, useEffect, useState } from "react";
 import type { EditorDocument } from "@/model/document";
-import { renderDocument } from "./renderDocument";
+import { renderDocument } from "@/render/renderDocument";
 
 export type RenderState =
 	| { status: "rendering" }

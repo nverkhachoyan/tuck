@@ -56,7 +56,7 @@ type EditorSceneProps = {
 };
 
 /**
- * The editor's counterpart to `ExportScene`: draws every layer in document
+ * The editor's counterpart to `DocumentRenderScene`: draws every layer in document
  * space, but loads images asynchronously, lets the selected layer follow
  * the live gesture values, fades whatever export will crop, and draws the
  * selection above everything. A transparent canvas shows a checkerboard.

@@ -8,8 +8,8 @@ import {
 	View,
 } from "react-native";
 import { colors, radii, webTransition } from "@/theme";
-import { interaction } from "./interaction";
-import { useTooltip } from "./Tooltip";
+import { interaction } from "@/ui/interaction";
+import { useTooltip } from "@/ui/Tooltip";
 
 // Tools use MaterialCommunityIcons (photo-editor glyphs like format-text, crop,
 // blur); small inline actions use Ionicons via IconButton.

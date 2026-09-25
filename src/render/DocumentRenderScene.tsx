@@ -12,7 +12,7 @@ import type { EditorDocument, Layer } from "@/model/document";
  * renderer draws a single frame, so async loaders like `useImage` would
  * still be null.
  */
-export function ExportScene({
+export function DocumentRenderScene({
 	document,
 	images,
 }: {

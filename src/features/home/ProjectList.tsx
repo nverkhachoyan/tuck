@@ -11,14 +11,13 @@ import {
 	View,
 } from "react-native";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
+import type { ProjectSummary } from "@/projects/projectFile";
 import { colors, fonts, radii, webTransition } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
-import type { ProjectSummary } from "./projectFile";
 
 const GAP = 12;
-// Cards narrower than this make the grid drop a column.
 const MIN_CARD_WIDTH = 150;
 const MAX_COLUMNS = 4;
 // Around the print inside its card, as a share of the card's width.
@@ -33,11 +32,6 @@ type ProjectListProps = {
 	onDelete: (id: string) => void;
 };
 
-/**
- * Saved projects to pick up again, most recent first: a grid of prints,
- * each at its own shape. Edit shows a delete button on every card; a mouse
- * over a card shows its own, and a long press asks to delete it.
- */
 export function ProjectList({
 	projects,
 	disabled,
