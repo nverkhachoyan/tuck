@@ -43,6 +43,27 @@ describe("shortcutFor", () => {
 		});
 	});
 
+	test("picks up a tool, or shows the layers, with a plain letter", () => {
+		assert.deepEqual(shortcutFor(press("t")), { type: "tool", tool: "text" });
+		assert.deepEqual(shortcutFor(press("d")), { type: "tool", tool: "draw" });
+		assert.deepEqual(shortcutFor(press("r")), {
+			type: "tool",
+			tool: "redact",
+		});
+		assert.deepEqual(shortcutFor(press("p")), { type: "tool", tool: "photo" });
+		assert.deepEqual(shortcutFor(press("c")), { type: "tool", tool: "crop" });
+		assert.deepEqual(shortcutFor(press("l")), { type: "layers" });
+		// Caps Lock on.
+		assert.deepEqual(shortcutFor(press("T")), { type: "tool", tool: "text" });
+	});
+
+	test("leaves tool letters with Shift, Option, or ⌘ alone", () => {
+		assert.equal(shortcutFor(press("T", { shiftKey: true })), null);
+		assert.equal(shortcutFor(press("t", { altKey: true })), null);
+		// ⌘C copies rather than cropping.
+		assert.equal(shortcutFor(press("c", { metaKey: true })), null);
+	});
+
 	test("deletes and deselects with plain keys", () => {
 		assert.deepEqual(shortcutFor(press("Backspace")), { type: "delete" });
 		assert.deepEqual(shortcutFor(press("Delete")), { type: "delete" });
@@ -62,10 +83,10 @@ describe("shortcutFor", () => {
 		});
 	});
 
-	test("ignores other keys, bare letters, and Option/Alt combinations", () => {
+	test("ignores other keys, unbound letters, and Option/Alt combinations", () => {
 		assert.equal(shortcutFor(press("a")), null);
 		assert.equal(shortcutFor(press("z")), null);
-		assert.equal(shortcutFor(press("d")), null);
+		assert.equal(shortcutFor(press("Enter")), null);
 		assert.equal(shortcutFor(press("s", { metaKey: true })), null);
 		assert.equal(shortcutFor(press("ArrowUp", { altKey: true })), null);
 		assert.equal(
