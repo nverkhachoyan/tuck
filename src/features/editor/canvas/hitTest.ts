@@ -28,6 +28,8 @@ export type LayerTarget = {
 	strokes: MaskStroke[] | null;
 	// A locked photo is cut off at the canvas's edge.
 	clipped: boolean;
+	// Its box resizes freely, with side handles (see `resizesFreely`).
+	resizable: boolean;
 };
 
 /**

@@ -13,7 +13,12 @@ import { GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { layerBounds } from "@/layers/layerBounds";
 import type { EditorDocument, Layer } from "@/model/document";
-import { type Rect, rectFromCorners, type Transform } from "@/model/geometry";
+import {
+	type Box,
+	type Rect,
+	rectFromCorners,
+	type Transform,
+} from "@/model/geometry";
 import { colors } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
 import {
@@ -25,7 +30,7 @@ import { handleUnder } from "../handles/handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
 import { type CanvasTool, EditorScene, type LiveStroke } from "./EditorScene";
 import { findLayerAt, type LayerTarget } from "./hitTest";
-import { layerTargets } from "./layerTargets";
+import { layerTargets, resizesFreely } from "./layerTargets";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
@@ -48,6 +53,13 @@ type EditorCanvasProps = {
 	// A tap on the layer that's already selected (the editor opens its text).
 	onTapSelectedLayer?: () => void;
 	onCommitTransform?: (id: string, transform: Transform) => void;
+	// A redaction's box resized by its handles, which moves its center too.
+	onResizeBox?: (
+		id: string,
+		transform: Transform,
+		width: number,
+		height: number,
+	) => void;
 	// Moves a layer by a document-space offset (see `nudgeSelection`).
 	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
 	// While set, dragging paints or drags out boxes with this tool instead of
@@ -75,7 +87,7 @@ export type EditorCanvasHandle = {
  * rendered at full resolution for export.
  *
  * All touch handling (tap-to-select, drag/pinch/rotate, the selection's
- * scale and rotate handles) is a single gesture on the canvas; selection is
+ * scale, resize, and rotate handles) is a single gesture on the canvas; selection is
  * resolved by hit-testing in document space, against `layerTargets`, which
  * the UI thread shares so a drag can pick its layer there. With a mouse, the
  * cursor shows what a press at the pointer would do.
@@ -94,6 +106,7 @@ export function EditorCanvas({
 	onSelectLayer,
 	onTapSelectedLayer,
 	onCommitTransform,
+	onResizeBox,
 	onNudgeLayer,
 	tool = null,
 	onPaintStroke,
@@ -152,8 +165,11 @@ export function EditorCanvas({
 		syncLiveTransform(
 			live,
 			movableLayer?.id ?? null,
-			movableLayer?.transform,
-			movableLayer && layerBounds(movableLayer),
+			movableLayer && {
+				transform: movableLayer.transform,
+				box: layerBounds(movableLayer),
+				resizable: resizesFreely(movableLayer),
+			},
 		);
 	}, [live, movableLayer]);
 
@@ -164,6 +180,7 @@ export function EditorCanvas({
 				? handleUnder(
 						selectedLayer.transform,
 						layerBounds(selectedLayer),
+						resizesFreely(selectedLayer),
 						viewPointToDocument(viewport, { x: screenX, y: screenY }),
 						scale,
 					)
@@ -223,6 +240,11 @@ export function EditorCanvas({
 		(id: string, transform: Transform) => onCommitTransform?.(id, transform),
 		[onCommitTransform],
 	);
+	const handleResize = useCallback(
+		(id: string, transform: Transform, box: Box) =>
+			onResizeBox?.(id, transform, box.halfWidth * 2, box.halfHeight * 2),
+		[onResizeBox],
+	);
 
 	const gesture = useLayerTransformGesture({
 		live,
@@ -232,6 +254,7 @@ export function EditorCanvas({
 		onTap: handleTap,
 		onSelect: onSelectLayer,
 		onCommit: handleCommit,
+		onResize: handleResize,
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
 	});

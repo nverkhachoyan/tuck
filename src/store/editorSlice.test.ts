@@ -437,6 +437,39 @@ describe("editorSlice", () => {
 			);
 		});
 
+		test("resizing a box is one undo step, by id", () => {
+			const { store, text } = storeWithText();
+			store.getState().addRedactionBox(box, black);
+			const [redaction] = redactions(store);
+			store.getState().selectLayer(text.id);
+			const steps = store.getState().past.length;
+			const moved = { ...redaction.transform, x: 280 };
+			store.getState().resizeRedactionBox(redaction.id, moved, 360, 80);
+			const [resized] = redactions(store);
+			assert.equal(resized.shape === "box" && resized.width, 360);
+			assert.equal(resized.shape === "box" && resized.height, 80);
+			assert.deepEqual(resized.transform, moved);
+			assert.equal(store.getState().selectedLayerId, text.id);
+			assert.equal(store.getState().past.length, steps + 1);
+
+			store.getState().undo();
+			assert.deepEqual(redactions(store), [redaction]);
+		});
+
+		test("resizing to the same box, or no box, changes nothing", () => {
+			const { store } = storeWithText();
+			store.getState().addRedactionBox(box, black);
+			store.getState().paintRedaction(mask([0, 0, 100, 0]), black);
+			const [boxed, brushed] = redactions(store);
+			const before = store.getState().document;
+			const resize = store.getState().resizeRedactionBox;
+			resize(boxed.id, boxed.transform, 300, 50);
+			resize(boxed.id, boxed.transform, 0, 50);
+			resize(brushed.id, brushed.transform, 300, 50);
+			resize("missing", boxed.transform, 300, 50);
+			assert.equal(store.getState().document, before);
+		});
+
 		test("an empty box is ignored", () => {
 			const { store } = storeWithText();
 			const before = store.getState().document;

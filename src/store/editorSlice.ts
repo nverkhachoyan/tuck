@@ -63,6 +63,12 @@ export type EditorSlice = {
 	setRedactionEffect: (id: string, effect: RedactionEffect) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
+	resizeRedactionBox: (
+		id: string,
+		transform: Transform,
+		width: number,
+		height: number,
+	) => void;
 	nudgeLayer: (id: string, dx: number, dy: number) => void;
 	reframe: (framing: Framing, turnLayers: boolean) => void;
 	setBackground: (background: string | null) => void;
@@ -269,6 +275,28 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			setLayers("editor/transformLayer", (layers) =>
 				layers.map((layer) =>
 					layer.id === id ? { ...layer, transform } : layer,
+				),
+			);
+		},
+
+		// Like `transformLayer`, for a redaction's box resized by its handles:
+		// its size changes, and its center moves with the sides that did.
+		resizeRedactionBox: (id, transform, width, height) => {
+			const target = findUnlockedLayer(id);
+			if (
+				target?.type !== "redaction" ||
+				target.shape !== "box" ||
+				width <= 0 ||
+				height <= 0 ||
+				(target.width === width &&
+					target.height === height &&
+					transformsEqual(target.transform, transform))
+			) {
+				return;
+			}
+			setLayers("editor/resizeRedactionBox", (layers) =>
+				layers.map((layer) =>
+					layer === target ? { ...target, transform, width, height } : layer,
 				),
 			);
 		},

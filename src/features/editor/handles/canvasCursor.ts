@@ -20,24 +20,29 @@ const RESIZE_CURSORS = [
 	"nesw-resize",
 ] as const;
 
-// Each corner's outward diagonal before rotation (y points down).
-const CORNER_ANGLES: Record<Exclude<Handle, "rotate">, number> = {
+// Which way each handle pulls before rotation (y points down): a corner
+// along its outward diagonal, a side straight out.
+const HANDLE_ANGLES: Record<Exclude<Handle, "rotate">, number> = {
 	"top-left": (-3 * Math.PI) / 4,
+	top: -Math.PI / 2,
 	"top-right": -Math.PI / 4,
+	right: 0,
 	"bottom-right": Math.PI / 4,
+	bottom: Math.PI / 2,
 	"bottom-left": (3 * Math.PI) / 4,
+	left: Math.PI,
 };
 
 /**
  * The cursor for a handle. Browsers only have resize arrows in four
- * directions, so a rotated corner gets whichever is closest to its diagonal.
+ * directions, so a rotated handle gets whichever is closest to its pull.
  */
 export function cursorForHandle(
 	handle: Handle,
 	rotation: number,
 ): CanvasCursor {
 	if (handle === "rotate") return "rotate";
-	const degrees = ((CORNER_ANGLES[handle] + rotation) * 180) / Math.PI;
+	const degrees = ((HANDLE_ANGLES[handle] + rotation) * 180) / Math.PI;
 	// Arrows point both ways, so only the axis (mod 180°) matters.
 	const axis = ((degrees % 180) + 180) % 180;
 	return RESIZE_CURSORS[Math.round(axis / 45) % 4];

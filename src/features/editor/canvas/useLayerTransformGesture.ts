@@ -3,9 +3,19 @@ import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
-import { boundingBox, type Size, type Transform } from "@/model/geometry";
+import {
+	type Box,
+	boundingBox,
+	type Point,
+	type Size,
+	type Transform,
+	toLayerSpace,
+} from "@/model/geometry";
 import {
 	type Handle,
+	handleSides,
+	type ResizeHandle,
+	resizeByDrag,
 	rotateByDrag,
 	scaleByDrag,
 } from "../handles/handleGeometry";
@@ -24,13 +34,21 @@ import {
 	type PointerTravel,
 	startTravel,
 } from "./pointerTravel";
-import { type AxisLines, snapAngle, snapLinesFor, snapSpan } from "./snapping";
+import {
+	type AxisLines,
+	snapAngle,
+	snapLinesFor,
+	snapSide,
+	snapSpan,
+} from "./snapping";
 
 // Rotation settles on upright and quarter turns when this close.
 const ROTATION_SNAP = (4 * Math.PI) / 180;
 // A dragged layer snaps onto the document's and the other layers' edges and
 // centers from this many screen pixels away.
 const SNAP_PX = 8;
+// How thin a box resizing freely can get, in screen pixels.
+const MIN_BOX_PX = 12;
 
 const NO_LINES: AxisLines = { edges: [], centers: [] };
 
@@ -40,7 +58,10 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  *
  * A pan that starts on one of the selected layer's handles scales (corners)
  * or rotates (knob) it instead of moving it, about its center like a pinch.
- * That's decided at touch-down, on the UI thread, from the live values.
+ * A box that resizes freely (`live.resizable`) has side handles too, and
+ * its corners and sides resize it instead, keeping the opposite sides put;
+ * that commits through `onResize`. Which handle is decided at touch-down,
+ * on the UI thread, from the live values.
  *
  * A drag that starts on another layer picks that layer up at once: it's
  * hit-tested here, on the UI thread, against `layers`, and `onSelect` tells
@@ -48,8 +69,9 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  * small text.
  *
  * Moving snaps the layer's edges onto the edges of the document and the
- * other layers, or its center onto their centers, and rotating settles on
- * quarter turns, with a haptic tick as each snap lands.
+ * other layers, or its center onto their centers; a side being resized
+ * snaps onto any of those lines; and rotating settles on quarter turns,
+ * with a haptic tick as each snap lands.
  *
  * While any of pan / pinch / rotate runs, the layer it transforms is held
  * (`live.heldId`): a sync from the document leaves it be, and the gestures
@@ -66,6 +88,7 @@ export function useLayerTransformGesture({
 	onTap,
 	onSelect,
 	onCommit,
+	onResize,
 	onHover,
 	onHoverEnd,
 }: {
@@ -77,6 +100,8 @@ export function useLayerTransformGesture({
 	// Without it, a drag only ever moves the current selection.
 	onSelect?: (id: string) => void;
 	onCommit: (id: string, transform: Transform) => void;
+	// A resized box: its transform, and its new size in its own units.
+	onResize: (id: string, transform: Transform, box: Box) => void;
 	onHover: (screenX: number, screenY: number) => void;
 	onHoverEnd: () => void;
 }) {
@@ -99,9 +124,12 @@ export function useLayerTransformGesture({
 	const dragHandle = useSharedValue<Handle | null>(null);
 	const handleStartScale = useSharedValue(1);
 	const handleStartRotation = useSharedValue(0);
-	// How many of pan / pinch / rotate are running, and whether any moved.
+	const handleStartBox = useSharedValue<Box>({ halfWidth: 0, halfHeight: 0 });
+	// How many of pan / pinch / rotate are running, whether any moved, and
+	// whether a handle resized the box.
 	const activeCount = useSharedValue(0);
 	const moved = useSharedValue(false);
+	const resized = useSharedValue(false);
 	// What this drag's layer snaps onto, gathered when it starts.
 	const snapLines = useSharedValue({ x: NO_LINES, y: NO_LINES });
 
@@ -156,11 +184,67 @@ export function useLayerTransformGesture({
 			);
 		};
 
+		// Resizes the held box by dragging `handle` from `from` to `to`, in the
+		// frame it had when the drag began, snapping each side it moves.
+		const resizeTo = (handle: ResizeHandle, from: Point, to: Point) => {
+			"worklet";
+			const start = {
+				x: startX.value,
+				y: startY.value,
+				scaleX: handleStartScale.value,
+				scaleY: handleStartScale.value,
+				rotation: handleStartRotation.value,
+			};
+			const box = handleStartBox.value;
+			const minSize = MIN_BOX_PX / (viewport.scale * start.scaleX);
+			const a = toLayerSpace(start, from);
+			const b = toLayerSpace(start, to);
+			const offset = { x: b.x - a.x, y: b.y - a.y };
+			const sides = handleSides(handle);
+			const tolerance = SNAP_PX / viewport.scale;
+			let guideX: number | null = null;
+			let guideY: number | null = null;
+			for (const axis of ["x", "y"] as const) {
+				const side = sides[axis];
+				if (side === 0) continue;
+				const half = axis === "x" ? box.halfWidth : box.halfHeight;
+				const position = side * half + offset[axis];
+				const snap = snapSide(
+					start,
+					axis,
+					position,
+					snapLines.value,
+					tolerance,
+				);
+				if (!snap) continue;
+				// Unless that takes the box under its minimum (see `resizeByDrag`).
+				if (side * snap.position + half < Math.min(minSize, half * 2)) continue;
+				offset[axis] += snap.position - position;
+				if (snap.guide === "x") guideX = snap.line;
+				else guideY = snap.line;
+			}
+			if (
+				(guideX !== null && guideX !== live.guideX.value) ||
+				(guideY !== null && guideY !== live.guideY.value)
+			) {
+				scheduleOnRN(hapticTick);
+			}
+			live.guideX.value = guideX;
+			live.guideY.value = guideY;
+			const next = resizeByDrag(start, box, handle, offset, minSize);
+			live.x.value = next.transform.x;
+			live.y.value = next.transform.y;
+			live.halfWidth.value = next.box.halfWidth;
+			live.halfHeight.value = next.box.halfHeight;
+			resized.value = true;
+		};
+
 		// The first gesture to start holds the selected layer, if there is one.
 		const gestureStarted = () => {
 			"worklet";
 			if (activeCount.value === 0) {
 				moved.value = false;
+				resized.value = false;
 				live.heldId.value = live.activeId.value;
 			}
 			activeCount.value += 1;
@@ -179,7 +263,16 @@ export function useLayerTransformGesture({
 			if (activeCount.value > 0) return;
 			const id = live.heldId.value;
 			if (moved.value && id !== null && holding()) {
-				scheduleOnRN(onCommit, id, readLiveTransform(live));
+				if (resized.value) {
+					scheduleOnRN(
+						onResize,
+						id,
+						readLiveTransform(live),
+						readLiveBox(live),
+					);
+				} else {
+					scheduleOnRN(onCommit, id, readLiveTransform(live));
+				}
 			}
 			live.heldId.value = null;
 		};
@@ -203,6 +296,7 @@ export function useLayerTransformGesture({
 						: handleUnder(
 								readLiveTransform(live),
 								readLiveBox(live),
+								live.resizable.value,
 								toDocument(event.x, event.y),
 								viewport.scale,
 							);
@@ -218,7 +312,7 @@ export function useLayerTransformGesture({
 						toDocument(downX.value, downY.value),
 					);
 					if (target && target.id !== live.activeId.value) {
-						holdLayer(live, target.id, target.transform, target.box);
+						holdLayer(live, target.id, target);
 						scheduleOnRN(onSelect, target.id);
 					}
 				}
@@ -226,6 +320,7 @@ export function useLayerTransformGesture({
 				startY.value = live.y.value;
 				handleStartScale.value = live.scale.value;
 				handleStartRotation.value = live.rotation.value;
+				handleStartBox.value = readLiveBox(live);
 				snapLines.value = snapLinesFor(
 					documentSize,
 					layers.value.filter((target) => target.id !== live.heldId.value),
@@ -243,6 +338,8 @@ export function useLayerTransformGesture({
 					const to = toDocument(downX.value + dx, downY.value + dy);
 					if (handle === "rotate") {
 						rotateTo(rotateByDrag(center, from, to, handleStartRotation.value));
+					} else if (live.resizable.value) {
+						resizeTo(handle, from, to);
 					} else {
 						live.scale.value = clampScale(
 							scaleByDrag(center, from, to, handleStartScale.value),
@@ -316,6 +413,7 @@ export function useLayerTransformGesture({
 		onTap,
 		onSelect,
 		onCommit,
+		onResize,
 		onHover,
 		onHoverEnd,
 		downX,
@@ -324,8 +422,10 @@ export function useLayerTransformGesture({
 		dragHandle,
 		handleStartScale,
 		handleStartRotation,
+		handleStartBox,
 		activeCount,
 		moved,
+		resized,
 		snapLines,
 		startX,
 		startY,

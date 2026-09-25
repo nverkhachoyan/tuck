@@ -94,6 +94,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const transformLayer = useStore((state) => state.transformLayer);
+	const resizeRedactionBox = useStore((state) => state.resizeRedactionBox);
 	const nudgeLayer = useStore((state) => state.nudgeLayer);
 	const moveLayer = useStore((state) => state.moveLayer);
 	const setLayerHidden = useStore((state) => state.setLayerHidden);
@@ -409,6 +410,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						selectedTextLayer ? () => setEditing("selected") : undefined
 					}
 					onCommitTransform={transformLayer}
+					onResizeBox={resizeRedactionBox}
 					onNudgeLayer={nudgeLayer}
 					tool={canvasTool}
 					onPaintStroke={handlePaintStroke}

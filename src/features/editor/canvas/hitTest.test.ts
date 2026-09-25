@@ -35,6 +35,7 @@ function target(
 		hitPadding: 0,
 		strokes: options.strokes ?? null,
 		clipped: false,
+		resizable: false,
 	};
 }
 

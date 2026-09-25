@@ -2,6 +2,7 @@
 import {
 	type Box,
 	boundingBox,
+	cosSin,
 	type Size,
 	type Transform,
 } from "../../../model/geometry.ts";
@@ -69,6 +70,68 @@ export function snapAngle(
 
 /** The lines along one axis that a layer's edges, or its center, snap onto. */
 export type AxisLines = { edges: number[]; centers: number[] };
+
+// The line in `lines` nearest to `value` within `tolerance`, or null.
+function nearestLine(
+	value: number,
+	lines: AxisLines,
+	tolerance: number,
+): number | null {
+	"worklet";
+	let nearest: number | null = null;
+	let closest = tolerance;
+	for (const group of [lines.edges, lines.centers]) {
+		for (const line of group) {
+			const distance = Math.abs(line - value);
+			if (distance <= closest) {
+				nearest = line;
+				closest = distance;
+			}
+		}
+	}
+	return nearest;
+}
+
+/**
+ * Snaps a side of a layer's box that's being dragged onto any of `lines`,
+ * edge or center. The side sits at `position` along the layer's own `axis`,
+ * in its units. Returns where the side lands, in the same terms, and the
+ * document's line it snapped to: a vertical line at x = `line` when `guide`
+ * is "x", a horizontal one when it's "y". Null when no line is in reach, or
+ * when the layer is turned off a quarter turn, which leaves its sides
+ * slanted across the lines.
+ */
+export function snapSide(
+	transform: Transform,
+	axis: "x" | "y",
+	position: number,
+	lines: { x: AxisLines; y: AxisLines },
+	tolerance: number,
+): { position: number; guide: "x" | "y"; line: number } | null {
+	"worklet";
+	const { cos, sin } = cosSin(transform.rotation);
+	// One unit along the layer's axis, in document space.
+	const stepX = axis === "x" ? cos * transform.scaleX : -sin * transform.scaleY;
+	const stepY = axis === "x" ? sin * transform.scaleX : cos * transform.scaleY;
+	let guide: "x" | "y";
+	let step: number;
+	let start: number;
+	if (stepY === 0) {
+		guide = "x";
+		step = stepX;
+		start = transform.x;
+	} else if (stepX === 0) {
+		guide = "y";
+		step = stepY;
+		start = transform.y;
+	} else {
+		return null;
+	}
+	const at = start + position * step;
+	const line = nearestLine(at, lines[guide], tolerance);
+	if (line === null) return null;
+	return { position: position + (line - at) / step, guide, line };
+}
 
 /**
  * Along one axis of a canvas `length` long: its edges and center, then the

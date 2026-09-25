@@ -13,12 +13,15 @@ const MAX_LAYER_SCALE = 8;
  * value when the gesture ends. While `activeId` matches a layer, that layer's
  * node renders from these values instead of its document transform.
  * `halfWidth`/`halfHeight` are its selection box, so the UI thread can find
- * and draw its handles without laying out text. `guideX`/`guideY` are the
+ * and draw its handles without laying out text, and `resizable` says the
+ * box resizes freely, with side handles (a redaction's box, which then
+ * draws at this size too). `guideX`/`guideY` are the
  * document's lines a drag has snapped it onto, if any: a vertical line at
  * x = `guideX`, a horizontal one at y = `guideY`.
  *
  * `heldId` is the layer a gesture is transforming, if any. The gesture owns
- * its transform until it ends, so a sync from the document leaves it be.
+ * its transform and box until it ends, so a sync from the document leaves
+ * them be.
  */
 export type LiveTransform = {
 	activeId: SharedValue<string | null>;
@@ -29,6 +32,7 @@ export type LiveTransform = {
 	rotation: SharedValue<number>;
 	halfWidth: SharedValue<number>;
 	halfHeight: SharedValue<number>;
+	resizable: SharedValue<boolean>;
 	guideX: SharedValue<number | null>;
 	guideY: SharedValue<number | null>;
 };
@@ -42,6 +46,7 @@ export function useLiveTransform(): LiveTransform {
 	const rotation = useSharedValue(0);
 	const halfWidth = useSharedValue(0);
 	const halfHeight = useSharedValue(0);
+	const resizable = useSharedValue(false);
 	const guideX = useSharedValue<number | null>(null);
 	const guideY = useSharedValue<number | null>(null);
 	return useMemo(
@@ -54,6 +59,7 @@ export function useLiveTransform(): LiveTransform {
 			rotation,
 			halfWidth,
 			halfHeight,
+			resizable,
 			guideX,
 			guideY,
 		}),
@@ -66,38 +72,40 @@ export function useLiveTransform(): LiveTransform {
 			rotation,
 			halfWidth,
 			halfHeight,
+			resizable,
 			guideX,
 			guideY,
 		],
 	);
 }
 
-function writeLayer(
-	live: LiveTransform,
-	transform: Transform | null,
-	box: Box,
-) {
+/** What the live values take from the layer they follow. */
+export type LiveLayerState = {
+	transform: Transform;
+	box: Box;
+	resizable: boolean;
+};
+
+function writeLayer(live: LiveTransform, layer: LiveLayerState) {
 	"worklet";
-	if (transform) {
-		live.x.value = transform.x;
-		live.y.value = transform.y;
-		live.scale.value = transform.scaleX;
-		live.rotation.value = transform.rotation;
-	}
-	live.halfWidth.value = box.halfWidth;
-	live.halfHeight.value = box.halfHeight;
+	live.x.value = layer.transform.x;
+	live.y.value = layer.transform.y;
+	live.scale.value = layer.transform.scaleX;
+	live.rotation.value = layer.transform.rotation;
+	live.halfWidth.value = layer.box.halfWidth;
+	live.halfHeight.value = layer.box.halfHeight;
+	live.resizable.value = layer.resizable;
 }
 
 function applySync(
 	live: LiveTransform,
 	id: string | null,
-	transform: Transform | undefined,
-	box: Box | undefined,
+	layer: LiveLayerState | undefined,
 ) {
 	"worklet";
-	if (id && transform && box) {
+	if (id && layer) {
 		const held = id === live.heldId.value && id === live.activeId.value;
-		writeLayer(live, held ? null : transform, box);
+		if (!held) writeLayer(live, layer);
 	}
 	live.activeId.value = id;
 }
@@ -105,20 +113,19 @@ function applySync(
 /**
  * Points the live values at the selected layer, and its document transform
  * and box, whenever either changes. It runs on the UI thread, between a
- * gesture's frames rather than during one, and leaves the transform of a
- * layer a gesture holds to the gesture. Otherwise a drag that picked its
- * layer on the UI thread would jump back when that selection reached React.
+ * gesture's frames rather than during one, and leaves a layer a gesture
+ * holds to the gesture. Otherwise a drag that picked its layer on the UI
+ * thread would jump back when that selection reached React.
  */
 export function syncLiveTransform(
 	live: LiveTransform,
 	id: string | null,
-	transform: Transform | undefined,
-	box: Box | undefined,
+	layer: LiveLayerState | undefined,
 ) {
 	// On web, worklets run on the JS thread anyway, and scheduling one there
 	// waits for the next frame.
-	if (Platform.OS === "web") applySync(live, id, transform, box);
-	else scheduleOnUI(applySync, live, id, transform, box);
+	if (Platform.OS === "web") applySync(live, id, layer);
+	else scheduleOnUI(applySync, live, id, layer);
 }
 
 /**
@@ -128,11 +135,10 @@ export function syncLiveTransform(
 export function holdLayer(
 	live: LiveTransform,
 	id: string,
-	transform: Transform,
-	box: Box,
+	layer: LiveLayerState,
 ) {
 	"worklet";
-	writeLayer(live, transform, box);
+	writeLayer(live, layer);
 	live.activeId.value = id;
 	live.heldId.value = id;
 }

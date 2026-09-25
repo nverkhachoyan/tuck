@@ -2,7 +2,13 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { Transform } from "../../../model/geometry.ts";
-import { snapAngle, snapLinesFor, snapSpan, snapTo } from "./snapping.ts";
+import {
+	snapAngle,
+	snapLinesFor,
+	snapSide,
+	snapSpan,
+	snapTo,
+} from "./snapping.ts";
 
 describe("snapTo", () => {
 	test("returns the target within the tolerance, on either side", () => {
@@ -120,5 +126,55 @@ describe("snapLinesFor", () => {
 			snapLinesFor(canvas, [{ transform: at(400, 50), box, clipped: true }]),
 			snapLinesFor(canvas, []),
 		);
+	});
+});
+
+describe("snapSide", () => {
+	const lines = {
+		x: { edges: [0, 200], centers: [100] },
+		y: { edges: [0, 100], centers: [50] },
+	};
+	// A box drawn at twice its size, centered at (60, 40).
+	const at = (rotation: number): Transform => ({
+		x: 60,
+		y: 40,
+		scaleX: 2,
+		scaleY: 2,
+		rotation,
+	});
+
+	test("snaps an upright side onto an edge or a center line", () => {
+		// Its right side, 19 units out, is at x = 98: 2 short of the center.
+		assert.deepEqual(snapSide(at(0), "x", 19, lines, 5), {
+			position: 20,
+			guide: "x",
+			line: 100,
+		});
+		// Its top side, 18 up, is at y = 4.
+		assert.deepEqual(snapSide(at(0), "y", -18, lines, 5), {
+			position: -20,
+			guide: "y",
+			line: 0,
+		});
+	});
+
+	test("snaps along the document's other axis once turned a quarter", () => {
+		// A quarter turn points the layer's x axis down: 4 units is y = 48.
+		assert.deepEqual(snapSide(at(Math.PI / 2), "x", 4, lines, 5), {
+			position: 5,
+			guide: "y",
+			line: 50,
+		});
+		// And its y axis to the left: 30 units is x = 0.
+		assert.deepEqual(snapSide(at(Math.PI / 2), "y", 30, lines, 5), {
+			position: 30,
+			guide: "x",
+			line: 0,
+		});
+	});
+
+	test("leaves a slanted side alone, and one out of reach", () => {
+		assert.equal(snapSide(at(0.3), "x", 19, lines, 5), null);
+		assert.equal(snapSide(at(0), "x", 10, lines, 5), null);
 	});
 });

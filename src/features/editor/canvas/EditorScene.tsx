@@ -17,19 +17,30 @@ import {
 	toInverseTransformList,
 	toTransformList,
 } from "@/layers/layerTransform";
-import { maskMarks, recordRedactionStrokes } from "@/layers/RedactionLayerView";
+import {
+	layerBlur,
+	maskMarks,
+	RedactionLayerView,
+	recordLayerStrokes,
+	recordRedactionStrokes,
+	strokesPicture,
+} from "@/layers/RedactionLayerView";
 import type {
 	Brush,
 	EditorDocument,
 	Layer,
 	MaskStroke,
+	RedactionBox,
 	RedactionEffect,
+	RedactionLayer,
 	RedactionStrokes,
 } from "@/model/document";
+import { drawingBox } from "@/model/drawing";
 import { rectFromCorners } from "@/model/geometry";
 import { colors } from "@/theme";
 import { CanvasBackground, LayerContent } from "../EditorSceneParts";
-import { handleMetrics, handlesVisible } from "../handles/handleMetrics";
+import { handleSides } from "../handles/handleGeometry";
+import { handleMetrics, shownHandles } from "../handles/handleMetrics";
 import type { LiveTransform } from "./liveTransform";
 
 const SELECTION_STROKE_PX = 1.5;
@@ -124,6 +135,7 @@ export function EditorScene({
 							<StrokeTarget
 								layer={layer}
 								stroke={stroke?.targetId === layer.id ? stroke : null}
+								live={live}
 								onImageError={onImageError}
 							/>
 						</LiveLayer>
@@ -197,15 +209,17 @@ function LiveLayer({
 
 /**
  * A layer's content, with `stroke` joining it as it's painted when the
- * layer is its target.
+ * layer is its target. A redaction follows the live values while selected.
  */
 function StrokeTarget({
 	layer,
 	stroke,
+	live,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke: LiveStroke | null;
+	live: LiveTransform;
 	onImageError: (error: unknown) => void;
 }) {
 	const tool = stroke?.tool;
@@ -216,6 +230,9 @@ function StrokeTarget({
 		layer.shape === "strokes"
 	) {
 		return <LiveRedactionStrokes layer={layer} stroke={stroke} tool={tool} />;
+	}
+	if (layer.type === "redaction") {
+		return <LiveRedaction layer={layer} live={live} />;
 	}
 	return (
 		<LayerContent
@@ -235,6 +252,79 @@ function StrokeTarget({
 			onImageError={onImageError}
 		/>
 	);
+}
+
+/**
+ * A redaction that follows the live values while it's selected, as
+ * `LiveLayer` places it: a box's size as its sides are dragged, and a blur
+ * that holds its strength in document pixels while a pinch or a corner
+ * scales the layer, rather than growing with it until the scale commits.
+ */
+function LiveRedaction({
+	layer,
+	live,
+}: {
+	layer: RedactionLayer;
+	live: LiveTransform;
+}) {
+	if (layer.shape === "box") {
+		return <LiveRedactionBox layer={layer} live={live} />;
+	}
+	if (layer.effect.type === "blur") {
+		return <LiveBlurStrokes layer={layer} live={live} />;
+	}
+	return <RedactionLayerView layer={layer} />;
+}
+
+function LiveRedactionBox({
+	layer,
+	live,
+}: {
+	layer: RedactionBox;
+	live: LiveTransform;
+}) {
+	const { id, width, height, effect, transform } = layer;
+	const box = useDerivedValue(() => {
+		const active = live.activeId.value === id;
+		const w = active ? live.halfWidth.value : width / 2;
+		const h = active ? live.halfHeight.value : height / 2;
+		return rect(-w, -h, w * 2, h * 2);
+	}, [id, width, height]);
+	const radius = effect.type === "blur" ? effect.radius : 0;
+	const blur = useDerivedValue(() => {
+		const active = live.activeId.value === id;
+		return layerBlur(radius, active ? live.scale.value : transform.scaleX);
+	}, [id, radius, transform.scaleX]);
+	return effect.type === "solid" ? (
+		<Rect rect={box} color={effect.color} />
+	) : (
+		<BackdropBlur clip={box} blur={blur} />
+	);
+}
+
+/**
+ * Blurred strokes, recorded again for the live scale while it's off the
+ * document's. Otherwise they're the picture export draws.
+ */
+function LiveBlurStrokes({
+	layer,
+	live,
+}: {
+	layer: RedactionStrokes;
+	live: LiveTransform;
+}) {
+	const { id, effect, transform } = layer;
+	const committed = strokesPicture(layer);
+	const marks = maskMarks(layer.strokes);
+	const box = drawingBox(layer);
+	const picture = useDerivedValue(() => {
+		const scale =
+			live.activeId.value === id ? live.scale.value : transform.scaleX;
+		return scale === transform.scaleX
+			? committed
+			: recordLayerStrokes(effect, marks, box, scale);
+	}, [layer]);
+	return <Picture picture={picture} />;
 }
 
 /**
@@ -431,9 +521,10 @@ function SnapGuides({
 
 /**
  * The selected layer's outline and its corner (scale) and knob (rotate)
- * handles, drawn from the live values so they follow gestures. The group
- * translates and rotates with the layer but doesn't scale: the scale moves
- * the corners instead, so handles stay the same size on screen.
+ * handles, and a box's side (resize) handles when it resizes freely, drawn
+ * from the live values so they follow gestures. The group translates and
+ * rotates with the layer but doesn't scale: the scale moves the corners
+ * instead, so handles stay the same size on screen.
  */
 function SelectionHandles({
 	live,
@@ -453,7 +544,7 @@ function SelectionHandles({
 	);
 
 	// The outline and the stem up to the knob as one path, and the corner
-	// dots and knob as another.
+	// dots, side pills, and knob as another.
 	const shapes = useDerivedValue(() => {
 		const lines = Skia.PathBuilder.Make();
 		const handles = Skia.PathBuilder.Make();
@@ -464,23 +555,41 @@ function SelectionHandles({
 		const w = box.halfWidth * live.scale.value;
 		const h = box.halfHeight * live.scale.value;
 		lines.addRect(Skia.XYWHRect(-w, -h, w * 2, h * 2));
-		if (!handlesVisible(box, live.scale.value, viewScale)) {
-			return { lines: lines.build(), handles: handles.build() };
-		}
-
 		const radius = (handleMetrics.size / viewScale) * 0.6;
-		const knobY = -h - handleMetrics.knobOffset / viewScale;
-		for (const [x, y] of [
-			[-w, -h],
-			[w, -h],
-			[w, h],
-			[-w, h],
-		]) {
-			handles.addCircle(x, y, radius);
+		// Pills along the sides, so they read as pulling that side out.
+		const long = radius * 3.2;
+		const short = radius * 1.5;
+		const shown = shownHandles(
+			box,
+			live.scale.value,
+			viewScale,
+			live.resizable.value,
+		);
+		for (const handle of shown) {
+			if (handle === "rotate") {
+				const knobY = -h - handleMetrics.knobOffset / viewScale;
+				handles.addCircle(0, knobY, radius);
+				lines.moveTo(0, -h);
+				lines.lineTo(0, knobY + radius);
+				continue;
+			}
+			const sides = handleSides(handle);
+			const x = sides.x * w;
+			const y = sides.y * h;
+			if (sides.x !== 0 && sides.y !== 0) {
+				handles.addCircle(x, y, radius);
+				continue;
+			}
+			const width = sides.x === 0 ? long : short;
+			const height = sides.x === 0 ? short : long;
+			handles.addRRect(
+				Skia.RRectXY(
+					Skia.XYWHRect(x - width / 2, y - height / 2, width, height),
+					short / 2,
+					short / 2,
+				),
+			);
 		}
-		handles.addCircle(0, knobY, radius);
-		lines.moveTo(0, -h);
-		lines.lineTo(0, knobY + radius);
 		return { lines: lines.build(), handles: handles.build() };
 	}, [viewScale]);
 	const lines = useDerivedValue(() => shapes.value.lines);

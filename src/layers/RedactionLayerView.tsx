@@ -20,7 +20,7 @@ import type {
 	RedactionStrokes,
 } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
-import type { Transform } from "@/model/geometry";
+import type { Box, Transform } from "@/model/geometry";
 import { pathFor } from "./DrawingLayerView";
 
 // How far past its sigma a blur reads what's around it: beyond three sigmas,
@@ -89,29 +89,15 @@ export function maskMarks(strokes: MaskStroke[]): MaskMark[] {
 // a layer is recorded once, for the editor and export alike.
 const pictures = new WeakMap<RedactionStrokes, SkPicture>();
 
-function strokesPicture(layer: RedactionStrokes): SkPicture {
+/** A redaction's strokes, recorded for its own transform. */
+export function strokesPicture(layer: RedactionStrokes): SkPicture {
 	let picture = pictures.get(layer);
 	if (!picture) {
-		const scale = layer.transform.scaleX;
-		// A blur reads a little past the strokes, so bounds that stopped at
-		// them would blur differently at their edges than the editor does
-		// while painting, when nothing bounds it.
-		const { halfWidth, halfHeight } = drawingBox(layer);
-		const reach =
-			layer.effect.type === "blur"
-				? layerBlur(layer.effect.radius, scale) * BLUR_REACH
-				: 0;
-		picture = recordRedactionStrokes(
+		picture = recordLayerStrokes(
 			layer.effect,
-			scale,
 			maskMarks(layer.strokes),
-			null,
-			rect(
-				-halfWidth - reach,
-				-halfHeight - reach,
-				(halfWidth + reach) * 2,
-				(halfHeight + reach) * 2,
-			),
+			drawingBox(layer),
+			layer.transform.scaleX,
 		);
 		pictures.set(layer, picture);
 	}
@@ -186,4 +172,35 @@ export function recordRedactionStrokes(
 	canvas.restore();
 	canvas.restore();
 	return recorder.finishRecordingAsPicture();
+}
+
+/**
+ * A redaction's strokes, which fill `box`, recorded for a layer at `scale`.
+ * A worklet, so the editor can record them again as a pinch scales them.
+ */
+export function recordLayerStrokes(
+	effect: RedactionEffect,
+	strokeMarks: MaskMark[],
+	box: Box,
+	scale: number,
+): SkPicture {
+	"worklet";
+	// A blur reads a little past the strokes, so bounds that stopped at them
+	// would blur differently at their edges than the editor does while
+	// painting, when nothing bounds it.
+	const { halfWidth, halfHeight } = box;
+	const reach =
+		effect.type === "blur" ? layerBlur(effect.radius, scale) * BLUR_REACH : 0;
+	return recordRedactionStrokes(
+		effect,
+		scale,
+		strokeMarks,
+		null,
+		rect(
+			-halfWidth - reach,
+			-halfHeight - reach,
+			(halfWidth + reach) * 2,
+			(halfHeight + reach) * 2,
+		),
+	);
 }
