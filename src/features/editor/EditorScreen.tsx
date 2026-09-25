@@ -252,10 +252,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		moveLayer(selectedLayer.id, selectedIndex + step);
 	};
 
-	// Always with the pen, so the first stroke shows. Its color and sizes stay.
+	// With the pen used last, but never the eraser, so the first stroke
+	// shows. Its color and sizes stay.
 	const startDrawing = () => {
 		setLayersOpen(false);
-		setBrushSettings((settings) => ({ ...settings, tool: "pen" }));
+		setBrushSettings((settings) =>
+			settings.tool === "eraser" ? { ...settings, tool: "pen" } : settings,
+		);
 		setTool("draw");
 	};
 	// With the tool that adds to the selected redaction, if there is one.
@@ -520,7 +523,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					{tool === "draw" ? (
 						<DrawPanel
 							settings={brushSettings}
-							optionsOpen={toolOptionsOpen}
 							onChange={setBrushSettings}
 							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
 						/>

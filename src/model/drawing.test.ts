@@ -103,6 +103,26 @@ describe("addStroke", () => {
 		assert.equal(layer.strokes[1].width, 5);
 	});
 
+	test("keeps a pen's tip and color through the move into the layer", () => {
+		const drawn = createDrawingLayer(pen([0, 0, 100, 0]));
+		const moved = { ...drawn, transform: { ...drawn.transform, x: 300 } };
+		const layer = addStroke(moved, {
+			...pen([0, 0, 50, 50], 30),
+			color: "#34C759",
+			tip: "marker",
+		});
+		assert.deepEqual(
+			{ ...layer.strokes[1], points: [] },
+			{
+				type: "pen",
+				color: "#34C759",
+				width: 30,
+				tip: "marker",
+				points: [],
+			},
+		);
+	});
+
 	test("an eraser doesn't move the drawing's middle", () => {
 		const drawn = createDrawingLayer(pen([0, 0, 100, 0]));
 		const layer = addStroke(drawn, eraser([100, 0, 900, 900], 40));

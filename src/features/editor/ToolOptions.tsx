@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import type { PenTip } from "@/model/document";
 import { colors, radii } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
 
@@ -42,7 +43,10 @@ export function ToolOptions({
 	);
 }
 
-/** One of the card's options: its name, then its choices. */
+/**
+ * One of the card's options: its name, then its choices under it, which
+ * leaves a phone room for a row of seven swatches.
+ */
 export function ToolOption({
 	label,
 	children,
@@ -66,13 +70,18 @@ export function ToolChoices({ children }: { children: ReactNode }) {
 // Each brush size's dot, in points: its order, not its true width.
 export const SIZE_DOTS = [4, 7, 11, 16, 22];
 
-/** A brush's tip: filled with its color, or an outline for an eraser. */
+/**
+ * A brush's tip: filled with its color, or an outline for an eraser. A
+ * marker's is squarer and see-through, and a neon pen's glows.
+ */
 export function SizeDot({
 	size,
 	color,
+	tip,
 }: {
 	size: number;
 	color: string | null;
+	tip?: PenTip;
 }) {
 	return (
 		<View
@@ -82,6 +91,13 @@ export function SizeDot({
 				color === null
 					? styles.eraserDot
 					: { backgroundColor: color, borderColor: colors.borderStrong },
+				color !== null &&
+					tip === "marker" && { borderRadius: size / 4, opacity: 0.6 },
+				color !== null &&
+					tip === "neon" && {
+						borderColor: colors.textPrimary,
+						boxShadow: `0 0 ${Math.max(4, size / 2)}px ${color}`,
+					},
 			]}
 		/>
 	);
@@ -99,18 +115,14 @@ const styles = StyleSheet.create({
 		borderRadius: radii.extraLarge,
 	},
 	cardContent: {
-		gap: 4,
+		gap: 6,
 		paddingHorizontal: 20,
 		paddingVertical: 10,
 	},
 	option: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 16,
+		gap: 2,
 	},
-	// Wide enough for the longest name, "Strength".
 	optionLabel: {
-		width: 60,
 		fontSize: 13,
 		fontWeight: "600",
 		color: colors.textSecondary,

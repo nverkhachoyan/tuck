@@ -1,8 +1,11 @@
 import { StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
+import { gradientBackground } from "@/ui/gradient";
 import { RING_TARGET, RingChoice } from "@/ui/RingChoice";
 
 const SWATCH_SIZE = 26;
+// The custom color's dot, inside the custom swatch's rainbow.
+const CUSTOM_DOT = 14;
 
 export const SWATCHES = [
 	{ color: "#FFFFFF", name: "White" },
@@ -13,14 +16,26 @@ export const SWATCHES = [
 	{ color: "#0A84FF", name: "Blue" },
 ];
 
-/** The color swatches, led by a "none" swatch when `noneLabel` is given. */
+/**
+ * A swatch that opens a color picker: a rainbow, around the color picked
+ * with it last (`color`) once there is one. It's chosen whenever the value
+ * isn't one of the swatches'.
+ */
+export type CustomSwatch = { color: string | null; onPress: () => void };
+
+/**
+ * The color swatches, led by a "none" swatch when `noneLabel` is given, and
+ * followed by a custom one when `custom` is.
+ */
 export function ColorSwatches({
 	value,
 	noneLabel,
+	custom,
 	onPick,
 }: {
 	value: string | null;
 	noneLabel?: string;
+	custom?: CustomSwatch;
 	onPick: (color: string | null) => void;
 }) {
 	return (
@@ -46,6 +61,23 @@ export function ColorSwatches({
 					<View style={[styles.swatch, { backgroundColor: color }]} />
 				</RingChoice>
 			))}
+			{custom && (
+				<RingChoice
+					label="Custom color"
+					selected={
+						value !== null && !SWATCHES.some((swatch) => swatch.color === value)
+					}
+					onPress={custom.onPress}
+				>
+					<View style={[styles.swatch, styles.rainbow]}>
+						{custom.color && (
+							<View
+								style={[styles.customDot, { backgroundColor: custom.color }]}
+							/>
+						)}
+					</View>
+				</RingChoice>
+			)}
 		</View>
 	);
 }
@@ -65,6 +97,17 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		overflow: "hidden",
+	},
+	// Diagonal, so the small swatch shows every hue.
+	rainbow: gradientBackground(
+		"linear-gradient(135deg, #FF3B30, #FFD60A, #34C759, #0A84FF, #BF5AF2)",
+	),
+	customDot: {
+		width: CUSTOM_DOT,
+		height: CUSTOM_DOT,
+		borderRadius: CUSTOM_DOT / 2,
+		borderWidth: 1.5,
+		borderColor: colors.surface,
 	},
 	swatchSlash: {
 		width: 36,
