@@ -102,41 +102,10 @@ export function addStroke(layer: DrawingLayer, stroke: Stroke): DrawingLayer {
 	});
 }
 
-/**
- * Whether a point in a drawing's own space is within `padding` of what one
- * of its pens drew. Unlike a box, this lets a tap inside a circle drawn
- * around something reach the layer under it.
- */
-export function hitTestDrawing(
-	layer: DrawingLayer,
-	point: Point,
-	padding: number,
-): boolean {
-	return layer.strokes.some(
-		(stroke) =>
-			stroke.type === "pen" &&
-			nearLine(stroke.points, point, stroke.width / 2 + padding),
-	);
-}
-
-/** Whether `point` is within `reach` of the line through `points`. */
-function nearLine(points: number[], point: Point, reach: number): boolean {
-	const reachSquared = reach * reach;
-	// A dot is a line from its point to itself.
-	const last = Math.max(0, points.length - 4);
-	for (let i = 0; i <= last; i += 2) {
-		const end = Math.min(i + 2, points.length - 2);
-		const distance = segmentDistanceSquared(
-			{ x: points[i], y: points[i + 1] },
-			{ x: points[end], y: points[end + 1] },
-			point,
-		);
-		if (distance <= reachSquared) return true;
-	}
-	return false;
-}
-
+// Hit-testing runs in gestures on the UI thread, so it's made of worklets,
+// each declared above the ones that call it: worklets aren't hoisted.
 function segmentDistanceSquared(from: Point, to: Point, point: Point): number {
+	"worklet";
 	const dx = to.x - from.x;
 	const dy = to.y - from.y;
 	const lengthSquared = dx * dx + dy * dy;
@@ -153,4 +122,40 @@ function segmentDistanceSquared(from: Point, to: Point, point: Point): number {
 	const x = from.x + along * dx - point.x;
 	const y = from.y + along * dy - point.y;
 	return x * x + y * y;
+}
+
+/** Whether `point` is within `reach` of the line through `points`. */
+function nearLine(points: number[], point: Point, reach: number): boolean {
+	"worklet";
+	const reachSquared = reach * reach;
+	// A dot is a line from its point to itself.
+	const last = Math.max(0, points.length - 4);
+	for (let i = 0; i <= last; i += 2) {
+		const end = Math.min(i + 2, points.length - 2);
+		const distance = segmentDistanceSquared(
+			{ x: points[i], y: points[i + 1] },
+			{ x: points[end], y: points[end + 1] },
+			point,
+		);
+		if (distance <= reachSquared) return true;
+	}
+	return false;
+}
+
+/**
+ * Whether a point in a drawing's own space is within `padding` of what one
+ * of its pens drew. Unlike a box, this lets a tap inside a circle drawn
+ * around something reach the layer under it.
+ */
+export function hitTestDrawing(
+	layer: DrawingLayer,
+	point: Point,
+	padding: number,
+): boolean {
+	"worklet";
+	return layer.strokes.some(
+		(stroke) =>
+			stroke.type === "pen" &&
+			nearLine(stroke.points, point, stroke.width / 2 + padding),
+	);
 }

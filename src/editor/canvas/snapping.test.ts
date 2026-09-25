@@ -1,7 +1,8 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { snapAngle, snapSpan, snapTo } from "./snapping.ts";
+import type { Transform } from "../../model/geometry.ts";
+import { snapAngle, snapLinesFor, snapSpan, snapTo } from "./snapping.ts";
 
 describe("snapTo", () => {
 	test("returns the target within the tolerance, on either side", () => {
@@ -55,5 +56,69 @@ describe("snapSpan", () => {
 
 	test("returns null when no line is in reach", () => {
 		assert.equal(snap(60, 40), null);
+	});
+});
+
+describe("snapLinesFor", () => {
+	const canvas = { width: 200, height: 100 };
+	const at = (x: number, y: number, rotation = 0): Transform => ({
+		x,
+		y,
+		scaleX: 1,
+		scaleY: 1,
+		rotation,
+	});
+	const box = { halfWidth: 20, halfHeight: 10 };
+
+	test("starts from the canvas's edges and center", () => {
+		assert.deepEqual(snapLinesFor(canvas, []), {
+			x: { edges: [0, 200], centers: [100] },
+			y: { edges: [0, 100], centers: [50] },
+		});
+	});
+
+	test("adds each other layer's edges and center", () => {
+		const lines = snapLinesFor(canvas, [
+			{ transform: at(60, 40), box, clipped: false },
+		]);
+		assert.deepEqual(lines.x, { edges: [0, 200, 40, 80], centers: [100, 60] });
+		assert.deepEqual(lines.y, { edges: [0, 100, 30, 50], centers: [50, 40] });
+	});
+
+	test("uses the upright box around a rotated layer", () => {
+		const lines = snapLinesFor(canvas, [
+			{ transform: at(60, 40, Math.PI / 2), box, clipped: false },
+		]);
+		assert.deepEqual(lines.x.edges, [0, 200, 50, 70]);
+		assert.deepEqual(lines.y.edges, [0, 100, 20, 60]);
+	});
+
+	test("leaves out lines past the canvas's edges", () => {
+		const lines = snapLinesFor(canvas, [
+			{ transform: at(190, 50), box, clipped: false },
+		]);
+		assert.deepEqual(lines.x, { edges: [0, 200, 170], centers: [100, 190] });
+	});
+
+	test("counts a clipped layer only as far as the canvas shows it", () => {
+		const photo = { halfWidth: 100, halfHeight: 50 };
+		const clipped = snapLinesFor(canvas, [
+			{ transform: at(150, 50), box: photo, clipped: true },
+		]);
+		assert.deepEqual(clipped.x, {
+			edges: [0, 200, 50, 200],
+			centers: [100, 125],
+		});
+		const unclipped = snapLinesFor(canvas, [
+			{ transform: at(150, 50), box: photo, clipped: false },
+		]);
+		assert.deepEqual(unclipped.x, { edges: [0, 200, 50], centers: [100, 150] });
+	});
+
+	test("ignores a clipped layer the canvas doesn't show at all", () => {
+		assert.deepEqual(
+			snapLinesFor(canvas, [{ transform: at(400, 50), box, clipped: true }]),
+			snapLinesFor(canvas, []),
+		);
 	});
 });

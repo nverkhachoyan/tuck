@@ -1,34 +1,84 @@
 import { layerBounds } from "@/layers/layerBounds";
-import type { EditorDocument } from "@/model/document";
+import type { DrawingLayer, EditorDocument } from "@/model/document";
 import { hitTestDrawing } from "@/model/drawing";
-import { hitTestBox, type Point, toLayerSpace } from "@/model/geometry";
+import {
+	type Box,
+	hitTestBox,
+	type Point,
+	type Transform,
+	toLayerSpace,
+} from "@/model/geometry";
 
 // Minimum comfortable touch padding around a layer, in screen pixels.
 const HIT_PADDING_PX = 14;
 
 /**
- * Returns the id of the topmost selectable layer under a document-space
- * point, or null. Locked and hidden layers aren't selectable. `viewScale`
- * (screen pixels per document unit) keeps small layers comfortably tappable
- * on screen. A drawing is only hit near what it drew, so a tap inside a
- * circle drawn around something reaches what's under it.
+ * What gestures need to know about a visible layer on the UI thread, where
+ * text can't be laid out: where it is, its selection box, and where a touch
+ * selects it. Built on the JS thread whenever the document or the view's
+ * scale changes, and hit-tested on either thread.
+ */
+export type LayerTarget = {
+	id: string;
+	transform: Transform;
+	box: Box;
+	// The box a touch hits, padded so small layers stay tappable; null when
+	// the layer is locked and can't be selected.
+	hitBox: Box | null;
+	hitPadding: number;
+	// A drawing is only hit near what it drew.
+	drawing: DrawingLayer | null;
+	// A locked photo is cut off at the canvas's edge.
+	clipped: boolean;
+};
+
+/**
+ * The document's visible layers, bottom to top. `viewScale` is screen pixels
+ * per document unit, and must be above 0.
+ */
+export function layerTargets(
+	document: EditorDocument,
+	viewScale: number,
+): LayerTarget[] {
+	return document.layers
+		.filter((layer) => !layer.hidden)
+		.map((layer) => {
+			const hitPadding = HIT_PADDING_PX / (viewScale * layer.transform.scaleX);
+			return {
+				id: layer.id,
+				transform: layer.transform,
+				box: layerBounds(layer),
+				hitBox: layer.locked ? null : layerBounds(layer, hitPadding),
+				hitPadding,
+				drawing: layer.type === "drawing" && !layer.locked ? layer : null,
+				clipped: layer.type === "image" && layer.locked,
+			};
+		});
+}
+
+/**
+ * The topmost selectable layer under a document-space point, or null. A
+ * drawing is only hit near what it drew, so a tap inside a circle drawn
+ * around something reaches what's under it.
  */
 export function findLayerAt(
-	document: EditorDocument,
+	targets: readonly LayerTarget[],
 	point: Point,
-	viewScale: number,
-): string | null {
-	for (let i = document.layers.length - 1; i >= 0; i--) {
-		const layer = document.layers[i];
-		if (layer.hidden || layer.locked) continue;
-		const padding = HIT_PADDING_PX / (viewScale * layer.transform.scaleX);
-		const box = layerBounds(layer, padding);
-		if (!hitTestBox(layer.transform, box, point)) continue;
+): LayerTarget | null {
+	"worklet";
+	for (let i = targets.length - 1; i >= 0; i--) {
+		const target = targets[i];
+		if (!target.hitBox || !hitTestBox(target.transform, target.hitBox, point))
+			continue;
 		if (
-			layer.type !== "drawing" ||
-			hitTestDrawing(layer, toLayerSpace(layer.transform, point), padding)
+			!target.drawing ||
+			hitTestDrawing(
+				target.drawing,
+				toLayerSpace(target.transform, point),
+				target.hitPadding,
+			)
 		) {
-			return layer.id;
+			return target;
 		}
 	}
 	return null;

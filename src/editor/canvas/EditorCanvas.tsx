@@ -23,7 +23,7 @@ import {
 import { handleUnder } from "../handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
 import { EditorScene, type LiveStroke } from "./EditorScene";
-import { findLayerAt } from "./hitTest";
+import { findLayerAt, type LayerTarget, layerTargets } from "./hitTest";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
@@ -66,8 +66,9 @@ export type EditorCanvasHandle = {
  *
  * All touch handling (tap-to-select, drag/pinch/rotate, the selection's
  * scale and rotate handles) is a single gesture on the canvas; selection is
- * resolved by hit-testing in document space. With a mouse, the cursor shows
- * what a press at the pointer would do.
+ * resolved by hit-testing in document space, against `layerTargets`, which
+ * the UI thread shares so a drag can pick its layer there. With a mouse, the
+ * cursor shows what a press at the pointer would do.
  *
  * With a `brush`, a single gesture paints instead, into the selected
  * drawing if there is one. The selection is then hidden and holds still.
@@ -112,6 +113,15 @@ export function EditorCanvas({
 	);
 	const { scale, offsetX, offsetY } = viewport;
 
+	const targets = useMemo(
+		() => (scale > 0 ? layerTargets(document, scale) : []),
+		[document, scale],
+	);
+	const sharedTargets = useSharedValue<readonly LayerTarget[]>([]);
+	useLayoutEffect(() => {
+		sharedTargets.value = targets;
+	}, [sharedTargets, targets]);
+
 	const selectedLayerId = selectedLayer?.id ?? null;
 	// What gestures move: nothing while painting.
 	const movableLayer = brush ? undefined : selectedLayer;
@@ -145,11 +155,10 @@ export function EditorCanvas({
 	const layerAt = useCallback(
 		(screenX: number, screenY: number) =>
 			findLayerAt(
-				document,
+				targets,
 				viewPointToDocument(viewport, { x: screenX, y: screenY }),
-				scale,
-			),
-		[document, viewport, scale],
+			)?.id ?? null,
+		[targets, viewport],
 	);
 
 	const handleTap = useCallback(
@@ -172,19 +181,6 @@ export function EditorCanvas({
 			scale,
 			selectedLayerId,
 		],
-	);
-
-	// Dragging a layer that isn't selected selects it first. Dragging empty
-	// space keeps moving the current selection, which helps with small text.
-	const handleDragStart = useCallback(
-		(screenX: number, screenY: number) => {
-			if (scale === 0 || !onSelectLayer) return false;
-			const id = layerAt(screenX, screenY);
-			if (id === null || id === selectedLayerId) return false;
-			onSelectLayer(id);
-			return true;
-		},
-		[layerAt, onSelectLayer, scale, selectedLayerId],
 	);
 
 	// What a press at the pointer would do: grab a handle, move a layer, or
@@ -210,10 +206,11 @@ export function EditorCanvas({
 
 	const gesture = useLayerTransformGesture({
 		live,
+		layers: sharedTargets,
 		viewport,
 		documentSize,
 		onTap: handleTap,
-		onDragStart: handleDragStart,
+		onSelect: onSelectLayer,
 		onCommit: handleCommit,
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
