@@ -11,7 +11,7 @@ import {
 } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import { type SharedValue, useDerivedValue } from "react-native-reanimated";
-import { brushPaint, strokePath } from "@/layers/DrawingLayerView";
+import { BrushStroke, strokePath } from "@/layers/DrawingLayerView";
 import { layerBounds } from "@/layers/layerBounds";
 import {
 	toInverseTransformList,
@@ -368,7 +368,7 @@ function unlanded(stroke: LiveStroke): number[] {
  */
 function LivePath({ stroke, brush }: { stroke: LiveStroke; brush: Brush }) {
 	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
-	return <Path path={path} {...brushPaint(brush)} />;
+	return <BrushStroke path={path} brush={brush} />;
 }
 
 /**

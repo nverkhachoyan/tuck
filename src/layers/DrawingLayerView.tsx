@@ -1,6 +1,25 @@
-import { Group, Path, Skia, type SkPath } from "@shopify/react-native-skia";
-import type { ReactNode } from "react";
+import {
+	BlurMask,
+	Group,
+	Path,
+	Skia,
+	type SkPath,
+} from "@shopify/react-native-skia";
+import type { ComponentProps, ReactNode } from "react";
+import { mixColors } from "@/lib/color";
 import type { Brush, DrawingLayer, MaskStroke } from "@/model/document";
+
+// A marker's ink is see-through, so what it highlights shows through it.
+const MARKER_OPACITY = 0.45;
+// A neon stroke's parts, as shares of its width: a blurred glow, the tube
+// over it, and the tube's bright core. The glow's sigma is a share too, so
+// it scales with the stroke, and the glow fades out about where the width
+// ends. The core is its color most of the way to white.
+const NEON_GLOW = 0.55;
+const NEON_GLOW_BLUR = 0.16;
+const NEON_TUBE = 0.2;
+const NEON_CORE = 0.08;
+const NEON_CORE_WHITE = 0.75;
 
 /**
  * A smooth line through flattened x, y pairs: curves through the midpoints
@@ -56,11 +75,11 @@ export function DrawingLayerView({
 	return (
 		<Group layer>
 			{layer.strokes.map((stroke, index) => (
-				<Path
+				<BrushStroke
 					// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
 					key={index}
 					path={pathFor(stroke)}
-					{...brushPaint(stroke)}
+					brush={stroke}
 				/>
 			))}
 			{children}
@@ -68,14 +87,70 @@ export function DrawingLayerView({
 	);
 }
 
-/** How a brush paints: round ends, and an eraser clears. */
-export function brushPaint(brush: Brush) {
+/**
+ * A stroke's line as its brush paints it: a pen with its tip, or an eraser,
+ * which clears. `path` can be a shared value, for a stroke still growing.
+ */
+export function BrushStroke({
+	path,
+	brush,
+}: {
+	path: ComponentProps<typeof Path>["path"];
+	brush: Brush;
+}) {
+	if (brush.type === "pen" && brush.tip === "neon") {
+		const { color, width } = brush;
+		return (
+			<>
+				<Path
+					path={path}
+					{...ROUND_STROKE}
+					strokeWidth={width * NEON_GLOW}
+					color={color}
+				>
+					<BlurMask blur={width * NEON_GLOW_BLUR} style="normal" />
+				</Path>
+				<Path
+					path={path}
+					{...ROUND_STROKE}
+					strokeWidth={width * NEON_TUBE}
+					color={color}
+				/>
+				<Path
+					path={path}
+					{...ROUND_STROKE}
+					strokeWidth={width * NEON_CORE}
+					color={mixColors(color, "#FFFFFF", NEON_CORE_WHITE)}
+				/>
+			</>
+		);
+	}
+	return <Path path={path} {...brushPaint(brush)} />;
+}
+
+const ROUND_STROKE = {
+	style: "stroke",
+	strokeCap: "round",
+	strokeJoin: "round",
+} as const;
+
+// Round ends, but a marker's are square, like a highlighter's chisel tip.
+// One path per stroke, so a marker crossing itself doesn't darken.
+function brushPaint(brush: Brush) {
+	if (brush.type === "eraser") {
+		return {
+			...ROUND_STROKE,
+			strokeWidth: brush.width,
+			color: "black",
+			blendMode: "clear",
+		} as const;
+	}
+	const marker = brush.tip === "marker";
 	return {
-		style: "stroke",
+		...ROUND_STROKE,
 		strokeWidth: brush.width,
-		strokeCap: "round",
-		strokeJoin: "round",
-		color: brush.type === "pen" ? brush.color : "black",
-		blendMode: brush.type === "eraser" ? "clear" : "srcOver",
+		strokeCap: marker ? "square" : "round",
+		color: brush.color,
+		opacity: marker ? MARKER_OPACITY : 1,
 	} as const;
 }

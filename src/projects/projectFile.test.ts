@@ -197,7 +197,17 @@ describe("parseSavedProject", () => {
 	test("reads a drawing, with pen and eraser strokes", () => {
 		const document = documentWithText();
 		const drawing = drawingLayer();
-		drawing.strokes.push({ type: "eraser", width: 30, points: [10, 10] });
+		drawing.strokes.push(
+			{
+				type: "pen",
+				color: "#FFD60A",
+				width: 40,
+				points: [0, 0],
+				tip: "marker",
+			},
+			{ type: "pen", color: "#0A84FF", width: 20, points: [5, 5], tip: "neon" },
+			{ type: "eraser", width: 30, points: [10, 10] },
+		);
 		document.layers.push(drawing);
 		const saved = mapImageUris(document, () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: saved }));
@@ -267,6 +277,7 @@ describe("parseSavedProject", () => {
 			...[
 				{ type: "pen", width: 4, points: [0, 0] },
 				{ type: "pencil", color: "#000", width: 4, points: [0, 0] },
+				{ type: "pen", color: "#000", width: 4, points: [0, 0], tip: "chalk" },
 				{ type: "eraser", width: 0, points: [0, 0] },
 				{ type: "eraser", width: 4, points: [] },
 				{ type: "eraser", width: 4, points: [0, 0, 1] },
