@@ -5,6 +5,7 @@ import {
 	BLUR_STRENGTHS,
 	defaultRedactSettings,
 	maskBrush,
+	parseRedactSettings,
 	REDACT_BRUSH_SIZES,
 	redactionEffect,
 	sameEffect,
@@ -79,5 +80,42 @@ describe("sameEffect", () => {
 		const blur = { ...solid, effect: "blur" as const };
 		assert.ok(sameEffect(blur, { ...blur, color: "#FFFFFF" }));
 		assert.ok(!sameEffect(blur, { ...blur, strength: 2 }));
+	});
+});
+
+describe("parseRedactSettings", () => {
+	test("reads back settings saved as they are", () => {
+		const settings = {
+			tool: "brush" as const,
+			effect: "blur" as const,
+			color: "#6B2FA0",
+			strength: 2,
+			brushSize: 4,
+			eraserSize: 0,
+		};
+		assert.deepEqual(
+			parseRedactSettings(JSON.parse(JSON.stringify(settings))),
+			settings,
+		);
+	});
+
+	test("is the default when nothing, or nothing like settings, was saved", () => {
+		for (const saved of [undefined, null, "blur", 3, []]) {
+			assert.deepEqual(parseRedactSettings(saved), defaultRedactSettings);
+		}
+	});
+
+	test("replaces only what isn't valid with the default's", () => {
+		assert.deepEqual(
+			parseRedactSettings({
+				tool: "lasso",
+				effect: "pixelate",
+				color: "red",
+				strength: BLUR_STRENGTHS.length,
+				brushSize: 1.5,
+				eraserSize: 3,
+			}),
+			{ ...defaultRedactSettings, eraserSize: 3 },
+		);
 	});
 });

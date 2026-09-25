@@ -22,9 +22,8 @@ import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
 import { Dock, DockButton, useDockInset } from "@/features/editor/Dock";
 import {
-	type BrushSettings,
 	brushFor,
-	defaultBrushSettings,
+	parseBrushSettings,
 } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
@@ -38,8 +37,8 @@ import {
 	RedactPanel,
 } from "@/features/editor/redact/RedactPanel";
 import {
-	defaultRedactSettings,
 	maskBrush,
+	parseRedactSettings,
 	type RedactSettings,
 	redactionEffect,
 	sameEffect,
@@ -60,6 +59,8 @@ import {
 import { useAddPhoto } from "@/features/editor/useAddPhoto";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { assertNever } from "@/lib/assertNever";
+import { isHexColor } from "@/lib/color";
+import { usePreference } from "@/lib/usePreference";
 import {
 	defaultTextStyle,
 	type EditorDocument,
@@ -90,6 +91,8 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
+
+const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
 export default function EditorScreen() {
 	const router = useRouter();
@@ -179,14 +182,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// redacting, into the selected brushed redaction, or a new one.
 	const [tool, setTool] = useState<"draw" | "redact" | null>(null);
 	const [toolOptionsOpen, setToolOptionsOpen] = useState(false);
-	const [brushSettings, setBrushSettings] =
-		useState<BrushSettings>(defaultBrushSettings);
-	const [chosenRedactSettings, setRedactSettings] = useState<RedactSettings>(
-		defaultRedactSettings,
+	// The tools' settings, and the custom color, are kept between sessions.
+	const [brushSettings, setBrushSettings] = usePreference(
+		"brushSettings",
+		parseBrushSettings,
+	);
+	const [chosenRedactSettings, setRedactSettings] = usePreference(
+		"redactSettings",
+		parseRedactSettings,
 	);
 	// The last color picked from a color picker, which every custom swatch
 	// keeps while a preset is in use. Null until there's one.
-	const [customColor, setCustomColor] = useState<string | null>(null);
+	const [customColor, setCustomColor] = usePreference(
+		"customColor",
+		parseCustomColor,
+	);
 	// Which of a text layer's colors has a picker open over the canvas. It
 	// belongs to that layer, and closes if another is selected.
 	const [textPicker, setTextPicker] = useState<{
