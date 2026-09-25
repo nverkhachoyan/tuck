@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createBlankDocument } from "@/model/document";
+import { editorHref } from "@/projects/projectRoute";
 import { createBlankProject } from "@/projects/projectService";
 import { useStore } from "@/store";
 import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
@@ -50,7 +51,7 @@ export default function CreateScreen() {
 				};
 			});
 			openDocument(opened.document, opened.id);
-			router.replace("/editor");
+			router.replace(editorHref(opened.id));
 		} finally {
 			creating.current = false;
 			setBusy(false);

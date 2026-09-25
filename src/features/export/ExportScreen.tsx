@@ -1,6 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Canvas, Image, Rect, rect, Shadow } from "@shopify/react-native-skia";
-import { useRouter } from "expo-router";
+import {
+	Redirect,
+	useIsFocused,
+	useLocalSearchParams,
+	useRouter,
+} from "expo-router";
 import { useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -15,6 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { errorMessage } from "@/lib/errorMessage";
 import type { EditorDocument } from "@/model/document";
+import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
 import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
 import { Button } from "@/ui/Button";
@@ -30,9 +36,17 @@ import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";
 import { useRenderedDocument } from "./useRenderedDocument";
 
 export default function ExportScreen() {
-	const document = useStore((state) => state.document);
+	const { id } = useLocalSearchParams<{ id: string }>();
+	const document = useStore((state) =>
+		projectRouteId(state.projectId) === id ? state.document : null,
+	);
+	const focused = useIsFocused();
 
-	if (!document) return null;
+	// Reached from a link or a reload, the project isn't open yet: the editor
+	// opens it. Left behind in the stack for another project, wait instead.
+	if (!document) {
+		return focused ? <Redirect href={editorHref(id)} /> : null;
+	}
 
 	return <ScreenContent document={document} />;
 }

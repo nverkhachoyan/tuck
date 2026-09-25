@@ -9,7 +9,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { LoadFonts, resetFailedFonts } from "@/layers/fonts";
 import { errorMessage } from "@/lib/errorMessage";
-import { useStore } from "@/store";
 import { colors, fonts } from "@/theme";
 import { Button } from "@/ui/Button";
 
@@ -86,8 +85,6 @@ function LoadDisplayFonts() {
 }
 
 function Routes() {
-	const hasDocument = useStore((state) => state.document !== null);
-
 	return (
 		<Stack
 			screenOptions={{
@@ -97,10 +94,8 @@ function Routes() {
 		>
 			<Stack.Screen name="index" />
 			<Stack.Screen name="create" />
-			<Stack.Protected guard={hasDocument}>
-				<Stack.Screen name="editor" />
-				<Stack.Screen name="export" />
-			</Stack.Protected>
+			<Stack.Screen name="projects/[id]/index" />
+			<Stack.Screen name="projects/[id]/export" />
 		</Stack>
 	);
 }

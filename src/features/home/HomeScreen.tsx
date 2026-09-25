@@ -21,6 +21,8 @@ import {
 	useHomeProjects,
 } from "@/features/home/useHomeProjects";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
+import { editorHref } from "@/projects/projectRoute";
+import { useStore } from "@/store";
 import { colors, fonts, radii } from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
@@ -118,7 +120,9 @@ export default function HomeScreen() {
 							<Button label="Retry Save" onPress={finishSession} />
 							<Button
 								label="Return to Editor"
-								onPress={() => router.push("/editor")}
+								onPress={() =>
+									router.push(editorHref(useStore.getState().projectId))
+								}
 							/>
 						</View>
 					</View>

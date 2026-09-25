@@ -1,6 +1,17 @@
-import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
+import {
+	useFocusEffect,
+	useIsFocused,
+	useLocalSearchParams,
+	useRouter,
+} from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+	ActivityIndicator,
+	StyleSheet,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import {
 	EditorCanvas,
 	type EditorCanvasHandle,
@@ -51,8 +62,11 @@ import {
 } from "@/model/document";
 import type { Framing } from "@/model/framing";
 import type { Rect } from "@/model/geometry";
+import { exportHref } from "@/projects/projectRoute";
 import { addImage } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
+import { useProjectSession } from "@/projects/useProjectSession";
+import { renderThumbnail } from "@/render/renderDocument";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -61,6 +75,7 @@ import {
 	selectSelectedRedaction,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
+import { colors } from "@/theme";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
@@ -71,12 +86,37 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 const SIDEBAR_MIN_WIDTH = 900;
 
 export default function EditorScreen() {
-	const document = useStore((state) => state.document);
+	const router = useRouter();
+	const { id } = useLocalSearchParams<{ id: string }>();
+	const session = useProjectSession(id, renderThumbnail);
 
-	// The stack guard unmounts this route once the document closes.
-	if (!document) return null;
+	if (session.status === "open") {
+		return <ScreenContent document={session.document} />;
+	}
 
-	return <ScreenContent document={document} />;
+	return (
+		<View style={styles.container}>
+			<ScreenHeader backLabel="Projects" onBack={() => leaveEditor(router)} />
+			<View style={styles.status}>
+				{session.status === "opening" ? (
+					<ActivityIndicator color={colors.textSecondary} />
+				) : (
+					<>
+						<Text style={styles.statusTitle}>Couldn't open project</Text>
+						<Text style={styles.statusMessage}>{session.message}</Text>
+						<Button label="Try Again" onPress={session.retry} />
+					</>
+				)}
+			</View>
+		</View>
+	);
+}
+
+// Opened from a link or a reload, there's nothing behind the editor; the
+// welcome screen still ends the session.
+function leaveEditor(router: ReturnType<typeof useRouter>) {
+	if (router.canGoBack()) router.back();
+	else router.replace("/");
 }
 
 function ScreenContent({ document }: { document: EditorDocument }) {
@@ -263,13 +303,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// Stable, so the layers sheet's swipe isn't rebuilt on every render.
 	const closeLayers = useCallback(() => setLayersOpen(false), []);
 
-	const goBack = () => {
-		// Opened from a link to the create screen, there's nothing behind the
-		// editor; the welcome screen still ends the session.
-		if (router.canGoBack()) router.back();
-		else router.replace("/");
-	};
-
 	const handleShortcut = (shortcut: Shortcut): boolean => {
 		if (shortcut.type === "undo") {
 			undo();
@@ -382,7 +415,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		<View style={styles.container}>
 			<ScreenHeader
 				backLabel="Projects"
-				onBack={goBack}
+				onBack={() => leaveEditor(router)}
 				action={
 					<View style={styles.headerActions}>
 						{!tool && (
@@ -415,7 +448,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								icon="share-outline"
 								variant="primary"
 								size="small"
-								onPress={() => router.push("/export")}
+								onPress={() => router.push(exportHref(projectId))}
 							/>
 						)}
 					</View>
@@ -585,5 +618,24 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 22,
+	},
+	status: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 12,
+		padding: 24,
+	},
+	statusTitle: {
+		fontSize: 17,
+		fontWeight: "600",
+		color: colors.textPrimary,
+	},
+	statusMessage: {
+		fontSize: 15,
+		color: colors.textSecondary,
+		textAlign: "center",
+		maxWidth: 320,
+		marginBottom: 12,
 	},
 });

@@ -1,0 +1,14 @@
+{
+	"cleanUrls": true,
+	"redirects": [
+		{ "source": "/editor", "destination": "/", "permanent": false },
+		{ "source": "/export", "destination": "/", "permanent": false }
+	],
+	"rewrites": [
+		{ "source": "/projects/:id", "destination": "/projects/[id].html" },
+		{
+			"source": "/projects/:id/export",
+			"destination": "/projects/[id]/export.html"
+		}
+	]
+}

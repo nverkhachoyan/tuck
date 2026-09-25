@@ -4,6 +4,7 @@ import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
 import { errorMessage } from "@/lib/errorMessage";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import type { ProjectSummary } from "@/projects/projectFile";
+import { editorHref } from "@/projects/projectRoute";
 import {
 	closeProject,
 	createProject,
@@ -82,7 +83,10 @@ export function useHomeProjects() {
 					return "saveFailed";
 				}
 			}
-			if (document) closeDocument();
+			// Unless a link to another project ended it first.
+			if (document && useStore.getState().document === document) {
+				closeDocument();
+			}
 			await refreshProjects();
 		});
 	}, [run, closeDocument, refreshProjects]);
@@ -100,7 +104,7 @@ export function useHomeProjects() {
 				const opened = await load();
 				if (opened) {
 					openDocument(opened.document, opened.id);
-					router.push("/editor");
+					router.push(editorHref(opened.id));
 				}
 			} catch (error) {
 				showAlert(failure, errorMessage(error));
