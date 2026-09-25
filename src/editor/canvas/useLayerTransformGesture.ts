@@ -3,7 +3,7 @@ import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
-import type { Size, Transform } from "@/model/geometry";
+import { boundingBox, type Size, type Transform } from "@/model/geometry";
 import { type Handle, rotateByDrag, scaleByDrag } from "../handleGeometry";
 import { handleUnder, hasFinePointer } from "../handleMetrics";
 import { type DocumentViewport, viewPointToDocument } from "../viewport";
@@ -18,13 +18,13 @@ import {
 	type PointerTravel,
 	startTravel,
 } from "./pointerTravel";
-import { snapAngle, snapTo } from "./snapping";
+import { snapAngle, snapSpan } from "./snapping";
 
 // Rotation settles on upright and quarter turns when this close.
 const ROTATION_SNAP = (4 * Math.PI) / 180;
-// A dragged layer's center snaps to the document's center lines from this
+// A dragged layer snaps onto the document's edges and center lines from this
 // many screen pixels away.
-const CENTER_SNAP_PX = 8;
+const SNAP_PX = 8;
 
 /**
  * Tap selects, and while a layer is selected pan / pinch / rotate transform
@@ -40,8 +40,9 @@ const CENTER_SNAP_PX = 8;
  * twitch in the meantime, and then applies the whole drag so far, keeping
  * the point the finger grabbed under the finger.
  *
- * Moving snaps the layer's center onto the document's center lines, and
- * rotating settles on quarter turns, with a haptic tick as each snap lands.
+ * Moving snaps the layer's edges onto the document's edges, or its center
+ * onto the center lines, and rotating settles on quarter turns, with a haptic
+ * tick as each snap lands.
  *
  * However many gestures take part, the result is committed once, when the
  * last of them ends, and only if the layer actually moved. With a mouse,
@@ -112,22 +113,31 @@ export function useLayerTransformGesture({
 			"worklet";
 			if (snapped !== null && snapped !== value.value) scheduleOnRN(hapticTick);
 			value.value = snapped ?? raw;
-			return snapped !== null;
 		};
 
 		const moveTo = (x: number, y: number) => {
 			"worklet";
-			const tolerance = CENTER_SNAP_PX / viewport.scale;
-			live.centeredX.value = settle(
-				live.x,
+			const tolerance = SNAP_PX / viewport.scale;
+			const { width, height } = documentSize;
+			const extent = boundingBox(readLiveTransform(live), readLiveBox(live));
+			const snapX = snapSpan(
 				x,
-				snapTo(x, documentSize.width / 2, tolerance),
+				extent.halfWidth,
+				[0, width],
+				[width / 2],
+				tolerance,
 			);
-			live.centeredY.value = settle(
-				live.y,
+			const snapY = snapSpan(
 				y,
-				snapTo(y, documentSize.height / 2, tolerance),
+				extent.halfHeight,
+				[0, height],
+				[height / 2],
+				tolerance,
 			);
+			settle(live.x, x, snapX?.center ?? null);
+			settle(live.y, y, snapY?.center ?? null);
+			live.guideX.value = snapX?.line ?? null;
+			live.guideY.value = snapY?.line ?? null;
 		};
 
 		const rotateTo = (angle: number) => {
@@ -231,8 +241,8 @@ export function useLayerTransformGesture({
 			.onEnd(gestureEnded)
 			.onFinalize(() => {
 				dragHandle.value = null;
-				live.centeredX.value = false;
-				live.centeredY.value = false;
+				live.guideX.value = null;
+				live.guideY.value = null;
 			});
 
 		// Pinch and rotate stand aside while a handle is being dragged, so a

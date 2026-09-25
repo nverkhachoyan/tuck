@@ -127,7 +127,7 @@ export function EditorScene({
 					color={colors.hoverOverlay}
 				/>
 			</Group>
-			<CenterGuides document={document} viewScale={viewScale} live={live} />
+			<SnapGuides document={document} viewScale={viewScale} live={live} />
 			{selectedLayerId !== null && selectedLayerId !== hiddenLayerId && (
 				<SelectionHandles live={live} viewScale={viewScale} />
 			)}
@@ -175,8 +175,8 @@ function LivePath({ stroke }: { stroke: LiveStroke }) {
 	return <Path path={path} {...brushPaint(stroke.brush)} />;
 }
 
-/** The document's center lines that the dragged layer has snapped onto. */
-function CenterGuides({
+/** The document's edge or center lines the dragged layer has snapped onto. */
+function SnapGuides({
 	document,
 	viewScale,
 	live,
@@ -188,13 +188,15 @@ function CenterGuides({
 	const { width, height } = document;
 	const path = useDerivedValue(() => {
 		const builder = Skia.PathBuilder.Make();
-		if (live.centeredX.value) {
-			builder.moveTo(width / 2, 0);
-			builder.lineTo(width / 2, height);
+		const x = live.guideX.value;
+		const y = live.guideY.value;
+		if (x !== null) {
+			builder.moveTo(x, 0);
+			builder.lineTo(x, height);
 		}
-		if (live.centeredY.value) {
-			builder.moveTo(0, height / 2);
-			builder.lineTo(width, height / 2);
+		if (y !== null) {
+			builder.moveTo(0, y);
+			builder.lineTo(width, y);
 		}
 		return builder.build();
 	}, [width, height]);

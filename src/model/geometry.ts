@@ -98,6 +98,22 @@ export function hitTestBox(
 	);
 }
 
+/**
+ * The smallest upright box around a layer's local-space box once its
+ * transform scales and rotates it: in document units, centered on the
+ * layer's position.
+ */
+export function boundingBox(transform: Transform, box: Box): Box {
+	"worklet";
+	const { cos, sin } = cosSin(transform.rotation);
+	const halfWidth = box.halfWidth * transform.scaleX;
+	const halfHeight = box.halfHeight * transform.scaleY;
+	return {
+		halfWidth: Math.abs(halfWidth * cos) + Math.abs(halfHeight * sin),
+		halfHeight: Math.abs(halfWidth * sin) + Math.abs(halfHeight * cos),
+	};
+}
+
 /** The inverse of `toLayerSpace`: a layer-local point in document space. */
 export function toDocumentSpace(transform: Transform, point: Point): Point {
 	"worklet";

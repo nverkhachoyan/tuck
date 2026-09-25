@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
 	applyMatrix,
+	boundingBox,
 	cosSin,
 	hitTestBox,
 	invertMatrix,
@@ -51,6 +52,37 @@ describe("hitTestBox", () => {
 		// Rotated 90°, the 100×20 box now runs vertically.
 		assert.ok(hitTestBox(upright, box, { x: 0, y: 49 }));
 		assert.ok(!hitTestBox(upright, box, { x: 49, y: 0 }));
+	});
+});
+
+describe("boundingBox", () => {
+	const at = (scale: number, rotation: number): Transform => ({
+		x: 40,
+		y: 30,
+		scaleX: scale,
+		scaleY: scale,
+		rotation,
+	});
+	const box = { halfWidth: 10, halfHeight: 5 };
+
+	test("scales an upright box", () => {
+		assert.deepEqual(boundingBox(at(2, 0), box), {
+			halfWidth: 20,
+			halfHeight: 10,
+		});
+	});
+
+	test("swaps the sides exactly on a quarter turn", () => {
+		assert.deepEqual(boundingBox(at(1, Math.PI / 2), box), {
+			halfWidth: 5,
+			halfHeight: 10,
+		});
+	});
+
+	test("grows to hold a rotated box's corners", () => {
+		const extent = boundingBox(at(1, Math.PI / 4), box);
+		near(extent.halfWidth, 15 / Math.SQRT2);
+		near(extent.halfHeight, 15 / Math.SQRT2);
 	});
 });
 
