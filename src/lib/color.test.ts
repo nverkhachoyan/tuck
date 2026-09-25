@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { hexToHsv, hsvToHex, mixColors } from "./color.ts";
+import { hexToHsv, hsvToHex, mixColors, parseTypedHex } from "./color.ts";
 
 describe("hsvToHex", () => {
 	test("makes the primaries and secondaries around the hue circle", () => {
@@ -55,6 +55,25 @@ describe("hexToHsv", () => {
 	test("is null for anything but #RRGGBB", () => {
 		for (const text of ["", "red", "#FFF", "#GGGGGG", "FF3B30"]) {
 			assert.equal(hexToHsv(text), null);
+		}
+	});
+});
+
+describe("parseTypedHex", () => {
+	test("reads six digits, with or without the #, in either case", () => {
+		assert.equal(parseTypedHex("#0a84ff"), "#0A84FF");
+		assert.equal(parseTypedHex("0A84FF"), "#0A84FF");
+		assert.equal(parseTypedHex("  #0a84FF "), "#0A84FF");
+	});
+
+	test("doubles each of three digits, as CSS does", () => {
+		assert.equal(parseTypedHex("#f80"), "#FF8800");
+		assert.equal(parseTypedHex("abc"), "#AABBCC");
+	});
+
+	test("is null for anything else", () => {
+		for (const text of ["", "#", "#12345", "#1234567", "#GG0000", "red"]) {
+			assert.equal(parseTypedHex(text), null);
 		}
 	});
 });

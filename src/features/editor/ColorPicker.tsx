@@ -2,11 +2,13 @@ import { useMemo, useRef, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
+	Platform,
 	StyleSheet,
+	TextInput,
 	View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { type Hsv, hexToHsv, hsvToHex } from "@/lib/color";
+import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
 import { colors } from "@/theme";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
 import { ColorSwatches, isCustomColor } from "./ColorSwatches";
@@ -129,6 +131,12 @@ export function ColorPicker({
 		change({ ...hsv, hue });
 		onChangeEnd(hsvToHex({ ...hsv, hue }));
 	};
+	const pickTyped = (hex: string) => {
+		const next = hexToHsv(hex, hsv.hue);
+		if (!next) return;
+		change(next);
+		onChangeEnd(hex);
+	};
 
 	const pure = hsvToHex({ hue: hsv.hue, saturation: 1, value: 1 });
 	const color = hsvToHex(hsv);
@@ -156,27 +164,71 @@ export function ColorPicker({
 					/>
 				</View>
 			</GestureDetector>
-			<GestureDetector gesture={bar.gesture}>
-				<View
-					onLayout={bar.onLayout}
-					accessible
-					accessibilityRole="adjustable"
-					accessibilityLabel="Hue"
-					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
-					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-					onAccessibilityAction={adjustHue}
-					style={[styles.bar, styles.hues]}
-				>
+			<View style={styles.row}>
+				<GestureDetector gesture={bar.gesture}>
 					<View
-						style={[
-							styles.thumb,
-							styles.barThumb,
-							{ left: `${(hsv.hue / 360) * 100}%`, backgroundColor: pure },
+						onLayout={bar.onLayout}
+						accessible
+						accessibilityRole="adjustable"
+						accessibilityLabel="Hue"
+						accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
+						accessibilityActions={[
+							{ name: "increment" },
+							{ name: "decrement" },
 						]}
-					/>
-				</View>
-			</GestureDetector>
+						onAccessibilityAction={adjustHue}
+						style={[styles.bar, styles.hues]}
+					>
+						<View
+							style={[
+								styles.thumb,
+								styles.barThumb,
+								{ left: `${(hsv.hue / 360) * 100}%`, backgroundColor: pure },
+							]}
+						/>
+					</View>
+				</GestureDetector>
+				{Platform.OS === "web" && <HexField color={color} onPick={pickTyped} />}
+			</View>
 		</View>
+	);
+}
+
+/**
+ * The color's hex code, to read or type over, on web: a desktop has the
+ * keyboard for it, where on a phone the keyboard would cover the picker.
+ * It picks what's typed on Enter or once it loses focus, and puts back the
+ * picker's color if that isn't a color.
+ */
+function HexField({
+	color,
+	onPick,
+}: {
+	color: string;
+	onPick: (hex: string) => void;
+}) {
+	// What's typed, until it's picked; the picker's color otherwise.
+	const [typed, setTyped] = useState<string | null>(null);
+	const pick = () => {
+		if (typed === null) return;
+		const hex = parseTypedHex(typed);
+		if (hex && hex !== color) onPick(hex);
+		setTyped(null);
+	};
+	return (
+		<TextInput
+			value={typed ?? color}
+			onChangeText={setTyped}
+			onSubmitEditing={pick}
+			onBlur={pick}
+			selectTextOnFocus
+			autoCapitalize="characters"
+			autoCorrect={false}
+			spellCheck={false}
+			maxLength={7}
+			accessibilityLabel="Hex color"
+			style={styles.hex}
+		/>
 	);
 }
 
@@ -239,9 +291,26 @@ const styles = StyleSheet.create({
 	blackDown: gradientBackground(
 		"linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000)",
 	),
+	row: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 16,
+	},
 	bar: {
+		flex: 1,
 		height: BAR_HEIGHT,
 		borderRadius: BAR_HEIGHT / 2,
+	},
+	hex: {
+		width: 84,
+		height: 30,
+		paddingHorizontal: 8,
+		borderRadius: 8,
+		backgroundColor: colors.glassControl,
+		color: colors.textPrimary,
+		fontSize: 13,
+		fontVariant: ["tabular-nums"],
+		textAlign: "center",
 	},
 	hues: gradientBackground(HUE_GRADIENT),
 	thumb: {

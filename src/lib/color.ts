@@ -25,6 +25,23 @@ function toHex(rgb: Rgb): string {
 	return `#${channels.join("")}`.toUpperCase();
 }
 
+const TYPED_HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+/**
+ * A hex color as someone might type it, as `#RRGGBB` in capitals, or null
+ * if it isn't one. The `#` is optional, and three digits stand for six, as
+ * in CSS (`#F80` is `#FF8800`).
+ */
+export function parseTypedHex(text: string): string | null {
+	const match = TYPED_HEX.exec(text.trim());
+	if (!match) return null;
+	const digits =
+		match[1].length === 3
+			? [...match[1]].map((digit) => digit + digit).join("")
+			: match[1];
+	return `#${digits.toUpperCase()}`;
+}
+
 /** `#RRGGBB`, in capitals like the swatches', for a color picker's color. */
 export function hsvToHex({ hue, saturation, value }: Hsv): string {
 	const h = (((hue % 360) + 360) % 360) / 60;
