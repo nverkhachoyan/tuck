@@ -618,6 +618,82 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().past.length, steps + 1);
 		});
 
+		test("an eraser removes each shape it passes over, as one undo step", () => {
+			const { store } = storeWithText();
+			store.getState().addShape("rectangle", place, style);
+			store.getState().addShape("arrow", { ...place, y: 900 }, style);
+			const [box, arrow] = shapes(store);
+			const steps = store.getState().past.length;
+			// Across the rectangle's top edge, at y = 250, and nowhere near the arrow.
+			const eraser: Stroke = {
+				type: "eraser",
+				width: 20,
+				points: [400, 200, 400, 300],
+			};
+			store.getState().drawStroke(eraser);
+			assert.deepEqual(shapes(store), [arrow]);
+			assert.equal(store.getState().past.length, steps + 1);
+			// The arrow was selected, and still is.
+			assert.equal(store.getState().selectedLayerId, arrow.id);
+
+			store.getState().undo();
+			assert.deepEqual(shapes(store), [box, arrow]);
+		});
+
+		test("erasing the selected shape clears the selection", () => {
+			const { store } = storeWithText();
+			store.getState().addShape("line", place, style);
+			store.getState().drawStroke({
+				type: "eraser",
+				width: 20,
+				points: [400, 300],
+			});
+			assert.deepEqual(shapes(store), []);
+			assert.equal(store.getState().selectedLayerId, null);
+		});
+
+		test("an eraser leaves locked and hidden shapes, and misses nothing else", () => {
+			const { store } = storeWithText();
+			store.getState().addShape("line", place, style);
+			store.getState().addShape("line", place, style);
+			const [locked, hidden] = shapes(store);
+			store.getState().setLayerLocked(locked.id, true);
+			store.getState().setLayerHidden(hidden.id, true);
+			const before = store.getState().document;
+			store.getState().drawStroke({
+				type: "eraser",
+				width: 20,
+				points: [400, 300],
+			});
+			assert.equal(store.getState().document, before);
+		});
+
+		test("an eraser erases in the selected drawing and removes shapes together", () => {
+			const { store } = storeWithText();
+			store.getState().addShape("line", place, style);
+			store.getState().drawStroke({
+				type: "pen",
+				color: "#000000",
+				width: 10,
+				points: [0, 0, 100, 100],
+			});
+			const steps = store.getState().past.length;
+			store.getState().drawStroke({
+				type: "eraser",
+				width: 20,
+				points: [50, 50, 400, 300],
+			});
+			assert.deepEqual(shapes(store), []);
+			const drawing = store
+				.getState()
+				.document?.layers.find((layer) => layer.type === "drawing");
+			assert.equal(
+				drawing?.type === "drawing" && drawing.strokes.at(-1)?.type,
+				"eraser",
+			);
+			assert.equal(store.getState().past.length, steps + 1);
+		});
+
 		test("resizing a line sets its length and angle", () => {
 			const { store } = storeWithText();
 			store.getState().addShape("arrow", place, style);

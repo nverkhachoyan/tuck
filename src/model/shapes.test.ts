@@ -5,6 +5,7 @@ import { createShapeLayer, type ShapeKind } from "./document.ts";
 import { hitTestDrawing } from "./drawing.ts";
 import {
 	arrowHead,
+	erasesShape,
 	outlineThickness,
 	shapeBox,
 	shapeOutline,
@@ -83,5 +84,39 @@ describe("shapeOutline", () => {
 	test("hits an arrow's head across its width", () => {
 		assert.equal(hits("arrow", 90, 20), true);
 		assert.equal(hits("arrow", -90, 20), false);
+	});
+});
+
+describe("erasesShape", () => {
+	test("is true where the eraser crosses the outline, not inside it", () => {
+		const box = shape("rectangle", 200, 100);
+		// The outline runs 5 in from the box's edge, 10 thick.
+		assert.equal(erasesShape(box, [0, 0, 0, -20], 10), false);
+		assert.equal(erasesShape(box, [0, 0, 0, -60], 10), true);
+		// The outline's ink spans y = -50 to -40: a dot just clear of it, then
+		// overlapping it.
+		assert.equal(erasesShape(box, [0, -33], 10), false);
+		assert.equal(erasesShape(box, [0, -42], 10), true);
+	});
+
+	test("catches a thin line between a quick stroke's far-apart points", () => {
+		const line = shape("line", 400, 0);
+		assert.equal(erasesShape(line, [0, -300, 0, 300], 4), true);
+	});
+
+	test("follows the shape's transform", () => {
+		const line = {
+			...shape("line", 400, 0),
+			transform: {
+				x: 500,
+				y: 500,
+				scaleX: 2,
+				scaleY: 2,
+				rotation: Math.PI / 2,
+			},
+		};
+		// Turned upright and doubled, it runs from y = 100 to 900 at x = 500.
+		assert.equal(erasesShape(line, [400, 850, 600, 850], 4), true);
+		assert.equal(erasesShape(line, [400, 950, 600, 950], 4), false);
 	});
 });

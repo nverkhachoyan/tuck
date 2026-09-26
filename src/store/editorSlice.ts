@@ -39,6 +39,7 @@ import {
 	type Transform,
 	transformsEqual,
 } from "../model/geometry.ts";
+import { erasesShape } from "../model/shapes.ts";
 import type { SliceCreator } from "./index.ts";
 
 // Undo steps kept; the oldest are dropped beyond this.
@@ -222,15 +223,40 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		},
 
 		// A stroke in document space joins the selected drawing, or starts a new
-		// one on top. That one is selected, so the next stroke joins it too.
+		// one on top. That one is selected, so the next stroke joins it too. An
+		// eraser also removes each shape it passes over, whole, in the same undo
+		// step; a shape is one mark, so it's never left in pieces.
 		drawStroke: (stroke) => {
-			if (stroke.points.length < 2) return;
+			const { document, selectedLayerId } = get();
+			if (!document || stroke.points.length < 2) return;
 			const selected = selectSelectedLayer(get());
-			if (selected?.type === "drawing" && !selected.locked) {
-				setLayers("editor/drawStroke", (layers) =>
-					layers.map((layer) =>
-						layer === selected ? addStroke(selected, stroke) : layer,
-					),
+			const target =
+				selected?.type === "drawing" && !selected.locked ? selected : null;
+			const erased = new Set(
+				stroke.type === "eraser"
+					? document.layers
+							.filter(
+								(layer) =>
+									layer.type === "shape" &&
+									!layer.locked &&
+									!layer.hidden &&
+									erasesShape(layer, stroke.points, stroke.width),
+							)
+							.map((layer) => layer.id)
+					: [],
+			);
+			if (target || erased.size > 0) {
+				setLayers(
+					"editor/drawStroke",
+					(layers) =>
+						layers
+							.filter((layer) => !erased.has(layer.id))
+							.map((layer) =>
+								layer === target ? addStroke(target, stroke) : layer,
+							),
+					selectedLayerId !== null && erased.has(selectedLayerId)
+						? null
+						: selectedLayerId,
 				);
 			} else if (stroke.type === "pen") {
 				addOnTop("editor/drawStroke", createDrawingLayer(stroke));
