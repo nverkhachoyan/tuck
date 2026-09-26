@@ -7,6 +7,7 @@ import {
 	createImageLayer,
 	createRedactionBox,
 	createShapeLayer,
+	createStickerLayer,
 	createTextLayer,
 	defaultTextStyle,
 	duplicateLayer,
@@ -208,6 +209,42 @@ describe("createTextLayer", () => {
 			Array.from({ length: 50 }, () => createTextLayer(document, "x").id),
 		);
 		assert.equal(ids.size, 50);
+	});
+});
+
+describe("createStickerLayer", () => {
+	test("centers a sticker across a share of the canvas's shorter side", () => {
+		const document = createBlankDocument(1080, 1920, "#FFFFFF");
+		const layer = createStickerLayer(document, "file:///sticker.png", 512, 512);
+		const scale = (1080 * 0.3) / 512;
+		assert.deepEqual(layer, {
+			type: "image",
+			id: layer.id,
+			uri: "file:///sticker.png",
+			width: 512,
+			height: 512,
+			flipped: false,
+			opaque: false,
+			sticker: true,
+			transform: { x: 540, y: 960, scaleX: scale, scaleY: scale, rotation: 0 },
+			hidden: false,
+			locked: false,
+		});
+	});
+
+	test("is enlarged past its pixels on a large photo", () => {
+		const layer = createStickerLayer(landscape(), "a", 512, 512);
+		assert.equal(layer.transform.scaleX, (3000 * 0.3) / 512);
+	});
+
+	test("fits its longer side", () => {
+		const layer = createStickerLayer(landscape(), "a", 256, 512);
+		assert.equal(layer.transform.scaleY, (3000 * 0.3) / 512);
+	});
+
+	test("keeps its mark when duplicated", () => {
+		const layer = createStickerLayer(landscape(), "a", 512, 512);
+		assert.equal(duplicateLayer(layer).sticker, true);
 	});
 });
 

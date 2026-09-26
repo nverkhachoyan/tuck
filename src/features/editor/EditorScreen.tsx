@@ -13,6 +13,7 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { AddSheet } from "@/features/editor/add/AddSheet";
 import { EyedropperHint } from "@/features/editor/ColorPicker";
 import { isCustomColor } from "@/features/editor/ColorSwatches";
 import {
@@ -71,7 +72,7 @@ import {
 	parseTextStyle,
 	withTextEdit,
 } from "@/features/editor/text/textSettings";
-import { useAddPhoto } from "@/features/editor/useAddPhoto";
+import { useAddImage } from "@/features/editor/useAddImage";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import type { TextSelection } from "@/layers/textEditing";
 import { textIndexAt } from "@/layers/textLayerLayout";
@@ -161,6 +162,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const canRedo = useStore(selectCanRedo);
 	const addTextLayer = useStore((state) => state.addTextLayer);
 	const addImageLayer = useStore((state) => state.addImageLayer);
+	const addStickerLayer = useStore((state) => state.addStickerLayer);
 	const duplicateSelectedLayer = useStore(
 		(state) => state.duplicateSelectedLayer,
 	);
@@ -206,6 +208,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// Typing and cropping take the keyboard, and pasted photos, for themselves.
 	const keysTaken = textEdit !== null || cropping;
 	const [layersOpen, setLayersOpen] = useState(false);
+	const [addOpen, setAddOpen] = useState(false);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
 	const dockInset = useDockInset();
 	// The tool dragging on the canvas uses in place of moving layers. While
@@ -485,8 +488,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		closeCrop();
 	};
 
-	// Stable, so the layers sheet's swipe isn't rebuilt on every render.
+	// Stable, so the sheets' swipes aren't rebuilt on every render.
 	const closeLayers = useCallback(() => setLayersOpen(false), []);
+	const closeAdd = useCallback(() => setAddOpen(false), []);
+	const openAdd = () => {
+		setLayersOpen(false);
+		setAddOpen(true);
+	};
 
 	const handleShortcut = (shortcut: Shortcut): boolean => {
 		if (shortcut.type === "undo") {
@@ -495,6 +503,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 		if (shortcut.type === "redo") {
 			redo();
+			return true;
+		}
+		// The Add sheet's own key, or Escape, closes it; the rest wait.
+		if (addOpen) {
+			if (
+				shortcut.type !== "deselect" &&
+				!(shortcut.type === "tool" && shortcut.tool === "add")
+			) {
+				return false;
+			}
+			closeAdd();
 			return true;
 		}
 		// Escape stops picking a color, or puts the tool down; the rest pick
@@ -558,21 +577,23 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	const focused = useIsFocused();
 	const {
-		busy: photoBusy,
+		busy: addBusy,
 		dragging,
 		pick: pickPhoto,
-	} = useAddPhoto({
+		addSticker,
+	} = useAddImage({
 		// On web, an image pasted or dropped onto the editor joins the canvas,
 		// unless another screen or tool is in front of it.
 		enabled: focused && !keysTaken,
 		maxShortSide: maxNewImageShortSide(document),
-		// The photo moves into the project, so autosave knows its file.
+		// The image moves into the project, so autosave knows its file.
 		// Without a project, it's used where the picker left it.
-		onPhoto: async ({ uri, width, height, opaque }) => {
+		onImage: async ({ uri, width, height, opaque, sticker }) => {
 			const url =
 				projectId === null ? uri : await addImage(projectId, uri, opaque);
 			commitPendingPinch();
-			addImageLayer(url, width, height, opaque);
+			if (sticker) addStickerLayer(url, width, height);
+			else addImageLayer(url, width, height, opaque);
 		},
 	});
 
@@ -583,6 +604,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		text: startNewText,
 		draw: startDrawing,
 		redact: startRedacting,
+		add: openAdd,
 		photo: pickPhoto,
 		crop: startCrop,
 	};
@@ -826,17 +848,29 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						/>
 					) : (
 						<ToolsPanel
-							photoBusy={photoBusy}
+							addBusy={addBusy}
 							onAddText={startNewText}
 							onDraw={startDrawing}
 							onRedact={startRedacting}
-							onAddPhoto={pickPhoto}
+							onAdd={openAdd}
 							onCrop={startCrop}
 						/>
 					)}
 				</Dock>
 			</CanvasStage>
 			{!layersBeside && layersPanel}
+			<AddSheet
+				open={addOpen}
+				onClose={closeAdd}
+				onAddPhoto={() => {
+					closeAdd();
+					pickPhoto();
+				}}
+				onAddSticker={(sticker) => {
+					closeAdd();
+					addSticker(sticker);
+				}}
+			/>
 
 			{dragging && <DropOverlay label="Drop to add to the canvas" />}
 			{cropping && (

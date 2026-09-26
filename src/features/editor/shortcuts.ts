@@ -2,14 +2,16 @@
 const NUDGE_PX = 1;
 const NUDGE_FAR_PX = 10;
 
-export type ToolKey = "text" | "draw" | "redact" | "photo" | "crop";
+export type ToolKey = "text" | "draw" | "redact" | "add" | "photo" | "crop";
 
 // A letter picks up a tool, and L shows or hides the layers. Each tool's
-// button shows its key on hover.
+// button shows its key on hover. A opens the Add sheet, and P goes straight
+// to its photo picker.
 export const TOOL_KEYS: Record<ToolKey, string> = {
 	text: "T",
 	draw: "D",
 	redact: "R",
+	add: "A",
 	photo: "P",
 	crop: "C",
 };

@@ -51,6 +51,8 @@ export const colors = {
 	dangerSoft: "rgba(255, 69, 58, 0.16)",
 	// Dims the canvas behind modal editing UI.
 	scrim: "rgba(0, 0, 0, 0.65)",
+	// Lighter still, behind a sheet the canvas stays in view past.
+	sheetScrim: "rgba(0, 0, 0, 0.3)",
 	// A little lighter, where a blur also quiets what's behind. Dark enough
 	// that white text over a white canvas still reads.
 	frostedScrim: "rgba(0, 0, 0, 0.6)",

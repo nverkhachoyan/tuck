@@ -18,7 +18,9 @@ import {
 // Drawings kept it too: builds from before them list a project that has one
 // as unavailable. Names kept it as well: builds from before them list a
 // project by its text, and drop its name when they save it. So did redactions, and shapes, for the same reason. So
-// did pens' `tip`: builds from before it draw every pen as a plain one.
+// did pens' `tip`: builds from before it draw every pen as a plain one. So
+// did image layers' `sticker`: builds from before it list a sticker as a
+// photo.
 export const PROJECT_VERSION = 3;
 
 // The file of the photo a project was made from. Saved image layers name a
@@ -278,7 +280,8 @@ function isLayer(value: unknown): boolean {
 				isPositive(value.width) &&
 				isPositive(value.height) &&
 				typeof value.flipped === "boolean" &&
-				typeof value.opaque === "boolean"
+				typeof value.opaque === "boolean" &&
+				(value.sticker === undefined || typeof value.sticker === "boolean")
 			);
 		case "text":
 			return (

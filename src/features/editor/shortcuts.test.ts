@@ -50,6 +50,7 @@ describe("shortcutFor", () => {
 			type: "tool",
 			tool: "redact",
 		});
+		assert.deepEqual(shortcutFor(press("a")), { type: "tool", tool: "add" });
 		assert.deepEqual(shortcutFor(press("p")), { type: "tool", tool: "photo" });
 		assert.deepEqual(shortcutFor(press("c")), { type: "tool", tool: "crop" });
 		assert.deepEqual(shortcutFor(press("l")), { type: "layers" });
@@ -90,7 +91,7 @@ describe("shortcutFor", () => {
 	});
 
 	test("ignores other keys, unbound letters, and Option/Alt combinations", () => {
-		assert.equal(shortcutFor(press("a")), null);
+		assert.equal(shortcutFor(press("q")), null);
 		assert.equal(shortcutFor(press("z")), null);
 		assert.equal(shortcutFor(press("Tab")), null);
 		assert.equal(shortcutFor(press("s", { metaKey: true })), null);

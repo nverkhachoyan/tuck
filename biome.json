@@ -97,7 +97,8 @@
 				"src/features/editor/**",
 				"src/import/**",
 				"src/render/**",
-				"src/projects/**"
+				"src/projects/**",
+				"src/stickers/**"
 			],
 			"linter": {
 				"rules": {
@@ -132,7 +133,7 @@
 											"!../theme",
 											"!../theme.ts"
 										],
-										"message": "Editor helpers and the shared import/, render/, and projects/ folders may import only lower-level modules or files in their own folder. See AGENTS.md."
+										"message": "Editor helpers and the shared import/, render/, projects/, and stickers/ folders may import only lower-level modules or files in their own folder. See AGENTS.md."
 									}
 								]
 							}
@@ -164,6 +165,7 @@
 											"!@/model/**",
 											"!../../model/**",
 											"!@/import/**",
+											"!@/stickers/**",
 											"!@/lib/**",
 											"!../../lib/**",
 											"!@/ui/**",
@@ -196,6 +198,7 @@
 											"../**",
 											"!../*",
 											"!../handles/*",
+											"!@/stickers/**",
 											"!@/layers/**",
 											"!../../../layers/**",
 											"!@/store",
@@ -212,7 +215,7 @@
 											"!../../../theme",
 											"!../../../theme.ts"
 										],
-										"message": "Editor subfolders import only themselves, editor root helpers, handles/, and shared lower-level modules. See AGENTS.md."
+										"message": "Editor subfolders import only themselves, editor root helpers, handles/, stickers/, and shared lower-level modules. See AGENTS.md."
 									}
 								]
 							}

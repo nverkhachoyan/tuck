@@ -3,21 +3,22 @@ import { ToolButton, ToolRow } from "../ToolButton";
 
 /**
  * The editing tools, in the dock while no layer is selected. On web, each
- * shows the letter that picks it up (see `TOOL_KEYS`) on hover.
+ * shows the letter that picks it up (see `TOOL_KEYS`) on hover. Add opens
+ * the sheet of photos and stickers, and spins while one is on its way.
  */
 export function ToolsPanel({
-	photoBusy,
+	addBusy,
 	onAddText,
 	onDraw,
 	onRedact,
-	onAddPhoto,
+	onAdd,
 	onCrop,
 }: {
-	photoBusy: boolean;
+	addBusy: boolean;
 	onAddText: () => void;
 	onDraw: () => void;
 	onRedact: () => void;
-	onAddPhoto: () => void;
+	onAdd: () => void;
 	onCrop: () => void;
 }) {
 	return (
@@ -41,11 +42,11 @@ export function ToolsPanel({
 				onPress={onRedact}
 			/>
 			<ToolButton
-				label="Photo"
-				icon="image-plus"
-				shortcut={TOOL_KEYS.photo}
-				busy={photoBusy}
-				onPress={onAddPhoto}
+				label="Add"
+				icon="plus-circle-outline"
+				shortcut={TOOL_KEYS.add}
+				busy={addBusy}
+				onPress={onAdd}
 			/>
 			<ToolButton
 				label="Crop"

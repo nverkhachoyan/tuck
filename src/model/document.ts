@@ -21,6 +21,8 @@ type LayerBase = {
 // transform.x/y is the image's center in document space. `flipped` mirrors
 // it within its own space, which keeps its transform's scale positive.
 // `opaque` is whether every pixel is: photos are, a PNG may not be.
+// `sticker` marks one added from the sticker sheet, which is only named
+// differently: its file is copied into the project like a photo's.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
@@ -28,6 +30,7 @@ export type ImageLayer = LayerBase & {
 	height: number;
 	flipped: boolean;
 	opaque: boolean;
+	sticker?: boolean;
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -423,6 +426,34 @@ export function createImageLayer(
 		},
 		hidden: false,
 		locked: false,
+	};
+}
+
+// How much of the canvas's shorter side a new sticker spans.
+const NEW_STICKER_FIT = 0.3;
+
+/**
+ * A sticker's image as a new layer, centered and sized to the canvas rather
+ * than its pixels, so it looks the same on a screenshot as on a large photo.
+ * A see-through PNG, it's never opaque.
+ */
+export function createStickerLayer(
+	document: EditorDocument,
+	uri: string,
+	width: number,
+	height: number,
+): ImageLayer {
+	const scale =
+		(Math.min(document.width, document.height) * NEW_STICKER_FIT) /
+		Math.max(width, height);
+	return {
+		...createImageLayer(document, uri, width, height, false),
+		sticker: true,
+		transform: {
+			...centeredTransform(document.width, document.height),
+			scaleX: scale,
+			scaleY: scale,
+		},
 	};
 }
 

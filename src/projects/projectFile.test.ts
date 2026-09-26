@@ -8,6 +8,7 @@ import {
 	createRedactionBox,
 	createRedactionStrokes,
 	createShapeLayer,
+	createStickerLayer,
 	createTextLayer,
 	type EditorDocument,
 } from "../model/document.ts";
@@ -205,6 +206,18 @@ describe("parseSavedProject", () => {
 		);
 	});
 
+	test("reads a sticker, an image layer in a file of its own", () => {
+		const document = documentWithText();
+		document.layers.push(
+			createStickerLayer(document, "image-abc-123.png", 512, 512),
+		);
+		const saved = mapImageUris(document, (uri) =>
+			uri === "image-abc-123.png" ? uri : PHOTO_FILE,
+		);
+		const project = parseSavedProject(savedJson({ document: saved }));
+		assert.deepEqual(project?.document, saved);
+	});
+
 	test("reads a drawing, with pen and eraser strokes", () => {
 		const document = documentWithText();
 		const drawing = drawingLayer();
@@ -307,6 +320,12 @@ describe("parseSavedProject", () => {
 			} as unknown as Partial<SavedProject>),
 			savedJson({
 				document: { ...photo, layers: [{ ...photo.layers[0], opaque: 1 }] },
+			} as unknown as Partial<SavedProject>),
+			savedJson({
+				document: {
+					...photo,
+					layers: [{ ...photo.layers[0], sticker: "yes" }],
+				},
 			} as unknown as Partial<SavedProject>),
 			...[
 				{ type: "pen", width: 4, points: [0, 0] },

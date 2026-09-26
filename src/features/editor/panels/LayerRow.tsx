@@ -252,7 +252,7 @@ function IconThumbnail({ icon }: { icon: IconName }) {
 function layerLabel(layer: Layer): string {
 	switch (layer.type) {
 		case "image":
-			return "Photo";
+			return layer.sticker ? "Sticker" : "Photo";
 		case "text":
 			return layer.text.replace(/\s+/g, " ");
 		case "drawing":

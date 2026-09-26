@@ -93,6 +93,19 @@ describe("editorSlice", () => {
 		assert.equal(store.getState().document?.layers.at(-1), added);
 	});
 
+	test("adding a sticker puts it on top, marked, and selects it", () => {
+		const { store } = storeWithText();
+		store.getState().addStickerLayer("file:///sticker.png", 512, 512);
+		const added = store.getState().document?.layers.at(-1);
+		assert.ok(added?.type === "image");
+		assert.equal(added.sticker, true);
+		assert.equal(added.opaque, false);
+		assert.equal(store.getState().selectedLayerId, added.id);
+
+		store.getState().undo();
+		assert.equal(store.getState().document?.layers.length, 2);
+	});
+
 	test("a blank canvas takes photos, and they move", () => {
 		const store = createTestStore();
 		store

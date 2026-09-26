@@ -6,6 +6,7 @@ import {
 	createRedactionBox,
 	createRedactionStrokes,
 	createShapeLayer,
+	createStickerLayer,
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
@@ -66,6 +67,7 @@ export type EditorSlice = {
 		height: number,
 		opaque: boolean,
 	) => void;
+	addStickerLayer: (uri: string, width: number, height: number) => void;
 	duplicateSelectedLayer: () => void;
 	drawStroke: (stroke: Stroke) => void;
 	addRedactionBox: (rect: Rect, effect: RedactionEffect) => void;
@@ -213,6 +215,15 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			addOnTop(
 				"editor/addImageLayer",
 				createImageLayer(document, uri, width, height, opaque),
+			);
+		},
+
+		addStickerLayer: (uri, width, height) => {
+			const { document } = get();
+			if (!document) return;
+			addOnTop(
+				"editor/addStickerLayer",
+				createStickerLayer(document, uri, width, height),
 			);
 		},
 
