@@ -31,6 +31,16 @@ export async function storeImage(
 	return image.uri;
 }
 
+/** Copies one of a project's image files into another project. */
+export async function copyImage(fromId: string, file: string, toId: string) {
+	const directory = projectDirectory(toId);
+	directory.create({ intermediates: true, idempotent: true });
+	await new File(projectDirectory(fromId), file).copy(
+		new File(directory, file),
+		{ overwrite: true },
+	);
+}
+
 export async function imageUrl(id: string, file: string): Promise<string> {
 	const image = new File(projectDirectory(id), file);
 	if (!image.exists) {

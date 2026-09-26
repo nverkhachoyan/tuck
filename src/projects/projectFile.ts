@@ -16,7 +16,8 @@ import {
 // as unavailable. So did image layers' `opaque`: builds from before it save
 // only JPEGs, so a layer without it is opaque, and they don't open PNGs.
 // Drawings kept it too: builds from before them list a project that has one
-// as unavailable. So did redactions, and shapes, for the same reason. So
+// as unavailable. Names kept it as well: builds from before them list a
+// project by its text, and drop its name when they save it. So did redactions, and shapes, for the same reason. So
 // did pens' `tip`: builds from before it draw every pen as a plain one.
 export const PROJECT_VERSION = 3;
 
@@ -52,6 +53,9 @@ export type SavedProject = {
 	// the project lives can change (on iOS, with every app update).
 	document: EditorDocument;
 	thumbnail?: ProjectThumbnail;
+	// Given by renaming; without one, it's listed by its text (see
+	// `projectLabel`).
+	name?: string;
 };
 
 /**
@@ -66,6 +70,7 @@ export type ProjectSummary =
 			id: string;
 			status: "ready";
 			updatedAt: number;
+			// Its name, or else its text.
 			label: string;
 			thumbnail: string | null;
 	  }
@@ -90,10 +95,52 @@ export function parseSavedProject(json: string): SavedProject | null {
 		const value = upgradeProject(JSON.parse(json));
 		if (!isSavedProject(value)) return null;
 		// A bad thumbnail only costs the thumbnail; closing makes a new one.
-		const { thumbnail, ...project } = value;
-		return isThumbnail(thumbnail) ? { ...project, thumbnail } : project;
+		// A bad name costs only the name.
+		const { thumbnail, name, ...project } = value;
+		const named = typeof name === "string" ? projectName(name) : null;
+		return {
+			...project,
+			...(isThumbnail(thumbnail) && { thumbnail }),
+			...(named !== null && { name: named }),
+		};
 	} catch {
 		return null;
+	}
+}
+
+// Enough for a caption, well past what a card shows.
+export const NAME_MAX_LENGTH = 60;
+
+/**
+ * `text` as a project's name, on one line, or null when that leaves nothing,
+ * which lists the project by its text again.
+ */
+export function projectName(text: string): string | null {
+	const name = text
+		.replace(/\s+/g, " ")
+		.trim()
+		.slice(0, NAME_MAX_LENGTH)
+		.trim();
+	return name || null;
+}
+
+// A copy's name ends in " copy", or " copy 2" and on for later ones.
+const COPY_SUFFIX = / copy(?: \d+)?$/;
+
+/**
+ * The name for a copy of a project listed as `label`, as Finder names one:
+ * "label copy", or the first of "label copy 2", "label copy 3", ... that no
+ * project is listed as yet. A copy of a copy counts on from the original.
+ */
+export function copyName(label: string, taken: Iterable<string>): string {
+	const listed = new Set(taken);
+	const base = label
+		.replace(COPY_SUFFIX, "")
+		.slice(0, NAME_MAX_LENGTH - " copy 99".length)
+		.trim();
+	for (let count = 1; ; count++) {
+		const name = count === 1 ? `${base} copy` : `${base} copy ${count}`;
+		if (!listed.has(name)) return name;
 	}
 }
 

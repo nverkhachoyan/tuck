@@ -1041,9 +1041,8 @@ Built early, alongside the stages above:
 * A simple layers panel.
 * Freehand drawing: a Draw tool with a pen, marker, and neon brush, an eraser, colors and sizes it remembers between sessions, and each drawing kept as its own layer of strokes, so it can be moved, resized, drawn on again, or undone a stroke at a time.
 * Shapes, in the Draw tool beside the pens and sharing their colors: rectangles, ellipses, lines, and arrows, each dragged out as its own layer. Rectangles and ellipses resize by their sides, and a line or arrow by dragging either end, which settles on level and upright. A tap inside an outline reaches what's under it, and the eraser removes a shape it passes over whole.
-* Saved projects: each session autosaves as a local project (on web too, in IndexedDB), listed with thumbnails on the welcome screen to reopen or delete. Each project has its own route, so links and reloads open it.
+* Saved projects: each session autosaves as a local project (on web too, in IndexedDB), listed with thumbnails on the welcome screen to reopen, rename, duplicate, or delete. A project without a name is listed by its top text. Each project has its own route, so links and reloads open it.
 
 Missing:
 
 * Stickers.
-* Renaming and duplicating projects.

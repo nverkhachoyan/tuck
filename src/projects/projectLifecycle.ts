@@ -16,6 +16,7 @@ import {
 	type ProjectThumbnail,
 	parseSavedProject,
 	projectLabel,
+	projectName,
 	type SavedProject,
 } from "./projectFile.ts";
 
@@ -24,6 +25,7 @@ export type ProjectStorage = {
 	claimProject(id: string): Promise<boolean>;
 	releaseProject(id: string): Promise<void>;
 	storeImage(id: string, file: string, uri: string): Promise<string>;
+	copyImage(fromId: string, file: string, toId: string): Promise<void>;
 	imageUrl(id: string, file: string): Promise<string>;
 	releaseImage(url: string): void;
 	listImages(id: string): Promise<string[]>;
@@ -49,9 +51,10 @@ type OpenProject = {
 	// The document as last saved, so an unchanged one isn't written again
 	// (and doesn't move up the list).
 	savedJson: string | null;
-	// The saved file's `updatedAt`, and the thumbnail it carries.
+	// The saved file's `updatedAt`, and the thumbnail and name it carries.
 	updatedAt: number;
 	thumbnail: ProjectThumbnail | null;
+	name: string | null;
 	// Autosaves and closing writes must finish in document order.
 	writing: Promise<void>;
 };
@@ -212,6 +215,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				savedJson: null,
 				updatedAt: createdAt,
 				thumbnail: null,
+				name: null,
 				writing: Promise.resolve(),
 			});
 			setAutosaveError(null);
@@ -267,6 +271,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				savedJson: JSON.stringify(saved.document),
 				updatedAt: saved.updatedAt,
 				thumbnail: saved.thumbnail ?? null,
+				name: saved.name ?? null,
 				writing: Promise.resolve(),
 			});
 			setAutosaveError(null);
@@ -300,6 +305,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				updatedAt: Date.now(),
 				document: saved,
 				thumbnail: project.thumbnail ?? undefined,
+				name: project.name ?? undefined,
 			};
 			await storage.writeProjectFile(id, JSON.stringify(file));
 			project.savedJson = savedJson;
@@ -335,6 +341,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 					updatedAt,
 					document: JSON.parse(project.savedJson),
 					thumbnail,
+					name: project.name ?? undefined,
 				};
 				await storage.writeProjectFile(id, JSON.stringify(file));
 				project.thumbnail = thumbnail;
@@ -428,17 +435,92 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		return closed;
 	}
 
-	/** Removes a saved project for good. */
-	async function deleteProject(id: string): Promise<void> {
+	/**
+	 * Runs `work` on a saved project that no editor has open, here or in
+	 * another tab, holding it until the work is done.
+	 */
+	async function withClosedProject<T>(
+		id: string,
+		work: () => Promise<T>,
+	): Promise<T> {
 		await closing;
 		if (openProjects.has(id) || !(await storage.claimProject(id))) {
 			throw new Error("This project is open in another tab.");
 		}
 		try {
-			await storage.removeProject(id);
+			return await work();
 		} finally {
 			await storage.releaseProject(id);
 		}
+	}
+
+	/** A closed project's saved file, which this version can open. */
+	async function readSaved(id: string): Promise<SavedProject> {
+		const json = await storage.readProjectFile(id);
+		if (json === null) throw new Error("This project no longer exists.");
+		const saved = parseSavedProject(json);
+		if (!saved || !hasKnownImageUris(saved)) {
+			throw new Error("It may have been saved by a newer version of the app.");
+		}
+		return saved;
+	}
+
+	/** Removes a saved project for good. */
+	function deleteProject(id: string): Promise<void> {
+		return withClosedProject(id, () => storage.removeProject(id));
+	}
+
+	/**
+	 * Names a saved project, or with a name that's blank (see `projectName`),
+	 * lists it by its text again. It keeps its place in the list: a rename
+	 * isn't an edit.
+	 */
+	function renameProject(id: string, text: string): Promise<void> {
+		return withClosedProject(id, async () => {
+			const { name: _, ...saved } = await readSaved(id);
+			const name = projectName(text);
+			const renamed: SavedProject = name === null ? saved : { ...saved, name };
+			await storage.writeProjectFile(id, JSON.stringify(renamed));
+		});
+	}
+
+	/**
+	 * Copies a saved project, with the image files its layers use, as a new
+	 * one called `name`, at the top of the list. Its thumbnail comes along,
+	 * still as up to date as the original's was.
+	 */
+	function duplicateProject(id: string, name: string): Promise<void> {
+		return withClosedProject(id, async () => {
+			const saved = await readSaved(id);
+			const copyId = createProjectId();
+			if (!(await storage.claimProject(copyId))) {
+				throw new Error("Couldn't start the copy.");
+			}
+			try {
+				for (const file of imageUris(saved.document)) {
+					await storage.copyImage(id, file, copyId);
+				}
+				const now = Date.now();
+				const { thumbnail } = saved;
+				const copy: SavedProject = {
+					version: PROJECT_VERSION,
+					createdAt: now,
+					updatedAt: now,
+					document: saved.document,
+					thumbnail:
+						thumbnail?.updatedAt === saved.updatedAt
+							? { ...thumbnail, updatedAt: now }
+							: thumbnail,
+					name: projectName(name) ?? undefined,
+				};
+				await storage.writeProjectFile(copyId, JSON.stringify(copy));
+			} catch (error) {
+				await storage.removeProject(copyId).catch(() => {});
+				throw error;
+			} finally {
+				await storage.releaseProject(copyId);
+			}
+		});
 	}
 
 	/**
@@ -469,7 +551,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 						id,
 						status: "ready",
 						updatedAt: saved.updatedAt,
-						label: projectLabel(saved.document),
+						label: saved.name ?? projectLabel(saved.document),
 						thumbnail: saved.thumbnail?.url ?? null,
 					};
 				}),
@@ -495,6 +577,8 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		addImage,
 		closeProject,
 		deleteProject,
+		renameProject,
+		duplicateProject,
 		listProjects,
 	};
 }

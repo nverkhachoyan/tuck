@@ -46,6 +46,8 @@ export default function HomeScreen() {
 		choosePhoto,
 		openImage,
 		openProject,
+		renameProject,
+		duplicateProject,
 		deleteProject,
 	} = useHomeProjects();
 	// Side by side once there's room for both labels.
@@ -105,6 +107,8 @@ export default function HomeScreen() {
 					projects={projects}
 					disabled={blocked}
 					onOpen={openProject}
+					onRename={renameProject}
+					onDuplicate={duplicateProject}
 					onDelete={deleteProject}
 				/>
 			)}

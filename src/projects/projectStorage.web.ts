@@ -127,6 +127,17 @@ export async function storeImage(
 	return URL.createObjectURL(blob);
 }
 
+/** Copies one of a project's image files into another project. */
+export async function copyImage(fromId: string, file: string, toId: string) {
+	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
+		t.objectStore(PHOTOS).get(imageKey(fromId, file)),
+	);
+	if (!blob) throw new Error("One of this project's photos is missing.");
+	await run([PHOTOS], "readwrite", (t) =>
+		t.objectStore(PHOTOS).put(blob, imageKey(toId, file)),
+	);
+}
+
 export async function imageUrl(id: string, file: string): Promise<string> {
 	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
 		t.objectStore(PHOTOS).get(imageKey(id, file)),

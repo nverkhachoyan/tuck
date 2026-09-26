@@ -1,17 +1,25 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import type { ComponentProps } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Image,
 	type LayoutChangeEvent,
+	Platform,
 	Pressable,
 	ScrollView,
 	StyleSheet,
 	Text,
+	TextInput,
+	type TextStyle,
 	View,
 } from "react-native";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
-import type { ProjectSummary } from "@/projects/projectFile";
+import {
+	NAME_MAX_LENGTH,
+	type ProjectSummary,
+	projectName,
+} from "@/projects/projectFile";
 import { colors, fonts, radii, webTransition } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
@@ -29,13 +37,22 @@ type ProjectListProps = {
 	projects: ProjectSummary[];
 	disabled: boolean;
 	onOpen: (id: string) => void;
+	onRename: (id: string, name: string) => void;
+	onDuplicate: (id: string) => void;
 	onDelete: (id: string) => void;
 };
 
+/**
+ * The saved projects as a grid of cards, which open them. Edit turns each
+ * card's name into a field to rename it, and gives it buttons to duplicate
+ * and delete it; with a mouse, those buttons also show on hover.
+ */
 export function ProjectList({
 	projects,
 	disabled,
 	onOpen,
+	onRename,
+	onDuplicate,
 	onDelete,
 }: ProjectListProps) {
 	const [editing, setEditing] = useState(false);
@@ -63,6 +80,10 @@ export function ProjectList({
 			<ScrollView
 				contentContainerStyle={styles.grid}
 				showsVerticalScrollIndicator={false}
+				// So a name being typed stays above the keyboard, and a tap on
+				// another card's field moves straight to it.
+				automaticallyAdjustKeyboardInsets
+				keyboardShouldPersistTaps="handled"
 				onLayout={(event: LayoutChangeEvent) =>
 					setWidth(event.nativeEvent.layout.width)
 				}
@@ -77,6 +98,8 @@ export function ProjectList({
 							editing={editing}
 							disabled={disabled}
 							onOpen={onOpen}
+							onRename={onRename}
+							onDuplicate={onDuplicate}
 							onDelete={onDelete}
 						/>
 					))}
@@ -92,16 +115,21 @@ function ProjectCard({
 	editing,
 	disabled,
 	onOpen,
+	onRename,
+	onDuplicate,
 	onDelete,
 }: {
 	project: ProjectSummary;
 	width: number;
 	order: number;
-} & Pick<ProjectListProps, "disabled" | "onOpen" | "onDelete"> & {
+} & Pick<
+	ProjectListProps,
+	"disabled" | "onOpen" | "onRename" | "onDuplicate" | "onDelete"
+> & {
 		editing: boolean;
 	}) {
-	// Tracked around the card and its delete button together, so moving
-	// onto the button doesn't hide it.
+	// Tracked around the card and its buttons together, so moving onto them
+	// doesn't hide them.
 	const [pointerOver, setPointerOver] = useState(false);
 	const unavailable = project.status === "unavailable";
 	const label = unavailable ? "Unavailable project" : project.label;
@@ -149,45 +177,150 @@ function ProjectCard({
 									lifted={hovered && !editing}
 								/>
 							</View>
-							<View style={styles.caption}>
-								<Text style={styles.label} numberOfLines={1}>
-									{label}
-								</Text>
-								<Text style={styles.date} numberOfLines={1}>
-									{detail}
-								</Text>
-							</View>
+							{!editing && (
+								<View style={styles.caption}>
+									<Text style={styles.label} numberOfLines={1}>
+										{label}
+									</Text>
+									<Text style={styles.date} numberOfLines={1}>
+										{detail}
+									</Text>
+								</View>
+							)}
 						</>
 					);
 				}}
 			</Pressable>
-			{(editing || pointerOver) && !disabled && (
-				<Animated.View entering={ZoomIn.duration(160)} style={styles.delete}>
-					<Pressable
-						hitSlop={8}
-						onPress={() => onDelete(project.id)}
-						accessibilityRole="button"
-						accessibilityLabel={`Delete ${label}`}
-						style={(state) => {
-							const { pressed, hovered } = interaction(state);
-							return [
-								styles.deleteButton,
-								webTransition,
-								(hovered || pressed) && styles.deleteButtonHovered,
-							];
-						}}
-					>
-						<Ionicons
-							name="trash-outline"
-							size={15}
-							color={colors.textPrimary}
+			{/* Beside the card rather than in it, so a press on the field is the
+			    field's alone. */}
+			{editing && (
+				<View style={[styles.caption, styles.editingCaption]}>
+					{unavailable ? (
+						<Text style={styles.label} numberOfLines={1}>
+							{label}
+						</Text>
+					) : (
+						<NameField
+							label={label}
+							disabled={disabled}
+							onRename={(name) => onRename(project.id, name)}
 						/>
-					</Pressable>
+					)}
+					<Text style={styles.date} numberOfLines={1}>
+						{detail}
+					</Text>
+				</View>
+			)}
+			{(editing || pointerOver) && !disabled && (
+				<Animated.View entering={ZoomIn.duration(160)} style={styles.badges}>
+					{!unavailable && (
+						<CardButton
+							icon="copy-outline"
+							label={`Duplicate ${label}`}
+							onPress={() => onDuplicate(project.id)}
+						/>
+					)}
+					<CardButton
+						icon="trash-outline"
+						label={`Delete ${label}`}
+						danger
+						onPress={() => onDelete(project.id)}
+					/>
 				</Animated.View>
 			)}
 		</Animated.View>
 	);
 }
+
+/** A small round button over a card's corner. */
+function CardButton({
+	icon,
+	label,
+	danger = false,
+	onPress,
+}: {
+	icon: ComponentProps<typeof Ionicons>["name"];
+	label: string;
+	danger?: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			hitSlop={6}
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			style={(state) => {
+				const { pressed, hovered } = interaction(state);
+				return [
+					styles.cardButton,
+					webTransition,
+					(hovered || pressed) &&
+						(danger ? styles.cardButtonDanger : styles.cardButtonHovered),
+				];
+			}}
+		>
+			<Ionicons name={icon} size={15} color={colors.textPrimary} />
+		</Pressable>
+	);
+}
+
+/**
+ * A project's name, to type a new one over. Leaving the field, or Return,
+ * renames it, and Escape puts the name back. A blank name lists the project
+ * by its text again.
+ */
+function NameField({
+	label,
+	disabled,
+	onRename,
+}: {
+	label: string;
+	disabled: boolean;
+	onRename: (name: string) => void;
+}) {
+	const input = useRef<TextInput>(null);
+	// What's typed, while the field has focus.
+	const [draft, setDraft] = useState<string | null>(null);
+	const cancelled = useRef(false);
+	const finish = () => {
+		const typed = draft;
+		setDraft(null);
+		if (cancelled.current) {
+			cancelled.current = false;
+			return;
+		}
+		if (typed !== null && projectName(typed) !== label) onRename(typed);
+	};
+	return (
+		<TextInput
+			ref={input}
+			value={draft ?? label}
+			editable={!disabled}
+			onFocus={() => setDraft(label)}
+			onChangeText={setDraft}
+			onBlur={finish}
+			onKeyPress={(event) => {
+				if (event.nativeEvent.key !== "Escape") return;
+				cancelled.current = true;
+				input.current?.blur();
+			}}
+			selectTextOnFocus
+			maxLength={NAME_MAX_LENGTH}
+			returnKeyType="done"
+			autoCorrect={false}
+			accessibilityLabel="Project name"
+			style={[styles.label, styles.nameField, fieldFocusStyle]}
+		/>
+	);
+}
+
+// Browsers ring a focused field in their own blue; the field's own border
+// shows focus instead.
+const fieldFocusStyle =
+	Platform.OS === "web"
+		? ({ outlineStyle: "none" } as unknown as TextStyle)
+		: null;
 
 /**
  * The project's last closed look at its own shape, fitted to `space`, like
@@ -365,12 +498,28 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 		color: colors.textSecondary,
 	},
-	delete: {
+	// Where the caption sits in the card while it's out of it (see
+	// `ProjectCard`), with room for the field's padding.
+	editingCaption: {
+		marginTop: 6,
+	},
+	nameField: {
+		height: 30,
+		marginHorizontal: -2,
+		paddingHorizontal: 8,
+		borderRadius: 8,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.borderStrong,
+		backgroundColor: colors.surface,
+	},
+	badges: {
 		position: "absolute",
 		top: 8,
 		right: 8,
+		flexDirection: "row",
+		gap: 6,
 	},
-	deleteButton: {
+	cardButton: {
 		width: 30,
 		height: 30,
 		borderRadius: 15,
@@ -380,7 +529,10 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.borderStrong,
 	},
-	deleteButtonHovered: {
+	cardButtonHovered: {
+		backgroundColor: colors.surfacePressed,
+	},
+	cardButtonDanger: {
 		backgroundColor: colors.danger,
 		borderColor: colors.danger,
 	},

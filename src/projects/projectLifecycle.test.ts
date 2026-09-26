@@ -36,20 +36,27 @@ function createHarness(
 	// Each project's image files; a project with none has no entry.
 	const images = new Map<string, Set<string>>();
 	const released: string[] = [];
+	// Projects another tab holds open, which can't be claimed here.
+	const openElsewhere = new Set<string>();
+	let copyImage: ProjectStorage["copyImage"] = async (fromId, file, toId) => {
+		if (!images.get(fromId)?.has(file)) throw new Error("Missing image");
+		images.set(toId, new Set(images.get(toId)).add(file));
+	};
 	let writes = 0;
 	const remove = (id: string) => {
 		files.delete(id);
 		images.delete(id);
 	};
 	const storage: ProjectStorage = {
-		async claimProject() {
-			return true;
+		async claimProject(id) {
+			return !openElsewhere.has(id);
 		},
 		async releaseProject() {},
 		async storeImage(id, file) {
 			images.set(id, new Set(images.get(id)).add(file));
 			return `blob:${id}/${file}`;
 		},
+		copyImage: (fromId, file, toId) => copyImage(fromId, file, toId),
 		async imageUrl(id, file) {
 			if (!images.get(id)?.has(file)) throw new Error("Missing image");
 			return `blob:${id}/${file}`;
@@ -87,6 +94,10 @@ function createHarness(
 		files,
 		images,
 		released,
+		openElsewhere,
+		set copyImage(copy: ProjectStorage["copyImage"]) {
+			copyImage = copy;
+		},
 		get writes() {
 			return writes;
 		},
@@ -591,5 +602,150 @@ describe("listing and deleting", () => {
 		await harness.projects.deleteProject(id);
 		assert.equal(harness.files.has(id), false);
 		assert.deepEqual(await harness.projects.listProjects(), []);
+	});
+});
+
+describe("renaming and duplicating", () => {
+	async function listed(harness: ReturnType<typeof createHarness>) {
+		return (await harness.projects.listProjects()).map((project) =>
+			project.status === "ready" ? project.label : project.status,
+		);
+	}
+
+	test("a renamed project is listed by its name, in its place", async (t) => {
+		let now = 0;
+		t.mock.method(Date, "now", () => (now += 1000));
+		const harness = createHarness();
+		const first = await createSavedProject(harness);
+		await createSavedProject(harness);
+		const { updatedAt } = savedProject(harness, first);
+		await harness.projects.renameProject(first, "  Trip\n  to   Rome ");
+		assert.equal(savedProject(harness, first).name, "Trip to Rome");
+		assert.equal(savedProject(harness, first).updatedAt, updatedAt);
+		assert.deepEqual(await listed(harness), ["CAPTION", "Trip to Rome"]);
+	});
+
+	test("a blank name lists it by its text again", async () => {
+		const harness = createHarness();
+		const id = await createSavedProject(harness);
+		await harness.projects.renameProject(id, "Named");
+		await harness.projects.renameProject(id, "   ");
+		assert.equal(savedProject(harness, id).name, undefined);
+		assert.deepEqual(await listed(harness), ["CAPTION"]);
+	});
+
+	test("a name outlasts reopening, autosaving, and closing", async () => {
+		const harness = createHarness();
+		const id = await createSavedProject(harness);
+		await harness.projects.renameProject(id, "Keeper");
+		const reopened = await harness.projects.openProject(id);
+		assert.ok(reopened);
+		const edited = addText(reopened, "MORE");
+		harness.projects.queueAutosave(id, edited);
+		harness.projects.flushAutosave();
+		await tick();
+		assert.equal(savedProject(harness, id).name, "Keeper");
+		await harness.projects.closeProject(id, edited, async () => "data:image/a");
+		assert.equal(savedProject(harness, id).name, "Keeper");
+		assert.equal(savedProject(harness, id).thumbnail?.url, "data:image/a");
+	});
+
+	test("a copy has the document and the images it uses, on top", async (t) => {
+		let now = 0;
+		t.mock.method(Date, "now", () => (now += 1000));
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.closeProject(
+			id,
+			addText(document, "CAPTION"),
+			async () => "data:image/a",
+		);
+		await createSavedProject(harness);
+		// Left behind by an earlier session; no layer uses it.
+		harness.images.get(id)?.add("image-old.jpg");
+
+		await harness.projects.duplicateProject(id, "CAPTION copy");
+		assert.deepEqual(await listed(harness), [
+			"CAPTION copy",
+			"CAPTION",
+			"CAPTION",
+		]);
+		const [copy] = await harness.projects.listProjects();
+		assert.notEqual(copy.id, id);
+		const original = savedProject(harness, id);
+		const copied = savedProject(harness, copy.id);
+		assert.deepEqual(copied.document, original.document);
+		assert.deepEqual([...(harness.images.get(copy.id) ?? [])], [PHOTO_FILE]);
+		// Its thumbnail shows it as it is, so closing it won't draw another.
+		assert.deepEqual(copied.thumbnail, {
+			url: "data:image/a",
+			updatedAt: copied.updatedAt,
+		});
+		const reopened = await harness.projects.openProject(copy.id);
+		assert.deepEqual(
+			imageLayers(reopened)[0].uri,
+			`blob:${copy.id}/${PHOTO_FILE}`,
+		);
+	});
+
+	test("a copy of an out-of-date thumbnail is still out of date", async (t) => {
+		let now = 0;
+		t.mock.method(Date, "now", () => (now += 1000));
+		const harness = createHarness();
+		const id = await createSavedProject(harness);
+		const saved = savedProject(harness, id);
+		harness.files.set(
+			id,
+			JSON.stringify({
+				...saved,
+				thumbnail: { url: "data:image/a", updatedAt: saved.updatedAt - 1 },
+			}),
+		);
+		await harness.projects.duplicateProject(id, "Copy");
+		const [copy] = await harness.projects.listProjects();
+		const copied = savedProject(harness, copy.id);
+		assert.notEqual(copied.thumbnail?.updatedAt, copied.updatedAt);
+	});
+
+	test("a copy that fails partway leaves nothing behind", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		const url = await harness.projects.addImage(id, "added", true);
+		await harness.projects.closeProject(id, addPhoto(document, url));
+		let copies = 0;
+		harness.copyImage = async (_fromId, file, toId) => {
+			if (++copies > 1) throw new Error("Disk full");
+			harness.images.set(toId, new Set([file]));
+		};
+		await assert.rejects(harness.projects.duplicateProject(id, "Copy"), {
+			message: "Disk full",
+		});
+		assert.deepEqual([...harness.images.keys()], [id]);
+		assert.deepEqual([...harness.files.keys()], [id]);
+	});
+
+	test("a project that's open, here or in another tab, is left alone", async () => {
+		const harness = createHarness();
+		const id = await createSavedProject(harness);
+		const before = harness.files.get(id);
+		harness.openElsewhere.add(id);
+		await assert.rejects(harness.projects.renameProject(id, "Name"));
+		await assert.rejects(harness.projects.duplicateProject(id, "Copy"));
+		harness.openElsewhere.delete(id);
+
+		assert.ok(await harness.projects.openProject(id));
+		await assert.rejects(harness.projects.renameProject(id, "Name"));
+		assert.equal(harness.files.get(id), before);
+		assert.equal(harness.files.size, 1);
+	});
+
+	test("a project this version can't open can't be renamed or copied", async () => {
+		const harness = createHarness();
+		const newer = JSON.stringify({ version: PROJECT_VERSION + 1 });
+		harness.files.set("newer", newer);
+		await assert.rejects(harness.projects.renameProject("newer", "Name"));
+		await assert.rejects(harness.projects.duplicateProject("newer", "Copy"));
+		assert.equal(harness.files.get("newer"), newer);
+		assert.equal(harness.files.size, 1);
 	});
 });

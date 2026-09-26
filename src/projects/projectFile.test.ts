@@ -12,6 +12,7 @@ import {
 	type EditorDocument,
 } from "../model/document.ts";
 import {
+	copyName,
 	isImageFile,
 	mapImageUris,
 	newImageFile,
@@ -19,6 +20,7 @@ import {
 	PROJECT_VERSION,
 	parseSavedProject,
 	projectLabel,
+	projectName,
 	type SavedProject,
 } from "./projectFile.ts";
 
@@ -254,6 +256,17 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
+	test("keeps a name, and drops a malformed one but not the project", () => {
+		assert.equal(parseSavedProject(savedJson({ name: "Trip" }))?.name, "Trip");
+		for (const name of [3, "   "]) {
+			const project = parseSavedProject(
+				savedJson({ name } as unknown as Partial<SavedProject>),
+			);
+			assert.ok(project);
+			assert.equal("name" in project, false);
+		}
+	});
+
 	test("reads a photo-only marker after the last edit is removed", () => {
 		const photo = mapImageUris(documentWithText(), () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: photo }));
@@ -379,5 +392,40 @@ describe("projectLabel", () => {
 		const document = createBlankDocument(1080, 1080, "#FFFFFF");
 		document.layers.push(createTextLayer(document, "ONLY"));
 		assert.equal(projectLabel(document), "ONLY");
+	});
+});
+
+describe("projectName", () => {
+	test("is the text on one line, trimmed", () => {
+		assert.equal(projectName("  Trip\n to\tRome "), "Trip to Rome");
+	});
+
+	test("is null for blank text, which lists a project by its text", () => {
+		assert.equal(projectName(" \n "), null);
+	});
+
+	test("is cut to the longest a name can be", () => {
+		assert.equal(projectName("a".repeat(100))?.length, 60);
+	});
+});
+
+describe("copyName", () => {
+	test("adds copy, then counts on past names that are taken", () => {
+		assert.equal(copyName("Trip", ["Trip"]), "Trip copy");
+		assert.equal(copyName("Trip", ["Trip", "Trip copy"]), "Trip copy 2");
+		assert.equal(
+			copyName("Trip", ["Trip copy", "Trip copy 2", "Trip copy 4"]),
+			"Trip copy 3",
+		);
+	});
+
+	test("counts a copy of a copy on from the original", () => {
+		assert.equal(copyName("Trip copy", ["Trip copy"]), "Trip copy 2");
+		assert.equal(copyName("Trip copy 2", ["Trip copy"]), "Trip copy 2");
+	});
+
+	test("leaves room for the count after a long label", () => {
+		const name = copyName("a".repeat(100), []);
+		assert.ok(projectName(`${name} 99`)?.endsWith(" 99"));
 	});
 });

@@ -3,14 +3,16 @@ import { useCallback, useRef, useState } from "react";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
 import { errorMessage } from "@/lib/errorMessage";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
-import type { ProjectSummary } from "@/projects/projectFile";
+import { copyName, type ProjectSummary } from "@/projects/projectFile";
 import { editorHref } from "@/projects/projectRoute";
 import {
 	closeProject,
 	createProject,
 	deleteProject,
+	duplicateProject,
 	listProjects,
 	openProject,
+	renameProject,
 } from "@/projects/projectService";
 import { renderThumbnail } from "@/render/renderDocument";
 import { useStore } from "@/store";
@@ -170,6 +172,32 @@ export function useHomeProjects() {
 			],
 		);
 
+	// Changes a saved project in place, then lists them all again.
+	const changeProject = (failure: string, change: () => Promise<void>) =>
+		run("saving", async () => {
+			try {
+				await change();
+			} catch (error) {
+				showAlert(failure, errorMessage(error));
+			}
+			await refreshProjects();
+		});
+
+	const renameSavedProject = (id: string, name: string) =>
+		changeProject("Couldn't rename project", () => renameProject(id, name));
+
+	// Named for the original, as the first copy of it not yet listed.
+	const duplicateSavedProject = (id: string) => {
+		const original = projects.find((project) => project.id === id);
+		if (original?.status !== "ready") return;
+		const labels = projects.flatMap((project) =>
+			project.status === "ready" ? [project.label] : [],
+		);
+		return changeProject("Couldn't duplicate project", () =>
+			duplicateProject(id, copyName(original.label, labels)),
+		);
+	};
+
 	return {
 		status,
 		projects,
@@ -178,6 +206,8 @@ export function useHomeProjects() {
 		choosePhoto,
 		openImage,
 		openProject: openSavedProject,
+		renameProject: renameSavedProject,
+		duplicateProject: duplicateSavedProject,
 		deleteProject: confirmDeleteProject,
 	};
 }

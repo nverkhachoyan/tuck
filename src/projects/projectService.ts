@@ -11,5 +11,7 @@ export const {
 	addImage,
 	closeProject,
 	deleteProject,
+	renameProject,
+	duplicateProject,
 	listProjects,
 } = projects;
