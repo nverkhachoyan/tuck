@@ -11,13 +11,12 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../ToolOptions";
-import {
-	BLUR_STRENGTHS,
-	type RedactSettings,
-	type RedactTool,
-} from "./redactSettings";
+import type { RedactSettings, RedactTool } from "./redactSettings";
 
-const STRENGTH_NAMES = ["Light", "Medium", "Strong"];
+const STRENGTH_NAMES = {
+	blur: ["Light blur", "Medium blur", "Strong blur"],
+	pixelate: ["Small pixels", "Medium pixels", "Large pixels"],
+};
 
 /**
  * The redact tools, in place of the toolbar while redacting: a box to drag
@@ -125,6 +124,13 @@ export function RedactOptions({
 							>
 								<EffectGlyph settings={settings} effect="blur" />
 							</RingChoice>
+							<RingChoice
+								label="Pixelate"
+								selected={effect === "pixelate"}
+								onPress={() => onChange({ ...settings, effect: "pixelate" })}
+							>
+								<EffectGlyph settings={settings} effect="pixelate" />
+							</RingChoice>
 						</ToolChoices>
 					</ToolOption>
 					{effect === "solid" ? (
@@ -140,14 +146,18 @@ export function RedactOptions({
 					) : (
 						<ToolOption label="Strength">
 							<ToolChoices>
-								{BLUR_STRENGTHS.map((_, index) => (
+								{STRENGTH_NAMES[effect].map((name, index) => (
 									<RingChoice
-										key={STRENGTH_NAMES[index]}
-										label={`${STRENGTH_NAMES[index]} blur`}
+										key={name}
+										label={name}
 										selected={index === settings.strength}
 										onPress={() => onChange({ ...settings, strength: index })}
 									>
-										<StrengthDot strength={index} />
+										{effect === "blur" ? (
+											<StrengthDot strength={index} />
+										) : (
+											<PixelSquare strength={index} />
+										)}
 									</RingChoice>
 								))}
 							</ToolChoices>
@@ -177,7 +187,7 @@ export function RedactOptions({
 	);
 }
 
-/** A solid effect's color as a tile, or blur's mark. */
+/** A solid effect's color as a tile, or blur's or pixelation's mark. */
 function EffectGlyph({
 	settings,
 	effect,
@@ -185,10 +195,10 @@ function EffectGlyph({
 	settings: RedactSettings;
 	effect: RedactSettings["effect"];
 }) {
-	if (effect === "blur") {
+	if (effect !== "solid") {
 		return (
 			<MaterialCommunityIcons
-				name="blur"
+				name={effect === "blur" ? "blur" : "checkerboard"}
 				size={24}
 				color={colors.textPrimary}
 			/>
@@ -214,6 +224,19 @@ function StrengthDot({ strength }: { strength: number }) {
 	);
 }
 
+/** Four pixels, larger the larger the pixelation's. */
+function PixelSquare({ strength }: { strength: number }) {
+	const size = 14 + strength * 6;
+	return (
+		<View style={[styles.pixels, { width: size, height: size }]}>
+			<View style={[styles.pixel, styles.pixelLit]} />
+			<View style={styles.pixel} />
+			<View style={styles.pixel} />
+			<View style={[styles.pixel, styles.pixelLit]} />
+		</View>
+	);
+}
+
 const styles = StyleSheet.create({
 	solidTile: {
 		width: 22,
@@ -231,6 +254,20 @@ const styles = StyleSheet.create({
 		width: 8,
 		height: 8,
 		borderRadius: 4,
+		backgroundColor: colors.textPrimary,
+	},
+	pixels: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		borderRadius: 3,
+		overflow: "hidden",
+	},
+	pixel: {
+		width: "50%",
+		height: "50%",
+		backgroundColor: "rgba(245, 245, 247, 0.28)",
+	},
+	pixelLit: {
 		backgroundColor: colors.textPrimary,
 	},
 });

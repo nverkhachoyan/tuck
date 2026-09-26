@@ -9,8 +9,9 @@ export type RedactSettings = {
 	tool: RedactTool;
 	effect: RedactionEffect["type"];
 	color: string;
-	// Indexes into `BLUR_STRENGTHS` and `REDACT_BRUSH_SIZES`; the brush and
-	// eraser each keep their own size.
+	// Indexes into `BLUR_STRENGTHS` or `PIXEL_SIZES`, whichever the effect
+	// uses, and `REDACT_BRUSH_SIZES`; the brush and eraser each keep their
+	// own size.
 	strength: number;
 	brushSize: number;
 	eraserSize: number;
@@ -26,16 +27,19 @@ export const defaultRedactSettings: RedactSettings = {
 	eraserSize: 2,
 };
 
-// Blur sigmas and brush widths as a share of the canvas's shorter side, like
-// the draw tool's sizes, so they look the same on a screenshot as on a
-// camera photo. The lightest blur still leaves text in a screenshot
-// unreadable; brushes start at about a line of its text.
+// Blur sigmas, pixel sides, and brush widths as a share of the canvas's
+// shorter side, like the draw tool's sizes, so they look the same on a
+// screenshot as on a camera photo. The lightest blur, and the smallest
+// pixels, still leave text in a screenshot unreadable: a line of it is about
+// two pixels tall. Brushes start at about a line of its text.
 export const BLUR_STRENGTHS = [0.008, 0.016, 0.03];
+export const PIXEL_SIZES = [0.02, 0.035, 0.055];
 export const REDACT_BRUSH_SIZES = [0.02, 0.035, 0.05, 0.075, 0.11];
 
 const shortSide = (size: Size) => Math.min(size.width, size.height);
 
 const REDACT_TOOLS: RedactTool[] = ["box", "brush", "eraser"];
+const EFFECTS: RedactSettings["effect"][] = ["solid", "blur", "pixelate"];
 
 /**
  * Redact settings from what an earlier session saved, which may be from an
@@ -60,7 +64,7 @@ export function parseRedactSettings(saved: unknown): RedactSettings {
 	};
 	return {
 		tool: REDACT_TOOLS.find((tool) => tool === fields.tool) ?? "box",
-		effect: fields.effect === "blur" ? "blur" : "solid",
+		effect: EFFECTS.find((effect) => effect === fields.effect) ?? "solid",
 		color: isHexColor(fields.color)
 			? fields.color
 			: defaultRedactSettings.color,
@@ -75,12 +79,20 @@ export function redactionEffect(
 	settings: RedactSettings,
 	size: Size,
 ): RedactionEffect {
-	return settings.effect === "solid"
-		? { type: "solid", color: settings.color }
-		: {
+	switch (settings.effect) {
+		case "solid":
+			return { type: "solid", color: settings.color };
+		case "blur":
+			return {
 				type: "blur",
 				radius: BLUR_STRENGTHS[settings.strength] * shortSide(size),
 			};
+		case "pixelate":
+			return {
+				type: "pixelate",
+				size: PIXEL_SIZES[settings.strength] * shortSide(size),
+			};
+	}
 }
 
 /**
@@ -102,7 +114,7 @@ export function maskBrush(
 
 /**
  * The settings showing an existing redaction's effect: its color, or the
- * strength closest to its blur, on a canvas of `size`.
+ * strength closest to its blur or pixels, on a canvas of `size`.
  */
 export function withEffect(
 	settings: RedactSettings,
@@ -112,21 +124,26 @@ export function withEffect(
 	if (effect.type === "solid") {
 		return { ...settings, effect: "solid", color: effect.color };
 	}
-	const share = effect.radius / shortSide(size);
+	const [strengths, value] =
+		effect.type === "blur"
+			? [BLUR_STRENGTHS, effect.radius]
+			: [PIXEL_SIZES, effect.size];
+	const share = value / shortSide(size);
 	let strength = 0;
-	BLUR_STRENGTHS.forEach((candidate, index) => {
-		if (
-			Math.abs(candidate - share) < Math.abs(BLUR_STRENGTHS[strength] - share)
-		) {
+	strengths.forEach((candidate, index) => {
+		if (Math.abs(candidate - share) < Math.abs(strengths[strength] - share)) {
 			strength = index;
 		}
 	});
-	return { ...settings, effect: "blur", strength };
+	return { ...settings, effect: effect.type, strength };
 }
 
 /** Whether two settings redact alike, whatever they paint with. */
 export function sameEffect(left: RedactSettings, right: RedactSettings) {
-	return left.effect === "solid"
-		? right.effect === "solid" && left.color === right.color
-		: right.effect === "blur" && left.strength === right.strength;
+	return (
+		left.effect === right.effect &&
+		(left.effect === "solid"
+			? left.color === right.color
+			: left.strength === right.strength)
+	);
 }

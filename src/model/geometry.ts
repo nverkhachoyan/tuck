@@ -193,6 +193,7 @@ export function applyMatrix(m: Matrix, point: Point): Point {
 }
 
 export function transformsEqual(left: Transform, right: Transform): boolean {
+	"worklet";
 	return (
 		left.x === right.x &&
 		left.y === right.y &&

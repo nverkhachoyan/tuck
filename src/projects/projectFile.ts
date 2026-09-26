@@ -251,7 +251,8 @@ function isRedactionEffect(value: unknown): boolean {
 	return (
 		isFields(value) &&
 		((value.type === "solid" && typeof value.color === "string") ||
-			(value.type === "blur" && isPositive(value.radius)))
+			(value.type === "blur" && isPositive(value.radius)) ||
+			(value.type === "pixelate" && isPositive(value.size)))
 	);
 }
 

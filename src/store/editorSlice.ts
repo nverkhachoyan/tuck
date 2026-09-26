@@ -454,7 +454,12 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 };
 
 function effectsEqual(left: RedactionEffect, right: RedactionEffect): boolean {
-	return left.type === "solid"
-		? right.type === "solid" && left.color === right.color
-		: right.type === "blur" && left.radius === right.radius;
+	switch (left.type) {
+		case "solid":
+			return right.type === "solid" && left.color === right.color;
+		case "blur":
+			return right.type === "blur" && left.radius === right.radius;
+		case "pixelate":
+			return right.type === "pixelate" && left.size === right.size;
+	}
 }

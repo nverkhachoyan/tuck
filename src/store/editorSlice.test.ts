@@ -456,6 +456,7 @@ describe("editorSlice", () => {
 	describe("redaction", () => {
 		const black = { type: "solid", color: "#000000" } as const;
 		const blur = { type: "blur", radius: 24 } as const;
+		const pixels = { type: "pixelate", size: 16 } as const;
 		const box = { x: 100, y: 200, width: 300, height: 50 };
 		const mask = (
 			points: number[],
@@ -530,6 +531,11 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().past.length, steps);
 
 			store.getState().setRedactionEffect(redaction.id, blur);
+			assert.deepEqual(redactions(store)[0].effect, blur);
+			store.getState().setRedactionEffect(redaction.id, pixels);
+			store.getState().setRedactionEffect(redaction.id, { ...pixels });
+			assert.equal(store.getState().past.length, steps + 2);
+			store.getState().undo();
 			assert.deepEqual(redactions(store)[0].effect, blur);
 			store.getState().undo();
 			assert.deepEqual(redactions(store)[0].effect, black);

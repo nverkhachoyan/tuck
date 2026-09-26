@@ -1,17 +1,20 @@
 import {
-	BackdropBlur,
+	BackdropFilter,
 	Fill,
 	Group,
+	ImageFilter,
 	Path,
 	Picture,
 	Rect,
 	rect,
 	Shadow,
 	Skia,
+	type SkRect,
 } from "@shopify/react-native-skia";
 import { type ReactNode, useEffect } from "react";
 import {
 	cancelAnimation,
+	type DerivedValue,
 	type SharedValue,
 	useDerivedValue,
 	useSharedValue,
@@ -27,34 +30,36 @@ import {
 	toTransformList,
 } from "@/layers/layerTransform";
 import {
-	layerBlur,
+	type FilterEffect,
 	maskMarks,
 	RedactionLayerView,
 	recordLayerStrokes,
 	recordRedactionStrokes,
+	redactionFilter,
 	strokesPicture,
 } from "@/layers/RedactionLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { clampSelection, type TextSelection } from "@/layers/textEditing";
 import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
-import type {
-	Brush,
-	EditorDocument,
-	Layer,
-	MaskStroke,
-	RedactionBox,
-	RedactionEffect,
-	RedactionLayer,
-	RedactionStrokes,
-	TextLayer,
+import {
+	type Brush,
+	type EditorDocument,
+	identityTransform,
+	type Layer,
+	type MaskStroke,
+	type RedactionBox,
+	type RedactionEffect,
+	type RedactionLayer,
+	type RedactionStrokes,
+	type TextLayer,
 } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
-import { rectFromCorners } from "@/model/geometry";
+import { rectFromCorners, transformsEqual } from "@/model/geometry";
 import { colors } from "@/theme";
 import { CanvasBackground, LayerContent } from "../EditorSceneParts";
 import { handleSides } from "../handles/handleGeometry";
 import { handleMetrics, shownHandles } from "../handles/handleMetrics";
-import type { LiveTransform } from "./liveTransform";
+import { type LiveTransform, readLiveTransform } from "./liveTransform";
 
 const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
@@ -392,8 +397,9 @@ function Caret({
 /**
  * A redaction that follows the live values while it's selected, as
  * `LiveLayer` places it: a box's size as its sides are dragged, and a blur
- * that holds its strength in document pixels while a pinch or a corner
- * scales the layer, rather than growing with it until the scale commits.
+ * or pixelation that holds in document pixels while a gesture moves or
+ * scales the layer, rather than moving and growing with it until the
+ * gesture commits.
  */
 function LiveRedaction({
 	layer,
@@ -405,8 +411,10 @@ function LiveRedaction({
 	if (layer.shape === "box") {
 		return <LiveRedactionBox layer={layer} live={live} />;
 	}
-	if (layer.effect.type === "blur") {
-		return <LiveBlurStrokes layer={layer} live={live} />;
+	if (layer.effect.type !== "solid") {
+		return (
+			<LiveFilteredStrokes layer={layer} effect={layer.effect} live={live} />
+		);
 	}
 	return <RedactionLayerView layer={layer} />;
 }
@@ -418,46 +426,66 @@ function LiveRedactionBox({
 	layer: RedactionBox;
 	live: LiveTransform;
 }) {
-	const { id, width, height, effect, transform } = layer;
-	const box = useDerivedValue(() => {
+	const { id, width, height, effect } = layer;
+	const box = useDerivedValue<SkRect>(() => {
 		const active = live.activeId.value === id;
 		const w = active ? live.halfWidth.value : width / 2;
 		const h = active ? live.halfHeight.value : height / 2;
 		return rect(-w, -h, w * 2, h * 2);
 	}, [id, width, height]);
-	const radius = effect.type === "blur" ? effect.radius : 0;
-	const blur = useDerivedValue(() => {
-		const active = live.activeId.value === id;
-		return layerBlur(radius, active ? live.scaleX.value : transform.scaleX);
-	}, [id, radius, transform.scaleX]);
 	return effect.type === "solid" ? (
 		<Rect rect={box} color={effect.color} />
 	) : (
-		<BackdropBlur clip={box} blur={blur} />
+		<LiveFilteredBox layer={layer} effect={effect} box={box} live={live} />
 	);
 }
 
-/**
- * Blurred strokes, recorded again for the live scale while it's off the
- * document's. Otherwise they're the picture export draws.
- */
-function LiveBlurStrokes({
+function LiveFilteredBox({
 	layer,
+	effect,
+	box,
+	live,
+}: {
+	layer: RedactionBox;
+	effect: FilterEffect;
+	box: DerivedValue<SkRect>;
+	live: LiveTransform;
+}) {
+	const { id, transform } = layer;
+	const filter = useDerivedValue(
+		() =>
+			redactionFilter(
+				effect,
+				live.activeId.value === id ? readLiveTransform(live) : transform,
+			),
+		[id, effect, transform],
+	);
+	return <BackdropFilter clip={box} filter={<ImageFilter filter={filter} />} />;
+}
+
+/**
+ * Blurred or pixelated strokes, recorded again for the live transform while
+ * it's off the document's. Otherwise they're the picture export draws.
+ */
+function LiveFilteredStrokes({
+	layer,
+	effect,
 	live,
 }: {
 	layer: RedactionStrokes;
+	effect: FilterEffect;
 	live: LiveTransform;
 }) {
-	const { id, effect, transform } = layer;
+	const { id, transform } = layer;
 	const committed = strokesPicture(layer);
 	const marks = maskMarks(layer.strokes);
 	const box = drawingBox(layer);
 	const picture = useDerivedValue(() => {
-		const scale =
-			live.activeId.value === id ? live.scaleX.value : transform.scaleX;
-		return scale === transform.scaleX
+		const current =
+			live.activeId.value === id ? readLiveTransform(live) : transform;
+		return transformsEqual(current, transform)
 			? committed
-			: recordLayerStrokes(effect, marks, box, scale);
+			: recordLayerStrokes(effect, marks, box, current);
 	}, [layer]);
 	return <Picture picture={picture} />;
 }
@@ -530,7 +558,7 @@ function LiveRedactionStrokes({
 		const points = unlanded(stroke);
 		return recordRedactionStrokes(
 			effect,
-			transform?.scaleX ?? 1,
+			transform ?? identityTransform,
 			marks,
 			points.length === 0
 				? null
@@ -550,7 +578,7 @@ function LiveRedactionStrokes({
 
 /**
  * A redaction's box as it's dragged out, in document space, outlined so a
- * blur over a plain area still shows where it goes.
+ * blur or pixelation over a plain area still shows where it goes.
  */
 function LiveBox({
 	stroke,
@@ -574,7 +602,12 @@ function LiveBox({
 			{effect.type === "solid" ? (
 				<Rect rect={box} color={effect.color} />
 			) : (
-				<BackdropBlur clip={box} blur={effect.radius} />
+				<BackdropFilter
+					clip={box}
+					filter={
+						<ImageFilter filter={redactionFilter(effect, identityTransform)} />
+					}
+				/>
 			)}
 			<Rect
 				rect={box}

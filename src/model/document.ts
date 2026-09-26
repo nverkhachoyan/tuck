@@ -105,13 +105,15 @@ export type MaskStroke = {
 };
 
 /**
- * How a redaction hides what's under it: covered with a color, or blurred.
- * `radius` is the blur's sigma in document pixels, however the layer is
- * scaled, so resizing a blur never weakens it.
+ * How a redaction hides what's under it: covered with a color, blurred, or
+ * pixelated. `radius` is the blur's sigma, and `size` a pixel's side, in
+ * document pixels, however the layer is scaled, so resizing one never
+ * weakens it.
  */
 export type RedactionEffect =
 	| { type: "solid"; color: string }
-	| { type: "blur"; radius: number };
+	| { type: "blur"; radius: number }
+	| { type: "pixelate"; size: number };
 
 type RedactionBase = LayerBase & {
 	type: "redaction";
@@ -151,7 +153,7 @@ export type EditorDocument = {
 	layers: Layer[];
 };
 
-const identityTransform: Transform = {
+export const identityTransform: Transform = {
 	x: 0,
 	y: 0,
 	scaleX: 1,

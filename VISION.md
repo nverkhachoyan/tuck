@@ -988,15 +988,14 @@ Any architecture that makes those two substantially different should be examined
 
 # Current Priority
 
-Stage 1's workflow is built, and the app has moved on through most of Stage 2 and parts of Stages 3 and 5 (see Status below). The current milestone is:
+Stage 1's workflow is built, and the app has moved on through Stage 2 and parts of Stages 3 and 5 (see Status below). The current milestone is:
 
-> **Finish Stage 2, then Stage 3's adjustments**
+> **Stage 3's adjustments**
 
 In order:
 
 1. Confirm save and share on real iOS and Android devices, the one Stage 1 criterion still open.
-2. Add pixelation to redaction, the one Stage 2 mode still missing.
-3. Build Stage 3's adjustments: brightness, contrast, saturation, and temperature.
+2. Build Stage 3's adjustments: brightness, contrast, saturation, and temperature.
 
 Stage 1's product test still holds, and new work shouldn't slow it down:
 
@@ -1022,9 +1021,7 @@ Text is edited in place on the canvas, with fonts, colors (including custom ones
 
 ### Stage 2 — Blur + Redaction
 
-Mostly built. A Redact tool adds each redaction as its own layer, either a box (dragged out, then moved and resized by its sides and corners) or brush strokes with an eraser, and each can be undone. A redaction is either a solid color (black by default) or a blur at one of three strengths. The tool remembers its settings between sessions.
-
-Missing: pixelation, both for boxes and brush strokes.
+Built. A Redact tool adds each redaction as its own layer, either a box (dragged out, then moved and resized by its sides and corners) or brush strokes with an eraser, and each can be undone. A redaction is a solid color (black by default), a blur, or a pixelation, the last two at one of three strengths. Pixels line up with the document, so they hold still as a redaction moves. The tool remembers its settings between sessions.
 
 ### Stage 3 — Basic Photo Editing
 

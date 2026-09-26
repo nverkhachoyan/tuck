@@ -25,7 +25,7 @@ import Animated, {
 import { scheduleOnRN } from "react-native-worklets";
 import { assertNever } from "@/lib/assertNever";
 import { hapticTick } from "@/lib/haptics";
-import type { Layer } from "@/model/document";
+import type { Layer, RedactionEffect } from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
@@ -214,21 +214,27 @@ function LayerThumbnail({ layer }: { layer: Layer }) {
 		case "drawing":
 			return <IconThumbnail icon="draw" />;
 		case "redaction":
-			return (
-				<IconThumbnail
-					icon={layer.effect.type === "blur" ? "blur" : "square-rounded"}
-				/>
-			);
+			return <IconThumbnail icon={REDACTION_ICONS[layer.effect.type]} />;
 		default:
 			return assertNever(layer);
 	}
 }
 
-function IconThumbnail({
-	icon,
-}: {
-	icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
-}) {
+type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+const REDACTION_ICONS: Record<RedactionEffect["type"], IconName> = {
+	solid: "square-rounded",
+	blur: "blur",
+	pixelate: "checkerboard",
+};
+
+const REDACTION_LABELS: Record<RedactionEffect["type"], string> = {
+	solid: "Redaction",
+	blur: "Blur",
+	pixelate: "Pixelate",
+};
+
+function IconThumbnail({ icon }: { icon: IconName }) {
 	return (
 		<View style={styles.thumbnail}>
 			<MaterialCommunityIcons
@@ -249,7 +255,7 @@ function layerLabel(layer: Layer): string {
 		case "drawing":
 			return "Drawing";
 		case "redaction":
-			return layer.effect.type === "blur" ? "Blur" : "Redaction";
+			return REDACTION_LABELS[layer.effect.type];
 		default:
 			return assertNever(layer);
 	}

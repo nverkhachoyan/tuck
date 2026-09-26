@@ -214,7 +214,7 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
-	test("reads redactions: boxes and brushed strokes, solid and blurred", () => {
+	test("reads redactions: boxes and brushed strokes, solid, blurred, and pixelated", () => {
 		const document = documentWithText();
 		const strokes = createRedactionStrokes(
 			{ type: "pen", width: 40, points: [0, 0, 100, 0] },
@@ -227,6 +227,10 @@ describe("parseSavedProject", () => {
 				{ type: "solid", color: "#000000" },
 			),
 			strokes,
+			createRedactionBox(
+				{ x: 0, y: 0, width: 40, height: 40 },
+				{ type: "pixelate", size: 16 },
+			),
 		);
 		const saved = mapImageUris(document, () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: saved }));
@@ -291,7 +295,8 @@ describe("parseSavedProject", () => {
 				} as unknown as Partial<SavedProject>),
 			),
 			...[
-				{ effect: { type: "pixelate", size: 8 } },
+				{ effect: { type: "mosaic", size: 8 } },
+				{ effect: { type: "pixelate", size: 0 } },
 				{ effect: { type: "blur", radius: 0 } },
 				{ effect: { type: "solid" } },
 				{ width: 0 },

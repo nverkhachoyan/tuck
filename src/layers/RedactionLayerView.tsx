@@ -1,10 +1,13 @@
 import {
-	BackdropBlur,
+	BackdropFilter,
 	BlendMode,
+	ColorChannel,
+	ImageFilter,
 	PaintStyle,
 	Picture,
 	Rect,
 	rect,
+	type SkImageFilter,
 	Skia,
 	type SkPath,
 	type SkPicture,
@@ -20,12 +23,22 @@ import type {
 	RedactionStrokes,
 } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
-import type { Box, Transform } from "@/model/geometry";
+import {
+	type Box,
+	type Point,
+	type Transform,
+	toLayerSpace,
+} from "@/model/geometry";
 import { pathFor } from "./DrawingLayerView";
 
 // How far past its sigma a blur reads what's around it: beyond three sigmas,
 // a Gaussian's weights round to nothing.
 const BLUR_REACH = 3;
+// A pixelation's blur, as a share of a pixel: about a pixel's average.
+const PIXEL_BLUR = 1 / 3;
+// Where in its pixel each of a pixelation's passes samples, as a share of
+// the pixel's side (see `pixelateFilter`).
+const PIXEL_SAMPLES = [1 / 2, 11 / 16];
 // Bounds for a recording whose layers take their size from the clip: past
 // anything a canvas shows.
 const UNBOUNDED = 1_000_000;
@@ -33,10 +46,13 @@ const UNBOUNDED = 1_000_000;
 /** A redaction's stroke ready to draw, its path built once. */
 export type MaskMark = { path: SkPath; width: number; eraser: boolean };
 
+/** An effect that changes what's under a redaction rather than covering it. */
+export type FilterEffect = Exclude<RedactionEffect, { type: "solid" }>;
+
 /**
  * Draws a redaction layer in its own space. It hides what's already drawn
- * under it: a box covers or blurs it; strokes do the same through a
- * picture, which Skia's declarative API can't express (see
+ * under it: a box covers, blurs, or pixelates it; strokes do the same
+ * through a picture, which Skia's declarative API can't express (see
  * `recordRedactionStrokes`).
  */
 export function RedactionLayerView({ layer }: { layer: RedactionLayer }) {
@@ -52,9 +68,11 @@ export function RedactionLayerView({ layer }: { layer: RedactionLayer }) {
 	return layer.effect.type === "solid" ? (
 		<Rect rect={box} color={layer.effect.color} />
 	) : (
-		<BackdropBlur
+		<BackdropFilter
 			clip={box}
-			blur={layerBlur(layer.effect.radius, layer.transform.scaleX)}
+			filter={
+				<ImageFilter filter={redactionFilter(layer.effect, layer.transform)} />
+			}
 		/>
 	);
 }
@@ -64,9 +82,127 @@ export function RedactionLayerView({ layer }: { layer: RedactionLayer }) {
  * to `radius` document pixels. Skia maps a filter through the canvas's
  * transform, so the editor's zoom scales it just as it scales the layer.
  */
-export function layerBlur(radius: number, scale: number): number {
+function layerBlur(radius: number, scale: number): number {
 	"worklet";
 	return radius / scale;
+}
+
+/**
+ * Moves each point in squares `width` by `height`, lined up with `origin`,
+ * to sample `input` `share` of the way across and down its square. Each of
+ * the two displacement maps, across and then down, is a gray ramp over a
+ * square, repeated: gray stays the same on a Display P3 canvas, where a red
+ * and a green ramp would bleed into each other's channels. The other
+ * channel each reads is its alpha, a constant half, which moves nothing.
+ * A ramp moves a point by at most `share` of a square, so `share` can't be
+ * less than a half.
+ */
+function samplePixels(
+	input: SkImageFilter,
+	share: number,
+	width: number,
+	height: number,
+	origin: Point,
+): SkImageFilter {
+	"worklet";
+	// Displacement is `reach` times the side, times the gray less a half.
+	const reach = share * 2;
+	const end = 1 - 1 / reach;
+	const ramp = (from: Point, to: Point) =>
+		Skia.ImageFilter.MakeShader(
+			Skia.Shader.MakeLinearGradient(
+				from,
+				to,
+				[Skia.Color([1, 1, 1, 0.5]), Skia.Color([end, end, end, 0.5])],
+				null,
+				TileMode.Repeat,
+			),
+		);
+	const across = Skia.ImageFilter.MakeDisplacementMap(
+		ColorChannel.R,
+		ColorChannel.A,
+		width * reach,
+		ramp({ x: origin.x, y: 0 }, { x: origin.x + width, y: 0 }),
+		input,
+	);
+	return Skia.ImageFilter.MakeDisplacementMap(
+		ColorChannel.A,
+		ColorChannel.R,
+		height * reach,
+		ramp({ x: 0, y: origin.y }, { x: 0, y: origin.y + height }),
+		across,
+	);
+}
+
+/**
+ * Pixelates what's under a layer placed by `transform`, in squares `size`
+ * document pixels across. They line up with the document's origin, not the
+ * layer's, so they hold still as the layer moves or resizes, and a box
+ * that lands where it was dragged out keeps its pixels. A rotated layer
+ * turns them with it.
+ *
+ * Skia has no pixelation, and on web no runtime or matrix image filters, so
+ * it's built from filters every platform has: a blur averages each square,
+ * then displacement maps sample it at the square's center (see
+ * `samplePixels`). Their 8-bit ramps can miss that point by a little, so
+ * where it falls on a screen pixel's edge, a square would split between
+ * the pixels on either side. A second pass samples the first's squares
+ * elsewhere in them, which evens the few that split, unless its point falls
+ * on an edge as well.
+ */
+function pixelateFilter(size: number, transform: Transform): SkImageFilter {
+	"worklet";
+	const width = size / transform.scaleX;
+	const height = size / transform.scaleY;
+	const origin = toLayerSpace(transform, { x: 0, y: 0 });
+	const sigma = size * PIXEL_BLUR;
+	let filter = Skia.ImageFilter.MakeBlur(
+		sigma / transform.scaleX,
+		sigma / transform.scaleY,
+		TileMode.Clamp,
+		null,
+	);
+	for (const share of PIXEL_SAMPLES) {
+		filter = samplePixels(filter, share, width, height, origin);
+	}
+	return filter;
+}
+
+/**
+ * What a blur or pixelation does to what's under a layer placed by
+ * `transform`, in the layer's own space. A worklet, so the editor can build
+ * it from live values as a gesture moves the layer.
+ */
+export function redactionFilter(
+	effect: FilterEffect,
+	transform: Transform,
+): SkImageFilter {
+	"worklet";
+	if (effect.type === "blur") {
+		const sigma = layerBlur(effect.radius, transform.scaleX);
+		return Skia.ImageFilter.MakeBlur(sigma, sigma, TileMode.Clamp, null);
+	}
+	return pixelateFilter(effect.size, transform);
+}
+
+/**
+ * How far past a layer placed by `transform` its effect reads what's under
+ * it, in the layer's own space.
+ */
+function filterReach(effect: RedactionEffect, transform: Transform): number {
+	"worklet";
+	switch (effect.type) {
+		case "solid":
+			return 0;
+		case "blur":
+			return layerBlur(effect.radius, transform.scaleX) * BLUR_REACH;
+		case "pixelate":
+			// Anywhere in its square, and the blur around that.
+			return (
+				(effect.size / Math.min(transform.scaleX, transform.scaleY)) *
+				(1 + PIXEL_BLUR * BLUR_REACH)
+			);
+	}
 }
 
 const marks = new WeakMap<MaskStroke[], MaskMark[]>();
@@ -97,7 +233,7 @@ export function strokesPicture(layer: RedactionStrokes): SkPicture {
 			layer.effect,
 			maskMarks(layer.strokes),
 			drawingBox(layer),
-			layer.transform.scaleX,
+			layer.transform,
 		);
 		pictures.set(layer, picture);
 	}
@@ -106,20 +242,21 @@ export function strokesPicture(layer: RedactionStrokes): SkPicture {
 
 /**
  * Records a redaction's strokes over what's under them. Its effect fills a
- * layer of its own, which starts out as what's under it, blurred, when it
- * blurs, and its strokes then mask that layer: pens keep it, erasers clear
- * it. `live` is a stroke still being painted, drawn after them. It's in
- * document space, so the layer's transform is undone for it, if it has one.
- * `scale` is the layer's, and `bounds` limit the layers to what the strokes
- * reach, or null to leave them to the clip.
+ * layer of its own, which starts out as what's under it, blurred or
+ * pixelated, when it filters, and its strokes then mask that layer: pens
+ * keep it, erasers clear it. `live` is a stroke still being painted, drawn
+ * after them. It's in document space, so the layer's transform is undone
+ * for it, if it has one. `transform` places the layer (the identity for a
+ * stroke that will start one), and `bounds` limit the layers to what the
+ * strokes reach, or null to leave them to the clip.
  *
  * A worklet, so the editor can record it again on the UI thread as a stroke
- * grows. Skia maps its blur through the canvas's transform when it plays
+ * grows. Skia maps its filter through the canvas's transform when it plays
  * back, as `layerBlur` describes.
  */
 export function recordRedactionStrokes(
 	effect: RedactionEffect,
-	scale: number,
+	transform: Transform,
 	strokeMarks: MaskMark[],
 	live: { mark: MaskMark; layerTransform: Transform | null } | null,
 	bounds: SkRect | null,
@@ -130,16 +267,11 @@ export function recordRedactionStrokes(
 		bounds ??
 			Skia.XYWHRect(-UNBOUNDED, -UNBOUNDED, UNBOUNDED * 2, UNBOUNDED * 2),
 	);
-	if (effect.type === "blur") {
-		const sigma = layerBlur(effect.radius, scale);
-		canvas.saveLayer(
-			undefined,
-			bounds,
-			Skia.ImageFilter.MakeBlur(sigma, sigma, TileMode.Clamp, null),
-		);
-	} else {
+	if (effect.type === "solid") {
 		canvas.saveLayer(undefined, bounds);
 		canvas.drawColor(Skia.Color(effect.color));
+	} else {
+		canvas.saveLayer(undefined, bounds, redactionFilter(effect, transform));
 	}
 	const mask = Skia.Paint();
 	mask.setBlendMode(BlendMode.DstIn);
@@ -175,25 +307,25 @@ export function recordRedactionStrokes(
 }
 
 /**
- * A redaction's strokes, which fill `box`, recorded for a layer at `scale`.
- * A worklet, so the editor can record them again as a pinch scales them.
+ * A redaction's strokes, which fill `box`, recorded for a layer placed by
+ * `transform`. A worklet, so the editor can record them again as a gesture
+ * moves them.
  */
 export function recordLayerStrokes(
 	effect: RedactionEffect,
 	strokeMarks: MaskMark[],
 	box: Box,
-	scale: number,
+	transform: Transform,
 ): SkPicture {
 	"worklet";
-	// A blur reads a little past the strokes, so bounds that stopped at them
-	// would blur differently at their edges than the editor does while
+	// A filter reads a little past the strokes, so bounds that stopped at
+	// them would filter differently at their edges than the editor does while
 	// painting, when nothing bounds it.
 	const { halfWidth, halfHeight } = box;
-	const reach =
-		effect.type === "blur" ? layerBlur(effect.radius, scale) * BLUR_REACH : 0;
+	const reach = filterReach(effect, transform);
 	return recordRedactionStrokes(
 		effect,
-		scale,
+		transform,
 		strokeMarks,
 		null,
 		rect(
