@@ -28,6 +28,7 @@ import { hapticTick } from "@/lib/haptics";
 import type { Layer, RedactionEffect } from "@/model/document";
 import { colors } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
+import { SHAPE_ICONS, SHAPE_NAMES } from "../shapeIcons";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 export const ROW_HEIGHT = 52;
@@ -215,6 +216,8 @@ function LayerThumbnail({ layer }: { layer: Layer }) {
 			return <IconThumbnail icon="draw" />;
 		case "redaction":
 			return <IconThumbnail icon={REDACTION_ICONS[layer.effect.type]} />;
+		case "shape":
+			return <IconThumbnail icon={SHAPE_ICONS[layer.shape]} />;
 		default:
 			return assertNever(layer);
 	}
@@ -256,6 +259,8 @@ function layerLabel(layer: Layer): string {
 			return "Drawing";
 		case "redaction":
 			return REDACTION_LABELS[layer.effect.type];
+		case "shape":
+			return SHAPE_NAMES[layer.shape];
 		default:
 			return assertNever(layer);
 	}

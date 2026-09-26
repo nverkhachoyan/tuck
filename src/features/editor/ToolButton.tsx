@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { ComponentProps, ReactNode } from "react";
+import { Children, type ComponentProps, type ReactNode, useState } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -11,6 +11,11 @@ import {
 import { colors, radii, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
+
+// A tool's narrowest width, and the space a row of them leaves between them
+// and at its ends while they fit.
+const TOOL_WIDTH = 56;
+const ROW_GAP = 12;
 
 // Tools use MaterialCommunityIcons (photo-editor glyphs like format-text, crop,
 // blur); small inline actions use Ionicons via IconButton.
@@ -101,16 +106,30 @@ export function ToolButton({
 }
 
 /**
- * A dock panel's row of `ToolButton`s, centered while they fit, and
- * scrolling sideways once a narrow screen can't fit them all.
+ * A dock panel's row of `ToolButton`s, centered while they fit. On a narrow
+ * screen the space between them shrinks to fit them all, and only once
+ * there's none left does the row scroll sideways.
  */
 export function ToolRow({ children }: { children: ReactNode }) {
+	const [width, setWidth] = useState(0);
+	const count = Children.toArray(children).length;
+	// Gaps between the tools, and one at each end. Until the row is measured,
+	// it's laid out as though they fit.
+	const spacing = ROW_GAP * (count + 1);
+	const fit =
+		width > 0
+			? Math.min(1, Math.max(0, (width - count * TOOL_WIDTH) / spacing))
+			: 1;
 	return (
 		<ScrollView
 			horizontal
 			showsHorizontalScrollIndicator={false}
 			style={styles.rowScroll}
-			contentContainerStyle={styles.row}
+			contentContainerStyle={[
+				styles.row,
+				{ gap: ROW_GAP * fit, paddingHorizontal: ROW_GAP * fit },
+			]}
+			onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
 		>
 			{children}
 		</ScrollView>
@@ -122,16 +141,14 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	// Grows to fill the panel rather than flexing, which would hold it to the
-	// panel's width, so it never scrolls. Five tools fit a 375pt phone.
+	// panel's width, so it never scrolls.
 	row: {
 		flexGrow: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		gap: 12,
-		paddingHorizontal: 12,
 	},
 	container: {
-		minWidth: 56,
+		minWidth: TOOL_WIDTH,
 		alignItems: "center",
 		gap: 6,
 	},

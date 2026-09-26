@@ -1,15 +1,19 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { createShapeLayer } from "../../../model/document.ts";
 import {
 	BRUSH_SIZES,
 	brushFor,
 	brushSizeIndex,
 	defaultBrushSettings,
 	parseBrushSettings,
+	shapeEdit,
+	shapeStyleFor,
+	withShape,
 } from "./brushSettings.ts";
 
-const sizes = { pen: 2, marker: 0, neon: 3, eraser: 4 };
+const sizes = { pen: 2, marker: 0, neon: 3, shape: 1, eraser: 4 };
 
 describe("brushFor", () => {
 	test("sizes the pen by the canvas's shorter side", () => {
@@ -69,9 +73,10 @@ test("every tool has a size for each size dot", () => {
 describe("parseBrushSettings", () => {
 	test("reads back settings saved as they are", () => {
 		const settings = {
-			tool: "neon" as const,
+			tool: "shape" as const,
 			color: "#6B2FA0",
-			sizes: { pen: 0, marker: 4, neon: 2, eraser: 1 },
+			shape: "ellipse" as const,
+			sizes: { pen: 0, marker: 4, neon: 2, shape: 3, eraser: 1 },
 		};
 		assert.deepEqual(
 			parseBrushSettings(JSON.parse(JSON.stringify(settings))),
@@ -87,11 +92,12 @@ describe("parseBrushSettings", () => {
 
 	test("replaces only what isn't valid with the default's", () => {
 		// As an older build might save it: one size for pens, and no sizes
-		// for tools it doesn't have.
+		// or shape for tools it doesn't have.
 		assert.deepEqual(
 			parseBrushSettings({
 				tool: "chalk",
 				color: "#ff3b3",
+				shape: "star",
 				penSize: 4,
 				sizes: { pen: 4, marker: 5, neon: -1 },
 			}),
@@ -100,5 +106,50 @@ describe("parseBrushSettings", () => {
 				sizes: { ...defaultBrushSettings.sizes, pen: 4 },
 			},
 		);
+	});
+});
+
+describe("shapes", () => {
+	const canvas = { width: 4000, height: 3000 };
+	const settings = { ...defaultBrushSettings, tool: "shape" as const, sizes };
+	const arrow = createShapeLayer(
+		"arrow",
+		{ x: 0, y: 0, rotation: 0, width: 400, height: 0 },
+		{ color: "#0A84FF", strokeWidth: BRUSH_SIZES.shape[3] * 3000 },
+	);
+
+	test("outline in the color, sized by the canvas's shorter side", () => {
+		assert.deepEqual(shapeStyleFor(settings, canvas), {
+			color: settings.color,
+			strokeWidth: BRUSH_SIZES.shape[1] * 3000,
+		});
+	});
+
+	test("show a shape's kind, color, and nearest size, as it's scaled", () => {
+		const shown = withShape(settings, arrow, canvas);
+		assert.equal(shown.shape, "arrow");
+		assert.equal(shown.color, "#0A84FF");
+		assert.equal(shown.sizes.shape, 3);
+		// Twice as thick on the canvas: the next size up and more.
+		const scaled = { ...arrow, transform: { ...arrow.transform, scaleX: 2 } };
+		assert.equal(withShape(settings, scaled, canvas).sizes.shape, 4);
+		// The other tools keep their sizes.
+		assert.equal(shown.sizes.pen, sizes.pen);
+	});
+
+	test("restyle a shape with only what changed, in its own units", () => {
+		assert.deepEqual(shapeEdit(settings, settings, canvas, 1), {});
+		assert.deepEqual(
+			shapeEdit(settings, { ...settings, color: "#FFFFFF" }, canvas, 1),
+			{ color: "#FFFFFF" },
+		);
+		assert.deepEqual(
+			shapeEdit(settings, { ...settings, shape: "line" }, canvas, 1),
+			{ shape: "line" },
+		);
+		const thicker = { ...settings, sizes: { ...sizes, shape: 2 } };
+		assert.deepEqual(shapeEdit(settings, thicker, canvas, 2), {
+			strokeWidth: (BRUSH_SIZES.shape[2] * 3000) / 2,
+		});
 	});
 });

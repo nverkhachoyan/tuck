@@ -1,5 +1,12 @@
 import { layerBounds } from "@/layers/layerBounds";
-import type { EditorDocument, Layer, MaskStroke } from "@/model/document";
+import {
+	type EditorDocument,
+	isLine,
+	type Layer,
+	type MaskStroke,
+} from "@/model/document";
+import { shapeOutline } from "@/model/shapes";
+import type { ResizeMode } from "../handles/handleGeometry";
 import type { LayerTarget } from "./hitTest";
 
 // Minimum comfortable touch padding around a layer, in screen pixels.
@@ -31,14 +38,13 @@ export function layerTargets(
 }
 
 /**
- * Whether dragging a layer's handles resizes its box, each side on its own,
- * rather than scaling it: a redaction's box, whose proportions mean nothing.
+ * How the layer's selection handles resize it, if they should: a
+ * redaction's box or a shape's, whose proportions mean nothing, by its
+ * sides; a line by its ends; and an image or text by stretching, once set to.
  */
-export type ResizeMode = "none" | "box" | "stretch";
-
-/** How the layer's selection handles resize it, if they should. */
 export function resizeMode(layer: Layer): ResizeMode {
 	if (layer.type === "redaction" && layer.shape === "box") return "box";
+	if (layer.type === "shape") return isLine(layer) ? "endpoints" : "box";
 	if ((layer.type === "image" || layer.type === "text") && layer.resizable) {
 		return "stretch";
 	}
@@ -50,5 +56,6 @@ function layerStrokes(layer: Layer): MaskStroke[] | null {
 	if (layer.type === "redaction" && layer.shape === "strokes") {
 		return layer.strokes;
 	}
+	if (layer.type === "shape") return shapeOutline(layer);
 	return null;
 }

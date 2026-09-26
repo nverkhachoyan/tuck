@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnUI } from "react-native-worklets";
 import type { Box, Transform } from "@/model/geometry";
-import type { ResizeMode } from "./layerTargets";
+import type { ResizeMode } from "../handles/handleGeometry";
 
 const MIN_LAYER_SCALE = 0.2;
 const MAX_LAYER_SCALE = 8;

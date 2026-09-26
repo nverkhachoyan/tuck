@@ -35,16 +35,16 @@ import {
 	type PointerTravel,
 	startTravel,
 } from "./pointerTravel";
+import { dragLineEnd } from "./shapeDrag";
 import {
 	type AxisLines,
+	ROTATION_SNAP,
 	snapAngle,
 	snapLinesFor,
 	snapSide,
 	snapSpan,
 } from "./snapping";
 
-// Rotation settles on upright and quarter turns when this close.
-const ROTATION_SNAP = (4 * Math.PI) / 180;
 // A dragged layer snaps onto the document's and the other layers' edges and
 // centers from this many screen pixels away.
 const SNAP_PX = 8;
@@ -61,7 +61,9 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  * or rotates (knob) it instead of moving it, about its center like a pinch.
  * A layer with a resize mode has side handles too, and
  * its corners and sides resize it instead, keeping the opposite sides put;
- * that commits through `onResize`. Which handle is decided at touch-down,
+ * that commits through `onResize`. A line has handles only at its ends,
+ * which drag that end anywhere, turning the line about the other; that
+ * commits through `onResize` too. Which handle is decided at touch-down,
  * on the UI thread, from the live values.
  *
  * A drag that starts on another layer picks that layer up at once: it's
@@ -253,6 +255,32 @@ export function useLayerTransformGesture({
 			resizedBox.value = live.resizeMode.value === "box";
 		};
 
+		// Drags a line's end, as `handle` grabbed it, from `from` to `to`, in the
+		// frame it had when the drag began. Its other end stays put, and it
+		// settles on quarter turns as a rotation does.
+		const dragEndTo = (handle: ResizeHandle, from: Point, to: Point) => {
+			"worklet";
+			const start = {
+				x: startX.value,
+				y: startY.value,
+				scaleX: handleStartScaleX.value,
+				scaleY: handleStartScaleY.value,
+				rotation: handleStartRotation.value,
+			};
+			const line = dragLineEnd(
+				start,
+				handleStartBox.value.halfWidth,
+				handleSides(handle).x < 0 ? -1 : 1,
+				{ x: to.x - from.x, y: to.y - from.y },
+				MIN_BOX_PX / viewport.scale,
+			);
+			settle(live.rotation, line.rotation, line.snapped ? line.rotation : null);
+			live.x.value = line.x;
+			live.y.value = line.y;
+			live.halfWidth.value = line.width / 2 / start.scaleX;
+			resizedBox.value = true;
+		};
+
 		// The first gesture to start holds the selected layer, if there is one.
 		const gestureStarted = () => {
 			"worklet";
@@ -310,7 +338,7 @@ export function useLayerTransformGesture({
 						: handleUnder(
 								readLiveTransform(live),
 								readLiveBox(live),
-								live.resizeMode.value !== "none",
+								live.resizeMode.value,
 								toDocument(event.x, event.y),
 								viewport.scale,
 							);
@@ -353,6 +381,8 @@ export function useLayerTransformGesture({
 					const to = toDocument(downX.value + dx, downY.value + dy);
 					if (handle === "rotate") {
 						rotateTo(rotateByDrag(center, from, to, handleStartRotation.value));
+					} else if (live.resizeMode.value === "endpoints") {
+						dragEndTo(handle, from, to);
 					} else if (live.resizeMode.value !== "none") {
 						resizeTo(handle, from, to);
 					} else {

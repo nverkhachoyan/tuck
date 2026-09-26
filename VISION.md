@@ -799,7 +799,6 @@ Automatic text-region detection
 Automatic license-plate blur
 Collages
 Image annotations
-Shapes and arrows
 Custom canvas sizes
 Clipboard image import
 Share-extension integration
@@ -1041,11 +1040,10 @@ Built early, alongside the stages above:
 * A small bundled font set.
 * A simple layers panel.
 * Freehand drawing: a Draw tool with a pen, marker, and neon brush, an eraser, colors and sizes it remembers between sessions, and each drawing kept as its own layer of strokes, so it can be moved, resized, drawn on again, or undone a stroke at a time.
+* Shapes, in the Draw tool beside the pens and sharing their colors: rectangles, ellipses, lines, and arrows, each dragged out as its own layer. Rectangles and ellipses resize by their sides, and a line or arrow by dragging either end, which settles on level and upright. A tap inside an outline reaches what's under it.
 * Saved projects: each session autosaves as a local project (on web too, in IndexedDB), listed with thumbnails on the welcome screen to reopen or delete. Each project has its own route, so links and reloads open it.
 
 Missing:
 
 * Stickers.
 * Renaming and duplicating projects.
-
-Shapes and arrows, listed under Future Possibilities, are the planned next addition to drawing, reusing its tool mode and color and size popup.

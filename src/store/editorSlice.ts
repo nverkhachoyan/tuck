@@ -5,14 +5,23 @@ import {
 	createImageLayer,
 	createRedactionBox,
 	createRedactionStrokes,
+	createShapeLayer,
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
+	isLineShape,
 	type Layer,
 	type MaskStroke,
 	type RedactionEffect,
 	type RedactionLayer,
 	reorderLayer,
+	resizeLayerBox,
+	restyleShape,
+	type ShapeEdit,
+	type ShapeKind,
+	type ShapeLayer,
+	type ShapePlacement,
+	type ShapeStyle,
 	type Stroke,
 	type TextLayer,
 	type TextLayerEdit,
@@ -61,10 +70,16 @@ export type EditorSlice = {
 	addRedactionBox: (rect: Rect, effect: RedactionEffect) => void;
 	paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) => void;
 	setRedactionEffect: (id: string, effect: RedactionEffect) => void;
+	addShape: (
+		shape: ShapeKind,
+		placement: ShapePlacement,
+		style: ShapeStyle,
+	) => void;
+	setShapeStyle: (id: string, edit: ShapeEdit) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
-	resizeRedactionBox: (
+	resizeBox: (
 		id: string,
 		transform: Transform,
 		width: number,
@@ -101,6 +116,13 @@ export const selectSelectedRedaction = (
 ): RedactionLayer | undefined => {
 	const layer = selectSelectedLayer(state);
 	return layer?.type === "redaction" ? layer : undefined;
+};
+
+export const selectSelectedShape = (
+	state: EditorSlice,
+): ShapeLayer | undefined => {
+	const layer = selectSelectedLayer(state);
+	return layer?.type === "shape" ? layer : undefined;
 };
 
 export const selectCanUndo = ({ past }: EditorSlice) => past.length > 0;
@@ -257,6 +279,24 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
+		// On top and selected, like a redaction's box, so restyling it right
+		// after (see `setShapeStyle`) changes it. A box needs both sides.
+		addShape: (shape, placement, style) => {
+			const { width, height } = placement;
+			if (width <= 0 || (height <= 0 && !isLineShape(shape))) return;
+			addOnTop("editor/addShape", createShapeLayer(shape, placement, style));
+		},
+
+		setShapeStyle: (id, edit) => {
+			const target = findLayer(id);
+			if (target?.type !== "shape") return;
+			const restyled = restyleShape(target, edit);
+			if (restyled === target) return;
+			setLayers("editor/setShapeStyle", (layers) =>
+				layers.map((layer) => (layer === target ? restyled : layer)),
+			);
+		},
+
 		updateSelectedText: (patch) => {
 			const selected = selectSelectedTextLayer(get());
 			if (selected) get().updateTextLayer(selected.id, patch);
@@ -288,25 +328,16 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
-		// Like `transformLayer`, for a redaction's box resized by its handles:
-		// its size changes, and its center moves with the sides that did.
-		resizeRedactionBox: (id, transform, width, height) => {
+		// Like `transformLayer`, for a box resized by its handles, a redaction's
+		// or a shape's: its size changes, and its center moves with the sides
+		// that did. A line's length is `width`, and its ends turn it too.
+		resizeBox: (id, transform, width, height) => {
 			const target = findUnlockedLayer(id);
-			if (
-				target?.type !== "redaction" ||
-				target.shape !== "box" ||
-				width <= 0 ||
-				height <= 0 ||
-				(target.width === width &&
-					target.height === height &&
-					transformsEqual(target.transform, transform))
-			) {
-				return;
-			}
-			setLayers("editor/resizeRedactionBox", (layers) =>
-				layers.map((layer) =>
-					layer === target ? { ...target, transform, width, height } : layer,
-				),
+			const resized =
+				target && resizeLayerBox(target, transform, width, height);
+			if (!resized) return;
+			setLayers("editor/resizeBox", (layers) =>
+				layers.map((layer) => (layer === target ? resized : layer)),
 			);
 		},
 

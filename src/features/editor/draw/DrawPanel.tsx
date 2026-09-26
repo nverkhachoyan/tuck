@@ -1,8 +1,10 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
+import { shapeKinds } from "@/model/document";
 import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorOptions } from "../ColorPicker";
+import { SHAPE_ICONS, SHAPE_NAMES } from "../shapeIcons";
 import { ToolButton, ToolRow } from "../ToolButton";
 import {
 	SIZE_DOTS,
@@ -19,21 +21,29 @@ import {
 } from "./brushSettings";
 
 const TOOLS = [
-	{ tool: "pen", label: "Pen", icon: "draw-pen" },
-	{ tool: "marker", label: "Marker", icon: "marker" },
-	{ tool: "neon", label: "Neon", icon: "shimmer" },
-	{ tool: "eraser", label: "Eraser", icon: "eraser" },
+	{ tool: "pen", label: "Pen" },
+	{ tool: "marker", label: "Marker" },
+	{ tool: "neon", label: "Neon" },
+	{ tool: "shape", label: "Shape" },
+	{ tool: "eraser", label: "Eraser" },
 ] as const;
 
-// The dot on the pen in use, in its color.
+const TOOL_ICONS = {
+	pen: "draw-pen",
+	marker: "marker",
+	neon: "shimmer",
+	eraser: "eraser",
+} as const;
+
+// The dot on the pen or shape in use, in its color.
 const BADGE = 12;
 
 /**
  * The drawing tools, in place of the toolbar while drawing: the pens (plain,
- * marker, and neon) and the eraser. Tapping the tool in use opens its
- * options over the canvas, which the dot of color on a pen's tile hints at.
- * Four tools and the dock's back button are all a phone fits, so there's no
- * separate button for them.
+ * marker, and neon), the shapes, which show the one they drag out, and the
+ * eraser. Tapping the tool in use opens its options over the canvas, which
+ * the dot of color on its tile hints at. The tools and the dock's back
+ * button fill a phone, so there's no separate button for them.
  */
 export function DrawPanel({
 	settings,
@@ -50,8 +60,10 @@ export function DrawPanel({
 	};
 	return (
 		<ToolRow>
-			{TOOLS.map(({ tool, label, icon }) => {
+			{TOOLS.map(({ tool, label }) => {
 				const inUse = settings.tool === tool;
+				const icon =
+					tool === "shape" ? SHAPE_ICONS[settings.shape] : TOOL_ICONS[tool];
 				return (
 					<ToolButton
 						key={tool}
@@ -81,8 +93,9 @@ export function DrawPanel({
 }
 
 /**
- * The brush's color and size, in a card over the canvas (see `ToolOptions`).
- * The custom swatch opens a picker for any color (see `ColorOptions`).
+ * The brush's color and size, and the shape tool's kind, in a card over the
+ * canvas (see `ToolOptions`). The custom swatch opens a picker for any color
+ * (see `ColorOptions`).
  */
 export function BrushOptions({
 	settings,
@@ -117,6 +130,26 @@ export function BrushOptions({
 			bottomInset={bottomInset}
 			onClose={onClose}
 		>
+			{settings.tool === "shape" && (
+				<ToolOption label="Shape">
+					<ToolChoices>
+						{shapeKinds.map((shape) => (
+							<RingChoice
+								key={shape}
+								label={SHAPE_NAMES[shape]}
+								selected={settings.shape === shape}
+								onPress={() => onChange({ ...settings, shape })}
+							>
+								<MaterialCommunityIcons
+									name={SHAPE_ICONS[shape]}
+									size={22}
+									color={colors.textPrimary}
+								/>
+							</RingChoice>
+						))}
+					</ToolChoices>
+				</ToolOption>
+			)}
 			{!eraser && (
 				<ToolOption label="Color">
 					<ColorOptions

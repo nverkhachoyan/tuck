@@ -1,5 +1,11 @@
 // Relative `.ts` import keeps this loadable by Node's test runner.
-import { type EditorDocument, penTips, textFonts } from "../model/document.ts";
+import {
+	type EditorDocument,
+	isLineShape,
+	penTips,
+	shapeKinds,
+	textFonts,
+} from "../model/document.ts";
 
 // Bump when the saved format changes, and teach `parseSavedProject` to read
 // the older one. 2 added the canvas's background, layers' `locked`, and
@@ -10,8 +16,8 @@ import { type EditorDocument, penTips, textFonts } from "../model/document.ts";
 // as unavailable. So did image layers' `opaque`: builds from before it save
 // only JPEGs, so a layer without it is opaque, and they don't open PNGs.
 // Drawings kept it too: builds from before them list a project that has one
-// as unavailable. So did redactions, for the same reason. So did pens'
-// `tip`: builds from before it draw every pen as a plain one.
+// as unavailable. So did redactions, and shapes, for the same reason. So
+// did pens' `tip`: builds from before it draw every pen as a plain one.
 export const PROJECT_VERSION = 3;
 
 // The file of the photo a project was made from. Saved image layers name a
@@ -242,9 +248,23 @@ function isLayer(value: unknown): boolean {
 			return Array.isArray(value.strokes) && value.strokes.every(isStroke);
 		case "redaction":
 			return isRedactionEffect(value.effect) && isRedactionShape(value);
+		case "shape":
+			return isShape(value);
 		default:
 			return false;
 	}
+}
+
+function isShape(value: Fields): boolean {
+	const shape = shapeKinds.find((kind) => kind === value.shape);
+	return (
+		shape !== undefined &&
+		typeof value.color === "string" &&
+		isPositive(value.strokeWidth) &&
+		(isLineShape(shape)
+			? isPositive(value.length)
+			: isPositive(value.width) && isPositive(value.height))
+	);
 }
 
 function isRedactionEffect(value: unknown): boolean {

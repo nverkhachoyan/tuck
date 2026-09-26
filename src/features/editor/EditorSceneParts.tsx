@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { DrawingLayerView } from "@/layers/DrawingLayerView";
 import { ImageLayerView } from "@/layers/ImageLayerView";
 import { RedactionLayerView } from "@/layers/RedactionLayerView";
+import { ShapeLayerView } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { ImageLayer, Layer } from "@/model/document";
@@ -51,6 +52,8 @@ export function LayerContent({
 			return <DrawingLayerView layer={layer}>{stroke}</DrawingLayerView>;
 		case "redaction":
 			return <RedactionLayerView layer={layer} />;
+		case "shape":
+			return <ShapeLayerView layer={layer} />;
 		default:
 			return assertNever(layer);
 	}

@@ -21,7 +21,12 @@ import { useSharedValue } from "react-native-reanimated";
 import { layerBounds } from "@/layers/layerBounds";
 import { type TextSelection, wordRange } from "@/layers/textEditing";
 import { textIndexAt } from "@/layers/textLayerLayout";
-import type { EditorDocument, Layer } from "@/model/document";
+import {
+	type EditorDocument,
+	isLineShape,
+	type Layer,
+	type ShapePlacement,
+} from "@/model/document";
 import {
 	type Box,
 	hitTestBox,
@@ -50,6 +55,7 @@ import {
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import { HIT_PADDING_PX, layerTargets, resizeMode } from "./layerTargets";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
+import { shapeFromDrag } from "./shapeDrag";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
 import { type TextPressPhase, useTextEditGesture } from "./useTextEditGesture";
@@ -58,8 +64,8 @@ import { useTrackpadPinch } from "./useTrackpadPinch";
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 16;
-// A box dragged no further than this either way, in screen pixels, was a
-// tap; one this thin in only one way hides nothing.
+// A box or a line dragged no further than this either way, in screen
+// pixels, was a tap; a box this thin in only one way is dropped.
 const TAP_SLOP_PX = 6;
 // A second tap on text this soon after the first, and this near it in
 // screen pixels, selects a word.
@@ -99,6 +105,8 @@ type EditorCanvasProps = {
 	onPaintStroke?: (points: number[]) => void;
 	// A finished redaction box, in document space.
 	onDrawBox?: (rect: Rect) => void;
+	// A finished shape, in document space.
+	onDrawShape?: (placement: ShapePlacement) => void;
 	// Where a tap, or a drag's end, picks a color, in document space.
 	onPickPoint?: (point: Point) => void;
 	// How much of the view's bottom is covered by panels floating over it.
@@ -125,10 +133,11 @@ export type EditorCanvasHandle = {
  * cursor shows what a press at the pointer would do.
  *
  * With a `tool`, a single gesture paints instead, into the selected layer
- * if the tool can add to it, or drags out a redaction's box. The selection
- * then holds still, and only a redaction's is outlined, to show what the
- * redact tool's style changes. In box mode, a tap picks the redaction to
- * change, or none. Picking a color, where the finger lifts is the point.
+ * if the tool can add to it, or drags out a shape or a redaction's box. The
+ * selection then holds still, and only a redaction's or a shape's is
+ * outlined, to show what the tool's style changes. Dragging out a box or a
+ * shape, a tap picks the one to change, or none. Picking a color, where the
+ * finger lifts is the point.
  */
 export function EditorCanvas({
 	ref,
@@ -145,6 +154,7 @@ export function EditorCanvas({
 	tool = null,
 	onPaintStroke,
 	onDrawBox,
+	onDrawShape,
 	onPickPoint,
 	bottomInset = 0,
 }: EditorCanvasProps) {
@@ -254,7 +264,7 @@ export function EditorCanvas({
 				? handleUnder(
 						selectedLayer.transform,
 						layerBounds(selectedLayer),
-						resizeMode(selectedLayer) !== "none",
+						resizeMode(selectedLayer),
 						viewPointToDocument(viewport, { x: screenX, y: screenY }),
 						scale,
 					)
@@ -467,31 +477,36 @@ export function EditorCanvas({
 				onPickPoint?.({ x: points[end], y: points[end + 1] });
 				return;
 			}
-			if (tool.type !== "redactBox") {
+			if (tool.type !== "redactBox" && tool.type !== "drawShape") {
 				onPaintStroke?.(points);
 				return;
 			}
 			const start = { x: points[0], y: points[1] };
-			const box = rectFromCorners(start, {
+			const end = {
 				x: points[points.length - 2],
 				y: points[points.length - 1],
-			});
-			// A box too thin to hide anything is dropped, rather than taken
-			// for a tap.
+			};
+			const line = tool.type === "drawShape" && isLineShape(tool.shape);
+			const box = rectFromCorners(start, end);
+			// A box too thin to show is dropped, rather than taken for a tap.
 			if (Math.max(box.width, box.height) * scale >= TAP_SLOP_PX) {
-				if (Math.min(box.width, box.height) * scale >= TAP_SLOP_PX) {
-					onDrawBox?.(box);
+				if (!line && Math.min(box.width, box.height) * scale < TAP_SLOP_PX) {
+					return;
 				}
+				if (tool.type === "redactBox") onDrawBox?.(box);
+				else onDrawShape?.(shapeFromDrag(tool.shape, start, end));
 				return;
 			}
 			const hit = findLayerAt(targets, start);
 			const tapped = document.layers.find((layer) => layer.id === hit?.id);
-			onSelectLayer?.(tapped?.type === "redaction" ? tapped.id : null);
+			const kind = tool.type === "redactBox" ? "redaction" : "shape";
+			onSelectLayer?.(tapped?.type === kind ? tapped.id : null);
 		},
 		[
 			tool,
 			onPaintStroke,
 			onDrawBox,
+			onDrawShape,
 			onPickPoint,
 			onSelectLayer,
 			scale,
@@ -520,8 +535,9 @@ export function EditorCanvas({
 		[tool, strokePoints, strokeId, landedStrokeId, selectedLayer],
 	);
 	const outlinedLayer =
-		(tool?.type === "redactBox" || tool?.type === "redactBrush") &&
-		selectedLayer?.type === "redaction"
+		((tool?.type === "redactBox" || tool?.type === "redactBrush") &&
+			selectedLayer?.type === "redaction") ||
+		(tool?.type === "drawShape" && selectedLayer?.type === "shape")
 			? selectedLayer
 			: !tool && textEdit
 				? textEdit.layer
@@ -591,6 +607,7 @@ function canAddTo(tool: CanvasTool, layer: Layer): boolean {
 		case "redactBrush":
 			return layer.type === "redaction" && layer.shape === "strokes";
 		case "redactBox":
+		case "drawShape":
 		case "pickColor":
 			return false;
 	}

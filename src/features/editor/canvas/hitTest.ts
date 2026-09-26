@@ -8,7 +8,7 @@ import {
 	type Transform,
 	toLayerSpace,
 } from "../../../model/geometry.ts";
-import type { ResizeMode } from "./layerTargets.ts";
+import type { ResizeMode } from "../handles/handleGeometry.ts";
 
 /**
  * What gestures need to know about a visible layer on the UI thread, where
@@ -24,8 +24,8 @@ export type LayerTarget = {
 	// the layer is locked and can't be selected.
 	hitBox: Box | null;
 	hitPadding: number;
-	// A drawing, or a redaction painted with a brush, is only hit near what
-	// its strokes drew.
+	// A drawing, a redaction painted with a brush, or a shape is only hit
+	// near what its strokes drew.
 	strokes: MaskStroke[] | null;
 	// A locked photo is cut off at the canvas's edge.
 	clipped: boolean;

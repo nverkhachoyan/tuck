@@ -10,6 +10,7 @@ import {
 	type ImageLayer,
 	type MaskStroke,
 	type RedactionLayer,
+	type ShapeLayer,
 	type Stroke,
 	type TextLayer,
 } from "../model/document.ts";
@@ -19,6 +20,7 @@ import {
 	MAX_HISTORY,
 	selectSelectedLayer,
 	selectSelectedRedaction,
+	selectSelectedShape,
 	selectSelectedTextLayer,
 } from "./editorSlice.ts";
 import type { StoreState } from "./index.ts";
@@ -489,7 +491,7 @@ describe("editorSlice", () => {
 			store.getState().selectLayer(text.id);
 			const steps = store.getState().past.length;
 			const moved = { ...redaction.transform, x: 280 };
-			store.getState().resizeRedactionBox(redaction.id, moved, 360, 80);
+			store.getState().resizeBox(redaction.id, moved, 360, 80);
 			const [resized] = redactions(store);
 			assert.equal(resized.shape === "box" && resized.width, 360);
 			assert.equal(resized.shape === "box" && resized.height, 80);
@@ -507,7 +509,7 @@ describe("editorSlice", () => {
 			store.getState().paintRedaction(mask([0, 0, 100, 0]), black);
 			const [boxed, brushed] = redactions(store);
 			const before = store.getState().document;
-			const resize = store.getState().resizeRedactionBox;
+			const resize = store.getState().resizeBox;
 			resize(boxed.id, boxed.transform, 300, 50);
 			resize(boxed.id, boxed.transform, 0, 50);
 			resize(brushed.id, brushed.transform, 300, 50);
@@ -568,6 +570,63 @@ describe("editorSlice", () => {
 				redactions(store).map((layer) => layer.shape),
 				["box", "strokes"],
 			);
+		});
+	});
+
+	describe("shapes", () => {
+		const style = { color: "#FF3B30", strokeWidth: 12 };
+		const place = { x: 400, y: 300, rotation: 0, width: 200, height: 100 };
+
+		function shapes(store: ReturnType<typeof createTestStore>) {
+			return (store.getState().document?.layers ?? []).filter(
+				(layer): layer is ShapeLayer => layer.type === "shape",
+			);
+		}
+
+		test("a shape goes on top, selected, as one undo step", () => {
+			const { store } = storeWithText();
+			const steps = store.getState().past.length;
+			store.getState().addShape("ellipse", place, style);
+			const [shape] = shapes(store);
+			assert.equal(store.getState().document?.layers.at(-1), shape);
+			assert.equal(selectSelectedShape(store.getState()), shape);
+			assert.equal(shape.shape, "ellipse");
+			assert.equal(store.getState().past.length, steps + 1);
+		});
+
+		test("a box needs both sides, and a line only its length", () => {
+			const { store } = storeWithText();
+			const before = store.getState().document;
+			store.getState().addShape("rectangle", { ...place, height: 0 }, style);
+			store.getState().addShape("arrow", { ...place, width: 0 }, style);
+			assert.equal(store.getState().document, before);
+			store.getState().addShape("arrow", { ...place, height: 0 }, style);
+			assert.equal(shapes(store).length, 1);
+		});
+
+		test("restyling is one undo step, and the same style isn't one", () => {
+			const { store } = storeWithText();
+			store.getState().addShape("rectangle", place, style);
+			const [shape] = shapes(store);
+			const steps = store.getState().past.length;
+			store.getState().setShapeStyle(shape.id, { ...style });
+			store.getState().setShapeStyle(shape.id, { shape: "line" });
+			assert.equal(store.getState().past.length, steps);
+
+			store.getState().setShapeStyle(shape.id, { color: "#FFFFFF" });
+			assert.equal(shapes(store)[0].color, "#FFFFFF");
+			assert.equal(store.getState().past.length, steps + 1);
+		});
+
+		test("resizing a line sets its length and angle", () => {
+			const { store } = storeWithText();
+			store.getState().addShape("arrow", place, style);
+			const [line] = shapes(store);
+			const turned = { ...line.transform, rotation: 1 };
+			store.getState().resizeBox(line.id, turned, 320, 60);
+			const [resized] = shapes(store);
+			assert.equal(resized.shape === "arrow" && resized.length, 320);
+			assert.deepEqual(resized.transform, turned);
 		});
 	});
 

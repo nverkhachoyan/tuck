@@ -18,6 +18,14 @@ export type Handle = Corner | Side | "rotate";
 export type ResizeHandle = Corner | Side;
 
 /**
+ * How a layer's handles change its box, if they do, rather than scale it:
+ * `box` resizes its sides each on its own (a redaction's box, or a shape's),
+ * `stretch` does too but by stretching its scale (an image or text set to),
+ * and `endpoints` drags either end of a line anywhere, turning it too.
+ */
+export type ResizeMode = "none" | "box" | "stretch" | "endpoints";
+
+/**
  * Where each handle sits on its box, along each of the layer's axes: -1 on
  * its left or top side, 1 on its right or bottom, 0 halfway between.
  */

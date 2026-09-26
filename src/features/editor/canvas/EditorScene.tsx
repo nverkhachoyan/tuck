@@ -38,6 +38,7 @@ import {
 	redactionFilter,
 	strokesPicture,
 } from "@/layers/RedactionLayerView";
+import { shapePath } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { clampSelection, type TextSelection } from "@/layers/textEditing";
 import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
@@ -45,21 +46,27 @@ import {
 	type Brush,
 	type EditorDocument,
 	identityTransform,
+	isLineShape,
 	type Layer,
 	type MaskStroke,
 	type RedactionBox,
 	type RedactionEffect,
 	type RedactionLayer,
 	type RedactionStrokes,
+	type ShapeKind,
+	type ShapeLayer,
+	type ShapeStyle,
 	type TextLayer,
 } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
 import { rectFromCorners, transformsEqual } from "@/model/geometry";
+import { lineReach, shapeBox } from "@/model/shapes";
 import { colors } from "@/theme";
 import { CanvasBackground, LayerContent } from "../EditorSceneParts";
 import { handleSides } from "../handles/handleGeometry";
 import { handleMetrics, shownHandles } from "../handles/handleMetrics";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
+import { shapeFromDrag } from "./shapeDrag";
 
 const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
@@ -80,11 +87,12 @@ const TEXT_SELECTION = "rgba(88, 166, 255, 0.4)";
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
- * brush, drags out a redaction's box, paints a redaction's strokes, or picks
- * a color where the finger lifts.
+ * brush, drags out a shape or a redaction's box, paints a redaction's
+ * strokes, or picks a color where the finger lifts.
  */
 export type CanvasTool =
 	| { type: "draw"; brush: Brush }
+	| { type: "drawShape"; shape: ShapeKind; style: ShapeStyle }
 	| { type: "pickColor" }
 	| { type: "redactBox"; effect: RedactionEffect }
 	| {
@@ -258,7 +266,8 @@ function LiveLayer({
 
 /**
  * A layer's content, with `stroke` joining it as it's painted when the
- * layer is its target. A redaction follows the live values while selected.
+ * layer is its target. A redaction or a shape follows the live values while
+ * selected.
  */
 function StrokeTarget({
 	layer,
@@ -283,6 +292,7 @@ function StrokeTarget({
 	if (layer.type === "redaction") {
 		return <LiveRedaction layer={layer} live={live} />;
 	}
+	if (layer.type === "shape") return <LiveShape layer={layer} live={live} />;
 	return (
 		<LayerContent
 			layer={layer}
@@ -464,6 +474,32 @@ function LiveFilteredBox({
 }
 
 /**
+ * A shape that follows the live values while it's selected, as `LiveLayer`
+ * places it: its box's size as its sides are dragged, or its length as an
+ * end is.
+ */
+function LiveShape({
+	layer,
+	live,
+}: {
+	layer: ShapeLayer;
+	live: LiveTransform;
+}) {
+	const { id, shape, strokeWidth } = layer;
+	const { halfWidth, halfHeight } = shapeBox(layer);
+	const path = useDerivedValue(() => {
+		const active = live.activeId.value === id;
+		return shapePath(
+			shape,
+			active ? live.halfWidth.value : halfWidth,
+			active ? live.halfHeight.value : halfHeight,
+			strokeWidth,
+		);
+	}, [id, shape, halfWidth, halfHeight, strokeWidth]);
+	return <Path path={path} color={layer.color} />;
+}
+
+/**
  * Blurred or pixelated strokes, recorded again for the live transform while
  * it's off the document's. Otherwise they're the picture export draws.
  */
@@ -515,6 +551,8 @@ function NewLayerStroke({
 			return (
 				<LiveBox stroke={stroke} effect={tool.effect} viewScale={viewScale} />
 			);
+		case "drawShape":
+			return <LiveNewShape stroke={stroke} tool={tool} />;
 		case "pickColor":
 			return null;
 	}
@@ -574,6 +612,50 @@ function LiveRedactionStrokes({
 		);
 	}, [effect, transform, marks, brush, stroke]);
 	return <Picture picture={picture} />;
+}
+
+/**
+ * A shape as it's dragged out, from where the drag began to where it is, as
+ * the document will have it: a box between them, or a line to it.
+ */
+function LiveNewShape({
+	stroke,
+	tool,
+}: {
+	stroke: LiveStroke;
+	tool: Extract<CanvasTool, { type: "drawShape" }>;
+}) {
+	const { shape, style } = tool;
+	const placement = useDerivedValue(() => {
+		const points = unlanded(stroke);
+		if (points.length === 0) return null;
+		return shapeFromDrag(
+			shape,
+			{ x: points[0], y: points[1] },
+			{ x: points[points.length - 2], y: points[points.length - 1] },
+		);
+	});
+	const transform = useDerivedValue(() => {
+		const { x = 0, y = 0, rotation = 0 } = placement.value ?? {};
+		return toTransformList({ ...identityTransform, x, y, rotation });
+	});
+	const path = useDerivedValue(() => {
+		const shown = placement.value;
+		if (!shown || shown.width === 0) return Skia.PathBuilder.Make().build();
+		return shapePath(
+			shape,
+			shown.width / 2,
+			isLineShape(shape)
+				? lineReach(shape, style.strokeWidth)
+				: shown.height / 2,
+			style.strokeWidth,
+		);
+	});
+	return (
+		<Group transform={transform}>
+			<Path path={path} color={style.color} />
+		</Group>
+	);
 }
 
 /**
@@ -734,7 +816,7 @@ function SelectionHandles({
 			live.scaleX.value,
 			live.scaleY.value,
 			viewScale,
-			live.resizeMode.value !== "none",
+			live.resizeMode.value,
 		);
 		for (const handle of shown) {
 			if (handle === "rotate") {
@@ -747,7 +829,11 @@ function SelectionHandles({
 			const sides = handleSides(handle);
 			const x = sides.x * w;
 			const y = sides.y * h;
-			if (sides.x !== 0 && sides.y !== 0) {
+			// A corner, or a line's end, which moves every way.
+			if (
+				(sides.x !== 0 && sides.y !== 0) ||
+				live.resizeMode.value === "endpoints"
+			) {
 				handles.addCircle(x, y, radius);
 				continue;
 			}

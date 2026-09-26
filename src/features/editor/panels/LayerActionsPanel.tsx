@@ -1,10 +1,11 @@
 import { ToolButton, ToolRow } from "../ToolButton";
 
 /**
- * Actions for the selected photo, drawing, or redaction, in place of the
- * tools, as the text panel is for text: it's moved and sized on the canvas,
- * and tapping the canvas off it deselects it. `onDraw` goes on drawing on
- * a drawing, and `onRedact` restyles a redaction or paints on.
+ * Actions for the selected photo, drawing, shape, or redaction, in place of
+ * the tools, as the text panel is for text: it's moved and sized on the
+ * canvas, and tapping the canvas off it deselects it. `onDraw` goes on
+ * drawing on a drawing or restyles a shape, and `onRedact` restyles a
+ * redaction or paints on.
  */
 export function LayerActionsPanel({
 	canMoveForward,

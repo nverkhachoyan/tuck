@@ -3,6 +3,7 @@ import { DrawingLayerView } from "@/layers/DrawingLayerView";
 import { ImageLayerView } from "@/layers/ImageLayerView";
 import { toTransformList } from "@/layers/layerTransform";
 import { RedactionLayerView } from "@/layers/RedactionLayerView";
+import { ShapeLayerView } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { EditorDocument, Layer } from "@/model/document";
@@ -57,6 +58,8 @@ function LayerContent({
 			return <DrawingLayerView layer={layer} />;
 		case "redaction":
 			return <RedactionLayerView layer={layer} />;
+		case "shape":
+			return <ShapeLayerView layer={layer} />;
 		default:
 			return assertNever(layer);
 	}

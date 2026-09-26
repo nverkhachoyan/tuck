@@ -7,6 +7,7 @@ import {
 	createDrawingLayer,
 	createRedactionBox,
 	createRedactionStrokes,
+	createShapeLayer,
 	createTextLayer,
 	type EditorDocument,
 } from "../model/document.ts";
@@ -41,6 +42,14 @@ function drawingLayer() {
 		width: 12,
 		points: [0, 0, 100, 50],
 	});
+}
+
+function shapeLayer(shape: "rectangle" | "arrow") {
+	return createShapeLayer(
+		shape,
+		{ x: 50, y: 60, rotation: 0.5, width: 200, height: 100 },
+		{ color: "#0A84FF", strokeWidth: 12 },
+	);
 }
 
 function savedJson(project: Partial<SavedProject> = {}) {
@@ -237,6 +246,14 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
+	test("reads shapes: boxes and lines", () => {
+		const document = documentWithText();
+		document.layers.push(shapeLayer("rectangle"), shapeLayer("arrow"));
+		const saved = mapImageUris(document, () => "original.jpg");
+		const project = parseSavedProject(savedJson({ document: saved }));
+		assert.deepEqual(project?.document, saved);
+	});
+
 	test("reads a photo-only marker after the last edit is removed", () => {
 		const photo = mapImageUris(documentWithText(), () => "original.jpg");
 		const project = parseSavedProject(savedJson({ document: photo }));
@@ -320,6 +337,21 @@ describe("parseSavedProject", () => {
 								...patch,
 							},
 						],
+					},
+				} as unknown as Partial<SavedProject>),
+			),
+			...[
+				{ shape: "star" },
+				{ color: null },
+				{ strokeWidth: 0 },
+				{ width: 0 },
+				// A line needs a length, not a box.
+				{ shape: "line" },
+			].map((patch) =>
+				savedJson({
+					document: {
+						...photo,
+						layers: [...photo.layers, { ...shapeLayer("rectangle"), ...patch }],
 					},
 				} as unknown as Partial<SavedProject>),
 			),

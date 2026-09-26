@@ -2,6 +2,7 @@ import { assertNever } from "@/lib/assertNever";
 import type { Layer } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
 import type { Box } from "@/model/geometry";
+import { shapeBox } from "@/model/shapes";
 import { textLayerBounds } from "./textLayerLayout";
 
 /**
@@ -28,6 +29,8 @@ export function layerBounds(layer: Layer, minPadding = 0): Box {
 						minPadding,
 					)
 				: padded(drawingBox(layer), minPadding);
+		case "shape":
+			return padded(shapeBox(layer), minPadding);
 		default:
 			return assertNever(layer);
 	}

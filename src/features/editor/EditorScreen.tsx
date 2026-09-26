@@ -26,8 +26,12 @@ import type {
 import { CropTool } from "@/features/editor/crop/CropTool";
 import { Dock, DockButton, useDockInset } from "@/features/editor/Dock";
 import {
+	type BrushSettings,
 	brushFor,
 	parseBrushSettings,
+	shapeEdit,
+	shapeStyleFor,
+	withShape,
 } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
@@ -77,7 +81,10 @@ import { usePreference } from "@/lib/usePreference";
 import {
 	createTextLayer,
 	type EditorDocument,
+	isLine,
+	isLineShape,
 	maxNewImageShortSide,
+	type ShapePlacement,
 	type TextLayer,
 	type TextLayerEdit,
 } from "@/model/document";
@@ -94,6 +101,7 @@ import {
 	selectCanUndo,
 	selectSelectedLayer,
 	selectSelectedRedaction,
+	selectSelectedShape,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
 import { colors } from "@/theme";
@@ -148,6 +156,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const selectedRedaction = useStore(selectSelectedRedaction);
+	const selectedShape = useStore(selectSelectedShape);
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
 	const addTextLayer = useStore((state) => state.addTextLayer);
@@ -159,10 +168,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const addRedactionBox = useStore((state) => state.addRedactionBox);
 	const paintRedaction = useStore((state) => state.paintRedaction);
 	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
+	const addShape = useStore((state) => state.addShape);
+	const setShapeStyle = useStore((state) => state.setShapeStyle);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const updateTextLayer = useStore((state) => state.updateTextLayer);
 	const transformLayer = useStore((state) => state.transformLayer);
-	const resizeRedactionBox = useStore((state) => state.resizeRedactionBox);
+	const resizeBox = useStore((state) => state.resizeBox);
 	const nudgeLayer = useStore((state) => state.nudgeLayer);
 	const moveLayer = useStore((state) => state.moveLayer);
 	const setLayerHidden = useStore((state) => state.setLayerHidden);
@@ -263,10 +274,46 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			);
 		}
 	};
+	// Likewise, the shape tool shows the selected shape's style, and changing
+	// it restyles that one. A kind it can't become, a box for a line or a line
+	// for a box, starts a new shape instead.
+	const restyledShape =
+		tool === "draw" && brushSettings.tool === "shape"
+			? selectedShape
+			: undefined;
+	const drawSettings = useMemo(
+		() =>
+			restyledShape
+				? withShape(brushSettings, restyledShape, documentSize)
+				: brushSettings,
+		[brushSettings, restyledShape, documentSize],
+	);
+	const changeDrawSettings = (next: BrushSettings) => {
+		setBrushSettings(next);
+		if (!restyledShape) return;
+		const edit = shapeEdit(
+			drawSettings,
+			next,
+			documentSize,
+			restyledShape.transform.scaleX,
+		);
+		if (edit.shape && isLineShape(edit.shape) !== isLine(restyledShape)) {
+			selectLayer(null);
+		} else {
+			setShapeStyle(restyledShape.id, edit);
+		}
+	};
 	const canvasTool = useMemo((): CanvasTool | null => {
 		if (eyedropper) return { type: "pickColor" };
+		if (tool === "draw" && drawSettings.tool === "shape") {
+			return {
+				type: "drawShape",
+				shape: drawSettings.shape,
+				style: shapeStyleFor(drawSettings, documentSize),
+			};
+		}
 		if (tool === "draw") {
-			return { type: "draw", brush: brushFor(brushSettings, documentSize) };
+			return { type: "draw", brush: brushFor(drawSettings, documentSize) };
 		}
 		if (tool !== "redact") return null;
 		const effect = redactionEffect(redactSettings, documentSize);
@@ -274,7 +321,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		return brush
 			? { type: "redactBrush", brush, effect }
 			: { type: "redactBox", effect };
-	}, [eyedropper, tool, brushSettings, redactSettings, documentSize]);
+	}, [eyedropper, tool, drawSettings, redactSettings, documentSize]);
 	const handlePaintStroke = (points: number[]) => {
 		if (canvasTool?.type === "draw") {
 			drawStroke({ ...canvasTool.brush, points });
@@ -296,6 +343,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const handleDrawBox = (rect: Rect) => {
 		if (canvasTool?.type === "redactBox") {
 			addRedactionBox(rect, canvasTool.effect);
+		}
+	};
+	const handleDrawShape = (placement: ShapePlacement) => {
+		if (canvasTool?.type === "drawShape") {
+			addShape(canvasTool.shape, placement, canvasTool.style);
 		}
 	};
 
@@ -323,13 +375,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		moveLayer(selectedLayer.id, selectedIndex + step);
 	};
 
-	// With the pen used last, but never the eraser, so the first stroke
-	// shows. Its color and sizes stay.
+	// With the tool that fits the selection: the shape tool for a shape, and a
+	// pen for a drawing. Otherwise the tool used last, but never the eraser,
+	// so the first stroke shows. Its color and sizes stay.
 	const startDrawing = () => {
 		setLayersOpen(false);
-		setBrushSettings((settings) =>
-			settings.tool === "eraser" ? { ...settings, tool: "pen" } : settings,
-		);
+		setBrushSettings((settings) => {
+			if (selectedLayer?.type === "shape") {
+				return { ...settings, tool: "shape" };
+			}
+			const onDrawing = selectedLayer?.type === "drawing";
+			return settings.tool === "eraser" ||
+				(onDrawing && settings.tool === "shape")
+				? { ...settings, tool: "pen" }
+				: settings;
+		});
 		setTool("draw");
 	};
 	// With the tool that adds to the selected redaction, if there is one.
@@ -614,29 +674,30 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							: undefined
 					}
 					onCommitTransform={transformLayer}
-					onResizeBox={resizeRedactionBox}
+					onResizeBox={resizeBox}
 					onNudgeLayer={nudgeLayer}
 					tool={canvasTool}
 					onPaintStroke={handlePaintStroke}
 					onDrawBox={handleDrawBox}
+					onDrawShape={handleDrawShape}
 					onPickPoint={handlePickPoint}
 					bottomInset={dockInset}
 				/>
 				{tool === "draw" && toolOptionsOpen && (
 					<BrushOptions
-						settings={brushSettings}
+						settings={drawSettings}
 						customColor={customColor}
 						bottomInset={dockInset}
-						onChange={setBrushSettings}
+						onChange={changeDrawSettings}
 						onPickCustom={(color) => {
-							setBrushSettings((settings) => ({ ...settings, color }));
+							changeDrawSettings({ ...drawSettings, color });
 							setCustomColor(color);
 						}}
 						onEyedropper={() => {
 							setToolOptionsOpen(false);
 							setEyedropper({
 								apply: (color) =>
-									setBrushSettings((settings) => ({ ...settings, color })),
+									changeDrawSettings({ ...drawSettings, color }),
 							});
 						}}
 						onClose={() => setToolOptionsOpen(false)}
@@ -708,8 +769,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				>
 					{tool === "draw" ? (
 						<DrawPanel
-							settings={brushSettings}
-							onChange={setBrushSettings}
+							settings={drawSettings}
+							onChange={changeDrawSettings}
 							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
 						/>
 					) : tool === "redact" ? (
@@ -740,7 +801,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							canMoveForward={selectedIndex < document.layers.length - 1}
 							canMoveBackward={selectedIndex > 0}
 							onDraw={
-								selectedLayer.type === "drawing" ? startDrawing : undefined
+								selectedLayer.type === "drawing" ||
+								selectedLayer.type === "shape"
+									? startDrawing
+									: undefined
 							}
 							onRedact={
 								selectedLayer.type === "redaction" ? startRedacting : undefined
