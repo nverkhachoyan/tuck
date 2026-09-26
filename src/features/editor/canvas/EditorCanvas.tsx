@@ -158,7 +158,8 @@ export function EditorCanvas({
 	// React Native Gesture Handler does not expose keyboard modifiers on a Pan.
 	// Keep Shift in a shared value so the UI-thread resize gesture can read it.
 	useEffect(() => {
-		if (typeof window === "undefined") return;
+		// Native has a `window`, but no events on it.
+		if (Platform.OS !== "web") return;
 		const setLock = (event: KeyboardEvent) => {
 			aspectLocked.value = event.shiftKey;
 		};
