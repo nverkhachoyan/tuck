@@ -988,11 +988,17 @@ Any architecture that makes those two substantially different should be examined
 
 # Current Priority
 
-The current milestone is:
+Stage 1's workflow is built, and the app has moved on through most of Stage 2 and parts of Stages 3 and 5 (see Status below). The current milestone is:
 
-> **Stage 1 — Canvas + Text**
+> **Finish Stage 2, then Stage 3's adjustments**
 
-The immediate product test is simple:
+In order:
+
+1. Confirm save and share on real iOS and Android devices, the one Stage 1 criterion still open.
+2. Add pixelation to redaction, the one Stage 2 mode still missing.
+3. Build Stage 3's adjustments: brightness, contrast, saturation, and temperature.
+
+Stage 1's product test still holds, and new work shouldn't slow it down:
 
 ```text
 Pick a photo
@@ -1006,14 +1012,43 @@ Export
 Save or share
 ```
 
-Do not expand scope until this workflow feels fast, predictable, and polished on both iOS and Android.
-
 ## Status
 
-The Stage 1 workflow is implemented; what remains is confirming save and share on real iOS and Android devices.
+### Stage 1 — Canvas + Text
 
-A few Stage 5 items were built early, alongside Stage 1: undo/redo, a small bundled font set, a simple layers panel, and saved projects (each session autosaves as a local project, listed on the welcome screen to reopen; on web too, in IndexedDB). They are part of the app now; this doesn't mean the rest of Stage 5 has started.
+Built. What remains is confirming save and share on real iOS and Android devices.
 
-Stage 3's geometry was also built early: a crop tool with aspect presets, quarter turns, flipping, and straightening. It keeps the photo whole and moves it under the canvas instead of re-encoding it, so every crop can be undone or widened again later. Along with it, the canvas became its own thing: it can be expanded past the photo and filled with white, black, or transparency (exported as PNG), and the photo can be unlocked to move like any layer. Export offers smaller sizes. A document can also start as an empty canvas at a preset size, and the photo can be reordered, hidden, or deleted like any layer. Photos can be added to a document as layers too, so a blank canvas can hold photos and a photo project more than one; the crop tool frames the lowest locked photo, and added photos start unlocked, so they move with the canvas. Stage 3's adjustments haven't started.
+Text is edited in place on the canvas, with fonts, colors (including custom ones and an eyedropper that picks from the canvas), alignment, an outline, and a background box. Layers snap to the canvas's and other layers' edges and centers as they're dragged.
 
-Stage 5's freehand drawing is built as well: a Draw tool with a pen and an eraser, a few colors and sizes, and each drawing kept as its own layer of strokes, so it can be moved, resized, drawn on again, or undone a stroke at a time. Shapes are next, reusing its tool mode and color and size popup.
+### Stage 2 — Blur + Redaction
+
+Mostly built. A Redact tool adds each redaction as its own layer, either a box (dragged out, then moved and resized by its sides and corners) or brush strokes with an eraser, and each can be undone. A redaction is either a solid color (black by default) or a blur at one of three strengths. The tool remembers its settings between sessions.
+
+Missing: pixelation, both for boxes and brush strokes.
+
+### Stage 3 — Basic Photo Editing
+
+Geometry is built: a crop tool with aspect presets, quarter turns, flipping, and straightening. It keeps the photo whole and moves it under the canvas instead of re-encoding it, so every crop can be undone or widened again later. Along with it, the canvas became its own thing: it can be expanded past the photo and filled with white, black, or transparency (exported as PNG), and the photo can be unlocked to move like any layer. Export offers smaller sizes. A document can also start as an empty canvas at a preset size, and the photo can be reordered, hidden, or deleted like any layer. Photos can be added to a document as layers too, so a blank canvas can hold photos and a photo project more than one; the crop tool frames the lowest locked photo, and added photos start unlocked, so they move with the canvas.
+
+Missing: all of the adjustments (brightness, contrast, saturation, temperature, and the later additions).
+
+### Stage 4 — Background Removal
+
+Not started. It needs the app's first native module, and so an Expo development build.
+
+### Stage 5 — Polish + Projects
+
+Built early, alongside the stages above:
+
+* Undo/redo.
+* A small bundled font set.
+* A simple layers panel.
+* Freehand drawing: a Draw tool with a pen, marker, and neon brush, an eraser, colors and sizes it remembers between sessions, and each drawing kept as its own layer of strokes, so it can be moved, resized, drawn on again, or undone a stroke at a time.
+* Saved projects: each session autosaves as a local project (on web too, in IndexedDB), listed with thumbnails on the welcome screen to reopen or delete. Each project has its own route, so links and reloads open it.
+
+Missing:
+
+* Stickers.
+* Renaming and duplicating projects.
+
+Shapes and arrows, listed under Future Possibilities, are the planned next addition to drawing, reusing its tool mode and color and size popup.
