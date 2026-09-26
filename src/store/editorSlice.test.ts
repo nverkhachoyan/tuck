@@ -37,7 +37,7 @@ function createTestStore() {
 function storeWithText() {
 	const store = createTestStore();
 	store.getState().openDocument(photo(), "project-1");
-	store.getState().addTextLayer("TOP TEXT", "center");
+	store.getState().addTextLayer("TOP TEXT");
 	const text = store.getState().document?.layers.at(-1) as TextLayer;
 	return { store, text };
 }
@@ -155,13 +155,40 @@ describe("editorSlice", () => {
 
 	test("updating text patches only the selected text layer", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM", "left");
+		store.getState().addTextLayer("BOTTOM", { align: "left" });
 		store.getState().updateSelectedText({ color: "#FF3B30" });
 
 		const [first, last] = textLayers(store);
 		assert.equal(first, text, "unselected layer is untouched");
 		assert.equal(last.color, "#FF3B30");
 		assert.equal(last.text, "BOTTOM");
+	});
+
+	test("new text takes the style it's given", () => {
+		const { store } = storeWithText();
+		store.getState().addTextLayer("BOTTOM", {
+			font: "serif",
+			outlineColor: null,
+		});
+		const last = textLayers(store).at(-1);
+		assert.equal(last?.font, "serif");
+		assert.equal(last?.outlineColor, null);
+		assert.equal(last?.color, "#FFFFFF");
+	});
+
+	test("text updates by id, whatever is selected now", () => {
+		const { store, text } = storeWithText();
+		store.getState().addTextLayer("BOTTOM");
+		store.getState().updateTextLayer(text.id, { text: "TOP", font: "serif" });
+
+		const [first, last] = textLayers(store);
+		assert.equal(first.text, "TOP");
+		assert.equal(first.font, "serif");
+		assert.equal(last.text, "BOTTOM");
+		assert.equal(store.getState().selectedLayerId, last.id);
+
+		store.getState().undo();
+		assert.equal(textLayers(store)[0], text, "one undo step");
 	});
 
 	test("font and background box are edited like the other styles", () => {
@@ -215,7 +242,7 @@ describe("editorSlice", () => {
 
 	test("deleting another layer keeps the selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM", "center");
+		store.getState().addTextLayer("BOTTOM");
 		const { selectedLayerId } = store.getState();
 		store.getState().deleteLayer(text.id);
 		assert.equal(textLayers(store).length, 1);
@@ -224,7 +251,7 @@ describe("editorSlice", () => {
 
 	test("moving a layer reorders the stack and keeps the selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM", "center");
+		store.getState().addTextLayer("BOTTOM");
 		const { selectedLayerId } = store.getState();
 		store.getState().moveLayer(text.id, 2);
 		assert.equal(textLayers(store).at(-1)?.id, text.id);
@@ -244,7 +271,7 @@ describe("editorSlice", () => {
 
 	test("hiding another layer keeps the selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM", "center");
+		store.getState().addTextLayer("BOTTOM");
 		const { selectedLayerId } = store.getState();
 		store.getState().setLayerHidden(text.id, true);
 		assert.equal(store.getState().selectedLayerId, selectedLayerId);
@@ -337,7 +364,7 @@ describe("editorSlice", () => {
 	test("edits without a document are ignored", () => {
 		const store = createTestStore();
 		const before = store.getState();
-		before.addTextLayer("x", "center");
+		before.addTextLayer("x");
 		before.addImageLayer("x", 1, 1, true);
 		before.updateSelectedText({ text: "y" });
 		before.duplicateSelectedLayer();
@@ -356,7 +383,7 @@ describe("editorSlice", () => {
 		const snapshot = structuredClone(document);
 		const id = store.getState().selectedLayerId ?? "";
 		store.getState().updateSelectedText({ text: "changed" });
-		store.getState().addTextLayer("more", "center");
+		store.getState().addTextLayer("more");
 		store.getState().moveLayer(id, 2);
 		store.getState().setLayerHidden(id, true);
 		store.getState().deleteLayer(id);
@@ -568,7 +595,7 @@ describe("editorSlice", () => {
 
 		test("undoing a move restores the order", () => {
 			const { store, text } = storeWithText();
-			store.getState().addTextLayer("BOTTOM", "center");
+			store.getState().addTextLayer("BOTTOM");
 			const before = store.getState().document;
 			store.getState().moveLayer(text.id, 2);
 			store.getState().undo();
@@ -589,7 +616,7 @@ describe("editorSlice", () => {
 
 		test("any other change ends a run of nudges", () => {
 			const { store, text } = storeWithText();
-			store.getState().addTextLayer("OTHER", "center");
+			store.getState().addTextLayer("OTHER");
 			const other = textLayers(store)[1];
 			const { past } = store.getState();
 
@@ -690,7 +717,7 @@ describe("editorSlice", () => {
 			assert.deepEqual(store.getState().past, []);
 			assert.deepEqual(store.getState().future, []);
 
-			store.getState().addTextLayer("x", "center");
+			store.getState().addTextLayer("x");
 			store.getState().closeDocument();
 			assert.deepEqual(store.getState().past, []);
 		});

@@ -29,7 +29,7 @@ function documentWithText(...texts: string[]): EditorDocument {
 		true,
 	);
 	for (const text of texts) {
-		document.layers.push(createTextLayer(document, text, "center"));
+		document.layers.push(createTextLayer(document, text));
 	}
 	return document;
 }
@@ -340,7 +340,7 @@ describe("projectLabel", () => {
 
 	test("reads text at the bottom of the stack", () => {
 		const document = createBlankDocument(1080, 1080, "#FFFFFF");
-		document.layers.push(createTextLayer(document, "ONLY", "center"));
+		document.layers.push(createTextLayer(document, "ONLY"));
 		assert.equal(projectLabel(document), "ONLY");
 	});
 });

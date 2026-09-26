@@ -6,6 +6,7 @@ import type { Handle } from "./handleGeometry";
 export type CanvasCursor =
 	| "default"
 	| "crosshair"
+	| "text"
 	| "move"
 	| "ew-resize"
 	| "nwse-resize"

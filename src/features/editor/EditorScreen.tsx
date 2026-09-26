@@ -7,6 +7,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
+	Platform,
 	StyleSheet,
 	Text,
 	useWindowDimensions,
@@ -18,7 +19,10 @@ import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/features/editor/canvas/EditorCanvas";
-import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
+import type {
+	CanvasTool,
+	TextEditState,
+} from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
 import { Dock, DockButton, useDockInset } from "@/features/editor/Dock";
 import {
@@ -50,25 +54,35 @@ import {
 	type Shortcut,
 	type ToolKey,
 } from "@/features/editor/shortcuts";
-import { TextEditor } from "@/features/editor/text/TextEditor";
+import {
+	TextEditor,
+	type TextEditorHandle,
+} from "@/features/editor/text/TextEditor";
 import {
 	type TextColorKey,
 	TextColorPicker,
 	TextStylePanel,
 } from "@/features/editor/text/TextStylePanel";
+import {
+	parseTextStyle,
+	withTextEdit,
+} from "@/features/editor/text/textSettings";
 import { useAddPhoto } from "@/features/editor/useAddPhoto";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
+import type { TextSelection } from "@/layers/textEditing";
+import { textIndexAt } from "@/layers/textLayerLayout";
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { usePreference } from "@/lib/usePreference";
 import {
-	defaultTextStyle,
+	createTextLayer,
 	type EditorDocument,
 	maxNewImageShortSide,
-	type TextAlign,
+	type TextLayer,
+	type TextLayerEdit,
 } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import type { Point, Rect } from "@/model/geometry";
+import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
@@ -146,6 +160,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const paintRedaction = useStore((state) => state.paintRedaction);
 	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
+	const updateTextLayer = useStore((state) => state.updateTextLayer);
 	const transformLayer = useStore((state) => state.transformLayer);
 	const resizeRedactionBox = useStore((state) => state.resizeRedactionBox);
 	const nudgeLayer = useStore((state) => state.nudgeLayer);
@@ -169,11 +184,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		[],
 	);
 
-	// What the full-screen text editor is open for: a layer that doesn't exist
-	// yet, or the selected one. The layer is only created or changed on Done.
-	const [editing, setEditing] = useState<"new" | "selected" | null>(null);
+	// Text being typed on the canvas: a new layer, added once editing ends,
+	// or the selected one, changed then. What's typed and restyled meanwhile
+	// stays here, so the whole edit is one undo step.
+	const [textEdit, setTextEdit] = useState<
+		(TextEditState & { initialSelection: TextSelection }) | null
+	>(null);
+	const textEditorRef = useRef<TextEditorHandle>(null);
 	const [cropping, setCropping] = useState(false);
-	const fullScreenToolOpen = editing !== null || cropping;
+	// Typing and cropping take the keyboard, and pasted photos, for themselves.
+	const keysTaken = textEdit !== null || cropping;
 	const [layersOpen, setLayersOpen] = useState(false);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
 	const dockInset = useDockInset();
@@ -197,13 +217,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		"customColor",
 		parseCustomColor,
 	);
+	// New text starts in the style text was last given.
+	const [textStyle, setTextStyle] = usePreference("textStyle", parseTextStyle);
+	// The text the dock styles: what's being typed, or else the selection.
+	const styledText: TextLayer | undefined =
+		textEdit?.layer ?? selectedTextLayer;
 	// Which of a text layer's colors has a picker open over the canvas. It
-	// belongs to that layer, and closes if another is selected.
+	// belongs to that layer, and closes if another is styled.
 	const [textPicker, setTextPicker] = useState<{
 		layerId: string;
 		key: TextColorKey;
 	} | null>(null);
-	if (textPicker && (tool || textPicker.layerId !== selectedTextLayer?.id)) {
+	if (textPicker && (tool || textPicker.layerId !== styledText?.id)) {
 		setTextPicker(null);
 	}
 	// While set, the canvas's next tap picks a color from what it shows, for
@@ -330,17 +355,67 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		setEyedropper(null);
 	};
 
+	const changeTextEdit = (change: Partial<TextEditState>) =>
+		setTextEdit((edit) => edit && { ...edit, ...change });
+	const changeEditedText = (patch: TextLayerEdit) =>
+		setTextEdit(
+			(edit) => edit && { ...edit, layer: { ...edit.layer, ...patch } },
+		);
+	const startNewText = () => {
+		setLayersOpen(false);
+		const start = { start: 0, end: 0 };
+		setTextEdit({
+			layer: createTextLayer(document, "", textStyle),
+			isNew: true,
+			selection: start,
+			initialSelection: start,
+			focused: false,
+		});
+	};
+	// With the caret at `index`, or the end.
+	const editSelectedText = (index?: number) => {
+		if (!selectedTextLayer) return;
+		setLayersOpen(false);
+		const at = index ?? selectedTextLayer.text.length;
+		setTextEdit({
+			layer: selectedTextLayer,
+			isNew: false,
+			selection: { start: at, end: at },
+			initialSelection: { start: at, end: at },
+			focused: false,
+		});
+	};
 	// Finishing with no text discards a new layer and deletes an existing one.
-	const handleEditDone = (rawText: string, align: TextAlign) => {
-		const text = rawText.trim();
-		if (editing === "new") {
-			if (text) addTextLayer(text, align);
+	const finishTextEdit = () => {
+		if (!textEdit) return;
+		const { layer, isNew } = textEdit;
+		const text = layer.text.trim();
+		const { font, color, outlineColor, backgroundColor, align } = layer;
+		const style = { font, color, outlineColor, backgroundColor, align };
+		if (isNew) {
+			if (text) addTextLayer(text, style);
 		} else if (text) {
-			updateSelectedText({ text, align });
-		} else if (selectedTextLayer) {
-			deleteLayer(selectedTextLayer.id);
+			updateTextLayer(layer.id, { text, ...style });
+		} else {
+			deleteLayer(layer.id);
 		}
-		setEditing(null);
+		setTextEdit(null);
+	};
+	// Restyles the text being typed, or else the selected text, and new text
+	// starts in the same style. On web, the dock's buttons take focus from
+	// the text being typed, so it takes the keyboard back.
+	const styleText = (patch: TextLayerEdit) => {
+		setTextStyle((style) => withTextEdit(style, patch));
+		if (!textEdit) {
+			updateSelectedText(patch);
+			return;
+		}
+		changeEditedText(patch);
+		if (Platform.OS === "web") textEditorRef.current?.focus();
+	};
+	const selectText = (selection: TextSelection) => {
+		textEditorRef.current?.select(selection);
+		changeTextEdit({ selection });
 	};
 
 	const startCrop = () => setCropping(true);
@@ -385,6 +460,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 		if (!selectedLayer) return false;
 		switch (shortcut.type) {
+			case "edit":
+				if (!selectedTextLayer) return false;
+				editSelectedText();
+				return true;
 			case "delete":
 				deleteLayer(selectedLayer.id);
 				return true;
@@ -405,13 +484,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 	};
 	useEditorShortcuts({
-		enabled: !fullScreenToolOpen,
+		enabled: !keysTaken,
 		onShortcut: handleShortcut,
 	});
 
 	const panelKind = tool
 		? tool
-		: selectedTextLayer
+		: styledText
 			? "text"
 			: selectedLayer
 				? "layer"
@@ -425,7 +504,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	} = useAddPhoto({
 		// On web, an image pasted or dropped onto the editor joins the canvas,
 		// unless another screen or tool is in front of it.
-		enabled: focused && !fullScreenToolOpen,
+		enabled: focused && !keysTaken,
 		maxShortSide: maxNewImageShortSide(document),
 		// The photo moves into the project, so autosave knows its file.
 		// Without a project, it's used where the picker left it.
@@ -441,7 +520,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// selected drawing or redaction takes the strokes, as its own Draw or
 	// Redact does.
 	const startTool: Record<ToolKey, () => void> = {
-		text: () => setEditing("new"),
+		text: startNewText,
 		draw: startDrawing,
 		redact: startRedacting,
 		photo: pickPhoto,
@@ -458,7 +537,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			layers={document.layers}
 			background={document.background}
 			selectedLayerId={selectedLayer?.id ?? null}
-			onSelect={selectLayer}
+			onSelect={(id) => {
+				finishTextEdit();
+				selectLayer(id);
+			}}
 			onMove={moveLayer}
 			onSetHidden={setLayerHidden}
 			onSetLocked={setLayerLocked}
@@ -516,12 +598,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					ref={canvasRef}
 					document={document}
 					selectedLayer={selectedLayer}
-					hiddenLayerId={
-						editing === "selected" ? (selectedTextLayer?.id ?? null) : null
-					}
+					textEdit={textEdit}
+					onTextSelect={selectText}
+					onTextEditDone={finishTextEdit}
 					onSelectLayer={selectLayer}
 					onTapSelectedLayer={
-						selectedTextLayer ? () => setEditing("selected") : undefined
+						selectedTextLayer
+							? (point) =>
+									editSelectedText(
+										textIndexAt(
+											selectedTextLayer,
+											toLayerSpace(selectedTextLayer.transform, point),
+										),
+									)
+							: undefined
 					}
 					onCommitTransform={transformLayer}
 					onResizeBox={resizeRedactionBox}
@@ -572,18 +662,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						onClose={() => setToolOptionsOpen(false)}
 					/>
 				)}
-				{textPicker && selectedTextLayer && (
+				{textPicker && styledText && (
 					<TextColorPicker
-						layer={selectedTextLayer}
+						layer={styledText}
 						colorKey={textPicker.key}
 						bottomInset={dockInset}
-						onChange={updateSelectedText}
+						onChange={styleText}
 						onPickCustom={setCustomColor}
 						onEyedropper={() => {
 							const { key } = textPicker;
 							setTextPicker(null);
 							setEyedropper({
-								apply: (color) => updateSelectedText({ [key]: color }),
+								apply: (color) => styleText({ [key]: color }),
 							});
 						}}
 						onClose={() => setTextPicker(null)}
@@ -629,23 +719,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onChange={changeRedactSettings}
 							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
 						/>
-					) : selectedTextLayer ? (
+					) : styledText ? (
 						<TextStylePanel
-							layer={selectedTextLayer}
+							layer={styledText}
+							editing={textEdit !== null}
 							customColor={customColor}
-							onChange={updateSelectedText}
+							onChange={styleText}
 							onOpenPicker={(key) =>
-								setTextPicker({ layerId: selectedTextLayer.id, key })
+								setTextPicker({ layerId: styledText.id, key })
 							}
-							onEdit={() => setEditing("selected")}
+							onEdit={() => editSelectedText()}
 							onToggleResize={() =>
-								setLayerResizable(
-									selectedTextLayer.id,
-									!selectedTextLayer.resizable,
-								)
+								setLayerResizable(styledText.id, !styledText.resizable)
 							}
 							onDuplicate={duplicateSelectedLayer}
-							onDelete={() => deleteLayer(selectedTextLayer.id)}
+							onDelete={() => deleteLayer(styledText.id)}
 						/>
 					) : selectedLayer ? (
 						<LayerActionsPanel
@@ -675,7 +763,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					) : (
 						<ToolsPanel
 							photoBusy={photoBusy}
-							onAddText={() => setEditing("new")}
+							onAddText={startNewText}
 							onDraw={startDrawing}
 							onRedact={startRedacting}
 							onAddPhoto={pickPhoto}
@@ -694,18 +782,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					onDone={finishCrop}
 				/>
 			)}
-			{editing === "new" && (
+			{textEdit && (
 				<TextEditor
-					initialText=""
-					layerStyle={defaultTextStyle}
-					onDone={handleEditDone}
-				/>
-			)}
-			{editing === "selected" && selectedTextLayer && (
-				<TextEditor
-					initialText={selectedTextLayer.text}
-					layerStyle={selectedTextLayer}
-					onDone={handleEditDone}
+					ref={textEditorRef}
+					text={textEdit.layer.text}
+					align={textEdit.layer.align}
+					initialSelection={textEdit.initialSelection}
+					onChangeText={(text) => changeEditedText({ text })}
+					onChangeAlign={(align) => styleText({ align })}
+					onSelectionChange={(selection) => changeTextEdit({ selection })}
+					onFocusChange={(focused) => changeTextEdit({ focused })}
+					onDone={finishTextEdit}
 				/>
 			)}
 		</View>

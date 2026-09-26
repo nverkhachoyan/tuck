@@ -14,9 +14,9 @@ import {
 	type RedactionLayer,
 	reorderLayer,
 	type Stroke,
-	type TextAlign,
 	type TextLayer,
 	type TextLayerEdit,
+	type TextLayerStyle,
 } from "../model/document.ts";
 import { addStroke } from "../model/drawing.ts";
 import {
@@ -49,7 +49,7 @@ export type EditorSlice = {
 	future: EditorSnapshot[];
 	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
-	addTextLayer: (text: string, align: TextAlign) => void;
+	addTextLayer: (text: string, style?: Partial<TextLayerStyle>) => void;
 	addImageLayer: (
 		uri: string,
 		width: number,
@@ -62,6 +62,7 @@ export type EditorSlice = {
 	paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) => void;
 	setRedactionEffect: (id: string, effect: RedactionEffect) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
+	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
 	resizeRedactionBox: (
 		id: string,
@@ -177,10 +178,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				"editor/closeDocument",
 			),
 
-		addTextLayer: (text, align) => {
+		addTextLayer: (text, style) => {
 			const { document } = get();
 			if (!document) return;
-			addOnTop("editor/addTextLayer", createTextLayer(document, text, align));
+			addOnTop("editor/addTextLayer", createTextLayer(document, text, style));
 		},
 
 		addImageLayer: (uri, width, height, opaque) => {
@@ -258,12 +259,19 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		updateSelectedText: (patch) => {
 			const selected = selectSelectedTextLayer(get());
-			if (!selected) return;
+			if (selected) get().updateTextLayer(selected.id, patch);
+		},
+
+		// By id, like `transformLayer`: text edited in place is committed to
+		// the layer it came from, whatever is selected by then.
+		updateTextLayer: (id, patch) => {
+			const target = findLayer(id);
+			if (target?.type !== "text") return;
 			const keys = Object.keys(patch) as (keyof TextLayerEdit)[];
-			if (keys.every((key) => selected[key] === patch[key])) return;
-			setLayers("editor/updateSelectedText", (layers) =>
+			if (keys.every((key) => target[key] === patch[key])) return;
+			setLayers("editor/updateTextLayer", (layers) =>
 				layers.map((layer) =>
-					layer === selected ? { ...selected, ...patch } : layer,
+					layer === target ? { ...target, ...patch } : layer,
 				),
 			);
 		},

@@ -9,8 +9,17 @@ import {
 	Shadow,
 	Skia,
 } from "@shopify/react-native-skia";
-import type { ReactNode } from "react";
-import { type SharedValue, useDerivedValue } from "react-native-reanimated";
+import { type ReactNode, useEffect } from "react";
+import {
+	cancelAnimation,
+	type SharedValue,
+	useDerivedValue,
+	useSharedValue,
+	withDelay,
+	withRepeat,
+	withSequence,
+	withTiming,
+} from "react-native-reanimated";
 import { BrushStroke, strokePath } from "@/layers/DrawingLayerView";
 import { layerBounds } from "@/layers/layerBounds";
 import {
@@ -25,6 +34,9 @@ import {
 	recordRedactionStrokes,
 	strokesPicture,
 } from "@/layers/RedactionLayerView";
+import { TextLayerView } from "@/layers/TextLayerView";
+import { clampSelection, type TextSelection } from "@/layers/textEditing";
+import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
 import type {
 	Brush,
 	EditorDocument,
@@ -34,6 +46,7 @@ import type {
 	RedactionEffect,
 	RedactionLayer,
 	RedactionStrokes,
+	TextLayer,
 } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
 import { rectFromCorners } from "@/model/geometry";
@@ -52,6 +65,13 @@ const SELECTION_HALO = "rgba(0, 0, 0, 0.22)";
 const SHADOW_OFFSET_PX = 6;
 const SHADOW_BLUR_PX = 18;
 const EDGE_PX = 1;
+// A caret's width, and its halo's on each side, in screen pixels, and how
+// long it stays on, then off, as it blinks.
+const CARET_PX = 2;
+const CARET_HALO_PX = 1;
+const CARET_BLINK_MS = 530;
+// Over the text rather than under it, where a box would hide it.
+const TEXT_SELECTION = "rgba(88, 166, 255, 0.4)";
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
@@ -85,10 +105,22 @@ export type LiveStroke = {
 	targetId: string | null;
 };
 
+/**
+ * Text being edited in place: its layer as typed so far, which is drawn in
+ * place of the document's (or on top when `isNew`: it's added once editing
+ * ends), and its caret or selection. The caret shows while `focused`.
+ */
+export type TextEditState = {
+	layer: TextLayer;
+	isNew: boolean;
+	selection: TextSelection;
+	focused: boolean;
+};
+
 type EditorSceneProps = {
 	document: EditorDocument;
 	selectedLayerId: string | null;
-	hiddenLayerId: string | null;
+	textEdit: TextEditState | null;
 	// Screen pixels per document unit.
 	viewScale: number;
 	live: LiveTransform;
@@ -112,13 +144,14 @@ type EditorSceneProps = {
 export function EditorScene({
 	document,
 	selectedLayerId,
-	hiddenLayerId,
+	textEdit,
 	viewScale,
 	live,
 	stroke,
 	outlinedLayer,
 	onImageError,
 }: EditorSceneProps) {
+	const editedId = textEdit && !textEdit.isNew ? textEdit.layer.id : null;
 	const canvas = rect(0, 0, document.width, document.height);
 	return (
 		<Group>
@@ -128,21 +161,30 @@ export function EditorScene({
 				viewScale={viewScale}
 			/>
 			{document.layers.map((layer) =>
-				layer.hidden || layer.id === hiddenLayerId ? null : (
+				layer.hidden ? null : (
 					<Group
 						key={layer.id}
 						clip={layer.type === "image" && layer.locked ? canvas : undefined}
 					>
 						<LiveLayer layer={layer} live={live}>
-							<StrokeTarget
-								layer={layer}
-								stroke={stroke?.targetId === layer.id ? stroke : null}
-								live={live}
-								onImageError={onImageError}
-							/>
+							{textEdit && layer.id === editedId ? (
+								<EditedText edit={textEdit} viewScale={viewScale} />
+							) : (
+								<StrokeTarget
+									layer={layer}
+									stroke={stroke?.targetId === layer.id ? stroke : null}
+									live={live}
+									onImageError={onImageError}
+								/>
+							)}
 						</LiveLayer>
 					</Group>
 				),
+			)}
+			{textEdit?.isNew && (
+				<Group transform={toTransformList(textEdit.layer.transform)}>
+					<EditedText edit={textEdit} viewScale={viewScale} />
+				</Group>
 			)}
 			{stroke?.targetId === null && (
 				<NewLayerStroke
@@ -174,7 +216,7 @@ export function EditorScene({
 			{outlinedLayer && (
 				<SelectionOutline layer={outlinedLayer} viewScale={viewScale} />
 			)}
-			{selectedLayerId !== null && selectedLayerId !== hiddenLayerId && (
+			{selectedLayerId !== null && (
 				<SelectionHandles live={live} viewScale={viewScale} />
 			)}
 		</Group>
@@ -253,6 +295,97 @@ function StrokeTarget({
 			}
 			onImageError={onImageError}
 		/>
+	);
+}
+
+/**
+ * Text being edited, in its layer's space: what's typed so far, with the
+ * selection over it, or the caret, blinking while it holds still.
+ */
+function EditedText({
+	edit,
+	viewScale,
+}: {
+	edit: TextEditState;
+	viewScale: number;
+}) {
+	const { layer, focused } = edit;
+	const selection = clampSelection(edit.selection, layer.text.length);
+	const collapsed = selection.start === selection.end;
+	// One screen pixel, across the layer, in its own units.
+	const pixel = 1 / (viewScale * layer.transform.scaleX);
+	let highlight = null;
+	if (!collapsed) {
+		const builder = Skia.PathBuilder.Make();
+		for (const box of textSelectionRects(layer, selection)) {
+			builder.addRect(Skia.XYWHRect(box.x, box.y, box.width, box.height));
+		}
+		highlight = builder.build();
+	}
+	return (
+		<>
+			<TextLayerView layer={layer} />
+			{highlight && <Path path={highlight} color={TEXT_SELECTION} />}
+			{focused && collapsed && (
+				<Caret
+					layer={layer}
+					index={selection.start}
+					pixel={pixel}
+					key={`${selection.start}:${layer.text}`}
+				/>
+			)}
+		</>
+	);
+}
+
+/**
+ * A text caret before `index`, `pixel` being a screen pixel in the layer's
+ * units. It blinks from the moment it mounts: keyed by where it is and the
+ * text, so it holds still while it moves and while typing.
+ */
+function Caret({
+	layer,
+	index,
+	pixel,
+}: {
+	layer: TextLayer;
+	index: number;
+	pixel: number;
+}) {
+	const { x, y, height } = textCaretRect(layer, index);
+	const opacity = useSharedValue(1);
+	useEffect(() => {
+		opacity.value = withSequence(
+			withTiming(1, { duration: 0 }),
+			withRepeat(
+				withSequence(
+					withDelay(CARET_BLINK_MS, withTiming(0, { duration: 0 })),
+					withDelay(CARET_BLINK_MS, withTiming(1, { duration: 0 })),
+				),
+				-1,
+			),
+		);
+		return () => cancelAnimation(opacity);
+	}, [opacity]);
+	const width = CARET_PX * pixel;
+	const halo = width + CARET_HALO_PX * 2 * pixel;
+	return (
+		<Group opacity={opacity}>
+			<Rect
+				x={x - halo / 2}
+				y={y - CARET_HALO_PX * pixel}
+				width={halo}
+				height={height + CARET_HALO_PX * 2 * pixel}
+				color={SELECTION_HALO}
+			/>
+			<Rect
+				x={x - width / 2}
+				y={y}
+				width={width}
+				height={height}
+				color={colors.selection}
+			/>
+		</Group>
 	);
 }
 

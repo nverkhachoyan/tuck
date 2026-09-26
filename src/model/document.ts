@@ -290,7 +290,7 @@ export const defaultTextStyle = {
 export function createTextLayer(
 	document: EditorDocument,
 	text: string,
-	align: TextAlign,
+	style: Partial<TextLayerStyle> = {},
 ): TextLayer {
 	return {
 		type: "text",
@@ -298,7 +298,7 @@ export function createTextLayer(
 		text,
 		fontSize: initialFontSize(document),
 		...defaultTextStyle,
-		align,
+		...style,
 		// Meme captions span most of the photo before wrapping.
 		maxWidth: document.width * 0.9,
 		transform: {

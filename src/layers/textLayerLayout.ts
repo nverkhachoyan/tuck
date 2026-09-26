@@ -8,8 +8,9 @@ import {
 	StrokeJoin,
 } from "@shopify/react-native-skia";
 import type { TextAlign, TextLayer } from "@/model/document";
-import type { Box } from "@/model/geometry";
+import type { Box, Point, Rect } from "@/model/geometry";
 import { getFontProvider, TEXT_FONTS } from "./fonts";
+import { type CaretText, caretText, type TextSelection } from "./textEditing";
 
 export type TextLayerLayout = {
 	// Drawn first, behind the text: a box around each line; null when disabled.
@@ -109,6 +110,96 @@ function lineBoxes(
 	return builder.build();
 }
 
+type CaretLayout = CaretText & { paragraph: SkParagraph };
+
+// Like `layouts`, for editing: built only for the layer being edited.
+const caretLayouts = new WeakMap<TextLayer, CaretLayout>();
+
+/**
+ * The text laid out as `caretText` has it, at the width the layer's own text
+ * took, so its lines fall where the drawn text's do, empty ones included.
+ */
+function caretLayout(layer: TextLayer): CaretLayout {
+	const cached = caretLayouts.get(layer);
+	if (cached) return cached;
+	const mapping = caretText(layer.text);
+	const paragraph = buildParagraph(layer, undefined, mapping.caretText);
+	paragraph.layout(layoutTextLayer(layer).width);
+	const layout = { ...mapping, paragraph };
+	caretLayouts.set(layer, layout);
+	return layout;
+}
+
+// From the paragraph's top left, where Skia measures, to the layer's space.
+function toLayerRect(layer: TextLayer, rect: Rect): Rect {
+	const { width, height } = layoutTextLayer(layer);
+	return {
+		x: rect.x - width / 2,
+		y: rect.y - height / 2,
+		width: rect.width,
+		height: rect.height,
+	};
+}
+
+/**
+ * Where a caret before index `index` of the layer's text stands, in the
+ * layer's space: a zero-width rect as tall as the line's text.
+ */
+export function textCaretRect(layer: TextLayer, index: number): Rect {
+	// Empty text is a line with no width, which Skia has nothing to measure in.
+	if (layer.text === "") {
+		const { height } = layoutTextLayer(layer);
+		return { x: 0, y: -height / 2, width: 0, height };
+	}
+	const { paragraph, caretText: text, toCaret } = caretLayout(layer);
+	const j = toCaret[Math.max(0, Math.min(index, layer.text.length))];
+	// Before the character it's at, unless that ends the line: then after the
+	// one before, which is never a line break (see `caretText`).
+	const before = j < text.length && text[j] !== "\n";
+	const rects = before
+		? paragraph.getRectsForRange(j, j + 1)
+		: paragraph.getRectsForRange(j - 1, j);
+	const rect = before ? rects[0] : rects[rects.length - 1];
+	if (!rect) {
+		return toLayerRect(layer, { x: 0, y: 0, width: 0, height: layer.fontSize });
+	}
+	return toLayerRect(layer, {
+		x: before ? rect.x : rect.x + rect.width,
+		y: rect.y,
+		width: 0,
+		height: rect.height,
+	});
+}
+
+/** The boxes a selection of the layer's text covers, in the layer's space. */
+export function textSelectionRects(
+	layer: TextLayer,
+	{ start, end }: TextSelection,
+): Rect[] {
+	const { paragraph, toCaret } = caretLayout(layer);
+	const clamp = (index: number) =>
+		toCaret[Math.max(0, Math.min(index, layer.text.length))];
+	return paragraph.getRectsForRange(clamp(start), clamp(end)).map((rect) =>
+		toLayerRect(layer, {
+			x: rect.x,
+			y: rect.y,
+			width: rect.width,
+			height: rect.height,
+		}),
+	);
+}
+
+/** The index of the layer's text nearest a point in the layer's space. */
+export function textIndexAt(layer: TextLayer, point: Point): number {
+	const { paragraph, caretText: text, fromCaret } = caretLayout(layer);
+	const { width, height } = layoutTextLayer(layer);
+	const j = paragraph.getGlyphPositionAtCoordinate(
+		point.x + width / 2,
+		point.y + height / 2,
+	);
+	return fromCaret[Math.max(0, Math.min(j, text.length))];
+}
+
 function outlinePaint(layer: TextLayer, color: string): SkPaint {
 	const paint = Skia.Paint();
 	paint.setAntiAlias(true);
@@ -119,7 +210,11 @@ function outlinePaint(layer: TextLayer, color: string): SkPaint {
 	return paint;
 }
 
-function buildParagraph(layer: TextLayer, foreground?: SkPaint): SkParagraph {
+function buildParagraph(
+	layer: TextLayer,
+	foreground?: SkPaint,
+	text = layer.text,
+): SkParagraph {
 	return (
 		Skia.ParagraphBuilder.Make(
 			{ textAlign: skTextAlign[layer.align] },
@@ -136,7 +231,7 @@ function buildParagraph(layer: TextLayer, foreground?: SkPaint): SkParagraph {
 				foreground,
 			)
 			// An empty layer still needs a line's height to stay selectable.
-			.addText(layer.text || " ")
+			.addText(text || " ")
 			.build()
 	);
 }

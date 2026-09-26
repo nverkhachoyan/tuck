@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
 import {
 	BackHandler,
-	KeyboardAvoidingView,
 	Platform,
 	Pressable,
 	StyleSheet,
@@ -9,11 +8,10 @@ import {
 	type TextStyle,
 	View,
 } from "react-native";
-import { TEXT_FONTS } from "@/layers/fonts";
-import type { TextAlign, TextLayerStyle } from "@/model/document";
+import type { TextSelection } from "@/layers/textEditing";
+import type { TextAlign } from "@/model/document";
 import { colors, HEADER_HEIGHT, webTransition } from "@/theme";
 import { Button } from "@/ui/Button";
-import { FrostedBackdrop } from "@/ui/GlassView";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 
@@ -23,111 +21,151 @@ const NEXT_ALIGN: Record<TextAlign, TextAlign> = {
 	right: "center",
 };
 
+export type TextEditorHandle = {
+	// Takes the keyboard back, keeping the caret where it was.
+	focus: () => void;
+	// Moves the caret, or selects, and takes the keyboard.
+	select: (selection: TextSelection) => void;
+};
+
 type TextEditorProps = {
-	initialText: string;
-	// Of the style, only the alignment can change here.
-	layerStyle: TextLayerStyle;
-	// Called with the final text, which may be empty.
-	onDone: (text: string, align: TextAlign) => void;
+	ref?: Ref<TextEditorHandle>;
+	text: string;
+	align: TextAlign;
+	// Where the caret starts, once the input first has focus.
+	initialSelection: TextSelection;
+	onChangeText: (text: string) => void;
+	onChangeAlign: (align: TextAlign) => void;
+	onSelectionChange: (selection: TextSelection) => void;
+	onFocusChange: (focused: boolean) => void;
+	onDone: () => void;
 };
 
 /**
- * Full-screen text entry over the dimmed canvas. The text is shown upright
- * and large rather than at the layer's position, size, and rotation: Skia
- * draws the real result once editing ends, so this only has to be pleasant
- * to type into, not pixel-identical.
+ * Typing into text on the canvas, which draws it in place, caret and all
+ * (see `TextEditState`). This is the bar over the screen's header, with the
+ * alignment and Done, and the input the keyboard types into, which is
+ * hidden under the bar: the canvas shows what it holds exactly as the text
+ * will look, at its size, angle, and wrapping, which no input could.
+ *
+ * On web, Escape or ⌘/Ctrl+Enter finishes, as Done does.
  */
 export function TextEditor({
-	initialText,
-	layerStyle,
+	ref,
+	text,
+	align,
+	initialSelection,
+	onChangeText,
+	onChangeAlign,
+	onSelectionChange,
+	onFocusChange,
 	onDone,
 }: TextEditorProps) {
-	const { font, color, outlineColor, backgroundColor } = layerStyle;
-	const [text, setText] = useState(initialText);
-	const [align, setAlign] = useState(layerStyle.align);
-	const done = () => onDone(text, align);
+	const input = useRef<TextInput>(null);
+	// The first focus, as it opens, places the caret.
+	const placed = useRef(false);
 	// Three bars alone read as a menu, so on web, hovering says what they do.
 	const alignLabel = `Text alignment: ${align}`;
 	const { anchor, tooltip } = useTooltip(alignLabel);
-	const outlineStyle =
-		outlineColor === null
-			? undefined
-			: Platform.select<TextStyle>({
-					// React Native Web deprecated the split textShadow* props in
-					// favor of the CSS shorthand; native still uses the split props.
-					web: {
-						textShadow: `0px 0px 4px ${outlineColor}`,
-					} as unknown as TextStyle,
-					default: {
-						textShadowColor: outlineColor,
-						textShadowOffset: { width: 0, height: 0 },
-						textShadowRadius: 4,
-					},
-				});
+
+	useImperativeHandle(
+		ref,
+		() => ({
+			focus: () => input.current?.focus(),
+			select: (selection) => {
+				placed.current = true;
+				input.current?.focus();
+				if (input.current) setInputSelection(input.current, selection);
+			},
+		}),
+		[],
+	);
+
+	// Not `autoFocus`: on web, React focuses that while it can't report the
+	// focus, and the caret would never be placed.
+	useEffect(() => {
+		input.current?.focus();
+	}, []);
 
 	// Android's back button finishes editing rather than leaving the editor.
 	useEffect(() => {
 		const subscription = BackHandler.addEventListener(
 			"hardwareBackPress",
 			() => {
-				onDone(text, align);
+				onDone();
 				return true;
 			},
 		);
 		return () => subscription.remove();
-	}, [onDone, text, align]);
+	}, [onDone]);
 
 	return (
-		<View style={StyleSheet.absoluteFill}>
-			{/* Below the toolbar, so the header it covers can't blur into view. */}
-			<FrostedBackdrop style={styles.backdrop} />
-			{/* The input is the only thing on screen the keyboard could cover. */}
-			<KeyboardAvoidingView behavior="padding" style={styles.flex}>
-				<View style={styles.toolbar}>
-					<Pressable
-						{...anchor}
-						hitSlop={4}
-						onPress={() => setAlign(NEXT_ALIGN[align])}
-						accessibilityRole="button"
-						accessibilityLabel={alignLabel}
-						style={(state) => {
-							const { pressed, hovered } = interaction(state);
-							return [
-								styles.alignButton,
-								webTransition,
-								hovered && styles.alignButtonHovered,
-								pressed && styles.alignButtonPressed,
-							];
-						}}
-					>
-						<AlignIcon align={align} />
-					</Pressable>
-					{tooltip}
-					<Button label="Done" variant="primary" size="small" onPress={done} />
-				</View>
-
-				<View style={styles.inputArea}>
-					{/* Tapping anywhere outside the text also finishes. Behind the
-					    input, not around it: on web, clicks on the input would bubble. */}
-					<Pressable style={StyleSheet.absoluteFill} onPress={done} />
-					<TextInput
-						value={text}
-						onChangeText={setText}
-						autoFocus
-						multiline
-						placeholder="Type something"
-						placeholderTextColor={colors.textSecondary}
-						style={[
-							styles.input,
-							{ fontFamily: TEXT_FONTS[font].family, color, textAlign: align },
-							backgroundColor !== null && [styles.box, { backgroundColor }],
-							outlineStyle,
-						]}
-					/>
-				</View>
-			</KeyboardAvoidingView>
+		<View style={styles.toolbar}>
+			<TextInput
+				ref={input}
+				value={text}
+				onChangeText={onChangeText}
+				onSelectionChange={(event) =>
+					onSelectionChange(event.nativeEvent.selection)
+				}
+				onFocus={() => {
+					onFocusChange(true);
+					if (placed.current || !input.current) return;
+					placed.current = true;
+					setInputSelection(input.current, initialSelection);
+				}}
+				onBlur={() => onFocusChange(false)}
+				onKeyPress={(event) => {
+					const { key, metaKey, ctrlKey } =
+						event.nativeEvent as typeof event.nativeEvent & {
+							metaKey?: boolean;
+							ctrlKey?: boolean;
+						};
+					if (key === "Escape" || (key === "Enter" && (metaKey || ctrlKey))) {
+						event.preventDefault();
+						onDone();
+					}
+				}}
+				multiline
+				keyboardAppearance="dark"
+				accessibilityLabel="Text"
+				style={styles.input}
+			/>
+			<Pressable
+				{...anchor}
+				hitSlop={4}
+				onPress={() => {
+					onChangeAlign(NEXT_ALIGN[align]);
+					// On web, the press took focus from the text.
+					if (Platform.OS === "web") input.current?.focus();
+				}}
+				accessibilityRole="button"
+				accessibilityLabel={alignLabel}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.alignButton,
+						webTransition,
+						hovered && styles.alignButtonHovered,
+						pressed && styles.alignButtonPressed,
+					];
+				}}
+			>
+				<AlignIcon align={align} />
+			</Pressable>
+			{tooltip}
+			<Button label="Done" variant="primary" size="small" onPress={onDone} />
 		</View>
 	);
+}
+
+// React Native Web's input is the DOM's own, which has no `setSelection`.
+function setInputSelection(input: TextInput, { start, end }: TextSelection) {
+	if (Platform.OS === "web") {
+		(input as unknown as HTMLTextAreaElement).setSelectionRange(start, end);
+	} else {
+		input.setSelection(start, end);
+	}
 }
 
 /** Three bars aligned the way the text is. */
@@ -144,20 +182,34 @@ function AlignIcon({ align }: { align: TextAlign }) {
 }
 
 const styles = StyleSheet.create({
-	backdrop: {
-		top: HEADER_HEIGHT,
-	},
-	flex: {
-		flex: 1,
-	},
-	// Opaque, so the screen header underneath doesn't show through.
+	// Opaque, over the screen's header, whose actions wait until editing ends.
 	toolbar: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
 		height: HEADER_HEIGHT,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
 		paddingHorizontal: 16,
 		backgroundColor: colors.background,
+	},
+	// Hidden under the bar, and out of the way of its buttons. At least 16px,
+	// or Safari on iOS zooms the page into it. On web, lines only break
+	// where the text does, so the arrow keys move up and down by those.
+	input: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		opacity: 0,
+		fontSize: 16,
+		pointerEvents: "none",
+		...Platform.select({
+			web: { whiteSpace: "pre", overflow: "hidden" } as unknown as TextStyle,
+		}),
 	},
 	// A halo around the icon, overhanging so the bar keeps its spacing.
 	alignButton: {
@@ -173,30 +225,6 @@ const styles = StyleSheet.create({
 	},
 	alignButtonPressed: {
 		backgroundColor: colors.pressedOverlay,
-	},
-	inputArea: {
-		flex: 1,
-		justifyContent: "center",
-		paddingHorizontal: 24,
-	},
-	// The layer's own font (set inline), so the text doesn't change face when
-	// editing ends. No fontWeight: Android drops a custom font asked for in a
-	// weight it wasn't registered with.
-	input: {
-		fontSize: 34,
-		// Native's default, but React Native Web leaves the textarea static,
-		// which CSS paints under the absolutely positioned backdrop.
-		position: "relative",
-		// Browsers ring a focused input; here the caret already shows focus.
-		// React Native's types lack "none", which only web understands.
-		...Platform.select({
-			web: { outlineStyle: "none" } as unknown as TextStyle,
-		}),
-	},
-	box: {
-		paddingHorizontal: 12,
-		paddingVertical: 6,
-		borderRadius: 8,
 	},
 	alignIcon: {
 		width: 22,

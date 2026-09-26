@@ -34,7 +34,7 @@ describe("createDocumentFromImage", () => {
 	test("locks the photo, and leaves new text unlocked", () => {
 		const document = landscape();
 		assert.equal(document.layers[0].locked, true);
-		assert.equal(createTextLayer(document, "x", "center").locked, false);
+		assert.equal(createTextLayer(document, "x").locked, false);
 	});
 
 	test("centers the photo's transform, so it covers the document", () => {
@@ -64,7 +64,7 @@ describe("hasEdits", () => {
 	test("is false for the photo alone and true once a layer is added", () => {
 		const document = landscape();
 		assert.equal(hasEdits(document), false);
-		document.layers.push(createTextLayer(document, "TOP TEXT", "center"));
+		document.layers.push(createTextLayer(document, "TOP TEXT"));
 		assert.equal(hasEdits(document), true);
 	});
 
@@ -109,7 +109,7 @@ describe("hasEdits", () => {
 	test("is false for an empty canvas, whatever its fill", () => {
 		const document = createBlankDocument(1080, 1080, "#000000");
 		assert.equal(hasEdits(document), false);
-		document.layers.push(createTextLayer(document, "HELLO", "center"));
+		document.layers.push(createTextLayer(document, "HELLO"));
 		assert.equal(hasEdits(document), true);
 	});
 });
@@ -163,7 +163,7 @@ describe("hasTransparency", () => {
 	test("is false while any visible image covers the canvas", () => {
 		const document = landscape();
 		const [photo] = document.layers;
-		const text = createTextLayer(document, "TOP", "center");
+		const text = createTextLayer(document, "TOP");
 		document.layers = [text, { ...photo, id: "copy" }, photo];
 		document.layers[2].hidden = true;
 		assert.equal(hasTransparency(document), false);
@@ -185,7 +185,7 @@ describe("initialFontSize", () => {
 describe("createTextLayer", () => {
 	test("starts centered, in the meme style, wrapping at 90% width", () => {
 		const document = landscape();
-		const layer = createTextLayer(document, "hello", "left");
+		const layer = createTextLayer(document, "hello", { align: "left" });
 		assert.equal(layer.transform.x, 2000);
 		assert.equal(layer.transform.y, 1500);
 		assert.equal(layer.font, "classic");
@@ -200,10 +200,7 @@ describe("createTextLayer", () => {
 	test("gives every layer a unique id", () => {
 		const document = landscape();
 		const ids = new Set(
-			Array.from(
-				{ length: 50 },
-				() => createTextLayer(document, "x", "center").id,
-			),
+			Array.from({ length: 50 }, () => createTextLayer(document, "x").id),
 		);
 		assert.equal(ids.size, 50);
 	});
@@ -306,7 +303,7 @@ describe("maxNewImageShortSide", () => {
 describe("duplicateLayer", () => {
 	test("copies text with a new id, nudged by half a scaled line", () => {
 		const original = {
-			...createTextLayer(landscape(), "copy me", "right"),
+			...createTextLayer(landscape(), "copy me", { align: "right" }),
 			transform: { x: 100, y: 200, scaleX: 2, scaleY: 2, rotation: 0.3 },
 		};
 		const copy = duplicateLayer(original);
@@ -349,7 +346,7 @@ describe("reorderLayer", () => {
 		return [
 			...document.layers,
 			...["a", "b", "c"].map((id) => ({
-				...createTextLayer(document, id, "center"),
+				...createTextLayer(document, id),
 				id,
 			})),
 		];

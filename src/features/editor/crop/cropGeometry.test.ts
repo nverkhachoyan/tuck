@@ -63,7 +63,7 @@ describe("startCrop", () => {
 		assert.deepEqual(startCrop(document), resetCrop(canvas));
 
 		// Turned, the canvas stands in afresh: nothing is left to remember.
-		document.layers.push(createTextLayer(document, "HI", "center"));
+		document.layers.push(createTextLayer(document, "HI"));
 		const framing = cropFraming(
 			rotateLeft(startCrop(document)),
 			canvas,

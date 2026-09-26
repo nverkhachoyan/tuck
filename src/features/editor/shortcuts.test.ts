@@ -70,6 +70,12 @@ describe("shortcutFor", () => {
 		assert.deepEqual(shortcutFor(press("Escape")), { type: "deselect" });
 	});
 
+	test("edits the selection's text with Enter", () => {
+		assert.deepEqual(shortcutFor(press("Enter")), { type: "edit" });
+		assert.equal(shortcutFor(press("Enter", { shiftKey: true })), null);
+		assert.equal(shortcutFor(press("Enter", { metaKey: true })), null);
+	});
+
 	test("nudges by one screen pixel, or ten with Shift", () => {
 		assert.deepEqual(shortcutFor(press("ArrowLeft")), {
 			type: "nudge",
@@ -86,7 +92,7 @@ describe("shortcutFor", () => {
 	test("ignores other keys, unbound letters, and Option/Alt combinations", () => {
 		assert.equal(shortcutFor(press("a")), null);
 		assert.equal(shortcutFor(press("z")), null);
-		assert.equal(shortcutFor(press("Enter")), null);
+		assert.equal(shortcutFor(press("Tab")), null);
 		assert.equal(shortcutFor(press("s", { metaKey: true })), null);
 		assert.equal(shortcutFor(press("ArrowUp", { altKey: true })), null);
 		assert.equal(

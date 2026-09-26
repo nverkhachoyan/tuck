@@ -9,20 +9,31 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { type LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
+import {
+	type LayoutChangeEvent,
+	Platform,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { layerBounds } from "@/layers/layerBounds";
+import { type TextSelection, wordRange } from "@/layers/textEditing";
+import { textIndexAt } from "@/layers/textLayerLayout";
 import type { EditorDocument, Layer } from "@/model/document";
 import {
 	type Box,
+	hitTestBox,
 	type Point,
 	type Rect,
 	rectFromCorners,
 	type Transform,
+	toLayerSpace,
 } from "@/model/geometry";
 import { colors } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
+import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -30,12 +41,18 @@ import {
 } from "../handles/canvasCursor";
 import { handleUnder } from "../handles/handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
-import { type CanvasTool, EditorScene, type LiveStroke } from "./EditorScene";
+import {
+	type CanvasTool,
+	EditorScene,
+	type LiveStroke,
+	type TextEditState,
+} from "./EditorScene";
 import { findLayerAt, type LayerTarget } from "./hitTest";
-import { layerTargets, resizeMode } from "./layerTargets";
+import { HIT_PADDING_PX, layerTargets, resizeMode } from "./layerTargets";
 import { syncLiveTransform, useLiveTransform } from "./liveTransform";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
+import { type TextPressPhase, useTextEditGesture } from "./useTextEditGesture";
 import { useTrackpadPinch } from "./useTrackpadPinch";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
@@ -44,16 +61,27 @@ const PHOTO_INSET = 16;
 // A box dragged no further than this either way, in screen pixels, was a
 // tap; one this thin in only one way hides nothing.
 const TAP_SLOP_PX = 6;
+// A second tap on text this soon after the first, and this near it in
+// screen pixels, selects a word.
+const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_SLOP_PX = 12;
+// Between the document and the keyboard, while it's up.
+const KEYBOARD_GAP = 8;
 
 type EditorCanvasProps = {
 	ref?: Ref<EditorCanvasHandle>;
 	document: EditorDocument;
 	selectedLayer?: Layer;
-	// Not drawn, e.g. while its text is open in the full-screen editor.
-	hiddenLayerId?: string | null;
+	// While set, this text is edited in place (see `TextEditState`). Presses
+	// on it place the caret or select, and a tap off it finishes. The
+	// document fits above the keyboard.
+	textEdit?: TextEditState | null;
+	onTextSelect?: (selection: TextSelection) => void;
+	onTextEditDone?: () => void;
 	onSelectLayer?: (id: string | null) => void;
-	// A tap on the layer that's already selected (the editor opens its text).
-	onTapSelectedLayer?: () => void;
+	// A tap on the layer that's already selected, in document space (the
+	// editor opens its text there).
+	onTapSelectedLayer?: (point: Point) => void;
 	onCommitTransform?: (id: string, transform: Transform) => void;
 	// A redaction's box resized by its handles, which moves its center too.
 	onResizeBox?: (
@@ -106,7 +134,9 @@ export function EditorCanvas({
 	ref,
 	document,
 	selectedLayer,
-	hiddenLayerId = null,
+	textEdit = null,
+	onTextSelect,
+	onTextEditDone,
 	onSelectLayer,
 	onTapSelectedLayer,
 	onCommitTransform,
@@ -145,6 +175,18 @@ export function EditorCanvas({
 		};
 	}, [aspectLocked]);
 
+	// On web, a press on the canvas would take the focus, and with it the
+	// keyboard, from the input typing into the edited text. The press places
+	// its caret instead.
+	const editingText = textEdit !== null;
+	useEffect(() => {
+		if (Platform.OS !== "web" || !editingText) return;
+		const node = containerRef.current as unknown as HTMLElement | null;
+		const keepFocus = (event: MouseEvent) => event.preventDefault();
+		node?.addEventListener("mousedown", keepFocus);
+		return () => node?.removeEventListener("mousedown", keepFocus);
+	}, [editingText]);
+
 	const handleImageError = useCallback((error: unknown) => {
 		console.warn("Couldn't load an image layer", error);
 		setImageFailed(true);
@@ -161,14 +203,19 @@ export function EditorCanvas({
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
+	const keyboardOverlap = useKeyboardOverlap(containerRef, editingText);
+	const fitInset =
+		keyboardOverlap > 0
+			? Math.max(bottomInset, keyboardOverlap + KEYBOARD_GAP)
+			: bottomInset;
 	const viewport = useMemo(
 		() =>
 			fitDocumentToView(
 				documentSize,
-				{ width: size.width, height: size.height - bottomInset },
+				{ width: size.width, height: size.height - fitInset },
 				PHOTO_INSET,
 			),
-		[documentSize, size, bottomInset],
+		[documentSize, size, fitInset],
 	);
 	const { scale, offsetX, offsetY } = viewport;
 
@@ -182,8 +229,8 @@ export function EditorCanvas({
 	}, [sharedTargets, targets]);
 
 	const selectedLayerId = selectedLayer?.id ?? null;
-	// What gestures move: nothing while painting.
-	const movableLayer = tool ? undefined : selectedLayer;
+	// What gestures move: nothing while painting or typing.
+	const movableLayer = tool || textEdit ? undefined : selectedLayer;
 
 	// Keep the gesture-driven values in step with the selected layer: when the
 	// selection changes, and when that layer does (a commit, undo, restyle).
@@ -231,7 +278,9 @@ export function EditorCanvas({
 			if (scale === 0 || handleAt(screenX, screenY)) return;
 			const id = layerAt(screenX, screenY);
 			if (id !== null && id === selectedLayerId) {
-				onTapSelectedLayer?.();
+				onTapSelectedLayer?.(
+					viewPointToDocument(viewport, { x: screenX, y: screenY }),
+				);
 			} else {
 				onSelectLayer?.(id);
 			}
@@ -243,6 +292,7 @@ export function EditorCanvas({
 			onTapSelectedLayer,
 			scale,
 			selectedLayerId,
+			viewport,
 		],
 	);
 
@@ -297,6 +347,109 @@ export function EditorCanvas({
 		},
 		[selectedLayer, scale, onNudgeLayer],
 	);
+
+	// Where the edited text is under a point reported by the view: the index
+	// of its text there, or null off it, or outside its box.
+	const textIndexUnder = useCallback(
+		(screenX: number, screenY: number, clampToText = false) => {
+			if (!textEdit || scale === 0) return null;
+			const { layer } = textEdit;
+			const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
+			const padding = HIT_PADDING_PX / (scale * layer.transform.scaleX);
+			if (
+				!clampToText &&
+				!hitTestBox(layer.transform, layerBounds(layer, padding), point)
+			) {
+				return null;
+			}
+			return textIndexAt(layer, toLayerSpace(layer.transform, point));
+		},
+		[textEdit, scale, viewport],
+	);
+	// The press under way on edited text: where it landed, and the index a
+	// drag selects from, or null when it's off the text or selected a word.
+	const textPress = useRef<{
+		x: number;
+		y: number;
+		anchor: number | null;
+		onText: boolean;
+	} | null>(null);
+	const lastTextTap = useRef({ time: 0, x: 0, y: 0 });
+	const handleTextPress = useCallback(
+		(phase: TextPressPhase, screenX: number, screenY: number) => {
+			if (!textEdit) return;
+			if (phase === "begin") {
+				const index = textIndexUnder(screenX, screenY);
+				const last = lastTextTap.current;
+				const double =
+					index !== null &&
+					Date.now() - last.time < DOUBLE_TAP_MS &&
+					Math.hypot(screenX - last.x, screenY - last.y) < DOUBLE_TAP_SLOP_PX;
+				textPress.current = {
+					x: screenX,
+					y: screenY,
+					anchor: double ? null : index,
+					onText: index !== null,
+				};
+				if (index === null) return;
+				lastTextTap.current = double
+					? { time: 0, x: 0, y: 0 }
+					: { time: Date.now(), x: screenX, y: screenY };
+				onTextSelect?.(
+					double
+						? wordRange(textEdit.layer.text, index)
+						: { start: index, end: index },
+				);
+				return;
+			}
+			const press = textPress.current;
+			if (!press) return;
+			if (phase === "end") textPress.current = null;
+			if (press.anchor !== null) {
+				const index = textIndexUnder(screenX, screenY, true) ?? press.anchor;
+				onTextSelect?.({
+					start: Math.min(press.anchor, index),
+					end: Math.max(press.anchor, index),
+				});
+				return;
+			}
+			// A tap off the text finishes; a drag there does nothing.
+			const travel = Math.hypot(screenX - press.x, screenY - press.y);
+			if (phase === "end" && !press.onText && travel < TAP_SLOP_PX) {
+				onTextEditDone?.();
+			}
+		},
+		[textEdit, textIndexUnder, onTextSelect, onTextEditDone],
+	);
+	const handleTextHover = useCallback(
+		(screenX: number, screenY: number) =>
+			setCursor(textIndexUnder(screenX, screenY) === null ? "default" : "text"),
+		[textIndexUnder],
+	);
+	// The handlers change with every keystroke, and a new gesture could cut
+	// off a drag that's selecting, so the gesture keeps stable ones that call
+	// the latest.
+	const textHandlers = useRef({
+		press: handleTextPress,
+		hover: handleTextHover,
+	});
+	useLayoutEffect(() => {
+		textHandlers.current = { press: handleTextPress, hover: handleTextHover };
+	});
+	const onTextPress = useCallback(
+		(phase: TextPressPhase, x: number, y: number) =>
+			textHandlers.current.press(phase, x, y),
+		[],
+	);
+	const onTextHover = useCallback(
+		(x: number, y: number) => textHandlers.current.hover(x, y),
+		[],
+	);
+	const textGesture = useTextEditGesture({
+		onPress: onTextPress,
+		onHover: onTextHover,
+		onHoverEnd: handleHoverEnd,
+	});
 
 	const strokePoints = useSharedValue<number[]>([]);
 	const strokeId = useSharedValue(0);
@@ -369,7 +522,9 @@ export function EditorCanvas({
 		(tool?.type === "redactBox" || tool?.type === "redactBrush") &&
 		selectedLayer?.type === "redaction"
 			? selectedLayer
-			: null;
+			: !tool && textEdit
+				? textEdit.layer
+				: null;
 
 	useImperativeHandle(ref, () => ({ flushPendingTransform, nudgeSelection }), [
 		flushPendingTransform,
@@ -377,7 +532,9 @@ export function EditorCanvas({
 	]);
 
 	return (
-		<GestureDetector gesture={tool ? paintGesture : gesture}>
+		<GestureDetector
+			gesture={tool ? paintGesture : textEdit ? textGesture : gesture}
+		>
 			<View
 				ref={containerRef}
 				style={[styles.container, cursorStyle(tool ? "crosshair" : cursor)]}
@@ -394,8 +551,8 @@ export function EditorCanvas({
 						>
 							<EditorScene
 								document={document}
-								selectedLayerId={tool ? null : selectedLayerId}
-								hiddenLayerId={hiddenLayerId}
+								selectedLayerId={tool || textEdit ? null : selectedLayerId}
+								textEdit={textEdit}
 								viewScale={scale}
 								live={live}
 								stroke={liveStroke}
