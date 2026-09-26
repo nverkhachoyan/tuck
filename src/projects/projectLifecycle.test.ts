@@ -101,7 +101,7 @@ const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 function addText(document: EditorDocument, text: string): EditorDocument {
 	return {
 		...document,
-		layers: [...document.layers, createTextLayer(document, text, "center")],
+		layers: [...document.layers, createTextLayer(document, text)],
 	};
 }
 

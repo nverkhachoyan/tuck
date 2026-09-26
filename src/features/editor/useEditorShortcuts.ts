@@ -29,6 +29,10 @@ export function useEditorShortcuts({
 				if (event.isComposing || isEditable(event.target)) return;
 				const shortcut = shortcutFor(event);
 				if (!shortcut) return;
+				// Enter on a focused button presses it.
+				if (shortcut.type === "edit" && event.target !== window.document.body) {
+					return;
+				}
 				if (handleShortcut(shortcut) || event.metaKey || event.ctrlKey) {
 					event.preventDefault();
 				}

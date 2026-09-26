@@ -35,7 +35,7 @@ function documentWithText(): EditorDocument {
 		3000,
 		true,
 	);
-	const text = createTextLayer(document, "TOP TEXT", "center");
+	const text = createTextLayer(document, "TOP TEXT");
 	text.transform = { ...text.transform, x: 1000, y: 500, rotation: 0.2 };
 	document.layers.push(text);
 	return document;
@@ -223,7 +223,7 @@ describe("framingAnchor", () => {
 describe("reframing a canvas without a photo", () => {
 	function blankWithText(): EditorDocument {
 		const document = createBlankDocument(1080, 1920, "#FFFFFF");
-		const caption = createTextLayer(document, "CAPTION", "center");
+		const caption = createTextLayer(document, "CAPTION");
 		caption.transform = { ...caption.transform, x: 540, y: 200 };
 		document.layers.push(caption);
 		return document;

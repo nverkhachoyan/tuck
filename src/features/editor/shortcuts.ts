@@ -24,6 +24,7 @@ export type Shortcut =
 	| { type: "redo" }
 	| { type: "delete" }
 	| { type: "deselect" }
+	| { type: "edit" }
 	| { type: "duplicate" }
 	| { type: "reorder"; step: 1 | -1 }
 	| { type: "nudge"; dx: number; dy: number }
@@ -79,6 +80,9 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 			return { type: "delete" };
 		case "Escape":
 			return { type: "deselect" };
+		// Types into the selected text, as tapping it again does.
+		case "Enter":
+			return press.shiftKey ? null : { type: "edit" };
 	}
 	// Shift is left alone, so a capital typed by mistake does nothing.
 	if (press.shiftKey) return null;

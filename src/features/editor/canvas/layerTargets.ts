@@ -3,7 +3,7 @@ import type { EditorDocument, Layer, MaskStroke } from "@/model/document";
 import type { LayerTarget } from "./hitTest";
 
 // Minimum comfortable touch padding around a layer, in screen pixels.
-const HIT_PADDING_PX = 14;
+export const HIT_PADDING_PX = 14;
 
 /**
  * The document's visible layers, bottom to top. `viewScale` is screen pixels

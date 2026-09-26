@@ -95,6 +95,8 @@ export function TextColorPicker({
 
 type TextStylePanelProps = {
 	layer: TextLayer;
+	// While its text is typed, the layer's actions wait.
+	editing: boolean;
 	// The editor's custom color, which the custom swatch shows.
 	customColor: string | null;
 	onChange: (patch: TextLayerEdit) => void;
@@ -107,13 +109,15 @@ type TextStylePanelProps = {
 };
 
 /**
- * Styling for the selected text layer. The text itself is edited full-screen
- * (Edit, or tap the selected layer) and resized on the canvas (pinch or the
- * corner handles), so this is font and colors. There's no Done button:
- * tapping anywhere on the canvas off the text deselects it.
+ * Styling for the selected text layer, or the text being typed. The text
+ * itself is edited on the canvas (Edit, or tap the selected layer) and
+ * resized there (pinch or the corner handles), so this is font and colors.
+ * There's no Done button: tapping anywhere on the canvas off the text
+ * deselects it, or finishes typing.
  */
 export function TextStylePanel({
 	layer,
+	editing,
 	customColor,
 	onChange,
 	onOpenPicker,
@@ -144,7 +148,10 @@ export function TextStylePanel({
 						/>
 					))}
 				</ScrollView>
-				<View style={styles.actions}>
+				<View
+					style={[styles.actions, editing && styles.hidden]}
+					aria-hidden={editing}
+				>
 					<IconButton
 						icon="create-outline"
 						label="Edit text"
@@ -430,6 +437,11 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		gap: 16,
 		paddingRight: 4,
+	},
+	// Kept in the layout, so the tabs don't move as typing starts and ends.
+	hidden: {
+		opacity: 0,
+		pointerEvents: "none",
 	},
 	// One height for every tab, so switching tabs never shifts the row above.
 	content: {
