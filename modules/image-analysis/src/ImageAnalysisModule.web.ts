@@ -1,8 +1,18 @@
 import { NativeModule, registerWebModule } from "expo";
+import type { Feature, TextRegion } from "./ImageAnalysis.types";
+import { tesseractText } from "./tesseractText";
 
 class ImageAnalysisModule extends NativeModule {
-	backend(): string {
-		return "MediaPipe and Tesseract on the web";
+	isAvailable(feature: Feature): boolean {
+		return (
+			feature === "text" &&
+			typeof WebAssembly === "object" &&
+			typeof Worker === "function"
+		);
+	}
+
+	detectText(uri: string): Promise<TextRegion[]> {
+		return tesseractText(uri);
 	}
 }
 

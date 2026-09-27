@@ -16,3 +16,10 @@ android {
     abortOnError false
   }
 }
+
+dependencies {
+  // The Google Play services versions: Play services downloads and updates
+  // the models, so they add little to the app.
+  implementation 'com.google.android.gms:play-services-base:18.11.0'
+  implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
+}
