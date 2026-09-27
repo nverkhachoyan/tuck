@@ -18,6 +18,8 @@ export type PickPhotoResult =
 export type PickPhotoOptions = {
 	// Shrinks the photo so its shorter side is at most this many pixels.
 	maxShortSide?: number;
+	// And so its longer side is at most this many.
+	maxLongSide?: number;
 };
 
 /**
@@ -27,9 +29,9 @@ export type PickPhotoOptions = {
  * so callers decide how to react to each outcome. Throws if the photo can't
  * be read or re-encoded.
  */
-export async function pickPhoto({
-	maxShortSide,
-}: PickPhotoOptions = {}): Promise<PickPhotoResult> {
+export async function pickPhoto(
+	options: PickPhotoOptions = {},
+): Promise<PickPhotoResult> {
 	const result = await ImagePicker.launchImageLibraryAsync({
 		mediaTypes: ["images"],
 		quality: 1,
@@ -38,7 +40,7 @@ export async function pickPhoto({
 		return { status: "canceled" };
 	}
 
-	const photo = await reencode(result.assets[0].uri, maxShortSide);
+	const photo = await reencode(result.assets[0].uri, options);
 	return { status: "picked", photo };
 }
 
@@ -49,9 +51,9 @@ export async function pickPhoto({
  */
 export async function importPhoto(
 	uri: string,
-	{ maxShortSide }: PickPhotoOptions = {},
+	options: PickPhotoOptions = {},
 ): Promise<PickedPhoto> {
-	return reencode(uri, maxShortSide);
+	return reencode(uri, options);
 }
 
 // Looks the same as 1, at about half the size on disk. Export uses 0.95.
@@ -65,12 +67,12 @@ const JPEG_QUALITY = 0.92;
  */
 async function reencode(
 	uri: string,
-	maxShortSide?: number,
+	{ maxShortSide, maxLongSide }: PickPhotoOptions,
 ): Promise<PickedPhoto> {
 	const opaque = await isOpaque(uri);
 	let image = await ImageManipulator.manipulate(uri).renderAsync();
 	// The rendered size already has the photo's EXIF rotation applied.
-	const scale = photoScale(image, MAX_PHOTO_PIXELS, maxShortSide);
+	const scale = photoScale(image, MAX_PHOTO_PIXELS, maxShortSide, maxLongSide);
 	if (scale < 1) {
 		const full = image;
 		image = await ImageManipulator.manipulate(full)

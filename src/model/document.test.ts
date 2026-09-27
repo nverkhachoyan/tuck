@@ -215,7 +215,13 @@ describe("createTextLayer", () => {
 describe("createStickerLayer", () => {
 	test("centers a sticker across a share of the canvas's shorter side", () => {
 		const document = createBlankDocument(1080, 1920, "#FFFFFF");
-		const layer = createStickerLayer(document, "file:///sticker.png", 512, 512);
+		const layer = createStickerLayer(
+			document,
+			"file:///sticker.png",
+			512,
+			512,
+			false,
+		);
 		const scale = (1080 * 0.3) / 512;
 		assert.deepEqual(layer, {
 			type: "image",
@@ -233,17 +239,17 @@ describe("createStickerLayer", () => {
 	});
 
 	test("is enlarged past its pixels on a large photo", () => {
-		const layer = createStickerLayer(landscape(), "a", 512, 512);
+		const layer = createStickerLayer(landscape(), "a", 512, 512, false);
 		assert.equal(layer.transform.scaleX, (3000 * 0.3) / 512);
 	});
 
 	test("fits its longer side", () => {
-		const layer = createStickerLayer(landscape(), "a", 256, 512);
+		const layer = createStickerLayer(landscape(), "a", 256, 512, false);
 		assert.equal(layer.transform.scaleY, (3000 * 0.3) / 512);
 	});
 
 	test("keeps its mark when duplicated", () => {
-		const layer = createStickerLayer(landscape(), "a", 512, 512);
+		const layer = createStickerLayer(landscape(), "a", 512, 512, false);
 		assert.equal(duplicateLayer(layer).sticker, true);
 	});
 });

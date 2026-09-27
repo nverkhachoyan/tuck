@@ -2,18 +2,20 @@ import { useRef, useState } from "react";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { errorMessage } from "@/lib/errorMessage";
-import { stickerFile } from "@/stickers/stickerFile";
-import { STICKER_SIZE, type Sticker } from "@/stickers/stickers";
+import {
+	SAVED_STICKER_MAX_SIDE,
+	type StickerImage,
+} from "@/stickers/savedStickers";
 import { showAlert } from "@/ui/showAlert";
 
 export type AddedImage = PickedPhoto & { sticker: boolean };
 
 /**
  * Adds photos from the picker, or, on web while `enabled`, pasted or dropped
- * onto the page, each shrunk to `maxShortSide`, and stickers. `onImage` puts
- * the image where it goes; an alert shows if that or reading the image
- * fails. `busy` is set while an image is on its way, and adding another
- * meanwhile does nothing.
+ * onto the page, each shrunk to `maxShortSide`, and stickers, from whatever
+ * `addSticker` is given to load one. `onImage` puts the image where it goes;
+ * an alert shows if that or loading the image fails. `busy` is set while an
+ * image is on its way, and adding another meanwhile does nothing.
  */
 export function useAddImage({
 	enabled,
@@ -64,18 +66,23 @@ export function useAddImage({
 		});
 	};
 
-	const addSticker = (sticker: Sticker) => {
-		void addImage(
-			async () => ({
-				uri: await stickerFile(sticker),
-				width: STICKER_SIZE,
-				height: STICKER_SIZE,
-				opaque: false,
-				sticker: true,
-			}),
-			"Couldn't add sticker",
-		);
+	// Null from `load` adds nothing, as when the picker is canceled.
+	const addSticker = (load: () => Promise<StickerImage | null>) => {
+		void addImage(async () => {
+			const image = await load();
+			return image && { ...image, sticker: true };
+		}, "Couldn't add sticker");
 	};
 
-	return { busy, dragging, pick, addSticker };
+	/**
+	 * Picks an image to make a sticker of, shrunk as saved stickers are, and
+	 * adds the image `keep` returns once it has kept it.
+	 */
+	const pickSticker = (keep: (image: PickedPhoto) => Promise<StickerImage>) =>
+		addSticker(async () => {
+			const result = await pickPhoto({ maxLongSide: SAVED_STICKER_MAX_SIDE });
+			return result.status === "canceled" ? null : keep(result.photo);
+		});
+
+	return { busy, dragging, pick, addSticker, pickSticker };
 }

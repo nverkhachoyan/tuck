@@ -37,6 +37,21 @@ describe("photoScale", () => {
 		assert.ok(photoScale({ width: 8064, height: 6048 }, MAX_PHOTO_PIXELS) < 1);
 	});
 
+	test("shrinks the longer side to its limit, either way round", () => {
+		assert.equal(
+			photoScale({ width: 4096, height: 1024 }, 24 * MP, 5000, 1024),
+			0.25,
+		);
+		assert.equal(
+			photoScale({ width: 1024, height: 2048 }, 24 * MP, 5000, 1024),
+			0.5,
+		);
+		assert.equal(
+			photoScale({ width: 512, height: 512 }, 24 * MP, 5000, 1024),
+			1,
+		);
+	});
+
 	test("takes whichever limit shrinks the photo more", () => {
 		const camera = { width: 8000, height: 6000 };
 		assert.equal(photoScale(camera, 24 * MP, 3000), 0.5);

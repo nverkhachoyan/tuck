@@ -8,17 +8,20 @@ import type { Size } from "../model/geometry.ts";
 export const MAX_PHOTO_PIXELS = 25_000_000;
 
 /**
- * How much to shrink a photo so it has at most `maxPixels` pixels and its
- * shorter side is at most `maxShortSide`: 1 if it already fits.
+ * How much to shrink a photo so it has at most `maxPixels` pixels, its
+ * shorter side is at most `maxShortSide`, and its longer at most
+ * `maxLongSide`: 1 if it already fits.
  */
 export function photoScale(
 	photo: Size,
 	maxPixels: number,
 	maxShortSide = Number.POSITIVE_INFINITY,
+	maxLongSide = Number.POSITIVE_INFINITY,
 ): number {
 	return Math.min(
 		1,
 		Math.sqrt(maxPixels / (photo.width * photo.height)),
 		maxShortSide / Math.min(photo.width, photo.height),
+		maxLongSide / Math.max(photo.width, photo.height),
 	);
 }

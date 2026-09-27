@@ -95,7 +95,7 @@ describe("editorSlice", () => {
 
 	test("adding a sticker puts it on top, marked, and selects it", () => {
 		const { store } = storeWithText();
-		store.getState().addStickerLayer("file:///sticker.png", 512, 512);
+		store.getState().addStickerLayer("file:///sticker.png", 512, 512, false);
 		const added = store.getState().document?.layers.at(-1);
 		assert.ok(added?.type === "image");
 		assert.equal(added.sticker, true);

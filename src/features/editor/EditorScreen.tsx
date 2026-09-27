@@ -74,10 +74,12 @@ import {
 } from "@/features/editor/text/textSettings";
 import { useAddImage } from "@/features/editor/useAddImage";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
+import { importPhoto } from "@/import/photoImport";
 import type { TextSelection } from "@/layers/textEditing";
 import { textIndexAt } from "@/layers/textLayerLayout";
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
+import { errorMessage } from "@/lib/errorMessage";
 import { usePreference } from "@/lib/usePreference";
 import {
 	createTextLayer,
@@ -96,6 +98,9 @@ import { addImage } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
 import { useProjectSession } from "@/projects/useProjectSession";
 import { renderThumbnail, sampleColor } from "@/render/renderDocument";
+import { SAVED_STICKER_MAX_SIDE } from "@/stickers/savedStickers";
+import { bundledStickerImage } from "@/stickers/stickerFile";
+import { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -111,6 +116,7 @@ import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
+import { showAlert } from "@/ui/showAlert";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
@@ -209,6 +215,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const keysTaken = textEdit !== null || cropping;
 	const [layersOpen, setLayersOpen] = useState(false);
 	const [addOpen, setAddOpen] = useState(false);
+	const savedStickers = useSavedStickers();
+	// A photo being kept as a sticker, or kept already this session.
+	const [stickerSave, setStickerSave] = useState<{
+		layerId: string;
+		status: "saving" | "saved";
+	} | null>(null);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
 	const dockInset = useDockInset();
 	// The tool dragging on the canvas uses in place of moving layers. While
@@ -581,6 +593,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		dragging,
 		pick: pickPhoto,
 		addSticker,
+		pickSticker,
 	} = useAddImage({
 		// On web, an image pasted or dropped onto the editor joins the canvas,
 		// unless another screen or tool is in front of it.
@@ -592,7 +605,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			const url =
 				projectId === null ? uri : await addImage(projectId, uri, opaque);
 			commitPendingPinch();
-			if (sticker) addStickerLayer(url, width, height);
+			if (sticker) addStickerLayer(url, width, height, opaque);
 			else addImageLayer(url, width, height, opaque);
 		},
 	});
@@ -607,6 +620,26 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		add: openAdd,
 		photo: pickPhoto,
 		crop: startCrop,
+	};
+
+	// Shrunk the way a saved sticker is, so a large photo doesn't make one.
+	const saveSelectedAsSticker = async () => {
+		if (selectedLayer?.type !== "image" || stickerSave?.status === "saving") {
+			return;
+		}
+		const layerId = selectedLayer.id;
+		setStickerSave({ layerId, status: "saving" });
+		try {
+			await savedStickers.save(
+				await importPhoto(selectedLayer.uri, {
+					maxLongSide: SAVED_STICKER_MAX_SIDE,
+				}),
+			);
+			setStickerSave({ layerId, status: "saved" });
+		} catch (error) {
+			setStickerSave(null);
+			showAlert("Couldn't save sticker", errorMessage(error));
+		}
 	};
 
 	// The sidebar stops above the dock, which stays usable.
@@ -832,6 +865,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								selectedLayer.type === "redaction" ? startRedacting : undefined
 							}
 							resizeEnabled={selectedLayer.resizable === true}
+							sticker={
+								stickerSave?.layerId === selectedLayer.id
+									? stickerSave.status
+									: undefined
+							}
+							onSaveSticker={
+								selectedLayer.type === "image" && !selectedLayer.sticker
+									? saveSelectedAsSticker
+									: undefined
+							}
 							onToggleResize={
 								selectedLayer.type === "image"
 									? () =>
@@ -868,7 +911,25 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				}}
 				onAddSticker={(sticker) => {
 					closeAdd();
-					addSticker(sticker);
+					addSticker(() => bundledStickerImage(sticker));
+				}}
+				savedStickers={savedStickers.stickers}
+				savedError={savedStickers.error}
+				onAddSaved={(sticker) => {
+					closeAdd();
+					addSticker(() => savedStickers.place(sticker));
+				}}
+				// Kept, then added at once, as it was picked to use.
+				onSaveNew={() => {
+					closeAdd();
+					pickSticker(async (image) =>
+						savedStickers.place(await savedStickers.save(image)),
+					);
+				}}
+				onDeleteSaved={(sticker) => {
+					savedStickers.remove(sticker).catch((error: unknown) => {
+						showAlert("Couldn't delete sticker", errorMessage(error));
+					});
 				}}
 			/>
 

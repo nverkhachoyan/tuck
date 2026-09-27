@@ -5,7 +5,8 @@ import { ToolButton, ToolRow } from "../ToolButton";
  * the tools, as the text panel is for text: it's moved and sized on the
  * canvas, and tapping the canvas off it deselects it. `onDraw` goes on
  * drawing on a drawing or restyles a shape, and `onRedact` restyles a
- * redaction or paints on.
+ * redaction or paints on. `onSaveSticker` keeps a photo as a sticker; once
+ * it has, `sticker` is "saved", and the button says so.
  */
 export function LayerActionsPanel({
 	canMoveForward,
@@ -14,6 +15,8 @@ export function LayerActionsPanel({
 	onRedact,
 	resizeEnabled,
 	onToggleResize,
+	sticker,
+	onSaveSticker,
 	onMoveForward,
 	onMoveBackward,
 	onDuplicate,
@@ -25,6 +28,8 @@ export function LayerActionsPanel({
 	onRedact?: () => void;
 	resizeEnabled?: boolean;
 	onToggleResize?: () => void;
+	sticker?: "saving" | "saved";
+	onSaveSticker?: () => void;
 	onMoveForward: () => void;
 	onMoveBackward: () => void;
 	onDuplicate: () => void;
@@ -40,6 +45,19 @@ export function LayerActionsPanel({
 					icon="arrow-expand"
 					selected={resizeEnabled}
 					onPress={onToggleResize}
+				/>
+			)}
+			{onSaveSticker && (
+				<ToolButton
+					label={sticker === "saved" ? "Saved" : "Sticker"}
+					icon={
+						sticker === "saved"
+							? "sticker-check-outline"
+							: "sticker-plus-outline"
+					}
+					busy={sticker === "saving"}
+					disabled={sticker === "saved"}
+					onPress={onSaveSticker}
 				/>
 			)}
 			<ToolButton

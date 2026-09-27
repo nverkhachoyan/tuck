@@ -209,7 +209,7 @@ describe("parseSavedProject", () => {
 	test("reads a sticker, an image layer in a file of its own", () => {
 		const document = documentWithText();
 		document.layers.push(
-			createStickerLayer(document, "image-abc-123.png", 512, 512),
+			createStickerLayer(document, "image-abc-123.png", 512, 512, false),
 		);
 		const saved = mapImageUris(document, (uri) =>
 			uri === "image-abc-123.png" ? uri : PHOTO_FILE,

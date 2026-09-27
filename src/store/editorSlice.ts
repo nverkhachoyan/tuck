@@ -67,7 +67,12 @@ export type EditorSlice = {
 		height: number,
 		opaque: boolean,
 	) => void;
-	addStickerLayer: (uri: string, width: number, height: number) => void;
+	addStickerLayer: (
+		uri: string,
+		width: number,
+		height: number,
+		opaque: boolean,
+	) => void;
 	duplicateSelectedLayer: () => void;
 	drawStroke: (stroke: Stroke) => void;
 	addRedactionBox: (rect: Rect, effect: RedactionEffect) => void;
@@ -218,12 +223,12 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
-		addStickerLayer: (uri, width, height) => {
+		addStickerLayer: (uri, width, height, opaque) => {
 			const { document } = get();
 			if (!document) return;
 			addOnTop(
 				"editor/addStickerLayer",
-				createStickerLayer(document, uri, width, height),
+				createStickerLayer(document, uri, width, height, opaque),
 			);
 		},
 

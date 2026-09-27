@@ -1,7 +1,10 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useState } from "react";
 import {
+	ActivityIndicator,
 	Image,
+	type ImageSourcePropType,
 	Platform,
 	Pressable,
 	ScrollView,
@@ -9,7 +12,7 @@ import {
 	Text,
 	View,
 } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
 import { usePreference } from "@/lib/usePreference";
 import {
 	STICKER_CATEGORY_LABELS,
@@ -18,9 +21,11 @@ import {
 	type StickerCategory,
 	stickerCategories,
 } from "@/stickers/stickers";
+import type { ShownSticker } from "@/stickers/useSavedStickers";
 import { colors, radii, webTransition } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { interaction } from "@/ui/interaction";
+import { showAlert } from "@/ui/showAlert";
 import { useTooltip } from "@/ui/Tooltip";
 import { TOOL_KEYS } from "../shortcuts";
 
@@ -31,26 +36,46 @@ const GRID_PADDING = 12;
 // resize the sheet. On a short screen it gives way first.
 const GRID_HEIGHT = 5 * (TILE + GRID_GAP) + GRID_PADDING;
 
-const parseCategory = (saved: unknown): StickerCategory =>
-	stickerCategories.find((category) => category === saved) ?? "faces";
+// The person's own stickers come first, then the bundled ones.
+type StickerTab = "yours" | StickerCategory;
+const stickerTabs: StickerTab[] = ["yours", ...stickerCategories];
+const TAB_LABELS: Record<StickerTab, string> = {
+	yours: "Yours",
+	...STICKER_CATEGORY_LABELS,
+};
+
+const parseTab = (saved: unknown): StickerTab =>
+	stickerTabs.find((tab) => tab === saved) ?? "faces";
+
+type SavedStickerProps = {
+	// Null while they load.
+	savedStickers: ShownSticker[] | null;
+	savedError: string | null;
+	onAddSaved: (sticker: ShownSticker) => void;
+	onSaveNew: () => void;
+	onDeleteSaved: (sticker: ShownSticker) => void;
+};
+
+type AddContentProps = SavedStickerProps & {
+	onAddPhoto: () => void;
+	onAddSticker: (sticker: Sticker) => void;
+};
 
 /**
  * What can be added to the canvas besides text and drawings: a photo, at the
- * top, then stickers by category, remembering the last one shown. Picking
- * either is up to `onAddPhoto` and `onAddSticker`; a tap outside the sheet,
- * or swiping it down, closes it. Stays mounted while closed, so the sheet
- * can animate out.
+ * top, then stickers by category, remembering the last one shown. Yours
+ * holds the person's own: `onSaveNew` picks an image to keep as one, and a
+ * long press (or on web, a hovered delete button) deletes one once
+ * confirmed. A tap outside the sheet, or swiping it down, closes it. Stays
+ * mounted while closed, so the sheet can animate out.
  */
 export function AddSheet({
 	open,
 	onClose,
-	onAddPhoto,
-	onAddSticker,
-}: {
+	...content
+}: AddContentProps & {
 	open: boolean;
 	onClose: () => void;
-	onAddPhoto: () => void;
-	onAddSticker: (sticker: Sticker) => void;
 }) {
 	return (
 		<View style={styles.area}>
@@ -72,7 +97,7 @@ export function AddSheet({
 			<View style={styles.column}>
 				{open && (
 					<BottomSheet title="Add" closeLabel="Close" onClose={onClose}>
-						<AddContent onAddPhoto={onAddPhoto} onAddSticker={onAddSticker} />
+						<AddContent {...content} />
 					</BottomSheet>
 				)}
 			</View>
@@ -80,17 +105,8 @@ export function AddSheet({
 	);
 }
 
-function AddContent({
-	onAddPhoto,
-	onAddSticker,
-}: {
-	onAddPhoto: () => void;
-	onAddSticker: (sticker: Sticker) => void;
-}) {
-	const [category, setCategory] = usePreference(
-		"stickerCategory",
-		parseCategory,
-	);
+function AddContent({ onAddPhoto, onAddSticker, ...saved }: AddContentProps) {
+	const [tab, setTab] = usePreference("stickerCategory", parseTab);
 	// Measured inside the scroll view, clear of a web scrollbar.
 	const [gridWidth, setGridWidth] = useState(0);
 	// As many whole tiles as fit across, spread to fill the row.
@@ -109,17 +125,17 @@ function AddContent({
 				style={styles.chipsScroll}
 				contentContainerStyle={styles.chips}
 			>
-				{stickerCategories.map((each) => (
+				{stickerTabs.map((each) => (
 					<CategoryChip
 						key={each}
-						label={STICKER_CATEGORY_LABELS[each]}
-						selected={each === category}
-						onPress={() => setCategory(each)}
+						label={TAB_LABELS[each]}
+						selected={each === tab}
+						onPress={() => setTab(each)}
 					/>
 				))}
 			</ScrollView>
 			<ScrollView
-				key={category}
+				key={tab}
 				style={styles.gridScroll}
 				contentContainerStyle={styles.gridContent}
 			>
@@ -128,13 +144,18 @@ function AddContent({
 					onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
 				>
 					{gridWidth > 0 &&
-						STICKERS[category].map((sticker) => (
-							<StickerTile
-								key={sticker.label}
-								sticker={sticker}
-								width={tileWidth}
-								onPress={() => onAddSticker(sticker)}
-							/>
+						(tab === "yours" ? (
+							<SavedStickers {...saved} tileWidth={tileWidth} />
+						) : (
+							STICKERS[tab].map((sticker) => (
+								<StickerTile
+									key={sticker.label}
+									label={sticker.label}
+									source={sticker.thumbnail}
+									width={tileWidth}
+									onPress={() => onAddSticker(sticker)}
+								/>
+							))
 						))}
 				</View>
 			</ScrollView>
@@ -220,33 +241,156 @@ function CategoryChip({
 	);
 }
 
+/**
+ * The Yours tab: a tile that makes a new sticker, then the saved ones, with
+ * a word on what they are while there are none.
+ */
+function SavedStickers({
+	savedStickers,
+	savedError,
+	onAddSaved,
+	onSaveNew,
+	onDeleteSaved,
+	tileWidth,
+}: SavedStickerProps & { tileWidth: number }) {
+	const confirmDelete = (sticker: ShownSticker) =>
+		showAlert(
+			"Delete sticker?",
+			"It's removed from your stickers. Projects that use it keep it.",
+			[
+				{ text: "Cancel", style: "cancel" },
+				{
+					text: "Delete",
+					style: "destructive",
+					onPress: () => onDeleteSaved(sticker),
+				},
+			],
+		);
+
+	return (
+		<>
+			<Pressable
+				onPress={onSaveNew}
+				accessibilityRole="button"
+				accessibilityLabel="New sticker from an image"
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.tile,
+						styles.newTile,
+						{ width: tileWidth },
+						webTransition,
+						hovered && styles.hovered,
+						pressed && styles.tilePressed,
+					];
+				}}
+			>
+				<MaterialCommunityIcons
+					name="plus"
+					size={26}
+					color={colors.textPrimary}
+				/>
+			</Pressable>
+			{savedStickers === null ? (
+				<View style={[styles.tile, { width: tileWidth }]}>
+					<ActivityIndicator color={colors.textSecondary} />
+				</View>
+			) : (
+				savedStickers.map((sticker) => (
+					<StickerTile
+						key={sticker.id}
+						label="Your sticker"
+						source={{ uri: sticker.url }}
+						width={tileWidth}
+						onPress={() => onAddSaved(sticker)}
+						onDelete={() => confirmDelete(sticker)}
+					/>
+				))
+			)}
+			{(savedError || savedStickers?.length === 0) && (
+				<Text style={styles.hint}>
+					{savedError
+						? `Couldn't load your stickers. ${savedError}`
+						: "Keep an image you use often as a sticker: add one here, or select a photo on the canvas and tap Sticker."}
+				</Text>
+			)}
+		</>
+	);
+}
+
+/**
+ * A sticker to add. With `onDelete`, a long press deletes it, as does a
+ * button a mouse brings up over its corner on web.
+ */
 function StickerTile({
-	sticker,
+	label,
+	source,
 	width,
 	onPress,
+	onDelete,
 }: {
-	sticker: Sticker;
+	label: string;
+	source: ImageSourcePropType;
 	width: number;
 	onPress: () => void;
+	onDelete?: () => void;
 }) {
+	// Tracked around the tile and its button together, so moving onto the
+	// button doesn't hide it.
+	const [pointerOver, setPointerOver] = useState(false);
 	return (
-		<Pressable
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={sticker.label}
-			style={(state) => {
-				const { pressed, hovered } = interaction(state);
-				return [
-					styles.tile,
-					{ width },
-					webTransition,
-					hovered && styles.hovered,
-					pressed && styles.tilePressed,
-				];
+		<View
+			style={{ width }}
+			onPointerEnter={(event) => {
+				if (event.nativeEvent.pointerType === "mouse") setPointerOver(true);
 			}}
+			onPointerLeave={() => setPointerOver(false)}
 		>
-			<Image source={sticker.thumbnail} style={styles.sticker} />
-		</Pressable>
+			<Pressable
+				onPress={onPress}
+				onLongPress={onDelete}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				accessibilityActions={
+					onDelete ? [{ name: "delete", label: "Delete" }] : undefined
+				}
+				onAccessibilityAction={(event) => {
+					if (event.nativeEvent.actionName === "delete") onDelete?.();
+				}}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.tile,
+						webTransition,
+						hovered && styles.hovered,
+						pressed && styles.tilePressed,
+					];
+				}}
+			>
+				<Image source={source} resizeMode="contain" style={styles.sticker} />
+			</Pressable>
+			{onDelete && pointerOver && (
+				<Animated.View
+					entering={ZoomIn.duration(160)}
+					style={styles.deleteBadge}
+				>
+					<Pressable
+						hitSlop={4}
+						onPress={onDelete}
+						accessibilityRole="button"
+						accessibilityLabel="Delete sticker"
+						style={(state) => [
+							styles.deleteButton,
+							webTransition,
+							(interaction(state).hovered || state.pressed) &&
+								styles.deleteButtonHovered,
+						]}
+					>
+						<Ionicons name="close" size={14} color={colors.textPrimary} />
+					</Pressable>
+				</Animated.View>
+			)}
+		</View>
 	);
 }
 
@@ -355,6 +499,38 @@ const styles = StyleSheet.create({
 	},
 	tilePressed: {
 		transform: [{ scale: 0.88 }],
+	},
+	newTile: {
+		borderWidth: 1,
+		borderStyle: "dashed",
+		borderColor: colors.borderStrong,
+	},
+	deleteBadge: {
+		position: "absolute",
+		top: -4,
+		right: -4,
+	},
+	deleteButton: {
+		width: 22,
+		height: 22,
+		borderRadius: 11,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: colors.surfacePressed,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.borderStrong,
+	},
+	deleteButtonHovered: {
+		backgroundColor: colors.danger,
+		borderColor: colors.danger,
+	},
+	hint: {
+		width: "100%",
+		paddingHorizontal: 4,
+		paddingTop: 8,
+		fontSize: 13,
+		lineHeight: 18,
+		color: colors.textSecondary,
 	},
 	sticker: {
 		width: 44,
