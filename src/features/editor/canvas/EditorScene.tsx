@@ -1,5 +1,6 @@
 import {
 	BackdropFilter,
+	Circle,
 	Fill,
 	Group,
 	ImageFilter,
@@ -23,6 +24,7 @@ import {
 	withSequence,
 	withTiming,
 } from "react-native-reanimated";
+import type { MappedDetectionRect } from "@/detection/mapDetectionRects";
 import { BrushStroke, strokePath } from "@/layers/DrawingLayerView";
 import { layerBounds } from "@/layers/layerBounds";
 import {
@@ -151,6 +153,7 @@ type EditorSceneProps = {
 	// Outlined without handles, as a tool's target: it holds still.
 	outlinedLayer: Layer | null;
 	adjusting: LiveAdjustment | null;
+	detections: readonly DetectionOverlayRegion[];
 	// An image layer's file couldn't be read or decoded. Must be stable.
 	onImageError: (error: unknown) => void;
 };
@@ -174,6 +177,7 @@ export function EditorScene({
 	stroke,
 	outlinedLayer,
 	adjusting,
+	detections,
 	onImageError,
 }: EditorSceneProps) {
 	const editedId = textEdit && !textEdit.isNew ? textEdit.layer.id : null;
@@ -242,6 +246,11 @@ export function EditorScene({
 					color={colors.hoverOverlay}
 				/>
 			</Group>
+			{detections.length > 0 && (
+				<Group clip={canvas}>
+					<DetectionOutlines regions={detections} viewScale={viewScale} />
+				</Group>
+			)}
 			<SnapGuides document={document} viewScale={viewScale} live={live} />
 			{outlinedLayer && (
 				<SelectionOutline layer={outlinedLayer} viewScale={viewScale} />
@@ -251,6 +260,69 @@ export function EditorScene({
 			)}
 		</Group>
 	);
+}
+
+export type DetectionOverlayRegion = MappedDetectionRect & {
+	selected: boolean;
+};
+
+/** Temporary detector proposals, outlined until the user applies them. */
+function DetectionOutlines({
+	regions,
+	viewScale,
+}: {
+	regions: readonly DetectionOverlayRegion[];
+	viewScale: number;
+}) {
+	const marker = 8 / viewScale;
+	return regions.map((region) => {
+		const { width, height, transform, selected } = region;
+		const box = rect(-width / 2, -height / 2, width, height);
+		const markerX = width / 2 - marker * 0.2;
+		const markerY = -height / 2 + marker * 0.2;
+		const check = Skia.Path.Make();
+		check.moveTo(markerX - marker * 0.42, markerY);
+		check.lineTo(markerX - marker * 0.1, markerY + marker * 0.34);
+		check.lineTo(markerX + marker * 0.48, markerY - marker * 0.34);
+		return (
+			<Group key={region.sourceIndex} transform={toTransformList(transform)}>
+				<Rect
+					rect={box}
+					color={selected ? colors.accentSoft : "rgba(0, 0, 0, 0.18)"}
+				/>
+				<Rect
+					rect={box}
+					color={selected ? colors.accent : colors.textSecondary}
+					style="stroke"
+					strokeWidth={(selected ? 2 : 1.25) / viewScale}
+				/>
+				<Circle
+					cx={markerX}
+					cy={markerY}
+					r={marker}
+					color={selected ? colors.accent : colors.surface}
+				/>
+				<Circle
+					cx={markerX}
+					cy={markerY}
+					r={marker}
+					color={selected ? colors.accent : colors.textSecondary}
+					style="stroke"
+					strokeWidth={1.25 / viewScale}
+				/>
+				{selected && (
+					<Path
+						path={check}
+						color={colors.onAccent}
+						style="stroke"
+						strokeWidth={2 / viewScale}
+						strokeCap="round"
+						strokeJoin="round"
+					/>
+				)}
+			</Group>
+		);
+	});
 }
 
 /**

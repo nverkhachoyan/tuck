@@ -1078,7 +1078,7 @@ Missing: the later additions (highlights, shadows, exposure, vignette, sharpen).
 
 ### Stage 4 — Background Removal + Detection
 
-Not started, but researched: see [docs/on-device-detection.md](docs/on-device-detection.md). It needs the app's first native module, and so an Expo development build.
+Finding faces and text is built: a native module on iOS and Android (Apple Vision and Google ML Kit) and MediaPipe/Tesseract on web detect faces and text lines in a photo. In the Redact tool, Find detects regions, outlines candidates over the photo, and adds chosen ones as redaction boxes in one undo step, following photo transforms, flips, and crops. Missing: background removal (needs a real iOS device).
 
 ### Stage 5 — Polish + Projects
 

@@ -18,6 +18,8 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
+import type { MappedDetectionRect } from "@/detection/mapDetectionRects";
 import { layerBounds } from "@/layers/layerBounds";
 import { type TextSelection, wordRange } from "@/layers/textEditing";
 import { textIndexAt } from "@/layers/textLayerLayout";
@@ -48,6 +50,7 @@ import { handleUnder } from "../handles/handleMetrics";
 import { fitDocumentToView, viewPointToDocument } from "../viewport";
 import {
 	type CanvasTool,
+	type DetectionOverlayRegion,
 	EditorScene,
 	type LiveAdjustment,
 	type LiveStroke,
@@ -113,6 +116,12 @@ type EditorCanvasProps = {
 	// While set, this image's adjustments are being changed: it's outlined,
 	// and the canvas holds still.
 	adjusting?: LiveAdjustment | null;
+	// Temporary detector proposals. While present, taps toggle them instead of
+	// selecting or drawing on the document.
+	detection?: {
+		regions: readonly DetectionOverlayRegion[];
+		onToggle: (sourceIndex: number) => void;
+	} | null;
 	// How much of the view's bottom is covered by panels floating over it.
 	// The document fits above them, and what's past its edges shows under.
 	bottomInset?: number;
@@ -161,6 +170,7 @@ export function EditorCanvas({
 	onDrawShape,
 	onPickPoint,
 	adjusting = null,
+	detection = null,
 	bottomInset = 0,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
@@ -246,7 +256,11 @@ export function EditorCanvas({
 
 	const selectedLayerId = selectedLayer?.id ?? null;
 	// What gestures move: nothing while painting, typing, or adjusting.
-	const holdingStill = tool !== null || textEdit !== null || adjusting !== null;
+	const holdingStill =
+		tool !== null ||
+		textEdit !== null ||
+		adjusting !== null ||
+		detection !== null;
 	const movableLayer = holdingStill ? undefined : selectedLayer;
 
 	// Keep the gesture-driven values in step with the selected layer: when the
@@ -552,6 +566,38 @@ export function EditorCanvas({
 				? textEdit.layer
 				: adjustedLayer || null;
 	const idleGesture = useMemo(() => Gesture.Tap().enabled(false), []);
+	const handleDetectionTap = useCallback(
+		(screenX: number, screenY: number) => {
+			if (!detection || scale === 0) return;
+			const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
+			const padding = 10 / scale;
+			let hit: MappedDetectionRect | null = null;
+			for (const region of detection.regions) {
+				if (
+					hitTestBox(
+						region.transform,
+						{
+							halfWidth: region.width / 2 + padding,
+							halfHeight: region.height / 2 + padding,
+						},
+						point,
+					) &&
+					(!hit || region.width * region.height < hit.width * hit.height)
+				) {
+					hit = region;
+				}
+			}
+			if (hit) detection.onToggle(hit.sourceIndex);
+		},
+		[detection, scale, viewport],
+	);
+	const detectionGesture = useMemo(
+		() =>
+			Gesture.Tap().onEnd((event, success) => {
+				if (success) scheduleOnRN(handleDetectionTap, event.x, event.y);
+			}),
+		[handleDetectionTap],
+	);
 
 	useImperativeHandle(ref, () => ({ flushPendingTransform, nudgeSelection }), [
 		flushPendingTransform,
@@ -561,20 +607,30 @@ export function EditorCanvas({
 	return (
 		<GestureDetector
 			gesture={
-				tool
-					? paintGesture
-					: textEdit
-						? textGesture
-						: adjusting
-							? idleGesture
-							: gesture
+				detection
+					? detectionGesture
+					: tool
+						? paintGesture
+						: textEdit
+							? textGesture
+							: adjusting
+								? idleGesture
+								: gesture
 			}
 		>
 			<View
 				ref={containerRef}
 				style={[
 					styles.container,
-					cursorStyle(tool ? "crosshair" : adjusting ? "default" : cursor),
+					cursorStyle(
+						detection
+							? "pointer"
+							: tool
+								? "crosshair"
+								: adjusting
+									? "default"
+									: cursor,
+					),
 				]}
 				onLayout={handleLayout}
 			>
@@ -598,6 +654,7 @@ export function EditorCanvas({
 								stroke={liveStroke}
 								outlinedLayer={outlinedLayer}
 								adjusting={adjusting}
+								detections={detection?.regions ?? []}
 								onImageError={handleImageError}
 							/>
 						</Group>

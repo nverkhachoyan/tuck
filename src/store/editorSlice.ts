@@ -4,6 +4,7 @@ import type { Adjustments } from "../model/adjustments.ts";
 import {
 	createDrawingLayer,
 	createImageLayer,
+	createPlacedRedactionBox,
 	createRedactionBox,
 	createRedactionStrokes,
 	createShapeLayer,
@@ -14,6 +15,7 @@ import {
 	isLineShape,
 	type Layer,
 	type MaskStroke,
+	type RedactionBoxPlacement,
 	type RedactionEffect,
 	type RedactionLayer,
 	reorderLayer,
@@ -78,6 +80,10 @@ export type EditorSlice = {
 	duplicateSelectedLayer: () => void;
 	drawStroke: (stroke: Stroke) => void;
 	addRedactionBox: (rect: Rect, effect: RedactionEffect) => void;
+	addRedactionBoxes: (
+		placements: readonly RedactionBoxPlacement[],
+		effect: RedactionEffect,
+	) => void;
 	paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) => void;
 	setRedactionEffect: (id: string, effect: RedactionEffect) => void;
 	addShape: (
@@ -287,6 +293,20 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		addRedactionBox: (rect, effect) => {
 			if (rect.width <= 0 || rect.height <= 0) return;
 			addOnTop("editor/addRedactionBox", createRedactionBox(rect, effect));
+		},
+
+		// Detector proposals land together, on top, as one undo step. The last
+		// one is selected, like a box drawn by hand.
+		addRedactionBoxes: (placements, effect) => {
+			const boxes = placements
+				.filter(({ width, height }) => width > 0 && height > 0)
+				.map((placement) => createPlacedRedactionBox(placement, effect));
+			if (boxes.length === 0) return;
+			setLayers(
+				"editor/addRedactionBoxes",
+				(layers) => [...layers, ...boxes],
+				boxes[boxes.length - 1].id,
+			);
 		},
 
 		// Like `drawStroke`: a stroke joins the selected brushed redaction, or a

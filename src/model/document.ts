@@ -137,6 +137,12 @@ export type RedactionBox = RedactionBase & {
 	height: number;
 };
 
+/** The geometry of a box redaction before it becomes a document layer. */
+export type RedactionBoxPlacement = Pick<
+	RedactionBox,
+	"width" | "height" | "transform"
+>;
+
 /**
  * A redaction over strokes painted across what to hide, in its own space
  * and centered like a drawing's (see `recenterDrawing`).
@@ -487,18 +493,31 @@ export function createRedactionBox(
 	rect: Rect,
 	effect: RedactionEffect,
 ): RedactionBox {
+	return createPlacedRedactionBox(
+		{
+			width: rect.width,
+			height: rect.height,
+			transform: {
+				...identityTransform,
+				x: rect.x + rect.width / 2,
+				y: rect.y + rect.height / 2,
+			},
+		},
+		effect,
+	);
+}
+
+/** A box redaction with its complete oriented placement. */
+export function createPlacedRedactionBox(
+	placement: RedactionBoxPlacement,
+	effect: RedactionEffect,
+): RedactionBox {
 	return {
 		type: "redaction",
 		id: createLayerId("redaction"),
 		effect,
 		shape: "box",
-		width: rect.width,
-		height: rect.height,
-		transform: {
-			...identityTransform,
-			x: rect.x + rect.width / 2,
-			y: rect.y + rect.height / 2,
-		},
+		...placement,
 		hidden: false,
 		locked: false,
 	};

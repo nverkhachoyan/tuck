@@ -26,13 +26,21 @@ const STRENGTH_NAMES = {
 export function RedactPanel({
 	settings,
 	optionsOpen,
+	findOpen,
+	finding,
+	hasTarget = true,
 	onChange,
 	onToggleOptions,
+	onToggleFind,
 }: {
 	settings: RedactSettings;
 	optionsOpen: boolean;
+	findOpen: boolean;
+	finding: boolean;
+	hasTarget?: boolean;
 	onChange: (settings: RedactSettings) => void;
 	onToggleOptions: () => void;
+	onToggleFind: () => void;
 }) {
 	const pickTool = (tool: RedactTool) => {
 		if (tool === settings.tool) onToggleOptions();
@@ -57,6 +65,14 @@ export function RedactPanel({
 				icon="eraser"
 				selected={settings.tool === "eraser"}
 				onPress={() => pickTool("eraser")}
+			/>
+			<ToolButton
+				label="Find"
+				icon="image-search-outline"
+				selected={findOpen}
+				busy={finding}
+				disabled={!hasTarget}
+				onPress={onToggleFind}
 			/>
 			<ToolButton
 				label="Style"

@@ -498,6 +498,71 @@ describe("editorSlice", () => {
 			);
 		});
 
+		test("detected boxes are added and undone together", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			store.getState().addRedactionBoxes(
+				[
+					{
+						width: 120,
+						height: 80,
+						transform: {
+							x: 200,
+							y: 300,
+							scaleX: 1,
+							scaleY: 1,
+							rotation: 0.2,
+						},
+					},
+					{
+						width: 60,
+						height: 40,
+						transform: {
+							x: 500,
+							y: 600,
+							scaleX: 1,
+							scaleY: 1,
+							rotation: -0.1,
+						},
+					},
+				],
+				blur,
+			);
+			const added = redactions(store);
+			assert.equal(added.length, 2);
+			assert.deepEqual(
+				added.map(({ effect, transform }) => ({ effect, transform })),
+				[
+					{
+						effect: blur,
+						transform: {
+							x: 200,
+							y: 300,
+							scaleX: 1,
+							scaleY: 1,
+							rotation: 0.2,
+						},
+					},
+					{
+						effect: blur,
+						transform: {
+							x: 500,
+							y: 600,
+							scaleX: 1,
+							scaleY: 1,
+							rotation: -0.1,
+						},
+					},
+				],
+			);
+			assert.equal(store.getState().selectedLayerId, added[1].id);
+			assert.equal(store.getState().past.length, 2, "one new history step");
+
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
 		test("resizing a box is one undo step, by id", () => {
 			const { store, text } = storeWithText();
 			store.getState().addRedactionBox(box, black);

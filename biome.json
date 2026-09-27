@@ -71,6 +71,7 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/**",
 											"../**",
 											"!@/model/**",
@@ -109,6 +110,7 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/**",
 											"../**",
 											"!@/layers/**",
@@ -133,7 +135,7 @@
 											"!../theme",
 											"!../theme.ts"
 										],
-										"message": "Editor helpers and the shared import/, render/, projects/, and stickers/ folders may import only lower-level modules or files in their own folder. See AGENTS.md."
+										"message": "Editor helpers and shared capability folders may import only lower-level modules or files in their own folder. Only detection/ imports image-analysis. See AGENTS.md."
 									}
 								]
 							}
@@ -153,6 +155,7 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/**",
 											"../**",
 											"./*/**",
@@ -164,6 +167,7 @@
 											"!../../store/**",
 											"!@/model/**",
 											"!../../model/**",
+											"!@/detection/**",
 											"!@/import/**",
 											"!@/stickers/**",
 											"!@/lib/**",
@@ -194,10 +198,12 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/**",
 											"../**",
 											"!../*",
 											"!../handles/*",
+											"!@/detection/**",
 											"!@/stickers/**",
 											"!@/layers/**",
 											"!../../../layers/**",
@@ -235,6 +241,7 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/app/**",
 											"@/features/**",
 											"../**",
@@ -260,6 +267,7 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/app/**",
 											"@/features/**",
 											"../**",
@@ -285,6 +293,7 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/app/**",
 											"@/features/**",
 											"../**",
@@ -309,7 +318,7 @@
 							"options": {
 								"patterns": [
 									{
-										"group": ["@/**", "../**", "!@/lib/**"],
+										"group": ["image-analysis", "@/**", "../**", "!@/lib/**"],
 										"message": "lib/ holds plain helpers: it imports only other lib/ files. See AGENTS.md."
 									}
 								]
@@ -330,6 +339,7 @@
 								"patterns": [
 									{
 										"group": [
+											"image-analysis",
 											"@/**",
 											"../**",
 											"!@/lib/**",
@@ -341,6 +351,46 @@
 											"!../theme.ts"
 										],
 										"message": "ui/ and theme.ts never import app code, only each other and lib/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/detection/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["@/**", "../**", "!../model/**", "!../lib/**"],
+										"message": "detection/ imports only its own files, the image-analysis bridge, and lower-level model/ and lib/ modules. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/app/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["image-analysis"],
+										"message": "Only detection/ imports the image-analysis bridge. See AGENTS.md."
 									}
 								]
 							}

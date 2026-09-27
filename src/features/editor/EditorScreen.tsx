@@ -13,6 +13,16 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import {
+	detectionTarget,
+	detectionTargetKey,
+} from "@/detection/detectionTarget";
+import {
+	type DetectionFeature,
+	isDetectionAvailable,
+} from "@/detection/imageDetection";
+import { mapDetectionRects } from "@/detection/mapDetectionRects";
+import { useImageDetection } from "@/detection/useImageDetection";
 import { AddSheet } from "@/features/editor/add/AddSheet";
 import { AdjustPanel } from "@/features/editor/adjust/AdjustPanel";
 import {
@@ -46,6 +56,7 @@ import {
 	LayersPanel,
 } from "@/features/editor/panels/LayersPanel";
 import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
+import { DetectionOptions } from "@/features/editor/redact/DetectionOptions";
 import {
 	RedactOptions,
 	RedactPanel,
@@ -182,6 +193,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 	const drawStroke = useStore((state) => state.drawStroke);
 	const addRedactionBox = useStore((state) => state.addRedactionBox);
+	const addRedactionBoxes = useStore((state) => state.addRedactionBoxes);
 	const paintRedaction = useStore((state) => state.paintRedaction);
 	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
 	const addShape = useStore((state) => state.addShape);
@@ -255,6 +267,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		[adjustedLayer, adjustController.matrix],
 	);
 	const [toolOptionsOpen, setToolOptionsOpen] = useState(false);
+	const [findOpen, setFindOpen] = useState(false);
 	// The tools' settings, and the custom color, are kept between sessions.
 	const [brushSettings, setBrushSettings] = usePreference(
 		"brushSettings",
@@ -294,6 +307,47 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
+	const detectedImage = detectionTarget(document, selectedLayer);
+	const detectedImageKey = detectionTargetKey(document, detectedImage);
+	const detection = useImageDetection(detectedImageKey);
+	const detectionAvailable = useMemo<Record<DetectionFeature, boolean>>(
+		() => ({
+			faces: isDetectionAvailable("faces"),
+			text: isDetectionAvailable("text"),
+		}),
+		[],
+	);
+	const mappedDetections = useMemo(
+		() =>
+			detectedImage && detection.state.status === "found"
+				? mapDetectionRects(
+						detectedImage,
+						detection.state.regions,
+						documentSize,
+						detection.state.feature,
+					)
+				: [],
+		[detectedImage, detection.state, documentSize],
+	);
+	const foundDetection =
+		detection.state.status === "found" ? detection.state : null;
+	const detectionOverlay = useMemo(
+		() =>
+			mappedDetections.map((region) => ({
+				...region,
+				selected: foundDetection?.selected.has(region.sourceIndex) ?? false,
+			})),
+		[mappedDetections, foundDetection],
+	);
+	const visibleDetectionIndices = useMemo(
+		() => mappedDetections.map(({ sourceIndex }) => sourceIndex),
+		[mappedDetections],
+	);
+	const selectedDetectionCount = foundDetection
+		? visibleDetectionIndices.filter((index) =>
+				foundDetection.selected.has(index),
+			).length
+		: 0;
 	// The style shows the selected redaction's, which new ones then share, so
 	// a redaction can be picked to match. Changing it restyles that one too.
 	const redactSettings = useMemo(
@@ -438,7 +492,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// Otherwise the last one used, but never the eraser, so the first drag
 	// shows.
 	const startRedacting = () => {
+		commitPendingPinch();
 		setLayersOpen(false);
+		setFindOpen(false);
+		detection.reset();
 		setRedactSettings((settings) => ({
 			...settings,
 			tool: selectedRedaction
@@ -462,7 +519,33 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const finishTool = () => {
 		setTool(null);
 		setToolOptionsOpen(false);
+		setFindOpen(false);
+		detection.reset();
 		setEyedropper(null);
+	};
+	const closeDetection = () => {
+		setFindOpen(false);
+		detection.reset();
+	};
+	const toggleDetection = () => {
+		setToolOptionsOpen(false);
+		if (findOpen) closeDetection();
+		else setFindOpen(true);
+	};
+	const startDetection = (feature: DetectionFeature) => {
+		if (detectedImage) detection.start(feature, detectedImage.uri);
+	};
+	const applyDetections = () => {
+		const found = detection.state;
+		if (found.status !== "found") return;
+		const placements = mappedDetections
+			.filter(({ sourceIndex }) => found.selected.has(sourceIndex))
+			.map(({ width, height, transform }) => ({ width, height, transform }));
+		addRedactionBoxes(
+			placements,
+			redactionEffect(redactSettings, documentSize),
+		);
+		closeDetection();
 	};
 
 	const changeTextEdit = (change: Partial<TextEditState>) =>
@@ -775,7 +858,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					onCommitTransform={transformLayer}
 					onResizeBox={resizeBox}
 					onNudgeLayer={nudgeLayer}
-					tool={canvasTool}
+					tool={findOpen ? null : canvasTool}
+					detection={
+						tool === "redact" && findOpen
+							? { regions: detectionOverlay, onToggle: detection.toggle }
+							: null
+					}
 					onPaintStroke={handlePaintStroke}
 					onDrawBox={handleDrawBox}
 					onDrawShape={handleDrawShape}
@@ -821,6 +909,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							});
 						}}
 						onClose={() => setToolOptionsOpen(false)}
+					/>
+				)}
+				{tool === "redact" && findOpen && (
+					<DetectionOptions
+						state={detection.state}
+						available={detectionAvailable}
+						visibleIndices={visibleDetectionIndices}
+						selectedCount={selectedDetectionCount}
+						bottomInset={dockInset}
+						onStart={startDetection}
+						onSelectAll={() => detection.select(visibleDetectionIndices)}
+						onClear={() => detection.select([])}
+						onApply={applyDetections}
+						onClose={closeDetection}
 					/>
 				)}
 				{textPicker && styledText && (
@@ -882,8 +984,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						<RedactPanel
 							settings={redactSettings}
 							optionsOpen={toolOptionsOpen}
+							findOpen={findOpen}
+							finding={detection.state.status === "working"}
+							hasTarget={detectedImage !== null}
 							onChange={changeRedactSettings}
-							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
+							onToggleOptions={() => {
+								closeDetection();
+								setToolOptionsOpen((open) => !open);
+							}}
+							onToggleFind={toggleDetection}
 						/>
 					) : styledText ? (
 						<TextStylePanel
@@ -912,7 +1021,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									: undefined
 							}
 							onRedact={
-								selectedLayer.type === "redaction" ? startRedacting : undefined
+								selectedLayer.type === "redaction" ||
+								selectedLayer.type === "image"
+									? startRedacting
+									: undefined
 							}
 							onAdjust={
 								selectedLayer.type === "image" ? startAdjusting : undefined
