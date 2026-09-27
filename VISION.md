@@ -566,11 +566,11 @@ The app can handle the majority of quick everyday photo corrections without leav
 
 ---
 
-# Stage 4 — Background Removal
+# Stage 4 — Background Removal + Detection
 
 ## Goal
 
-Allow a user to isolate the main subject of a photo with one action.
+Allow a user to isolate the main subject of a photo with one action, and to find the faces and text in a photo so they can be redacted with one tap.
 
 Example:
 
@@ -584,27 +584,48 @@ Foreground subject
 Transparent background
 ```
 
+```text
+Photo or screenshot
+  ↓
+Find faces / Find text
+  ↓
+Tap the ones to hide
+  ↓
+Redaction boxes
+```
+
+The research behind this stage, including the dependencies chosen and rejected, is in [docs/on-device-detection.md](docs/on-device-detection.md).
+
 ## Architecture
 
-Background segmentation is intentionally platform-specific.
+Detection is intentionally platform-specific.
 
 Expose one shared TypeScript interface.
 
 Example:
 
 ```ts
+type Rect = { x: number; y: number; width: number; height: number };
+
+type TextRegion = {
+  line: Rect;
+  words: Rect[];
+};
+
 type SegmentationResult = {
   maskUri: string;
   width: number;
   height: number;
 };
 
-removeBackground(
-  imageUri: string
-): Promise<SegmentationResult>;
+detectFaces(imageUri: string): Promise<Rect[]>;
+detectText(imageUri: string): Promise<TextRegion[]>;
+removeBackground(imageUri: string): Promise<SegmentationResult>;
 ```
 
-The editor should not care which native implementation produced the mask.
+Rectangles are in the image's pixels. The editor should not care which implementation produced them or the mask.
+
+Detected faces and text become ordinary redaction layers, which the user can move, resize, restyle, or undo like ones drawn by hand. Detection only proposes them.
 
 ## iOS
 
@@ -615,7 +636,7 @@ Swift
 Apple Vision
 ```
 
-Prefer Apple's foreground-instance segmentation APIs.
+Use `VNDetectFaceRectanglesRequest`, `VNRecognizeTextRequest`, and Apple's foreground-instance segmentation (`VNGenerateForegroundInstanceMaskRequest`, iOS 17+).
 
 ## Android
 
@@ -623,8 +644,23 @@ Implement using:
 
 ```text
 Kotlin
+Google ML Kit Face Detection
+Google ML Kit Text Recognition v2
 Google ML Kit Subject Segmentation
 ```
+
+Use the Google Play services versions, which download their models rather than ship them in the app.
+
+## Web
+
+Implement using:
+
+```text
+@mediapipe/tasks-vision   faces, background removal
+tesseract.js              text
+```
+
+Serve their WebAssembly files and models from the app itself, not a third-party CDN.
 
 ## Expo integration
 
@@ -634,17 +670,19 @@ Suggested structure:
 
 ```text
 modules/
-└── image-segmentation/
+└── image-analysis/
     ├── ios/
     ├── android/
     └── src/
 ```
 
+The web implementation lives in the module's `.web.ts` file, behind the same interface.
+
 At this point the project should use an Expo development build when required for custom native functionality.
 
 ## Rendering
 
-Native code should primarily produce segmentation results or masks.
+Native code should primarily produce detection results or masks.
 
 Skia remains responsible for:
 
@@ -652,6 +690,7 @@ Skia remains responsible for:
 * displaying the cutout
 * transforming the resulting layer
 * compositing it with other content
+* drawing redactions over detected regions
 * exporting
 
 ## Explicitly NOT included
@@ -666,12 +705,15 @@ Avoid introducing:
 * server-side processing
 * object generation
 * prompt-based image manipulation
+* face recognition (telling who a face belongs to)
 
 unless the product direction explicitly changes later.
 
 ## Stage 4 completion criteria
 
 A user can select an image, tap `Remove Background`, and receive a clean foreground layer that can be positioned and exported over a transparent or custom background.
+
+A user can open a photo or screenshot, have its faces and text found, and redact any of them with a tap each.
 
 ---
 
@@ -794,8 +836,6 @@ These are not part of the current roadmap and should not influence early archite
 Possible future capabilities:
 
 ```text
-Face blur detection
-Automatic text-region detection
 Automatic license-plate blur
 Collages
 Image annotations
@@ -934,7 +974,9 @@ Add crop and photo adjustment workflows while preserving the existing editor arc
 
 ## When asked to design Stage 4
 
-Treat background removal as an isolated native capability exposed through a small cross-platform API.
+Treat background removal, face detection, and text detection as one isolated native capability exposed through a small cross-platform API.
+
+Detection proposes redaction layers; it never redacts on its own.
 
 Do not move the editor itself into Swift or Kotlin.
 
@@ -987,14 +1029,18 @@ Any architecture that makes those two substantially different should be examined
 
 # Current Priority
 
-Stage 1's workflow is built, and the app has moved on through Stages 2 and 3 and parts of Stage 5 (see Status below). The current milestone is:
+Stages 1 through 3 are built and confirmed on a real device, and much of Stage 5 was built early alongside them (see Status below). The current milestone is:
 
-> **Confirming Stage 1 on real devices**
+> **Stage 4 — Background removal and detection**
 
 In order:
 
-1. Confirm save and share on real iOS and Android devices, the one Stage 1 criterion still open.
-2. Try the adjustments on real photos on a phone, and tune their strength if the extremes feel off.
+1. Move from Expo Go to a development build, and add the local `modules/image-analysis/` module.
+2. Find text, so screenshots can be redacted in a tap. Apple Vision's text recognition runs on the simulator.
+3. Find faces. Apple Vision's face detection runs on the simulator only when pinned to the CPU.
+4. Remove backgrounds. On iOS this can only be tried on a real device.
+
+The dependencies and their reasons are in [docs/on-device-detection.md](docs/on-device-detection.md).
 
 Stage 1's product test still holds, and new work shouldn't slow it down:
 
@@ -1014,7 +1060,7 @@ Save or share
 
 ### Stage 1 — Canvas + Text
 
-Built. What remains is confirming save and share on real iOS and Android devices.
+Built, and confirmed on a real device: pick a photo, add meme text, move, scale, and rotate it, export, and save or share.
 
 Text is edited in place on the canvas, with fonts, colors (including custom ones and an eyedropper that picks from the canvas), alignment, an outline, and a background box. Layers snap to the canvas's and other layers' edges and centers as they're dragged.
 
@@ -1026,13 +1072,13 @@ Built. A Redact tool adds each redaction as its own layer, either a box (dragged
 
 Geometry is built: a crop tool with aspect presets, quarter turns, flipping, and straightening. It keeps the photo whole and moves it under the canvas instead of re-encoding it, so every crop can be undone or widened again later. Along with it, the canvas became its own thing: it can be expanded past the photo and filled with white, black, or transparency (exported as PNG), and the photo can be unlocked to move like any layer. Export offers smaller sizes. A document can also start as an empty canvas at a preset size, and the photo can be reordered, hidden, or deleted like any layer. Photos can be added to a document as layers too, so a blank canvas can hold photos and a photo project more than one; the crop tool frames the lowest locked photo, and added photos start unlocked, so they move with the canvas.
 
-Adjustments are built too: an Adjust tool changes brightness, contrast, saturation, and warmth on the photo, or on a selected photo or sticker, with a dial for each that settles on zero. Each image keeps its own, as a color filter over the untouched file, so any of them can be undone or reset later, and the editor, export, and thumbnails draw them alike. A blank canvas with no images doesn't offer the tool.
+Adjustments are built too: an Adjust tool changes brightness, contrast, saturation, and warmth on the photo, or on a selected photo or sticker, with a dial for each that settles on zero. Each image keeps its own, as a color filter over the untouched file, so any of them can be undone or reset later, and the editor, export, and thumbnails draw them alike. A blank canvas with no images doesn't offer the tool. They've been tried on real photos on a phone.
 
 Missing: the later additions (highlights, shadows, exposure, vignette, sharpen).
 
-### Stage 4 — Background Removal
+### Stage 4 — Background Removal + Detection
 
-Not started. It needs the app's first native module, and so an Expo development build.
+Not started, but researched: see [docs/on-device-detection.md](docs/on-device-detection.md). It needs the app's first native module, and so an Expo development build.
 
 ### Stage 5 — Polish + Projects
 
