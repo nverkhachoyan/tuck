@@ -4,4 +4,7 @@ export type Rect = { x: number; y: number; width: number; height: number };
 /** A line of text, and each of its words. */
 export type TextRegion = { line: Rect; words: Rect[] };
 
-export type Feature = "text";
+/** An image's size, once its EXIF orientation is applied. */
+export type Size = { width: number; height: number };
+
+export type Feature = "faces" | "text";

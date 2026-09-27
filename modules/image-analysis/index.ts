@@ -1,4 +1,6 @@
-import type { Feature, TextRegion } from "./src/ImageAnalysis.types";
+import { Platform } from "react-native";
+import { faceTiles, mergeFaces } from "./src/faceTiles";
+import type { Feature, Rect, TextRegion } from "./src/ImageAnalysis.types";
 import ImageAnalysisModule from "./src/ImageAnalysisModule";
 
 export type { Feature, Rect, TextRegion } from "./src/ImageAnalysis.types";
@@ -9,6 +11,21 @@ export type { Feature, Rect, TextRegion } from "./src/ImageAnalysis.types";
  */
 export function isAvailable(feature: Feature): boolean {
 	return ImageAnalysisModule.isAvailable(feature);
+}
+
+/**
+ * A box around every face in the image at `uri`, in the image's pixels once
+ * its EXIF orientation is applied.
+ */
+export async function detectFaces(uri: string): Promise<Rect[]> {
+	const { width, height } = await ImageAnalysisModule.imageSize(uri);
+	// ML Kit looks at the image at every scale itself, so tiles only slow it.
+	const tiles =
+		Platform.OS === "android"
+			? [{ x: 0, y: 0, width, height }]
+			: faceTiles(width, height);
+	const found = await ImageAnalysisModule.detectFaces(uri, tiles);
+	return mergeFaces(tiles, found, width, height);
 }
 
 /**

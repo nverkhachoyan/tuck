@@ -39,3 +39,22 @@ copy(
 	require.resolve("@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz"),
 	"tesseract/eng.traineddata.gz",
 );
+
+// Face detection. The app loads the library's script build itself, and
+// FilesetResolver picks the SIMD build of its WebAssembly when the browser
+// has SIMD. The model isn't published to npm, so it's kept in the repository:
+// version 1 of blaze_face_full_range from Google's MediaPipe models.
+const mediaPipeFiles = ["vision_bundle.js"];
+for (const build of ["", "_nosimd"]) {
+	mediaPipeFiles.push(
+		`vision_wasm${build}_internal.js`,
+		`vision_wasm${build}_internal.wasm`,
+	);
+}
+for (const file of mediaPipeFiles) {
+	copy(require.resolve(`@mediapipe/tasks-vision/${file}`), `mediapipe/${file}`);
+}
+copy(
+	"modules/image-analysis/models/blaze_face_full_range.tflite",
+	"mediapipe/blaze_face_full_range.tflite",
+);

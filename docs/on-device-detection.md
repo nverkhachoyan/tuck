@@ -52,6 +52,8 @@ Serve every WebAssembly file and model from the app's own `public/` folder, not 
 * **Android:** ML Kit face detection returns every face's box. Google advises faces of at least 100×100 pixels, and its default `minFaceSize` is 0.1 (a head a tenth of the image's width), so lower it for group photos. If ML Kit misses too many small faces, MediaPipe's Android tasks run the same full-range model as web.
 * **Web:** MediaPipe's Face Detector with **`blaze_face_full_range`** (1.1 MB). Its default short-range model (230 KB) is built for selfies from a front camera and misses the small faces in group photos and back-camera shots. The sparse full-range model its docs describe isn't published (a 404 in September 2026).
 
+Tried on three photos with 9 to 36 faces, 3000 pixels wide (September 2026), Vision and MediaPipe found no faces in a group photo whose faces are about 50 pixels wide, since each looks at the image shrunk to a few hundred pixels. Looking at overlapping tiles too (half and a quarter of the longer side) found 31 on iOS and 25 on web. ML Kit with `minFaceSize` 0.02 found 36 in the whole image, and tiling it only made it seven times slower. The full-range model isn't on npm (`@mediapipe/tasks-vision` ships only the WebAssembly, and the deprecated `@mediapipe/face_detection`'s copy lacks the metadata the Tasks API reads), so version 1 is kept in the repository at `modules/image-analysis/models/`.
+
 ### Text
 
 * **iOS:** `VNRecognizeTextRequest` returns each line, and `boundingBox(for:)` returns the box of any range of it, so words can be redacted on their own.

@@ -2,7 +2,7 @@ const { AndroidConfig, withAndroidManifest } = require("expo/config-plugins");
 
 // The ML Kit models Play services should download when the app is installed,
 // rather than the first time they're used.
-const MODELS = ["ocr"];
+const MODELS = ["face", "ocr"];
 const DEPENDENCIES = "com.google.mlkit.vision.DEPENDENCIES";
 
 // Other libraries set this too (the dev launcher asks for `barcode_ui`), and

@@ -16,6 +16,9 @@ import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetector
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -31,20 +34,60 @@ class ImageAnalysisModule : Module() {
 	private val context: Context
 		get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
 
+	private var faceDetector: FaceDetector? = null
 	private var textRecognizer: TextRecognizer? = null
 
 	override fun definition() = ModuleDefinition {
 		Name("ImageAnalysis")
 
 		Function("isAvailable") { feature: String ->
-			feature == "text" && hasPlayServices()
+			(feature == "text" || feature == "faces") && hasPlayServices()
+		}
+
+		AsyncFunction("imageSize") { uri: String ->
+			val source = Uri.parse(uri)
+			val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+			context.contentResolver.openInputStream(source)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+			if (bounds.outWidth <= 0) throw UnreadableImageException(source)
+			val sideways = readOrientation(source) in SIDEWAYS
+			SizeRecord(
+				(if (sideways) bounds.outHeight else bounds.outWidth).toDouble(),
+				(if (sideways) bounds.outWidth else bounds.outHeight).toDouble(),
+			)
+		}
+
+		AsyncFunction("detectFaces") { uri: String, tiles: List<RectRecord> ->
+			val bitmap = loadUpright(Uri.parse(uri))
+			val detector = faceDetector ?: FaceDetection.getClient(
+				FaceDetectorOptions.Builder()
+					.setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+					// A head's width as a fraction of the image's. The default,
+					// 0.1, misses the faces at the back of a group photo; ML Kit
+					// looks at the image at every scale down to this one.
+					.setMinFaceSize(0.02f)
+					.build()
+			).also { faceDetector = it }
+			try {
+				tiles.map { tile ->
+					val x = tile.x.toInt()
+					val y = tile.y.toInt()
+					val crop = Bitmap.createBitmap(bitmap, x, y, tile.width.toInt(), tile.height.toInt())
+					val faces = await(detector, detector.process(InputImage.fromBitmap(crop, 0)), "Face")
+					if (crop !== bitmap) crop.recycle()
+					faces.map { face ->
+						face.boundingBox.let { rect(Rect(it.left + x, it.top + y, it.right + x, it.bottom + y)) }
+					}
+				}
+			} finally {
+				bitmap.recycle()
+			}
 		}
 
 		AsyncFunction("detectText") { uri: String ->
 			val image = InputImage.fromBitmap(loadUpright(Uri.parse(uri)), 0)
 			val recognizer = textRecognizer
 				?: TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS).also { textRecognizer = it }
-			val text = await(recognizer, recognizer.process(image))
+			val text = await(recognizer, recognizer.process(image), "Text")
 			text.textBlocks.flatMap { block ->
 				block.lines.mapNotNull { line ->
 					line.boundingBox?.let { box ->
@@ -55,6 +98,7 @@ class ImageAnalysisModule : Module() {
 		}
 
 		OnDestroy {
+			faceDetector?.close()
 			textRecognizer?.close()
 		}
 	}
@@ -64,23 +108,24 @@ class ImageAnalysisModule : Module() {
 
 	// ML Kit ignores EXIF, so the bitmap is turned upright before it looks.
 	private fun loadUpright(uri: Uri): Bitmap {
-		val resolver = context.contentResolver
-		val bitmap = resolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
+		val bitmap = context.contentResolver.openInputStream(uri)?.use(BitmapFactory::decodeStream)
 			?: throw UnreadableImageException(uri)
-		val orientation = runCatching {
-			resolver.openInputStream(uri)?.use {
-				ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-			}
-		}.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
-		val matrix = exifMatrix(orientation) ?: return bitmap
+		val matrix = exifMatrix(readOrientation(uri)) ?: return bitmap
 		val upright = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 		if (upright !== bitmap) bitmap.recycle()
 		return upright
 	}
 
+	private fun readOrientation(uri: Uri): Int =
+		runCatching {
+			context.contentResolver.openInputStream(uri)?.use {
+				ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+			}
+		}.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+
 	// A model missing because the app was installed offline is asked for now,
 	// so trying again once it's downloaded works.
-	private fun <T> await(api: OptionalModuleApi, task: Task<T>): T =
+	private fun <T> await(api: OptionalModuleApi, task: Task<T>, feature: String): T =
 		try {
 			Tasks.await(task)
 		} catch (e: ExecutionException) {
@@ -88,11 +133,18 @@ class ImageAnalysisModule : Module() {
 			if (cause is MlKitException && cause.errorCode == MlKitException.UNAVAILABLE) {
 				ModuleInstall.getClient(context)
 					.installModules(ModuleInstallRequest.newBuilder().addApi(api).build())
-				throw ModelUnavailableException()
+				throw ModelUnavailableException(feature)
 			}
 			throw cause ?: e
 		}
 }
+
+private val SIDEWAYS = setOf(
+	ExifInterface.ORIENTATION_TRANSPOSE,
+	ExifInterface.ORIENTATION_ROTATE_90,
+	ExifInterface.ORIENTATION_TRANSVERSE,
+	ExifInterface.ORIENTATION_ROTATE_270,
+)
 
 private fun exifMatrix(orientation: Int): Matrix? {
 	val matrix = Matrix()
@@ -123,6 +175,11 @@ class RectRecord(
 	@Field val height: Double = 0.0,
 ) : Record
 
+class SizeRecord(
+	@Field val width: Double = 0.0,
+	@Field val height: Double = 0.0,
+) : Record
+
 class TextRegionRecord(
 	@Field val line: RectRecord = RectRecord(),
 	@Field val words: List<RectRecord> = emptyList(),
@@ -132,5 +189,5 @@ private class UnreadableImageException(uri: Uri) :
 	CodedException("Couldn't read the image at $uri")
 
 // Play services downloads each model on its own, after the app is installed.
-private class ModelUnavailableException :
-	CodedException("Text detection is still being downloaded. Try again in a moment.")
+private class ModelUnavailableException(feature: String) :
+	CodedException("$feature detection is still being downloaded. Try again in a moment.")

@@ -7,7 +7,28 @@ public class ImageAnalysisModule: Module {
 		Name("ImageAnalysis")
 
 		Function("isAvailable") { (feature: String) -> Bool in
-			feature == "text"
+			feature == "text" || feature == "faces"
+		}
+
+		AsyncFunction("imageSize") { (uri: URL) -> SizeRecord in
+			let image = try SourceImage(url: uri)
+			return SizeRecord(width: image.width, height: image.height)
+		}
+
+		// Vision decodes the image once for every tile's request.
+		AsyncFunction("detectFaces") { (uri: URL, tiles: [RectRecord]) -> [[RectRecord]] in
+			let image = try SourceImage(url: uri)
+			let requests = tiles.map { tile in
+				let request = VNDetectFaceRectanglesRequest()
+				request.regionOfInterest = image.box(tile)
+				pinToCPUOnSimulator(request)
+				return request
+			}
+			try image.requestHandler().perform(requests)
+			// Boxes are fractions of the whole image, not of the tile.
+			return requests.map { request in
+				(request.results ?? []).map { image.rect($0.boundingBox) }
+			}
 		}
 
 		AsyncFunction("detectText") { (uri: URL) -> [TextRegionRecord] in
@@ -60,6 +81,15 @@ private struct SourceImage {
 	}
 
 	/// Vision's boxes are fractions of the image, with the origin at the bottom left.
+	func box(_ rect: RectRecord) -> CGRect {
+		CGRect(
+			x: rect.x / width,
+			y: 1 - (rect.y + rect.height) / height,
+			width: rect.width / width,
+			height: rect.height / height
+		)
+	}
+
 	func rect(_ box: CGRect) -> RectRecord {
 		RectRecord(
 			x: box.minX * width,
@@ -68,6 +98,20 @@ private struct SourceImage {
 			height: box.height * height
 		)
 	}
+}
+
+/// The simulator can't create the Neural Engine or GPU context face detection
+/// asks for, and fails with "Could not create inference context".
+private func pinToCPUOnSimulator(_ request: VNRequest) {
+	#if targetEnvironment(simulator)
+	if #available(iOS 17.0, *), let devices = try? request.supportedComputeStageDevices {
+		for (stage, list) in devices {
+			if let cpu = list.first(where: { if case .cpu = $0 { true } else { false } }) {
+				request.setComputeDevice(cpu, for: stage)
+			}
+		}
+	}
+	#endif
 }
 
 /// The ranges of `text` between whitespace, as ML Kit and Tesseract split words.
@@ -101,6 +145,18 @@ struct RectRecord: Record {
 	init(x: Double, y: Double, width: Double, height: Double) {
 		self.x = x
 		self.y = y
+		self.width = width
+		self.height = height
+	}
+}
+
+struct SizeRecord: Record {
+	@Field var width: Double = 0
+	@Field var height: Double = 0
+
+	init() {}
+
+	init(width: Double, height: Double) {
 		self.width = width
 		self.height = height
 	}

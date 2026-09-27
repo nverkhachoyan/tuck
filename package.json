@@ -10,7 +10,7 @@
     "format": "biome format --write .",
     "check": "biome check .",
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\"",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\" \"modules/**/*.test.ts\"",
     "postinstall": "node scripts/copy-web-assets.mjs",
     "build:web": "expo export -p web",
     "deploy": "npm run build:web && npx eas-cli@latest deploy"
@@ -23,6 +23,7 @@
     "@expo-google-fonts/permanent-marker": "^0.4.0",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@shopify/react-native-skia": "2.6.2",
     "@tesseract.js-data/eng": "^1.0.0",
     "expo": "^57.0.1",
