@@ -145,7 +145,9 @@ export function CropCanvas({
 			>
 				{/* Drawn once the view has a size: on web, Skia can miss redraws
 				    asked for while its surface is still being set up. */}
-				<Canvas style={styles.canvas}>
+				{/* sRGB, like export's offscreen surface: filters and adjustments
+				    work in the canvas's color space, so a P3 one would look stronger. */}
+				<Canvas style={styles.canvas} colorSpace="srgb">
 					{viewScale > 0 && (
 						<Group transform={viewTransform}>
 							<Group clip={box}>

@@ -1,4 +1,5 @@
-// Relative `.ts` import keeps this loadable by Node's test runner.
+// Relative `.ts` imports keep this loadable by Node's test runner.
+import { adjustmentKeys } from "../model/adjustments.ts";
 import {
 	type EditorDocument,
 	isLineShape,
@@ -20,7 +21,8 @@ import {
 // project by its text, and drop its name when they save it. So did redactions, and shapes, for the same reason. So
 // did pens' `tip`: builds from before it draw every pen as a plain one. So
 // did image layers' `sticker`: builds from before it list a sticker as a
-// photo.
+// photo. So did image layers' `adjustments`: builds from before them show
+// the image unadjusted.
 export const PROJECT_VERSION = 3;
 
 // The file of the photo a project was made from. Saved image layers name a
@@ -281,7 +283,8 @@ function isLayer(value: unknown): boolean {
 				isPositive(value.height) &&
 				typeof value.flipped === "boolean" &&
 				typeof value.opaque === "boolean" &&
-				(value.sticker === undefined || typeof value.sticker === "boolean")
+				(value.sticker === undefined || typeof value.sticker === "boolean") &&
+				(value.adjustments === undefined || isAdjustments(value.adjustments))
 			);
 		case "text":
 			return (
@@ -303,6 +306,16 @@ function isLayer(value: unknown): boolean {
 		default:
 			return false;
 	}
+}
+
+function isAdjustments(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		adjustmentKeys.every((key) => {
+			const amount = value[key];
+			return typeof amount === "number" && Math.abs(amount) <= 1;
+		})
+	);
 }
 
 function isShape(value: Fields): boolean {

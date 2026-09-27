@@ -987,14 +987,14 @@ Any architecture that makes those two substantially different should be examined
 
 # Current Priority
 
-Stage 1's workflow is built, and the app has moved on through Stage 2 and parts of Stages 3 and 5 (see Status below). The current milestone is:
+Stage 1's workflow is built, and the app has moved on through Stages 2 and 3 and parts of Stage 5 (see Status below). The current milestone is:
 
-> **Stage 3's adjustments**
+> **Confirming Stage 1 on real devices**
 
 In order:
 
 1. Confirm save and share on real iOS and Android devices, the one Stage 1 criterion still open.
-2. Build Stage 3's adjustments: brightness, contrast, saturation, and temperature.
+2. Try the adjustments on real photos on a phone, and tune their strength if the extremes feel off.
 
 Stage 1's product test still holds, and new work shouldn't slow it down:
 
@@ -1026,7 +1026,9 @@ Built. A Redact tool adds each redaction as its own layer, either a box (dragged
 
 Geometry is built: a crop tool with aspect presets, quarter turns, flipping, and straightening. It keeps the photo whole and moves it under the canvas instead of re-encoding it, so every crop can be undone or widened again later. Along with it, the canvas became its own thing: it can be expanded past the photo and filled with white, black, or transparency (exported as PNG), and the photo can be unlocked to move like any layer. Export offers smaller sizes. A document can also start as an empty canvas at a preset size, and the photo can be reordered, hidden, or deleted like any layer. Photos can be added to a document as layers too, so a blank canvas can hold photos and a photo project more than one; the crop tool frames the lowest locked photo, and added photos start unlocked, so they move with the canvas.
 
-Missing: all of the adjustments (brightness, contrast, saturation, temperature, and the later additions).
+Adjustments are built too: an Adjust tool changes brightness, contrast, saturation, and warmth on the photo, or on a selected photo or sticker, with a dial for each that settles on zero. Each image keeps its own, as a color filter over the untouched file, so any of them can be undone or reset later, and the editor, export, and thumbnails draw them alike. A blank canvas with no images doesn't offer the tool.
+
+Missing: the later additions (highlights, shadows, exposure, vignette, sharpen).
 
 ### Stage 4 — Background Removal
 

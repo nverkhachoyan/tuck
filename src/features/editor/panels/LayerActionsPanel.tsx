@@ -4,8 +4,8 @@ import { ToolButton, ToolRow } from "../ToolButton";
  * Actions for the selected photo, drawing, shape, or redaction, in place of
  * the tools, as the text panel is for text: it's moved and sized on the
  * canvas, and tapping the canvas off it deselects it. `onDraw` goes on
- * drawing on a drawing or restyles a shape, and `onRedact` restyles a
- * redaction or paints on. `onSaveSticker` keeps a photo as a sticker; once
+ * drawing on a drawing or restyles a shape, `onRedact` restyles a
+ * redaction or paints on, and `onAdjust` changes an image's colors. `onSaveSticker` keeps a photo as a sticker; once
  * it has, `sticker` is "saved", and the button says so.
  */
 export function LayerActionsPanel({
@@ -13,6 +13,7 @@ export function LayerActionsPanel({
 	canMoveBackward,
 	onDraw,
 	onRedact,
+	onAdjust,
 	resizeEnabled,
 	onToggleResize,
 	sticker,
@@ -26,6 +27,7 @@ export function LayerActionsPanel({
 	canMoveBackward: boolean;
 	onDraw?: () => void;
 	onRedact?: () => void;
+	onAdjust?: () => void;
 	resizeEnabled?: boolean;
 	onToggleResize?: () => void;
 	sticker?: "saving" | "saved";
@@ -39,6 +41,9 @@ export function LayerActionsPanel({
 		<ToolRow>
 			{onDraw && <ToolButton label="Draw" icon="draw" onPress={onDraw} />}
 			{onRedact && <ToolButton label="Redact" icon="blur" onPress={onRedact} />}
+			{onAdjust && (
+				<ToolButton label="Adjust" icon="tune-variant" onPress={onAdjust} />
+			)}
 			{onToggleResize && (
 				<ToolButton
 					label="Stretch"

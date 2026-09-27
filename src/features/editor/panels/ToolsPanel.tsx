@@ -5,6 +5,7 @@ import { ToolButton, ToolRow } from "../ToolButton";
  * The editing tools, in the dock while no layer is selected. On web, each
  * shows the letter that picks it up (see `TOOL_KEYS`) on hover. Add opens
  * the sheet of photos and stickers, and spins while one is on its way.
+ * Adjust shows only with an image to adjust.
  */
 export function ToolsPanel({
 	addBusy,
@@ -13,6 +14,7 @@ export function ToolsPanel({
 	onRedact,
 	onAdd,
 	onCrop,
+	onAdjust,
 }: {
 	addBusy: boolean;
 	onAddText: () => void;
@@ -20,6 +22,7 @@ export function ToolsPanel({
 	onRedact: () => void;
 	onAdd: () => void;
 	onCrop: () => void;
+	onAdjust?: () => void;
 }) {
 	return (
 		<ToolRow>
@@ -54,6 +57,14 @@ export function ToolsPanel({
 				shortcut={TOOL_KEYS.crop}
 				onPress={onCrop}
 			/>
+			{onAdjust && (
+				<ToolButton
+					label="Adjust"
+					icon="tune-variant"
+					shortcut={TOOL_KEYS.adjust}
+					onPress={onAdjust}
+				/>
+			)}
 		</ToolRow>
 	);
 }

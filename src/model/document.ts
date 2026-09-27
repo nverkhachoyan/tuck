@@ -1,3 +1,8 @@
+import {
+	type Adjustments,
+	adjustmentsEqual,
+	isNeutral,
+} from "./adjustments.ts";
 import { drawingBox, recenterDrawing } from "./drawing.ts";
 import {
 	hitTestBox,
@@ -23,6 +28,7 @@ type LayerBase = {
 // `opaque` is whether every pixel is: photos are, a PNG may not be.
 // `sticker` marks one added from the sticker sheet, which is only named
 // differently: its file is copied into the project like a photo's.
+// `adjustments` is left out while none are made.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
@@ -31,6 +37,7 @@ export type ImageLayer = LayerBase & {
 	flipped: boolean;
 	opaque: boolean;
 	sticker?: boolean;
+	adjustments?: Adjustments;
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -292,6 +299,7 @@ export function hasEdits(document: EditorDocument): boolean {
 		document.width !== first.width ||
 		document.height !== first.height ||
 		first.flipped ||
+		first.adjustments !== undefined ||
 		!transformsEqual(
 			first.transform,
 			centeredTransform(first.width, first.height),
@@ -559,6 +567,25 @@ export function restyleShape(layer: ShapeLayer, edit: ShapeEdit): ShapeLayer {
 		return layer;
 	}
 	return { ...layer, shape: kind, color, strokeWidth } as ShapeLayer;
+}
+
+/**
+ * `layer` with `adjustments`, left out when they change nothing, or `layer`
+ * itself when its adjustments are the same already.
+ */
+export function withAdjustments(
+	layer: ImageLayer,
+	adjustments: Adjustments,
+): ImageLayer {
+	const current = layer.adjustments;
+	if (isNeutral(adjustments)) {
+		if (!current) return layer;
+		const { adjustments: _, ...rest } = layer;
+		return rest;
+	}
+	return current && adjustmentsEqual(current, adjustments)
+		? layer
+		: { ...layer, adjustments };
 }
 
 /**

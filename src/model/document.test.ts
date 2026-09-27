@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { neutralAdjustments } from "./adjustments.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
@@ -21,6 +22,7 @@ import {
 	resizeLayerBox,
 	restyleShape,
 	type ShapeLayer,
+	withAdjustments,
 } from "./document.ts";
 
 const landscape = () =>
@@ -89,6 +91,12 @@ describe("hasEdits", () => {
 			},
 			(document) => {
 				document.background = "#FFFFFF";
+			},
+			(document) => {
+				document.layers[0] = withAdjustments(photo(document), {
+					...neutralAdjustments,
+					brightness: 0.2,
+				});
 			},
 		];
 		for (const edit of edits) {
@@ -572,5 +580,27 @@ describe("reorderLayer", () => {
 		const before = [...layers];
 		reorderLayer(layers, "a", 3);
 		assert.deepEqual(layers, before);
+	});
+});
+
+describe("withAdjustments", () => {
+	const photo = () => landscape().layers[0] as ImageLayer;
+	const warm = { ...neutralAdjustments, temperature: 0.4 };
+
+	test("sets adjustments, and leaves the layer be when they're the same", () => {
+		const adjusted = withAdjustments(photo(), warm);
+		assert.deepEqual(adjusted.adjustments, warm);
+		assert.equal(withAdjustments(adjusted, { ...warm }), adjusted);
+	});
+
+	test("leaves out adjustments that change nothing", () => {
+		const layer = photo();
+		assert.equal(withAdjustments(layer, neutralAdjustments), layer);
+		const reset = withAdjustments(
+			withAdjustments(layer, warm),
+			neutralAdjustments,
+		);
+		assert.equal("adjustments" in reset, false);
+		assert.deepEqual(reset, layer);
 	});
 });

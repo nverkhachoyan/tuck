@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { devtools } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
+import { neutralAdjustments } from "../model/adjustments.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
@@ -883,6 +884,40 @@ describe("editorSlice", () => {
 			before.undo();
 			before.redo();
 			assert.equal(store.getState(), before);
+		});
+	});
+	describe("adjustments", () => {
+		const warm = { ...neutralAdjustments, temperature: 0.5 };
+		const firstImage = (store: ReturnType<typeof createTestStore>) =>
+			store.getState().document?.layers[0] as ImageLayer;
+
+		test("adjusting is one undo step, and undo takes it back", () => {
+			const { store } = storeWithText();
+			const steps = store.getState().past.length;
+			store.getState().setAdjustments("photo", warm);
+			assert.deepEqual(firstImage(store).adjustments, warm);
+			assert.equal(store.getState().past.length, steps + 1);
+			store.getState().undo();
+			assert.equal(firstImage(store).adjustments, undefined);
+		});
+
+		test("the same adjustments aren't a step, and none leaves them out", () => {
+			const { store } = storeWithText();
+			store.getState().setAdjustments("photo", warm);
+			const steps = store.getState().past.length;
+			store.getState().setAdjustments("photo", { ...warm });
+			assert.equal(store.getState().past.length, steps);
+			store.getState().setAdjustments("photo", neutralAdjustments);
+			assert.equal("adjustments" in firstImage(store), false);
+			assert.equal(store.getState().past.length, steps + 1);
+		});
+
+		test("only images take adjustments", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			store.getState().setAdjustments(text.id, warm);
+			store.getState().setAdjustments("missing", warm);
+			assert.equal(store.getState().document, before);
 		});
 	});
 });

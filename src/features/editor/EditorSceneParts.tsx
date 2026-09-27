@@ -6,6 +6,7 @@ import { RedactionLayerView } from "@/layers/RedactionLayerView";
 import { ShapeLayerView } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
+import type { ColorMatrix } from "@/model/adjustments";
 import type { ImageLayer, Layer } from "@/model/document";
 import { CHECKER_CELL } from "@/theme";
 import { Checkerboard } from "@/ui/Checkerboard";
@@ -32,20 +33,25 @@ export function CanvasBackground({
 
 /**
  * A layer's content in its own space, loading images asynchronously.
- * `stroke` is one still being drawn on a drawing layer.
+ * `stroke` is one still being drawn on a drawing layer, and `matrix` colors
+ * an image in place of its adjustments (see `ImageLayerView`).
  */
 export function LayerContent({
 	layer,
 	stroke,
+	matrix,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke?: ReactNode;
+	matrix?: { value: ColorMatrix };
 	onImageError: (error: unknown) => void;
 }) {
 	switch (layer.type) {
 		case "image":
-			return <AsyncImage layer={layer} onError={onImageError} />;
+			return (
+				<AsyncImage layer={layer} matrix={matrix} onError={onImageError} />
+			);
 		case "text":
 			return <TextLayerView layer={layer} />;
 		case "drawing":
@@ -62,12 +68,14 @@ export function LayerContent({
 /** Draws nothing until the image has decoded, or if it can't be. */
 function AsyncImage({
 	layer,
+	matrix,
 	onError,
 }: {
 	layer: ImageLayer;
+	matrix?: { value: ColorMatrix };
 	onError: (error: unknown) => void;
 }) {
 	const image = useDecodedImage(layer.uri, onError);
 	if (!image) return null;
-	return <ImageLayerView layer={layer} image={image} />;
+	return <ImageLayerView layer={layer} image={image} matrix={matrix} />;
 }

@@ -42,6 +42,7 @@ import { shapePath } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { clampSelection, type TextSelection } from "@/layers/textEditing";
 import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
+import type { ColorMatrix } from "@/model/adjustments";
 import {
 	type Brush,
 	type EditorDocument,
@@ -130,6 +131,15 @@ export type TextEditState = {
 	focused: boolean;
 };
 
+/**
+ * An image layer whose adjustments a control is changing: `matrix` colors
+ * it meanwhile, following the control without rendering React.
+ */
+export type LiveAdjustment = {
+	layerId: string;
+	matrix: DerivedValue<ColorMatrix>;
+};
+
 type EditorSceneProps = {
 	document: EditorDocument;
 	selectedLayerId: string | null;
@@ -140,6 +150,7 @@ type EditorSceneProps = {
 	stroke: LiveStroke | null;
 	// Outlined without handles, as a tool's target: it holds still.
 	outlinedLayer: Layer | null;
+	adjusting: LiveAdjustment | null;
 	// An image layer's file couldn't be read or decoded. Must be stable.
 	onImageError: (error: unknown) => void;
 };
@@ -162,6 +173,7 @@ export function EditorScene({
 	live,
 	stroke,
 	outlinedLayer,
+	adjusting,
 	onImageError,
 }: EditorSceneProps) {
 	const editedId = textEdit && !textEdit.isNew ? textEdit.layer.id : null;
@@ -187,6 +199,11 @@ export function EditorScene({
 									layer={layer}
 									stroke={stroke?.targetId === layer.id ? stroke : null}
 									live={live}
+									matrix={
+										adjusting?.layerId === layer.id
+											? adjusting.matrix
+											: undefined
+									}
 									onImageError={onImageError}
 								/>
 							)}
@@ -273,11 +290,13 @@ function StrokeTarget({
 	layer,
 	stroke,
 	live,
+	matrix,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke: LiveStroke | null;
 	live: LiveTransform;
+	matrix?: DerivedValue<ColorMatrix>;
 	onImageError: (error: unknown) => void;
 }) {
 	const tool = stroke?.tool;
@@ -308,6 +327,7 @@ function StrokeTarget({
 					</Group>
 				)
 			}
+			matrix={matrix}
 			onImageError={onImageError}
 		/>
 	);

@@ -14,6 +14,11 @@ import {
 	View,
 } from "react-native";
 import { AddSheet } from "@/features/editor/add/AddSheet";
+import { AdjustPanel } from "@/features/editor/adjust/AdjustPanel";
+import {
+	adjustTarget,
+	useAdjustController,
+} from "@/features/editor/adjust/useAdjustController";
 import { EyedropperHint } from "@/features/editor/ColorPicker";
 import { isCustomColor } from "@/features/editor/ColorSwatches";
 import {
@@ -81,9 +86,11 @@ import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { usePreference } from "@/lib/usePreference";
+import { neutralAdjustments } from "@/model/adjustments";
 import {
 	createTextLayer,
 	type EditorDocument,
+	type ImageLayer,
 	isLine,
 	isLineShape,
 	maxNewImageShortSide,
@@ -117,6 +124,7 @@ import { DropOverlay } from "@/ui/DropOverlay";
 import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
+import { TextButton } from "@/ui/TextButton";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
@@ -178,6 +186,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
 	const addShape = useStore((state) => state.addShape);
 	const setShapeStyle = useStore((state) => state.setShapeStyle);
+	const setAdjustments = useStore((state) => state.setAdjustments);
 	const updateSelectedText = useStore((state) => state.updateSelectedText);
 	const updateTextLayer = useStore((state) => state.updateTextLayer);
 	const transformLayer = useStore((state) => state.transformLayer);
@@ -223,10 +232,28 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	} | null>(null);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
 	const dockInset = useDockInset();
-	// The tool dragging on the canvas uses in place of moving layers. While
-	// drawing, strokes go into the selected drawing, or a new one; while
-	// redacting, into the selected brushed redaction, or a new one.
-	const [tool, setTool] = useState<"draw" | "redact" | null>(null);
+	// The tool in the dock. While drawing, strokes on the canvas go into the
+	// selected drawing, or a new one; while redacting, into the selected
+	// brushed redaction, or a new one. While adjusting, the canvas holds still.
+	const [tool, setTool] = useState<"draw" | "redact" | "adjust" | null>(null);
+	// The image being adjusted. The tool puts itself down if it goes away.
+	const [adjustedId, setAdjustedId] = useState<string | null>(null);
+	const adjustedLayer =
+		tool === "adjust"
+			? document.layers.find(
+					(layer): layer is ImageLayer =>
+						layer.type === "image" && !layer.hidden && layer.id === adjustedId,
+				)
+			: undefined;
+	if (tool === "adjust" && !adjustedLayer) setTool(null);
+	const adjustController = useAdjustController(adjustedLayer, setAdjustments);
+	const adjusting = useMemo(
+		() =>
+			adjustedLayer
+				? { layerId: adjustedLayer.id, matrix: adjustController.matrix }
+				: null,
+		[adjustedLayer, adjustController.matrix],
+	);
 	const [toolOptionsOpen, setToolOptionsOpen] = useState(false);
 	// The tools' settings, and the custom color, are kept between sessions.
 	const [brushSettings, setBrushSettings] = usePreference(
@@ -424,6 +451,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}));
 		setTool("redact");
 	};
+	// The selected image, or else the photo, if there's an image at all.
+	const adjustable = adjustTarget(document, selectedLayer);
+	const startAdjusting = () => {
+		if (!adjustable) return;
+		setLayersOpen(false);
+		setAdjustedId(adjustable.id);
+		setTool("adjust");
+	};
 	const finishTool = () => {
 		setTool(null);
 		setToolOptionsOpen(false);
@@ -620,6 +655,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		add: openAdd,
 		photo: pickPhoto,
 		crop: startCrop,
+		adjust: startAdjusting,
 	};
 
 	// Shrunk the way a saved sticker is, so a large photo doesn't make one.
@@ -671,6 +707,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				onBack={() => leaveEditor(router)}
 				action={
 					<View style={styles.headerActions}>
+						{adjustedLayer?.adjustments && (
+							<TextButton
+								label="Reset"
+								onPress={() =>
+									setAdjustments(adjustedLayer.id, neutralAdjustments)
+								}
+							/>
+						)}
 						{!tool && (
 							<IconButton
 								icon="layers-outline"
@@ -736,6 +780,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					onDrawBox={handleDrawBox}
 					onDrawShape={handleDrawShape}
 					onPickPoint={handlePickPoint}
+					adjusting={adjusting}
 					bottomInset={dockInset}
 				/>
 				{tool === "draw" && toolOptionsOpen && (
@@ -828,6 +873,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onChange={changeDrawSettings}
 							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
 						/>
+					) : tool === "adjust" ? (
+						<AdjustPanel
+							controller={adjustController}
+							adjustments={adjustedLayer?.adjustments}
+						/>
 					) : tool === "redact" ? (
 						<RedactPanel
 							settings={redactSettings}
@@ -864,6 +914,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onRedact={
 								selectedLayer.type === "redaction" ? startRedacting : undefined
 							}
+							onAdjust={
+								selectedLayer.type === "image" ? startAdjusting : undefined
+							}
 							resizeEnabled={selectedLayer.resizable === true}
 							sticker={
 								stickerSave?.layerId === selectedLayer.id
@@ -897,6 +950,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onRedact={startRedacting}
 							onAdd={openAdd}
 							onCrop={startCrop}
+							onAdjust={adjustable ? startAdjusting : undefined}
 						/>
 					)}
 				</Dock>

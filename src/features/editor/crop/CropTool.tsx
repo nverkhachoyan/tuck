@@ -17,14 +17,23 @@ import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
+import { Dial, type DialScale } from "../Dial";
 import { Dock, DockButton, useDockInset } from "../Dock";
 import { ToolButton, ToolRow } from "../ToolButton";
-import { AngleDial } from "./AngleDial";
 import { CropCanvas } from "./CropCanvas";
 import { MAX_STRAIGHTEN } from "./cropGeometry";
 import { ASPECTS, useCropController } from "./useCropController";
 
 type CropTab = "crop" | "rotate" | "canvas";
+
+// A degree a step, a long tick every 15, settling level from a degree away.
+const DEGREES: DialScale = {
+	step: Math.PI / 180,
+	pxPerStep: 8,
+	tickEvery: 1,
+	majorEvery: 15,
+	snap: 1,
+};
 
 const TABS: { tab: CropTab; label: string; icon: IconName }[] = [
 	{ tab: "crop", label: "Crop", icon: "crop" },
@@ -152,10 +161,15 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 						<>
 							{/* Levels a tilted photo; a canvas alone has nothing to level. */}
 							{anchor.layer && (
-								<AngleDial
+								<Dial
 									value={controller.straighten}
 									max={MAX_STRAIGHTEN}
+									scale={DEGREES}
 									label="Straighten"
+									increaseLabel="Increase angle"
+									decreaseLabel="Decrease angle"
+									readout={(degrees) => `${degrees}°`}
+									valueText={(degrees) => `${degrees} degrees`}
 									onBegin={controller.straightenBegin}
 									onChange={controller.straightenChange}
 									onEnd={controller.straightenEnd}

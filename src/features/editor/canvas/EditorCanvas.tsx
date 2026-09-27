@@ -16,7 +16,7 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { layerBounds } from "@/layers/layerBounds";
 import { type TextSelection, wordRange } from "@/layers/textEditing";
@@ -49,6 +49,7 @@ import { fitDocumentToView, viewPointToDocument } from "../viewport";
 import {
 	type CanvasTool,
 	EditorScene,
+	type LiveAdjustment,
 	type LiveStroke,
 	type TextEditState,
 } from "./EditorScene";
@@ -109,6 +110,9 @@ type EditorCanvasProps = {
 	onDrawShape?: (placement: ShapePlacement) => void;
 	// Where a tap, or a drag's end, picks a color, in document space.
 	onPickPoint?: (point: Point) => void;
+	// While set, this image's adjustments are being changed: it's outlined,
+	// and the canvas holds still.
+	adjusting?: LiveAdjustment | null;
 	// How much of the view's bottom is covered by panels floating over it.
 	// The document fits above them, and what's past its edges shows under.
 	bottomInset?: number;
@@ -137,7 +141,7 @@ export type EditorCanvasHandle = {
  * selection then holds still, and only a redaction's or a shape's is
  * outlined, to show what the tool's style changes. Dragging out a box or a
  * shape, a tap picks the one to change, or none. Picking a color, where the
- * finger lifts is the point.
+ * finger lifts is the point. While `adjusting`, presses do nothing.
  */
 export function EditorCanvas({
 	ref,
@@ -156,6 +160,7 @@ export function EditorCanvas({
 	onDrawBox,
 	onDrawShape,
 	onPickPoint,
+	adjusting = null,
 	bottomInset = 0,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
@@ -240,8 +245,9 @@ export function EditorCanvas({
 	}, [sharedTargets, targets]);
 
 	const selectedLayerId = selectedLayer?.id ?? null;
-	// What gestures move: nothing while painting or typing.
-	const movableLayer = tool || textEdit ? undefined : selectedLayer;
+	// What gestures move: nothing while painting, typing, or adjusting.
+	const holdingStill = tool !== null || textEdit !== null || adjusting !== null;
+	const movableLayer = holdingStill ? undefined : selectedLayer;
 
 	// Keep the gesture-driven values in step with the selected layer: when the
 	// selection changes, and when that layer does (a commit, undo, restyle).
@@ -534,6 +540,9 @@ export function EditorCanvas({
 			},
 		[tool, strokePoints, strokeId, landedStrokeId, selectedLayer],
 	);
+	const adjustedLayer =
+		adjusting &&
+		document.layers.find((layer) => layer.id === adjusting.layerId);
 	const outlinedLayer =
 		((tool?.type === "redactBox" || tool?.type === "redactBrush") &&
 			selectedLayer?.type === "redaction") ||
@@ -541,7 +550,8 @@ export function EditorCanvas({
 			? selectedLayer
 			: !tool && textEdit
 				? textEdit.layer
-				: null;
+				: adjustedLayer || null;
+	const idleGesture = useMemo(() => Gesture.Tap().enabled(false), []);
 
 	useImperativeHandle(ref, () => ({ flushPendingTransform, nudgeSelection }), [
 		flushPendingTransform,
@@ -550,14 +560,27 @@ export function EditorCanvas({
 
 	return (
 		<GestureDetector
-			gesture={tool ? paintGesture : textEdit ? textGesture : gesture}
+			gesture={
+				tool
+					? paintGesture
+					: textEdit
+						? textGesture
+						: adjusting
+							? idleGesture
+							: gesture
+			}
 		>
 			<View
 				ref={containerRef}
-				style={[styles.container, cursorStyle(tool ? "crosshair" : cursor)]}
+				style={[
+					styles.container,
+					cursorStyle(tool ? "crosshair" : adjusting ? "default" : cursor),
+				]}
 				onLayout={handleLayout}
 			>
-				<Canvas style={styles.canvas}>
+				{/* sRGB, like export's offscreen surface: filters and adjustments
+				    work in the canvas's color space, so a P3 one would look stronger. */}
+				<Canvas style={styles.canvas} colorSpace="srgb">
 					{scale > 0 && (
 						<Group
 							transform={[
@@ -568,12 +591,13 @@ export function EditorCanvas({
 						>
 							<EditorScene
 								document={document}
-								selectedLayerId={tool || textEdit ? null : selectedLayerId}
+								selectedLayerId={holdingStill ? null : selectedLayerId}
 								textEdit={textEdit}
 								viewScale={scale}
 								live={live}
 								stroke={liveStroke}
 								outlinedLayer={outlinedLayer}
+								adjusting={adjusting}
 								onImageError={handleImageError}
 							/>
 						</Group>

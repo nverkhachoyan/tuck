@@ -11,6 +11,8 @@ import {
 	createStickerLayer,
 	createTextLayer,
 	type EditorDocument,
+	type ImageLayer,
+	withAdjustments,
 } from "../model/document.ts";
 import {
 	copyName,
@@ -218,6 +220,19 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
+	test("reads an image layer's adjustments", () => {
+		const document = documentWithText();
+		document.layers[0] = withAdjustments(document.layers[0] as ImageLayer, {
+			brightness: 0.25,
+			contrast: -1,
+			saturation: 1,
+			temperature: -0.4,
+		});
+		const saved = mapImageUris(document, () => PHOTO_FILE);
+		const project = parseSavedProject(savedJson({ document: saved }));
+		assert.deepEqual(project?.document, saved);
+	});
+
 	test("reads a drawing, with pen and eraser strokes", () => {
 		const document = documentWithText();
 		const drawing = drawingLayer();
@@ -327,6 +342,17 @@ describe("parseSavedProject", () => {
 					layers: [{ ...photo.layers[0], sticker: "yes" }],
 				},
 			} as unknown as Partial<SavedProject>),
+			...[
+				"warm",
+				{ brightness: 0.5, contrast: 0, saturation: 0 },
+				{ brightness: 1.5, contrast: 0, saturation: 0, temperature: 0 },
+				{ brightness: null, contrast: 0, saturation: 0, temperature: 0 },
+				{ brightness: "0", contrast: 0, saturation: 0, temperature: 0 },
+			].map((adjustments) =>
+				savedJson({
+					document: { ...photo, layers: [{ ...photo.layers[0], adjustments }] },
+				} as unknown as Partial<SavedProject>),
+			),
 			...[
 				{ type: "pen", width: 4, points: [0, 0] },
 				{ type: "pencil", color: "#000", width: 4, points: [0, 0] },

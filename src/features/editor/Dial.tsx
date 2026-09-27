@@ -19,13 +19,21 @@ import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
 import { colors } from "@/theme";
 
-// Screen pixels per degree along the ruler.
-const PX_PER_DEGREE = 8;
-// A tick every degree, a long one every MAJOR degrees.
-const MAJOR = 15;
-// Settles on 0 from this many degrees away.
-const ZERO_SNAP = 1;
-const ACCESSIBLE_STEP = Math.PI / 180;
+/**
+ * How a dial's ruler measures its value: `step` is one unit of it, which
+ * the readout counts and arrow keys move by, drawn `pxPerStep` apart. A
+ * tick marks every `tickEvery` steps, and a long one every `majorEvery`.
+ * The value settles on 0 within `snap` steps of it, and with `wholeSteps`
+ * it only ever takes whole steps.
+ */
+export type DialScale = {
+	step: number;
+	pxPerStep: number;
+	tickEvery: number;
+	majorEvery: number;
+	snap: number;
+	wholeSteps?: boolean;
+};
 
 type WebKeyDownEvent = {
 	nativeEvent: { key: string };
@@ -33,42 +41,50 @@ type WebKeyDownEvent = {
 	stopPropagation: () => void;
 };
 
-const toDegrees = (radians: number) => {
-	"worklet";
-	return (radians * 180) / Math.PI;
-};
-
 /**
- * A ruler dragged sideways to set an angle, in radians within ±`max`, like a
- * photo app's straighten dial. It settles on 0 with a haptic tick, and a
- * double tap returns it there. `value` is shown; the callbacks run on the UI
- * thread (they must be worklets), bracketing each change.
+ * A ruler dragged sideways to set a value within ±`max`, like a photo app's
+ * straighten or adjustment dial. It settles on 0 with a haptic tick, and a
+ * double tap returns it there. `value` is shown, above the ruler as
+ * `readout` of its steps, and read out to assistive tech as `valueText`.
+ * The callbacks run on the UI thread (they must be worklets), bracketing
+ * each change.
  */
-export function AngleDial({
+export function Dial({
 	value,
 	max,
+	scale,
 	label,
+	increaseLabel,
+	decreaseLabel,
+	readout,
+	valueText,
 	onBegin,
 	onChange,
 	onEnd,
 }: {
 	value: DerivedValue<number>;
 	max: number;
+	scale: DialScale;
 	label: string;
+	increaseLabel: string;
+	decreaseLabel: string;
+	readout: (steps: number) => string;
+	valueText: (steps: number) => string;
 	onBegin: () => void;
-	onChange: (angle: number) => void;
+	onChange: (value: number) => void;
 	onEnd: () => void;
 }) {
+	const { step, pxPerStep, tickEvery, majorEvery, snap, wholeSteps } = scale;
 	const [width, setWidth] = useState(0);
-	const [degrees, setDegrees] = useState(0);
+	const [steps, setSteps] = useState(0);
 	const start = useSharedValue(0);
 	const dragging = useSharedValue(false);
-	const maxDegrees = Math.round(toDegrees(max));
+	const maxSteps = Math.round(max / step);
 
 	useAnimatedReaction(
-		() => Math.round(toDegrees(value.value)),
+		() => Math.round(value.value / step),
 		(shown, previous) => {
-			if (shown !== previous) scheduleOnRN(setDegrees, shown);
+			if (shown !== previous) scheduleOnRN(setSteps, shown);
 		},
 	);
 
@@ -82,14 +98,14 @@ export function AngleDial({
 				onBegin();
 			})
 			.onUpdate((event) => {
-				const raw =
-					start.value - ((event.translationX / PX_PER_DEGREE) * Math.PI) / 180;
-				let angle = Math.min(max, Math.max(-max, raw));
-				if (Math.abs(toDegrees(angle)) < ZERO_SNAP) {
+				const raw = start.value - (event.translationX / pxPerStep) * step;
+				let next = Math.min(max, Math.max(-max, raw));
+				if (wholeSteps) next = Math.round(next / step) * step;
+				if (Math.abs(next / step) < snap) {
 					if (value.value !== 0) scheduleOnRN(hapticTick);
-					angle = 0;
+					next = 0;
 				}
-				onChange(angle);
+				onChange(next);
 			})
 			.onFinalize(() => {
 				if (!dragging.value) return;
@@ -105,28 +121,37 @@ export function AngleDial({
 				onEnd();
 			});
 		return Gesture.Race(pan, reset);
-	}, [value, start, dragging, max, onBegin, onChange, onEnd]);
+	}, [
+		value,
+		start,
+		dragging,
+		max,
+		step,
+		pxPerStep,
+		snap,
+		wholeSteps,
+		onBegin,
+		onChange,
+		onEnd,
+	]);
 
 	const ruler = useAnimatedStyle(() => ({
-		transform: [
-			{ translateX: width / 2 - toDegrees(value.value) * PX_PER_DEGREE },
-		],
+		transform: [{ translateX: width / 2 - (value.value / step) * pxPerStep }],
 	}));
 
-	const ticks = useMemo(
-		() =>
-			Array.from(
-				{ length: maxDegrees * 2 + 1 },
-				(_, index) => index - maxDegrees,
-			),
-		[maxDegrees],
-	);
+	const ticks = useMemo(() => {
+		const last = Math.floor(maxSteps / tickEvery);
+		return Array.from(
+			{ length: last * 2 + 1 },
+			(_, index) => (index - last) * tickEvery,
+		);
+	}, [maxSteps, tickEvery]);
 
 	// Accessibility actions and web arrow keys originate on the JS thread;
 	// run the same worklet callbacks as a gesture on the UI thread.
 	const setFromControl = useCallback(
-		(angle: number) => {
-			const next = Math.min(max, Math.max(-max, angle));
+		(target: number) => {
+			const next = Math.min(max, Math.max(-max, target));
 			scheduleOnUI(() => {
 				"worklet";
 				onBegin();
@@ -137,8 +162,9 @@ export function AngleDial({
 		[max, onBegin, onChange, onEnd],
 	);
 	const adjust = useCallback(
-		(step: number) => setFromControl(value.value + step * ACCESSIBLE_STEP),
-		[value, setFromControl],
+		(direction: 1 | -1) =>
+			setFromControl((Math.round(value.value / step) + direction) * step),
+		[value, step, setFromControl],
 	);
 	const handleAccessibilityAction = useCallback(
 		(event: AccessibilityActionEvent) => {
@@ -166,8 +192,8 @@ export function AngleDial({
 
 	return (
 		<View style={styles.container}>
-			<Text style={[styles.readout, degrees !== 0 && styles.readoutActive]}>
-				{degrees}°
+			<Text style={[styles.readout, steps !== 0 && styles.readoutActive]}>
+				{readout(steps)}
 			</Text>
 			<GestureDetector gesture={gesture}>
 				<View
@@ -181,14 +207,14 @@ export function AngleDial({
 					accessibilityRole="adjustable"
 					accessibilityLabel={label}
 					accessibilityValue={{
-						min: -maxDegrees,
-						max: maxDegrees,
-						now: degrees,
-						text: `${degrees} degrees`,
+						min: -maxSteps,
+						max: maxSteps,
+						now: steps,
+						text: valueText(steps),
 					}}
 					accessibilityActions={[
-						{ name: "increment", label: "Increase angle" },
-						{ name: "decrement", label: "Decrease angle" },
+						{ name: "increment", label: increaseLabel },
+						{ name: "decrement", label: decreaseLabel },
 					]}
 					onAccessibilityAction={handleAccessibilityAction}
 				>
@@ -198,8 +224,8 @@ export function AngleDial({
 								key={tick}
 								style={[
 									styles.tick,
-									{ left: tick * PX_PER_DEGREE },
-									tick % MAJOR === 0 && styles.majorTick,
+									{ left: tick * pxPerStep },
+									tick % majorEvery === 0 && styles.majorTick,
 								]}
 							/>
 						))}

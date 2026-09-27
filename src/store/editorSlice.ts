@@ -1,5 +1,6 @@
 // Relative `.ts` imports, and only types from zustand and `./index.ts`, keep
 // this slice loadable by Node's test runner.
+import type { Adjustments } from "../model/adjustments.ts";
 import {
 	createDrawingLayer,
 	createImageLayer,
@@ -27,6 +28,7 @@ import {
 	type TextLayer,
 	type TextLayerEdit,
 	type TextLayerStyle,
+	withAdjustments,
 } from "../model/document.ts";
 import { addStroke } from "../model/drawing.ts";
 import {
@@ -84,6 +86,7 @@ export type EditorSlice = {
 		style: ShapeStyle,
 	) => void;
 	setShapeStyle: (id: string, edit: ShapeEdit) => void;
+	setAdjustments: (id: string, adjustments: Adjustments) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
@@ -336,6 +339,18 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			if (restyled === target) return;
 			setLayers("editor/setShapeStyle", (layers) =>
 				layers.map((layer) => (layer === target ? restyled : layer)),
+			);
+		},
+
+		// By id, like `transformLayer`: a dial's drag belongs to the image it
+		// started on.
+		setAdjustments: (id, adjustments) => {
+			const target = findLayer(id);
+			if (target?.type !== "image") return;
+			const adjusted = withAdjustments(target, adjustments);
+			if (adjusted === target) return;
+			setLayers("editor/setAdjustments", (layers) =>
+				layers.map((layer) => (layer === target ? adjusted : layer)),
 			);
 		},
 
