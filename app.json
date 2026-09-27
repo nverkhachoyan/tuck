@@ -5,7 +5,11 @@
 		"backgroundColor": "#0A0A0B",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
+		"ios": {
+			"bundleIdentifier": "com.nverk.photoeditor"
+		},
 		"android": {
+			"package": "com.nverk.photoeditor",
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/adaptive-icon.png",
 				"backgroundColor": "#141416"

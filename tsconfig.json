@@ -4,7 +4,8 @@
 		// `.ts` extensions on relative imports.
 		"allowImportingTsExtensions": true,
 		"paths": {
-			"@/*": ["./src/*"]
+			"@/*": ["./src/*"],
+			"image-analysis": ["./modules/image-analysis"]
 		}
 	},
 	"extends": "expo/tsconfig.base"

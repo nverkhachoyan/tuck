@@ -6,20 +6,19 @@ direction and staged feature plan live in [VISION.md](./VISION.md).
 
 ## Getting started
 
-Install dependencies and start the Expo development server:
+The app has its own native code (`modules/image-analysis/`), so it runs in a
+development build rather than Expo Go. Install dependencies, then build and
+launch it on the iOS simulator or an Android emulator (this generates the
+ignored `ios/` and `android/` folders and starts Metro):
 
 ```sh
 npm install
-npm start
-```
-
-Platform-specific shortcuts are also available:
-
-```sh
 npm run ios
 npm run android
-npm run web
 ```
+
+Once a build is installed, `npm start` serves JavaScript changes to it, and
+`npm run web` runs the web version.
 
 ## Checks
 
