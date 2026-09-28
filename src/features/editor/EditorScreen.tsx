@@ -17,10 +17,6 @@ import {
 	detectionTarget,
 	detectionTargetKey,
 } from "@/detection/detectionTarget";
-import {
-	type DetectionFeature,
-	isDetectionAvailable,
-} from "@/detection/imageDetection";
 import { mapDetectionRects } from "@/detection/mapDetectionRects";
 import { useImageDetection } from "@/detection/useImageDetection";
 import { AddSheet } from "@/features/editor/add/AddSheet";
@@ -317,21 +313,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const detectedImage = detectionTarget(document, selectedLayer);
 	const detectedImageKey = detectionTargetKey(document, detectedImage);
 	const detection = useImageDetection(detectedImageKey);
-	const detectionAvailable = useMemo<Record<DetectionFeature, boolean>>(
-		() => ({
-			faces: isDetectionAvailable("faces"),
-			text: isDetectionAvailable("text"),
-		}),
-		[],
-	);
 	const mappedDetections = useMemo(
 		() =>
 			detectedImage && detection.state.status === "found"
-				? mapDetectionRects(
-						detectedImage,
-						detection.state.regions,
-						documentSize,
-						detection.state.feature,
+				? detection.state.regions.flatMap(
+						({ feature, ...region }, sourceIndex) =>
+							mapDetectionRects(
+								detectedImage,
+								[region],
+								documentSize,
+								feature,
+							).map((mapped) => ({ ...mapped, sourceIndex })),
 					)
 				: [],
 		[detectedImage, detection.state, documentSize],
@@ -550,8 +542,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (findOpen) closeDetection();
 		else setFindOpen(true);
 	};
-	const startDetection = (feature: DetectionFeature) => {
-		if (detectedImage) detection.start(feature, detectedImage.uri);
+	const startDetection = () => {
+		if (detectedImage) detection.start(detectedImage.uri);
 	};
 	const applyDetections = () => {
 		const found = detection.state;
@@ -965,7 +957,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				{tool === "redact" && findOpen && (
 					<DetectionOptions
 						state={detection.state}
-						available={detectionAvailable}
 						visibleIndices={visibleDetectionIndices}
 						selectedCount={selectedDetectionCount}
 						bottomInset={dockInset}

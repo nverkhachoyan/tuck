@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import type { DetectionFeature } from "@/detection/imageDetection";
 import type { ImageDetectionState } from "@/detection/useImageDetection";
 import { colors, radii } from "@/theme";
 import { Button } from "@/ui/Button";
@@ -11,13 +10,9 @@ import { GlassView } from "@/ui/GlassView";
 // them, where the buttons would leave it a few letters' width.
 const STACK_BELOW_WIDTH = 480;
 
-const featureName = (feature: DetectionFeature) =>
-	feature === "faces" ? "faces" : "text";
-
 /** The compact workflow for finding, choosing, and applying redactions. */
 export function DetectionOptions({
 	state,
-	available,
 	visibleIndices,
 	selectedCount,
 	bottomInset,
@@ -28,11 +23,10 @@ export function DetectionOptions({
 	onClose,
 }: {
 	state: ImageDetectionState;
-	available: Record<DetectionFeature, boolean>;
 	visibleIndices: readonly number[];
 	selectedCount: number;
 	bottomInset: number;
-	onStart: (feature: DetectionFeature) => void;
+	onStart: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
 	onApply: () => void;
@@ -60,16 +54,12 @@ export function DetectionOptions({
 						contentStyle={[styles.content, stacked && styles.stacked]}
 					>
 						{state.status === "idle" && (
-							<ChooseFeature
-								available={available}
-								onStart={onStart}
-								onClose={onClose}
-							/>
+							<Start onStart={onStart} onClose={onClose} />
 						)}
 						{state.status === "working" && (
 							<Status
 								busy
-								title={`Finding ${featureName(state.feature)}…`}
+								title="Finding faces and text…"
 								message="This can take a moment the first time."
 								onClose={onClose}
 							/>
@@ -81,40 +71,18 @@ export function DetectionOptions({
 								onSelectAll={onSelectAll}
 								onClear={onClear}
 								onApply={onApply}
+								issue={state.issues[0]?.message}
 								onClose={onClose}
 							/>
 						)}
 						{state.status === "empty" && (
 							<Status
-								title={`No ${featureName(state.feature)} found`}
-								message="You can try again or choose the other detector."
+								title="Nothing found"
+								message={
+									state.issues[0]?.message ?? "Try another photo or scan again."
+								}
 								action="Try Again"
-								onAction={() => onStart(state.feature)}
-								onClose={onClose}
-							/>
-						)}
-						{state.status === "unavailable" && (
-							<Status
-								title="Not available here"
-								message={`${capitalize(featureName(state.feature))} finding isn't supported on this device.`}
-								onClose={onClose}
-							/>
-						)}
-						{state.status === "downloading" && (
-							<Status
-								title="Getting detector ready"
-								message="Google Play services is still downloading this model. Try again in a moment."
-								action="Try Again"
-								onAction={() => onStart(state.feature)}
-								onClose={onClose}
-							/>
-						)}
-						{state.status === "failed" && (
-							<Status
-								title="Couldn't scan this photo"
-								message={state.message}
-								action="Try Again"
-								onAction={() => onStart(state.feature)}
+								onAction={onStart}
 								onClose={onClose}
 							/>
 						)}
@@ -125,47 +93,26 @@ export function DetectionOptions({
 	);
 }
 
-function ChooseFeature({
-	available,
+function Start({
 	onStart,
 	onClose,
 }: {
-	available: Record<DetectionFeature, boolean>;
-	onStart: (feature: DetectionFeature) => void;
+	onStart: () => void;
 	onClose: () => void;
 }) {
-	const unavailable = (["faces", "text"] as const)
-		.filter((feature) => !available[feature])
-		.map(featureName);
 	return (
 		<>
 			<View style={styles.copy}>
 				<Text style={styles.title}>Find to redact</Text>
-				<Text style={styles.message}>
-					Choose what to look for in this photo.
-				</Text>
-				{unavailable.length > 0 && (
-					<Text style={styles.note}>
-						{capitalize(joinNames(unavailable))}{" "}
-						{unavailable.length > 1 ? "aren't" : "isn't"} available on this
-						device.
-					</Text>
-				)}
+				<Text style={styles.message}>Scan this photo for faces and text.</Text>
 			</View>
 			<View style={styles.actions}>
 				<Button
-					label="Faces"
-					icon="person-outline"
+					label="Find"
+					icon="images-outline"
+					variant="primary"
 					size="small"
-					disabled={!available.faces}
-					onPress={() => onStart("faces")}
-				/>
-				<Button
-					label="Text"
-					icon="text-outline"
-					size="small"
-					disabled={!available.text}
-					onPress={() => onStart("text")}
+					onPress={onStart}
 				/>
 				<Button label="Close" size="small" onPress={onClose} />
 			</View>
@@ -179,6 +126,7 @@ function Found({
 	onSelectAll,
 	onClear,
 	onApply,
+	issue,
 	onClose,
 }: {
 	count: number;
@@ -186,6 +134,7 @@ function Found({
 	onSelectAll: () => void;
 	onClear: () => void;
 	onApply: () => void;
+	issue?: string;
 	onClose: () => void;
 }) {
 	return (
@@ -196,6 +145,7 @@ function Found({
 						? "Nothing in the visible crop"
 						: `${selected} of ${count} selected`}
 				</Text>
+				{issue && <Text style={styles.note}>{issue}</Text>}
 				<Text style={styles.message}>
 					{count === 0
 						? "The detector found regions, but none are inside the canvas."
@@ -208,7 +158,7 @@ function Found({
 						<Button label="All" size="small" onPress={onSelectAll} />
 						<Button label="None" size="small" onPress={onClear} />
 						<Button
-							label={`Add ${selected}`}
+							label={`Redact ${selected}`}
 							variant="primary"
 							size="small"
 							disabled={selected === 0}
@@ -260,14 +210,6 @@ function Status({
 			</View>
 		</>
 	);
-}
-
-function capitalize(value: string): string {
-	return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function joinNames(names: string[]): string {
-	return names.length === 2 ? `${names[0]} and ${names[1]}` : (names[0] ?? "");
 }
 
 const styles = StyleSheet.create({

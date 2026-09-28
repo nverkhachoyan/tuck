@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { StyleSheet, View } from "react-native";
-import { colors } from "@/theme";
+import type { ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, radii } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorOptions } from "../ColorPicker";
 import { ToolButton, ToolRow } from "../ToolButton";
@@ -126,27 +127,22 @@ export function RedactOptions({
 				<>
 					<ToolOption label="Effect">
 						<ToolChoices>
-							<RingChoice
-								label="Solid"
-								selected={effect === "solid"}
-								onPress={() => onChange({ ...settings, effect: "solid" })}
-							>
-								<EffectGlyph settings={settings} effect="solid" />
-							</RingChoice>
-							<RingChoice
-								label="Blur"
-								selected={effect === "blur"}
-								onPress={() => onChange({ ...settings, effect: "blur" })}
-							>
-								<EffectGlyph settings={settings} effect="blur" />
-							</RingChoice>
-							<RingChoice
-								label="Pixelate"
-								selected={effect === "pixelate"}
-								onPress={() => onChange({ ...settings, effect: "pixelate" })}
-							>
-								<EffectGlyph settings={settings} effect="pixelate" />
-							</RingChoice>
+							{(["solid", "blur", "pixelate"] as const).map((choice) => (
+								<EffectChoice
+									key={choice}
+									label={
+										choice === "solid"
+											? "Solid"
+											: choice === "blur"
+												? "Blur"
+												: "Pixelate"
+									}
+									selected={effect === choice}
+									onPress={() => onChange({ ...settings, effect: choice })}
+								>
+									<EffectGlyph settings={settings} effect={choice} />
+								</EffectChoice>
+							))}
 						</ToolChoices>
 					</ToolOption>
 					{effect === "solid" ? (
@@ -200,6 +196,36 @@ export function RedactOptions({
 				</ToolOption>
 			)}
 		</ToolOptions>
+	);
+}
+
+/** An effect icon and its visible name, compact enough to leave the card room. */
+function EffectChoice({
+	label,
+	selected,
+	onPress,
+	children,
+}: {
+	label: string;
+	selected: boolean;
+	onPress: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<Pressable
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			accessibilityState={{ selected }}
+			style={[styles.effectChoice, selected && styles.effectChoiceSelected]}
+		>
+			{children}
+			<Text
+				style={[styles.effectLabel, selected && styles.effectLabelSelected]}
+			>
+				{label}
+			</Text>
+		</Pressable>
 	);
 }
 
@@ -285,5 +311,24 @@ const styles = StyleSheet.create({
 	},
 	pixelLit: {
 		backgroundColor: colors.textPrimary,
+	},
+	effectChoice: {
+		width: 56,
+		height: 52,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 3,
+		borderRadius: radii.medium,
+	},
+	effectChoiceSelected: {
+		backgroundColor: colors.chosenSoft,
+	},
+	effectLabel: {
+		fontSize: 10,
+		fontWeight: "600",
+		color: colors.textSecondary,
+	},
+	effectLabelSelected: {
+		color: colors.textPrimary,
 	},
 });
