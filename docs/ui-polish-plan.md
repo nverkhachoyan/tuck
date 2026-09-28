@@ -30,7 +30,7 @@ The editor renders a project's thumbnail only in `closeProject` (`src/projects/p
 
 When home lists projects, bring each missing or stale thumbnail up to date. A thumbnail is stale when its `updatedAt` differs from the project's. Render with the `renderThumbnail` home already hands to `closeProject` (from `render/`). Render them one at a time after the list has appeared, updating each card as its thumbnail lands, and write through the same per-project queue the lifecycle uses. Skip a project that is open in the editor. A failure only logs, as `refreshThumbnail`'s does. Add tests to `projectLifecycle.test.ts`.
 
-## Step 2 — One way to finish every tool
+## Step 2 — One way to finish every tool (done)
 
 Today there are three ways to finish:
 
@@ -40,7 +40,7 @@ Today there are three ways to finish:
 
 Change them all to one pattern:
 
-* While Draw, Redact, or Adjust is open, the header is the tool's header. It shows the tool's name as a centered title and hides "‹ Projects". At the right it keeps undo and redo, then a primary **Done** button, styled like the text editor's (`Button` with `variant="primary"` and `size="small"`). Adjust keeps its Reset button, placed before undo.
+* While Draw, Redact, or Adjust is open, the header is the tool's header. It shows the tool's name as its title and hides "‹ Projects". (Built with the title at the left, in Back's place: centered, it ran into undo, redo, and Done at 390 points.) At the right it keeps undo and redo, then a primary **Done** button, styled like the text editor's (`Button` with `variant="primary"` and `size="small"`). Adjust keeps its Reset button, placed before undo.
 * Crop's header shows **Cancel** at the left, "Crop" as the title, and **Done** at the right. Crop has no undo of its own, so its header has none.
 * Remove the dock's back button and Crop's ✕ and ✓. If nothing else uses `DockButton` or the dock's `start` and `end` slots afterwards, delete them.
 * Keep every keyboard shortcut: Escape finishes Draw, Redact, and Adjust. In Crop, Escape cancels and Enter applies. Show them in the Done and Cancel tooltips on web, as the dock buttons do now.

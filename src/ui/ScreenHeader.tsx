@@ -7,29 +7,39 @@ import { interaction } from "./interaction";
 /**
  * Top bar with a Back action, an optional centered title, and an optional
  * trailing action. `backLabel` names where Back goes, when that says more
- * than "Back".
+ * than "Back". Without `onBack`, `start` takes Back's place, or else the
+ * title does, as in a tool's header, which finishes from `action`: centered,
+ * it would run into a phone's undo, redo, and Done.
  */
 export function ScreenHeader({
 	title,
 	backLabel = "Back",
 	onBack,
+	start,
 	action,
 }: {
 	title?: string;
 	backLabel?: string;
-	onBack: () => void;
+	onBack?: () => void;
+	start?: ReactNode;
 	action?: ReactNode;
 }) {
+	const heading = title ? (
+		<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
+			{title}
+		</Text>
+	) : null;
+	const leading = onBack ? (
+		<BackButton label={backLabel} onPress={onBack} />
+	) : (
+		start
+	);
 	return (
 		<View style={styles.container}>
-			{title && (
-				<View style={styles.titleContainer}>
-					<Text style={styles.title} accessibilityRole="header">
-						{title}
-					</Text>
-				</View>
+			{leading && heading && (
+				<View style={styles.titleContainer}>{heading}</View>
 			)}
-			<BackButton label={backLabel} onPress={onBack} />
+			{leading ?? heading ?? <View />}
 			{action}
 		</View>
 	);

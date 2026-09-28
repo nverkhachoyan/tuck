@@ -40,7 +40,7 @@ import type {
 	TextEditState,
 } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
-import { Dock, DockButton, useDockInset } from "@/features/editor/Dock";
+import { Dock, useDockInset } from "@/features/editor/Dock";
 import {
 	type BrushSettings,
 	brushFor,
@@ -139,6 +139,9 @@ import { TextButton } from "@/ui/TextButton";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
+
+// A tool's header shows its name in place of the way back to projects.
+const TOOL_TITLES = { draw: "Draw", redact: "Redact", adjust: "Adjust" };
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
@@ -786,8 +789,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	return (
 		<View style={styles.container}>
 			<ScreenHeader
+				title={tool ? TOOL_TITLES[tool] : undefined}
 				backLabel="Projects"
-				onBack={() => leaveEditor(router)}
+				onBack={tool ? undefined : () => leaveEditor(router)}
 				action={
 					<View style={styles.headerActions}>
 						{adjustedLayer?.adjustments && (
@@ -821,8 +825,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							disabled={!canRedo}
 							onPress={redo}
 						/>
-						{/* A tool is put down from the dock. */}
-						{!tool && (
+						{tool ? (
+							<Button
+								label="Done"
+								variant="primary"
+								size="small"
+								shortcut="Escape"
+								onPress={finishTool}
+							/>
+						) : (
 							<Button
 								label="Export"
 								icon="share-outline"
@@ -956,19 +967,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 				{/* After the tool's options, so taps on the dock reach it rather
 				    than closing them. */}
-				<Dock
-					panel={panelKind}
-					start={
-						tool ? (
-							<DockButton
-								icon="chevron-back"
-								label="Back to tools"
-								shortcut="Escape"
-								onPress={finishTool}
-							/>
-						) : undefined
-					}
-				>
+				<Dock panel={panelKind}>
 					{tool === "draw" ? (
 						<DrawPanel
 							settings={drawSettings}

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { colors, radii, webTransition } from "@/theme";
 import { interaction } from "./interaction";
+import { useTooltip } from "./Tooltip";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type ButtonVariant = "primary" | "secondary" | "danger";
@@ -20,6 +21,8 @@ type ButtonProps = Omit<PressableProps, "style" | "children"> & {
 	icon?: IconName;
 	variant?: ButtonVariant;
 	size?: ButtonSize;
+	// On web, a hover shows the label with this key (see `useTooltip`).
+	shortcut?: string;
 };
 
 export function Button({
@@ -27,51 +30,57 @@ export function Button({
 	icon,
 	variant = "secondary",
 	size = "medium",
+	shortcut,
 	...props
 }: ButtonProps) {
+	const { anchor, tooltip } = useTooltip(label, shortcut);
 	const enabled = !props.disabled;
 	const labelColor =
 		variant === "primary" ? colors.onAccent : colors.textPrimary;
 	const tone = TONES[variant];
 
 	return (
-		<Pressable
-			hitSlop={size === "small" ? 10 : 4}
-			accessibilityRole="button"
-			{...props}
-			style={(state) => {
-				const { pressed, hovered } = interaction(state);
-				return [
-					styles.base,
-					styles[size],
-					tone.rest,
-					webTransition,
-					enabled && hovered && tone.hovered,
-					enabled && pressed && [tone.pressed, styles.pressed],
-					!enabled && styles.disabled,
-				];
-			}}
-		>
-			{icon && (
-				<View style={styles.icon}>
-					<Ionicons
-						name={icon}
-						size={size === "large" ? 20 : 18}
-						color={labelColor}
-					/>
-				</View>
-			)}
-			<Text
-				numberOfLines={1}
-				style={[
-					styles.label,
-					size === "large" && styles.labelLarge,
-					{ color: labelColor },
-				]}
+		<>
+			<Pressable
+				hitSlop={size === "small" ? 10 : 4}
+				accessibilityRole="button"
+				{...(shortcut ? anchor : {})}
+				{...props}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.base,
+						styles[size],
+						tone.rest,
+						webTransition,
+						enabled && hovered && tone.hovered,
+						enabled && pressed && [tone.pressed, styles.pressed],
+						!enabled && styles.disabled,
+					];
+				}}
 			>
-				{label}
-			</Text>
-		</Pressable>
+				{icon && (
+					<View style={styles.icon}>
+						<Ionicons
+							name={icon}
+							size={size === "large" ? 20 : 18}
+							color={labelColor}
+						/>
+					</View>
+				)}
+				<Text
+					numberOfLines={1}
+					style={[
+						styles.label,
+						size === "large" && styles.labelLarge,
+						{ color: labelColor },
+					]}
+				>
+					{label}
+				</Text>
+			</Pressable>
+			{tooltip}
+		</>
 	);
 }
 

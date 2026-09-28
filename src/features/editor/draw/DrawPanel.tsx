@@ -43,8 +43,8 @@ const BADGE = 12;
  * marker, and neon), the shapes, which show the one they drag out, and the
  * eraser, which erases the selected drawing's strokes and removes any shape
  * it passes over. Tapping the tool in use opens its options over the canvas, which
- * the dot of color on its tile hints at. The tools and the dock's back
- * button fill a phone, so there's no separate button for them.
+ * the dot of color on its tile hints at. The tools fill a phone, so there's
+ * no separate button for them.
  */
 export function DrawPanel({
 	settings,
