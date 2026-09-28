@@ -77,6 +77,8 @@ export type ProjectSummary =
 			// Its name, or else its text.
 			label: string;
 			thumbnail: string | null;
+			// Missing, or older than the latest save; see `updateThumbnail`.
+			thumbnailOutdated: boolean;
 	  }
 	| { id: string; status: "unavailable" };
 
@@ -98,7 +100,7 @@ export function parseSavedProject(json: string): SavedProject | null {
 	try {
 		const value = upgradeProject(JSON.parse(json));
 		if (!isSavedProject(value)) return null;
-		// A bad thumbnail only costs the thumbnail; closing makes a new one.
+		// A bad thumbnail only costs the thumbnail; the list makes a new one.
 		// A bad name costs only the name.
 		const { thumbnail, name, ...project } = value;
 		const named = typeof name === "string" ? projectName(name) : null;

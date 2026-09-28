@@ -553,6 +553,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 						updatedAt: saved.updatedAt,
 						label: saved.name ?? projectLabel(saved.document),
 						thumbnail: saved.thumbnail?.url ?? null,
+						thumbnailOutdated: saved.thumbnail?.updatedAt !== saved.updatedAt,
 					};
 				}),
 		);
@@ -563,6 +564,62 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 					(b.status === "ready" ? b.updatedAt : 0) -
 					(a.status === "ready" ? a.updatedAt : 0),
 			);
+	}
+
+	/**
+	 * Renders a thumbnail for a closed project whose one is missing or older
+	 * than its latest save, as when a session ended without closing, and
+	 * returns it. Returns null when there's nothing to do: the project is up
+	 * to date, open here or in another tab, or changed while rendering. It
+	 * only decorates the list, so a failure is logged.
+	 */
+	async function updateThumbnail(
+		id: string,
+		render: RenderThumbnail,
+	): Promise<string | null> {
+		try {
+			await closing;
+			if (openProjects.has(id)) return null;
+			const json = await storage.readProjectFile(id);
+			const saved = json === null ? null : parseSavedProject(json);
+			if (!saved || !hasKnownImageUris(saved)) return null;
+			const { updatedAt } = saved;
+			if (saved.thumbnail?.updatedAt === updatedAt) return null;
+			const urls = await imageUrls(id, imageUris(saved.document));
+			let url: string;
+			try {
+				url = await render(
+					mapImageUris(saved.document, (file) => urls.get(file) ?? file),
+				);
+			} finally {
+				for (const imageUrl of urls.values()) storage.releaseImage(imageUrl);
+			}
+			// With the other writes to closed projects, so one opening meanwhile
+			// waits for this rather than finding it claimed.
+			const written = closing.then(async () => {
+				if (openProjects.has(id) || !(await storage.claimProject(id))) {
+					return false;
+				}
+				try {
+					const latest = await storage.readProjectFile(id);
+					const current = latest === null ? null : parseSavedProject(latest);
+					if (!current || current.updatedAt !== updatedAt) return false;
+					const file: SavedProject = {
+						...current,
+						thumbnail: { url, updatedAt },
+					};
+					await storage.writeProjectFile(id, JSON.stringify(file));
+					return true;
+				} finally {
+					await storage.releaseProject(id);
+				}
+			});
+			closing = written.catch(() => {});
+			return (await written) ? url : null;
+		} catch (error) {
+			console.warn("Couldn't update the project's thumbnail", error);
+			return null;
+		}
 	}
 
 	return {
@@ -580,5 +637,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		renameProject,
 		duplicateProject,
 		listProjects,
+		updateThumbnail,
 	};
 }

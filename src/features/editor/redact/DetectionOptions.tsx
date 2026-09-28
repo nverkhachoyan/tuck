@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { DetectionFeature } from "@/detection/imageDetection";
@@ -5,6 +6,10 @@ import type { ImageDetectionState } from "@/detection/useImageDetection";
 import { colors, radii } from "@/theme";
 import { Button } from "@/ui/Button";
 import { GlassView } from "@/ui/GlassView";
+
+// Narrower than this, a card's text goes above its buttons rather than beside
+// them, where the buttons would leave it a few letters' width.
+const STACK_BELOW_WIDTH = 480;
 
 const featureName = (feature: DetectionFeature) =>
 	feature === "faces" ? "faces" : "text";
@@ -33,6 +38,9 @@ export function DetectionOptions({
 	onApply: () => void;
 	onClose: () => void;
 }) {
+	// The card's own width, not the window's: the layers sidebar can narrow
+	// the canvas on web.
+	const [stacked, setStacked] = useState(false);
 	return (
 		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
 			<View
@@ -43,8 +51,14 @@ export function DetectionOptions({
 					entering={FadeIn.duration(120)}
 					exiting={FadeOut.duration(100)}
 					style={styles.cardWrapper}
+					onLayout={(event) =>
+						setStacked(event.nativeEvent.layout.width < STACK_BELOW_WIDTH)
+					}
 				>
-					<GlassView style={styles.card} contentStyle={styles.content}>
+					<GlassView
+						style={styles.card}
+						contentStyle={[styles.content, stacked && styles.stacked]}
+					>
 						{state.status === "idle" && (
 							<ChooseFeature
 								available={available}
@@ -280,6 +294,12 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 18,
 		paddingVertical: 12,
 	},
+	stacked: {
+		flexDirection: "column",
+		alignItems: "stretch",
+		gap: 12,
+		paddingTop: 14,
+	},
 	copy: {
 		flexShrink: 1,
 		gap: 3,
@@ -305,6 +325,7 @@ const styles = StyleSheet.create({
 	},
 	actions: {
 		flexDirection: "row",
+		flexWrap: "wrap",
 		alignItems: "center",
 		gap: 8,
 	},

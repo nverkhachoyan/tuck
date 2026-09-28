@@ -16,7 +16,7 @@ The audit ran the web build at iPhone width (390 × 844) and at desktop width. T
 * **Every tool finishes with Done at the top right.** This reverses the earlier choice of putting a tool's way out at the ends of the dock (`d1dc3a9`, `7f2ee0f`). It gives one rule everywhere: the top right holds the next step, which is Export in the editor and Done inside a tool. It also frees a slot in the dock. Text editing already works this way.
 * The user approved every item below, including the clipboard features and the new `expo-clipboard` dependency they need.
 
-## Step 1 — Fix what's broken
+## Step 1 — Fix what's broken (done)
 
 ### 1a. The Find card crushes its text on a phone
 

@@ -13,6 +13,7 @@ import {
 	listProjects,
 	openProject,
 	renameProject,
+	updateThumbnail,
 } from "@/projects/projectService";
 import { renderThumbnail } from "@/render/renderDocument";
 import { useStore } from "@/store";
@@ -31,7 +32,9 @@ export type HomeStatus =
 /**
  * The saved projects, and the home screen's work on them: ending the editor's
  * session on coming back here, and opening a photo or project in the editor.
- * One piece of work runs at a time, and `status` names it.
+ * One piece of work runs at a time, and `status` names it. Between them,
+ * thumbnails that a session ending without Back left missing or outdated
+ * are rendered again.
  */
 export function useHomeProjects() {
 	const openDocument = useStore((state) => state.openDocument);
@@ -45,11 +48,15 @@ export function useHomeProjects() {
 	// saving. Set at once, so a second tap meanwhile can't start more work
 	// before the status re-renders.
 	const busy = useRef(false);
+	// Counts passes over the list's outdated thumbnails. Any other work, or
+	// leaving the screen, ends the current one.
+	const thumbnailPass = useRef(0);
 
 	const run = useCallback(
 		async (during: HomeStatus, work: () => Promise<HomeStatus | undefined>) => {
 			if (busy.current) return;
 			busy.current = true;
+			thumbnailPass.current++;
 			setStatus(during);
 			let after: HomeStatus | undefined;
 			try {
@@ -62,15 +69,36 @@ export function useHomeProjects() {
 		[],
 	);
 
+	// One at a time, so the list stays responsive, each card updating as its
+	// thumbnail lands.
+	const updateThumbnails = useCallback(async (list: ProjectSummary[]) => {
+		const pass = ++thumbnailPass.current;
+		for (const project of list) {
+			if (pass !== thumbnailPass.current) return;
+			if (project.status !== "ready" || !project.thumbnailOutdated) continue;
+			const thumbnail = await updateThumbnail(project.id, renderThumbnail);
+			if (!thumbnail || pass !== thumbnailPass.current) continue;
+			setProjects((current) =>
+				current.map((listed) =>
+					listed.id === project.id && listed.status === "ready"
+						? { ...listed, thumbnail, thumbnailOutdated: false }
+						: listed,
+				),
+			);
+		}
+	}, []);
+
 	const refreshProjects = useCallback(async () => {
 		try {
-			setProjects(await listProjects());
+			const list = await listProjects();
+			setProjects(list);
+			void updateThumbnails(list);
 		} catch (error) {
 			showAlert("Couldn't load your projects", errorMessage(error));
 		} finally {
 			setListed(true);
 		}
-	}, []);
+	}, [updateThumbnails]);
 
 	// Coming back here, however the editor was left, ends that session: its
 	// last edits are saved, and the list shows them.
@@ -96,6 +124,9 @@ export function useHomeProjects() {
 	useFocusEffect(
 		useCallback(() => {
 			void finishSession();
+			return () => {
+				thumbnailPass.current++;
+			};
 		}, [finishSession]),
 	);
 

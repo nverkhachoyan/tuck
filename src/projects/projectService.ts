@@ -14,4 +14,5 @@ export const {
 	renameProject,
 	duplicateProject,
 	listProjects,
+	updateThumbnail,
 } = projects;

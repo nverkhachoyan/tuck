@@ -91,6 +91,11 @@ function createHarness(
 	};
 	return {
 		projects: createProjectLifecycle(storage),
+		// A new session over the same storage, as after a reload or the app
+		// being killed: whatever was open was never closed.
+		restart() {
+			this.projects = createProjectLifecycle(storage);
+		},
 		files,
 		images,
 		released,
@@ -580,6 +585,160 @@ describe("thumbnails", () => {
 		assert.ok(listed.status === "ready");
 		assert.equal(listed.label, "CAPTION");
 		assert.equal(listed.thumbnail, null);
+	});
+});
+
+describe("thumbnails after a session that ended without closing", () => {
+	const render =
+		(url: string, drawn: EditorDocument[] = []) =>
+		async (document: EditorDocument) => {
+			drawn.push(document);
+			return url;
+		};
+
+	// A project whose latest edit was autosaved, in a session that then ended.
+	async function autosaveAndRestart(
+		harness: ReturnType<typeof createHarness>,
+		id: string,
+		document: EditorDocument,
+	) {
+		harness.projects.queueAutosave(id, document);
+		harness.projects.flushAutosave();
+		await tick();
+		harness.restart();
+	}
+
+	async function listedProject(harness: ReturnType<typeof createHarness>) {
+		const [listed] = await harness.projects.listProjects();
+		assert.ok(listed.status === "ready");
+		return listed;
+	}
+
+	test("a missing one is listed as outdated, then rendered and kept", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await autosaveAndRestart(harness, id, addText(document, "CAPTION"));
+		const before = savedProject(harness, id);
+		const listed = await listedProject(harness);
+		assert.equal(listed.thumbnail, null);
+		assert.equal(listed.thumbnailOutdated, true);
+
+		const drawn: EditorDocument[] = [];
+		assert.equal(
+			await harness.projects.updateThumbnail(id, render("data:image/a", drawn)),
+			"data:image/a",
+		);
+		const photoUrl = `blob:${id}/${PHOTO_FILE}`;
+		assert.deepEqual(
+			imageLayers(drawn[0]).map((layer) => layer.uri),
+			[photoUrl],
+		);
+		assert.ok(harness.released.includes(photoUrl));
+		const after = savedProject(harness, id);
+		assert.deepEqual(after, {
+			...before,
+			thumbnail: { url: "data:image/a", updatedAt: before.updatedAt },
+		});
+		const updated = await listedProject(harness);
+		assert.equal(updated.thumbnail, "data:image/a");
+		assert.equal(updated.thumbnailOutdated, false);
+	});
+
+	test("an older one is replaced", async (t) => {
+		let now = 0;
+		t.mock.method(Date, "now", () => (now += 1000));
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.closeProject(
+			id,
+			addText(document, "FIRST"),
+			render("data:image/a"),
+		);
+		const reopened = await harness.projects.openProject(id);
+		assert.ok(reopened);
+		await autosaveAndRestart(harness, id, addText(reopened, "SECOND"));
+		const listed = await listedProject(harness);
+		assert.equal(listed.thumbnail, "data:image/a");
+		assert.equal(listed.thumbnailOutdated, true);
+
+		await harness.projects.updateThumbnail(id, render("data:image/b"));
+		const saved = savedProject(harness, id);
+		assert.deepEqual(saved.thumbnail, {
+			url: "data:image/b",
+			updatedAt: saved.updatedAt,
+		});
+	});
+
+	test("an up-to-date one isn't rendered again", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.closeProject(
+			id,
+			addText(document, "CAPTION"),
+			render("data:image/a"),
+		);
+		const writes = harness.writes;
+		const drawn: EditorDocument[] = [];
+		assert.equal(
+			await harness.projects.updateThumbnail(id, render("data:image/b", drawn)),
+			null,
+		);
+		assert.equal(drawn.length, 0);
+		assert.equal(harness.writes, writes);
+	});
+
+	test("a project open here or in another tab is left alone", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await autosaveAndRestart(harness, id, addText(document, "CAPTION"));
+		const before = harness.files.get(id);
+
+		harness.openElsewhere.add(id);
+		assert.equal(
+			await harness.projects.updateThumbnail(id, render("data:image/a")),
+			null,
+		);
+		harness.openElsewhere.delete(id);
+
+		assert.ok(await harness.projects.openProject(id));
+		const drawn: EditorDocument[] = [];
+		assert.equal(
+			await harness.projects.updateThumbnail(id, render("data:image/a", drawn)),
+			null,
+		);
+		assert.equal(drawn.length, 0);
+		assert.equal(harness.files.get(id), before);
+	});
+
+	test("a project saved again while rendering keeps that save", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await autosaveAndRestart(harness, id, addText(document, "CAPTION"));
+		const saved = savedProject(harness, id);
+		const newer = JSON.stringify({ ...saved, updatedAt: saved.updatedAt + 1 });
+
+		const thumbnail = await harness.projects.updateThumbnail(id, async () => {
+			harness.files.set(id, newer);
+			return "data:image/a";
+		});
+		assert.equal(thumbnail, null);
+		assert.equal(harness.files.get(id), newer);
+	});
+
+	test("a failure is logged, frees the images, and changes nothing", async (t) => {
+		const warn = t.mock.method(console, "warn", () => {});
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await autosaveAndRestart(harness, id, addText(document, "CAPTION"));
+		const before = harness.files.get(id);
+
+		const thumbnail = await harness.projects.updateThumbnail(id, async () => {
+			throw new Error("Couldn't draw");
+		});
+		assert.equal(thumbnail, null);
+		assert.equal(warn.mock.callCount(), 1);
+		assert.ok(harness.released.includes(`blob:${id}/${PHOTO_FILE}`));
+		assert.equal(harness.files.get(id), before);
 	});
 });
 
