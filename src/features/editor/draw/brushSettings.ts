@@ -12,9 +12,12 @@ import type { Size } from "../../../model/geometry.ts";
 
 // A plain pen, a pen with a tip, the shapes, or the eraser.
 export type DrawTool = "pen" | PenTip | "shape" | "eraser";
+export type BrushTool = "pen" | PenTip;
 
 export type BrushSettings = {
 	tool: DrawTool;
+	// The brush Brush returns to after drawing a shape or erasing.
+	lastBrush: BrushTool;
 	// Every pen and shape draws in it, whatever its tip or kind.
 	color: string;
 	// What the shape tool drags out.
@@ -25,6 +28,7 @@ export type BrushSettings = {
 
 export const defaultBrushSettings: BrushSettings = {
 	tool: "pen",
+	lastBrush: "pen",
 	color: "#FF3B30",
 	shape: "arrow",
 	sizes: { pen: 1, marker: 2, neon: 1, shape: 2, eraser: 3 },
@@ -45,6 +49,7 @@ export const BRUSH_SIZES: Record<DrawTool, number[]> = {
 };
 
 const DRAW_TOOLS: DrawTool[] = ["pen", "marker", "neon", "shape", "eraser"];
+const BRUSH_TOOLS: BrushTool[] = ["pen", "marker", "neon"];
 
 const shortSide = (size: Size) => Math.min(size.width, size.height);
 
@@ -54,7 +59,10 @@ const shortSide = (size: Size) => Math.min(size.width, size.height);
  */
 export function parseBrushSettings(saved: unknown): BrushSettings {
 	if (typeof saved !== "object" || saved === null) return defaultBrushSettings;
-	const { tool, color, shape, sizes } = saved as Record<string, unknown>;
+	const { tool, lastBrush, color, shape, sizes } = saved as Record<
+		string,
+		unknown
+	>;
 	const savedSizes = (
 		typeof sizes === "object" && sizes !== null ? sizes : {}
 	) as Record<string, unknown>;
@@ -67,8 +75,15 @@ export function parseBrushSettings(saved: unknown): BrushSettings {
 			? size
 			: defaultBrushSettings.sizes[drawTool];
 	};
+	const parsedTool = DRAW_TOOLS.find((drawTool) => drawTool === tool) ?? "pen";
 	return {
-		tool: DRAW_TOOLS.find((drawTool) => drawTool === tool) ?? "pen",
+		tool: parsedTool,
+		// Older builds saved each brush directly in `tool`. Preserve that
+		// preference when migrating them; otherwise start new records at pen.
+		lastBrush:
+			BRUSH_TOOLS.find((brush) => brush === lastBrush) ??
+			BRUSH_TOOLS.find((brush) => brush === parsedTool) ??
+			"pen",
 		color: isHexColor(color) ? color : defaultBrushSettings.color,
 		shape:
 			shapeKinds.find((kind) => kind === shape) ?? defaultBrushSettings.shape,

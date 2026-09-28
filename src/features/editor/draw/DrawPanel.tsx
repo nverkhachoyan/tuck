@@ -15,18 +15,11 @@ import {
 } from "../ToolOptions";
 import {
 	type BrushSettings,
+	type BrushTool,
 	brushSizeIndex,
 	type DrawTool,
 	penTip,
 } from "./brushSettings";
-
-const TOOLS = [
-	{ tool: "pen", label: "Pen" },
-	{ tool: "marker", label: "Marker" },
-	{ tool: "neon", label: "Neon" },
-	{ tool: "shape", label: "Shape" },
-	{ tool: "eraser", label: "Eraser" },
-] as const;
 
 const TOOL_ICONS = {
 	pen: "draw-pen",
@@ -35,23 +28,19 @@ const TOOL_ICONS = {
 	eraser: "eraser",
 } as const;
 
-// The dot on the pen or shape in use, in its color.
-const BADGE = 12;
-
 /**
- * The drawing tools, in place of the toolbar while drawing: the pens (plain,
- * marker, and neon), the shapes, which show the one they drag out, and the
- * eraser, which erases the selected drawing's strokes and removes any shape
- * it passes over. Tapping the tool in use opens its options over the canvas, which
- * the dot of color on its tile hints at. The tools fill a phone, so there's
- * no separate button for them.
+ * The drawing tools, in place of the toolbar while drawing: Brush returns to
+ * the last pen, Shape drags its shown kind, Eraser removes marks, and Style
+ * opens the shared options card. Tapping the active tool opens that card too.
  */
 export function DrawPanel({
 	settings,
+	optionsOpen,
 	onChange,
 	onToggleOptions,
 }: {
 	settings: BrushSettings;
+	optionsOpen: boolean;
 	onChange: (settings: BrushSettings) => void;
 	onToggleOptions: () => void;
 }) {
@@ -59,36 +48,37 @@ export function DrawPanel({
 		if (tool === settings.tool) onToggleOptions();
 		else onChange({ ...settings, tool });
 	};
+	const pickBrush = () => {
+		if (isBrush(settings.tool)) onToggleOptions();
+		else onChange({ ...settings, tool: settings.lastBrush });
+	};
 	return (
 		<ToolRow>
-			{TOOLS.map(({ tool, label }) => {
-				const inUse = settings.tool === tool;
-				const icon =
-					tool === "shape" ? SHAPE_ICONS[settings.shape] : TOOL_ICONS[tool];
-				return (
-					<ToolButton
-						key={tool}
-						label={label}
-						icon={icon}
-						glyph={
-							inUse && tool !== "eraser" ? (
-								<View>
-									<MaterialCommunityIcons
-										name={icon}
-										size={24}
-										color={colors.textPrimary}
-									/>
-									<View
-										style={[styles.badge, { backgroundColor: settings.color }]}
-									/>
-								</View>
-							) : undefined
-						}
-						selected={inUse}
-						onPress={() => pickTool(tool)}
-					/>
-				);
-			})}
+			<ToolButton
+				label="Brush"
+				icon={TOOL_ICONS[settings.lastBrush]}
+				selected={isBrush(settings.tool)}
+				onPress={pickBrush}
+			/>
+			<ToolButton
+				label="Shape"
+				icon={SHAPE_ICONS[settings.shape]}
+				selected={settings.tool === "shape"}
+				onPress={() => pickTool("shape")}
+			/>
+			<ToolButton
+				label="Eraser"
+				icon="eraser"
+				selected={settings.tool === "eraser"}
+				onPress={() => pickTool("eraser")}
+			/>
+			<ToolButton
+				label="Style"
+				icon="palette-outline"
+				glyph={<ColorGlyph color={settings.color} />}
+				selected={optionsOpen}
+				onPress={onToggleOptions}
+			/>
 		</ToolRow>
 	);
 }
@@ -119,6 +109,8 @@ export function BrushOptions({
 }) {
 	const eraser = settings.tool === "eraser";
 	const tip = penTip(settings.tool);
+	const pickBrush = (brush: BrushTool) =>
+		onChange({ ...settings, tool: brush, lastBrush: brush });
 	const pickSize = (size: number) =>
 		onChange({
 			...settings,
@@ -131,6 +123,32 @@ export function BrushOptions({
 			bottomInset={bottomInset}
 			onClose={onClose}
 		>
+			{isBrush(settings.tool) && (
+				<ToolOption label="Brush">
+					<ToolChoices>
+						{(["pen", "marker", "neon"] as const).map((brush) => (
+							<RingChoice
+								key={brush}
+								label={
+									brush === "pen"
+										? "Pen"
+										: brush === "marker"
+											? "Marker"
+											: "Neon"
+								}
+								selected={settings.tool === brush}
+								onPress={() => pickBrush(brush)}
+							>
+								<MaterialCommunityIcons
+									name={TOOL_ICONS[brush]}
+									size={22}
+									color={colors.textPrimary}
+								/>
+							</RingChoice>
+						))}
+					</ToolChoices>
+				</ToolOption>
+			)}
 			{settings.tool === "shape" && (
 				<ToolOption label="Shape">
 					<ToolChoices>
@@ -184,15 +202,21 @@ export function BrushOptions({
 	);
 }
 
+function isBrush(tool: DrawTool): tool is BrushTool {
+	return tool === "pen" || tool === "marker" || tool === "neon";
+}
+
+/** The current brush color in the dock's Style tile. */
+function ColorGlyph({ color }: { color: string }) {
+	return <View style={[styles.colorTile, { backgroundColor: color }]} />;
+}
+
 const styles = StyleSheet.create({
-	badge: {
-		position: "absolute",
-		right: -BADGE / 2,
-		bottom: -BADGE / 3,
-		width: BADGE,
-		height: BADGE,
-		borderRadius: BADGE / 2,
-		borderWidth: 2,
-		borderColor: colors.surface,
+	colorTile: {
+		width: 22,
+		height: 22,
+		borderRadius: 6,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.borderStrong,
 	},
 });

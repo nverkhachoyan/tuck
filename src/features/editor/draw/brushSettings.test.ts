@@ -74,6 +74,7 @@ describe("parseBrushSettings", () => {
 	test("reads back settings saved as they are", () => {
 		const settings = {
 			tool: "shape" as const,
+			lastBrush: "neon" as const,
 			color: "#6B2FA0",
 			shape: "ellipse" as const,
 			sizes: { pen: 0, marker: 4, neon: 2, shape: 3, eraser: 1 },
@@ -106,6 +107,23 @@ describe("parseBrushSettings", () => {
 				sizes: { ...defaultBrushSettings.sizes, pen: 4 },
 			},
 		);
+	});
+
+	test("migrates an older saved brush tool into the last brush", () => {
+		const saved = {
+			tool: "neon",
+			color: "#0A84FF",
+			shape: "arrow",
+			sizes: defaultBrushSettings.sizes,
+		};
+		assert.deepEqual(parseBrushSettings(saved), {
+			...saved,
+			lastBrush: "neon",
+		});
+	});
+
+	test("uses pen as the last brush when an old non-brush tool has none", () => {
+		assert.equal(parseBrushSettings({ tool: "shape" }).lastBrush, "pen");
 	});
 });
 

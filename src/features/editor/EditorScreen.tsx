@@ -501,7 +501,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			const onDrawing = selectedLayer?.type === "drawing";
 			return settings.tool === "eraser" ||
 				(onDrawing && settings.tool === "shape")
-				? { ...settings, tool: "pen" }
+				? { ...settings, tool: settings.lastBrush }
 				: settings;
 		});
 		setTool("draw");
@@ -1011,6 +1011,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					{tool === "draw" ? (
 						<DrawPanel
 							settings={drawSettings}
+							optionsOpen={toolOptionsOpen}
 							onChange={changeDrawSettings}
 							onToggleOptions={() => setToolOptionsOpen((open) => !open)}
 						/>
