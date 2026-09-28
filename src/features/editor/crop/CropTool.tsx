@@ -14,13 +14,12 @@ import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
 import { colors, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
-import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
 import { Dial, type DialScale } from "../Dial";
-import { Dock, useDockInset } from "../Dock";
+import { Dock, DockButton, useDockInset } from "../Dock";
 import { ToolButton, ToolRow } from "../ToolButton";
 import { CropCanvas } from "./CropCanvas";
 import { MAX_STRAIGHTEN } from "./cropGeometry";
@@ -65,8 +64,8 @@ type CropToolProps = {
  * photo's edges expands the canvas. With no locked photo, the canvas itself
  * is cropped and turned, and its layers with it.
  * Nothing changes in the document until Done, which is one undo step.
- * Cancel and Done are in its header, over the editor's. Its controls are in
- * tabs, picked in the dock, and shown just above it.
+ * Cancel and Done are beside the dock, where its tabs are picked; each tab's
+ * controls show just above it. Its header covers the editor's.
  */
 export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	const controller = useCropController(document, onDone);
@@ -113,22 +112,10 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 			{/* As tall as the editor's header, so the canvas keeps its place. */}
 			<ScreenHeader
 				title="Crop"
-				start={
-					<TextButton label="Cancel" shortcut="Escape" onPress={onCancel} />
-				}
 				action={
-					<View style={styles.headerActions}>
-						{controller.changed && (
-							<TextButton label="Reset" onPress={controller.reset} />
-						)}
-						<Button
-							label="Done"
-							variant="primary"
-							size="small"
-							shortcut="Enter"
-							onPress={controller.done}
-						/>
-					</View>
+					controller.changed && (
+						<TextButton label="Reset" onPress={controller.reset} />
+					)
 				}
 			/>
 
@@ -225,7 +212,26 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 				</Animated.View>
 			</View>
 
-			<Dock panel="crop">
+			<Dock
+				panel="crop"
+				start={
+					<DockButton
+						icon="close"
+						label="Cancel"
+						shortcut="Escape"
+						onPress={onCancel}
+					/>
+				}
+				end={
+					<DockButton
+						icon="checkmark"
+						label="Done"
+						shortcut="Enter"
+						primary
+						onPress={controller.done}
+					/>
+				}
+			>
 				<ToolRow>
 					{TABS.map(({ tab: value, label, icon }) => (
 						<ToolButton
@@ -352,11 +358,6 @@ const styles = StyleSheet.create({
 	container: {
 		...StyleSheet.absoluteFill,
 		backgroundColor: colors.background,
-	},
-	headerActions: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 22,
 	},
 	// Each tab's controls sit on the dock, over any room they don't need.
 	controls: {

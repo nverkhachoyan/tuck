@@ -45,7 +45,6 @@ import {
 } from "@/model/geometry";
 import { colors } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
-import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -94,8 +93,6 @@ const TAP_SLOP_PX = 6;
 // screen pixels, selects a word.
 const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_SLOP_PX = 12;
-// Between the document and the keyboard, while it's up.
-const KEYBOARD_GAP = 8;
 // The selection bar's distance from the selection, above it past the rotate
 // knob or below it past the handles, and from the view's edges.
 const SELECTION_BAR_GAPS = {
@@ -109,8 +106,7 @@ type EditorCanvasProps = {
 	document: EditorDocument;
 	selectedLayer?: Layer;
 	// While set, this text is edited in place (see `TextEditState`). Presses
-	// on it place the caret or select, and a tap off it finishes. The
-	// document fits above the keyboard.
+	// on it place the caret or select, and a tap off it finishes.
 	textEdit?: TextEditState | null;
 	onTextSelect?: (selection: TextSelection) => void;
 	onTextEditDone?: () => void;
@@ -148,8 +144,9 @@ type EditorCanvasProps = {
 		regions: readonly DetectionOverlayRegion[];
 		onToggle: (sourceIndex: number) => void;
 	} | null;
-	// How much of the view's bottom is covered by panels floating over it.
-	// The document fits above them, and what's past its edges shows under.
+	// How much of the view's bottom is covered by panels floating over it,
+	// and by the keyboard they ride on. The document fits above them, and
+	// what's past its edges shows under.
 	bottomInset?: number;
 	// Actions for the selected layer, floating by it while it can be moved.
 	selectionBar?: ReactNode;
@@ -261,19 +258,14 @@ export function EditorCanvas({
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
-	const keyboardOverlap = useKeyboardOverlap(containerRef, editingText);
-	const fitInset =
-		keyboardOverlap > 0
-			? Math.max(bottomInset, keyboardOverlap + KEYBOARD_GAP)
-			: bottomInset;
 	const viewport = useMemo(
 		() =>
 			fitDocumentToView(
 				documentSize,
-				{ width: size.width, height: size.height - fitInset },
+				{ width: size.width, height: size.height - bottomInset },
 				PHOTO_INSET,
 			),
-		[documentSize, size, fitInset],
+		[documentSize, size, bottomInset],
 	);
 	const { scale, offsetX, offsetY } = viewport;
 

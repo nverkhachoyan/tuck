@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import type { TextSelection } from "@/layers/textEditing";
 import { colors } from "@/theme";
-import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 
 export type TextEditorHandle = {
@@ -27,17 +26,17 @@ type TextEditorProps = {
 	onChangeText: (text: string) => void;
 	onSelectionChange: (selection: TextSelection) => void;
 	onFocusChange: (focused: boolean) => void;
+	// Escape, ⌘/Ctrl+Enter, or Android's back button, as Done by the dock.
 	onDone: () => void;
 };
 
 /**
  * Typing into text on the canvas, which draws it in place, caret and all
  * (see `TextEditState`). This is the header over the screen's, a tool's
- * like any other, with Done, and the input the keyboard types into, which is
- * hidden under the bar: the canvas shows what it holds exactly as the text
- * will look, at its size, angle, and wrapping, which no input could.
- *
- * On web, Escape or ⌘/Ctrl+Enter finishes, as Done does.
+ * like any other, and the input the keyboard types into, which is hidden
+ * under the bar: the canvas shows what it holds exactly as the text will
+ * look, at its size, angle, and wrapping, which no input could. Done is
+ * beside the dock, which rides the keyboard.
  */
 export function TextEditor({
 	ref,
@@ -115,18 +114,7 @@ export function TextEditor({
 				accessibilityLabel="Text"
 				style={styles.input}
 			/>
-			<ScreenHeader
-				title="Text"
-				action={
-					<Button
-						label="Done"
-						variant="primary"
-						size="small"
-						shortcut="Escape"
-						onPress={onDone}
-					/>
-				}
-			/>
+			<ScreenHeader title="Text" />
 		</View>
 	);
 }

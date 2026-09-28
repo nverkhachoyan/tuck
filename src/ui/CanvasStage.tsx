@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { colors, radii } from "@/theme";
 
@@ -14,15 +14,18 @@ const FRAME = 8;
  * over it; otherwise something sits below it.
  */
 export function CanvasStage({
+	ref,
 	toBottom = false,
 	children,
 }: {
+	ref?: Ref<View>;
 	toBottom?: boolean;
 	children: ReactNode;
 }) {
 	const framed = useWindowDimensions().width >= FRAMED_MIN_WIDTH;
 	return (
 		<View
+			ref={ref}
 			style={[
 				styles.stage,
 				framed && styles.framed,

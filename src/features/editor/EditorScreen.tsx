@@ -36,7 +36,7 @@ import type {
 	TextEditState,
 } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
-import { Dock, useDockInset } from "@/features/editor/Dock";
+import { Dock, DockButton, useDockInset } from "@/features/editor/Dock";
 import {
 	type BrushSettings,
 	brushFor,
@@ -136,6 +136,7 @@ import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
 import { TextButton } from "@/ui/TextButton";
+import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
@@ -246,7 +247,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		status: "saving" | "saved";
 	} | null>(null);
 	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
-	const dockInset = useDockInset();
+	// While typing, the dock rides the keyboard, bringing the text's style
+	// and Done, and the document fits above them.
+	const stageRef = useRef<View>(null);
+	const keyboardOverlap = useKeyboardOverlap(stageRef, textEdit !== null);
+	const dockInset = useDockInset(keyboardOverlap);
 	// The tool in the dock. While drawing, strokes on the canvas go into the
 	// selected drawing, or a new one; while redacting, into the selected
 	// brushed redaction, or a new one. While adjusting, the canvas holds still.
@@ -832,15 +837,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							disabled={!canRedo}
 							onPress={redo}
 						/>
-						{tool ? (
-							<Button
-								label="Done"
-								variant="primary"
-								size="small"
-								shortcut="Escape"
-								onPress={finishTool}
-							/>
-						) : (
+						{!tool && (
 							<Button
 								label="Export"
 								icon="share-outline"
@@ -853,7 +850,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				}
 			/>
 			{/* The dock floats over the stage, which runs under it. */}
-			<CanvasStage toBottom>
+			<CanvasStage ref={stageRef} toBottom>
 				<EditorCanvas
 					ref={canvasRef}
 					document={document}
@@ -998,7 +995,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 				{/* After the tool's options, so taps on the dock reach it rather
 				    than closing them. */}
-				<Dock panel={panelKind}>
+				<Dock
+					panel={panelKind}
+					end={
+						tool || textEdit ? (
+							<DockButton
+								icon="checkmark"
+								label="Done"
+								shortcut="Escape"
+								primary
+								onPress={tool ? finishTool : finishTextEdit}
+							/>
+						) : undefined
+					}
+					keyboardOverlap={keyboardOverlap}
+				>
 					{tool === "draw" ? (
 						<DrawPanel
 							settings={drawSettings}
