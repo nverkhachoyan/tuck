@@ -55,6 +55,10 @@ import {
 	LAYERS_SIDEBAR_INSET,
 	LayersPanel,
 } from "@/features/editor/panels/LayersPanel";
+import {
+	type ArrangeMove,
+	SelectionBar,
+} from "@/features/editor/panels/SelectionBar";
 import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
 import { DetectionOptions } from "@/features/editor/redact/DetectionOptions";
 import {
@@ -473,6 +477,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (!selectedLayer) return;
 		moveLayer(selectedLayer.id, selectedIndex + step);
 	};
+	const arrangeSelected = (move: ArrangeMove) => {
+		if (!selectedLayer) return;
+		if (move === "forward") moveSelected(1);
+		else if (move === "backward") moveSelected(-1);
+		else {
+			moveLayer(
+				selectedLayer.id,
+				move === "front" ? document.layers.length - 1 : 0,
+			);
+		}
+	};
 
 	// With the tool that fits the selection: the shape tool for a shape, and a
 	// pen for a drawing. Otherwise the tool used last, but never the eraser,
@@ -881,6 +896,31 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					onPickPoint={handlePickPoint}
 					adjusting={adjusting}
 					bottomInset={dockInset}
+					selectionBar={
+						selectedLayer && (
+							<SelectionBar
+								canMoveForward={selectedIndex < document.layers.length - 1}
+								canMoveBackward={selectedIndex > 0}
+								onEdit={
+									selectedTextLayer ? () => editSelectedText() : undefined
+								}
+								stretched={selectedLayer.resizable === true}
+								onToggleStretch={
+									selectedLayer.type === "text" ||
+									selectedLayer.type === "image"
+										? () =>
+												setLayerResizable(
+													selectedLayer.id,
+													!selectedLayer.resizable,
+												)
+										: undefined
+								}
+								onArrange={arrangeSelected}
+								onDuplicate={duplicateSelectedLayer}
+								onDelete={() => deleteLayer(selectedLayer.id)}
+							/>
+						)
+					}
 				/>
 				{tool === "draw" && toolOptionsOpen && (
 					<BrushOptions
@@ -996,23 +1036,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					) : styledText ? (
 						<TextStylePanel
 							layer={styledText}
-							editing={textEdit !== null}
 							customColor={customColor}
 							onChange={styleText}
 							onOpenPicker={(key) =>
 								setTextPicker({ layerId: styledText.id, key })
 							}
-							onEdit={() => editSelectedText()}
-							onToggleResize={() =>
-								setLayerResizable(styledText.id, !styledText.resizable)
-							}
-							onDuplicate={duplicateSelectedLayer}
-							onDelete={() => deleteLayer(styledText.id)}
 						/>
 					) : selectedLayer ? (
 						<LayerActionsPanel
-							canMoveForward={selectedIndex < document.layers.length - 1}
-							canMoveBackward={selectedIndex > 0}
 							onDraw={
 								selectedLayer.type === "drawing" ||
 								selectedLayer.type === "shape"
@@ -1028,7 +1059,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onAdjust={
 								selectedLayer.type === "image" ? startAdjusting : undefined
 							}
-							resizeEnabled={selectedLayer.resizable === true}
 							sticker={
 								stickerSave?.layerId === selectedLayer.id
 									? stickerSave.status
@@ -1039,19 +1069,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									? saveSelectedAsSticker
 									: undefined
 							}
-							onToggleResize={
-								selectedLayer.type === "image"
-									? () =>
-											setLayerResizable(
-												selectedLayer.id,
-												!selectedLayer.resizable,
-											)
-									: undefined
-							}
-							onMoveForward={() => moveSelected(1)}
-							onMoveBackward={() => moveSelected(-1)}
-							onDuplicate={duplicateSelectedLayer}
-							onDelete={() => deleteLayer(selectedLayer.id)}
 						/>
 					) : (
 						<ToolsPanel
@@ -1110,10 +1127,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				<TextEditor
 					ref={textEditorRef}
 					text={textEdit.layer.text}
-					align={textEdit.layer.align}
 					initialSelection={textEdit.initialSelection}
 					onChangeText={(text) => changeEditedText({ text })}
-					onChangeAlign={(align) => styleText({ align })}
 					onSelectionChange={(selection) => changeTextEdit({ selection })}
 					onFocusChange={(focused) => changeTextEdit({ focused })}
 					onDone={finishTextEdit}

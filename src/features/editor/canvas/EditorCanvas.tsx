@@ -1,5 +1,6 @@
 import { Canvas, Group } from "@shopify/react-native-skia";
 import {
+	type ReactNode,
 	type Ref,
 	useCallback,
 	useEffect,
@@ -17,7 +18,11 @@ import {
 	View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { useSharedValue } from "react-native-reanimated";
+import Animated, {
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import type { MappedDetectionRect } from "@/detection/mapDetectionRects";
 import { layerBounds } from "@/layers/layerBounds";
@@ -46,8 +51,12 @@ import {
 	cursorForHandle,
 	cursorStyle,
 } from "../handles/canvasCursor";
-import { handleUnder } from "../handles/handleMetrics";
-import { fitDocumentToView, viewPointToDocument } from "../viewport";
+import { handleMetrics, handleUnder } from "../handles/handleMetrics";
+import {
+	type DocumentViewport,
+	fitDocumentToView,
+	viewPointToDocument,
+} from "../viewport";
 import {
 	type CanvasTool,
 	type DetectionOverlayRegion,
@@ -58,7 +67,17 @@ import {
 } from "./EditorScene";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import { HIT_PADDING_PX, layerTargets, resizeMode } from "./layerTargets";
-import { syncLiveTransform, useLiveTransform } from "./liveTransform";
+import {
+	type LiveTransform,
+	readLiveBox,
+	readLiveTransform,
+	syncLiveTransform,
+	useLiveTransform,
+} from "./liveTransform";
+import {
+	placeSelectionBar,
+	selectionScreenBounds,
+} from "./selectionBarPlacement";
 import { shapeFromDrag } from "./shapeDrag";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
@@ -77,6 +96,13 @@ const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_SLOP_PX = 12;
 // Between the document and the keyboard, while it's up.
 const KEYBOARD_GAP = 8;
+// The selection bar's distance from the selection, above it past the rotate
+// knob or below it past the handles, and from the view's edges.
+const SELECTION_BAR_GAPS = {
+	above: handleMetrics.knobOffset + handleMetrics.size / 2 + 10,
+	below: handleMetrics.size / 2 + 12,
+	margin: 8,
+};
 
 type EditorCanvasProps = {
 	ref?: Ref<EditorCanvasHandle>;
@@ -125,6 +151,8 @@ type EditorCanvasProps = {
 	// How much of the view's bottom is covered by panels floating over it.
 	// The document fits above them, and what's past its edges shows under.
 	bottomInset?: number;
+	// Actions for the selected layer, floating by it while it can be moved.
+	selectionBar?: ReactNode;
 };
 
 export type EditorCanvasHandle = {
@@ -151,6 +179,9 @@ export type EditorCanvasHandle = {
  * outlined, to show what the tool's style changes. Dragging out a box or a
  * shape, a tap picks the one to change, or none. Picking a color, where the
  * finger lifts is the point. While `adjusting`, presses do nothing.
+ *
+ * `selectionBar` floats by a layer that can be moved, following it on the
+ * UI thread, and steps aside while a gesture moves it.
  */
 export function EditorCanvas({
 	ref,
@@ -172,6 +203,7 @@ export function EditorCanvas({
 	adjusting = null,
 	detection = null,
 	bottomInset = 0,
+	selectionBar,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [cursor, setCursor] = useState<CanvasCursor>("default");
@@ -605,77 +637,148 @@ export function EditorCanvas({
 	]);
 
 	return (
-		<GestureDetector
-			gesture={
-				detection
-					? detectionGesture
-					: tool
-						? paintGesture
-						: textEdit
-							? textGesture
-							: adjusting
-								? idleGesture
-								: gesture
-			}
-		>
-			<View
-				ref={containerRef}
-				style={[
-					styles.container,
-					cursorStyle(
-						detection
-							? "pointer"
-							: tool
-								? "crosshair"
+		<View style={styles.container}>
+			<GestureDetector
+				gesture={
+					detection
+						? detectionGesture
+						: tool
+							? paintGesture
+							: textEdit
+								? textGesture
 								: adjusting
-									? "default"
-									: cursor,
-					),
-				]}
-				onLayout={handleLayout}
+									? idleGesture
+									: gesture
+				}
 			>
-				{/* sRGB, like export's offscreen surface: filters and adjustments
+				<View
+					ref={containerRef}
+					style={[
+						styles.container,
+						cursorStyle(
+							detection
+								? "pointer"
+								: tool
+									? "crosshair"
+									: adjusting
+										? "default"
+										: cursor,
+						),
+					]}
+					onLayout={handleLayout}
+				>
+					{/* sRGB, like export's offscreen surface: filters and adjustments
 				    work in the canvas's color space, so a P3 one would look stronger. */}
-				<Canvas style={styles.canvas} colorSpace="srgb">
-					{scale > 0 && (
-						<Group
-							transform={[
-								{ translateX: offsetX },
-								{ translateY: offsetY },
-								{ scale },
-							]}
-						>
-							<EditorScene
-								document={document}
-								selectedLayerId={holdingStill ? null : selectedLayerId}
-								textEdit={textEdit}
-								viewScale={scale}
-								live={live}
-								stroke={liveStroke}
-								outlinedLayer={outlinedLayer}
-								adjusting={adjusting}
-								detections={detection?.regions ?? []}
-								onImageError={handleImageError}
-							/>
-						</Group>
-					)}
-				</Canvas>
-				{/* At the bottom, clear of new text at the center and the editor's
+					<Canvas style={styles.canvas} colorSpace="srgb">
+						{scale > 0 && (
+							<Group
+								transform={[
+									{ translateX: offsetX },
+									{ translateY: offsetY },
+									{ scale },
+								]}
+							>
+								<EditorScene
+									document={document}
+									selectedLayerId={holdingStill ? null : selectedLayerId}
+									textEdit={textEdit}
+									viewScale={scale}
+									live={live}
+									stroke={liveStroke}
+									outlinedLayer={outlinedLayer}
+									adjusting={adjusting}
+									detections={detection?.regions ?? []}
+									onImageError={handleImageError}
+								/>
+							</Group>
+						)}
+					</Canvas>
+					{/* At the bottom, clear of new text at the center and the editor's
 					    save banner at the top. Touches pass through to the canvas. */}
-				{imageFailed && (
-					<View style={[styles.failure, { bottom: bottomInset + PHOTO_INSET }]}>
-						<GlassView
-							style={styles.failurePill}
-							contentStyle={styles.failurePillContent}
+					{imageFailed && (
+						<View
+							style={[styles.failure, { bottom: bottomInset + PHOTO_INSET }]}
 						>
-							<Text style={styles.failureText}>
-								A photo couldn't be loaded.
-							</Text>
-						</GlassView>
-					</View>
-				)}
-			</View>
-		</GestureDetector>
+							<GlassView
+								style={styles.failurePill}
+								contentStyle={styles.failurePillContent}
+							>
+								<Text style={styles.failureText}>
+									A photo couldn't be loaded.
+								</Text>
+							</GlassView>
+						</View>
+					)}
+				</View>
+			</GestureDetector>
+			{/* Outside the gesture's view, so a press on the bar is the bar's. */}
+			{selectionBar && movableLayer && scale > 0 && (
+				<SelectionBarFrame
+					key={movableLayer.id}
+					live={live}
+					viewport={viewport}
+					width={size.width}
+					height={size.height - bottomInset}
+				>
+					{selectionBar}
+				</SelectionBarFrame>
+			)}
+		</View>
+	);
+}
+
+/**
+ * Places `children` by the selection (see `placeSelectionBar`), within
+ * `width` and `height`, as the live values move it. It's hidden until it has
+ * a size to place, and while a gesture holds the layer.
+ */
+function SelectionBarFrame({
+	live,
+	viewport,
+	width,
+	height,
+	children,
+}: {
+	live: LiveTransform;
+	viewport: DocumentViewport;
+	width: number;
+	height: number;
+	children: ReactNode;
+}) {
+	const barSize = useSharedValue({ width: 0, height: 0 });
+	const style = useAnimatedStyle(() => {
+		const { x, y } = placeSelectionBar(
+			selectionScreenBounds(
+				readLiveTransform(live),
+				readLiveBox(live),
+				viewport,
+			),
+			barSize.value,
+			{ width, height },
+			SELECTION_BAR_GAPS,
+		);
+		const shown =
+			barSize.value.width > 0 &&
+			live.activeId.value !== null &&
+			live.heldId.value === null;
+		return {
+			transform: [{ translateX: x }, { translateY: y }],
+			opacity: withTiming(shown ? 1 : 0, { duration: shown ? 160 : 80 }),
+		};
+	}, [live, viewport, width, height]);
+	return (
+		// A plain view, since Reanimated drops `box-none` on web.
+		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+			<Animated.View
+				style={[styles.selectionBar, style]}
+				onLayout={(event) => {
+					const { width, height } = event.nativeEvent.layout;
+					barSize.value = { width, height };
+				}}
+			>
+				{children}
+			</Animated.View>
+		</View>
 	);
 }
 
@@ -700,6 +803,11 @@ const styles = StyleSheet.create({
 	},
 	canvas: {
 		flex: 1,
+	},
+	selectionBar: {
+		position: "absolute",
+		top: 0,
+		left: 0,
 	},
 	failure: {
 		position: "absolute",

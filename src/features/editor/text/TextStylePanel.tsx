@@ -1,14 +1,24 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ReactNode, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+	Pressable,
+	ScrollView,
+	type StyleProp,
+	StyleSheet,
+	Text,
+	View,
+	type ViewStyle,
+} from "react-native";
 import { TEXT_FONTS } from "@/layers/fonts";
 import {
+	type TextAlign,
 	type TextFont,
 	type TextLayer,
 	type TextLayerEdit,
 	textFonts,
 } from "@/model/document";
 import { colors, webTransition } from "@/theme";
-import { IconButton } from "@/ui/IconButton";
+import { gradientBackground } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { ColorPicker } from "../ColorPicker";
 import { ColorSwatches, isCustomColor } from "../ColorSwatches";
@@ -30,15 +40,32 @@ const FONT_LABELS: Record<TextFont, string> = {
 	typewriter: "Typewriter",
 };
 
-type Tab = "font" | "color" | "outline" | "background";
+type Tab = "font" | "color" | "outline" | "background" | "align";
 
+// Short, so every tab fits across a phone.
 const TABS: { tab: Tab; label: string }[] = [
 	{ tab: "font", label: "Font" },
 	{ tab: "color", label: "Color" },
 	{ tab: "outline", label: "Outline" },
-	// Short, so every tab fits beside the actions on a phone.
 	{ tab: "background", label: "Box" },
+	{ tab: "align", label: "Align" },
 ];
+
+const ALIGNS: { align: TextAlign; label: string; icon: AlignIcon }[] = [
+	{ align: "left", label: "Align left", icon: "format-align-left" },
+	{ align: "center", label: "Align center", icon: "format-align-center" },
+	{ align: "right", label: "Align right", icon: "format-align-right" },
+];
+
+type AlignIcon =
+	| "format-align-left"
+	| "format-align-center"
+	| "format-align-right";
+
+// Where a scrolling row fades out, hinting there's more past the edge: to
+// the glass's color, nearly opaque, so a chip under it clearly runs on.
+const FADE_WIDTH = 56;
+const FADE_COLOR = "rgba(28, 28, 32, 0.96)";
 
 /** A text layer's colors, which its Color, Outline, and Box tabs pick. */
 export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
@@ -95,88 +122,41 @@ export function TextColorPicker({
 
 type TextStylePanelProps = {
 	layer: TextLayer;
-	// While its text is typed, the layer's actions wait.
-	editing: boolean;
 	// The editor's custom color, which the custom swatch shows.
 	customColor: string | null;
 	onChange: (patch: TextLayerEdit) => void;
 	// The custom swatch was tapped: open a picker for one of the colors.
 	onOpenPicker: (key: TextColorKey) => void;
-	onEdit: () => void;
-	onToggleResize: () => void;
-	onDuplicate: () => void;
-	onDelete: () => void;
 };
 
 /**
- * Styling for the selected text layer, or the text being typed. The text
- * itself is edited on the canvas (Edit, or tap the selected layer) and
- * resized there (pinch or the corner handles), so this is font and colors.
- * There's no Done button: tapping anywhere on the canvas off the text
- * deselects it, or finishes typing.
+ * Styling for the selected text layer, or the text being typed: its font,
+ * colors, and alignment. The text itself is edited on the canvas (tap the
+ * selected layer, or Edit in the selection bar) and resized there (pinch or
+ * the corner handles), and the actions every layer has float by it (see
+ * `SelectionBar`). There's no Done button: tapping anywhere on the canvas
+ * off the text deselects it, or finishes typing.
  */
 export function TextStylePanel({
 	layer,
-	editing,
 	customColor,
 	onChange,
 	onOpenPicker,
-	onEdit,
-	onToggleResize,
-	onDuplicate,
-	onDelete,
 }: TextStylePanelProps) {
 	const [tab, setTab] = useState<Tab>("font");
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.row}>
-				{/* Scrolls when a narrow screen can't fit every tab. */}
-				<ScrollView
-					horizontal
-					showsHorizontalScrollIndicator={false}
-					style={styles.tabsScroll}
-					contentContainerStyle={styles.tabs}
-				>
-					<View style={styles.track} />
-					{TABS.map(({ tab: value, label }) => (
-						<Tab
-							key={value}
-							label={label}
-							active={tab === value}
-							onPress={() => setTab(value)}
-						/>
-					))}
-				</ScrollView>
-				<View
-					style={[styles.actions, editing && styles.hidden]}
-					aria-hidden={editing}
-				>
-					<IconButton
-						icon="create-outline"
-						label="Edit text"
-						onPress={onEdit}
+			<View style={styles.tabs} accessibilityRole="tablist">
+				<View style={styles.track} />
+				{TABS.map(({ tab: value, label }) => (
+					<Tab
+						key={value}
+						label={label}
+						active={tab === value}
+						onPress={() => setTab(value)}
 					/>
-					<IconButton
-						icon="resize-outline"
-						label="Stretch text with handles"
-						selected={layer.resizable === true}
-						onPress={onToggleResize}
-					/>
-					<IconButton
-						icon="copy-outline"
-						label="Duplicate"
-						shortcut="mod+D"
-						onPress={onDuplicate}
-					/>
-					<IconButton
-						icon="trash-outline"
-						label="Delete"
-						shortcut="Delete"
-						tone="danger"
-						onPress={onDelete}
-					/>
-				</View>
+				))}
 			</View>
 
 			<View style={styles.content}>
@@ -220,6 +200,13 @@ function TabContent({
 		};
 	};
 	switch (tab) {
+		case "align":
+			return (
+				<AlignPicker
+					value={layer.align}
+					onPick={(align) => onChange({ align })}
+				/>
+			);
 		case "font":
 			return (
 				<FontPicker value={layer.font} onPick={(font) => onChange({ font })} />
@@ -265,15 +252,90 @@ function TabContent({
  * can't fit them all: with "none" and the custom one, there are eight.
  */
 function SwatchRow({ children }: { children: ReactNode }) {
+	return <ScrollRow contentStyle={styles.swatches}>{children}</ScrollRow>;
+}
+
+/**
+ * A row that scrolls edge to edge, past the panel's padding, when it's
+ * wider than the panel. While more of it is past the right edge, that edge
+ * fades out, so the row reads as one that scrolls.
+ */
+function ScrollRow({
+	contentStyle,
+	children,
+}: {
+	contentStyle: StyleProp<ViewStyle>;
+	children: ReactNode;
+}) {
+	const [width, setWidth] = useState(0);
+	const [contentWidth, setContentWidth] = useState(0);
+	const [offset, setOffset] = useState(0);
+	const more = contentWidth - offset - width > 1;
 	return (
-		<ScrollView
-			horizontal
-			showsHorizontalScrollIndicator={false}
-			style={styles.bleed}
-			contentContainerStyle={styles.swatches}
-		>
-			{children}
-		</ScrollView>
+		<View style={styles.bleed}>
+			<ScrollView
+				horizontal
+				showsHorizontalScrollIndicator={false}
+				contentContainerStyle={contentStyle}
+				scrollEventThrottle={32}
+				onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+				onContentSizeChange={(contentWidth) => setContentWidth(contentWidth)}
+				onScroll={(event) => setOffset(event.nativeEvent.contentOffset.x)}
+			>
+				{children}
+			</ScrollView>
+			{more && <View style={styles.fade} />}
+		</View>
+	);
+}
+
+/** Left, center, and right, each drawn as it lines up text. */
+function AlignPicker({
+	value,
+	onPick,
+}: {
+	value: TextAlign;
+	onPick: (align: TextAlign) => void;
+}) {
+	return (
+		<View style={styles.aligns}>
+			{ALIGNS.map(({ align, label, icon }) => {
+				const selected = align === value;
+				return (
+					<Pressable
+						key={align}
+						hitSlop={4}
+						onPress={() => onPick(align)}
+						accessibilityRole="button"
+						accessibilityLabel={label}
+						accessibilityState={{ selected }}
+						style={styles.target}
+					>
+						{(state) => {
+							const { pressed, hovered } = interaction(state);
+							return (
+								<View
+									style={[
+										styles.fontChip,
+										styles.alignChip,
+										webTransition,
+										hovered && styles.fontChipHovered,
+										selected && styles.fontChipSelected,
+										pressed && styles.fontChipPressed,
+									]}
+								>
+									<MaterialCommunityIcons
+										name={icon}
+										size={20}
+										color={selected ? colors.onChosen : colors.textPrimary}
+									/>
+								</View>
+							);
+						}}
+					</Pressable>
+				);
+			})}
+		</View>
 	);
 }
 
@@ -292,7 +354,7 @@ function Tab({
 			onPress={onPress}
 			accessibilityRole="tab"
 			accessibilityState={{ selected: active }}
-			style={styles.target}
+			style={[styles.target, styles.tab]}
 		>
 			{(state) => {
 				const { hovered } = interaction(state);
@@ -328,12 +390,7 @@ function FontPicker({
 	onPick: (font: TextFont) => void;
 }) {
 	return (
-		<ScrollView
-			horizontal
-			showsHorizontalScrollIndicator={false}
-			style={styles.bleed}
-			contentContainerStyle={styles.fonts}
-		>
+		<ScrollRow contentStyle={styles.fonts}>
 			{textFonts.map((font) => {
 				const selected = font === value;
 				return (
@@ -374,7 +431,7 @@ function FontPicker({
 					</Pressable>
 				);
 			})}
-		</ScrollView>
+		</ScrollRow>
 	);
 }
 
@@ -387,19 +444,11 @@ const styles = StyleSheet.create({
 		paddingHorizontal: PADDING,
 		gap: 2,
 	},
-	row: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 16,
-	},
-	tabsScroll: {
-		flex: 1,
-	},
 	tabs: {
+		flexDirection: "row",
 		paddingHorizontal: (TARGET - TRACK) / 2,
 	},
-	// Behind the tabs, which are taller to be easy to hit. As wide as the
-	// content, not the scroll view.
+	// Behind the tabs, which are taller to be easy to hit.
 	track: {
 		position: "absolute",
 		top: (TARGET - TRACK) / 2,
@@ -415,9 +464,13 @@ const styles = StyleSheet.create({
 		borderRadius: TARGET / 2,
 		justifyContent: "center",
 	},
+	tab: {
+		flex: 1,
+	},
 	segment: {
 		height: TRACK - 6,
-		paddingHorizontal: 11,
+		paddingHorizontal: 4,
+		alignItems: "center",
 		borderRadius: (TRACK - 6) / 2,
 		justifyContent: "center",
 	},
@@ -432,16 +485,6 @@ const styles = StyleSheet.create({
 	},
 	tabLabelActive: {
 		color: colors.textPrimary,
-	},
-	actions: {
-		flexDirection: "row",
-		gap: 16,
-		paddingRight: 4,
-	},
-	// Kept in the layout, so the tabs don't move as typing starts and ends.
-	hidden: {
-		opacity: 0,
-		pointerEvents: "none",
 	},
 	// One height for every tab, so switching tabs never shifts the row above.
 	content: {
@@ -458,6 +501,26 @@ const styles = StyleSheet.create({
 	},
 	swatches: {
 		paddingHorizontal: PADDING,
+	},
+	fade: {
+		position: "absolute",
+		top: 0,
+		bottom: 0,
+		right: 0,
+		width: FADE_WIDTH,
+		pointerEvents: "none",
+		...gradientBackground(
+			`linear-gradient(to right, rgba(28, 28, 32, 0), ${FADE_COLOR})`,
+		),
+	},
+	aligns: {
+		flexDirection: "row",
+		justifyContent: "center",
+		gap: 12,
+	},
+	alignChip: {
+		width: 56,
+		alignItems: "center",
 	},
 	fontChip: {
 		height: 34,

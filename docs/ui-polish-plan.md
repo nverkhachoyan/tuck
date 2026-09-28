@@ -49,7 +49,10 @@ Change them all to one pattern:
 
 A tool header could be a variant of `ScreenHeader` (a title, optional start and end content, and no back button) rather than a new component. Choose whichever reads better.
 
-## Step 3 — Text (Propose first)
+## Step 3 — Text (Propose first) (done)
+
+Built as the alternative below: a floating selection bar (`panels/SelectionBar.tsx`) with Edit (text), Stretch (text and images), Arrange, Duplicate, and Delete for every layer type, placed by `canvas/selectionBarPlacement.ts` and hidden while a gesture moves the layer. The dock keeps what only one kind of layer does: the style panel for text (Font, Color, Outline, Box, and Align tabs across the width), and Draw, Redact, Adjust, or Sticker for the rest. Typing shows "Text" and Done in the header. Arrange (step 6) came with it.
+
 
 Four problems, all in `text/TextStylePanel.tsx` and `text/TextEditor.tsx`:
 
@@ -84,7 +87,10 @@ Today the dock shows Pen, Marker, Neon, Shape, and Eraser (`draw/DrawPanel.tsx`)
 * **One tap finds everything.** Today Find asks "Faces or Text?" first. Instead, Find looks for faces and text together, using whichever detectors this device has, and shows every region it finds, all selected (`useImageDetection` already preselects). The card says how many it found and how many are selected, offers All and None, and has a primary "Redact 5" (today it says "Add 5"). Run the two detectors one after the other, not at once, because on web MediaPipe and Tesseract are both heavy. If one detector fails or isn't available, still show what the other found, and mention it in one line. If both find nothing, show "Nothing found" with Try Again. This changes `detection/useImageDetection.ts`'s state from one `feature` to both; regions could carry their kind, if faces and text should be outlined differently. Keep detection's rule from VISION.md: it proposes redactions and never applies them by itself.
 * Out of scope: on web, Tesseract missed white text on a gradient in the test image (`modules/image-analysis/src/tesseractText.ts`). That's detection quality, a separate task.
 
-## Step 6 — Arrange (Propose first)
+## Step 6 — Arrange (Propose first) (done in step 3)
+
+Arrange lives in the selection bar: it swaps the bar's actions for To Front, Forward, Backward, and To Back, each disabled when it can't apply, until Back.
+
 
 Forward and Backward take two of the five to seven tiles in `LayerActionsPanel` for every selected layer. For a quick tool, layer order is occasional. Fold them into one **Arrange** tile that opens a small card with Bring to Front, Forward, Backward, and Send to Back, each disabled when it can't apply. The ⌘] and ⌘[ shortcuts stay. Make this match whatever step 3 settles for text: if the floating bar was chosen there, Arrange lives in it.
 
