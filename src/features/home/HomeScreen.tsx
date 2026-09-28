@@ -5,8 +5,10 @@ import {
 	RadialGradient,
 	vec,
 } from "@shopify/react-native-skia";
-import { useIsFocused, useRouter } from "expo-router";
+import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
+	AppState,
 	Platform,
 	StyleSheet,
 	Text,
@@ -20,6 +22,7 @@ import {
 	type HomeStatus,
 	useHomeProjects,
 } from "@/features/home/useHomeProjects";
+import { hasClipboardImage } from "@/import/clipboardImage";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
@@ -45,6 +48,7 @@ export default function HomeScreen() {
 		finishSession,
 		choosePhoto,
 		openImage,
+		pasteImage,
 		openProject,
 		renameProject,
 		duplicateProject,
@@ -66,6 +70,19 @@ export default function HomeScreen() {
 
 	const hasProjects = projects.length > 0;
 	const blocked = status !== "idle";
+	const [canPaste, setCanPaste] = useState(false);
+	const showPaste = Platform.OS !== "web" && canPaste;
+	useFocusEffect(
+		useCallback(() => {
+			if (Platform.OS === "web") return;
+			const refresh = () => void hasClipboardImage().then(setCanPaste);
+			refresh();
+			const subscription = AppState.addEventListener("change", (next) => {
+				if (next === "active") refresh();
+			});
+			return () => subscription.remove();
+		}, []),
+	);
 
 	return (
 		<View style={[styles.container, { paddingBottom: 24 + bottom }]}>
@@ -135,16 +152,42 @@ export default function HomeScreen() {
 
 			<View style={styles.actionsArea}>
 				<View style={[styles.actions, wide && styles.actionsWide]}>
-					<View style={wide && styles.flex}>
-						<Button
-							label={choosePhotoLabels[status]}
-							icon="images-outline"
-							variant="primary"
-							size="large"
-							disabled={blocked}
-							onPress={choosePhoto}
-						/>
-					</View>
+					{showPaste ? (
+						<View
+							style={[styles.photoActions, wide && styles.photoActionsWide]}
+						>
+							<View style={styles.flex}>
+								<Button
+									label={choosePhotoLabels[status]}
+									icon="images-outline"
+									variant="primary"
+									size="large"
+									disabled={blocked}
+									onPress={choosePhoto}
+								/>
+							</View>
+							<View style={styles.flex}>
+								<Button
+									label="Paste"
+									icon="clipboard-outline"
+									size="large"
+									disabled={blocked}
+									onPress={pasteImage}
+								/>
+							</View>
+						</View>
+					) : (
+						<View style={wide && styles.flex}>
+							<Button
+								label={choosePhotoLabels[status]}
+								icon="images-outline"
+								variant="primary"
+								size="large"
+								disabled={blocked}
+								onPress={choosePhoto}
+							/>
+						</View>
+					)}
 					<View style={wide && styles.flex}>
 						<Button
 							label="New Canvas"
@@ -253,6 +296,13 @@ const styles = StyleSheet.create({
 	actionsWide: {
 		flexDirection: "row",
 		maxWidth: 560,
+	},
+	photoActions: {
+		flexDirection: "row",
+		gap: 12,
+	},
+	photoActionsWide: {
+		flex: 2,
 	},
 	hint: {
 		fontSize: 13,

@@ -840,7 +840,6 @@ Automatic license-plate blur
 Collages
 Image annotations
 Custom canvas sizes
-Clipboard image import
 Share-extension integration
 Batch redaction
 PDF redaction

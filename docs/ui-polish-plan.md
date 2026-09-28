@@ -94,7 +94,9 @@ Arrange lives in the selection bar: it swaps the bar's actions for To Front, For
 
 Forward and Backward take two of the five to seven tiles in `LayerActionsPanel` for every selected layer. For a quick tool, layer order is occasional. Fold them into one **Arrange** tile that opens a small card with Bring to Front, Forward, Backward, and Send to Back, each disabled when it can't apply. The ⌘] and ⌘[ shortcuts stay. Make this match whatever step 3 settles for text: if the floating bar was chosen there, Arrange lives in it.
 
-## Step 7 — Clipboard
+## Step 7 — Clipboard (done)
+
+Built Copy on Export (PNG clipboard images on web and native) and native Home Paste through the normal JPEG import pipeline. Export now keeps Save primary with Share and Copy paired below on phone; Home shows Paste beside Choose Photo whenever the native clipboard holds an image.
 
 These are small features that complete the quick screenshot loop: copy a screenshot, paste it into Tuck, redact it, copy it out, and paste it into a chat.
 

@@ -30,6 +30,7 @@ import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
 import { TextButton } from "@/ui/TextButton";
+import { copyImage } from "./copyImage";
 import { exportFormatFor, exportFormats } from "./exportFormat";
 import { exportSizes } from "./exportSizes";
 import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";
@@ -58,8 +59,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const exportSize = sizes[Math.min(sizeIndex, sizes.length - 1)];
 	const format = exportFormatFor(document);
 	const { state, retry } = useRenderedDocument(document, exportSize.scale);
-	const [busy, setBusy] = useState<"saving" | "sharing" | null>(null);
+	const [busy, setBusy] = useState<"saving" | "sharing" | "copying" | null>(
+		null,
+	);
 	const [saved, setSaved] = useState(false);
+	const [copied, setCopied] = useState(false);
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [canShare] = useState(canShareImages);
 	const fit = Math.min(
@@ -76,6 +80,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const pickSize = (index: number) => {
 		setSizeIndex(index);
 		setSaved(false);
+		setCopied(false);
 	};
 
 	const handleLayout = (event: LayoutChangeEvent) => {
@@ -116,6 +121,19 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			}
 		} catch (error) {
 			showAlert("Share failed", errorMessage(error));
+		} finally {
+			setBusy(null);
+		}
+	};
+
+	const handleCopy = async () => {
+		if (state.status !== "ready") return;
+		setBusy("copying");
+		try {
+			await copyImage(state.image);
+			setCopied(true);
+		} catch (error) {
+			showAlert("Copy failed", errorMessage(error));
 		} finally {
 			setBusy(null);
 		}
@@ -258,18 +276,45 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								/>
 							)}
 						</View>
-						{/* Most desktop browsers can't share files. */}
-						{canShare && (
+						<View
+							style={[
+								styles.secondaryActions,
+								wide && styles.secondaryActionsWide,
+							]}
+						>
+							{/* Most desktop browsers can't share files. */}
+							{canShare && (
+								<View style={wide && styles.actionWide}>
+									<Button
+										label={busy === "sharing" ? "Opening…" : "Share"}
+										icon="share-outline"
+										size="large"
+										disabled={!ready || busy !== null}
+										onPress={handleShare}
+									/>
+								</View>
+							)}
 							<View style={wide && styles.actionWide}>
-								<Button
-									label={busy === "sharing" ? "Opening…" : "Share"}
-									icon="share-outline"
-									size="large"
-									disabled={!ready || busy !== null}
-									onPress={handleShare}
-								/>
+								{copied ? (
+									<View style={styles.saved} accessibilityLiveRegion="polite">
+										<Ionicons
+											name="checkmark-circle"
+											size={22}
+											color={colors.accent}
+										/>
+										<Text style={styles.savedLabel}>Copied</Text>
+									</View>
+								) : (
+									<Button
+										label={busy === "copying" ? "Copying…" : "Copy"}
+										icon="copy-outline"
+										size="large"
+										disabled={!ready || busy !== null}
+										onPress={handleCopy}
+									/>
+								)}
 							</View>
-						)}
+						</View>
 					</View>
 				</View>
 			</View>
@@ -361,6 +406,13 @@ const styles = StyleSheet.create({
 	},
 	actionsWide: {
 		flexDirection: "row",
+	},
+	secondaryActions: {
+		flexDirection: "row",
+		gap: 12,
+	},
+	secondaryActionsWide: {
+		flex: 1,
 	},
 	// Only in a row: in a column, the buttons keep their own height.
 	actionWide: {
