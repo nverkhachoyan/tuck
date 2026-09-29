@@ -25,18 +25,21 @@ export const TrayPlacement = createContext<{
 /**
  * A panel rising out of the dock, which sits `bottomInset` up from the
  * canvas's bottom. It's opaque, so it reads the same over any photo, and
- * the canvas refits above it (see `TrayHeight`). With `onDismiss`, a tap
- * anywhere else on the canvas closes it rather than drawing.
+ * the canvas refits above it (see `TrayHeight`). By default, a tap anywhere
+ * else closes it rather than reaching the canvas. Canvas tools can let that
+ * tap through, then close the tray after the gesture finishes.
  */
 export function Tray({
 	bottomInset,
 	dismissLabel,
 	onDismiss,
+	dismissOnOutsidePress = true,
 	children,
 }: {
 	bottomInset: number;
 	dismissLabel?: string;
 	onDismiss?: () => void;
+	dismissOnOutsidePress?: boolean;
 	children: ReactNode;
 }) {
 	const setHeight = useContext(TrayHeight);
@@ -46,7 +49,7 @@ export function Tray({
 		<View style={styles.layer}>
 			{/* Behind the tray, not around it: on web, a click on the tray would
 			    bubble up to it and close the tray. */}
-			{onDismiss && (
+			{dismissOnOutsidePress && onDismiss && (
 				<Pressable
 					style={StyleSheet.absoluteFill}
 					onPress={onDismiss}
@@ -81,11 +84,13 @@ export function ToolOptions({
 	closeLabel,
 	bottomInset,
 	onClose,
+	dismissOnOutsidePress,
 	children,
 }: {
 	closeLabel: string;
 	bottomInset: number;
 	onClose: () => void;
+	dismissOnOutsidePress?: boolean;
 	children: ReactNode;
 }) {
 	return (
@@ -93,6 +98,7 @@ export function ToolOptions({
 			bottomInset={bottomInset}
 			dismissLabel={closeLabel}
 			onDismiss={onClose}
+			dismissOnOutsidePress={dismissOnOutsidePress}
 		>
 			<View style={styles.options}>{children}</View>
 		</Tray>

@@ -952,6 +952,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onDrawBox={handleDrawBox}
 							onDrawShape={handleDrawShape}
 							onPickPoint={handlePickPoint}
+							onToolInteractionEnd={() => setToolOptionsOpen(false)}
 							adjusting={adjusting}
 							bottomInset={wide ? 0 : dockInset + trayHeight}
 							leftInset={wide ? RAIL_WIDTH : 0}

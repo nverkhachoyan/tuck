@@ -122,6 +122,7 @@ export function BrushOptions({
 			closeLabel="Close brush options"
 			bottomInset={bottomInset}
 			onClose={onClose}
+			dismissOnOutsidePress={false}
 		>
 			{isBrush(settings.tool) && (
 				<ToolOption label="Brush">

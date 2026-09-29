@@ -122,6 +122,7 @@ export function RedactOptions({
 			closeLabel="Close redaction style"
 			bottomInset={bottomInset}
 			onClose={onClose}
+			dismissOnOutsidePress={false}
 		>
 			{tool !== "eraser" && (
 				<>

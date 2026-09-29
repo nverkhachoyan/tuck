@@ -139,6 +139,9 @@ type EditorCanvasProps = {
 	onDrawShape?: (placement: ShapePlacement) => void;
 	// Where a tap, or a drag's end, picks a color, in document space.
 	onPickPoint?: (point: Point) => void;
+	// A canvas-tool gesture has finished. A tool can use this to put away its
+	// options after the same gesture has drawn, rather than blocking the draw.
+	onToolInteractionEnd?: () => void;
 	// While set, this image's adjustments are being changed: it's outlined
 	// when there are other images, and the canvas holds still.
 	adjusting?: LiveAdjustment | null;
@@ -205,6 +208,7 @@ export function EditorCanvas({
 	onDrawBox,
 	onDrawShape,
 	onPickPoint,
+	onToolInteractionEnd,
 	adjusting = null,
 	detection = null,
 	bottomInset = 0,
@@ -545,6 +549,7 @@ export function EditorCanvas({
 		(points: number[], id: number) => {
 			if (!tool || points.length < 2) return;
 			setLandedStrokeId(id);
+			onToolInteractionEnd?.();
 			if (tool.type === "pickColor") {
 				const end = points.length - 2;
 				onPickPoint?.({ x: points[end], y: points[end + 1] });
@@ -581,6 +586,7 @@ export function EditorCanvas({
 			onDrawBox,
 			onDrawShape,
 			onPickPoint,
+			onToolInteractionEnd,
 			onSelectLayer,
 			scale,
 			targets,
