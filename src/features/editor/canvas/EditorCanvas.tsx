@@ -142,13 +142,19 @@ type EditorCanvasProps = {
 	// A canvas-tool gesture has finished. A tool can use this to put away its
 	// options after the same gesture has drawn, rather than blocking the draw.
 	onToolInteractionEnd?: () => void;
+	// A tap away from what the tool works on, while painting, finding, or
+	// adjusting. The editor puts the tool down, and the tap then selects what's
+	// under it, as it would without a tool.
+	onTapAway?: () => void;
 	// While set, this image's adjustments are being changed: it's outlined
 	// when there are other images, and the canvas holds still.
 	adjusting?: LiveAdjustment | null;
-	// Temporary detector proposals. While present, taps toggle them instead of
-	// selecting or drawing on the document.
+	// Temporary detector proposals, found in the image `imageId`. While
+	// present, taps toggle them instead of selecting or drawing on the
+	// document.
 	detection?: {
 		regions: readonly DetectionOverlayRegion[];
+		imageId: string;
 		onToggle: (sourceIndex: number) => void;
 	} | null;
 	// How much of the view's bottom is covered by panels floating over it,
@@ -188,6 +194,10 @@ export type EditorCanvasHandle = {
  * shape, a tap picks the one to change, or none. Picking a color, where the
  * finger lifts is the point. While `adjusting`, presses do nothing.
  *
+ * A tap away from what a tool works on calls `onTapAway`: off the document
+ * while painting, off the searched image while finding, and anywhere while
+ * adjusting. A drag from off the document still paints.
+ *
  * `selectionBar` floats by a layer that can be moved, following it on the
  * UI thread, and steps aside while a gesture moves it.
  */
@@ -209,6 +219,7 @@ export function EditorCanvas({
 	onDrawShape,
 	onPickPoint,
 	onToolInteractionEnd,
+	onTapAway,
 	adjusting = null,
 	detection = null,
 	bottomInset = 0,
@@ -357,6 +368,14 @@ export function EditorCanvas({
 				viewPointToDocument(viewport, { x: screenX, y: screenY }),
 			)?.id ?? null,
 		[targets, viewport],
+	);
+
+	const tapAway = useCallback(
+		(point: Point) => {
+			onTapAway?.();
+			onSelectLayer?.(findLayerAt(targets, point)?.id ?? null);
+		},
+		[onTapAway, onSelectLayer, targets],
 	);
 
 	const handleTap = useCallback(
@@ -555,11 +574,18 @@ export function EditorCanvas({
 				onPickPoint?.({ x: points[end], y: points[end + 1] });
 				return;
 			}
+			const start = { x: points[0], y: points[1] };
+			if (
+				!insideDocument(documentSize, start) &&
+				staysWithin(points, TAP_SLOP_PX / scale)
+			) {
+				tapAway(start);
+				return;
+			}
 			if (tool.type !== "redactBox" && tool.type !== "drawShape") {
 				onPaintStroke?.(points);
 				return;
 			}
-			const start = { x: points[0], y: points[1] };
 			const end = {
 				x: points[points.length - 2],
 				y: points[points.length - 1],
@@ -588,6 +614,8 @@ export function EditorCanvas({
 			onPickPoint,
 			onToolInteractionEnd,
 			onSelectLayer,
+			tapAway,
+			documentSize,
 			scale,
 			targets,
 			document,
@@ -626,7 +654,20 @@ export function EditorCanvas({
 			: !tool && textEdit
 				? textEdit.layer
 				: adjustedLayer || null;
-	const idleGesture = useMemo(() => Gesture.Tap().enabled(false), []);
+	const handleIdleTap = useCallback(
+		(screenX: number, screenY: number) => {
+			if (scale === 0) return;
+			tapAway(viewPointToDocument(viewport, { x: screenX, y: screenY }));
+		},
+		[tapAway, scale, viewport],
+	);
+	const idleGesture = useMemo(
+		() =>
+			Gesture.Tap().onEnd((event, success) => {
+				if (success) scheduleOnRN(handleIdleTap, event.x, event.y);
+			}),
+		[handleIdleTap],
+	);
 	const handleDetectionTap = useCallback(
 		(screenX: number, screenY: number) => {
 			if (!detection || scale === 0) return;
@@ -648,9 +689,25 @@ export function EditorCanvas({
 					hit = region;
 				}
 			}
-			if (hit) detection.onToggle(hit.sourceIndex);
+			if (hit) {
+				detection.onToggle(hit.sourceIndex);
+				return;
+			}
+			// A miss on the image, as by a face, keeps finding. Where the image is
+			// locked, it has no hit box, and shows only inside the document.
+			const under = findLayerAt(targets, point)?.id ?? null;
+			const image = document.layers.find(
+				(layer) => layer.id === detection.imageId,
+			);
+			const onImage =
+				under === null
+					? image !== undefined &&
+						insideDocument(documentSize, point) &&
+						hitTestBox(image.transform, layerBounds(image), point)
+					: under === detection.imageId;
+			if (!onImage) tapAway(point);
 		},
-		[detection, scale, viewport],
+		[detection, scale, viewport, targets, document, documentSize, tapAway],
 	);
 	const detectionGesture = useMemo(
 		() =>
@@ -803,6 +860,25 @@ function SelectionBarFrame({
 			</Animated.View>
 		</View>
 	);
+}
+
+function insideDocument(size: { width: number; height: number }, point: Point) {
+	return (
+		point.x >= 0 &&
+		point.y >= 0 &&
+		point.x <= size.width &&
+		point.y <= size.height
+	);
+}
+
+/** Whether a stroke's points, flat pairs, all stay within `slop` of its first. */
+function staysWithin(points: number[], slop: number): boolean {
+	for (let i = 2; i < points.length; i += 2) {
+		if (Math.hypot(points[i] - points[0], points[i + 1] - points[1]) > slop) {
+			return false;
+		}
+	}
+	return true;
 }
 
 /** Whether `tool`'s strokes join `layer`, rather than starting a new one. */

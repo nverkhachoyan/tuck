@@ -296,7 +296,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// The tool in the dock. While drawing, strokes on the canvas go into the
 	// selected drawing, or a new one; while redacting, into the selected
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
-	// what's found. While adjusting, the canvas holds still.
+	// what's found. While adjusting, the canvas holds still. A tap away from
+	// what the tool works on puts it down, as Done does.
 	const [tool, setTool] = useState<
 		"draw" | "redact" | "find" | "adjust" | null
 	>(null);
@@ -978,8 +979,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onNudgeLayer={nudgeLayer}
 							tool={canvasTool}
 							detection={
-								tool === "find" && !eyedropper
-									? { regions: detectionOverlay, onToggle: detection.toggle }
+								tool === "find" && detectedImage && !eyedropper
+									? {
+											regions: detectionOverlay,
+											imageId: detectedImage.id,
+											onToggle: detection.toggle,
+										}
 									: null
 							}
 							onPaintStroke={handlePaintStroke}
@@ -987,6 +992,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onDrawShape={handleDrawShape}
 							onPickPoint={handlePickPoint}
 							onToolInteractionEnd={() => setToolOptionsOpen(false)}
+							onTapAway={doneWithTool}
 							adjusting={adjusting}
 							bottomInset={wide ? 0 : dockInset + trayHeight}
 							leftInset={wide ? RAIL_WIDTH : 0}
