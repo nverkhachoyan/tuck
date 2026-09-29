@@ -23,7 +23,7 @@ import {
 // did image layers' `sticker`: builds from before it list a sticker as a
 // photo. So did image layers' `adjustments`: builds from before them show
 // the image unadjusted.
-export const PROJECT_VERSION = 3;
+export const PROJECT_VERSION = 4;
 
 // The file of the photo a project was made from. Saved image layers name a
 // file in the project as their `uri`: this one, or an added photo's.
@@ -170,11 +170,14 @@ function isFields(value: unknown): value is Fields {
 function upgradeProject(value: unknown): unknown {
 	const upgraded = upgradeFromVersion1(value);
 	// Every version 2 project is also a version 3 one, with the photo first.
-	return upgradeImageOpacity(
+	const opaque = upgradeImageOpacity(
 		isFields(upgraded) && upgraded.version === 2
 			? { ...upgraded, version: 3 }
 			: upgraded,
 	);
+	return isFields(opaque) && opaque.version === 3 && isFields(opaque.document)
+		? { ...opaque, version: 4, document: { ...opaque.document, groups: [] } }
+		: opaque;
 }
 
 /**
@@ -256,13 +259,31 @@ function isThumbnail(value: unknown): value is ProjectThumbnail {
 }
 
 function isDocument(value: unknown): boolean {
+	if (!isFields(value)) return false;
+	const { layers, groups } = value;
 	return (
-		isFields(value) &&
-		Array.isArray(value.layers) &&
+		Array.isArray(layers) &&
 		isPositive(value.width) &&
 		isPositive(value.height) &&
 		isColorOrNull(value.background) &&
-		value.layers.every(isLayer)
+		layers.every(isLayer) &&
+		Array.isArray(groups) &&
+		groups.every((group) => isLayerGroup(group, layers))
+	);
+}
+
+function isLayerGroup(value: unknown, layers: unknown[]): boolean {
+	return (
+		isFields(value) &&
+		typeof value.id === "string" &&
+		typeof value.name === "string" &&
+		Array.isArray(value.layerIds) &&
+		value.layerIds.length > 0 &&
+		value.layerIds.every(
+			(id) =>
+				typeof id === "string" &&
+				layers.some((layer) => isFields(layer) && layer.id === id),
+		)
 	);
 }
 

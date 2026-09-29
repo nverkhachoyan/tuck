@@ -4,6 +4,7 @@ import type { Adjustments } from "../model/adjustments.ts";
 import {
 	createDrawingLayer,
 	createImageLayer,
+	createLayerGroup,
 	createPlacedRedactionBox,
 	createRedactionBox,
 	createRedactionStrokes,
@@ -12,6 +13,7 @@ import {
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
+	groupsForLayers,
 	isLineShape,
 	type Layer,
 	type MaskStroke,
@@ -87,6 +89,9 @@ export type EditorSlice = {
 		placements: readonly RedactionBoxPlacement[],
 		effect: RedactionEffect,
 	) => void;
+	setLayerGroupHidden: (id: string, hidden: boolean) => void;
+	setLayerGroupLocked: (id: string, locked: boolean) => void;
+	deleteLayerGroup: (id: string) => void;
 	paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) => void;
 	setRedactionEffect: (id: string, effect: RedactionEffect) => void;
 	addShape: (
@@ -181,7 +186,14 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	) =>
 		setDocument(
 			action,
-			(document) => ({ ...document, layers: update(document.layers) }),
+			(document) => {
+				const layers = update(document.layers);
+				return {
+					...document,
+					layers,
+					groups: groupsForLayers(document.groups, layers),
+				};
+			},
 			nextSelectedLayerId,
 		);
 
@@ -312,17 +324,104 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			addOnTop("editor/addRedactionBox", createRedactionBox(rect, effect));
 		},
 
-		// Detector proposals land together, on top, as one undo step. The last
-		// one is selected, like a box drawn by hand.
+		// Detector proposals land together, on top, as one undo step. Their
+		// group is metadata over the flat paint order, so a large result stays
+		// one compact row without adding a canvas compositing layer.
 		addRedactionBoxes: (placements, effect) => {
 			const boxes = placements
 				.filter(({ width, height }) => width > 0 && height > 0)
 				.map((placement) => createPlacedRedactionBox(placement, effect));
 			if (boxes.length === 0) return;
-			setLayers(
+			setDocument(
 				"editor/addRedactionBoxes",
-				(layers) => [...layers, ...boxes],
+				(document) => ({
+					...document,
+					layers: [...document.layers, ...boxes],
+					groups: [
+						...(document.groups ?? []),
+						createLayerGroup(
+							"Find results",
+							boxes.map((box) => box.id),
+						),
+					],
+				}),
 				boxes[boxes.length - 1].id,
+			);
+		},
+
+		setLayerGroupHidden: (id, hidden) => {
+			const group = get().document?.groups?.find(
+				(candidate) => candidate.id === id,
+			);
+			if (!group) return;
+			const ids = new Set(group.layerIds);
+			if (
+				!(get().document?.layers ?? []).some(
+					(layer) => ids.has(layer.id) && layer.hidden !== hidden,
+				)
+			) {
+				return;
+			}
+			const selectedLayerId = get().selectedLayerId;
+			setLayers(
+				hidden ? "editor/hideLayerGroup" : "editor/showLayerGroup",
+				(layers) =>
+					layers.map((layer) =>
+						ids.has(layer.id) && layer.hidden !== hidden
+							? { ...layer, hidden }
+							: layer,
+					),
+				selectedLayerId !== null && ids.has(selectedLayerId) && hidden
+					? null
+					: selectedLayerId,
+			);
+		},
+
+		setLayerGroupLocked: (id, locked) => {
+			const group = get().document?.groups?.find(
+				(candidate) => candidate.id === id,
+			);
+			if (!group) return;
+			const ids = new Set(group.layerIds);
+			if (
+				!(get().document?.layers ?? []).some(
+					(layer) => ids.has(layer.id) && layer.locked !== locked,
+				)
+			) {
+				return;
+			}
+			const selectedLayerId = get().selectedLayerId;
+			setLayers(
+				locked ? "editor/lockLayerGroup" : "editor/unlockLayerGroup",
+				(layers) =>
+					layers.map((layer) =>
+						ids.has(layer.id) && layer.locked !== locked
+							? { ...layer, locked }
+							: layer,
+					),
+				selectedLayerId !== null && ids.has(selectedLayerId) && locked
+					? null
+					: selectedLayerId,
+			);
+		},
+
+		deleteLayerGroup: (id) => {
+			const group = get().document?.groups?.find(
+				(candidate) => candidate.id === id,
+			);
+			if (!group) return;
+			const ids = new Set(group.layerIds);
+			const { selectedLayerId } = get();
+			setDocument(
+				"editor/deleteLayerGroup",
+				(document) => ({
+					...document,
+					layers: document.layers.filter((layer) => !ids.has(layer.id)),
+					groups: (document.groups ?? []).filter(
+						(candidate) => candidate !== group,
+					),
+				}),
+				selectedLayerId && ids.has(selectedLayerId) ? null : selectedLayerId,
 			);
 		},
 

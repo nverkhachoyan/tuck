@@ -56,6 +56,7 @@ export function LayerRow({
 	onSetHidden,
 	onSetLocked,
 	onDelete,
+	staticRow = false,
 }: {
 	layer: Layer;
 	slot: number;
@@ -65,6 +66,8 @@ export function LayerRow({
 	scrollRef: RefObject<ScrollView | null>;
 	selected: boolean;
 	compact: boolean;
+	/** A group-expanded list keeps its rows in normal flow, not drag slots. */
+	staticRow?: boolean;
 } & LayerRowActions) {
 	const { id, hidden, locked } = layer;
 	const label = layerLabel(layer);
@@ -142,9 +145,9 @@ export function LayerRow({
 		<Animated.View
 			style={[
 				styles.row,
-				styles.stackedRow,
+				!staticRow && styles.stackedRow,
 				selected && styles.rowSelected,
-				position,
+				!staticRow && position,
 			]}
 			onPointerEnter={(event) => {
 				if (event.nativeEvent.pointerType === "mouse") setHovered(true);
@@ -186,22 +189,24 @@ export function LayerRow({
 					onPress={() => onDelete(id)}
 				/>
 			</View>
-			<GestureDetector gesture={pan}>
-				<View
-					style={[
-						styles.trailing,
-						compact && styles.compactTrailing,
-						handleCursor,
-					]}
-					accessibilityLabel={`Reorder ${label}`}
-				>
-					<Ionicons
-						name="reorder-three-outline"
-						size={24}
-						color={colors.textSecondary}
-					/>
-				</View>
-			</GestureDetector>
+			{staticRow ? null : (
+				<GestureDetector gesture={pan}>
+					<View
+						style={[
+							styles.trailing,
+							compact && styles.compactTrailing,
+							handleCursor,
+						]}
+						accessibilityLabel={`Reorder ${label}`}
+					>
+						<Ionicons
+							name="reorder-three-outline"
+							size={24}
+							color={colors.textSecondary}
+						/>
+					</View>
+				</GestureDetector>
+			)}
 		</Animated.View>
 	);
 }

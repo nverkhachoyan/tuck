@@ -531,6 +531,12 @@ describe("editorSlice", () => {
 			);
 			const added = redactions(store);
 			assert.equal(added.length, 2);
+			const [group] = store.getState().document?.groups ?? [];
+			assert.equal(group?.name, "Find results");
+			assert.deepEqual(
+				group?.layerIds,
+				added.map((layer) => layer.id),
+			);
 			assert.deepEqual(
 				added.map(({ effect, transform }) => ({ effect, transform })),
 				[
@@ -558,6 +564,18 @@ describe("editorSlice", () => {
 			);
 			assert.equal(store.getState().selectedLayerId, added[1].id);
 			assert.equal(store.getState().past.length, 2, "one new history step");
+
+			store.getState().setLayerGroupHidden(group?.id ?? "", true);
+			assert.ok(
+				added.every((layer) => {
+					const current = store
+						.getState()
+						.document?.layers.find(({ id }) => id === layer.id);
+					return current?.hidden;
+				}),
+			);
+			store.getState().undo();
+			assert.equal(store.getState().document?.groups?.length, 1);
 
 			store.getState().undo();
 			assert.equal(store.getState().document, before);

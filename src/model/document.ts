@@ -216,6 +216,18 @@ export type Layer =
 	| RedactionLayer
 	| ShapeLayer;
 
+/**
+ * A named collection of existing layers. Groups deliberately keep their
+ * children in the document's flat paint order: that makes rendering, export,
+ * and canvas hit testing just as cheap as an ungrouped document, while the
+ * layers panel can present a large batch as one row.
+ */
+export type LayerGroup = {
+	id: string;
+	name: string;
+	layerIds: string[];
+};
+
 // The canvas is the document itself: its size is the exported image's, and
 // layers outside it are cropped.
 export type EditorDocument = {
@@ -226,6 +238,8 @@ export type EditorDocument = {
 	// Bottom to top, and possibly none: a blank canvas starts empty, and any
 	// layer can be deleted.
 	layers: Layer[];
+	// Groups only organize layers; they never add a canvas compositing layer.
+	groups?: LayerGroup[];
 };
 
 export const identityTransform: Transform = {
@@ -243,6 +257,13 @@ export function createLayerId(prefix: string): string {
 	return `${prefix}-${Date.now().toString(36)}-${nextLayerId}`;
 }
 
+export function createLayerGroup(
+	name: string,
+	layerIds: readonly string[],
+): LayerGroup {
+	return { id: createLayerId("group"), name, layerIds: [...layerIds] };
+}
+
 /**
  * A canvas the size of the photo, with the photo as its only layer. The
  * photo starts locked, so the crop tool places it, until it's unlocked to
@@ -258,6 +279,7 @@ export function createDocumentFromImage(
 		width,
 		height,
 		background: null,
+		groups: [],
 		layers: [
 			{
 				type: "image",
@@ -281,7 +303,19 @@ export function createBlankDocument(
 	height: number,
 	background: string | null,
 ): EditorDocument {
-	return { width, height, background, layers: [] };
+	return { width, height, background, layers: [], groups: [] };
+}
+
+/** Drops deleted layers and empty groups, preserving the document's groups. */
+export function groupsForLayers(
+	groups: readonly LayerGroup[] | undefined,
+	layers: readonly Layer[],
+): LayerGroup[] {
+	const ids = new Set(layers.map((layer) => layer.id));
+	return (groups ?? []).flatMap((group) => {
+		const layerIds = group.layerIds.filter((id) => ids.has(id));
+		return layerIds.length > 0 ? [{ ...group, layerIds }] : [];
+	});
 }
 
 /** Places something of this size centered on a canvas of the same size. */

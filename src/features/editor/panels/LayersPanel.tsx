@@ -1,5 +1,5 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import Animated, {
 	Easing,
@@ -7,10 +7,11 @@ import Animated, {
 	FadeOutRight,
 	useSharedValue,
 } from "react-native-reanimated";
-import type { Layer } from "@/model/document";
+import type { Layer, LayerGroup } from "@/model/document";
 import { colors, radii, typography } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
+import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 
@@ -27,9 +28,13 @@ export const LAYERS_SIDEBAR_INSET = SIDEBAR_WIDTH + SIDEBAR_MARGIN * 2;
 
 type LayerListProps = LayerRowActions & {
 	layers: Layer[];
+	groups: LayerGroup[];
 	background: string | null;
 	selectedLayerId: string | null;
 	onSetBackground: (background: string | null) => void;
+	onSetGroupHidden: (id: string, hidden: boolean) => void;
+	onSetGroupLocked: (id: string, locked: boolean) => void;
+	onDeleteGroup: (id: string) => void;
 };
 
 /**
@@ -115,7 +120,15 @@ export function LayersPanel({
  * slide aside without React rendering, and the document is only reordered
  * once, when the drag ends.
  */
-function LayerList({
+function LayerList(props: LayerListProps & { compact: boolean }) {
+	return props.groups.length > 0 ? (
+		<GroupedLayerList {...props} />
+	) : (
+		<FlatLayerList {...props} />
+	);
+}
+
+function FlatLayerList({
 	layers,
 	background,
 	selectedLayerId,
@@ -171,6 +184,181 @@ function LayerList({
 				<BackgroundPicker value={background} onPick={onSetBackground} />
 			</View>
 		</ScrollView>
+	);
+}
+
+function GroupedLayerList({
+	layers,
+	groups,
+	background,
+	selectedLayerId,
+	onSelect,
+	onMove,
+	onSetHidden,
+	onSetLocked,
+	onDelete,
+	onSetBackground,
+	compact,
+	onSetGroupHidden,
+	onSetGroupLocked,
+	onDeleteGroup,
+}: LayerListProps & { compact: boolean }) {
+	const [expanded, setExpanded] = useState<ReadonlySet<string>>(
+		() => new Set(),
+	);
+	const groupsByLayer = useMemo(() => {
+		const result = new Map<string, LayerGroup>();
+		for (const group of groups) {
+			for (const id of group.layerIds) result.set(id, group);
+		}
+		return result;
+	}, [groups]);
+	const topFirst = layers.slice().reverse();
+	const shown = new Set<string>();
+	return (
+		<ScrollView contentContainerStyle={[styles.column, styles.content]}>
+			{topFirst.map((layer) => {
+				const group = groupsByLayer.get(layer.id);
+				if (!group) {
+					return (
+						<StaticLayerRow
+							key={layer.id}
+							layer={layer}
+							selected={layer.id === selectedLayerId}
+							compact={compact}
+							onSelect={onSelect}
+							onMove={onMove}
+							onSetHidden={onSetHidden}
+							onSetLocked={onSetLocked}
+							onDelete={onDelete}
+						/>
+					);
+				}
+				if (shown.has(group.id)) return null;
+				shown.add(group.id);
+				const children = topFirst.filter((candidate) =>
+					group.layerIds.includes(candidate.id),
+				);
+				const isExpanded = expanded.has(group.id);
+				return (
+					<View key={group.id}>
+						<GroupRow
+							group={group}
+							layers={children}
+							expanded={isExpanded}
+							compact={compact}
+							onToggle={() =>
+								setExpanded((current) => {
+									const next = new Set(current);
+									if (next.has(group.id)) next.delete(group.id);
+									else next.add(group.id);
+									return next;
+								})
+							}
+							onSetHidden={onSetGroupHidden}
+							onSetLocked={onSetGroupLocked}
+							onDelete={onDeleteGroup}
+						/>
+						{isExpanded &&
+							children.map((child) => (
+								<View key={child.id} style={styles.groupChild}>
+									<StaticLayerRow
+										layer={child}
+										selected={child.id === selectedLayerId}
+										compact={compact}
+										onSelect={onSelect}
+										onMove={onMove}
+										onSetHidden={onSetHidden}
+										onSetLocked={onSetLocked}
+										onDelete={onDelete}
+									/>
+								</View>
+							))}
+					</View>
+				);
+			})}
+			<View style={styles.row}>
+				<Text style={styles.label}>Background</Text>
+				<BackgroundPicker value={background} onPick={onSetBackground} />
+			</View>
+		</ScrollView>
+	);
+}
+
+function StaticLayerRow(
+	props: Omit<
+		Parameters<typeof LayerRow>[0],
+		"slot" | "count" | "order" | "dragId" | "scrollRef" | "staticRow"
+	>,
+) {
+	const order = useSharedValue<string[]>([]);
+	const dragId = useSharedValue<string | null>(null);
+	const scrollRef = useRef<ScrollView>(null);
+	return (
+		<LayerRow
+			{...props}
+			slot={0}
+			count={1}
+			order={order}
+			dragId={dragId}
+			scrollRef={scrollRef}
+			staticRow
+		/>
+	);
+}
+
+function GroupRow({
+	group,
+	layers,
+	expanded,
+	compact,
+	onToggle,
+	onSetHidden,
+	onSetLocked,
+	onDelete,
+}: {
+	group: LayerGroup;
+	layers: Layer[];
+	expanded: boolean;
+	compact: boolean;
+	onToggle: () => void;
+	onSetHidden: (id: string, hidden: boolean) => void;
+	onSetLocked: (id: string, locked: boolean) => void;
+	onDelete: (id: string) => void;
+}) {
+	const hidden = layers.every((layer) => layer.hidden);
+	const locked = layers.every((layer) => layer.locked);
+	return (
+		<View style={[styles.groupRow, hidden && styles.dimmed]}>
+			<Pressable
+				style={styles.groupMain}
+				onPress={onToggle}
+				accessibilityRole="button"
+				accessibilityLabel={`${expanded ? "Collapse" : "Expand"} ${group.name}`}
+			>
+				<Text style={styles.disclosure}>{expanded ? "⌄" : "›"}</Text>
+				<Text style={styles.groupLabel} numberOfLines={1}>
+					{group.name} · {layers.length}
+				</Text>
+			</Pressable>
+			<View style={[styles.groupActions, compact && styles.compactActions]}>
+				<IconButton
+					icon={hidden ? "eye-off-outline" : "eye-outline"}
+					label={hidden ? `Show ${group.name}` : `Hide ${group.name}`}
+					onPress={() => onSetHidden(group.id, !hidden)}
+				/>
+				<IconButton
+					icon={locked ? "lock-closed-outline" : "lock-open-outline"}
+					label={locked ? `Unlock ${group.name}` : `Lock ${group.name}`}
+					onPress={() => onSetLocked(group.id, !locked)}
+				/>
+				<IconButton
+					icon="trash-outline"
+					label={`Delete ${group.name}`}
+					onPress={() => onDelete(group.id)}
+				/>
+			</View>
+		</View>
 	);
 }
 
@@ -243,4 +431,20 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 		color: colors.textSecondary,
 	},
+	groupRow: {
+		height: ROW_HEIGHT,
+		flexDirection: "row",
+		alignItems: "center",
+		marginHorizontal: 8,
+		paddingLeft: 12,
+		borderRadius: radii.medium,
+		backgroundColor: colors.surfaceHover,
+	},
+	groupMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+	disclosure: { ...typography.title, color: colors.textSecondary },
+	groupLabel: { ...typography.bodyStrong, flex: 1, color: colors.textPrimary },
+	groupActions: { flexDirection: "row", gap: 22, paddingLeft: 12 },
+	compactActions: { gap: 14 },
+	groupChild: { marginLeft: 16 },
+	dimmed: { opacity: 0.4 },
 });

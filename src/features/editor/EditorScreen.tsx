@@ -216,6 +216,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const drawStroke = useStore((state) => state.drawStroke);
 	const addRedactionBox = useStore((state) => state.addRedactionBox);
 	const addRedactionBoxes = useStore((state) => state.addRedactionBoxes);
+	const setLayerGroupHidden = useStore((state) => state.setLayerGroupHidden);
+	const setLayerGroupLocked = useStore((state) => state.setLayerGroupLocked);
+	const deleteLayerGroup = useStore((state) => state.deleteLayerGroup);
 	const paintRedaction = useStore((state) => state.paintRedaction);
 	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
 	const addShape = useStore((state) => state.addShape);
@@ -833,6 +836,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	const layerList = {
 		layers: document.layers,
+		groups: document.groups ?? [],
 		background: document.background,
 		selectedLayerId: selectedLayer?.id ?? null,
 		onSelect: (id: string) => {
@@ -843,6 +847,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onSetHidden: setLayerHidden,
 		onSetLocked: setLayerLocked,
 		onDelete: deleteLayer,
+		onSetGroupHidden: setLayerGroupHidden,
+		onSetGroupLocked: setLayerGroupLocked,
+		onDeleteGroup: deleteLayerGroup,
 		onSetBackground: setBackground,
 		onClose: closeLayers,
 		bottomInset: dockInset,

@@ -64,6 +64,7 @@ describe("createBlankDocument", () => {
 			height: 1920,
 			background: "#FFFFFF",
 			layers: [],
+			groups: [],
 		});
 	});
 });
