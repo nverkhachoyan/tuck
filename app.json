@@ -51,7 +51,8 @@
 			"expo-sharing",
 			"expo-asset",
 			"expo-font",
-			"./modules/image-analysis/app.plugin.js"
+			"./modules/image-analysis/app.plugin.js",
+			"./plugins/withSceneLifecycle.js"
 		],
 		"name": "Tuck",
 		"slug": "photo-editor"
