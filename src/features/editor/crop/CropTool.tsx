@@ -12,7 +12,13 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import { colors, radii, typography, webTransition } from "@/theme";
+import {
+	chosenOutline,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { interaction } from "@/ui/interaction";
@@ -383,9 +389,7 @@ const styles = StyleSheet.create({
 	chipHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	chipSelected: {
-		boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
-	},
+	chipSelected: chosenOutline,
 	chipPressed: {
 		transform: [{ scale: 0.96 }],
 	},
@@ -396,7 +400,6 @@ const styles = StyleSheet.create({
 	},
 	chipLabelSelected: {
 		color: colors.textPrimary,
-		fontWeight: "600",
 	},
 	actions: {
 		flexDirection: "row",
@@ -415,16 +418,14 @@ const styles = StyleSheet.create({
 	actionIcon: {
 		width: 36,
 		height: 36,
-		borderRadius: 18,
+		borderRadius: radii.small,
 		alignItems: "center",
 		justifyContent: "center",
 	},
 	actionIconHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	actionIconSelected: {
-		backgroundColor: colors.chosenSoft,
-	},
+	actionIconSelected: chosenOutline,
 	actionIconPressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],

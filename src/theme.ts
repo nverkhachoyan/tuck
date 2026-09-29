@@ -32,11 +32,9 @@ export const colors = {
 	selection: "#58A6FF",
 	selectionSoft: "rgba(88, 166, 255, 0.16)",
 	selectionBorder: "rgba(88, 166, 255, 0.55)",
-	// A chosen option among controls (a font, a tool, a swatch's ring): the
+	// A chosen option's outline, ring, or underline (see `chosenOutline`): the
 	// UI stays neutral, and color is left to the photo and the accent.
 	chosen: "#F5F5F7",
-	onChosen: "#0A0A0B",
-	chosenSoft: "rgba(255, 255, 255, 0.16)",
 	// Around every color swatch, so black shows on the dark UI and white on a
 	// light photo.
 	swatchRing: "rgba(255, 255, 255, 0.3)",
@@ -108,6 +106,18 @@ export const floatingShadow = "0 12px 32px rgba(0, 0, 0, 0.45)";
 export const fonts = {
 	display: "InstrumentSerif-Regular",
 	displayItalic: "InstrumentSerif-Italic",
+};
+
+// A chosen option among controls (a tool, a font, an aspect ratio): a thin
+// outline with `radii.small` corners, never a fill. Fill is left for what
+// really is a color.
+export const chosenOutline: ViewStyle = {
+	boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
+};
+
+// The chosen tab: an underline along its label's bottom edge.
+export const chosenUnderline: ViewStyle = {
+	boxShadow: `inset 0 -2px 0 ${colors.chosen}`,
 };
 
 // Every bar across the top of a screen, so switching screens and tools never

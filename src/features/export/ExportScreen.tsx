@@ -24,6 +24,7 @@ import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
 import {
 	CHECKER_CELL,
+	chosenOutline,
 	colors,
 	radii,
 	typography,
@@ -385,16 +386,13 @@ const styles = StyleSheet.create({
 	sizeChip: {
 		height: 34,
 		paddingHorizontal: 12,
-		borderRadius: 17,
-		backgroundColor: colors.glassControl,
+		borderRadius: radii.small,
 		justifyContent: "center",
 	},
 	sizeChipHovered: {
-		backgroundColor: colors.glassControlHover,
+		backgroundColor: colors.hoverOverlay,
 	},
-	sizeChipSelected: {
-		backgroundColor: colors.chosen,
-	},
+	sizeChipSelected: chosenOutline,
 	sizeChipPressed: {
 		transform: [{ scale: 0.96 }],
 	},
@@ -404,8 +402,7 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	sizeLabelSelected: {
-		fontWeight: "600",
-		color: colors.onChosen,
+		color: colors.textPrimary,
 	},
 	actions: {
 		gap: 12,

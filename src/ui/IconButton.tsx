@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
 import { Pressable, StyleSheet } from "react-native";
-import { colors, webTransition } from "@/theme";
+import { chosenOutline, colors, webTransition } from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 
@@ -89,9 +89,7 @@ const styles = StyleSheet.create({
 	dangerHovered: {
 		backgroundColor: colors.dangerSoft,
 	},
-	selected: {
-		backgroundColor: colors.chosenSoft,
-	},
+	selected: chosenOutline,
 	pressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],

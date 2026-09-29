@@ -54,7 +54,9 @@ Add to `theme.ts`, then replace literal values:
 
 Tool labels grow from 11 to 12pt: check that Redact's five tools still fit at 390pt.
 
-### 1.3 One way to show a choice
+### 1.3 One way to show a choice (done)
+
+Built with `chosenOutline` and `chosenUnderline` in `theme.ts`, which every outlined or underlined choice now uses. `RingChoice` gained an `outline` variant for icons (Draw's brush types and shapes); colors, sizes, and Redact's strengths keep the ring. Header toggles (Layers) and Crop's Turn layers switch are outlined too. `chosenSoft` and `onChosen` are gone.
 
 Apply rule 3 everywhere:
 

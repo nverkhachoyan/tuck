@@ -129,6 +129,7 @@ export function BrushOptions({
 						{(["pen", "marker", "neon"] as const).map((brush) => (
 							<RingChoice
 								key={brush}
+								variant="outline"
 								label={
 									brush === "pen"
 										? "Pen"
@@ -155,6 +156,7 @@ export function BrushOptions({
 						{shapeKinds.map((shape) => (
 							<RingChoice
 								key={shape}
+								variant="outline"
 								label={SHAPE_NAMES[shape]}
 								selected={settings.shape === shape}
 								onPress={() => onChange({ ...settings, shape })}

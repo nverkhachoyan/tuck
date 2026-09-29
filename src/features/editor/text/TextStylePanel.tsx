@@ -17,7 +17,14 @@ import {
 	type TextLayerEdit,
 	textFonts,
 } from "@/model/document";
-import { colors, typography, webTransition } from "@/theme";
+import {
+	chosenOutline,
+	chosenUnderline,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { gradientBackground } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { ColorPicker } from "../ColorPicker";
@@ -27,8 +34,8 @@ import { ToolOption, ToolOptions } from "../ToolOptions";
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.
 const TARGET = 44;
-// The tabs' track, inside their targets.
-const TRACK = 34;
+// A tab's label and underline, inside its target.
+const TAB_HEIGHT = 30;
 // Inside the panel's rounded corners.
 const PADDING = 16;
 
@@ -148,7 +155,6 @@ export function TextStylePanel({
 	return (
 		<View style={styles.container}>
 			<View style={styles.tabs} accessibilityRole="tablist">
-				<View style={styles.track} />
 				{TABS.map(({ tab: value, label }) => (
 					<Tab
 						key={value}
@@ -327,7 +333,7 @@ function AlignPicker({
 									<MaterialCommunityIcons
 										name={icon}
 										size={20}
-										color={selected ? colors.onChosen : colors.textPrimary}
+										color={colors.textPrimary}
 									/>
 								</View>
 							);
@@ -339,7 +345,7 @@ function AlignPicker({
 	);
 }
 
-/** One segment of the tabs' track; the active one is raised out of it. */
+/** One tab; the active one is underlined. */
 function Tab({
 	label,
 	active,
@@ -420,7 +426,6 @@ function FontPicker({
 										style={[
 											styles.fontLabel,
 											{ fontFamily: TEXT_FONTS[font].family },
-											selected && styles.fontLabelSelected,
 										]}
 									>
 										{FONT_LABELS[font]}
@@ -446,17 +451,6 @@ const styles = StyleSheet.create({
 	},
 	tabs: {
 		flexDirection: "row",
-		paddingHorizontal: (TARGET - TRACK) / 2,
-	},
-	// Behind the tabs, which are taller to be easy to hit.
-	track: {
-		position: "absolute",
-		top: (TARGET - TRACK) / 2,
-		bottom: (TARGET - TRACK) / 2,
-		left: 0,
-		right: 0,
-		borderRadius: TRACK / 2,
-		backgroundColor: "rgba(0, 0, 0, 0.28)",
 	},
 	// Rounded so a browser's focus ring hugs what's drawn inside.
 	target: {
@@ -469,17 +463,14 @@ const styles = StyleSheet.create({
 	tab: {
 		flexGrow: 1,
 	},
+	// As wide as its label, so the underline is too.
 	segment: {
-		height: TRACK - 6,
-		paddingHorizontal: 4,
-		alignItems: "center",
-		borderRadius: (TRACK - 6) / 2,
+		alignSelf: "center",
+		height: TAB_HEIGHT,
+		paddingHorizontal: 2,
 		justifyContent: "center",
 	},
-	segmentActive: {
-		backgroundColor: colors.chosenSoft,
-		boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)",
-	},
+	segmentActive: chosenUnderline,
 	tabLabel: {
 		...typography.labelStrong,
 		color: colors.textSecondary,
@@ -525,25 +516,19 @@ const styles = StyleSheet.create({
 	},
 	fontChip: {
 		height: 34,
-		paddingHorizontal: 14,
-		borderRadius: 17,
-		backgroundColor: colors.glassControl,
+		paddingHorizontal: 12,
+		borderRadius: radii.small,
 		justifyContent: "center",
 	},
 	fontChipHovered: {
-		backgroundColor: colors.glassControlHover,
+		backgroundColor: colors.hoverOverlay,
 	},
-	fontChipSelected: {
-		backgroundColor: colors.chosen,
-	},
+	fontChipSelected: chosenOutline,
 	fontChipPressed: {
 		transform: [{ scale: 0.96 }],
 	},
 	fontLabel: {
 		fontSize: 16,
 		color: colors.textPrimary,
-	},
-	fontLabelSelected: {
-		color: colors.onChosen,
 	},
 });

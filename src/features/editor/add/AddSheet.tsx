@@ -22,7 +22,13 @@ import {
 	stickerCategories,
 } from "@/stickers/stickers";
 import type { ShownSticker } from "@/stickers/useSavedStickers";
-import { colors, radii, typography, webTransition } from "@/theme";
+import {
+	chosenUnderline,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
@@ -217,11 +223,10 @@ function CategoryChip({
 			accessibilityRole="tab"
 			accessibilityState={{ selected }}
 			style={(state) => {
-				const { pressed, hovered } = interaction(state);
+				const { pressed } = interaction(state);
 				return [
 					styles.chip,
 					webTransition,
-					hovered && styles.hovered,
 					pressed && styles.pressed,
 					selected && styles.chipSelected,
 				];
@@ -455,22 +460,19 @@ const styles = StyleSheet.create({
 		flexShrink: 0,
 	},
 	chips: {
-		gap: 8,
-		paddingHorizontal: 12,
+		gap: 18,
+		paddingHorizontal: 16,
 		paddingTop: 14,
 		paddingBottom: 6,
 	},
+	// A tab: its label, underlined while chosen.
 	chip: {
-		paddingHorizontal: 14,
+		paddingHorizontal: 2,
 		paddingVertical: 7,
-		borderRadius: 999,
-		backgroundColor: colors.glassControl,
 	},
-	chipSelected: {
-		backgroundColor: colors.chosenSoft,
-	},
+	chipSelected: chosenUnderline,
 	chipLabel: {
-		...typography.label,
+		...typography.labelStrong,
 		color: colors.textSecondary,
 	},
 	chipLabelLit: {

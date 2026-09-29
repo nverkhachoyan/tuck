@@ -1,7 +1,13 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ComponentProps, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii, typography, webTransition } from "@/theme";
+import {
+	chosenOutline,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { GlassView } from "@/ui/GlassView";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
@@ -190,9 +196,7 @@ const styles = StyleSheet.create({
 	hovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	selected: {
-		backgroundColor: colors.chosenSoft,
-	},
+	selected: chosenOutline,
 	pressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.94 }],

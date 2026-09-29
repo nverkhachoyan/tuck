@@ -6,7 +6,7 @@ import {
 	type Adjustments,
 	adjustmentKeys,
 } from "@/model/adjustments";
-import { colors, radii, webTransition } from "@/theme";
+import { chosenOutline, colors, radii, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 import { Dial, type DialScale } from "../Dial";
@@ -146,9 +146,7 @@ const styles = StyleSheet.create({
 	choiceHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	choiceSelected: {
-		boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
-	},
+	choiceSelected: chosenOutline,
 	choicePressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],

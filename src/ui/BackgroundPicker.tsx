@@ -55,8 +55,8 @@ const styles = StyleSheet.create({
 		width: SWATCH_SIZE,
 		height: SWATCH_SIZE,
 		borderRadius: SWATCH_SIZE / 2,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.borderStrong,
+		borderWidth: 1,
+		borderColor: colors.swatchRing,
 		overflow: "hidden",
 	},
 });

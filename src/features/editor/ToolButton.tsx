@@ -8,7 +8,13 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { colors, radii, typography, webTransition } from "@/theme";
+import {
+	chosenOutline,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 
@@ -165,9 +171,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 	},
-	tileSelected: {
-		boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
-	},
+	tileSelected: chosenOutline,
 	tileHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},

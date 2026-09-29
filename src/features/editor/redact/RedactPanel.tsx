@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii, typography } from "@/theme";
+import { chosenOutline, colors, radii, typography } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorOptions } from "../ColorPicker";
 import { ToolButton, ToolRow } from "../ToolButton";
@@ -318,11 +318,9 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 3,
-		borderRadius: radii.medium,
+		borderRadius: radii.small,
 	},
-	effectChoiceSelected: {
-		backgroundColor: colors.chosenSoft,
-	},
+	effectChoiceSelected: chosenOutline,
 	effectLabel: {
 		...typography.caption,
 		color: colors.textSecondary,
