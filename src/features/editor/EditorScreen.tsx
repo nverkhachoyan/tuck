@@ -4,7 +4,7 @@ import {
 	useLocalSearchParams,
 	useRouter,
 } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Platform,
@@ -222,6 +222,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const selectLayer = useStore((state) => state.selectLayer);
 	const undo = useStore((state) => state.undo);
 	const redo = useStore((state) => state.redo);
+	const beginSession = useStore((state) => state.beginSession);
+	const commitSession = useStore((state) => state.commitSession);
+	const cancelSession = useStore((state) => state.cancelSession);
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
 	// A web trackpad pinch commits after a short pause, or at the next press
@@ -270,6 +273,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				)
 			: undefined;
 	if (tool === "adjust" && !adjustedLayer) setTool(null);
+	// A tool's changes are one session: one undo step, or none if canceled.
+	// Closing the tool any way, leaving the editor included, keeps them.
+	useEffect(() => {
+		if (!tool) return;
+		beginSession();
+		return commitSession;
+	}, [tool, beginSession, commitSession]);
 	const adjustController = useAdjustController(adjustedLayer, setAdjustments);
 	const adjusting = useMemo(
 		() =>
@@ -541,6 +551,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		setFindOpen(false);
 		detection.reset();
 		setEyedropper(null);
+	};
+	const cancelTool = () => {
+		cancelSession();
+		finishTool();
 	};
 	const closeDetection = () => {
 		setFindOpen(false);
@@ -1010,12 +1024,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						tool ? (
 							<DockFooter
 								title={TOOL_TITLES[tool]}
+								onCancel={cancelTool}
 								onDone={finishTool}
 								doneShortcut="Escape"
 							/>
 						) : textEdit ? (
 							<DockFooter
 								title="Text"
+								onCancel={() => setTextEdit(null)}
 								onDone={finishTextEdit}
 								doneShortcut="Escape"
 							/>

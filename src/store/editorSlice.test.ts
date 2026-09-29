@@ -19,6 +19,7 @@ import { documentFraming } from "../model/framing.ts";
 import {
 	createEditorSlice,
 	MAX_HISTORY,
+	selectCanUndo,
 	selectSelectedLayer,
 	selectSelectedRedaction,
 	selectSelectedShape,
@@ -951,6 +952,94 @@ describe("editorSlice", () => {
 			assert.equal(store.getState(), before);
 		});
 	});
+	describe("sessions", () => {
+		const pen = (points: number[]): Stroke => ({
+			type: "pen",
+			color: "#FF3B30",
+			width: 10,
+			points,
+		});
+
+		test("committing makes a session's changes one undo step", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			const pastLength = store.getState().past.length;
+			store.getState().beginSession();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			store.getState().commitSession();
+			assert.equal(store.getState().session, null);
+			assert.equal(store.getState().past.length, pastLength + 1);
+
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("canceling restores where the session started", () => {
+			const { store, text } = storeWithText();
+			const { document: before, past } = store.getState();
+			store.getState().beginSession();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().deleteLayer(text.id);
+			store.getState().cancelSession();
+			assert.equal(store.getState().document, before);
+			assert.equal(store.getState().selectedLayerId, text.id);
+			assert.deepEqual(store.getState().past, past);
+			assert.equal(store.getState().session, null);
+		});
+
+		test("a session without changes leaves the history alone", () => {
+			const { store } = storeWithText();
+			const { document, past } = store.getState();
+			store.getState().beginSession();
+			store.getState().commitSession();
+			assert.equal(store.getState().document, document);
+			assert.equal(store.getState().past, past);
+		});
+
+		test("undo stops at the session's start", () => {
+			const { store } = storeWithText();
+			store.getState().beginSession();
+			assert.equal(selectCanUndo(store.getState()), false);
+			store.getState().undo();
+			assert.equal(textLayers(store).length, 1);
+
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			assert.equal(selectCanUndo(store.getState()), true);
+			store.getState().undo();
+			store.getState().undo();
+			assert.equal(textLayers(store).length, 1);
+		});
+
+		test("undoing within a session, then drawing again, still commits one step", () => {
+			const { store } = storeWithText();
+			const before = store.getState().document;
+			const pastLength = store.getState().past.length;
+			store.getState().beginSession();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().undo();
+			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			store.getState().commitSession();
+			assert.equal(store.getState().past.length, pastLength + 1);
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
+		});
+
+		test("a session longer than the history keeps only its own step", () => {
+			const { store } = storeWithText();
+			const before = store.getState().document;
+			store.getState().beginSession();
+			for (let i = 0; i <= MAX_HISTORY; i++) {
+				store.getState().drawStroke(pen([i, 0, i + 10, 10]));
+			}
+			store.getState().commitSession();
+			assert.equal(store.getState().past.length, 1);
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
+		});
+	});
+
 	describe("adjustments", () => {
 		const warm = { ...neutralAdjustments, temperature: 0.5 };
 		const firstImage = (store: ReturnType<typeof createTestStore>) =>

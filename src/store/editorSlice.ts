@@ -62,6 +62,9 @@ export type EditorSlice = {
 	selectedLayerId: string | null;
 	past: EditorSnapshot[];
 	future: EditorSnapshot[];
+	// While a tool is open, where it started: Cancel returns there, and its
+	// changes become one undo step when it's done.
+	session: EditorSnapshot | null;
 	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
 	addTextLayer: (text: string, style?: Partial<TextLayerStyle>) => void;
@@ -113,6 +116,9 @@ export type EditorSlice = {
 	selectLayer: (id: string | null) => void;
 	undo: () => void;
 	redo: () => void;
+	beginSession: () => void;
+	commitSession: () => void;
+	cancelSession: () => void;
 };
 
 export const selectSelectedLayer = ({
@@ -142,7 +148,9 @@ export const selectSelectedShape = (
 	return layer?.type === "shape" ? layer : undefined;
 };
 
-export const selectCanUndo = ({ past }: EditorSlice) => past.length > 0;
+// Within a session, not past its start: Cancel is the way back from there.
+export const selectCanUndo = ({ past, document, session }: EditorSlice) =>
+	past.length > 0 && document !== session?.document;
 
 export const selectCanRedo = ({ future }: EditorSlice) => future.length > 0;
 
@@ -196,10 +204,18 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		selectedLayerId: null,
 		past: [],
 		future: [],
+		session: null,
 
 		openDocument: (document, projectId) =>
 			set(
-				{ document, projectId, selectedLayerId: null, past: [], future: [] },
+				{
+					document,
+					projectId,
+					selectedLayerId: null,
+					past: [],
+					future: [],
+					session: null,
+				},
 				false,
 				"editor/openDocument",
 			),
@@ -212,6 +228,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 					selectedLayerId: null,
 					past: [],
 					future: [],
+					session: null,
 				},
 				false,
 				"editor/closeDocument",
@@ -532,7 +549,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		undo: () => {
 			const { document, selectedLayerId, past, future } = get();
 			const previous = past.at(-1);
-			if (!document || !previous) return;
+			if (!document || !previous || !selectCanUndo(get())) return;
 			set(
 				{
 					...previous,
@@ -558,8 +575,72 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				"editor/redo",
 			);
 		},
+
+		beginSession: () => {
+			const { document, selectedLayerId, session } = get();
+			if (!document || session) return;
+			set(
+				{ session: { document, selectedLayerId } },
+				false,
+				"editor/beginSession",
+			);
+		},
+
+		// The session's steps become one, from where it started.
+		commitSession: () => {
+			const { document, session, past } = get();
+			if (!session) return;
+			if (document === session.document) {
+				set({ session: null }, false, "editor/commitSession");
+				return;
+			}
+			set(
+				{
+					past: [...pastBefore(past, session), session].slice(-MAX_HISTORY),
+					future: [],
+					session: null,
+				},
+				false,
+				"editor/commitSession",
+			);
+		},
+
+		cancelSession: () => {
+			const { document, session, past } = get();
+			if (!session) return;
+			if (document === session.document) {
+				set({ session: null }, false, "editor/cancelSession");
+				return;
+			}
+			set(
+				{
+					...session,
+					past: pastBefore(past, session),
+					future: [],
+					session: null,
+				},
+				false,
+				"editor/cancelSession",
+			);
+		},
 	};
 };
+
+/**
+ * The undo steps from before `session`. Its first change recorded where it
+ * started, and undo can't go past that, so the last step holding the
+ * session's starting document is where it began. Without one, the session
+ * took so many steps that everything before it was dropped.
+ */
+function pastBefore(
+	past: EditorSnapshot[],
+	session: EditorSnapshot,
+): EditorSnapshot[] {
+	for (let index = past.length - 1; index >= 0; index--) {
+		if (past[index].document === session.document) return past.slice(0, index);
+	}
+	return [];
+}
 
 function effectsEqual(left: RedactionEffect, right: RedactionEffect): boolean {
 	switch (left.type) {

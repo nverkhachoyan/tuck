@@ -87,7 +87,9 @@ Built as described, with the review's mockup as the proposal. The dock is 144pt:
 * Keep the shortcuts: Escape finishes Draw, Redact, and Adjust (and deselects); in Crop, Escape cancels and Enter applies. Show them in the footer buttons' tooltips on web.
 * While typing, the footer rides the keyboard with the style panel, as the dock does now.
 
-### 2.2 Tool sessions
+### 2.2 Tool sessions (done)
+
+Built in `store/editorSlice.ts` as `beginSession`, `commitSession`, and `cancelSession`, tested in `editorSlice.test.ts`. The editor begins a session when Draw, Redact, or Adjust opens and commits it when the tool closes, from an effect on `tool`, so leaving the editor commits too. Undo stops at the session's start; ✕ is the way back from there. Crop keeps its own cancel, which never touched the document. Typing's ✕ discards the draft, which was never in the document either.
 
 * Opening a tool records the document and the undo history's length. ✕ restores that document; ✓ keeps it. Either way the session collapses to one undo step, so ⌘Z after ✓ undoes the whole session. This belongs in `store/editorSlice.ts` (say `beginSession`, `commitSession`, `cancelSession`), tested in `editorSlice.test.ts`.
 * Crop already cancels; move it onto the same mechanism if that simplifies `crop/useCropController.ts`, otherwise leave it.
