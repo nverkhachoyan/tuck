@@ -25,7 +25,7 @@ import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
 import { Dial, type DialScale } from "../Dial";
-import { Dock, DockButton, useDockInset } from "../Dock";
+import { Dock, DockFooter, useDockInset } from "../Dock";
 import { ToolButton, ToolRow } from "../ToolButton";
 import { CropCanvas } from "./CropCanvas";
 import { MAX_STRAIGHTEN } from "./cropGeometry";
@@ -117,7 +117,6 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 		<View style={styles.container}>
 			{/* As tall as the editor's header, so the canvas keeps its place. */}
 			<ScreenHeader
-				title="Crop"
 				action={
 					controller.changed && (
 						<TextButton label="Reset" onPress={controller.reset} />
@@ -220,20 +219,13 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 
 			<Dock
 				panel="crop"
-				start={
-					<DockButton
-						icon="close-outline"
-						label="Cancel"
-						shortcut="Escape"
-						onPress={onCancel}
-					/>
-				}
-				end={
-					<DockButton
-						icon="checkmark-outline"
-						label="Done"
-						shortcut="Enter"
-						onPress={controller.done}
+				footer={
+					<DockFooter
+						title="Crop"
+						onCancel={onCancel}
+						cancelShortcut="Escape"
+						onDone={controller.done}
+						doneShortcut="Enter"
 					/>
 				}
 			>

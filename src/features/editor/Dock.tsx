@@ -1,25 +1,28 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps, ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, webTransition } from "@/theme";
+import { colors, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 
-// Every panel shares one fixed height, so the canvas, fitted above the dock,
-// never moves when the selection changes.
-const DOCK_HEIGHT = 104;
+// The dock's one fixed height, shared by every panel, so the canvas, fitted
+// above the dock, never moves when the selection or tool changes. The panel
+// takes the top, and a mode's footer the rest. The main tools leave the
+// footer's row empty, so their row doesn't jump as a mode opens.
+const CONTENT_HEIGHT = 100;
+const FOOTER_HEIGHT = 44;
+const DOCK_HEIGHT = CONTENT_HEIGHT + FOOTER_HEIGHT;
 // Wide enough for the text panel's tabs and actions side by side.
 const DOCK_MAX_WIDTH = 520;
 // Under the dock's content where nothing's in the way.
 const DOCK_MARGIN = 10;
 // Between the dock and the keyboard, while it's up.
 const KEYBOARD_GAP = 8;
-const BUTTON_SIZE = 48;
+const BUTTON_SIZE = 44;
 const PANEL_IN = FadeIn.duration(220).easing(Easing.bezier(0.2, 0, 0, 1));
 const PANEL_OUT = FadeOut.duration(120);
-const BUTTON_IN = FadeIn.duration(160);
 
 /**
  * How far up from the canvas's bottom edge the dock reaches, space under it
@@ -43,28 +46,22 @@ function dockBottom(safeAreaBottom: number, keyboardOverlap: number) {
  * The bar across the bottom of the canvas, holding the panel for the
  * selection or tool. It's the screen's own color, so the photo is the only
  * thing that stands out. Changing `panel` cross-fades to the new one; the
- * same panel for another layer stays put. `start` and `end` hold
- * `DockButton`s at its ends: a tool's Done, and Crop's Cancel, within reach
- * of the thumb that's using the tool. It rises above the keyboard by
- * `keyboardOverlap`, taking them along.
+ * same panel for another layer stays put. Every mode, a tool or a selected
+ * layer, puts a `DockFooter` in `footer`, under its panel. It rises above
+ * the keyboard by `keyboardOverlap`, taking the footer along.
  */
 export function Dock({
 	panel,
-	start,
-	end,
+	footer,
 	keyboardOverlap = 0,
 	children,
 }: {
 	panel: string;
-	start?: ReactNode;
-	end?: ReactNode;
+	footer?: ReactNode;
 	keyboardOverlap?: number;
 	children: ReactNode;
 }) {
 	const { bottom } = useSafeAreaInsets();
-	// Both ends, even with one button, keep the panel centered.
-	const ends = start !== undefined || end !== undefined;
-
 	return (
 		<View
 			style={[
@@ -75,29 +72,63 @@ export function Dock({
 				},
 			]}
 		>
-			<View style={styles.row}>
-				{ends && (
-					<View style={styles.end}>
-						{start && (
-							<Animated.View entering={BUTTON_IN}>{start}</Animated.View>
-						)}
-					</View>
-				)}
-				<View style={styles.dock}>
+			<View style={styles.column}>
+				<View style={styles.content}>
 					<Animated.View
 						key={panel}
 						entering={PANEL_IN}
 						exiting={PANEL_OUT}
-						style={[StyleSheet.absoluteFill, styles.content]}
+						style={[StyleSheet.absoluteFill, styles.panel]}
 					>
 						{children}
 					</Animated.View>
 				</View>
-				{ends && (
-					<View style={styles.end}>
-						{end && <Animated.View entering={BUTTON_IN}>{end}</Animated.View>}
-					</View>
+				{footer ?? <View style={styles.footer} />}
+			</View>
+		</View>
+	);
+}
+
+/**
+ * A mode's last row: Cancel at the left, the mode's name in the middle, and
+ * Done at the right, all within reach of the thumb that's using it. Without
+ * `onCancel`, Cancel's place stays empty, so the name stays centered.
+ */
+export function DockFooter({
+	title,
+	onCancel,
+	cancelShortcut,
+	onDone,
+	doneShortcut,
+}: {
+	title: string;
+	onCancel?: () => void;
+	cancelShortcut?: string;
+	onDone: () => void;
+	doneShortcut?: string;
+}) {
+	return (
+		<View style={styles.footer}>
+			<View style={styles.footerEnd}>
+				{onCancel && (
+					<DockButton
+						icon="close-outline"
+						label="Cancel"
+						shortcut={cancelShortcut}
+						onPress={onCancel}
+					/>
 				)}
+			</View>
+			<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
+				{title}
+			</Text>
+			<View style={[styles.footerEnd, styles.footerEndRight]}>
+				<DockButton
+					icon="checkmark-outline"
+					label="Done"
+					shortcut={doneShortcut}
+					onPress={onDone}
+				/>
 			</View>
 		</View>
 	);
@@ -106,10 +137,10 @@ export function Dock({
 type DockIconName = ComponentProps<typeof Ionicons>["name"];
 
 /**
- * A glyph at one end of the dock, with no fill: the dock's ends are where a
- * tool's Done and Cancel always are, so their place names them.
+ * A glyph at one end of the footer, with no fill: the footer's ends are
+ * where a mode's Done and Cancel always are, so their place names them.
  */
-export function DockButton({
+function DockButton({
 	icon,
 	label,
 	shortcut,
@@ -139,7 +170,7 @@ export function DockButton({
 					];
 				}}
 			>
-				<Ionicons name={icon} size={30} color={colors.textPrimary} />
+				<Ionicons name={icon} size={28} color={colors.textPrimary} />
 			</Pressable>
 			{tooltip}
 		</>
@@ -156,26 +187,35 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		backgroundColor: colors.background,
 	},
-	row: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		height: DOCK_HEIGHT,
-	},
-	// Holds its button, or keeps the panel centered without one. No wider than
-	// the button, so five tools still fit between the ends at 390 points.
-	end: {
-		width: BUTTON_SIZE,
-		alignItems: "center",
-	},
-	// Takes what the ends leave, up to its widest.
-	dock: {
-		flex: 1,
+	column: {
+		width: "100%",
 		maxWidth: DOCK_MAX_WIDTH,
 		height: DOCK_HEIGHT,
+		alignSelf: "center",
 	},
 	content: {
+		height: CONTENT_HEIGHT,
+	},
+	panel: {
 		flexDirection: "row",
+	},
+	footer: {
+		height: FOOTER_HEIGHT,
+		flexDirection: "row",
+		alignItems: "center",
+		paddingHorizontal: 8,
+	},
+	footerEnd: {
+		width: BUTTON_SIZE,
+	},
+	footerEndRight: {
+		alignItems: "flex-end",
+	},
+	title: {
+		flex: 1,
+		...typography.bodyStrong,
+		color: colors.textPrimary,
+		textAlign: "center",
 	},
 	button: {
 		width: BUTTON_SIZE,

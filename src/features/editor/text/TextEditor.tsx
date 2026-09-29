@@ -114,7 +114,7 @@ export function TextEditor({
 				accessibilityLabel="Text"
 				style={styles.input}
 			/>
-			<ScreenHeader title="Text" />
+			<ScreenHeader />
 		</View>
 	);
 }

@@ -250,11 +250,18 @@ function IconThumbnail({ icon }: { icon: IconName }) {
 }
 
 function layerLabel(layer: Layer): string {
+	return layer.type === "text"
+		? layer.text.replace(/\s+/g, " ")
+		: layerKindName(layer);
+}
+
+/** What kind of layer `layer` is, as the selection's footer names it. */
+export function layerKindName(layer: Layer): string {
 	switch (layer.type) {
 		case "image":
 			return layer.sticker ? "Sticker" : "Photo";
 		case "text":
-			return layer.text.replace(/\s+/g, " ");
+			return "Text";
 		case "drawing":
 			return "Drawing";
 		case "redaction":

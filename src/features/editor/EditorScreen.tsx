@@ -36,7 +36,7 @@ import type {
 	TextEditState,
 } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
-import { Dock, DockButton, useDockInset } from "@/features/editor/Dock";
+import { Dock, DockFooter, useDockInset } from "@/features/editor/Dock";
 import {
 	type BrushSettings,
 	brushFor,
@@ -47,6 +47,7 @@ import {
 } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
+import { layerKindName } from "@/features/editor/panels/LayerRow";
 import {
 	LAYERS_SIDEBAR_INSET,
 	LayersPanel,
@@ -808,7 +809,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	return (
 		<View style={styles.container}>
 			<ScreenHeader
-				title={tool ? TOOL_TITLES[tool] : undefined}
 				backLabel="Back to projects"
 				onBack={tool ? undefined : () => leaveEditor(router)}
 				action={
@@ -1006,13 +1006,24 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				    than closing them. */}
 				<Dock
 					panel={panelKind}
-					end={
-						tool || textEdit ? (
-							<DockButton
-								icon="checkmark-outline"
-								label="Done"
-								shortcut="Escape"
-								onPress={tool ? finishTool : finishTextEdit}
+					footer={
+						tool ? (
+							<DockFooter
+								title={TOOL_TITLES[tool]}
+								onDone={finishTool}
+								doneShortcut="Escape"
+							/>
+						) : textEdit ? (
+							<DockFooter
+								title="Text"
+								onDone={finishTextEdit}
+								doneShortcut="Escape"
+							/>
+						) : selectedLayer ? (
+							<DockFooter
+								title={layerKindName(selectedLayer)}
+								onDone={() => selectLayer(null)}
+								doneShortcut="Escape"
 							/>
 						) : undefined
 					}

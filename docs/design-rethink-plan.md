@@ -77,7 +77,9 @@ Built as described. Back's label now names its destination ("Back to projects", 
 
 ## Phase 2: One bottom bar
 
-### 2.1 The footer (Propose first)
+### 2.1 The footer (done)
+
+Built as described, with the review's mockup as the proposal. The dock is 144pt: a 100pt panel row and a 44pt footer row, which the main tools leave empty so their row sits where every mode's does. A selected layer's footer names its kind (`layerKindName` in `panels/LayerRow.tsx`). ✕ appears only in Crop until 2.2.
 
 * `Dock` gains a footer row under its content: ✕ at the left, the mode's name in the middle, ✓ at the right. It replaces the `start` and `end` slots and `DockButton`'s side columns, giving the content the full width. The main editor has no footer: its tool row takes the dock's whole height, so the canvas doesn't move as modes open and close.
 * Every tool uses it: Draw, Redact, Adjust, and Crop, and text while typing. The header drops the tool's title and keeps undo and redo (and Adjust's Reset).

@@ -10,9 +10,9 @@ const BACK_SIZE = 44;
 /**
  * Top bar with a Back action, an optional centered title, and an optional
  * trailing action. Back is a chevron; `backLabel` names where it goes, for
- * assistive tech and as its tooltip on web. Without `onBack`, the title takes
- * Back's place, as in a tool's header: centered, it could run into a phone's
- * Reset, undo, and redo.
+ * assistive tech and as its tooltip on web. Without `onBack`, the title, if
+ * any, takes Back's place. A tool's header has neither: its name is in the
+ * dock's footer, and the header keeps only its actions.
  */
 export function ScreenHeader({
 	title,
