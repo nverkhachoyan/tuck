@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, webTransition } from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
 		paddingVertical: PAD_Y,
 		marginHorizontal: -PAD_X,
 		marginVertical: -PAD_Y,
-		borderRadius: 10,
+		borderRadius: radii.small,
 	},
 	hovered: {
 		backgroundColor: colors.hoverOverlay,
@@ -68,8 +68,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.pressedOverlay,
 	},
 	label: {
-		fontSize: 16,
-		fontWeight: "500",
+		...typography.body,
 		color: colors.textPrimary,
 	},
 	accent: {

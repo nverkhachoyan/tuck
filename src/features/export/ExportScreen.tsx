@@ -22,7 +22,13 @@ import { errorMessage } from "@/lib/errorMessage";
 import type { EditorDocument } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
+import {
+	CHECKER_CELL,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { Checkerboard } from "@/ui/Checkerboard";
@@ -349,7 +355,7 @@ const styles = StyleSheet.create({
 		gap: 12,
 	},
 	status: {
-		fontSize: 15,
+		...typography.body,
 		color: colors.textSecondary,
 	},
 	footer: {
@@ -365,7 +371,7 @@ const styles = StyleSheet.create({
 		gap: 14,
 	},
 	details: {
-		fontSize: 13,
+		...typography.label,
 		color: colors.textSecondary,
 		textAlign: "center",
 	},
@@ -393,7 +399,7 @@ const styles = StyleSheet.create({
 		transform: [{ scale: 0.96 }],
 	},
 	sizeLabel: {
-		fontSize: 13,
+		...typography.label,
 		fontVariant: ["tabular-nums"],
 		color: colors.textSecondary,
 	},
@@ -429,14 +435,13 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 8,
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 		borderWidth: 1,
 		borderColor: colors.accentBorder,
 		backgroundColor: colors.accentSoft,
 	},
 	savedLabel: {
-		fontSize: 17,
-		fontWeight: "600",
+		...typography.title,
 		color: colors.textPrimary,
 	},
 });

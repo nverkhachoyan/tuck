@@ -8,7 +8,7 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 
 /**
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
 		width: "100%",
 		maxWidth: 360,
 		padding: 22,
-		borderRadius: radii.extraLarge,
+		borderRadius: radii.large,
 		borderWidth: 1,
 		borderColor: colors.glassBorder,
 		backgroundColor: "rgba(32, 32, 36, 0.82)",
@@ -203,14 +203,13 @@ const styles = StyleSheet.create({
 		animationTimingFunction: "cubic-bezier(0.2, 0, 0, 1)",
 	} as unknown as ViewStyle,
 	title: {
-		fontSize: 17,
-		fontWeight: "600",
+		...typography.title,
 		color: colors.textPrimary,
 	},
 	message: {
+		...typography.label,
 		marginTop: 6,
-		fontSize: 14,
-		lineHeight: 20,
+		lineHeight: 18,
 		color: colors.textSecondary,
 	},
 	buttons: {

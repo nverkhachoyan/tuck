@@ -20,7 +20,7 @@ import {
 	type ProjectSummary,
 	projectName,
 } from "@/projects/projectFile";
-import { colors, fonts, radii, webTransition } from "@/theme";
+import { colors, fonts, radii, typography, webTransition } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
 	well: {
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.border,
 		backgroundColor: colors.surface,
@@ -490,12 +490,11 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 2,
 	},
 	label: {
-		fontSize: 14,
-		fontWeight: "600",
+		...typography.labelStrong,
 		color: colors.textPrimary,
 	},
 	date: {
-		fontSize: 12,
+		...typography.caption,
 		color: colors.textSecondary,
 	},
 	// Where the caption sits in the card while it's out of it (see
@@ -507,7 +506,7 @@ const styles = StyleSheet.create({
 		height: 30,
 		marginHorizontal: -2,
 		paddingHorizontal: 8,
-		borderRadius: 8,
+		borderRadius: radii.small,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.borderStrong,
 		backgroundColor: colors.surface,

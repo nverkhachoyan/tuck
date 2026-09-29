@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
-import { colors } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import type { TooltipAnchorProps } from "./Tooltip";
 
 const SHOW_DELAY_MS = 500;
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
 		gap: 8,
 		paddingHorizontal: 9,
 		paddingVertical: 5,
-		borderRadius: 8,
+		borderRadius: radii.small,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: "rgba(255, 255, 255, 0.1)",
 		backgroundColor: "rgba(44, 44, 48, 0.78)",
@@ -191,12 +191,11 @@ const styles = StyleSheet.create({
 		animationFillMode: "both",
 	} as unknown as ViewStyle,
 	text: {
-		fontSize: 12,
-		fontWeight: "500",
+		...typography.caption,
 		color: colors.textPrimary,
 	},
 	shortcut: {
-		fontSize: 12,
+		...typography.caption,
 		fontVariant: ["tabular-nums"],
 		color: colors.textSecondary,
 	},

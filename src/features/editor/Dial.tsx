@@ -17,7 +17,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
-import { colors } from "@/theme";
+import { colors, typography } from "@/theme";
 
 /**
  * How a dial's ruler measures its value: `step` is one unit of it, which
@@ -243,8 +243,7 @@ const styles = StyleSheet.create({
 		gap: 2,
 	},
 	readout: {
-		fontSize: 13,
-		fontWeight: "600",
+		...typography.labelStrong,
 		fontVariant: ["tabular-nums"],
 		color: colors.textPrimary,
 	},

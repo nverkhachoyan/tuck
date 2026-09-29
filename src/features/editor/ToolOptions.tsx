@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { PenTip } from "@/model/document";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
 
 /**
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
 		pointerEvents: "box-none",
 	},
 	card: {
-		borderRadius: radii.extraLarge,
+		borderRadius: radii.large,
 	},
 	cardContent: {
 		gap: 6,
@@ -123,8 +123,7 @@ const styles = StyleSheet.create({
 		gap: 2,
 	},
 	optionLabel: {
-		fontSize: 13,
-		fontWeight: "600",
+		...typography.labelStrong,
 		color: colors.textSecondary,
 	},
 	choices: {

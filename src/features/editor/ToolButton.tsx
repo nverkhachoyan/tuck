@@ -8,7 +8,7 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { colors, radii, webTransition } from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 
@@ -179,8 +179,7 @@ const styles = StyleSheet.create({
 		transform: [{ scale: 0.92 }],
 	},
 	label: {
-		fontSize: 11,
-		fontWeight: "500",
+		...typography.caption,
 		letterSpacing: 0.1,
 		color: colors.textSecondary,
 	},

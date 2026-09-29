@@ -7,7 +7,7 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { colors, radii, webTransition } from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
 	large: {
 		height: 56,
 		paddingHorizontal: 20,
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 	},
 	medium: {
 		height: 44,
@@ -140,10 +140,9 @@ const styles = StyleSheet.create({
 		marginTop: -1,
 	},
 	label: {
-		fontSize: 15,
-		fontWeight: "600",
+		...typography.bodyStrong,
 	},
 	labelLarge: {
-		fontSize: 17,
+		...typography.title,
 	},
 });

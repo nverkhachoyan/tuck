@@ -26,7 +26,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { assertNever } from "@/lib/assertNever";
 import { hapticTick } from "@/lib/haptics";
 import type { Layer, RedactionEffect } from "@/model/document";
-import { colors } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../shapeIcons";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		marginHorizontal: 8,
 		paddingLeft: 12,
-		borderRadius: 12,
+		borderRadius: radii.medium,
 		borderWidth: 1,
 		borderColor: "transparent",
 	},
@@ -301,14 +301,14 @@ const styles = StyleSheet.create({
 	thumbnail: {
 		width: 36,
 		height: 36,
-		borderRadius: 8,
+		borderRadius: radii.small,
 		alignItems: "center",
 		justifyContent: "center",
 		backgroundColor: colors.glassControlHover,
 	},
 	label: {
+		...typography.body,
 		flex: 1,
-		fontSize: 15,
 		color: colors.textPrimary,
 	},
 	actions: {

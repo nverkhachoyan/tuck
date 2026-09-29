@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { GlassView } from "@/ui/GlassView";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
@@ -312,11 +312,11 @@ const styles = StyleSheet.create({
 	},
 	field: {
 		height: FIELD_HEIGHT,
-		borderRadius: 10,
+		borderRadius: radii.small,
 	},
 	fill: {
 		...StyleSheet.absoluteFill,
-		borderRadius: 10,
+		borderRadius: radii.small,
 	},
 	// Explicitly white and black at no opacity: a gradient to `transparent`
 	// can pass through gray.
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
 		pointerEvents: "box-none",
 	},
 	hint: {
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 	},
 	hintContent: {
 		flexDirection: "row",
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 8,
 	},
 	hintText: {
-		fontSize: 14,
+		...typography.label,
 		color: colors.textPrimary,
 	},
 	row: {
@@ -360,13 +360,13 @@ const styles = StyleSheet.create({
 		borderRadius: BAR_HEIGHT / 2,
 	},
 	hex: {
+		...typography.label,
 		width: 84,
 		height: 30,
 		paddingHorizontal: 8,
-		borderRadius: 8,
+		borderRadius: radii.small,
 		backgroundColor: colors.glassControl,
 		color: colors.textPrimary,
-		fontSize: 13,
 		fontVariant: ["tabular-nums"],
 		textAlign: "center",
 	},

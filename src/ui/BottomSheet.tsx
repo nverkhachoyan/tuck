@@ -15,7 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { GlassView } from "./GlassView";
 import { IconButton } from "./IconButton";
 
@@ -185,8 +185,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.borderStrong,
 	},
 	title: {
-		fontSize: 15,
-		fontWeight: "600",
+		...typography.bodyStrong,
 		color: colors.textPrimary,
 	},
 });

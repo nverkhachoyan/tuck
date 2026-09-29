@@ -42,7 +42,9 @@ Built as described. The dock's end columns are now as wide as their button (48pt
 * **Adjust**: the photo keeps its blue selection outline while it's being adjusted, as if it were being moved. Hide it in Adjust. Make the value under the icons readable (primary text).
 * **Dev only**: MediaPipe logs "INFO: Created TensorFlow Lite XNNPACK delegate" through `console.error`, so the development overlay shows a red toast over the dock after every first Find. Keep it out of `console.error`.
 
-### 1.2 Tokens
+### 1.2 Tokens (done)
+
+Built with `typography`, `radii`, and `space` in `theme.ts`. `label` came out regular (400) rather than medium: 13pt running text in cards read heavy at 500, so medium is left to `caption`, the tool labels. `extraLarge` was folded into `large` (20), and what used `large` (16) for buttons and cards moved to `medium` (12). Spacing isn't applied yet.
 
 Add to `theme.ts`, then replace literal values:
 

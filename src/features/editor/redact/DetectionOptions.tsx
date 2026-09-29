@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { ImageDetectionState } from "@/detection/useImageDetection";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { GlassView } from "@/ui/GlassView";
 
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
 	card: {
 		width: "100%",
 		maxWidth: 540,
-		borderRadius: radii.extraLarge,
+		borderRadius: radii.large,
 	},
 	content: {
 		flexDirection: "row",
@@ -252,17 +252,16 @@ const styles = StyleSheet.create({
 		gap: 10,
 	},
 	title: {
-		fontSize: 15,
-		fontWeight: "600",
+		...typography.bodyStrong,
 		color: colors.textPrimary,
 		fontVariant: ["tabular-nums"],
 	},
 	message: {
-		fontSize: 13,
+		...typography.label,
 		color: colors.textSecondary,
 	},
 	note: {
-		fontSize: 12,
+		...typography.caption,
 		color: colors.textTertiary,
 	},
 	actions: {

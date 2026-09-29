@@ -6,7 +6,13 @@ import { createBlankDocument } from "@/model/document";
 import { editorHref } from "@/projects/projectRoute";
 import { createBlankProject } from "@/projects/projectService";
 import { useStore } from "@/store";
-import { CHECKER_CELL, colors, radii, webTransition } from "@/theme";
+import {
+	CHECKER_CELL,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
@@ -177,7 +183,7 @@ const styles = StyleSheet.create({
 		paddingLeft: 16,
 		paddingRight: 8,
 		paddingVertical: 4,
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.border,
 		backgroundColor: colors.surface,
@@ -186,12 +192,11 @@ const styles = StyleSheet.create({
 		gap: 1,
 	},
 	fillLabel: {
-		fontSize: 15,
-		fontWeight: "600",
+		...typography.bodyStrong,
 		color: colors.textPrimary,
 	},
 	fillValue: {
-		fontSize: 13,
+		...typography.label,
 		color: colors.textSecondary,
 	},
 	grid: {
@@ -207,7 +212,7 @@ const styles = StyleSheet.create({
 		paddingTop: 20,
 		paddingBottom: 16,
 		paddingHorizontal: 12,
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.border,
 		backgroundColor: colors.surface,
@@ -221,11 +226,10 @@ const styles = StyleSheet.create({
 		transform: [{ scale: 0.98 }],
 	},
 	ratio: {
+		...typography.caption,
 		position: "absolute",
 		top: 10,
 		left: 12,
-		fontSize: 11,
-		fontWeight: "600",
 		fontVariant: ["tabular-nums"],
 		color: colors.textTertiary,
 	},
@@ -248,12 +252,11 @@ const styles = StyleSheet.create({
 		boxShadow: "0 10px 20px rgba(0, 0, 0, 0.55)",
 	},
 	name: {
-		fontSize: 15,
-		fontWeight: "600",
+		...typography.bodyStrong,
 		color: colors.textPrimary,
 	},
 	size: {
-		fontSize: 13,
+		...typography.label,
 		fontVariant: ["tabular-nums"],
 		color: colors.textSecondary,
 	},

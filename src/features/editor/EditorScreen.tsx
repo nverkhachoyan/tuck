@@ -128,7 +128,7 @@ import {
 	selectSelectedShape,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
-import { colors } from "@/theme";
+import { colors, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
@@ -1161,12 +1161,11 @@ const styles = StyleSheet.create({
 		padding: 24,
 	},
 	statusTitle: {
-		fontSize: 17,
-		fontWeight: "600",
+		...typography.title,
 		color: colors.textPrimary,
 	},
 	statusMessage: {
-		fontSize: 15,
+		...typography.body,
 		color: colors.textSecondary,
 		textAlign: "center",
 		maxWidth: 320,

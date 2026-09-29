@@ -17,7 +17,7 @@ import {
 	type TextLayerEdit,
 	textFonts,
 } from "@/model/document";
-import { colors, webTransition } from "@/theme";
+import { colors, typography, webTransition } from "@/theme";
 import { gradientBackground } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { ColorPicker } from "../ColorPicker";
@@ -481,8 +481,7 @@ const styles = StyleSheet.create({
 		boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)",
 	},
 	tabLabel: {
-		fontSize: 13,
-		fontWeight: "600",
+		...typography.labelStrong,
 		color: colors.textSecondary,
 	},
 	tabLabelActive: {

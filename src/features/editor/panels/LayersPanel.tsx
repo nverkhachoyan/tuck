@@ -8,7 +8,7 @@ import Animated, {
 	useSharedValue,
 } from "react-native-reanimated";
 import type { Layer } from "@/model/document";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
 import { GlassView } from "@/ui/GlassView";
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
 	},
 	sidebarCard: {
 		flexShrink: 1,
-		borderRadius: radii.extraLarge,
+		borderRadius: radii.large,
 	},
 	shrink: {
 		flexShrink: 1,
@@ -206,20 +206,20 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		marginHorizontal: 8,
 		paddingLeft: 12,
-		borderRadius: 12,
+		borderRadius: radii.medium,
 		borderWidth: 1,
 		borderColor: "transparent",
 	},
 	label: {
+		...typography.body,
 		flex: 1,
-		fontSize: 15,
 		color: colors.textPrimary,
 	},
 	empty: {
+		...typography.label,
 		height: ROW_HEIGHT,
 		lineHeight: ROW_HEIGHT,
 		paddingHorizontal: 20,
-		fontSize: 14,
 		color: colors.textSecondary,
 	},
 });

@@ -12,7 +12,7 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import { colors, radii, webTransition } from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { interaction } from "@/ui/interaction";
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
 		transform: [{ scale: 0.96 }],
 	},
 	chipLabel: {
-		fontSize: 14,
+		...typography.label,
 		fontVariant: ["tabular-nums"],
 		color: colors.textSecondary,
 	},
@@ -430,8 +430,7 @@ const styles = StyleSheet.create({
 		transform: [{ scale: 0.92 }],
 	},
 	actionLabel: {
-		fontSize: 11,
-		fontWeight: "500",
+		...typography.caption,
 		color: colors.textPrimary,
 	},
 	// Its own row keeps the picker reachable beside all three actions on a
@@ -444,7 +443,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 	},
 	fillLabel: {
-		fontSize: 13,
+		...typography.label,
 		color: colors.textSecondary,
 	},
 });

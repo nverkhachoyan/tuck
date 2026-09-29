@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 
 /**
  * Covers the screen while files are dragged over it, saying what dropping
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 14,
-		borderRadius: radii.extraLarge,
+		borderRadius: radii.large,
 		borderWidth: 2,
 		borderStyle: "dashed",
 		borderColor: colors.accentBorder,
@@ -55,8 +55,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.accentSoft,
 	},
 	label: {
-		fontSize: 17,
-		fontWeight: "600",
+		...typography.title,
 		color: colors.textPrimary,
 	},
 });

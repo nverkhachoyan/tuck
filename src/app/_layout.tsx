@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { LoadFonts, resetFailedFonts } from "@/layers/fonts";
 import { errorMessage } from "@/lib/errorMessage";
-import { colors, fonts } from "@/theme";
+import { colors, fonts, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 
 export default function Layout() {
@@ -115,12 +115,11 @@ const styles = StyleSheet.create({
 		padding: 24,
 	},
 	failureTitle: {
-		fontSize: 17,
-		fontWeight: "600",
+		...typography.title,
 		color: colors.textPrimary,
 	},
 	failureMessage: {
-		fontSize: 15,
+		...typography.body,
 		color: colors.textSecondary,
 		textAlign: "center",
 		maxWidth: 320,

@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ComponentProps, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, webTransition } from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
 		minWidth: 52,
 		height: 48,
 		paddingHorizontal: 6,
-		borderRadius: 14,
+		borderRadius: radii.small,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 2,
@@ -201,8 +201,7 @@ const styles = StyleSheet.create({
 		opacity: 0.35,
 	},
 	label: {
-		fontSize: 11,
-		fontWeight: "500",
+		...typography.caption,
 	},
 	divider: {
 		width: StyleSheet.hairlineWidth,

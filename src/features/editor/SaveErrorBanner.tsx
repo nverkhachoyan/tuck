@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { GlassView } from "@/ui/GlassView";
 
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
 	banner: {
 		width: "100%",
 		maxWidth: 560,
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 	},
 	bannerContent: {
 		flexDirection: "row",
@@ -60,9 +60,9 @@ const styles = StyleSheet.create({
 		paddingVertical: 8,
 	},
 	message: {
+		...typography.label,
 		flex: 1,
-		fontSize: 14,
-		lineHeight: 19,
+		lineHeight: 18,
 		color: colors.textPrimary,
 	},
 });

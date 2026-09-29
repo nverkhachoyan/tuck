@@ -26,7 +26,7 @@ import { hasClipboardImage } from "@/import/clipboardImage";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import { colors, fonts, radii } from "@/theme";
+import { colors, fonts, radii, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { LogoMark } from "@/ui/LogoMark";
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
 		color: colors.textPrimary,
 	},
 	tagline: {
-		fontSize: 15,
+		...typography.body,
 		lineHeight: 22,
 		color: colors.textSecondary,
 		textAlign: "center",
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
 		flex: 2,
 	},
 	hint: {
-		fontSize: 13,
+		...typography.label,
 		color: colors.textTertiary,
 		textAlign: "center",
 	},
@@ -323,8 +323,8 @@ const styles = StyleSheet.create({
 		gap: 12,
 	},
 	saveRecoveryText: {
-		fontSize: 14,
-		lineHeight: 20,
+		...typography.label,
+		lineHeight: 18,
 		color: colors.textPrimary,
 	},
 	saveActions: {

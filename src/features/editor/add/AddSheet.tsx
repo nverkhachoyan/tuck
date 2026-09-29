@@ -22,7 +22,7 @@ import {
 	stickerCategories,
 } from "@/stickers/stickers";
 import type { ShownSticker } from "@/stickers/useSavedStickers";
-import { colors, radii, webTransition } from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
 		marginHorizontal: 12,
 		marginTop: 12,
 		padding: 10,
-		borderRadius: radii.large,
+		borderRadius: radii.medium,
 		borderCurve: "continuous",
 		backgroundColor: colors.glassControl,
 	},
@@ -437,12 +437,11 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.glassControlHover,
 	},
 	photoLabel: {
-		fontSize: 15,
-		fontWeight: "600",
+		...typography.bodyStrong,
 		color: colors.textPrimary,
 	},
 	photoHint: {
-		fontSize: 13,
+		...typography.label,
 		color: colors.textSecondary,
 	},
 	hovered: {
@@ -471,8 +470,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.chosenSoft,
 	},
 	chipLabel: {
-		fontSize: 13,
-		fontWeight: "500",
+		...typography.label,
 		color: colors.textSecondary,
 	},
 	chipLabelLit: {
@@ -525,10 +523,10 @@ const styles = StyleSheet.create({
 		borderColor: colors.danger,
 	},
 	hint: {
+		...typography.label,
 		width: "100%",
 		paddingHorizontal: 4,
 		paddingTop: 8,
-		fontSize: 13,
 		lineHeight: 18,
 		color: colors.textSecondary,
 	},

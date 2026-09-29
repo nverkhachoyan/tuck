@@ -1,4 +1,4 @@
-import { Platform, type ViewStyle } from "react-native";
+import { Platform, type TextStyle, type ViewStyle } from "react-native";
 
 // Neutral grays, like a photo editor's surround: a tinted UI would shift how
 // the photo's own colors look. The accent carries the warmth.
@@ -66,13 +66,39 @@ export const colors = {
 };
 
 export const radii = {
+	// Controls, chips, and a chosen option's outline.
 	small: 8,
+	// Buttons, cards, and the selection bar.
 	medium: 12,
-	large: 16,
-	extraLarge: 22,
-	// The floating panels over the canvas.
+	// Sheets, dialogs, and cards floating over the canvas.
+	large: 20,
+	// The glass panels over the canvas.
 	panel: 28,
 };
+
+// Every gap and padding is one of these.
+export const space = {
+	xxs: 4,
+	xs: 8,
+	sm: 12,
+	md: 16,
+	lg: 24,
+	xl: 32,
+};
+
+// The text sizes and weights for controls, in the system font.
+export const typography = {
+	// Tool labels, hints, and small print.
+	caption: { fontSize: 12, fontWeight: "500" },
+	// Chips, tabs, rows, and small buttons.
+	label: { fontSize: 13, fontWeight: "400" },
+	labelStrong: { fontSize: 13, fontWeight: "600" },
+	// Running text in cards, sheets, and dialogs.
+	body: { fontSize: 15, fontWeight: "400" },
+	bodyStrong: { fontSize: 15, fontWeight: "600" },
+	// Buttons, and screen and mode titles.
+	title: { fontSize: 17, fontWeight: "600" },
+} satisfies Record<string, TextStyle>;
 
 // Under anything floating over the canvas.
 export const floatingShadow = "0 12px 32px rgba(0, 0, 0, 0.45)";

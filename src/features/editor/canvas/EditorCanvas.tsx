@@ -43,7 +43,7 @@ import {
 	type Transform,
 	toLayerSpace,
 } from "@/model/geometry";
-import { colors } from "@/theme";
+import { colors, typography } from "@/theme";
 import { GlassView } from "@/ui/GlassView";
 import {
 	type CanvasCursor,
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 8,
 	},
 	failureText: {
-		fontSize: 14,
+		...typography.label,
 		color: colors.textPrimary,
 	},
 });

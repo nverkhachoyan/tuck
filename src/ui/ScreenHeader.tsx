@@ -1,7 +1,13 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, HEADER_HEIGHT, webTransition } from "@/theme";
+import {
+	colors,
+	fonts,
+	HEADER_HEIGHT,
+	typography,
+	webTransition,
+} from "@/theme";
 import { interaction } from "./interaction";
 
 /**
@@ -107,8 +113,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.pressedOverlay,
 	},
 	backLabel: {
-		fontSize: 16,
-		fontWeight: "500",
+		...typography.body,
 		color: colors.textPrimary,
 	},
 });
