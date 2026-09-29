@@ -9,6 +9,7 @@ import {
 } from "./imageDetection";
 
 export type DetectedRegion = DetectionRect & { feature: DetectionFeature };
+export type DetectionScope = DetectionFeature | "both";
 
 type DetectionIssue = {
 	feature: DetectionFeature;
@@ -17,14 +18,15 @@ type DetectionIssue = {
 
 export type ImageDetectionState =
 	| { status: "idle" }
-	| { status: "working" }
+	| { status: "working"; scope: DetectionScope }
 	| {
 			status: "found";
+			scope: DetectionScope;
 			regions: DetectedRegion[];
 			selected: ReadonlySet<number>;
 			issues: DetectionIssue[];
 	  }
-	| { status: "empty"; issues: DetectionIssue[] };
+	| { status: "empty"; scope: DetectionScope; issues: DetectionIssue[] };
 
 export function useImageDetection(targetKey: string) {
 	const [state, setState] = useState<ImageDetectionState>({ status: "idle" });
@@ -40,14 +42,16 @@ export function useImageDetection(targetKey: string) {
 		reset();
 	}, [targetKey, reset]);
 
-	const start = useCallback(async (uri: string) => {
+	const start = useCallback(async (uri: string, scope: DetectionScope) => {
 		const current = request.current + 1;
 		request.current = current;
-		setState({ status: "working" });
+		setState({ status: "working", scope });
 		const regions: DetectedRegion[] = [];
 		const issues: DetectionIssue[] = [];
 		// These libraries are both expensive on web, so run one at a time.
-		for (const feature of ["faces", "text"] as const) {
+		const features: DetectionFeature[] =
+			scope === "both" ? ["faces", "text"] : [scope];
+		for (const feature of features) {
 			if (!isDetectionAvailable(feature)) {
 				issues.push({
 					feature,
@@ -70,9 +74,10 @@ export function useImageDetection(targetKey: string) {
 		if (request.current !== current) return;
 		setState(
 			regions.length === 0
-				? { status: "empty", issues }
+				? { status: "empty", scope, issues }
 				: {
 						status: "found",
+						scope,
 						regions,
 						issues,
 						selected: new Set(regions.map((_, index) => index)),

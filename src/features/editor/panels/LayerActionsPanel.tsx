@@ -6,7 +6,8 @@ import { ToolButton, ToolRow } from "../ToolButton";
  * layer shares float by it (see `SelectionBar`). It's moved and sized on
  * the canvas, and tapping the canvas off it deselects it. `onDraw` goes on
  * drawing on a drawing or restyles a shape, `onRedact` restyles a
- * redaction or paints on, and `onAdjust` changes an image's colors.
+ * redaction or paints on, `onAdjust` changes an image's colors, and
+ * `onFind` looks in an image for faces or text to redact.
  * `onSaveSticker` keeps a photo as a sticker; once it has, `sticker` is
  * "saved", and the button says so.
  */
@@ -14,12 +15,14 @@ export function LayerActionsPanel({
 	onDraw,
 	onRedact,
 	onAdjust,
+	onFind,
 	sticker,
 	onSaveSticker,
 }: {
 	onDraw?: () => void;
 	onRedact?: () => void;
 	onAdjust?: () => void;
+	onFind?: () => void;
 	sticker?: "saving" | "saved";
 	onSaveSticker?: () => void;
 }) {
@@ -29,6 +32,9 @@ export function LayerActionsPanel({
 			{onRedact && <ToolButton label="Redact" icon="blur" onPress={onRedact} />}
 			{onAdjust && (
 				<ToolButton label="Adjust" icon="tune-variant" onPress={onAdjust} />
+			)}
+			{onFind && (
+				<ToolButton label="Find" icon="image-search-outline" onPress={onFind} />
 			)}
 			{onSaveSticker && (
 				<ToolButton

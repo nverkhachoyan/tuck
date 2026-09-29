@@ -18,7 +18,10 @@ import {
 	detectionTargetKey,
 } from "@/detection/detectionTarget";
 import { mapDetectionRects } from "@/detection/mapDetectionRects";
-import { useImageDetection } from "@/detection/useImageDetection";
+import {
+	type DetectionScope,
+	useImageDetection,
+} from "@/detection/useImageDetection";
 import { AddSheet } from "@/features/editor/add/AddSheet";
 import { AdjustPanel } from "@/features/editor/adjust/AdjustPanel";
 import {
@@ -64,7 +67,10 @@ import {
 	SelectionBar,
 } from "@/features/editor/panels/SelectionBar";
 import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
-import { DetectionOptions } from "@/features/editor/redact/DetectionOptions";
+import {
+	DetectionOptions,
+	FindPanel,
+} from "@/features/editor/redact/DetectionOptions";
 import {
 	RedactOptions,
 	RedactPanel,
@@ -157,7 +163,12 @@ const RAIL_WIDTH = 76;
 const INSPECTOR_TRAY = { top: INSPECTOR_TRAY_TOP, width: INSPECTOR_WIDTH };
 
 // What a tool's footer calls it.
-const TOOL_TITLES = { draw: "Draw", redact: "Redact", adjust: "Adjust" };
+const TOOL_TITLES = {
+	draw: "Draw",
+	redact: "Redact",
+	find: "Find",
+	adjust: "Adjust",
+};
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
@@ -284,8 +295,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const [trayHeight, setTrayHeight] = useState(0);
 	// The tool in the dock. While drawing, strokes on the canvas go into the
 	// selected drawing, or a new one; while redacting, into the selected
-	// brushed redaction, or a new one. While adjusting, the canvas holds still.
-	const [tool, setTool] = useState<"draw" | "redact" | "adjust" | null>(null);
+	// brushed redaction, or a new one. While finding, taps on the canvas pick
+	// what's found. While adjusting, the canvas holds still.
+	const [tool, setTool] = useState<
+		"draw" | "redact" | "find" | "adjust" | null
+	>(null);
 	// The image being adjusted. The tool puts itself down if it goes away.
 	const [adjustedId, setAdjustedId] = useState<string | null>(null);
 	const adjustedLayer =
@@ -312,7 +326,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		[adjustedLayer, adjustController.matrix],
 	);
 	const [toolOptionsOpen, setToolOptionsOpen] = useState(false);
-	const [findOpen, setFindOpen] = useState(false);
 	// The tools' settings, and the custom color, are kept between sessions.
 	const [brushSettings, setBrushSettings] = usePreference(
 		"brushSettings",
@@ -355,6 +368,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const detectedImage = detectionTarget(document, selectedLayer);
 	const detectedImageKey = detectionTargetKey(document, detectedImage);
 	const detection = useImageDetection(detectedImageKey);
+	// Find puts itself down if its photo goes away.
+	if (tool === "find" && !detectedImage) setTool(null);
 	const mappedDetections = useMemo(
 		() =>
 			detectedImage && detection.state.status === "found"
@@ -365,7 +380,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								[region],
 								documentSize,
 								feature,
-							).map((mapped) => ({ ...mapped, sourceIndex })),
+							).map((mapped) => ({ ...mapped, sourceIndex, feature })),
 					)
 				: [],
 		[detectedImage, detection.state, documentSize],
@@ -546,8 +561,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const startRedacting = () => {
 		commitPendingPinch();
 		setLayersOpen(false);
-		setFindOpen(false);
-		detection.reset();
 		setRedactSettings((settings) => ({
 			...settings,
 			tool: selectedRedaction
@@ -571,7 +584,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const finishTool = () => {
 		setTool(null);
 		setToolOptionsOpen(false);
-		setFindOpen(false);
 		detection.reset();
 		setEyedropper(null);
 	};
@@ -579,34 +591,48 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		cancelSession();
 		finishTool();
 	};
-	const closeDetection = () => {
-		setFindOpen(false);
-		detection.reset();
+	// In the selected photo, or else the main one.
+	const startFinding = () => {
+		if (!detectedImage) return;
+		commitPendingPinch();
+		setLayersOpen(false);
+		setTool("find");
 	};
-	const toggleDetection = () => {
-		setToolOptionsOpen(false);
-		if (findOpen) {
-			closeDetection();
-			return;
-		}
-		setFindOpen(true);
-		startDetection();
+	// Picking what's already found keeps the regions chosen from it.
+	const findRegions = (scope: DetectionScope) => {
+		const { state } = detection;
+		if (state.status === "found" && state.scope === scope) return;
+		if (detectedImage) detection.start(detectedImage.uri, scope);
 	};
-	const startDetection = () => {
-		if (detectedImage) detection.start(detectedImage.uri);
-	};
-	const applyDetections = () => {
+	// Done redacts the regions chosen, together in one group, in the style
+	// last picked rather than a selected redaction's.
+	const finishFinding = () => {
 		const found = detection.state;
-		if (found.status !== "found") return;
-		const placements = mappedDetections
-			.filter(({ sourceIndex }) => found.selected.has(sourceIndex))
-			.map(({ width, height, transform }) => ({ width, height, transform }));
-		addRedactionBoxes(
-			placements,
-			redactionEffect(redactSettings, documentSize),
-		);
-		closeDetection();
+		const chosen =
+			found.status === "found"
+				? mappedDetections.filter(({ sourceIndex }) =>
+						found.selected.has(sourceIndex),
+					)
+				: [];
+		if (chosen.length > 0) {
+			const features = new Set(chosen.map(({ feature }) => feature));
+			addRedactionBoxes(
+				chosen.map(({ width, height, transform }) => ({
+					width,
+					height,
+					transform,
+				})),
+				redactionEffect(chosenRedactSettings, documentSize),
+				features.size > 1
+					? "Find results"
+					: features.has("faces")
+						? "Face results"
+						: "Text results",
+			);
+		}
+		finishTool();
 	};
+	const doneWithTool = tool === "find" ? finishFinding : finishTool;
 
 	const changeTextEdit = (change: Partial<TextEditState>) =>
 		setTextEdit((edit) => edit && { ...edit, ...change });
@@ -729,7 +755,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 		if (tool) {
 			if (shortcut.type !== "deselect") return false;
-			finishTool();
+			doneWithTool();
 			return true;
 		}
 		if (shortcut.type === "tool") {
@@ -808,6 +834,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		text: startNewText,
 		draw: startDrawing,
 		redact: startRedacting,
+		find: startFinding,
 		add: openAdd,
 		photo: pickPhoto,
 		crop: startCrop,
@@ -949,9 +976,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onCommitTransform={transformLayer}
 							onResizeBox={resizeBox}
 							onNudgeLayer={nudgeLayer}
-							tool={findOpen ? null : canvasTool}
+							tool={canvasTool}
 							detection={
-								tool === "redact" && findOpen
+								tool === "find" && !eyedropper
 									? { regions: detectionOverlay, onToggle: detection.toggle }
 									: null
 							}
@@ -1031,17 +1058,42 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								onClose={() => setToolOptionsOpen(false)}
 							/>
 						)}
-						{tool === "redact" && findOpen && (
+						{tool === "find" && toolOptionsOpen && (
+							<RedactOptions
+								settings={{ ...chosenRedactSettings, tool: "box" }}
+								customColor={customColor}
+								bottomInset={dockInset}
+								onChange={({ tool: _, ...style }) =>
+									setRedactSettings((settings) => ({ ...settings, ...style }))
+								}
+								onPickCustom={(color) => {
+									setRedactSettings((settings) => ({ ...settings, color }));
+									setCustomColor(color);
+								}}
+								onEyedropper={() => {
+									setToolOptionsOpen(false);
+									setEyedropper({
+										apply: (color) =>
+											setRedactSettings((settings) => ({ ...settings, color })),
+									});
+								}}
+								onClose={() => setToolOptionsOpen(false)}
+							/>
+						)}
+						{tool === "find" && !toolOptionsOpen && !eyedropper && (
 							<DetectionOptions
 								state={detection.state}
 								visibleIndices={visibleDetectionIndices}
 								selectedCount={selectedDetectionCount}
 								bottomInset={dockInset}
-								onStart={startDetection}
+								onRetry={() => {
+									const { state } = detection;
+									if (state.status !== "idle") findRegions(state.scope);
+								}}
+								onStop={detection.reset}
 								onSelectAll={() => detection.select(visibleDetectionIndices)}
 								onClear={() => detection.select([])}
-								onApply={applyDetections}
-								onClose={closeDetection}
+								onApply={finishFinding}
 							/>
 						)}
 						{textPicker && styledText && (
@@ -1087,6 +1139,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									onAddText={fromRail(startNewText)}
 									onDraw={fromRail(startDrawing)}
 									onRedact={fromRail(startRedacting)}
+									onFind={detectedImage ? fromRail(startFinding) : undefined}
 									onAdd={fromRail(openAdd)}
 									onCrop={fromRail(startCrop)}
 									onAdjust={adjustable ? fromRail(startAdjusting) : undefined}
@@ -1104,7 +1157,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									<DockFooter
 										title={TOOL_TITLES[tool]}
 										onCancel={cancelTool}
-										onDone={finishTool}
+										onDone={doneWithTool}
 										doneShortcut="Escape"
 									/>
 								) : textEdit ? (
@@ -1140,15 +1193,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<RedactPanel
 									settings={redactSettings}
 									optionsOpen={toolOptionsOpen}
-									findOpen={findOpen}
-									finding={detection.state.status === "working"}
-									hasTarget={detectedImage !== null}
 									onChange={changeRedactSettings}
-									onToggleOptions={() => {
-										closeDetection();
-										setToolOptionsOpen((open) => !open);
-									}}
-									onToggleFind={toggleDetection}
+									onToggleOptions={() => setToolOptionsOpen((open) => !open)}
+								/>
+							) : tool === "find" ? (
+								<FindPanel
+									state={detection.state}
+									settings={chosenRedactSettings}
+									optionsOpen={toolOptionsOpen}
+									onFind={findRegions}
+									onToggleOptions={() => setToolOptionsOpen((open) => !open)}
 								/>
 							) : styledText ? (
 								<TextStylePanel
@@ -1176,6 +1230,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									onAdjust={
 										selectedLayer.type === "image" ? startAdjusting : undefined
 									}
+									onFind={
+										selectedLayer.type === "image" && !selectedLayer.hidden
+											? startFinding
+											: undefined
+									}
 									sticker={
 										stickerSave?.layerId === selectedLayer.id
 											? stickerSave.status
@@ -1195,6 +1254,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									onAddText={startNewText}
 									onDraw={startDrawing}
 									onRedact={startRedacting}
+									onFind={detectedImage ? startFinding : undefined}
 									onAdd={openAdd}
 									onCrop={startCrop}
 									onAdjust={adjustable ? startAdjusting : undefined}

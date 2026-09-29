@@ -50,6 +50,7 @@ describe("shortcutFor", () => {
 			type: "tool",
 			tool: "redact",
 		});
+		assert.deepEqual(shortcutFor(press("f")), { type: "tool", tool: "find" });
 		assert.deepEqual(shortcutFor(press("a")), { type: "tool", tool: "add" });
 		assert.deepEqual(shortcutFor(press("p")), { type: "tool", tool: "photo" });
 		assert.deepEqual(shortcutFor(press("c")), { type: "tool", tool: "crop" });

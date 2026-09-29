@@ -1,38 +1,92 @@
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import type { ImageDetectionState } from "@/detection/useImageDetection";
+import type {
+	DetectionScope,
+	ImageDetectionState,
+} from "@/detection/useImageDetection";
 import { colors, typography } from "@/theme";
 import { Button } from "@/ui/Button";
+import { ToolButton, ToolRow } from "../ToolButton";
 import { Tray } from "../ToolOptions";
+import { EffectGlyph } from "./RedactPanel";
+import type { RedactSettings } from "./redactSettings";
 
 // Narrower than this, the tray's text goes above its buttons rather than beside
 // them, where the buttons would leave it a few letters' width.
 const STACK_BELOW_WIDTH = 480;
 
 /**
- * The compact workflow for finding, choosing, and applying redactions, in a
- * tray. It has no backdrop: taps on the canvas toggle the regions found.
+ * What Find looks for, in place of the toolbar: faces, text, or both, each
+ * scanning the photo as it's picked, and the style what's found is redacted
+ * in, which opens over the canvas.
+ */
+export function FindPanel({
+	state,
+	settings,
+	optionsOpen,
+	onFind,
+	onToggleOptions,
+}: {
+	state: ImageDetectionState;
+	settings: RedactSettings;
+	optionsOpen: boolean;
+	onFind: (scope: DetectionScope) => void;
+	onToggleOptions: () => void;
+}) {
+	const scanned = state.status === "idle" ? null : state.scope;
+	return (
+		<ToolRow>
+			{SCOPES.map(({ scope, label, icon }) => (
+				<ToolButton
+					key={scope}
+					label={label}
+					icon={icon}
+					selected={scanned === scope}
+					busy={state.status === "working" && scanned === scope}
+					onPress={() => onFind(scope)}
+				/>
+			))}
+			<ToolButton
+				label="Style"
+				icon="palette-outline"
+				glyph={<EffectGlyph settings={settings} effect={settings.effect} />}
+				open={optionsOpen}
+				onPress={onToggleOptions}
+			/>
+		</ToolRow>
+	);
+}
+
+const SCOPES = [
+	{ scope: "faces", label: "Faces", icon: "face-recognition" },
+	{ scope: "text", label: "Text", icon: "text-recognition" },
+	{ scope: "both", label: "Both", icon: "image-search-outline" },
+] as const;
+
+/**
+ * How the scan is going, then what it found, to choose from and redact, in
+ * a tray. It has no backdrop: taps on the canvas toggle the regions found.
  */
 export function DetectionOptions({
 	state,
 	visibleIndices,
 	selectedCount,
 	bottomInset,
-	onStart,
+	onRetry,
+	onStop,
 	onSelectAll,
 	onClear,
 	onApply,
-	onClose,
 }: {
 	state: ImageDetectionState;
 	visibleIndices: readonly number[];
 	selectedCount: number;
 	bottomInset: number;
-	onStart: () => void;
+	onRetry: () => void;
+	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
 	onApply: () => void;
-	onClose: () => void;
 }) {
 	// The tray's own width, not the window's: the layers sidebar can narrow
 	// the canvas on web.
@@ -46,14 +100,18 @@ export function DetectionOptions({
 				}
 			>
 				{state.status === "idle" && (
-					<Start onStart={onStart} onClose={onClose} />
+					<Status
+						title="Find faces or text"
+						message="Pick what to look for, then tap what's found to choose what to redact."
+					/>
 				)}
 				{state.status === "working" && (
 					<Status
 						busy
-						title="Finding faces and text…"
+						title={`Finding ${scopeName(state.scope)}…`}
 						message="This can take a moment the first time."
-						onClose={onClose}
+						action="Stop"
+						onAction={onStop}
 					/>
 				)}
 				{state.status === "found" && (
@@ -64,18 +122,16 @@ export function DetectionOptions({
 						onClear={onClear}
 						onApply={onApply}
 						issue={state.issues[0]?.message}
-						onClose={onClose}
 					/>
 				)}
 				{state.status === "empty" && (
 					<Status
-						title="Nothing found"
+						title={`No ${scopeName(state.scope)} found`}
 						message={
 							state.issues[0]?.message ?? "Try another photo or scan again."
 						}
 						action="Try Again"
-						onAction={onStart}
-						onClose={onClose}
+						onAction={onRetry}
 					/>
 				)}
 			</View>
@@ -83,31 +139,8 @@ export function DetectionOptions({
 	);
 }
 
-function Start({
-	onStart,
-	onClose,
-}: {
-	onStart: () => void;
-	onClose: () => void;
-}) {
-	return (
-		<>
-			<View style={styles.copy}>
-				<Text style={styles.title}>Find to redact</Text>
-				<Text style={styles.message}>Scan this photo for faces and text.</Text>
-			</View>
-			<View style={styles.actions}>
-				<Button
-					label="Find"
-					icon="images-outline"
-					variant="primary"
-					size="small"
-					onPress={onStart}
-				/>
-				<Button label="Close" size="small" onPress={onClose} />
-			</View>
-		</>
-	);
+function scopeName(scope: DetectionScope): string {
+	return scope === "both" ? "faces or text" : scope;
 }
 
 function Found({
@@ -117,7 +150,6 @@ function Found({
 	onClear,
 	onApply,
 	issue,
-	onClose,
 }: {
 	count: number;
 	selected: number;
@@ -125,7 +157,6 @@ function Found({
 	onClear: () => void;
 	onApply: () => void;
 	issue?: string;
-	onClose: () => void;
 }) {
 	return (
 		<>
@@ -142,22 +173,19 @@ function Found({
 						: "Tap an outlined region to include or leave it out."}
 				</Text>
 			</View>
-			<View style={styles.actions}>
-				{count > 0 && (
-					<>
-						<Button label="All" size="small" onPress={onSelectAll} />
-						<Button label="None" size="small" onPress={onClear} />
-						<Button
-							label={`Redact ${selected}`}
-							variant="primary"
-							size="small"
-							disabled={selected === 0}
-							onPress={onApply}
-						/>
-					</>
-				)}
-				<Button label="Cancel" size="small" onPress={onClose} />
-			</View>
+			{count > 0 && (
+				<View style={styles.actions}>
+					<Button label="All" size="small" onPress={onSelectAll} />
+					<Button label="None" size="small" onPress={onClear} />
+					<Button
+						label={`Redact selected (${selected})`}
+						variant="primary"
+						size="small"
+						disabled={selected === 0}
+						onPress={onApply}
+					/>
+				</View>
+			)}
 		</>
 	);
 }
@@ -168,14 +196,12 @@ function Status({
 	message,
 	action,
 	onAction,
-	onClose,
 }: {
 	busy?: boolean;
 	title: string;
 	message: string;
 	action?: string;
 	onAction?: () => void;
-	onClose: () => void;
 }) {
 	return (
 		<>
@@ -188,16 +214,11 @@ function Status({
 					</Text>
 				</View>
 			</View>
-			<View style={styles.actions}>
-				{action && onAction && (
+			{action && onAction && (
+				<View style={styles.actions}>
 					<Button label={action} size="small" onPress={onAction} />
-				)}
-				<Button
-					label={busy ? "Cancel" : "Close"}
-					size="small"
-					onPress={onClose}
-				/>
-			</View>
+				</View>
+			)}
 		</>
 	);
 }

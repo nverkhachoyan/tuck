@@ -6,6 +6,7 @@ export type ToolKey =
 	| "text"
 	| "draw"
 	| "redact"
+	| "find"
 	| "add"
 	| "photo"
 	| "crop"
@@ -18,6 +19,7 @@ export const TOOL_KEYS: Record<ToolKey, string> = {
 	text: "T",
 	draw: "D",
 	redact: "R",
+	find: "F",
 	add: "A",
 	photo: "P",
 	crop: "C",
@@ -120,6 +122,7 @@ export const SHORTCUT_GROUPS: {
 			{ keys: TOOL_KEYS.text, action: "Add text" },
 			{ keys: TOOL_KEYS.draw, action: "Draw" },
 			{ keys: TOOL_KEYS.redact, action: "Redact" },
+			{ keys: TOOL_KEYS.find, action: "Find faces or text to redact" },
 			{ keys: TOOL_KEYS.add, action: "Add a photo or sticker" },
 			{ keys: TOOL_KEYS.photo, action: "Add a photo" },
 			{ keys: TOOL_KEYS.crop, action: "Crop" },

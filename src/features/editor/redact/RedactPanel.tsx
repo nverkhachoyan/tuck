@@ -27,21 +27,13 @@ const STRENGTH_NAMES = {
 export function RedactPanel({
 	settings,
 	optionsOpen,
-	findOpen,
-	finding,
-	hasTarget = true,
 	onChange,
 	onToggleOptions,
-	onToggleFind,
 }: {
 	settings: RedactSettings;
 	optionsOpen: boolean;
-	findOpen: boolean;
-	finding: boolean;
-	hasTarget?: boolean;
 	onChange: (settings: RedactSettings) => void;
 	onToggleOptions: () => void;
-	onToggleFind: () => void;
 }) {
 	const pickTool = (tool: RedactTool) => {
 		if (tool === settings.tool) onToggleOptions();
@@ -66,14 +58,6 @@ export function RedactPanel({
 				icon="eraser"
 				selected={settings.tool === "eraser"}
 				onPress={() => pickTool("eraser")}
-			/>
-			<ToolButton
-				label="Find"
-				icon="image-search-outline"
-				open={findOpen}
-				busy={finding}
-				disabled={!hasTarget}
-				onPress={onToggleFind}
 			/>
 			<ToolButton
 				label="Style"
@@ -231,7 +215,7 @@ function EffectChoice({
 }
 
 /** A solid effect's color as a tile, or blur's or pixelation's mark. */
-function EffectGlyph({
+export function EffectGlyph({
 	settings,
 	effect,
 }: {

@@ -5,8 +5,9 @@ import { ToolButton, ToolRow } from "../ToolButton";
  * The editing tools, in the dock while no layer is selected. On web, each
  * shows the letter that picks it up (see `TOOL_KEYS`) on hover. Add opens
  * the sheet of photos and stickers, and spins while one is on its way.
- * Adjust shows only with an image to adjust. `vertical` stacks them for a
- * wide screen's rail, where they stay while a tool is in use, marking it.
+ * Find and Adjust show only with an image to scan or adjust. `vertical`
+ * stacks them for a wide screen's rail, where they stay while a tool is in
+ * use, marking it.
  */
 export function ToolsPanel({
 	vertical = false,
@@ -15,16 +16,18 @@ export function ToolsPanel({
 	onAddText,
 	onDraw,
 	onRedact,
+	onFind,
 	onAdd,
 	onCrop,
 	onAdjust,
 }: {
 	vertical?: boolean;
-	tool?: "text" | "draw" | "redact" | "adjust" | null;
+	tool?: "text" | "draw" | "redact" | "find" | "adjust" | null;
 	addBusy: boolean;
 	onAddText: () => void;
 	onDraw: () => void;
 	onRedact: () => void;
+	onFind?: () => void;
 	onAdd: () => void;
 	onCrop: () => void;
 	onAdjust?: () => void;
@@ -52,6 +55,15 @@ export function ToolsPanel({
 				selected={tool === "redact"}
 				onPress={onRedact}
 			/>
+			{onFind && (
+				<ToolButton
+					label="Find"
+					icon="image-search-outline"
+					shortcut={TOOL_KEYS.find}
+					selected={tool === "find"}
+					onPress={onFind}
+				/>
+			)}
 			<ToolButton
 				label="Add"
 				icon="plus-circle-outline"

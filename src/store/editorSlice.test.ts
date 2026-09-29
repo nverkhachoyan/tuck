@@ -499,7 +499,7 @@ describe("editorSlice", () => {
 			);
 		});
 
-		test("detected boxes are added and undone together", () => {
+		test("detected boxes are added unselected and undone together", () => {
 			const { store, text } = storeWithText();
 			const before = store.getState().document;
 			store.getState().addRedactionBoxes(
@@ -562,7 +562,7 @@ describe("editorSlice", () => {
 					},
 				],
 			);
-			assert.equal(store.getState().selectedLayerId, added[1].id);
+			assert.equal(store.getState().selectedLayerId, null);
 			assert.equal(store.getState().past.length, 2, "one new history step");
 
 			store.getState().setLayerGroupHidden(group?.id ?? "", true);

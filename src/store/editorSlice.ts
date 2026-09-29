@@ -88,6 +88,7 @@ export type EditorSlice = {
 	addRedactionBoxes: (
 		placements: readonly RedactionBoxPlacement[],
 		effect: RedactionEffect,
+		groupName?: string,
 	) => void;
 	setLayerGroupHidden: (id: string, hidden: boolean) => void;
 	setLayerGroupLocked: (id: string, locked: boolean) => void;
@@ -326,8 +327,9 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// Detector proposals land together, on top, as one undo step. Their
 		// group is metadata over the flat paint order, so a large result stays
-		// one compact row without adding a canvas compositing layer.
-		addRedactionBoxes: (placements, effect) => {
+		// one compact row without adding a canvas compositing layer. None of
+		// them is selected: the group, not any one box, is what was added.
+		addRedactionBoxes: (placements, effect, groupName = "Find results") => {
 			const boxes = placements
 				.filter(({ width, height }) => width > 0 && height > 0)
 				.map((placement) => createPlacedRedactionBox(placement, effect));
@@ -340,12 +342,12 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 					groups: [
 						...(document.groups ?? []),
 						createLayerGroup(
-							"Find results",
+							groupName,
 							boxes.map((box) => box.id),
 						),
 					],
 				}),
-				boxes[boxes.length - 1].id,
+				null,
 			);
 		},
 
