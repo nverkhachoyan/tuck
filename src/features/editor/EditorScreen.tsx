@@ -78,6 +78,7 @@ import {
 	withEffect,
 } from "@/features/editor/redact/redactSettings";
 import { SaveErrorBanner } from "@/features/editor/SaveErrorBanner";
+import { ShortcutsOverlay } from "@/features/editor/ShortcutsOverlay";
 import {
 	LAYERS_KEY,
 	type Shortcut,
@@ -677,12 +678,25 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// Stable, so the sheets' swipes aren't rebuilt on every render.
 	const closeLayers = useCallback(() => setLayersOpen(false), []);
 	const closeAdd = useCallback(() => setAddOpen(false), []);
+	const [shortcutsOpen, setShortcutsOpen] = useState(false);
 	const openAdd = () => {
 		setLayersOpen(false);
 		setAddOpen(true);
 	};
 
 	const handleShortcut = (shortcut: Shortcut): boolean => {
+		// The list of shortcuts closes with its own key or Escape, and holds
+		// the rest back.
+		if (shortcutsOpen) {
+			if (shortcut.type === "help" || shortcut.type === "deselect") {
+				setShortcutsOpen(false);
+			}
+			return true;
+		}
+		if (shortcut.type === "help") {
+			setShortcutsOpen(true);
+			return true;
+		}
 		if (shortcut.type === "undo") {
 			undo();
 			return true;
@@ -1230,6 +1244,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onFocusChange={(focused) => changeTextEdit({ focused })}
 							onDone={finishTextEdit}
 						/>
+					)}
+					{shortcutsOpen && (
+						<ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />
 					)}
 				</View>
 			</TrayPlacement.Provider>

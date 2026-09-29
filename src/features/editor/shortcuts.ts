@@ -39,7 +39,8 @@ export type Shortcut =
 	| { type: "reorder"; step: 1 | -1 }
 	| { type: "nudge"; dx: number; dy: number }
 	| { type: "tool"; tool: ToolKey }
-	| { type: "layers" };
+	| { type: "layers" }
+	| { type: "help" };
 
 export type KeyPress = {
 	key: string;
@@ -85,6 +86,9 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 		return { type: "nudge", dx: arrow[0] * distance, dy: arrow[1] * distance };
 	}
 	switch (press.key) {
+		// Shift makes it on most layouts, so it's allowed here.
+		case "?":
+			return { type: "help" };
 		case "Delete":
 		case "Backspace":
 			return { type: "delete" };
@@ -101,3 +105,51 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 	const tool = TOOLS_BY_KEY.get(letter);
 	return tool ? { type: "tool", tool } : null;
 }
+
+/**
+ * Every shortcut, as the help overlay lists them, in the notation tooltips
+ * take ("mod+shift+Z").
+ */
+export const SHORTCUT_GROUPS: {
+	title: string;
+	items: { keys: string; action: string }[];
+}[] = [
+	{
+		title: "Tools",
+		items: [
+			{ keys: TOOL_KEYS.text, action: "Add text" },
+			{ keys: TOOL_KEYS.draw, action: "Draw" },
+			{ keys: TOOL_KEYS.redact, action: "Redact" },
+			{ keys: TOOL_KEYS.add, action: "Add a photo or sticker" },
+			{ keys: TOOL_KEYS.photo, action: "Add a photo" },
+			{ keys: TOOL_KEYS.crop, action: "Crop" },
+			{ keys: TOOL_KEYS.adjust, action: "Adjust" },
+			{ keys: LAYERS_KEY, action: "Show or hide layers" },
+		],
+	},
+	{
+		title: "Editing",
+		items: [
+			{ keys: "mod+Z", action: "Undo" },
+			{ keys: "mod+shift+Z", action: "Redo" },
+			{ keys: "mod+D", action: "Duplicate" },
+			{ keys: "mod+]", action: "Bring forward" },
+			{ keys: "mod+[", action: "Send backward" },
+			{ keys: "Delete", action: "Delete" },
+			{ keys: "Enter", action: "Edit the selected text" },
+			{ keys: "←↑→↓", action: "Nudge, with Shift for more" },
+			{ keys: "Escape", action: "Done, or deselect" },
+		],
+	},
+	{
+		title: "Crop",
+		items: [
+			{ keys: "Enter", action: "Apply" },
+			{ keys: "Escape", action: "Cancel" },
+		],
+	},
+	{
+		title: "Help",
+		items: [{ keys: "?", action: "Show these shortcuts" }],
+	},
+];

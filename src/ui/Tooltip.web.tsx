@@ -143,7 +143,7 @@ const MAC_KEYS: Record<string, string> = {
 const OTHER_KEYS: Record<string, string> = { Delete: "Del", Escape: "Esc" };
 
 /** "mod+shift+Z" as this platform writes it: ⇧⌘Z on a Mac, Ctrl+Shift+Z elsewhere. */
-function formatShortcut(shortcut: string) {
+export function formatShortcut(shortcut: string) {
 	const parts = shortcut.split("+");
 	const key = parts[parts.length - 1];
 	const modifiers = isMac ? MAC_MODIFIERS : OTHER_MODIFIERS;

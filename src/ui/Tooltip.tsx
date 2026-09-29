@@ -20,3 +20,8 @@ export function useTooltip(
 ): { anchor: TooltipAnchorProps; tooltip: ReactNode } {
 	return { anchor: {}, tooltip: null };
 }
+
+/** A shortcut as this platform writes it; only web shows them. */
+export function formatShortcut(shortcut: string) {
+	return shortcut;
+}

@@ -150,7 +150,9 @@ Built with the review's mockup as the proposal. From 1024pt, `EditorScreen` puts
 * The inspector's resting state is the layers list, replacing the floating layers panel.
 * The header shows the project's name.
 
-### 5.2 Shortcuts
+### 5.2 Shortcuts (done)
+
+`?` (with or without Shift) opens `ShortcutsOverlay`, listing `SHORTCUT_GROUPS` from `shortcuts.ts` in each platform's notation (`formatShortcut`, now exported by `ui/Tooltip`). Escape or `?` closes it, and other shortcuts wait while it's open.
 
 * `?` opens an overlay listing the keyboard shortcuts from `features/editor/shortcuts.ts`.
 

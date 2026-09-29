@@ -66,6 +66,13 @@ describe("shortcutFor", () => {
 		assert.equal(shortcutFor(press("c", { metaKey: true })), null);
 	});
 
+	test("shows the shortcuts with ?, Shift or not", () => {
+		assert.deepEqual(shortcutFor(press("?")), { type: "help" });
+		assert.deepEqual(shortcutFor(press("?", { shiftKey: true })), {
+			type: "help",
+		});
+	});
+
 	test("deletes and deselects with plain keys", () => {
 		assert.deepEqual(shortcutFor(press("Backspace")), { type: "delete" });
 		assert.deepEqual(shortcutFor(press("Delete")), { type: "delete" });
