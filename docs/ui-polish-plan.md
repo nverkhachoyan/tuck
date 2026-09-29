@@ -19,7 +19,7 @@ The audit ran the web build at iPhone width (390 × 844) and at desktop width. T
   * Controls have no fill of their own. A tool is an icon over its label (`ToolButton`); Done and Cancel are bare glyphs. Hover and press lay `hoverOverlay` and `pressedOverlay` over them.
   * The chosen option among controls (a tool, an adjustment, an aspect ratio) gets a thin outline in `colors.chosen` with `radii.small` corners, not a filled tile. Color stays for what really is a color, like a Style tile's swatch.
   * The accent is for Export and for the value being changed (a dial's marker), not for finishing a tool.
-  * Still to decide: the cards and bars that float over the canvas (tool options, the selection bar, the Find card, the layers sidebar) are still frosted `GlassView`s with large corners. Either make them opaque with small corners and a hairline border, or have options rise out of the dock in its color, as Snapseed's do. Adjust could also show its value large above the dial.
+  * Settled on 2026-09-28 in `design-rethink-plan.md`: options rise out of the dock as opaque trays, and the selection bar becomes an opaque pill.
 * The user approved every item below, including the clipboard features and the new `expo-clipboard` dependency they need.
 
 ## Step 1 — Fix what's broken (done)
