@@ -11,7 +11,7 @@ import type { Layer } from "@/model/document";
 import { colors, radii, typography } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
-import { GlassView } from "@/ui/GlassView";
+import { Surface } from "@/ui/Surface";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 
 const SIDEBAR_WIDTH = 340;
@@ -79,14 +79,14 @@ export function LayersPanel({
 					exiting={SIDEBAR_OUT}
 					style={styles.sidebar}
 				>
-					<GlassView style={styles.sidebarCard} contentStyle={styles.shrink}>
+					<Surface style={styles.sidebarCard} contentStyle={styles.shrink}>
 						<PanelHeader
 							title="Layers"
 							closeLabel="Close layers"
 							onClose={onClose}
 						/>
 						<LayerList {...list} compact />
-					</GlassView>
+					</Surface>
 				</Animated.View>
 			)}
 		</View>

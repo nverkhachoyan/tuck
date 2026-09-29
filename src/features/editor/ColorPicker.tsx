@@ -13,9 +13,9 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
 import { colors, radii, typography } from "@/theme";
 import { Button } from "@/ui/Button";
-import { GlassView } from "@/ui/GlassView";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
 import { IconButton } from "@/ui/IconButton";
+import { Surface } from "@/ui/Surface";
 import { ColorSwatches, isCustomColor } from "./ColorSwatches";
 
 // As wide as a row of seven swatches, so a picker on its own in a card is
@@ -260,11 +260,11 @@ const RED: Hsv = { hue: 0, saturation: 1, value: 1 };
 export function EyedropperHint({ onCancel }: { onCancel: () => void }) {
 	return (
 		<View style={styles.hintArea}>
-			<GlassView style={styles.hint} contentStyle={styles.hintContent}>
+			<Surface style={styles.hint} contentStyle={styles.hintContent}>
 				<Ionicons name="eyedrop-outline" size={18} color={colors.textPrimary} />
 				<Text style={styles.hintText}>Tap the canvas to pick its color</Text>
 				<Button label="Cancel" size="small" onPress={onCancel} />
-			</GlassView>
+			</Surface>
 		</View>
 	);
 }
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
 		height: 30,
 		paddingHorizontal: 8,
 		borderRadius: radii.small,
-		backgroundColor: colors.glassControl,
+		backgroundColor: colors.surfaceHover,
 		color: colors.textPrimary,
 		fontVariant: ["tabular-nums"],
 		textAlign: "center",

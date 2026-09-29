@@ -8,8 +8,8 @@ import {
 	typography,
 	webTransition,
 } from "@/theme";
-import { GlassView } from "@/ui/GlassView";
 import { interaction } from "@/ui/interaction";
+import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
@@ -44,7 +44,7 @@ export function SelectionBar({
 }) {
 	const [arranging, setArranging] = useState(false);
 	return (
-		<GlassView style={styles.bar} contentStyle={styles.content}>
+		<Surface style={styles.bar} contentStyle={styles.content}>
 			{arranging ? (
 				<>
 					<BarButton
@@ -114,7 +114,7 @@ export function SelectionBar({
 					/>
 				</>
 			)}
-		</GlassView>
+		</Surface>
 	);
 }
 
@@ -176,7 +176,7 @@ function BarButton({
 
 const styles = StyleSheet.create({
 	bar: {
-		borderRadius: 18,
+		borderRadius: radii.medium,
 	},
 	content: {
 		flexDirection: "row",

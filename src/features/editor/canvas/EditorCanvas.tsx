@@ -46,7 +46,7 @@ import {
 	toLayerSpace,
 } from "@/model/geometry";
 import { colors, typography } from "@/theme";
-import { GlassView } from "@/ui/GlassView";
+import { Surface } from "@/ui/Surface";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -708,14 +708,14 @@ export function EditorCanvas({
 						<View
 							style={[styles.failure, { bottom: bottomInset + PHOTO_INSET }]}
 						>
-							<GlassView
+							<Surface
 								style={styles.failurePill}
 								contentStyle={styles.failurePillContent}
 							>
 								<Text style={styles.failureText}>
 									A photo couldn't be loaded.
 								</Text>
-							</GlassView>
+							</Surface>
 						</View>
 					)}
 				</View>

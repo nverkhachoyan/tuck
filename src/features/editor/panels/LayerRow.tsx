@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
 		borderRadius: radii.small,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.glassControlHover,
+		backgroundColor: colors.surfaceHover,
 	},
 	label: {
 		...typography.body,

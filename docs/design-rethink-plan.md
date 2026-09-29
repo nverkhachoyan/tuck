@@ -106,7 +106,9 @@ Built with the review's mockup as the proposal. `Tray` in `ToolOptions.tsx` sits
 * The canvas refits above an open tray, animated over about 250ms (`useDockInset` grows by the tray's height). Selection changes never move it.
 * Style's tile shows it's open with a bold label, not a second outline: only the tool in use is outlined.
 
-### 3.2 Opaque everywhere else
+### 3.2 Opaque everywhere else (done)
+
+`ui/Surface.tsx` replaced `GlassView`: an opaque panel in `colors.surface` with a hairline border and the floating shadow. The web alert, tooltip, and drop overlay lost their backdrop blurs too, and `expo-blur` was uninstalled (the development build still carries it until the next rebuild, harmlessly).
 
 * The selection bar (`panels/SelectionBar.tsx`) becomes an opaque pill in `colors.surfaceHover` with a `borderStrong` hairline and `radii.medium` corners.
 * The Add sheet (`add/AddSheet.tsx`, `ui/BottomSheet.tsx`) and the layers panel (`panels/LayersPanel.tsx`) become opaque; the color picker and the save error banner too.

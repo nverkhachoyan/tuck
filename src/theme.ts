@@ -38,15 +38,6 @@ export const colors = {
 	// Around every color swatch, so black shows on the dark UI and white on a
 	// light photo.
 	swatchRing: "rgba(255, 255, 255, 0.3)",
-	// Frosted panels floating over the canvas. Where the platform can't blur
-	// behind a view (Android), `glassFallback` stands in, nearly opaque.
-	// Dense enough that white text on it still reads over a white photo.
-	glass: "rgba(28, 28, 32, 0.72)",
-	glassFallback: "rgba(28, 28, 32, 0.96)",
-	glassBorder: "rgba(255, 255, 255, 0.09)",
-	// A control's fill on glass, lighter than the glass around it.
-	glassControl: "rgba(255, 255, 255, 0.06)",
-	glassControlHover: "rgba(255, 255, 255, 0.11)",
 	danger: "#FF453A",
 	dangerHover: "#FF6259",
 	dangerPressed: "#E0352B",
@@ -55,9 +46,6 @@ export const colors = {
 	scrim: "rgba(0, 0, 0, 0.65)",
 	// Lighter still, behind a sheet the canvas stays in view past.
 	sheetScrim: "rgba(0, 0, 0, 0.3)",
-	// A little lighter, where a blur also quiets what's behind. Dark enough
-	// that white text over a white canvas still reads.
-	frostedScrim: "rgba(0, 0, 0, 0.6)",
 	// The checkerboard that stands for transparency.
 	checkerDark: "#2E2E33",
 	checkerLight: "#45454B",
@@ -70,8 +58,6 @@ export const radii = {
 	medium: 12,
 	// Sheets, dialogs, and cards floating over the canvas.
 	large: 20,
-	// The glass panels over the canvas.
-	panel: 28,
 };
 
 // Every gap and padding is one of these.

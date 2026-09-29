@@ -169,11 +169,9 @@ const styles = StyleSheet.create({
 		paddingVertical: 5,
 		borderRadius: radii.small,
 		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: "rgba(255, 255, 255, 0.1)",
-		backgroundColor: "rgba(44, 44, 48, 0.78)",
+		borderColor: colors.borderStrong,
+		backgroundColor: colors.surfaceHover,
 		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
-		// React Native's style types lack backdrop filters, which only web has.
-		backdropFilter: "blur(16px) saturate(160%)",
 		pointerEvents: "none",
 	} as unknown as ViewStyle,
 	measuring: {

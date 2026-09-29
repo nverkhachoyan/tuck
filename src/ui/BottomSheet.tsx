@@ -16,8 +16,8 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { colors, radii, typography } from "@/theme";
-import { GlassView } from "./GlassView";
 import { IconButton } from "./IconButton";
+import { Surface } from "./Surface";
 
 // `webTransition`'s curve, for arriving, and its mirror for leaving.
 const DECELERATE = Easing.bezier(0.2, 0, 0, 1);
@@ -93,7 +93,7 @@ export function BottomSheet({
 				}}
 				style={[styles.sheet, dragged]}
 			>
-				<GlassView
+				<Surface
 					style={styles.sheetCard}
 					contentStyle={[styles.shrink, { paddingBottom: bottom }]}
 				>
@@ -104,7 +104,7 @@ export function BottomSheet({
 						swipe={swipe}
 					/>
 					{children}
-				</GlassView>
+				</Surface>
 			</Animated.View>
 		</Animated.View>
 	);
@@ -156,8 +156,8 @@ const styles = StyleSheet.create({
 	},
 	sheetCard: {
 		flexShrink: 1,
-		borderTopLeftRadius: radii.panel,
-		borderTopRightRadius: radii.panel,
+		borderTopLeftRadius: radii.large,
+		borderTopRightRadius: radii.large,
 		borderBottomLeftRadius: 0,
 		borderBottomRightRadius: 0,
 	},
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
 		paddingLeft: 20,
 		paddingRight: 22,
 		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.glassBorder,
+		borderBottomColor: colors.border,
 	},
 	grabber: {
 		position: "absolute",

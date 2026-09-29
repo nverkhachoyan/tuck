@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
 		padding: 10,
 		borderRadius: radii.medium,
 		borderCurve: "continuous",
-		backgroundColor: colors.glassControl,
+		backgroundColor: colors.surfaceHover,
 	},
 	photoIcon: {
 		width: 40,
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
 		borderCurve: "continuous",
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.glassControlHover,
+		backgroundColor: colors.surfacePressed,
 	},
 	photoLabel: {
 		...typography.bodyStrong,
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	hovered: {
-		backgroundColor: colors.glassControlHover,
+		backgroundColor: colors.surfacePressed,
 	},
 	pressed: {
 		backgroundColor: colors.pressedOverlay,
