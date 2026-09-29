@@ -95,7 +95,15 @@ function Routes() {
 			<Stack.Screen name="index" />
 			<Stack.Screen name="create" />
 			<Stack.Screen name="projects/[id]/index" />
-			<Stack.Screen name="projects/[id]/export" />
+			{/* A sheet over the editor, which stays in view behind it. */}
+			<Stack.Screen
+				name="projects/[id]/export"
+				options={{
+					presentation: "transparentModal",
+					animation: "fade",
+					contentStyle: { backgroundColor: "transparent" },
+				}}
+			/>
 		</Stack>
 	);
 }

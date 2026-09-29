@@ -1,48 +1,50 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Canvas, Image, Rect, rect, Shadow } from "@shopify/react-native-skia";
 import {
 	Redirect,
 	useIsFocused,
 	useLocalSearchParams,
 	useRouter,
 } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
-	type LayoutChangeEvent,
 	Linking,
+	Platform,
 	Pressable,
 	StyleSheet,
 	Text,
-	useWindowDimensions,
 	View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { errorMessage } from "@/lib/errorMessage";
-import type { EditorDocument } from "@/model/document";
+import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
 import {
-	CHECKER_CELL,
 	chosenOutline,
 	colors,
 	radii,
+	space,
 	typography,
 	webTransition,
 } from "@/theme";
+import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
-import { CanvasStage } from "@/ui/CanvasStage";
-import { Checkerboard } from "@/ui/Checkerboard";
 import { interaction } from "@/ui/interaction";
-import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
-import { TextButton } from "@/ui/TextButton";
 import { copyImage } from "./copyImage";
-import { exportFormatFor, exportFormats } from "./exportFormat";
-import { exportSizes } from "./exportSizes";
+import {
+	type ExportFormat,
+	exportFormatFor,
+	exportFormats,
+} from "./exportFormat";
+import { type ExportSize, exportSizes } from "./exportSizes";
 import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";
 import { useRenderedDocument } from "./useRenderedDocument";
 
+/**
+ * Export, as a sheet over the editor, which shows what will be saved: its
+ * size and format, then Save, Share, and Copy.
+ */
 export default function ExportScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const document = useStore((state) =>
@@ -64,35 +66,30 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const sizes = useMemo(() => exportSizes(document), [document]);
 	const [sizeIndex, setSizeIndex] = useState(0);
 	const exportSize = sizes[Math.min(sizeIndex, sizes.length - 1)];
-	const format = exportFormatFor(document);
+	const transparent = hasTransparency(document);
+	const [format, setFormat] = useState<ExportFormat>(() =>
+		exportFormatFor(document),
+	);
 	const { state, retry } = useRenderedDocument(document, exportSize.scale);
 	const [busy, setBusy] = useState<"saving" | "sharing" | "copying" | null>(
 		null,
 	);
 	const [saved, setSaved] = useState(false);
 	const [copied, setCopied] = useState(false);
-	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [canShare] = useState(canShareImages);
-	const fit = Math.min(
-		size.width / exportSize.width,
-		size.height / exportSize.height,
-	);
-	const imageBounds = rect(
-		(size.width - exportSize.width * fit) / 2,
-		(size.height - exportSize.height * fit) / 2,
-		exportSize.width * fit,
-		exportSize.height * fit,
-	);
+	const close = useCallback(() => router.back(), [router]);
+	useEffect(() => {
+		if (Platform.OS !== "web") return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") close();
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [close]);
 
-	const pickSize = (index: number) => {
-		setSizeIndex(index);
+	const changed = () => {
 		setSaved(false);
 		setCopied(false);
-	};
-
-	const handleLayout = (event: LayoutChangeEvent) => {
-		const { width, height } = event.nativeEvent.layout;
-		setSize({ width, height });
 	};
 
 	const handleSave = async () => {
@@ -147,151 +144,90 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	};
 
 	const ready = state.status === "ready";
-	const wide = useWindowDimensions().width >= 420;
-	const { bottom } = useSafeAreaInsets();
 
 	return (
 		<View style={styles.container}>
-			<ScreenHeader
-				title="Export"
-				backLabel="Back to editor"
-				onBack={() => router.back()}
-				action={
-					// Saved, the edit is finished: straight back to the projects,
-					// which ends the session, rather than through the editor.
-					saved ? (
-						<TextButton
-							label="Done"
-							tone="accent"
-							onPress={() => router.dismissTo("/")}
-						/>
-					) : undefined
-				}
+			{/* Behind the sheet, not around it: on web, a click on the sheet
+			    would bubble up to it and close the sheet. */}
+			<Pressable
+				style={[StyleSheet.absoluteFill, styles.scrim]}
+				onPress={close}
+				accessibilityLabel="Close export"
 			/>
-
-			<CanvasStage>
-				<View style={styles.previewArea}>
-					{/* Canvas has no onLayout on Fabric, so measure a wrapper instead. */}
-					<View style={styles.preview} onLayout={handleLayout}>
-						<Canvas style={styles.preview}>
-							{ready && (
-								<Rect rect={imageBounds} color="black">
-									<Shadow
-										dx={0}
-										dy={8}
-										blur={24}
-										color="rgba(0, 0, 0, 0.6)"
-										shadowOnly
-									/>
-								</Rect>
-							)}
-							{ready && format === "png" && (
-								<Checkerboard bounds={imageBounds} cell={CHECKER_CELL} />
-							)}
-							{ready && (
-								<Image image={state.image} rect={imageBounds} fit="fill" />
-							)}
-						</Canvas>
-					</View>
-
-					{state.status === "rendering" && (
-						<View style={styles.overlay}>
-							<ActivityIndicator color={colors.textSecondary} />
-							<Text style={styles.status}>Preparing full-size image…</Text>
-						</View>
-					)}
-					{state.status === "failed" && (
-						<View style={styles.overlay}>
-							<Ionicons
-								name="alert-circle-outline"
-								size={28}
-								color={colors.textSecondary}
+			<View style={styles.column}>
+				<BottomSheet title="Export" closeLabel="Close" onClose={close}>
+					<View style={styles.content}>
+						{sizes.length > 1 && (
+							<Segmented
+								label="Size"
+								disabled={busy !== null}
+								options={sizes.map(({ width, height }, index) => ({
+									title: sizeName(index, sizes),
+									detail: `${width} × ${height}`,
+									accessibilityLabel: `${sizeName(index, sizes)}, ${width} by ${height} pixels`,
+								}))}
+								selected={Math.min(sizeIndex, sizes.length - 1)}
+								onSelect={(index) => {
+									setSizeIndex(index);
+									changed();
+								}}
 							/>
-							<Text style={styles.status}>Couldn't render the image.</Text>
-							<Button label="Try Again" onPress={retry} />
-						</View>
-					)}
-				</View>
-			</CanvasStage>
-
-			<View style={[styles.footer, { paddingBottom: 24 + bottom }]}>
-				<View style={styles.footerContent}>
-					{sizes.length > 1 && (
-						<View style={styles.sizes}>
-							{sizes.map(({ width, height, scale }, index) => {
-								const selected = index === sizeIndex;
-								return (
-									<Pressable
-										key={scale}
-										hitSlop={4}
-										disabled={busy !== null}
-										onPress={() => pickSize(index)}
-										accessibilityRole="button"
-										accessibilityLabel={`${width} by ${height} pixels`}
-										accessibilityState={{ selected, disabled: busy !== null }}
-										style={(pressable) => {
-											const { pressed, hovered } = interaction(pressable);
-											return [
-												styles.sizeChip,
-												webTransition,
-												hovered && styles.sizeChipHovered,
-												selected && styles.sizeChipSelected,
-												pressed && styles.sizeChipPressed,
-											];
-										}}
-									>
-										<Text
-											style={[
-												styles.sizeLabel,
-												selected && styles.sizeLabelSelected,
-											]}
-										>
-											{width} × {height}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</View>
-					)}
-					<Text style={styles.details}>
-						{sizes.length > 1
-							? `${sizeName(exportSize.scale, sizes.indexOf(exportSize))} · `
-							: `${exportSize.width} × ${exportSize.height} · `}
-						{format === "png"
-							? `${exportFormats.png.label}, to keep the transparent areas`
-							: exportFormats.jpeg.label}
-					</Text>
-					<View style={[styles.actions, wide && styles.actionsWide]}>
-						<View style={wide && styles.actionWide}>
-							{saved ? (
-								<View style={styles.saved} accessibilityLiveRegion="polite">
-									<Ionicons
-										name="checkmark-circle"
-										size={22}
-										color={colors.accent}
-									/>
-									<Text style={styles.savedLabel}>{saveLabels.done}</Text>
-								</View>
-							) : (
-								<Button
-									label={busy === "saving" ? saveLabels.busy : saveLabels.idle}
-									icon="download-outline"
-									variant="primary"
-									size="large"
-									disabled={!ready || busy !== null}
-									onPress={handleSave}
+						)}
+						<Segmented
+							label="Format"
+							disabled={busy !== null}
+							options={(["jpeg", "png"] as const).map((value) => ({
+								title: exportFormats[value].label,
+								detail:
+									value === "png"
+										? "Keeps transparency"
+										: transparent
+											? "Fills transparency black"
+											: "Smaller file",
+							}))}
+							selected={format === "jpeg" ? 0 : 1}
+							onSelect={(index) => {
+								setFormat(index === 0 ? "jpeg" : "png");
+								changed();
+							}}
+						/>
+						{state.status === "rendering" && (
+							<View style={styles.status}>
+								<ActivityIndicator color={colors.textSecondary} />
+								<Text style={styles.statusText}>Preparing the image…</Text>
+							</View>
+						)}
+						{state.status === "failed" && (
+							<View style={styles.status}>
+								<Text style={styles.statusText}>
+									Couldn't render the image.
+								</Text>
+								<Button label="Try Again" size="small" onPress={retry} />
+							</View>
+						)}
+						{saved ? (
+							<View style={styles.done} accessibilityLiveRegion="polite">
+								<Ionicons
+									name="checkmark-circle"
+									size={22}
+									color={colors.accent}
 								/>
-							)}
-						</View>
-						<View
-							style={[
-								styles.secondaryActions,
-								wide && styles.secondaryActionsWide,
-							]}
-						>
+								<Text style={styles.doneLabel}>{saveLabels.done}</Text>
+							</View>
+						) : (
+							<Button
+								label={busy === "saving" ? saveLabels.busy : saveLabels.idle}
+								icon="download-outline"
+								variant="primary"
+								size="large"
+								disabled={!ready || busy !== null}
+								onPress={handleSave}
+							/>
+						)}
+						<View style={styles.secondaryActions}>
 							{/* Most desktop browsers can't share files. */}
 							{canShare && (
-								<View style={styles.shareAction}>
+								<View style={styles.secondaryAction}>
 									<Button
 										label={busy === "sharing" ? "Opening…" : "Share"}
 										icon="share-outline"
@@ -301,15 +237,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									/>
 								</View>
 							)}
-							<View style={styles.shareAction}>
+							<View style={styles.secondaryAction}>
 								{copied ? (
-									<View style={styles.saved} accessibilityLiveRegion="polite">
+									<View style={styles.done} accessibilityLiveRegion="polite">
 										<Ionicons
 											name="checkmark-circle"
 											size={22}
 											color={colors.accent}
 										/>
-										<Text style={styles.savedLabel}>Copied</Text>
+										<Text style={styles.doneLabel}>Copied</Text>
 									</View>
 								) : (
 									<Button
@@ -322,122 +258,185 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								)}
 							</View>
 						</View>
+						{/* Saved, the edit is finished: straight back to the projects,
+						    which ends the session, rather than through the editor. */}
+						{saved && (
+							<Button
+								label="Back to Projects"
+								size="large"
+								onPress={() => router.dismissTo("/")}
+							/>
+						)}
 					</View>
-				</View>
+				</BottomSheet>
 			</View>
 		</View>
 	);
 }
 
 /**
- * What a size chip's pixels mean: the document's own size, or the largest
- * export can hold when that's too big, or one smaller for sharing.
+ * A row of two or three choices, each a name over a detail, with the chosen
+ * one outlined.
  */
-function sizeName(scale: number, index: number) {
-	if (index > 0) return "Smaller file";
-	return scale === 1 ? "Original size" : "Largest size";
+function Segmented({
+	label,
+	options,
+	selected,
+	disabled,
+	onSelect,
+}: {
+	label: string;
+	options: { title: string; detail: string; accessibilityLabel?: string }[];
+	selected: number;
+	disabled: boolean;
+	onSelect: (index: number) => void;
+}) {
+	return (
+		<View style={styles.segmented} accessibilityRole="radiogroup">
+			<Text style={styles.segmentedLabel}>{label}</Text>
+			<View style={styles.segments}>
+				{options.map(({ title, detail, accessibilityLabel }, index) => {
+					const chosen = index === selected;
+					return (
+						<Pressable
+							key={title}
+							disabled={disabled}
+							onPress={() => onSelect(index)}
+							accessibilityRole="radio"
+							accessibilityLabel={accessibilityLabel ?? `${title}, ${detail}`}
+							accessibilityState={{ checked: chosen, disabled }}
+							aria-checked={chosen}
+							style={(state) => {
+								const { pressed, hovered } = interaction(state);
+								return [
+									styles.segment,
+									webTransition,
+									hovered && styles.segmentHovered,
+									chosen && chosenOutline,
+									pressed && styles.segmentPressed,
+								];
+							}}
+						>
+							<Text
+								style={[
+									styles.segmentTitle,
+									chosen && styles.segmentTitleChosen,
+								]}
+							>
+								{title}
+							</Text>
+							<Text style={styles.segmentDetail}>{detail}</Text>
+						</Pressable>
+					);
+				})}
+			</View>
+		</View>
+	);
+}
+
+/**
+ * A size's name: the document's own size (or the largest export can hold,
+ * when that's too big), then smaller ones for sharing.
+ */
+function sizeName(index: number, sizes: ExportSize[]) {
+	if (index === 0) return sizes[0].scale === 1 ? "Full size" : "Largest";
+	if (sizes.length > 2 && index === 1) return "Medium";
+	return "Small";
 }
 
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-	},
-	previewArea: {
-		flex: 1,
-		padding: 24,
-	},
-	preview: {
-		flex: 1,
-	},
-	overlay: {
-		...StyleSheet.absoluteFill,
+		justifyContent: "flex-end",
 		alignItems: "center",
-		justifyContent: "center",
-		gap: 12,
 	},
-	status: {
-		...typography.body,
-		color: colors.textSecondary,
+	scrim: {
+		backgroundColor: colors.sheetScrim,
 	},
-	footer: {
-		paddingHorizontal: 20,
-		paddingTop: 16,
-	},
-	// A phone-width column, so a wide browser window doesn't stretch the
-	// buttons across it.
-	footerContent: {
+	// A phone's width, and no wider on a large screen.
+	column: {
 		width: "100%",
 		maxWidth: 480,
-		alignSelf: "center",
-		gap: 14,
+		maxHeight: "90%",
 	},
-	details: {
-		...typography.label,
+	content: {
+		gap: space.md,
+		paddingHorizontal: space.md,
+		paddingTop: space.md,
+		paddingBottom: space.lg,
+	},
+	segmented: {
+		gap: space.xs,
+	},
+	segmentedLabel: {
+		...typography.labelStrong,
 		color: colors.textSecondary,
-		textAlign: "center",
 	},
-	sizes: {
+	segments: {
 		flexDirection: "row",
-		justifyContent: "center",
-		flexWrap: "wrap",
-		gap: 8,
+		gap: space.xs,
 	},
-	// Small enough that three fit across a phone.
-	sizeChip: {
-		height: 34,
-		paddingHorizontal: 12,
+	segment: {
+		flex: 1,
+		minHeight: 52,
+		paddingHorizontal: space.xs,
+		paddingVertical: space.xs,
 		borderRadius: radii.small,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
+		alignItems: "center",
 		justifyContent: "center",
+		gap: 2,
 	},
-	sizeChipHovered: {
+	segmentHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	sizeChipSelected: chosenOutline,
-	sizeChipPressed: {
-		transform: [{ scale: 0.96 }],
+	segmentPressed: {
+		backgroundColor: colors.pressedOverlay,
 	},
-	sizeLabel: {
-		...typography.label,
-		fontVariant: ["tabular-nums"],
+	segmentTitle: {
+		...typography.labelStrong,
 		color: colors.textSecondary,
 	},
-	sizeLabelSelected: {
+	segmentTitleChosen: {
 		color: colors.textPrimary,
 	},
-	actions: {
-		gap: 12,
+	segmentDetail: {
+		...typography.caption,
+		fontVariant: ["tabular-nums"],
+		color: colors.textTertiary,
+		textAlign: "center",
 	},
-	actionsWide: {
+	status: {
 		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: space.xs,
+	},
+	statusText: {
+		...typography.label,
+		color: colors.textSecondary,
 	},
 	secondaryActions: {
 		flexDirection: "row",
-		gap: 12,
+		gap: space.sm,
 	},
-	secondaryActionsWide: {
+	secondaryAction: {
 		flex: 1,
 	},
-	// Only in a row: in a column, the buttons keep their own height.
-	actionWide: {
-		flex: 1,
-	},
-	// Share and Copy are always side by side, splitting their row.
-	shareAction: {
-		flex: 1,
-	},
-	// Where the save button was, the same size, so nothing shifts.
-	saved: {
+	// Where the button was, the same size, so nothing shifts.
+	done: {
 		height: 56,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 8,
+		gap: space.xs,
 		borderRadius: radii.medium,
 		borderWidth: 1,
 		borderColor: colors.accentBorder,
 		backgroundColor: colors.accentSoft,
 	},
-	savedLabel: {
+	doneLabel: {
 		...typography.title,
 		color: colors.textPrimary,
 	},
