@@ -139,6 +139,7 @@ export function ToolRow({
 	vertical?: boolean;
 	children: ReactNode;
 }) {
+	const [width, setWidth] = useState(0);
 	if (vertical) {
 		return (
 			<ScrollView
@@ -149,7 +150,6 @@ export function ToolRow({
 			</ScrollView>
 		);
 	}
-	const [width, setWidth] = useState(0);
 	const count = Children.toArray(children).length;
 	// Gaps between the tools, and one at each end. Until the row is measured,
 	// it's laid out as though they fit.
