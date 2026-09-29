@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "expo-router";
 import type { ComponentProps } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
 	Image,
 	type LayoutChangeEvent,
@@ -22,14 +22,14 @@ import {
 } from "@/projects/projectFile";
 import { colors, fonts, radii, typography, webTransition } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
+import { gradientBackground } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
+import { showAlert } from "@/ui/showAlert";
 import { TextButton } from "@/ui/TextButton";
 
-const GAP = 12;
-const MIN_CARD_WIDTH = 150;
-const MAX_COLUMNS = 4;
-// Around the print inside its card, as a share of the card's width.
-const MAT = 0.12;
+const GAP = 4;
+const MIN_CARD_WIDTH = 100;
+const MAX_COLUMNS = 6;
 // Cards after this many appear together, so a long list doesn't trickle in.
 const STAGGERED = 8;
 
@@ -43,9 +43,10 @@ type ProjectListProps = {
 };
 
 /**
- * The saved projects as a grid of cards, which open them. Edit turns each
- * card's name into a field to rename it, and gives it buttons to duplicate
- * and delete it; with a mouse, those buttons also show on hover.
+ * The saved projects as a grid of thumbnails, like a photo library's, which
+ * open them. A long press offers Duplicate, Rename, and Delete; with a
+ * mouse, hovering shows the name and those buttons. Edit puts each name in
+ * a field under its thumbnail to rename it.
  */
 export function ProjectList({
 	projects,
@@ -101,6 +102,7 @@ export function ProjectList({
 							onRename={onRename}
 							onDuplicate={onDuplicate}
 							onDelete={onDelete}
+							onStartEditing={() => setEditing(true)}
 						/>
 					))}
 			</ScrollView>
@@ -118,6 +120,7 @@ function ProjectCard({
 	onRename,
 	onDuplicate,
 	onDelete,
+	onStartEditing,
 }: {
 	project: ProjectSummary;
 	width: number;
@@ -127,12 +130,15 @@ function ProjectCard({
 	"disabled" | "onOpen" | "onRename" | "onDuplicate" | "onDelete"
 > & {
 		editing: boolean;
+		onStartEditing: () => void;
 	}) {
 	// Tracked around the card and its buttons together, so moving onto them
 	// doesn't hide them.
 	const [pointerOver, setPointerOver] = useState(false);
 	const unavailable = project.status === "unavailable";
-	const label = unavailable ? "Unavailable project" : project.label;
+	const label = unavailable
+		? "Unavailable project"
+		: displayLabel(project.label);
 	const detail = unavailable
 		? "Needs a newer version of the app"
 		: formatDate(project.updatedAt);
@@ -151,43 +157,57 @@ function ProjectCard({
 				onPress={() => {
 					if (!editing) onOpen(project.id);
 				}}
-				onLongPress={() => onDelete(project.id)}
+				onLongPress={() =>
+					showAlert(label, detail, [
+						...(unavailable
+							? []
+							: [
+									{
+										text: "Duplicate",
+										onPress: () => onDuplicate(project.id),
+									},
+									{ text: "Rename", onPress: onStartEditing },
+								]),
+						{
+							text: "Delete",
+							style: "destructive",
+							onPress: () => onDelete(project.id),
+						},
+						{ text: "Cancel", style: "cancel" },
+					])
+				}
 				accessibilityRole="button"
 				accessibilityLabel={`${label}, ${detail}`}
 				accessibilityHint={editing ? undefined : "Opens the project"}
 				style={styles.card}
 			>
 				{(state) => {
-					const { pressed, hovered } = interaction(state);
+					const { pressed } = interaction(state);
 					return (
-						<>
-							<View
-								style={[
-									styles.well,
-									{ height: width },
-									webTransition,
-									hovered && styles.wellHovered,
-									pressed && styles.wellPressed,
-								]}
-							>
-								<Print
-									url={unavailable ? null : project.thumbnail}
-									unavailable={unavailable}
-									space={width * (1 - MAT * 2)}
-									lifted={hovered && !editing}
-								/>
-							</View>
-							{!editing && (
-								<View style={styles.caption}>
-									<Text style={styles.label} numberOfLines={1}>
+						<View
+							style={[
+								styles.thumbnail,
+								{ height: width },
+								webTransition,
+								pressed && styles.thumbnailPressed,
+							]}
+						>
+							<Thumbnail
+								url={unavailable ? null : project.thumbnail}
+								unavailable={unavailable}
+								size={width}
+							/>
+							{pointerOver && !editing && (
+								<View style={styles.hoverCaption}>
+									<Text style={styles.hoverLabel} numberOfLines={1}>
 										{label}
 									</Text>
-									<Text style={styles.date} numberOfLines={1}>
+									<Text style={styles.hoverDate} numberOfLines={1}>
 										{detail}
 									</Text>
 								</View>
 							)}
-						</>
+						</View>
 					);
 				}}
 			</Pressable>
@@ -323,42 +343,20 @@ const fieldFocusStyle =
 		: null;
 
 /**
- * The project's last closed look at its own shape, fitted to `space`, like
- * a print on a mat. A placeholder until it has one.
+ * The project's last closed look, filling a square as a photo library's
+ * thumbnails do. A placeholder until it has one, or if it can't be read.
  */
-function Print({
+function Thumbnail({
 	url,
 	unavailable,
-	space,
-	lifted,
+	size,
 }: {
 	url: string | null;
 	unavailable: boolean;
-	space: number;
-	lifted: boolean;
+	size: number;
 }) {
-	// Width over height, once the image is read; `false` if it can't be.
-	const [aspect, setAspect] = useState<number | false | null>(null);
-
-	useEffect(() => {
-		if (!url) return;
-		let current = true;
-		Image.getSize(
-			url,
-			(width, height) => {
-				if (current)
-					setAspect(width > 0 && height > 0 ? width / height : false);
-			},
-			() => {
-				if (current) setAspect(false);
-			},
-		);
-		return () => {
-			current = false;
-		};
-	}, [url]);
-
-	if (!url || aspect === false) {
+	const [failed, setFailed] = useState(false);
+	if (!url || failed) {
 		return (
 			<Ionicons
 				name={unavailable ? "alert-circle-outline" : "image-outline"}
@@ -367,35 +365,31 @@ function Print({
 			/>
 		);
 	}
-
-	const size =
-		aspect === null
-			? { width: space, height: space }
-			: aspect >= 1
-				? { width: space, height: space / aspect }
-				: { width: space * aspect, height: space };
-
 	return (
-		<View
-			style={[
-				styles.print,
-				size,
-				webTransition,
-				aspect === null && styles.printLoading,
-				lifted && styles.printLifted,
-			]}
-		>
+		<>
 			{/* Thumbnails are PNGs only where the canvas is see-through. */}
 			{url.startsWith("data:image/png") && (
-				<CheckerFill {...size} cell={Math.max(4, space / 24)} />
+				<CheckerFill width={size} height={size} cell={Math.max(4, size / 24)} />
 			)}
 			<Image
 				source={{ uri: url }}
 				resizeMode="cover"
-				style={styles.printImage}
+				onError={() => setFailed(true)}
+				style={StyleSheet.absoluteFill}
 			/>
-		</View>
+		</>
 	);
+}
+
+/**
+ * A project listed by its text shows it in sentence case: meme text is
+ * usually all capitals, which shouts in a list.
+ */
+function displayLabel(label: string) {
+	if (label !== label.toUpperCase() || label === label.toLowerCase()) {
+		return label;
+	}
+	return label.charAt(0) + label.slice(1).toLowerCase();
 }
 
 /** Today's time, "Yesterday", or the date, with the year once it's past. */
@@ -449,41 +443,40 @@ const styles = StyleSheet.create({
 		paddingBottom: 12,
 	},
 	card: {
-		gap: 10,
+		gap: 6,
 	},
-	well: {
+	thumbnail: {
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: radii.medium,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.border,
+		overflow: "hidden",
+		borderRadius: radii.small,
+		borderCurve: "continuous",
 		backgroundColor: colors.surface,
 	},
-	wellHovered: {
-		borderColor: colors.borderStrong,
-		backgroundColor: colors.surfaceHover,
+	thumbnailPressed: {
+		opacity: 0.8,
 	},
-	wellPressed: {
-		backgroundColor: colors.surfacePressed,
-		transform: [{ scale: 0.98 }],
+	// Over the thumbnail's foot, on a shade that keeps it legible on any
+	// image.
+	hoverCaption: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		paddingHorizontal: 8,
+		paddingTop: 20,
+		paddingBottom: 6,
+		...gradientBackground(
+			"linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75))",
+		),
 	},
-	print: {
-		borderRadius: 3,
-		overflow: "hidden",
-		boxShadow: "0 6px 16px rgba(0, 0, 0, 0.5)",
+	hoverLabel: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
 	},
-	printImage: {
-		width: "100%",
-		height: "100%",
-		borderRadius: 3,
-	},
-	// Kept invisible until its shape is known, so it doesn't jump into it.
-	printLoading: {
-		opacity: 0,
-	},
-	printLifted: {
-		transform: [{ translateY: -3 }, { rotate: "-1.5deg" }, { scale: 1.03 }],
-		boxShadow: "0 14px 28px rgba(0, 0, 0, 0.6)",
+	hoverDate: {
+		...typography.caption,
+		color: colors.textSecondary,
 	},
 	caption: {
 		gap: 2,

@@ -5,11 +5,11 @@ import {
 	RadialGradient,
 	vec,
 } from "@shopify/react-native-skia";
-import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useIsFocused, useRouter } from "expo-router";
+import type { ComponentProps } from "react";
 import {
-	AppState,
 	Platform,
+	Pressable,
 	StyleSheet,
 	Text,
 	useWindowDimensions,
@@ -22,13 +22,20 @@ import {
 	type HomeStatus,
 	useHomeProjects,
 } from "@/features/home/useHomeProjects";
-import { hasClipboardImage } from "@/import/clipboardImage";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import { colors, fonts, radii, typography } from "@/theme";
+import {
+	colors,
+	fonts,
+	radii,
+	space,
+	typography,
+	webTransition,
+} from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
+import { interaction } from "@/ui/interaction";
 import { LogoMark } from "@/ui/LogoMark";
 
 const choosePhotoLabels: Record<HomeStatus, string> = {
@@ -54,7 +61,7 @@ export default function HomeScreen() {
 		duplicateProject,
 		deleteProject,
 	} = useHomeProjects();
-	// Side by side once there's room for both labels.
+	// Room for the hint about pasting and dropping.
 	const wide = useWindowDimensions().width >= 560;
 	const { bottom } = useSafeAreaInsets();
 
@@ -70,18 +77,28 @@ export default function HomeScreen() {
 
 	const hasProjects = projects.length > 0;
 	const blocked = status !== "idle";
-	const [canPaste, setCanPaste] = useState(false);
-	const showPaste = Platform.OS !== "web" && canPaste;
-	useFocusEffect(
-		useCallback(() => {
-			if (Platform.OS === "web") return;
-			const refresh = () => void hasClipboardImage().then(setCanPaste);
-			refresh();
-			const subscription = AppState.addEventListener("change", (next) => {
-				if (next === "active") refresh();
-			});
-			return () => subscription.remove();
-		}, []),
+	const start = (
+		<View style={styles.start}>
+			<StartTile
+				label={choosePhotoLabels[status]}
+				icon="images-outline"
+				primary
+				disabled={blocked}
+				onPress={choosePhoto}
+			/>
+			<StartTile
+				label="Paste"
+				icon="clipboard-outline"
+				disabled={blocked}
+				onPress={pasteImage}
+			/>
+			<StartTile
+				label="New Canvas"
+				icon="add"
+				disabled={blocked}
+				onPress={() => router.push("/create")}
+			/>
+		</View>
 	);
 
 	return (
@@ -119,6 +136,8 @@ export default function HomeScreen() {
 				</View>
 			)}
 
+			{hasProjects && start}
+
 			{hasProjects && (
 				<ProjectList
 					projects={projects}
@@ -150,62 +169,66 @@ export default function HomeScreen() {
 				</View>
 			)}
 
-			<View style={styles.actionsArea}>
-				<View style={[styles.actions, wide && styles.actionsWide]}>
-					{showPaste ? (
-						<View
-							style={[styles.photoActions, wide && styles.photoActionsWide]}
-						>
-							<View style={styles.flex}>
-								<Button
-									label={choosePhotoLabels[status]}
-									icon="images-outline"
-									variant="primary"
-									size="large"
-									disabled={blocked}
-									onPress={choosePhoto}
-								/>
-							</View>
-							<View style={styles.flex}>
-								<Button
-									label="Paste"
-									icon="clipboard-outline"
-									size="large"
-									disabled={blocked}
-									onPress={pasteImage}
-								/>
-							</View>
-						</View>
-					) : (
-						<View style={wide && styles.flex}>
-							<Button
-								label={choosePhotoLabels[status]}
-								icon="images-outline"
-								variant="primary"
-								size="large"
-								disabled={blocked}
-								onPress={choosePhoto}
-							/>
-						</View>
+			{!hasProjects && (
+				<View style={styles.startArea}>
+					{start}
+					{Platform.OS === "web" && wide && (
+						<Text style={styles.hint}>
+							Or paste a screenshot, or drop an image anywhere.
+						</Text>
 					)}
-					<View style={wide && styles.flex}>
-						<Button
-							label="New Canvas"
-							icon="add"
-							size="large"
-							disabled={blocked}
-							onPress={() => router.push("/create")}
-						/>
-					</View>
 				</View>
-				{Platform.OS === "web" && wide && (
-					<Text style={styles.hint}>
-						Or paste a screenshot, or drop an image anywhere.
-					</Text>
-				)}
-			</View>
+			)}
 			{dragging && <DropOverlay label="Drop to open" />}
 		</View>
+	);
+}
+
+/** One way to start: an icon over its name, in a tile a third of the row. */
+function StartTile({
+	label,
+	icon,
+	primary = false,
+	disabled,
+	onPress,
+}: {
+	label: string;
+	icon: ComponentProps<typeof Ionicons>["name"];
+	primary?: boolean;
+	disabled: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			disabled={disabled}
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			accessibilityState={{ disabled }}
+			style={(state) => {
+				const { pressed, hovered } = interaction(state);
+				return [
+					styles.tile,
+					primary && styles.tilePrimary,
+					webTransition,
+					hovered && (primary ? styles.tilePrimaryHovered : styles.tileHovered),
+					pressed && styles.tilePressed,
+					disabled && styles.tileDisabled,
+				];
+			}}
+		>
+			<Ionicons
+				name={icon}
+				size={24}
+				color={primary ? colors.onAccent : colors.textPrimary}
+			/>
+			<Text
+				style={[styles.tileLabel, primary && styles.tileLabelPrimary]}
+				numberOfLines={1}
+			>
+				{label}
+			</Text>
+		</Pressable>
 	);
 }
 
@@ -241,9 +264,6 @@ const styles = StyleSheet.create({
 		gap: 24,
 		paddingHorizontal: 24,
 		paddingTop: 20,
-	},
-	flex: {
-		flex: 1,
 	},
 	brand: {
 		flexDirection: "row",
@@ -284,25 +304,48 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 		textAlign: "center",
 	},
-	actionsArea: {
+	startArea: {
 		gap: 14,
 	},
-	actions: {
-		gap: 12,
-		width: "100%",
-		maxWidth: 480,
-		alignSelf: "center",
-	},
-	actionsWide: {
+	start: {
 		flexDirection: "row",
-		maxWidth: 560,
+		gap: space.xs,
 	},
-	photoActions: {
-		flexDirection: "row",
-		gap: 12,
+	tile: {
+		flex: 1,
+		height: 80,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 6,
+		paddingHorizontal: space.xs,
+		borderRadius: radii.medium,
+		borderCurve: "continuous",
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
+		backgroundColor: colors.surface,
 	},
-	photoActionsWide: {
-		flex: 2,
+	tilePrimary: {
+		borderColor: colors.accent,
+		backgroundColor: colors.accent,
+	},
+	tileHovered: {
+		backgroundColor: colors.surfaceHover,
+	},
+	tilePrimaryHovered: {
+		backgroundColor: colors.accentHover,
+	},
+	tilePressed: {
+		transform: [{ scale: 0.97 }],
+	},
+	tileDisabled: {
+		opacity: 0.5,
+	},
+	tileLabel: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
+	},
+	tileLabelPrimary: {
+		color: colors.onAccent,
 	},
 	hint: {
 		...typography.label,

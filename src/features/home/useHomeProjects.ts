@@ -174,7 +174,14 @@ export function useHomeProjects() {
 	const pasteImage = () =>
 		open("Couldn't paste image", async () => {
 			const uri = await pasteClipboardImage();
-			return uri ? openPhoto(await importPhoto(uri)) : null;
+			if (!uri) {
+				showAlert(
+					"No image to paste",
+					"Copy a photo or screenshot first, then tap Paste.",
+				);
+				return null;
+			}
+			return openPhoto(await importPhoto(uri));
 		});
 
 	const openSavedProject = (id: string) =>

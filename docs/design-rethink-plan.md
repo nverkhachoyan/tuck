@@ -131,7 +131,9 @@ The export route stays and is presented as a `transparentModal`, so the editor s
 * The `/projects/[id]/export` route still has to work from a link or a reload: send it to the editor with the sheet open, and keep `vercel.json`'s rewrite. Update AGENTS.md's routing learning.
 * Long-press Export (⌘⇧C on web) copies the full-size image without opening the sheet.
 
-### 4.2 Home (Propose first)
+### 4.2 Home (done)
+
+Built with the review's mockup as the proposal. Paste now works on web too, reading the clipboard with the browser's permission, and says what to do when there's no image. Rename stays in Edit mode, which the long-press menu's Rename turns on: a long press can't take typing everywhere (only iOS has a text prompt). With a mouse, hovering a thumbnail shows its name, date, and the Duplicate and Delete buttons.
 
 * The three ways to start sit at the top, as equal tiles: Photo (accent), Paste, and Canvas. Paste stays visible on every platform and says what to do when the clipboard has no image.
 * Projects are a bare three-column grid of thumbnails with no card around each. Long-press (right-click on web) offers Duplicate and Delete, replacing Edit mode.
