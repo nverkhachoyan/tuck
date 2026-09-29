@@ -152,6 +152,10 @@ type EditorCanvasProps = {
 	// and by the keyboard they ride on. The document fits above them, and
 	// what's past its edges shows under.
 	bottomInset?: number;
+	// How much of each side is covered, as by a wide screen's tool rail and
+	// inspector.
+	leftInset?: number;
+	rightInset?: number;
 	// Actions for the selected layer, floating by it while it can be moved.
 	selectionBar?: ReactNode;
 };
@@ -204,6 +208,8 @@ export function EditorCanvas({
 	adjusting = null,
 	detection = null,
 	bottomInset = 0,
+	leftInset = 0,
+	rightInset = 0,
 	selectionBar,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
@@ -262,15 +268,17 @@ export function EditorCanvas({
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
-	const viewport = useMemo(
-		() =>
-			fitDocumentToView(
-				documentSize,
-				{ width: size.width, height: size.height - bottomInset },
-				PHOTO_INSET,
-			),
-		[documentSize, size, bottomInset],
-	);
+	const viewport = useMemo(() => {
+		const fit = fitDocumentToView(
+			documentSize,
+			{
+				width: size.width - leftInset - rightInset,
+				height: size.height - bottomInset,
+			},
+			PHOTO_INSET,
+		);
+		return { ...fit, offsetX: fit.offsetX + leftInset };
+	}, [documentSize, size, bottomInset, leftInset, rightInset]);
 	const { scale, offsetX, offsetY } = viewport;
 	// What the canvas draws eases to a new fit, as when a tray opens or the
 	// keyboard rises, rather than jumping. Gestures use the new fit at once.
@@ -726,7 +734,7 @@ export function EditorCanvas({
 					key={movableLayer.id}
 					live={live}
 					viewport={viewport}
-					width={size.width}
+					width={size.width - rightInset}
 					height={size.height - bottomInset}
 				>
 					{selectionBar}

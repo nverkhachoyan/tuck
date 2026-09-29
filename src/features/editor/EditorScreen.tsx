@@ -36,7 +36,14 @@ import type {
 	TextEditState,
 } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
-import { Dock, DockFooter, useDockInset } from "@/features/editor/Dock";
+import {
+	Dock,
+	DockFooter,
+	INSPECTOR_TRAY_TOP,
+	INSPECTOR_WIDTH,
+	InspectorBackdrop,
+	useDockInset,
+} from "@/features/editor/Dock";
 import {
 	type BrushSettings,
 	brushFor,
@@ -76,7 +83,7 @@ import {
 	type Shortcut,
 	type ToolKey,
 } from "@/features/editor/shortcuts";
-import { TrayHeight } from "@/features/editor/ToolOptions";
+import { TrayHeight, TrayPlacement } from "@/features/editor/ToolOptions";
 import {
 	TextEditor,
 	type TextEditorHandle,
@@ -142,8 +149,13 @@ import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
+// Wide enough for a tool rail at the left and an inspector at the right,
+// which the dock, its trays, and the layers move into.
+const INSPECTOR_MIN_WIDTH = 1024;
+const RAIL_WIDTH = 76;
+const INSPECTOR_TRAY = { top: INSPECTOR_TRAY_TOP, width: INSPECTOR_WIDTH };
 
-// A tool's header shows its name in place of the way back to projects.
+// What a tool's footer calls it.
 const TOOL_TITLES = { draw: "Draw", redact: "Redact", adjust: "Adjust" };
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
@@ -254,12 +266,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		layerId: string;
 		status: "saving" | "saved";
 	} | null>(null);
-	const layersBeside = useWindowDimensions().width >= SIDEBAR_MIN_WIDTH;
+	const windowWidth = useWindowDimensions().width;
+	const layersBeside = windowWidth >= SIDEBAR_MIN_WIDTH;
+	const wide = windowWidth >= INSPECTOR_MIN_WIDTH;
 	// While typing, the dock rides the keyboard, bringing the text's style
 	// and Done, and the document fits above them.
 	const stageRef = useRef<View>(null);
 	const keyboardOverlap = useKeyboardOverlap(stageRef, textEdit !== null);
-	const dockInset = useDockInset(keyboardOverlap);
+	const barInset = useDockInset(keyboardOverlap);
+	// As an inspector, the dock covers none of the canvas's bottom.
+	const dockInset = wide ? 0 : barInset;
 	// An open tray's height: the canvas fits above it as well as the dock.
 	const [trayHeight, setTrayHeight] = useState(0);
 	// The tool in the dock. While drawing, strokes on the canvas go into the
@@ -801,384 +817,422 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 	};
 
+	const layerList = {
+		layers: document.layers,
+		background: document.background,
+		selectedLayerId: selectedLayer?.id ?? null,
+		onSelect: (id: string) => {
+			finishTextEdit();
+			selectLayer(id);
+		},
+		onMove: moveLayer,
+		onSetHidden: setLayerHidden,
+		onSetLocked: setLayerLocked,
+		onDelete: deleteLayer,
+		onSetBackground: setBackground,
+		onClose: closeLayers,
+		bottomInset: dockInset,
+	};
 	// The sidebar stops above the dock, which stays usable.
 	const layersPanel = (
 		<LayersPanel
+			{...layerList}
 			layout={layersBeside ? "sidebar" : "sheet"}
-			bottomInset={dockInset}
 			open={layersOpen}
-			onClose={closeLayers}
-			layers={document.layers}
-			background={document.background}
-			selectedLayerId={selectedLayer?.id ?? null}
-			onSelect={(id) => {
-				finishTextEdit();
-				selectLayer(id);
-			}}
-			onMove={moveLayer}
-			onSetHidden={setLayerHidden}
-			onSetLocked={setLayerLocked}
-			onDelete={deleteLayer}
-			onSetBackground={setBackground}
 		/>
 	);
 
+	// A tool picked from the rail while another is open finishes that one.
+	const fromRail = (start: () => void) => () => {
+		if (tool) finishTool();
+		if (textEdit) finishTextEdit();
+		start();
+	};
+
 	return (
 		<TrayHeight.Provider value={setTrayHeight}>
-			<View style={styles.container}>
-				<ScreenHeader
-					backLabel="Back to projects"
-					onBack={tool ? undefined : () => leaveEditor(router)}
-					action={
-						<View style={styles.headerActions}>
-							{adjustedLayer?.adjustments && (
-								<TextButton
-									label="Reset"
-									onPress={() =>
-										setAdjustments(adjustedLayer.id, neutralAdjustments)
-									}
-								/>
-							)}
-							{!tool && (
-								<IconButton
-									icon="layers-outline"
-									label="Layers"
-									shortcut={LAYERS_KEY}
-									selected={layersOpen}
-									onPress={() => setLayersOpen((open) => !open)}
-								/>
-							)}
-							<IconButton
-								icon="arrow-undo-outline"
-								label="Undo"
-								shortcut="mod+Z"
-								disabled={!canUndo}
-								onPress={undo}
-							/>
-							<IconButton
-								icon="arrow-redo-outline"
-								label="Redo"
-								shortcut="mod+shift+Z"
-								disabled={!canRedo}
-								onPress={redo}
-							/>
-							{!tool && (
-								<View style={styles.exportAction}>
-									<Button
-										label="Export"
-										icon="share-outline"
-										variant="primary"
-										size="small"
-										onPress={() => router.push(exportHref(projectId))}
+			<TrayPlacement.Provider value={wide ? INSPECTOR_TRAY : null}>
+				<View style={styles.container}>
+					<ScreenHeader
+						backLabel="Back to projects"
+						onBack={tool ? undefined : () => leaveEditor(router)}
+						action={
+							<View style={styles.headerActions}>
+								{adjustedLayer?.adjustments && (
+									<TextButton
+										label="Reset"
+										onPress={() =>
+											setAdjustments(adjustedLayer.id, neutralAdjustments)
+										}
 									/>
-								</View>
-							)}
-						</View>
-					}
-				/>
-				{/* The dock covers the stage's bottom, which runs under it. */}
-				<CanvasStage ref={stageRef} toBottom>
-					<EditorCanvas
-						ref={canvasRef}
-						document={document}
-						selectedLayer={selectedLayer}
-						textEdit={textEdit}
-						onTextSelect={selectText}
-						onTextEditDone={finishTextEdit}
-						onSelectLayer={selectLayer}
-						onTapSelectedLayer={
-							selectedTextLayer
-								? (point) =>
-										editSelectedText(
-											textIndexAt(
-												selectedTextLayer,
-												toLayerSpace(selectedTextLayer.transform, point),
-											),
-										)
-								: undefined
-						}
-						onCommitTransform={transformLayer}
-						onResizeBox={resizeBox}
-						onNudgeLayer={nudgeLayer}
-						tool={findOpen ? null : canvasTool}
-						detection={
-							tool === "redact" && findOpen
-								? { regions: detectionOverlay, onToggle: detection.toggle }
-								: null
-						}
-						onPaintStroke={handlePaintStroke}
-						onDrawBox={handleDrawBox}
-						onDrawShape={handleDrawShape}
-						onPickPoint={handlePickPoint}
-						adjusting={adjusting}
-						bottomInset={dockInset + trayHeight}
-						selectionBar={
-							selectedLayer && (
-								<SelectionBar
-									canMoveForward={selectedIndex < document.layers.length - 1}
-									canMoveBackward={selectedIndex > 0}
-									onEdit={
-										selectedTextLayer ? () => editSelectedText() : undefined
-									}
-									stretched={selectedLayer.resizable === true}
-									onToggleStretch={
-										selectedLayer.type === "text" ||
-										selectedLayer.type === "image"
-											? () =>
-													setLayerResizable(
-														selectedLayer.id,
-														!selectedLayer.resizable,
-													)
-											: undefined
-									}
-									onArrange={arrangeSelected}
-									onDuplicate={duplicateSelectedLayer}
-									onDelete={() => deleteLayer(selectedLayer.id)}
+								)}
+								{/* A wide screen's inspector always shows them. */}
+								{!tool && !wide && (
+									<IconButton
+										icon="layers-outline"
+										label="Layers"
+										shortcut={LAYERS_KEY}
+										selected={layersOpen}
+										onPress={() => setLayersOpen((open) => !open)}
+									/>
+								)}
+								<IconButton
+									icon="arrow-undo-outline"
+									label="Undo"
+									shortcut="mod+Z"
+									disabled={!canUndo}
+									onPress={undo}
 								/>
-							)
+								<IconButton
+									icon="arrow-redo-outline"
+									label="Redo"
+									shortcut="mod+shift+Z"
+									disabled={!canRedo}
+									onPress={redo}
+								/>
+								{!tool && (
+									<View style={styles.exportAction}>
+										<Button
+											label="Export"
+											icon="share-outline"
+											variant="primary"
+											size="small"
+											onPress={() => router.push(exportHref(projectId))}
+										/>
+									</View>
+								)}
+							</View>
 						}
 					/>
-					{tool === "draw" && toolOptionsOpen && (
-						<BrushOptions
-							settings={drawSettings}
-							customColor={customColor}
-							bottomInset={dockInset}
-							onChange={changeDrawSettings}
-							onPickCustom={(color) => {
-								changeDrawSettings({ ...drawSettings, color });
-								setCustomColor(color);
-							}}
-							onEyedropper={() => {
-								setToolOptionsOpen(false);
-								setEyedropper({
-									apply: (color) =>
-										changeDrawSettings({ ...drawSettings, color }),
-								});
-							}}
-							onClose={() => setToolOptionsOpen(false)}
-						/>
-					)}
-					{tool === "redact" && toolOptionsOpen && (
-						<RedactOptions
-							settings={redactSettings}
-							customColor={customColor}
-							bottomInset={dockInset}
-							onChange={changeRedactSettings}
-							onPickCustom={(color) => {
-								changeRedactSettings({ ...redactSettings, color });
-								setCustomColor(color);
-							}}
-							onEyedropper={() => {
-								setToolOptionsOpen(false);
-								setEyedropper({
-									apply: (color) =>
-										changeRedactSettings({ ...redactSettings, color }),
-								});
-							}}
-							onClose={() => setToolOptionsOpen(false)}
-						/>
-					)}
-					{tool === "redact" && findOpen && (
-						<DetectionOptions
-							state={detection.state}
-							visibleIndices={visibleDetectionIndices}
-							selectedCount={selectedDetectionCount}
-							bottomInset={dockInset}
-							onStart={startDetection}
-							onSelectAll={() => detection.select(visibleDetectionIndices)}
-							onClear={() => detection.select([])}
-							onApply={applyDetections}
-							onClose={closeDetection}
-						/>
-					)}
-					{textPicker && styledText && (
-						<TextColorPicker
-							layer={styledText}
-							colorKey={textPicker.key}
-							bottomInset={dockInset}
-							onChange={styleText}
-							onPickCustom={setCustomColor}
-							onEyedropper={() => {
-								const { key } = textPicker;
-								setTextPicker(null);
-								setEyedropper({
-									apply: (color) => styleText({ [key]: color }),
-								});
-							}}
-							onClose={() => setTextPicker(null)}
-						/>
-					)}
-					{eyedropper && (
-						<EyedropperHint onCancel={() => setEyedropper(null)} />
-					)}
-					{saveProblem && (
-						<SaveErrorBanner
-							message={saveProblem}
-							onRetry={projectId !== null ? retryAutosave : undefined}
-							rightInset={
-								layersBeside && layersOpen ? LAYERS_SIDEBAR_INSET : undefined
+					{/* The dock covers the stage's bottom, which runs under it. */}
+					<CanvasStage ref={stageRef} toBottom>
+						<EditorCanvas
+							ref={canvasRef}
+							document={document}
+							selectedLayer={selectedLayer}
+							textEdit={textEdit}
+							onTextSelect={selectText}
+							onTextEditDone={finishTextEdit}
+							onSelectLayer={selectLayer}
+							onTapSelectedLayer={
+								selectedTextLayer
+									? (point) =>
+											editSelectedText(
+												textIndexAt(
+													selectedTextLayer,
+													toLayerSpace(selectedTextLayer.transform, point),
+												),
+											)
+									: undefined
+							}
+							onCommitTransform={transformLayer}
+							onResizeBox={resizeBox}
+							onNudgeLayer={nudgeLayer}
+							tool={findOpen ? null : canvasTool}
+							detection={
+								tool === "redact" && findOpen
+									? { regions: detectionOverlay, onToggle: detection.toggle }
+									: null
+							}
+							onPaintStroke={handlePaintStroke}
+							onDrawBox={handleDrawBox}
+							onDrawShape={handleDrawShape}
+							onPickPoint={handlePickPoint}
+							adjusting={adjusting}
+							bottomInset={wide ? 0 : dockInset + trayHeight}
+							leftInset={wide ? RAIL_WIDTH : 0}
+							rightInset={wide ? INSPECTOR_WIDTH : 0}
+							selectionBar={
+								selectedLayer && (
+									<SelectionBar
+										canMoveForward={selectedIndex < document.layers.length - 1}
+										canMoveBackward={selectedIndex > 0}
+										onEdit={
+											selectedTextLayer ? () => editSelectedText() : undefined
+										}
+										stretched={selectedLayer.resizable === true}
+										onToggleStretch={
+											selectedLayer.type === "text" ||
+											selectedLayer.type === "image"
+												? () =>
+														setLayerResizable(
+															selectedLayer.id,
+															!selectedLayer.resizable,
+														)
+												: undefined
+										}
+										onArrange={arrangeSelected}
+										onDuplicate={duplicateSelectedLayer}
+										onDelete={() => deleteLayer(selectedLayer.id)}
+									/>
+								)
 							}
 						/>
-					)}
-					{layersBeside && layersPanel}
-
-					{/* After the tool's options, so taps on the dock reach it rather
-				    than closing them. */}
-					<Dock
-						panel={panelKind}
-						footer={
-							tool ? (
-								<DockFooter
-									title={TOOL_TITLES[tool]}
-									onCancel={cancelTool}
-									onDone={finishTool}
-									doneShortcut="Escape"
-								/>
-							) : textEdit ? (
-								<DockFooter
-									title="Text"
-									onCancel={() => setTextEdit(null)}
-									onDone={finishTextEdit}
-									doneShortcut="Escape"
-								/>
-							) : selectedLayer ? (
-								<DockFooter
-									title={layerKindName(selectedLayer)}
-									onDone={() => selectLayer(null)}
-									doneShortcut="Escape"
-								/>
-							) : undefined
-						}
-						keyboardOverlap={keyboardOverlap}
-					>
-						{tool === "draw" ? (
-							<DrawPanel
+						{wide && <InspectorBackdrop />}
+						{tool === "draw" && toolOptionsOpen && (
+							<BrushOptions
 								settings={drawSettings}
-								optionsOpen={toolOptionsOpen}
-								onChange={changeDrawSettings}
-								onToggleOptions={() => setToolOptionsOpen((open) => !open)}
-							/>
-						) : tool === "adjust" ? (
-							<AdjustPanel
-								controller={adjustController}
-								adjustments={adjustedLayer?.adjustments}
-							/>
-						) : tool === "redact" ? (
-							<RedactPanel
-								settings={redactSettings}
-								optionsOpen={toolOptionsOpen}
-								findOpen={findOpen}
-								finding={detection.state.status === "working"}
-								hasTarget={detectedImage !== null}
-								onChange={changeRedactSettings}
-								onToggleOptions={() => {
-									closeDetection();
-									setToolOptionsOpen((open) => !open);
-								}}
-								onToggleFind={toggleDetection}
-							/>
-						) : styledText ? (
-							<TextStylePanel
-								layer={styledText}
 								customColor={customColor}
-								onChange={styleText}
-								onOpenPicker={(key) =>
-									setTextPicker({ layerId: styledText.id, key })
-								}
-							/>
-						) : selectedLayer ? (
-							<LayerActionsPanel
-								onDraw={
-									selectedLayer.type === "drawing" ||
-									selectedLayer.type === "shape"
-										? startDrawing
-										: undefined
-								}
-								onRedact={
-									selectedLayer.type === "redaction" ||
-									selectedLayer.type === "image"
-										? startRedacting
-										: undefined
-								}
-								onAdjust={
-									selectedLayer.type === "image" ? startAdjusting : undefined
-								}
-								sticker={
-									stickerSave?.layerId === selectedLayer.id
-										? stickerSave.status
-										: undefined
-								}
-								onSaveSticker={
-									selectedLayer.type === "image" && !selectedLayer.sticker
-										? saveSelectedAsSticker
-										: undefined
-								}
-							/>
-						) : (
-							<ToolsPanel
-								addBusy={addBusy}
-								onAddText={startNewText}
-								onDraw={startDrawing}
-								onRedact={startRedacting}
-								onAdd={openAdd}
-								onCrop={startCrop}
-								onAdjust={adjustable ? startAdjusting : undefined}
+								bottomInset={dockInset}
+								onChange={changeDrawSettings}
+								onPickCustom={(color) => {
+									changeDrawSettings({ ...drawSettings, color });
+									setCustomColor(color);
+								}}
+								onEyedropper={() => {
+									setToolOptionsOpen(false);
+									setEyedropper({
+										apply: (color) =>
+											changeDrawSettings({ ...drawSettings, color }),
+									});
+								}}
+								onClose={() => setToolOptionsOpen(false)}
 							/>
 						)}
-					</Dock>
-				</CanvasStage>
-				{!layersBeside && layersPanel}
-				<AddSheet
-					open={addOpen}
-					onClose={closeAdd}
-					onAddPhoto={() => {
-						closeAdd();
-						pickPhoto();
-					}}
-					onAddSticker={(sticker) => {
-						closeAdd();
-						addSticker(() => bundledStickerImage(sticker));
-					}}
-					savedStickers={savedStickers.stickers}
-					savedError={savedStickers.error}
-					onAddSaved={(sticker) => {
-						closeAdd();
-						addSticker(() => savedStickers.place(sticker));
-					}}
-					// Kept, then added at once, as it was picked to use.
-					onSaveNew={() => {
-						closeAdd();
-						pickSticker(async (image) =>
-							savedStickers.place(await savedStickers.save(image)),
-						);
-					}}
-					onDeleteSaved={(sticker) => {
-						savedStickers.remove(sticker).catch((error: unknown) => {
-							showAlert("Couldn't delete sticker", errorMessage(error));
-						});
-					}}
-				/>
+						{tool === "redact" && toolOptionsOpen && (
+							<RedactOptions
+								settings={redactSettings}
+								customColor={customColor}
+								bottomInset={dockInset}
+								onChange={changeRedactSettings}
+								onPickCustom={(color) => {
+									changeRedactSettings({ ...redactSettings, color });
+									setCustomColor(color);
+								}}
+								onEyedropper={() => {
+									setToolOptionsOpen(false);
+									setEyedropper({
+										apply: (color) =>
+											changeRedactSettings({ ...redactSettings, color }),
+									});
+								}}
+								onClose={() => setToolOptionsOpen(false)}
+							/>
+						)}
+						{tool === "redact" && findOpen && (
+							<DetectionOptions
+								state={detection.state}
+								visibleIndices={visibleDetectionIndices}
+								selectedCount={selectedDetectionCount}
+								bottomInset={dockInset}
+								onStart={startDetection}
+								onSelectAll={() => detection.select(visibleDetectionIndices)}
+								onClear={() => detection.select([])}
+								onApply={applyDetections}
+								onClose={closeDetection}
+							/>
+						)}
+						{textPicker && styledText && (
+							<TextColorPicker
+								layer={styledText}
+								colorKey={textPicker.key}
+								bottomInset={dockInset}
+								onChange={styleText}
+								onPickCustom={setCustomColor}
+								onEyedropper={() => {
+									const { key } = textPicker;
+									setTextPicker(null);
+									setEyedropper({
+										apply: (color) => styleText({ [key]: color }),
+									});
+								}}
+								onClose={() => setTextPicker(null)}
+							/>
+						)}
+						{eyedropper && (
+							<EyedropperHint onCancel={() => setEyedropper(null)} />
+						)}
+						{saveProblem && (
+							<SaveErrorBanner
+								message={saveProblem}
+								onRetry={projectId !== null ? retryAutosave : undefined}
+								rightInset={
+									wide
+										? INSPECTOR_WIDTH
+										: layersBeside && layersOpen
+											? LAYERS_SIDEBAR_INSET
+											: undefined
+								}
+							/>
+						)}
+						{layersBeside && !wide && layersPanel}
+						{wide && (
+							<View style={styles.rail}>
+								<ToolsPanel
+									vertical
+									tool={textEdit ? "text" : tool}
+									addBusy={addBusy}
+									onAddText={fromRail(startNewText)}
+									onDraw={fromRail(startDrawing)}
+									onRedact={fromRail(startRedacting)}
+									onAdd={fromRail(openAdd)}
+									onCrop={fromRail(startCrop)}
+									onAdjust={adjustable ? fromRail(startAdjusting) : undefined}
+								/>
+							</View>
+						)}
 
-				{dragging && <DropOverlay label="Drop to add to the canvas" />}
-				{cropping && (
-					<CropTool
-						document={document}
-						onCancel={closeCrop}
-						onDone={finishCrop}
+						{/* After the tool's options, so taps on the dock reach it rather
+				    than closing them. */}
+						<Dock
+							panel={panelKind}
+							layout={wide ? "inspector" : "bar"}
+							footer={
+								tool ? (
+									<DockFooter
+										title={TOOL_TITLES[tool]}
+										onCancel={cancelTool}
+										onDone={finishTool}
+										doneShortcut="Escape"
+									/>
+								) : textEdit ? (
+									<DockFooter
+										title="Text"
+										onCancel={() => setTextEdit(null)}
+										onDone={finishTextEdit}
+										doneShortcut="Escape"
+									/>
+								) : selectedLayer ? (
+									<DockFooter
+										title={layerKindName(selectedLayer)}
+										onDone={() => selectLayer(null)}
+										doneShortcut="Escape"
+									/>
+								) : undefined
+							}
+							keyboardOverlap={keyboardOverlap}
+						>
+							{tool === "draw" ? (
+								<DrawPanel
+									settings={drawSettings}
+									optionsOpen={toolOptionsOpen}
+									onChange={changeDrawSettings}
+									onToggleOptions={() => setToolOptionsOpen((open) => !open)}
+								/>
+							) : tool === "adjust" ? (
+								<AdjustPanel
+									controller={adjustController}
+									adjustments={adjustedLayer?.adjustments}
+								/>
+							) : tool === "redact" ? (
+								<RedactPanel
+									settings={redactSettings}
+									optionsOpen={toolOptionsOpen}
+									findOpen={findOpen}
+									finding={detection.state.status === "working"}
+									hasTarget={detectedImage !== null}
+									onChange={changeRedactSettings}
+									onToggleOptions={() => {
+										closeDetection();
+										setToolOptionsOpen((open) => !open);
+									}}
+									onToggleFind={toggleDetection}
+								/>
+							) : styledText ? (
+								<TextStylePanel
+									layer={styledText}
+									customColor={customColor}
+									onChange={styleText}
+									onOpenPicker={(key) =>
+										setTextPicker({ layerId: styledText.id, key })
+									}
+								/>
+							) : selectedLayer ? (
+								<LayerActionsPanel
+									onDraw={
+										selectedLayer.type === "drawing" ||
+										selectedLayer.type === "shape"
+											? startDrawing
+											: undefined
+									}
+									onRedact={
+										selectedLayer.type === "redaction" ||
+										selectedLayer.type === "image"
+											? startRedacting
+											: undefined
+									}
+									onAdjust={
+										selectedLayer.type === "image" ? startAdjusting : undefined
+									}
+									sticker={
+										stickerSave?.layerId === selectedLayer.id
+											? stickerSave.status
+											: undefined
+									}
+									onSaveSticker={
+										selectedLayer.type === "image" && !selectedLayer.sticker
+											? saveSelectedAsSticker
+											: undefined
+									}
+								/>
+							) : wide ? (
+								<LayersPanel {...layerList} layout="inspector" open />
+							) : (
+								<ToolsPanel
+									addBusy={addBusy}
+									onAddText={startNewText}
+									onDraw={startDrawing}
+									onRedact={startRedacting}
+									onAdd={openAdd}
+									onCrop={startCrop}
+									onAdjust={adjustable ? startAdjusting : undefined}
+								/>
+							)}
+						</Dock>
+					</CanvasStage>
+					{!layersBeside && layersPanel}
+					<AddSheet
+						open={addOpen}
+						onClose={closeAdd}
+						onAddPhoto={() => {
+							closeAdd();
+							pickPhoto();
+						}}
+						onAddSticker={(sticker) => {
+							closeAdd();
+							addSticker(() => bundledStickerImage(sticker));
+						}}
+						savedStickers={savedStickers.stickers}
+						savedError={savedStickers.error}
+						onAddSaved={(sticker) => {
+							closeAdd();
+							addSticker(() => savedStickers.place(sticker));
+						}}
+						// Kept, then added at once, as it was picked to use.
+						onSaveNew={() => {
+							closeAdd();
+							pickSticker(async (image) =>
+								savedStickers.place(await savedStickers.save(image)),
+							);
+						}}
+						onDeleteSaved={(sticker) => {
+							savedStickers.remove(sticker).catch((error: unknown) => {
+								showAlert("Couldn't delete sticker", errorMessage(error));
+							});
+						}}
 					/>
-				)}
-				{textEdit && (
-					<TextEditor
-						ref={textEditorRef}
-						text={textEdit.layer.text}
-						initialSelection={textEdit.initialSelection}
-						onChangeText={(text) => changeEditedText({ text })}
-						onSelectionChange={(selection) => changeTextEdit({ selection })}
-						onFocusChange={(focused) => changeTextEdit({ focused })}
-						onDone={finishTextEdit}
-					/>
-				)}
-			</View>
+
+					{dragging && <DropOverlay label="Drop to add to the canvas" />}
+					{cropping && (
+						<CropTool
+							document={document}
+							onCancel={closeCrop}
+							onDone={finishCrop}
+						/>
+					)}
+					{textEdit && (
+						<TextEditor
+							ref={textEditorRef}
+							text={textEdit.layer.text}
+							initialSelection={textEdit.initialSelection}
+							onChangeText={(text) => changeEditedText({ text })}
+							onSelectionChange={(selection) => changeTextEdit({ selection })}
+							onFocusChange={(focused) => changeTextEdit({ focused })}
+							onDone={finishTextEdit}
+						/>
+					)}
+				</View>
+			</TrayPlacement.Provider>
 		</TrayHeight.Provider>
 	);
 }
@@ -1186,6 +1240,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+	},
+	rail: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		bottom: 0,
+		width: RAIL_WIDTH,
+		borderRightWidth: StyleSheet.hairlineWidth,
+		borderRightColor: colors.border,
+		backgroundColor: colors.background,
 	},
 	headerActions: {
 		flexDirection: "row",

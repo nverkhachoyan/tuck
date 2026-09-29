@@ -36,7 +36,8 @@ type LayerListProps = LayerRowActions & {
  * The layers list in a card floating over its parent, so opening it never
  * resizes the canvas, which stays usable around it. A "sidebar" sits at the
  * top right, down to `bottomInset` from the bottom; a "sheet" along the
- * bottom, up to half the parent's height.
+ * bottom, up to half the parent's height. In the "inspector" of a wide
+ * screen, it's the column's resting content, always shown.
  *
  * Stays mounted while closed, so the card can animate out. The area around
  * the card is a plain View because `box-none` needs a class on web, and an
@@ -49,11 +50,21 @@ export function LayersPanel({
 	onClose,
 	...list
 }: LayerListProps & {
-	layout: "sidebar" | "sheet";
+	layout: "sidebar" | "sheet" | "inspector";
 	bottomInset: number;
 	open: boolean;
 	onClose: () => void;
 }) {
+	if (layout === "inspector") {
+		return (
+			<View style={styles.inspector}>
+				<Text style={styles.inspectorTitle} accessibilityRole="header">
+					Layers
+				</Text>
+				<LayerList {...list} compact />
+			</View>
+		);
+	}
 	if (layout === "sheet") {
 		return (
 			<View style={styles.sheetArea}>
@@ -170,6 +181,16 @@ const styles = StyleSheet.create({
 		right: SIDEBAR_MARGIN,
 		width: SIDEBAR_WIDTH,
 		pointerEvents: "box-none",
+	},
+	inspector: {
+		flex: 1,
+		paddingTop: 12,
+	},
+	inspectorTitle: {
+		...typography.bodyStrong,
+		color: colors.textPrimary,
+		paddingHorizontal: 20,
+		paddingBottom: 8,
 	},
 	sheetArea: {
 		position: "absolute",

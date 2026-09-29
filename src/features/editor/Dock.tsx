@@ -21,6 +21,10 @@ const DOCK_MARGIN = 10;
 // Between the dock and the keyboard, while it's up.
 const KEYBOARD_GAP = 8;
 const BUTTON_SIZE = 44;
+// A wide screen's inspector, along the right, which the dock becomes.
+export const INSPECTOR_WIDTH = 300;
+// Where a tray starts in the inspector: under its footer and panel.
+export const INSPECTOR_TRAY_TOP = FOOTER_HEIGHT + CONTENT_HEIGHT;
 const PANEL_IN = FadeIn.duration(220).easing(Easing.bezier(0.2, 0, 0, 1));
 const PANEL_OUT = FadeOut.duration(120);
 
@@ -49,19 +53,44 @@ function dockBottom(safeAreaBottom: number, keyboardOverlap: number) {
  * same panel for another layer stays put. Every mode, a tool or a selected
  * layer, puts a `DockFooter` in `footer`, under its panel. It rises above
  * the keyboard by `keyboardOverlap`, taking the footer along.
+ *
+ * As an `inspector`, on a wide screen, it's a column down the right
+ * instead: the footer heads it, then the panel, then any tray (see
+ * `Tray`). With no mode, the panel fills the column. It draws only its own
+ * part of the column, so a tray under it shows; `InspectorBackdrop` draws
+ * the rest, under the trays.
  */
 export function Dock({
 	panel,
 	footer,
+	layout = "bar",
 	keyboardOverlap = 0,
 	children,
 }: {
 	panel: string;
 	footer?: ReactNode;
+	layout?: "bar" | "inspector";
 	keyboardOverlap?: number;
 	children: ReactNode;
 }) {
 	const { bottom } = useSafeAreaInsets();
+	if (layout === "inspector") {
+		return (
+			<View style={[styles.inspector, footer ? styles.inspectorTop : null]}>
+				{footer && <View style={styles.inspectorFooter}>{footer}</View>}
+				<View style={footer ? styles.content : styles.inspectorRest}>
+					<Animated.View
+						key={panel}
+						entering={PANEL_IN}
+						exiting={PANEL_OUT}
+						style={[StyleSheet.absoluteFill, footer ? styles.panel : null]}
+					>
+						{children}
+					</Animated.View>
+				</View>
+			</View>
+		);
+	}
 	return (
 		<View
 			style={[
@@ -87,6 +116,11 @@ export function Dock({
 			</View>
 		</View>
 	);
+}
+
+/** The inspector's column, under the trays that go into it. */
+export function InspectorBackdrop() {
+	return <View style={[styles.inspector, styles.inspectorBackdrop]} />;
 }
 
 /**
@@ -195,6 +229,31 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		height: CONTENT_HEIGHT,
+	},
+	inspector: {
+		position: "absolute",
+		top: 0,
+		right: 0,
+		bottom: 0,
+		width: INSPECTOR_WIDTH,
+		borderLeftWidth: StyleSheet.hairlineWidth,
+		borderLeftColor: colors.border,
+		backgroundColor: colors.background,
+	},
+	// Only the footer and panel, so the tray below shows.
+	inspectorTop: {
+		bottom: undefined,
+		height: FOOTER_HEIGHT + CONTENT_HEIGHT,
+	},
+	inspectorBackdrop: {
+		pointerEvents: "none",
+	},
+	inspectorFooter: {
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+	},
+	inspectorRest: {
+		flex: 1,
 	},
 	panel: {
 		flexDirection: "row",

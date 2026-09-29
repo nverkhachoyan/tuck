@@ -86,8 +86,11 @@ export function ColorSwatches({
 
 const styles = StyleSheet.create({
 	// Lines the first swatch up with the panel's edge, past its target's margin.
+	// Wraps where a row is narrower than the swatches, as in a wide screen's
+	// inspector.
 	swatches: {
 		flexDirection: "row",
+		flexWrap: "wrap",
 		marginHorizontal: -(RING_TARGET - SWATCH_SIZE) / 2,
 	},
 	swatch: {

@@ -129,9 +129,26 @@ export function ToolButton({
 /**
  * A dock panel's row of `ToolButton`s, centered while they fit. On a narrow
  * screen the space between them shrinks to fit them all, and only once
- * there's none left does the row scroll sideways.
+ * there's none left does the row scroll sideways. `vertical` stacks them in
+ * a column instead, for a wide screen's tool rail.
  */
-export function ToolRow({ children }: { children: ReactNode }) {
+export function ToolRow({
+	vertical = false,
+	children,
+}: {
+	vertical?: boolean;
+	children: ReactNode;
+}) {
+	if (vertical) {
+		return (
+			<ScrollView
+				showsVerticalScrollIndicator={false}
+				contentContainerStyle={styles.column}
+			>
+				{children}
+			</ScrollView>
+		);
+	}
 	const [width, setWidth] = useState(0);
 	const count = Children.toArray(children).length;
 	// Gaps between the tools, and one at each end. Until the row is measured,
@@ -160,6 +177,11 @@ export function ToolRow({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
 	rowScroll: {
 		flex: 1,
+	},
+	column: {
+		alignItems: "center",
+		gap: ROW_GAP,
+		paddingVertical: ROW_GAP,
 	},
 	// Grows to fill the panel rather than flexing, which would hold it to the
 	// panel's width, so it never scrolls.

@@ -14,6 +14,15 @@ const TRAY_MAX_WIDTH = 520;
 export const TrayHeight = createContext<(height: number) => void>(() => {});
 
 /**
+ * Where trays go on a wide screen: into the inspector, `top` down its
+ * `width`-wide column, rather than on the dock.
+ */
+export const TrayPlacement = createContext<{
+	top: number;
+	width: number;
+} | null>(null);
+
+/**
  * A panel rising out of the dock, which sits `bottomInset` up from the
  * canvas's bottom. It's opaque, so it reads the same over any photo, and
  * the canvas refits above it (see `TrayHeight`). With `onDismiss`, a tap
@@ -31,6 +40,7 @@ export function Tray({
 	children: ReactNode;
 }) {
 	const setHeight = useContext(TrayHeight);
+	const placement = useContext(TrayPlacement);
 	useEffect(() => () => setHeight(0), [setHeight]);
 	return (
 		<View style={styles.layer}>
@@ -43,11 +53,20 @@ export function Tray({
 					accessibilityLabel={dismissLabel}
 				/>
 			)}
-			<View style={[styles.trayArea, { bottom: bottomInset }]}>
+			<View
+				style={
+					placement
+						? [
+								styles.inspectorArea,
+								{ top: placement.top, width: placement.width },
+							]
+						: [styles.trayArea, { bottom: bottomInset }]
+				}
+			>
 				<Animated.View
 					entering={FadeIn.duration(160)}
 					exiting={FadeOut.duration(100)}
-					style={styles.tray}
+					style={placement ? styles.inspectorTray : styles.tray}
 					onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
 				>
 					{children}
@@ -154,6 +173,16 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		pointerEvents: "box-none",
 	},
+	inspectorArea: {
+		position: "absolute",
+		right: 0,
+		pointerEvents: "box-none",
+	},
+	// Part of the inspector's column, under its panel.
+	inspectorTray: {
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
+	},
 	tray: {
 		width: "100%",
 		maxWidth: TRAY_MAX_WIDTH,
@@ -179,6 +208,7 @@ const styles = StyleSheet.create({
 	},
 	choices: {
 		flexDirection: "row",
+		flexWrap: "wrap",
 		// As the swatches do, so the rows' first choices line up.
 		marginHorizontal: -9,
 	},
