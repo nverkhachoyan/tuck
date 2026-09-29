@@ -64,6 +64,7 @@ import {
 	type ViewZoom,
 	viewPointToDocument,
 	viewportForZoom,
+	visibleDocumentArea,
 	zoomForViewport,
 	zoomViewportAbout,
 } from "../viewport";
@@ -75,7 +76,7 @@ import {
 	type LiveStroke,
 	type TextEditState,
 } from "./EditorScene";
-import { findLayerAt, type LayerTarget } from "./hitTest";
+import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
 import { HIT_PADDING_PX, layerTargets, resizeMode } from "./layerTargets";
 import {
 	type LiveTransform,
@@ -102,14 +103,16 @@ import { useWheelZoom } from "./useWheelZoom";
 
 // How much each zoom in or out by key scales the view.
 const ZOOM_STEP = 2;
+const DOUBLE_TAP_ZOOM = 3;
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 16;
 // A box or a line dragged no further than this either way, in screen
 // pixels, was a tap; a box this thin in only one way is dropped.
 const TAP_SLOP_PX = 6;
-// A second tap on text this soon after the first, and this near it in
-// screen pixels, selects a word.
+// A second tap this soon after the first, and this near it in screen
+// pixels, selects a word of edited text, or zooms where there's nothing to
+// select, by `DOUBLE_TAP_ZOOM`.
 const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_SLOP_PX = 12;
 // The selection bar's distance from the selection, above it past the rotate
@@ -189,6 +192,9 @@ export type EditorCanvasHandle = {
 	nudgeSelection: (dx: number, dy: number) => void;
 	// Zooms about the middle of the view, or back to the fit, easing there.
 	zoom: (to: "in" | "out" | "fit") => void;
+	// The part of the document in view, in document space, where a new layer
+	// goes.
+	visibleArea: () => Rect;
 };
 
 /**
@@ -199,8 +205,11 @@ export type EditorCanvasHandle = {
  *
  * The view zooms into the fit (see `ViewZoom`): with two fingers wherever
  * they wouldn't transform the selected layer (see `useViewGesture`), with a
- * trackpad pinch or the wheel on web (`useWheelZoom`), and by key through
- * `zoom`. While zoomed, a Fit button returns to the fit. A crop, which
+ * trackpad pinch or the wheel on web (`useWheelZoom`), by key through
+ * `zoom`, and with a double tap on nothing to select, which zooms in there
+ * or back out. While zoomed in, one finger pans it too, unless it lands on
+ * the selected layer or its handles, and so does it anywhere while finding
+ * or adjusting. While zoomed, a Fit button returns to the fit. A crop, which
  * changes the document's size, starts afresh at the fit.
  *
  * All touch handling (tap-to-select, drag/pinch/rotate, the selection's
@@ -335,12 +344,63 @@ export function EditorCanvas({
 		{ translateY: shown.offsetY.value },
 		{ scale: shown.scale.value },
 	]);
-	const commitViewport = useCallback(
-		(next: DocumentViewport) => {
-			const zoom = zoomForViewport(frame, next);
+	// Where the view is headed, as of its last change: a render, or a zoom
+	// that's still to render.
+	const latestViewport = useRef(viewport);
+	useLayoutEffect(() => {
+		latestViewport.current = viewport;
+	}, [viewport]);
+	const setZoom = useCallback(
+		(zoom: ViewZoom | null) => {
+			latestViewport.current = viewportForZoom(frame, zoom);
 			setZoomed(zoom && { zoom, documentSize });
 		},
 		[frame, documentSize],
+	);
+	const commitViewport = useCallback(
+		(next: DocumentViewport) => setZoom(zoomForViewport(frame, next)),
+		[frame, setZoom],
+	);
+	const flushWheel = useWheelZoom({
+		target: containerRef,
+		shown,
+		frame,
+		onCommit: commitViewport,
+	});
+	// Scales the view by `factor` about `point`, or returns it to the fit
+	// without one, easing there.
+	const zoomTo = useCallback(
+		(factor: number | null, point: Point) => {
+			flushWheel();
+			setZoom(
+				factor === null
+					? null
+					: zoomForViewport(
+							frame,
+							zoomViewportAbout(frame, latestViewport.current, factor, point),
+						),
+			);
+		},
+		[flushWheel, frame, setZoom],
+	);
+	const lastEmptyTap = useRef({ time: 0, x: 0, y: 0 });
+	// A tap on nothing to select: a second one soon after the first, and near
+	// it, zooms in there, or back to the fit. Any other tap calls it with
+	// null, so it doesn't count toward one.
+	const tapOnNothing = useCallback(
+		(point: Point | null) => {
+			const last = lastEmptyTap.current;
+			const double =
+				point !== null &&
+				Date.now() - last.time < DOUBLE_TAP_MS &&
+				Math.hypot(point.x - last.x, point.y - last.y) < DOUBLE_TAP_SLOP_PX;
+			lastEmptyTap.current =
+				point && !double
+					? { time: Date.now(), ...point }
+					: { time: 0, x: 0, y: 0 };
+			if (double) zoomTo(zoom ? null : DOUBLE_TAP_ZOOM, point);
+		},
+		[zoom, zoomTo],
 	);
 
 	const targets = useMemo(
@@ -414,6 +474,7 @@ export function EditorCanvas({
 			// than deselecting the layer that owns it.
 			if (scale === 0 || handleAt(screenX, screenY)) return;
 			const id = layerAt(screenX, screenY);
+			tapOnNothing(id === null ? { x: screenX, y: screenY } : null);
 			if (id !== null && id === selectedLayerId) {
 				onTapSelectedLayer?.(
 					viewPointToDocument(viewport, { x: screenX, y: screenY }),
@@ -429,23 +490,82 @@ export function EditorCanvas({
 			onTapSelectedLayer,
 			scale,
 			selectedLayerId,
+			tapOnNothing,
 			viewport,
 		],
 	);
 
-	// What a press at the pointer would do: grab a handle, move a layer, or
-	// nothing. Renders only when that changes, not on every pointer move.
+	// Where one finger moves the view too: anywhere while finding or
+	// adjusting, whose taps don't drag, and while zoomed in, anywhere off the
+	// selected layer and its handles, so another layer is tapped before it's
+	// dragged. At the fit, where the view can't move, a drag picks up the
+	// layer under it, or moves the selection. Painting and typing keep one
+	// finger for themselves. Both the view's gesture and the layers' ask it,
+	// once, where the finger lands.
+	const oneFingerMode =
+		tool !== null || textEdit !== null
+			? null
+			: detection !== null || adjusting !== null
+				? "anywhere"
+				: zoom
+					? "offSelection"
+					: null;
+	const dragAlone = useMemo(() => {
+		if (oneFingerMode === null) return null;
+		if (oneFingerMode === "anywhere") {
+			return () => {
+				"worklet";
+				return true;
+			};
+		}
+		return (x: number, y: number) => {
+			"worklet";
+			const id = live.activeId.value;
+			if (id === null) return true;
+			const point = viewPointToDocument(viewport, { x, y });
+			return (
+				handleUnder(
+					readLiveTransform(live),
+					readLiveBox(live),
+					live.resizeMode.value,
+					point,
+					viewport.scale,
+				) === null && !hitsLayer(sharedTargets.value, id, point)
+			);
+		};
+	}, [oneFingerMode, live, sharedTargets, viewport]);
+
+	// What a press at the pointer would do: grab a handle, move a layer, move
+	// the view, or nothing. Renders only when that changes, not on every
+	// pointer move.
 	const handleHover = useCallback(
 		(screenX: number, screenY: number) => {
 			if (scale === 0) return;
 			const handle = handleAt(screenX, screenY);
 			if (handle && selectedLayer) {
 				setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
-			} else {
-				setCursor(layerAt(screenX, screenY) === null ? "default" : "move");
+				return;
 			}
+			if (zoom) {
+				const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
+				const onSelection =
+					selectedLayerId !== null &&
+					hitsLayer(targets, selectedLayerId, point);
+				setCursor(onSelection ? "move" : "grab");
+				return;
+			}
+			setCursor(layerAt(screenX, screenY) === null ? "default" : "move");
 		},
-		[handleAt, layerAt, scale, selectedLayer],
+		[
+			handleAt,
+			layerAt,
+			scale,
+			selectedLayer,
+			selectedLayerId,
+			targets,
+			viewport,
+			zoom,
+		],
 	);
 	const handleHoverEnd = useCallback(() => setCursor("default"), []);
 
@@ -471,47 +591,29 @@ export function EditorCanvas({
 		onResize: handleResize,
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
+		dragsView: dragAlone,
 	});
 	// Two fingers transform the selected layer while it can move.
 	const viewGesture = useViewGesture({
 		shown,
 		frame,
-		enabled: movableLayer === undefined,
-		onCommit: commitViewport,
-	});
-	const flushWheel = useWheelZoom({
-		target: containerRef,
-		shown,
-		frame,
+		live,
+		twoFingers: movableLayer === undefined,
+		dragAlone,
 		onCommit: commitViewport,
 	});
 	const zoomView = useCallback(
 		(to: "in" | "out" | "fit") => {
-			flushWheel();
-			if (to === "fit") {
-				setZoomed(null);
-				return;
-			}
-			// From what the wheel just committed, if it had anything waiting.
-			setZoomed((last) => {
-				const from = viewportForZoom(
-					frame,
-					last?.documentSize === documentSize ? last.zoom : null,
-				);
-				const zoom = zoomForViewport(
-					frame,
-					zoomViewportAbout(
-						frame,
-						from,
-						to === "in" ? ZOOM_STEP : 1 / ZOOM_STEP,
-						areaMiddle(frame.area),
-					),
-				);
-				return zoom && { zoom, documentSize };
-			});
+			const factor =
+				to === "fit" ? null : to === "in" ? ZOOM_STEP : 1 / ZOOM_STEP;
+			zoomTo(factor, areaMiddle(frame.area));
 		},
-		[flushWheel, frame, documentSize],
+		[zoomTo, frame],
 	);
+	const visibleArea = useCallback(() => {
+		flushWheel();
+		return visibleDocumentArea(frame, latestViewport.current);
+	}, [flushWheel, frame]);
 	const nudgeSelection = useCallback(
 		(dx: number, dy: number) => {
 			if (!selectedLayer || scale === 0) return;
@@ -763,10 +865,12 @@ export function EditorCanvas({
 				}
 			}
 			if (hit) {
+				tapOnNothing(null);
 				detection.onToggle(hit.sourceIndex);
 				return;
 			}
-			// A miss on the image, as by a face, keeps finding. Where the image is
+			// A miss on the image, as by a face, keeps finding, and a second one
+			// zooms (see `tapOnNothing`). Where the image is
 			// locked, it has no hit box, and shows only inside the document.
 			const under = findLayerAt(targets, point)?.id ?? null;
 			const image = document.layers.find(
@@ -778,9 +882,19 @@ export function EditorCanvas({
 						insideDocument(documentSize, point) &&
 						hitTestBox(image.transform, layerBounds(image), point)
 					: under === detection.imageId;
-			if (!onImage) tapAway(point);
+			if (onImage) tapOnNothing({ x: screenX, y: screenY });
+			else tapAway(point);
 		},
-		[detection, scale, viewport, targets, document, documentSize, tapAway],
+		[
+			detection,
+			scale,
+			viewport,
+			targets,
+			document,
+			documentSize,
+			tapAway,
+			tapOnNothing,
+		],
 	);
 	const detectionGesture = useMemo(
 		() =>
@@ -801,15 +915,19 @@ export function EditorCanvas({
 				: adjusting
 					? idleGesture
 					: gesture;
+	// The view's gestures join at the top, one by one: a `Simultaneous` nested
+	// in another drops the outer one's relations, so the mode's gestures and
+	// the view's would race, the first to start cancelling the other.
 	const canvasGesture = useMemo(
-		() => Gesture.Simultaneous(modeGesture, viewGesture),
+		() => Gesture.Simultaneous(modeGesture, ...viewGesture.toGestureArray()),
 		[modeGesture, viewGesture],
 	);
 
-	useImperativeHandle(ref, () => ({ nudgeSelection, zoom: zoomView }), [
-		nudgeSelection,
-		zoomView,
-	]);
+	useImperativeHandle(
+		ref,
+		() => ({ nudgeSelection, zoom: zoomView, visibleArea }),
+		[nudgeSelection, zoomView, visibleArea],
+	);
 
 	return (
 		<View style={styles.container}>
@@ -824,7 +942,9 @@ export function EditorCanvas({
 								: tool
 									? "crosshair"
 									: adjusting
-										? "default"
+										? zoom
+											? "grab"
+											: "default"
 										: cursor,
 						),
 					]}

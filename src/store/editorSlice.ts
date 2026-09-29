@@ -69,18 +69,26 @@ export type EditorSlice = {
 	session: EditorSnapshot | null;
 	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
-	addTextLayer: (text: string, style?: Partial<TextLayerStyle>) => void;
+	// A new layer goes in `area`, the part of the document in view, or else
+	// in the middle of the whole of it (see `createTextLayer`).
+	addTextLayer: (
+		text: string,
+		style?: Partial<TextLayerStyle>,
+		area?: Rect,
+	) => void;
 	addImageLayer: (
 		uri: string,
 		width: number,
 		height: number,
 		opaque: boolean,
+		area?: Rect,
 	) => void;
 	addStickerLayer: (
 		uri: string,
 		width: number,
 		height: number,
 		opaque: boolean,
+		area?: Rect,
 	) => void;
 	duplicateSelectedLayer: () => void;
 	drawStroke: (stroke: Stroke) => void;
@@ -247,27 +255,30 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				"editor/closeDocument",
 			),
 
-		addTextLayer: (text, style) => {
+		addTextLayer: (text, style, area) => {
 			const { document } = get();
 			if (!document) return;
-			addOnTop("editor/addTextLayer", createTextLayer(document, text, style));
+			addOnTop(
+				"editor/addTextLayer",
+				createTextLayer(document, text, style, area),
+			);
 		},
 
-		addImageLayer: (uri, width, height, opaque) => {
+		addImageLayer: (uri, width, height, opaque, area) => {
 			const { document } = get();
 			if (!document) return;
 			addOnTop(
 				"editor/addImageLayer",
-				createImageLayer(document, uri, width, height, opaque),
+				createImageLayer(document, uri, width, height, opaque, area),
 			);
 		},
 
-		addStickerLayer: (uri, width, height, opaque) => {
+		addStickerLayer: (uri, width, height, opaque, area) => {
 			const { document } = get();
 			if (!document) return;
 			addOnTop(
 				"editor/addStickerLayer",
-				createStickerLayer(document, uri, width, height, opaque),
+				createStickerLayer(document, uri, width, height, opaque, area),
 			);
 		},
 

@@ -6,7 +6,7 @@ import type {
 	RedactionStrokes,
 } from "../../../model/document.ts";
 import type { Transform } from "../../../model/geometry.ts";
-import { findLayerAt, type LayerTarget } from "./hitTest.ts";
+import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest.ts";
 
 const at = (x: number, y: number): Transform => ({
 	x,
@@ -89,5 +89,19 @@ describe("findLayerAt", () => {
 		];
 		assert.equal(findLayerAt(targets, { x: 10, y: 2 })?.id, "redaction");
 		assert.equal(findLayerAt(targets, { x: 10, y: 30 })?.id, "photo");
+	});
+});
+
+describe("hitsLayer", () => {
+	test("hits a layer under another one over it", () => {
+		const targets = [target("below", 0, 0), target("above", 20, 0)];
+		assert.equal(hitsLayer(targets, "below", { x: 10, y: 0 }), true);
+		assert.equal(hitsLayer(targets, "below", { x: 60, y: 0 }), false);
+	});
+
+	test("misses a layer that isn't there or can't be selected", () => {
+		const targets = [target("locked", 0, 0, { locked: true })];
+		assert.equal(hitsLayer(targets, "locked", { x: 0, y: 0 }), false);
+		assert.equal(hitsLayer(targets, "gone", { x: 0, y: 0 }), false);
 	});
 });

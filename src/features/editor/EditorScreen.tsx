@@ -256,9 +256,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	// Text being typed on the canvas: a new layer, added once editing ends,
 	// or the selected one, changed then. What's typed and restyled meanwhile
-	// stays here, so the whole edit is one undo step.
+	// stays here, so the whole edit is one undo step. New text is placed in
+	// `area`, the part of the photo in view when it began.
 	const [textEdit, setTextEdit] = useState<
-		(TextEditState & { initialSelection: TextSelection }) | null
+		(TextEditState & { initialSelection: TextSelection; area?: Rect }) | null
 	>(null);
 	const textEditorRef = useRef<TextEditorHandle>(null);
 	const [cropping, setCropping] = useState(false);
@@ -624,17 +625,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		setTextEdit(
 			(edit) => edit && { ...edit, layer: { ...edit.layer, ...patch } },
 		);
-	// Placed and sized by the whole canvas, which the view then shows.
 	const startNewText = () => {
 		setLayersOpen(false);
-		canvasRef.current?.zoom("fit");
 		const start = { start: 0, end: 0 };
+		const area = canvasRef.current?.visibleArea();
 		setTextEdit({
-			layer: createTextLayer(document, "", textStyle),
+			layer: createTextLayer(document, "", textStyle, area),
 			isNew: true,
 			selection: start,
 			initialSelection: start,
 			focused: false,
+			area,
 		});
 	};
 	// With the caret at `index`, or the end.
@@ -653,12 +654,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// Finishing with no text discards a new layer and deletes an existing one.
 	const finishTextEdit = () => {
 		if (!textEdit) return;
-		const { layer, isNew } = textEdit;
+		const { layer, isNew, area } = textEdit;
 		const text = layer.text.trim();
 		const { font, color, outlineColor, backgroundColor, align } = layer;
 		const style = { font, color, outlineColor, backgroundColor, align };
 		if (isNew) {
-			if (text) addTextLayer(text, style);
+			if (text) addTextLayer(text, style, area);
 		} else if (text) {
 			updateTextLayer(layer.id, { text, ...style });
 		} else {
@@ -812,10 +813,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onImage: async ({ uri, width, height, opaque, sticker }) => {
 			const url =
 				projectId === null ? uri : await addImage(projectId, uri, opaque);
-			// Placed and sized by the whole canvas, which the view then shows.
-			canvasRef.current?.zoom("fit");
-			if (sticker) addStickerLayer(url, width, height, opaque);
-			else addImageLayer(url, width, height, opaque);
+			const area = canvasRef.current?.visibleArea();
+			if (sticker) addStickerLayer(url, width, height, opaque, area);
+			else addImageLayer(url, width, height, opaque, area);
 		},
 	});
 

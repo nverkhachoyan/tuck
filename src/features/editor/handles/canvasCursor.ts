@@ -8,6 +8,7 @@ export type CanvasCursor =
 	| "crosshair"
 	| "text"
 	| "move"
+	| "grab"
 	| "pointer"
 	| "ew-resize"
 	| "nwse-resize"

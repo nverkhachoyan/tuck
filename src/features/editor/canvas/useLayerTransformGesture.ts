@@ -70,7 +70,9 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  * once: it's hit-tested here, on the UI thread, against `layers`, and
  * `onSelect` tells React. Two fingers never pick one up: with nothing
  * selected, they zoom the view (see `useViewGesture`). Dragging empty space
- * keeps moving the selection, which helps with small text.
+ * keeps moving the selection, which helps with small text. A one-finger drag
+ * from where `dragsView` says the view moves instead is left alone, from
+ * touch-down to lift.
  *
  * Moving snaps the layer's edges onto the edges of the document and the
  * other layers, or its center onto their centers; a side being resized
@@ -96,6 +98,7 @@ export function useLayerTransformGesture({
 	onResize,
 	onHover,
 	onHoverEnd,
+	dragsView = null,
 }: {
 	live: LiveTransform;
 	aspectLocked: SharedValue<boolean>;
@@ -110,6 +113,9 @@ export function useLayerTransformGesture({
 	onResize: (id: string, transform: Transform, box: Box) => void;
 	onHover: (screenX: number, screenY: number) => void;
 	onHoverEnd: () => void;
+	// Whether one finger landing at a point moves the view rather than a
+	// layer. A worklet.
+	dragsView?: ((screenX: number, screenY: number) => boolean) | null;
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
 	// variables captured by worklets are copied, so writes wouldn't persist.
@@ -140,6 +146,8 @@ export function useLayerTransformGesture({
 	const resizedBox = useSharedValue(false);
 	// What this drag's layer snaps onto, gathered when it starts.
 	const snapLines = useSharedValue({ x: NO_LINES, y: NO_LINES });
+	// Whether this pan's drag moves the view, and the pan stands aside.
+	const aside = useSharedValue(false);
 
 	return useMemo(() => {
 		const toDocument = (screenX: number, screenY: number) => {
@@ -330,6 +338,7 @@ export function useLayerTransformGesture({
 		// on an unselected layer stays a plain select.
 		const pan = Gesture.Pan()
 			.onBegin((event) => {
+				aside.value = dragsView?.(event.x, event.y) ?? false;
 				downX.value = event.x;
 				downY.value = event.y;
 				travel.value = startTravel(event);
@@ -346,6 +355,7 @@ export function useLayerTransformGesture({
 			})
 			.onStart((event) => {
 				travel.value = continueTravel(travel.value, event);
+				if (aside.value) return;
 				gestureStarted();
 				// Picks up the layer under the touch-down point, unless it grabbed a
 				// handle or more than one finger is at work.
@@ -378,7 +388,7 @@ export function useLayerTransformGesture({
 			.onUpdate((event) => {
 				travel.value = continueTravel(travel.value, event);
 				const { dx, dy } = travel.value;
-				if (!holding()) return;
+				if (aside.value || !holding()) return;
 
 				const handle = dragHandle.value;
 				if (handle !== null) {
@@ -409,7 +419,9 @@ export function useLayerTransformGesture({
 				);
 				moved.value = true;
 			})
-			.onEnd(gestureEnded)
+			.onEnd(() => {
+				if (!aside.value) gestureEnded();
+			})
 			.onFinalize(() => {
 				dragHandle.value = null;
 				live.guideX.value = null;
@@ -474,6 +486,8 @@ export function useLayerTransformGesture({
 		onResize,
 		onHover,
 		onHoverEnd,
+		dragsView,
+		aside,
 		downX,
 		downY,
 		travel,

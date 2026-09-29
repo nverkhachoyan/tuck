@@ -316,3 +316,26 @@ export function zoomForViewport(
 		center: viewPointToDocument(viewport, areaMiddle(frame.area)),
 	};
 }
+
+/**
+ * The part of the document shown in the frame's area, in document space:
+ * all of it at the fit, less as the view zooms in.
+ */
+export function visibleDocumentArea(
+	frame: ViewFrame,
+	viewport: DocumentViewport,
+): Rect {
+	const { area, documentSize } = frame;
+	const { scale, offsetX, offsetY } = viewport;
+	const left = Math.max(0, (area.x - offsetX) / scale);
+	const top = Math.max(0, (area.y - offsetY) / scale);
+	const right = Math.min(
+		documentSize.width,
+		(area.x + area.width - offsetX) / scale,
+	);
+	const bottom = Math.min(
+		documentSize.height,
+		(area.y + area.height - offsetY) / scale,
+	);
+	return { x: left, y: top, width: right - left, height: bottom - top };
+}

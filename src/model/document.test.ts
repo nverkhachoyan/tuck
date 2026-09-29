@@ -197,6 +197,36 @@ describe("initialFontSize", () => {
 	});
 });
 
+describe("placing a new layer in the part of the photo in view", () => {
+	// A quarter of the photo either way, zoomed into near its top-left.
+	const area = { x: 400, y: 300, width: 1000, height: 750 };
+
+	test("centers text on it, sized and wrapped to it", () => {
+		const layer = createTextLayer(landscape(), "hi", {}, area);
+		assert.equal(layer.transform.x, 900);
+		assert.equal(layer.transform.y, 675);
+		assert.equal(layer.fontSize, initialFontSize(area));
+		assert.equal(layer.maxWidth, 900);
+	});
+
+	test("never makes text smaller than a pixel", () => {
+		assert.equal(initialFontSize({ width: 4, height: 4 }), 1);
+	});
+
+	test("shrinks a photo to sit inside it", () => {
+		const layer = createImageLayer(landscape(), "x", 2000, 1500, true, area);
+		assert.equal(layer.transform.x, 900);
+		assert.equal(layer.transform.y, 675);
+		assert.equal(layer.transform.scaleX, 0.4);
+	});
+
+	test("sizes a sticker to it", () => {
+		const layer = createStickerLayer(landscape(), "x", 500, 500, false, area);
+		assert.equal(layer.transform.x, 900);
+		assert.equal(layer.transform.scaleX, (750 * 0.3) / 500);
+	});
+});
+
 describe("createTextLayer", () => {
 	test("starts centered, in the meme style, wrapping at 90% width", () => {
 		const document = landscape();

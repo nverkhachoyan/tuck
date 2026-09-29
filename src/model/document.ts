@@ -7,6 +7,7 @@ import { drawingBox, recenterDrawing } from "./drawing.ts";
 import {
 	hitTestBox,
 	type Rect,
+	type Size,
 	type Transform,
 	transformsEqual,
 } from "./geometry.ts";
@@ -324,6 +325,23 @@ export function centeredTransform(width: number, height: number): Transform {
 }
 
 /**
+ * The whole of a document, where a new layer goes unless it's given the
+ * part the editor shows.
+ */
+export function documentArea(document: EditorDocument): Rect {
+	return { x: 0, y: 0, width: document.width, height: document.height };
+}
+
+// Centered on `area`, unscaled.
+function areaTransform(area: Rect): Transform {
+	return {
+		...identityTransform,
+		x: area.x + area.width / 2,
+		y: area.y + area.height / 2,
+	};
+}
+
+/**
  * Whether the document is worth keeping as a project: it's neither an empty
  * canvas nor the untouched photo it was made from. Unlocking the photo isn't
  * an edit until it's moved.
@@ -376,12 +394,13 @@ export function hasTransparency(document: EditorDocument): boolean {
 }
 
 /**
- * A new text layer's font size, relative to the photo's shorter side so text
- * starts out looking the same on a 1080px screenshot and a 4000px camera
- * photo. It's fixed from then on: the layer's scale resizes it.
+ * A new text layer's font size, relative to the shorter side of the area
+ * it's placed in (the photo, or the part of it in view), so text starts out
+ * looking the same on a 1080px screenshot and a 4000px camera photo. It's
+ * fixed from then on: the layer's scale resizes it.
  */
-export function initialFontSize(document: EditorDocument): number {
-	return Math.round(Math.min(document.width, document.height) * 0.08);
+export function initialFontSize(area: Size): number {
+	return Math.max(1, Math.round(Math.min(area.width, area.height) * 0.08));
 }
 
 /** How a text layer's text looks, apart from its size. */
@@ -403,21 +422,18 @@ export function createTextLayer(
 	document: EditorDocument,
 	text: string,
 	style: Partial<TextLayerStyle> = {},
+	area: Rect = documentArea(document),
 ): TextLayer {
 	return {
 		type: "text",
 		id: createLayerId("text"),
 		text,
-		fontSize: initialFontSize(document),
+		fontSize: initialFontSize(area),
 		...defaultTextStyle,
 		...style,
 		// Meme captions span most of the photo before wrapping.
-		maxWidth: document.width * 0.9,
-		transform: {
-			...identityTransform,
-			x: document.width / 2,
-			y: document.height / 2,
-		},
+		maxWidth: area.width * 0.9,
+		transform: areaTransform(area),
 		hidden: false,
 		locked: false,
 	};
@@ -443,9 +459,10 @@ export function maxNewImageShortSide(document: EditorDocument): number {
 }
 
 /**
- * A photo as a new layer, centered and shrunk to sit well inside the canvas,
- * but never enlarged past its own pixels, which would blur it. It starts
- * unlocked, so it moves on the canvas and the crop tool doesn't frame it.
+ * A photo as a new layer, centered and shrunk to sit well inside `area` (the
+ * canvas, or the part of it in view), but never enlarged past its own
+ * pixels, which would blur it. It starts unlocked, so it moves on the canvas
+ * and the crop tool doesn't frame it.
  */
 export function createImageLayer(
 	document: EditorDocument,
@@ -453,11 +470,12 @@ export function createImageLayer(
 	width: number,
 	height: number,
 	opaque: boolean,
+	area: Rect = documentArea(document),
 ): ImageLayer {
 	const scale = Math.min(
 		1,
-		(document.width * NEW_IMAGE_FIT) / width,
-		(document.height * NEW_IMAGE_FIT) / height,
+		(area.width * NEW_IMAGE_FIT) / width,
+		(area.height * NEW_IMAGE_FIT) / height,
 	);
 	return {
 		type: "image",
@@ -467,11 +485,7 @@ export function createImageLayer(
 		height,
 		flipped: false,
 		opaque,
-		transform: {
-			...centeredTransform(document.width, document.height),
-			scaleX: scale,
-			scaleY: scale,
-		},
+		transform: { ...areaTransform(area), scaleX: scale, scaleY: scale },
 		hidden: false,
 		locked: false,
 	};
@@ -481,8 +495,9 @@ export function createImageLayer(
 const NEW_STICKER_FIT = 0.3;
 
 /**
- * A sticker's image as a new layer, centered and sized to the canvas rather
- * than its pixels, so it looks the same on a screenshot as on a large photo.
+ * A sticker's image as a new layer, centered on `area` (the canvas, or the
+ * part of it in view) and sized to it rather than its pixels, so it looks
+ * the same on a screenshot as on a large photo.
  */
 export function createStickerLayer(
 	document: EditorDocument,
@@ -490,18 +505,15 @@ export function createStickerLayer(
 	width: number,
 	height: number,
 	opaque: boolean,
+	area: Rect = documentArea(document),
 ): ImageLayer {
 	const scale =
-		(Math.min(document.width, document.height) * NEW_STICKER_FIT) /
+		(Math.min(area.width, area.height) * NEW_STICKER_FIT) /
 		Math.max(width, height);
 	return {
 		...createImageLayer(document, uri, width, height, opaque),
 		sticker: true,
-		transform: {
-			...centeredTransform(document.width, document.height),
-			scaleX: scale,
-			scaleY: scale,
-		},
+		transform: { ...areaTransform(area), scaleX: scale, scaleY: scale },
 	};
 }
 

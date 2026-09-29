@@ -60,3 +60,17 @@ export function findLayerAt(
 	}
 	return null;
 }
+
+/**
+ * Whether a document-space point hits the layer `id` itself, whatever lies
+ * over it there.
+ */
+export function hitsLayer(
+	targets: readonly LayerTarget[],
+	id: string,
+	point: Point,
+): boolean {
+	"worklet";
+	const target = targets.find((candidate) => candidate.id === id);
+	return target !== undefined && findLayerAt([target], point) !== null;
+}

@@ -12,6 +12,7 @@ import {
 	viewPointToDocument,
 	viewportForZoom,
 	viewRectToDocument,
+	visibleDocumentArea,
 	zoomForViewport,
 	zoomViewportAbout,
 } from "./viewport.ts";
@@ -276,5 +277,26 @@ describe("viewportForZoom and zoomForViewport", () => {
 			y: 500,
 		});
 		assert.equal(zoomForViewport(frame, nearly), null);
+	});
+});
+
+describe("visibleDocumentArea", () => {
+	test("is the whole document at the fit", () => {
+		assert.deepEqual(visibleDocumentArea(frame, fitToFrame(frame)), {
+			x: 0,
+			y: 0,
+			width: 4000,
+			height: 3000,
+		});
+	});
+
+	test("is the part in the area once zoomed", () => {
+		// At 0.4, the 432 × 800 area shows 1080 × 2000 of the document.
+		const zoomed = { scale: 0.4, offsetX: -400, offsetY: -200 };
+		const shown = visibleDocumentArea(frame, zoomed);
+		assert.equal(shown.x, 1000);
+		assert.equal(shown.width, 1080);
+		assert.equal(shown.y, 750);
+		assert.equal(shown.height, 2000);
 	});
 });
