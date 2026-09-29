@@ -40,6 +40,7 @@ export type Shortcut =
 	| { type: "duplicate" }
 	| { type: "reorder"; step: 1 | -1 }
 	| { type: "nudge"; dx: number; dy: number }
+	| { type: "zoom"; to: "in" | "out" | "fit" }
 	| { type: "tool"; tool: ToolKey }
 	| { type: "layers" }
 	| { type: "help" };
@@ -78,6 +79,14 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 				return { type: "reorder", step: 1 };
 			case "[":
 				return { type: "reorder", step: -1 };
+			// Plus is Shift and = on most layouts, and on the number pad.
+			case "=":
+			case "+":
+				return { type: "zoom", to: "in" };
+			case "-":
+				return { type: "zoom", to: "out" };
+			case "0":
+				return { type: "zoom", to: "fit" };
 			default:
 				return null;
 		}
@@ -142,6 +151,14 @@ export const SHORTCUT_GROUPS: {
 			{ keys: "Enter", action: "Edit the selected text" },
 			{ keys: "←↑→↓", action: "Nudge, with Shift for more" },
 			{ keys: "Escape", action: "Done, or deselect" },
+		],
+	},
+	{
+		title: "View",
+		items: [
+			{ keys: "mod+=", action: "Zoom in" },
+			{ keys: "mod+-", action: "Zoom out" },
+			{ keys: "mod+0", action: "Zoom to fit" },
 		],
 	},
 	{

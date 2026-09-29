@@ -43,6 +43,18 @@ describe("shortcutFor", () => {
 		});
 	});
 
+	test("zooms in, out, and to fit with the modifier", () => {
+		const zoom = (to: string) => ({ type: "zoom", to });
+		assert.deepEqual(shortcutFor(press("=", { metaKey: true })), zoom("in"));
+		assert.deepEqual(
+			shortcutFor(press("+", { ctrlKey: true, shiftKey: true })),
+			zoom("in"),
+		);
+		assert.deepEqual(shortcutFor(press("-", { metaKey: true })), zoom("out"));
+		assert.deepEqual(shortcutFor(press("0", { ctrlKey: true })), zoom("fit"));
+		assert.equal(shortcutFor(press("0")), null);
+	});
+
 	test("picks up a tool, or shows the layers, with a plain letter", () => {
 		assert.deepEqual(shortcutFor(press("t")), { type: "tool", tool: "text" });
 		assert.deepEqual(shortcutFor(press("d")), { type: "tool", tool: "draw" });

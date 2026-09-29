@@ -1,9 +1,4 @@
-import {
-	useFocusEffect,
-	useIsFocused,
-	useLocalSearchParams,
-	useRouter,
-} from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
@@ -209,6 +204,9 @@ function leaveEditor(router: ReturnType<typeof useRouter>) {
 	else router.replace("/");
 }
 
+// For a save as the app leaves the foreground, before React has rendered.
+const latestDocument = () => useStore.getState().document;
+
 function ScreenContent({ document }: { document: EditorDocument }) {
 	const router = useRouter();
 	const projectId = useStore((state) => state.projectId);
@@ -255,13 +253,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const cancelSession = useStore((state) => state.cancelSession);
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
-	// A web trackpad pinch commits after a short pause, or at the next press
-	// or key. Commit it too where no input comes first: a background save,
-	// leaving the screen, and a photo that finished loading.
-	const commitPendingPinch = useCallback(
-		() => canvasRef.current?.flushPendingTransform(),
-		[],
-	);
 
 	// Text being typed on the canvas: a new layer, added once editing ends,
 	// or the selected one, changed then. What's typed and restyled meanwhile
@@ -504,21 +495,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 	};
 
-	const prepareForBackgroundSave = useCallback(() => {
-		commitPendingPinch();
-		return useStore.getState().document;
-	}, [commitPendingPinch]);
 	const { error: autosaveError, retry: retryAutosave } = useAutosave(
 		projectId,
 		document,
-		prepareForBackgroundSave,
+		latestDocument,
 	);
 	const saveProblem =
 		projectId === null
 			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
-	// So the session closes with the latest transform.
-	useFocusEffect(useCallback(() => commitPendingPinch, [commitPendingPinch]));
 
 	const selectedIndex = selectedLayer
 		? document.layers.indexOf(selectedLayer)
@@ -560,7 +545,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// Otherwise the last one used, but never the eraser, so the first drag
 	// shows.
 	const startRedacting = () => {
-		commitPendingPinch();
 		setLayersOpen(false);
 		setRedactSettings((settings) => ({
 			...settings,
@@ -595,7 +579,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
 		if (!detectedImage) return;
-		commitPendingPinch();
 		setLayersOpen(false);
 		setTool("find");
 	};
@@ -641,8 +624,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		setTextEdit(
 			(edit) => edit && { ...edit, layer: { ...edit.layer, ...patch } },
 		);
+	// Placed and sized by the whole canvas, which the view then shows.
 	const startNewText = () => {
 		setLayersOpen(false);
+		canvasRef.current?.zoom("fit");
 		const start = { start: 0, end: 0 };
 		setTextEdit({
 			layer: createTextLayer(document, "", textStyle),
@@ -746,6 +731,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			closeAdd();
 			return true;
 		}
+		// The view zooms whatever's in use.
+		if (shortcut.type === "zoom") {
+			canvasRef.current?.zoom(shortcut.to);
+			return true;
+		}
 		// Escape stops picking a color, or puts the tool down; the rest pick
 		// up another tool or act on a selection, which holds still while a
 		// tool is in use.
@@ -822,7 +812,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onImage: async ({ uri, width, height, opaque, sticker }) => {
 			const url =
 				projectId === null ? uri : await addImage(projectId, uri, opaque);
-			commitPendingPinch();
+			// Placed and sized by the whole canvas, which the view then shows.
+			canvasRef.current?.zoom("fit");
 			if (sticker) addStickerLayer(url, width, height, opaque);
 			else addImageLayer(url, width, height, opaque);
 		},

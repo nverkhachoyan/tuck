@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Canvas, Group } from "@shopify/react-native-skia";
 import {
 	type ReactNode,
@@ -13,13 +14,13 @@ import {
 import {
 	type LayoutChangeEvent,
 	Platform,
+	Pressable,
 	StyleSheet,
 	Text,
 	View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-	Easing,
 	useAnimatedStyle,
 	useDerivedValue,
 	useSharedValue,
@@ -42,11 +43,14 @@ import {
 	type Point,
 	type Rect,
 	rectFromCorners,
+	type Size,
 	type Transform,
 	toLayerSpace,
 } from "@/model/geometry";
-import { colors, typography } from "@/theme";
+import { colors, radii, space, typography, webTransition } from "@/theme";
+import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
+import { useTooltip } from "@/ui/Tooltip";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -54,9 +58,14 @@ import {
 } from "../handles/canvasCursor";
 import { handleMetrics, handleUnder } from "../handles/handleMetrics";
 import {
+	areaMiddle,
 	type DocumentViewport,
-	fitDocumentToView,
+	type ViewFrame,
+	type ViewZoom,
 	viewPointToDocument,
+	viewportForZoom,
+	zoomForViewport,
+	zoomViewportAbout,
 } from "../viewport";
 import {
 	type CanvasTool,
@@ -80,13 +89,19 @@ import {
 	selectionScreenBounds,
 } from "./selectionBarPlacement";
 import { shapeFromDrag } from "./shapeDrag";
+import {
+	readShownViewport,
+	type ShownViewport,
+	useShownViewport,
+} from "./shownViewport";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
 import { type TextPressPhase, useTextEditGesture } from "./useTextEditGesture";
-import { useTrackpadPinch } from "./useTrackpadPinch";
+import { useViewGesture } from "./useViewGesture";
+import { useWheelZoom } from "./useWheelZoom";
 
-// How the drawing eases to a new fit.
-const REFIT = { duration: 250, easing: Easing.bezier(0.2, 0, 0, 1) };
+// How much each zoom in or out by key scales the view.
+const ZOOM_STEP = 2;
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 16;
@@ -170,9 +185,10 @@ type EditorCanvasProps = {
 };
 
 export type EditorCanvasHandle = {
-	flushPendingTransform: () => void;
 	// Moves the selected layer by an on-screen distance, in pixels.
 	nudgeSelection: (dx: number, dy: number) => void;
+	// Zooms about the middle of the view, or back to the fit, easing there.
+	zoom: (to: "in" | "out" | "fit") => void;
 };
 
 /**
@@ -180,6 +196,12 @@ export type EditorCanvasHandle = {
  * the document's logical coordinates onto the container's screen size, so
  * layers live purely in document space and the same layer tree can later be
  * rendered at full resolution for export.
+ *
+ * The view zooms into the fit (see `ViewZoom`): with two fingers wherever
+ * they wouldn't transform the selected layer (see `useViewGesture`), with a
+ * trackpad pinch or the wheel on web (`useWheelZoom`), and by key through
+ * `zoom`. While zoomed, a Fit button returns to the fit. A crop, which
+ * changes the document's size, starts afresh at the fit.
  *
  * All touch handling (tap-to-select, drag/pinch/rotate, the selection's
  * scale, resize, and rotate handles) is a single gesture on the canvas; selection is
@@ -283,35 +305,43 @@ export function EditorCanvas({
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
-	const viewport = useMemo(() => {
-		const fit = fitDocumentToView(
+	const frame = useMemo<ViewFrame>(
+		() => ({
 			documentSize,
-			{
+			area: {
+				x: leftInset,
+				y: 0,
 				width: size.width - leftInset - rightInset,
 				height: size.height - bottomInset,
 			},
-			PHOTO_INSET,
-		);
-		return { ...fit, offsetX: fit.offsetX + leftInset };
-	}, [documentSize, size, bottomInset, leftInset, rightInset]);
-	const { scale, offsetX, offsetY } = viewport;
-	// What the canvas draws eases to a new fit, as when a tray opens or the
-	// keyboard rises, rather than jumping. Gestures use the new fit at once.
-	const shownX = useSharedValue(offsetX);
-	const shownY = useSharedValue(offsetY);
-	const shownScale = useSharedValue(scale);
-	useLayoutEffect(() => {
-		const ease = shownScale.value > 0 && scale > 0;
-		const to = (value: number) => (ease ? withTiming(value, REFIT) : value);
-		shownX.value = to(offsetX);
-		shownY.value = to(offsetY);
-		shownScale.value = to(scale);
-	}, [offsetX, offsetY, scale, shownX, shownY, shownScale]);
+			inset: PHOTO_INSET,
+		}),
+		[documentSize, size, bottomInset, leftInset, rightInset],
+	);
+	// Kept with the size it was zoomed at, so a crop drops it.
+	const [zoomed, setZoomed] = useState<{
+		zoom: ViewZoom;
+		documentSize: Size;
+	} | null>(null);
+	const zoom = zoomed?.documentSize === documentSize ? zoomed.zoom : null;
+	const viewport = useMemo(() => viewportForZoom(frame, zoom), [frame, zoom]);
+	const { scale } = viewport;
+	// What the canvas draws eases to a new viewport, as when a tray opens or
+	// the keyboard rises, rather than jumping. Gestures use the new one at
+	// once.
+	const shown = useShownViewport(viewport);
 	const shownTransform = useDerivedValue(() => [
-		{ translateX: shownX.value },
-		{ translateY: shownY.value },
-		{ scale: shownScale.value },
+		{ translateX: shown.offsetX.value },
+		{ translateY: shown.offsetY.value },
+		{ scale: shown.scale.value },
 	]);
+	const commitViewport = useCallback(
+		(next: DocumentViewport) => {
+			const zoom = zoomForViewport(frame, next);
+			setZoomed(zoom && { zoom, documentSize });
+		},
+		[frame, documentSize],
+	);
 
 	const targets = useMemo(
 		() => (scale > 0 ? layerTargets(document, scale) : []),
@@ -442,11 +472,46 @@ export function EditorCanvas({
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
 	});
-	const flushPendingTransform = useTrackpadPinch({
-		target: containerRef,
-		live,
-		onCommit: handleCommit,
+	// Two fingers transform the selected layer while it can move.
+	const viewGesture = useViewGesture({
+		shown,
+		frame,
+		enabled: movableLayer === undefined,
+		onCommit: commitViewport,
 	});
+	const flushWheel = useWheelZoom({
+		target: containerRef,
+		shown,
+		frame,
+		onCommit: commitViewport,
+	});
+	const zoomView = useCallback(
+		(to: "in" | "out" | "fit") => {
+			flushWheel();
+			if (to === "fit") {
+				setZoomed(null);
+				return;
+			}
+			// From what the wheel just committed, if it had anything waiting.
+			setZoomed((last) => {
+				const from = viewportForZoom(
+					frame,
+					last?.documentSize === documentSize ? last.zoom : null,
+				);
+				const zoom = zoomForViewport(
+					frame,
+					zoomViewportAbout(
+						frame,
+						from,
+						to === "in" ? ZOOM_STEP : 1 / ZOOM_STEP,
+						areaMiddle(frame.area),
+					),
+				);
+				return zoom && { zoom, documentSize };
+			});
+		},
+		[flushWheel, frame, documentSize],
+	);
 	const nudgeSelection = useCallback(
 		(dx: number, dy: number) => {
 			if (!selectedLayer || scale === 0) return;
@@ -485,6 +550,11 @@ export function EditorCanvas({
 	const handleTextPress = useCallback(
 		(phase: TextPressPhase, screenX: number, screenY: number) => {
 			if (!textEdit) return;
+			// A second finger landed, to zoom.
+			if (phase === "cancel") {
+				textPress.current = null;
+				return;
+			}
 			if (phase === "begin") {
 				const index = textIndexUnder(screenX, screenY);
 				const last = lastTextTap.current;
@@ -661,11 +731,14 @@ export function EditorCanvas({
 		},
 		[tapAway, scale, viewport],
 	);
+	// Short of a pinch's travel, so two fingers zooming aren't a tap.
 	const idleGesture = useMemo(
 		() =>
-			Gesture.Tap().onEnd((event, success) => {
-				if (success) scheduleOnRN(handleIdleTap, event.x, event.y);
-			}),
+			Gesture.Tap()
+				.maxDistance(TAP_SLOP_PX)
+				.onEnd((event, success) => {
+					if (success) scheduleOnRN(handleIdleTap, event.x, event.y);
+				}),
 		[handleIdleTap],
 	);
 	const handleDetectionTap = useCallback(
@@ -711,32 +784,36 @@ export function EditorCanvas({
 	);
 	const detectionGesture = useMemo(
 		() =>
-			Gesture.Tap().onEnd((event, success) => {
-				if (success) scheduleOnRN(handleDetectionTap, event.x, event.y);
-			}),
+			Gesture.Tap()
+				.maxDistance(TAP_SLOP_PX)
+				.onEnd((event, success) => {
+					if (success) scheduleOnRN(handleDetectionTap, event.x, event.y);
+				}),
 		[handleDetectionTap],
 	);
 
-	useImperativeHandle(ref, () => ({ flushPendingTransform, nudgeSelection }), [
-		flushPendingTransform,
+	const modeGesture = detection
+		? detectionGesture
+		: tool
+			? paintGesture
+			: textEdit
+				? textGesture
+				: adjusting
+					? idleGesture
+					: gesture;
+	const canvasGesture = useMemo(
+		() => Gesture.Simultaneous(modeGesture, viewGesture),
+		[modeGesture, viewGesture],
+	);
+
+	useImperativeHandle(ref, () => ({ nudgeSelection, zoom: zoomView }), [
 		nudgeSelection,
+		zoomView,
 	]);
 
 	return (
 		<View style={styles.container}>
-			<GestureDetector
-				gesture={
-					detection
-						? detectionGesture
-						: tool
-							? paintGesture
-							: textEdit
-								? textGesture
-								: adjusting
-									? idleGesture
-									: gesture
-				}
-			>
+			<GestureDetector gesture={canvasGesture}>
 				<View
 					ref={containerRef}
 					style={[
@@ -762,7 +839,8 @@ export function EditorCanvas({
 									document={document}
 									selectedLayerId={holdingStill ? null : selectedLayerId}
 									textEdit={textEdit}
-									viewScale={scale}
+									viewScale={shown.scale}
+									settledScale={scale}
 									live={live}
 									stroke={liveStroke}
 									outlinedLayer={outlinedLayer}
@@ -796,14 +874,59 @@ export function EditorCanvas({
 				<SelectionBarFrame
 					key={movableLayer.id}
 					live={live}
-					viewport={viewport}
+					shown={shown}
 					width={size.width - rightInset}
 					height={size.height - bottomInset}
 				>
 					{selectionBar}
 				</SelectionBarFrame>
 			)}
+			{zoom && (
+				<View
+					style={[
+						styles.fit,
+						{ left: leftInset + space.sm, bottom: bottomInset + space.sm },
+					]}
+				>
+					<FitButton onPress={() => zoomView("fit")} />
+				</View>
+			)}
 		</View>
+	);
+}
+
+/** Returns a zoomed view to the fit. */
+function FitButton({ onPress }: { onPress: () => void }) {
+	const { anchor, tooltip } = useTooltip("Zoom to fit", "mod+0");
+	return (
+		<>
+			<Surface style={styles.fitPill}>
+				<Pressable
+					{...anchor}
+					hitSlop={8}
+					onPress={onPress}
+					accessibilityRole="button"
+					accessibilityLabel="Zoom to fit"
+					style={(state) => {
+						const { pressed, hovered } = interaction(state);
+						return [
+							styles.fitButton,
+							webTransition,
+							hovered && styles.fitHovered,
+							pressed && styles.fitPressed,
+						];
+					}}
+				>
+					<MaterialCommunityIcons
+						name="fit-to-screen-outline"
+						size={18}
+						color={colors.textPrimary}
+					/>
+					<Text style={styles.fitLabel}>Fit</Text>
+				</Pressable>
+			</Surface>
+			{tooltip}
+		</>
 	);
 }
 
@@ -814,13 +937,13 @@ export function EditorCanvas({
  */
 function SelectionBarFrame({
 	live,
-	viewport,
+	shown,
 	width,
 	height,
 	children,
 }: {
 	live: LiveTransform;
-	viewport: DocumentViewport;
+	shown: ShownViewport;
 	width: number;
 	height: number;
 	children: ReactNode;
@@ -831,21 +954,21 @@ function SelectionBarFrame({
 			selectionScreenBounds(
 				readLiveTransform(live),
 				readLiveBox(live),
-				viewport,
+				readShownViewport(shown),
 			),
 			barSize.value,
 			{ width, height },
 			SELECTION_BAR_GAPS,
 		);
-		const shown =
+		const visible =
 			barSize.value.width > 0 &&
 			live.activeId.value !== null &&
 			live.heldId.value === null;
 		return {
 			transform: [{ translateX: x }, { translateY: y }],
-			opacity: withTiming(shown ? 1 : 0, { duration: shown ? 160 : 80 }),
+			opacity: withTiming(visible ? 1 : 0, { duration: visible ? 160 : 80 }),
 		};
-	}, [live, viewport, width, height]);
+	}, [live, shown, width, height]);
 	return (
 		// A plain view, since Reanimated drops `box-none` on web.
 		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
@@ -914,6 +1037,30 @@ const styles = StyleSheet.create({
 		right: PHOTO_INSET,
 		alignItems: "center",
 		pointerEvents: "none",
+	},
+	fit: {
+		position: "absolute",
+	},
+	fitPill: {
+		borderRadius: radii.medium,
+	},
+	fitButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: space.xxs + 2,
+		paddingVertical: space.xs,
+		paddingLeft: space.sm - 2,
+		paddingRight: space.sm,
+	},
+	fitHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	fitPressed: {
+		backgroundColor: colors.pressedOverlay,
+	},
+	fitLabel: {
+		...typography.label,
+		color: colors.textPrimary,
 	},
 	failurePill: {
 		borderRadius: 18,

@@ -1,6 +1,5 @@
 import {
 	BackdropFilter,
-	Circle,
 	Fill,
 	Group,
 	ImageFilter,
@@ -87,6 +86,8 @@ const CARET_HALO_PX = 1;
 const CARET_BLINK_MS = 530;
 // Over the text rather than under it, where a box would hide it.
 const TEXT_SELECTION = "rgba(88, 166, 255, 0.4)";
+// A detected region's check mark's radius, in screen pixels.
+const MARKER_PX = 8;
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
@@ -146,8 +147,11 @@ type EditorSceneProps = {
 	document: EditorDocument;
 	selectedLayerId: string | null;
 	textEdit: TextEditState | null;
-	// Screen pixels per document unit.
-	viewScale: number;
+	// Screen pixels per document unit, as shown: it follows a zoom as it goes.
+	viewScale: DerivedValue<number>;
+	// The same once the view settles, for what's too costly to draw again on
+	// every frame of a zoom (the checkerboard).
+	settledScale: number;
 	live: LiveTransform;
 	stroke: LiveStroke | null;
 	// Outlined without handles, as a tool's target: it holds still.
@@ -167,12 +171,16 @@ type EditorSceneProps = {
  * A locked image is cut off at the canvas's edge, like a crop. Once unlocked
  * it moves like any layer, so it fades past the edge instead. The canvas
  * sits on the stage like a print, with a shadow and an edge around it.
+ *
+ * What's sized in screen pixels (outlines, handles, the shadow) keeps its
+ * size on screen at any zoom, following `viewScale` on the UI thread.
  */
 export function EditorScene({
 	document,
 	selectedLayerId,
 	textEdit,
 	viewScale,
+	settledScale,
 	live,
 	stroke,
 	outlinedLayer,
@@ -182,12 +190,16 @@ export function EditorScene({
 }: EditorSceneProps) {
 	const editedId = textEdit && !textEdit.isNew ? textEdit.layer.id : null;
 	const canvas = rect(0, 0, document.width, document.height);
+	const shadowOffset = useScreenPixels(viewScale, SHADOW_OFFSET_PX);
+	const shadowBlur = useScreenPixels(viewScale, SHADOW_BLUR_PX);
+	// Doubled, as the canvas clips away its inner half.
+	const edge = useScreenPixels(viewScale, EDGE_PX * 2);
 	return (
 		<Group>
 			<CanvasBackground
 				bounds={canvas}
 				background={document.background}
-				viewScale={viewScale}
+				viewScale={settledScale}
 			/>
 			{document.layers.map((layer) =>
 				layer.hidden ? null : (
@@ -232,23 +244,28 @@ export function EditorScene({
 				<Rect rect={canvas} color="black">
 					<Shadow
 						dx={0}
-						dy={SHADOW_OFFSET_PX / viewScale}
-						blur={SHADOW_BLUR_PX / viewScale}
+						dy={shadowOffset}
+						blur={shadowBlur}
 						color="rgba(0, 0, 0, 0.6)"
 						shadowOnly
 					/>
 				</Rect>
-				{/* Doubled, as the canvas clips away its inner half. */}
 				<Rect
 					rect={canvas}
 					style="stroke"
-					strokeWidth={(EDGE_PX * 2) / viewScale}
+					strokeWidth={edge}
 					color={colors.hoverOverlay}
 				/>
 			</Group>
 			{detections.length > 0 && (
 				<Group clip={canvas}>
-					<DetectionOutlines regions={detections} viewScale={viewScale} />
+					{detections.map((region) => (
+						<DetectionOutline
+							key={region.sourceIndex}
+							region={region}
+							viewScale={viewScale}
+						/>
+					))}
 				</Group>
 			)}
 			<SnapGuides document={document} viewScale={viewScale} live={live} />
@@ -266,63 +283,75 @@ export type DetectionOverlayRegion = MappedDetectionRect & {
 	selected: boolean;
 };
 
-/** Temporary detector proposals, outlined until the user applies them. */
-function DetectionOutlines({
-	regions,
+/**
+ * `px` screen pixels in document units, following the view's scale as a
+ * zoom changes it.
+ */
+function useScreenPixels(viewScale: DerivedValue<number>, px: number) {
+	return useDerivedValue(() => px / viewScale.value, [viewScale, px]);
+}
+
+/**
+ * A temporary detector proposal, outlined until the user applies it, with a
+ * mark in its corner that's checked while it's chosen.
+ */
+function DetectionOutline({
+	region,
 	viewScale,
 }: {
-	regions: readonly DetectionOverlayRegion[];
-	viewScale: number;
+	region: DetectionOverlayRegion;
+	viewScale: DerivedValue<number>;
 }) {
-	const marker = 8 / viewScale;
-	return regions.map((region) => {
-		const { width, height, transform, selected } = region;
-		const box = rect(-width / 2, -height / 2, width, height);
-		const markerX = width / 2 - marker * 0.2;
-		const markerY = -height / 2 + marker * 0.2;
-		const check = Skia.Path.Make();
-		check.moveTo(markerX - marker * 0.42, markerY);
-		check.lineTo(markerX - marker * 0.1, markerY + marker * 0.34);
-		check.lineTo(markerX + marker * 0.48, markerY - marker * 0.34);
-		return (
-			<Group key={region.sourceIndex} transform={toTransformList(transform)}>
-				<Rect
-					rect={box}
-					color={selected ? colors.accentSoft : "rgba(0, 0, 0, 0.18)"}
-				/>
-				<Rect
-					rect={box}
-					color={selected ? colors.accent : colors.textSecondary}
+	const { width, height, transform, selected } = region;
+	const box = rect(-width / 2, -height / 2, width, height);
+	const marker = useDerivedValue(() => {
+		const radius = MARKER_PX / viewScale.value;
+		const x = width / 2 - radius * 0.2;
+		const y = -height / 2 + radius * 0.2;
+		const disc = Skia.PathBuilder.Make();
+		disc.addCircle(x, y, radius);
+		const check = Skia.PathBuilder.Make();
+		check.moveTo(x - radius * 0.42, y);
+		check.lineTo(x - radius * 0.1, y + radius * 0.34);
+		check.lineTo(x + radius * 0.48, y - radius * 0.34);
+		return { disc: disc.build(), check: check.build() };
+	}, [viewScale, width, height]);
+	const disc = useDerivedValue(() => marker.value.disc);
+	const check = useDerivedValue(() => marker.value.check);
+	const outline = useScreenPixels(viewScale, selected ? 2 : 1.25);
+	const ring = useScreenPixels(viewScale, 1.25);
+	const tick = useScreenPixels(viewScale, 2);
+	return (
+		<Group transform={toTransformList(transform)}>
+			<Rect
+				rect={box}
+				color={selected ? colors.accentSoft : "rgba(0, 0, 0, 0.18)"}
+			/>
+			<Rect
+				rect={box}
+				color={selected ? colors.accent : colors.textSecondary}
+				style="stroke"
+				strokeWidth={outline}
+			/>
+			<Path path={disc} color={selected ? colors.accent : colors.surface} />
+			<Path
+				path={disc}
+				color={selected ? colors.accent : colors.textSecondary}
+				style="stroke"
+				strokeWidth={ring}
+			/>
+			{selected && (
+				<Path
+					path={check}
+					color={colors.onAccent}
 					style="stroke"
-					strokeWidth={(selected ? 2 : 1.25) / viewScale}
+					strokeWidth={tick}
+					strokeCap="round"
+					strokeJoin="round"
 				/>
-				<Circle
-					cx={markerX}
-					cy={markerY}
-					r={marker}
-					color={selected ? colors.accent : colors.surface}
-				/>
-				<Circle
-					cx={markerX}
-					cy={markerY}
-					r={marker}
-					color={selected ? colors.accent : colors.textSecondary}
-					style="stroke"
-					strokeWidth={1.25 / viewScale}
-				/>
-				{selected && (
-					<Path
-						path={check}
-						color={colors.onAccent}
-						style="stroke"
-						strokeWidth={2 / viewScale}
-						strokeCap="round"
-						strokeJoin="round"
-					/>
-				)}
-			</Group>
-		);
-	});
+			)}
+		</Group>
+	);
 }
 
 /**
@@ -414,13 +443,17 @@ function EditedText({
 	viewScale,
 }: {
 	edit: TextEditState;
-	viewScale: number;
+	viewScale: DerivedValue<number>;
 }) {
 	const { layer, focused } = edit;
 	const selection = clampSelection(edit.selection, layer.text.length);
 	const collapsed = selection.start === selection.end;
 	// One screen pixel, across the layer, in its own units.
-	const pixel = 1 / (viewScale * layer.transform.scaleX);
+	const { scaleX } = layer.transform;
+	const pixel = useDerivedValue(
+		() => 1 / (viewScale.value * scaleX),
+		[viewScale, scaleX],
+	);
 	let highlight = null;
 	if (!collapsed) {
 		const builder = Skia.PathBuilder.Make();
@@ -457,9 +490,18 @@ function Caret({
 }: {
 	layer: TextLayer;
 	index: number;
-	pixel: number;
+	pixel: DerivedValue<number>;
 }) {
 	const { x, y, height } = textCaretRect(layer, index);
+	const bar = useDerivedValue(() => {
+		const width = CARET_PX * pixel.value;
+		return rect(x - width / 2, y, width, height);
+	}, [pixel, x, y, height]);
+	const halo = useDerivedValue(() => {
+		const margin = CARET_HALO_PX * pixel.value;
+		const width = CARET_PX * pixel.value + margin * 2;
+		return rect(x - width / 2, y - margin, width, height + margin * 2);
+	}, [pixel, x, y, height]);
 	const opacity = useSharedValue(1);
 	useEffect(() => {
 		opacity.value = withSequence(
@@ -474,24 +516,10 @@ function Caret({
 		);
 		return () => cancelAnimation(opacity);
 	}, [opacity]);
-	const width = CARET_PX * pixel;
-	const halo = width + CARET_HALO_PX * 2 * pixel;
 	return (
 		<Group opacity={opacity}>
-			<Rect
-				x={x - halo / 2}
-				y={y - CARET_HALO_PX * pixel}
-				width={halo}
-				height={height + CARET_HALO_PX * 2 * pixel}
-				color={SELECTION_HALO}
-			/>
-			<Rect
-				x={x - width / 2}
-				y={y}
-				width={width}
-				height={height}
-				color={colors.selection}
-			/>
+			<Rect rect={halo} color={SELECTION_HALO} />
+			<Rect rect={bar} color={colors.selection} />
 		</Group>
 	);
 }
@@ -627,7 +655,7 @@ function NewLayerStroke({
 	viewScale,
 }: {
 	stroke: LiveStroke;
-	viewScale: number;
+	viewScale: DerivedValue<number>;
 }) {
 	const { tool } = stroke;
 	switch (tool.type) {
@@ -761,8 +789,9 @@ function LiveBox({
 }: {
 	stroke: LiveStroke;
 	effect: RedactionEffect;
-	viewScale: number;
+	viewScale: DerivedValue<number>;
 }) {
+	const outline = useScreenPixels(viewScale, SELECTION_STROKE_PX);
 	const box = useDerivedValue(() => {
 		const points = unlanded(stroke);
 		if (points.length === 0) return rect(0, 0, 0, 0);
@@ -787,7 +816,7 @@ function LiveBox({
 				rect={box}
 				color={colors.selection}
 				style="stroke"
-				strokeWidth={SELECTION_STROKE_PX / viewScale}
+				strokeWidth={outline}
 			/>
 		</Group>
 	);
@@ -802,8 +831,10 @@ function SelectionOutline({
 	viewScale,
 }: {
 	layer: Layer;
-	viewScale: number;
+	viewScale: DerivedValue<number>;
 }) {
+	const halo = useScreenPixels(viewScale, SELECTION_HALO_PX);
+	const outline = useScreenPixels(viewScale, SELECTION_STROKE_PX);
 	const { transform } = layer;
 	const { halfWidth, halfHeight } = layerBounds(layer);
 	const w = halfWidth * transform.scaleX;
@@ -815,13 +846,13 @@ function SelectionOutline({
 				rect={box}
 				color={SELECTION_HALO}
 				style="stroke"
-				strokeWidth={SELECTION_HALO_PX / viewScale}
+				strokeWidth={halo}
 			/>
 			<Rect
 				rect={box}
 				color={colors.selection}
 				style="stroke"
-				strokeWidth={SELECTION_STROKE_PX / viewScale}
+				strokeWidth={outline}
 			/>
 		</Group>
 	);
@@ -834,9 +865,10 @@ function SnapGuides({
 	live,
 }: {
 	document: EditorDocument;
-	viewScale: number;
+	viewScale: DerivedValue<number>;
 	live: LiveTransform;
 }) {
+	const outline = useScreenPixels(viewScale, SELECTION_STROKE_PX);
 	const { width, height } = document;
 	const path = useDerivedValue(() => {
 		const builder = Skia.PathBuilder.Make();
@@ -858,7 +890,7 @@ function SnapGuides({
 			path={path}
 			color={colors.accent}
 			style="stroke"
-			strokeWidth={SELECTION_STROKE_PX / viewScale}
+			strokeWidth={outline}
 		/>
 	);
 }
@@ -875,8 +907,12 @@ function SelectionHandles({
 	viewScale,
 }: {
 	live: LiveTransform;
-	viewScale: number;
+	viewScale: DerivedValue<number>;
 }) {
+	const halo = useScreenPixels(viewScale, SELECTION_HALO_PX);
+	const outline = useScreenPixels(viewScale, SELECTION_STROKE_PX);
+	const shadowOffset = useScreenPixels(viewScale, 1);
+	const shadowBlur = useScreenPixels(viewScale, 3);
 	const transform = useDerivedValue(() =>
 		toTransformList({
 			x: live.x.value,
@@ -899,7 +935,8 @@ function SelectionHandles({
 		const w = box.halfWidth * live.scaleX.value;
 		const h = box.halfHeight * live.scaleY.value;
 		lines.addRect(Skia.XYWHRect(-w, -h, w * 2, h * 2));
-		const radius = (handleMetrics.size / viewScale) * 0.6;
+		const scale = viewScale.value;
+		const radius = (handleMetrics.size / scale) * 0.6;
 		// Pills along the sides, so they read as pulling that side out.
 		const long = radius * 3.2;
 		const short = radius * 1.5;
@@ -907,12 +944,12 @@ function SelectionHandles({
 			box,
 			live.scaleX.value,
 			live.scaleY.value,
-			viewScale,
+			scale,
 			live.resizeMode.value,
 		);
 		for (const handle of shown) {
 			if (handle === "rotate") {
-				const knobY = -h - handleMetrics.knobOffset / viewScale;
+				const knobY = -h - handleMetrics.knobOffset / scale;
 				handles.addCircle(0, knobY, radius);
 				lines.moveTo(0, -h);
 				lines.lineTo(0, knobY + radius);
@@ -944,26 +981,25 @@ function SelectionHandles({
 	const lines = useDerivedValue(() => shapes.value.lines);
 	const handles = useDerivedValue(() => shapes.value.handles);
 
-	const strokeWidth = SELECTION_STROKE_PX / viewScale;
 	return (
 		<Group transform={transform}>
 			<Path
 				path={lines}
 				color={SELECTION_HALO}
 				style="stroke"
-				strokeWidth={SELECTION_HALO_PX / viewScale}
+				strokeWidth={halo}
 			/>
 			<Path
 				path={lines}
 				color={colors.selection}
 				style="stroke"
-				strokeWidth={strokeWidth}
+				strokeWidth={outline}
 			/>
 			<Path path={handles} color="#FFFFFF">
 				<Shadow
 					dx={0}
-					dy={1 / viewScale}
-					blur={3 / viewScale}
+					dy={shadowOffset}
+					blur={shadowBlur}
 					color="rgba(0, 0, 0, 0.4)"
 				/>
 			</Path>
@@ -971,7 +1007,7 @@ function SelectionHandles({
 				path={handles}
 				color={colors.selection}
 				style="stroke"
-				strokeWidth={strokeWidth}
+				strokeWidth={outline}
 			/>
 		</Group>
 	);

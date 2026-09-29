@@ -259,6 +259,8 @@ The selected image should render inside a Skia canvas with predictable editor co
 
 The canvas should support fitting the source image to the available screen while retaining its logical document dimensions.
 
+The view can zoom into that fit and pan around it: with two fingers wherever they wouldn't transform a selected layer, with a trackpad pinch or the wheel on web, and with ⌘+, ⌘−, and ⌘0. Zooming is a way of looking, never part of the document or its undo history.
+
 ### Text layers
 
 Support:

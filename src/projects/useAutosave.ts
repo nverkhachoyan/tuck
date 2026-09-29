@@ -11,7 +11,7 @@ import { projects } from "./projectService";
 export function useAutosave(
 	id: string | null,
 	document: EditorDocument | null,
-	prepareForBackgroundSave?: () => EditorDocument | null,
+	latestDocument?: () => EditorDocument | null,
 ) {
 	const error = useSyncExternalStore(
 		projects.subscribeAutosave,
@@ -27,9 +27,9 @@ export function useAutosave(
 	useEffect(() => {
 		const subscription = AppState.addEventListener("change", (state) => {
 			if (state !== "active") {
-				// Commit any canvas gesture first, then read the document that
-				// commit wrote. React's autosave effect may not run before suspension.
-				const latest = prepareForBackgroundSave?.();
+				// Read the latest document: React's autosave effect may not run for
+				// it before suspension.
+				const latest = latestDocument?.();
 				if (id && latest) projects.queueAutosave(id, latest);
 				projects.flushAutosave();
 			} else if (projects.getAutosaveError()) {
@@ -37,7 +37,7 @@ export function useAutosave(
 			}
 		});
 		return () => subscription.remove();
-	}, [id, prepareForBackgroundSave]);
+	}, [id, latestDocument]);
 
 	useLayoutEffect(() => {
 		if (Platform.OS !== "web" || !document) return;

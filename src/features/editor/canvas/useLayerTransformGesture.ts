@@ -66,10 +66,11 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  * commits through `onResize` too. Which handle is decided at touch-down,
  * on the UI thread, from the live values.
  *
- * A drag that starts on another layer picks that layer up at once: it's
- * hit-tested here, on the UI thread, against `layers`, and `onSelect` tells
- * React. Dragging empty space keeps moving the selection, which helps with
- * small text.
+ * A one-finger drag that starts on another layer picks that layer up at
+ * once: it's hit-tested here, on the UI thread, against `layers`, and
+ * `onSelect` tells React. Two fingers never pick one up: with nothing
+ * selected, they zoom the view (see `useViewGesture`). Dragging empty space
+ * keeps moving the selection, which helps with small text.
  *
  * Moving snaps the layer's edges onto the edges of the document and the
  * other layers, or its center onto their centers; a side being resized
@@ -347,8 +348,13 @@ export function useLayerTransformGesture({
 				travel.value = continueTravel(travel.value, event);
 				gestureStarted();
 				// Picks up the layer under the touch-down point, unless it grabbed a
-				// handle or another finger is already transforming the selection.
-				if (onSelect && dragHandle.value === null && activeCount.value === 1) {
+				// handle or more than one finger is at work.
+				if (
+					onSelect &&
+					dragHandle.value === null &&
+					activeCount.value === 1 &&
+					event.numberOfPointers === 1
+				) {
 					const target = findLayerAt(
 						layers.value,
 						toDocument(downX.value, downY.value),

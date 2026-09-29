@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
+import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hasFinePointer } from "../handles/handleMetrics";
 
-export type TextPressPhase = "begin" | "move" | "end";
+export type TextPressPhase = "begin" | "move" | "end" | "cancel";
 
 /**
  * Presses on the canvas while text is edited in place, reported in view
@@ -13,6 +14,8 @@ export type TextPressPhase = "begin" | "move" | "end";
  *
  * It reports the end when the gesture finishes, however it does: iOS only
  * activates a pan once the finger moves, so a tap would otherwise never end.
+ * A second finger cancels the press, leaving the two to zoom the view; it's
+ * watched for as the paint gesture does (see `usePaintGesture`).
  */
 export function useTextEditGesture({
 	onPress,
@@ -23,16 +26,34 @@ export function useTextEditGesture({
 	onHover: (x: number, y: number) => void;
 	onHoverEnd: () => void;
 }) {
+	const cancelled = useSharedValue(false);
+
 	return useMemo(() => {
+		const cancel = () => {
+			"worklet";
+			if (cancelled.value) return;
+			cancelled.value = true;
+			scheduleOnRN(onPress, "cancel", 0, 0);
+		};
+
 		const press = Gesture.Pan()
 			.minDistance(0)
+			.onTouchesDown((event) => {
+				if (event.numberOfTouches === 1) cancelled.value = false;
+				else cancel();
+			})
 			.onBegin((event) => {
+				if (cancelled.value) return;
 				scheduleOnRN(onPress, "begin", event.x, event.y);
+				if (event.numberOfPointers > 1) cancel();
 			})
 			.onUpdate((event) => {
+				if (event.numberOfPointers > 1) cancel();
+				if (cancelled.value) return;
 				scheduleOnRN(onPress, "move", event.x, event.y);
 			})
 			.onFinalize((event) => {
+				if (cancelled.value) return;
 				scheduleOnRN(onPress, "end", event.x, event.y);
 			});
 
@@ -49,5 +70,5 @@ export function useTextEditGesture({
 			});
 
 		return Gesture.Simultaneous(hover, press);
-	}, [onPress, onHover, onHoverEnd]);
+	}, [onPress, onHover, onHoverEnd, cancelled]);
 }
