@@ -45,10 +45,12 @@ export type AdjustController = {
 	choose: (key: AdjustmentKey) => void;
 	// The chosen adjustment, in the dial's percent.
 	dialValue: DerivedValue<number>;
-	// Worklets bracketing a change to the chosen adjustment.
+	// Worklets bracketing a change to the chosen adjustment, which `changing`
+	// is true between.
 	begin: () => void;
 	change: (percent: number) => void;
 	end: () => void;
+	changing: SharedValue<boolean>;
 };
 
 function syncAdjustments(
@@ -112,5 +114,14 @@ export function useAdjustController(
 		scheduleOnRN(commit, values.value);
 	}, [held, values, commit]);
 
-	return { matrix, chosen, choose, dialValue, begin, change, end };
+	return {
+		matrix,
+		chosen,
+		choose,
+		dialValue,
+		begin,
+		change,
+		end,
+		changing: held,
+	};
 }

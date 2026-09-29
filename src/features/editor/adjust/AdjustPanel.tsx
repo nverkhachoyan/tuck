@@ -1,14 +1,25 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { ComponentProps } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { type ComponentProps, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+	useAnimatedReaction,
+	useAnimatedStyle,
+	withTiming,
+} from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import {
 	type AdjustmentKey,
 	type Adjustments,
 	adjustmentKeys,
 } from "@/model/adjustments";
-import { chosenOutline, colors, radii, webTransition } from "@/theme";
+import {
+	chosenOutline,
+	colors,
+	radii,
+	typography,
+	webTransition,
+} from "@/theme";
 import { interaction } from "@/ui/interaction";
-import { useTooltip } from "@/ui/Tooltip";
 import { Dial, type DialScale } from "../Dial";
 import { ADJUST_DIAL_MAX, type AdjustController } from "./useAdjustController";
 
@@ -37,6 +48,7 @@ const signed = (steps: number) => (steps > 0 ? `+${steps}` : `${steps}`);
 /**
  * The Adjust tool's dock panel: a choice of adjustment, each marked while
  * `adjustments` changes it, over the dial that changes the chosen one.
+ * While the dial moves, its value shows large just above the dock.
  */
 export function AdjustPanel({
 	controller,
@@ -49,6 +61,7 @@ export function AdjustPanel({
 	const { label } = ADJUSTMENTS[chosen];
 	return (
 		<View style={styles.panel}>
+			<ChangingValue controller={controller} label={label} />
 			<View style={styles.choices}>
 				{adjustmentKeys.map((key) => (
 					<AdjustmentChoice
@@ -69,12 +82,43 @@ export function AdjustPanel({
 				label={label}
 				increaseLabel={`Increase ${label.toLowerCase()}`}
 				decreaseLabel={`Decrease ${label.toLowerCase()}`}
-				readout={(steps) => `${label} ${signed(steps)}`}
+				readout={signed}
 				valueText={signed}
 				onBegin={controller.begin}
 				onChange={controller.change}
 				onEnd={controller.end}
 			/>
+		</View>
+	);
+}
+
+/** The chosen adjustment's value, large over the canvas while it changes. */
+function ChangingValue({
+	controller,
+	label,
+}: {
+	controller: AdjustController;
+	label: string;
+}) {
+	const { dialValue, changing } = controller;
+	const [steps, setSteps] = useState(0);
+	useAnimatedReaction(
+		() => Math.round(dialValue.value),
+		(shown, previous) => {
+			if (shown !== previous) scheduleOnRN(setSteps, shown);
+		},
+	);
+	const style = useAnimatedStyle(() => ({
+		opacity: withTiming(changing.value ? 1 : 0, {
+			duration: changing.value ? 100 : 240,
+		}),
+	}));
+	return (
+		<View style={styles.changingArea}>
+			<Animated.View style={[styles.changing, style]}>
+				<Text style={styles.changingLabel}>{label}</Text>
+				<Text style={styles.changingValue}>{signed(steps)}</Text>
+			</Animated.View>
 		</View>
 	);
 }
@@ -91,36 +135,47 @@ function AdjustmentChoice({
 	onPress: () => void;
 }) {
 	const { label, icon } = ADJUSTMENTS[adjustment];
-	const { anchor, tooltip } = useTooltip(label);
 	return (
-		<>
-			<Pressable
-				{...anchor}
-				hitSlop={4}
-				onPress={onPress}
-				accessibilityRole="button"
-				accessibilityLabel={changed ? `${label}, changed` : label}
-				accessibilityState={{ selected }}
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.choice,
-						webTransition,
-						hovered && styles.choiceHovered,
-						selected && styles.choiceSelected,
-						pressed && styles.choicePressed,
-					];
-				}}
-			>
-				<MaterialCommunityIcons
-					name={icon}
-					size={20}
-					color={selected ? colors.textPrimary : colors.textSecondary}
-				/>
-				{changed && <View style={styles.changed} />}
-			</Pressable>
-			{tooltip}
-		</>
+		<Pressable
+			hitSlop={4}
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={changed ? `${label}, changed` : label}
+			accessibilityState={{ selected }}
+			style={styles.choice}
+		>
+			{(state) => {
+				const { pressed, hovered } = interaction(state);
+				return (
+					<>
+						<View
+							style={[
+								styles.choiceIcon,
+								webTransition,
+								hovered && styles.choiceHovered,
+								selected && chosenOutline,
+								pressed && styles.choicePressed,
+							]}
+						>
+							<MaterialCommunityIcons
+								name={icon}
+								size={20}
+								color={selected ? colors.textPrimary : colors.textSecondary}
+							/>
+							{changed && <View style={styles.changed} />}
+						</View>
+						<Text
+							style={[
+								styles.choiceLabel,
+								(selected || hovered) && styles.choiceLabelLit,
+							]}
+						>
+							{label}
+						</Text>
+					</>
+				);
+			}}
+		</Pressable>
 	);
 }
 
@@ -129,16 +184,46 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 12,
-		gap: 4,
+		gap: 2,
+	},
+	// Just above the dock, over the canvas, touching nothing.
+	changingArea: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: "100%",
+		alignItems: "center",
+		paddingBottom: 12,
+		pointerEvents: "none",
+	},
+	changing: {
+		alignItems: "center",
+		paddingHorizontal: 16,
+		paddingVertical: 6,
+		borderRadius: radii.medium,
+		backgroundColor: colors.scrim,
+	},
+	changingLabel: {
+		...typography.caption,
+		color: colors.textSecondary,
+	},
+	changingValue: {
+		...typography.figure,
+		color: colors.textPrimary,
 	},
 	choices: {
 		flexDirection: "row",
 		justifyContent: "center",
-		gap: 14,
+		gap: 8,
 	},
 	choice: {
-		width: 40,
-		height: 40,
+		minWidth: 64,
+		alignItems: "center",
+		gap: 2,
+	},
+	choiceIcon: {
+		width: 32,
+		height: 28,
 		borderRadius: radii.small,
 		alignItems: "center",
 		justifyContent: "center",
@@ -146,18 +231,24 @@ const styles = StyleSheet.create({
 	choiceHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	choiceSelected: chosenOutline,
 	choicePressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],
 	},
+	choiceLabel: {
+		...typography.caption,
+		color: colors.textSecondary,
+	},
+	choiceLabelLit: {
+		color: colors.textPrimary,
+	},
 	changed: {
 		position: "absolute",
-		top: 3,
-		right: 3,
-		width: 7,
-		height: 7,
-		borderRadius: 3.5,
+		top: 1,
+		right: 1,
+		width: 6,
+		height: 6,
+		borderRadius: 3,
 		backgroundColor: colors.accent,
 	},
 });

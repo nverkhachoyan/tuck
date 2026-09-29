@@ -82,6 +82,8 @@ export const typography = {
 	bodyStrong: { fontSize: 15, fontWeight: "600" },
 	// Buttons, and screen and mode titles.
 	title: { fontSize: 17, fontWeight: "600" },
+	// A value read at a glance while it changes, like an adjustment's.
+	figure: { fontSize: 28, fontWeight: "600", fontVariant: ["tabular-nums"] },
 } satisfies Record<string, TextStyle>;
 
 // Under anything floating over the canvas.

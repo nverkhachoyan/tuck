@@ -114,7 +114,9 @@ Built with the review's mockup as the proposal. `Tray` in `ToolOptions.tsx` sits
 * The Add sheet (`add/AddSheet.tsx`, `ui/BottomSheet.tsx`) and the layers panel (`panels/LayersPanel.tsx`) become opaque; the color picker and the save error banner too.
 * Delete `GlassView` and the `glass*` colors, `radii.panel`, and anything else only they used.
 
-### 3.3 Adjust
+### 3.3 Adjust (done)
+
+Each adjustment is an icon over its name. While the dial moves, the value shows at `typography.figure` (28pt, a new token) in a small dark plate just above the dock, fading out when the finger lifts; the controller exposes `changing` for it. The dial's own readout is the value alone now that the chosen name is lit.
 
 * Label every adjustment (icon over name, as in the other tools), and dot the ones that aren't at zero.
 * While the dial moves, show the value large above it (`title` size or bigger, tabular figures).
