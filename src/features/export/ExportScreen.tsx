@@ -284,7 +284,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						>
 							{/* Most desktop browsers can't share files. */}
 							{canShare && (
-								<View style={wide && styles.actionWide}>
+								<View style={styles.shareAction}>
 									<Button
 										label={busy === "sharing" ? "Opening…" : "Share"}
 										icon="share-outline"
@@ -294,7 +294,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									/>
 								</View>
 							)}
-							<View style={wide && styles.actionWide}>
+							<View style={styles.shareAction}>
 								{copied ? (
 									<View style={styles.saved} accessibilityLiveRegion="polite">
 										<Ionicons
@@ -416,6 +416,10 @@ const styles = StyleSheet.create({
 	},
 	// Only in a row: in a column, the buttons keep their own height.
 	actionWide: {
+		flex: 1,
+	},
+	// Share and Copy are always side by side, splitting their row.
+	shareAction: {
 		flex: 1,
 	},
 	// Where the save button was, the same size, so nothing shifts.

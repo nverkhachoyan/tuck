@@ -162,9 +162,10 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		height: DOCK_HEIGHT,
 	},
-	// Holds its button, or keeps the panel centered without one.
+	// Holds its button, or keeps the panel centered without one. No wider than
+	// the button, so five tools still fit between the ends at 390 points.
 	end: {
-		width: BUTTON_SIZE + 12,
+		width: BUTTON_SIZE,
 		alignItems: "center",
 	},
 	// Takes what the ends leave, up to its widest.

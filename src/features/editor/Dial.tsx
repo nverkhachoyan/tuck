@@ -243,10 +243,10 @@ const styles = StyleSheet.create({
 		gap: 2,
 	},
 	readout: {
-		fontSize: 12,
+		fontSize: 13,
 		fontWeight: "600",
 		fontVariant: ["tabular-nums"],
-		color: colors.textSecondary,
+		color: colors.textPrimary,
 	},
 	readoutActive: {
 		color: colors.accent,

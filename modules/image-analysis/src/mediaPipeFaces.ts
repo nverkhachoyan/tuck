@@ -34,10 +34,28 @@ function faceDetector(): Promise<Vision.FaceDetector> {
 	return detector;
 }
 
+// MediaPipe's WebAssembly writes every log line to stderr, which reaches
+// `console.error`, so the development build's overlay showed "INFO: Created
+// TensorFlow Lite XNNPACK delegate" as an error after every first Find.
+let infoLogsDemoted = false;
+function demoteInfoLogs() {
+	if (infoLogsDemoted) return;
+	infoLogsDemoted = true;
+	const error = console.error;
+	console.error = (...args: unknown[]) => {
+		if (typeof args[0] === "string" && args[0].startsWith("INFO: ")) {
+			console.info(...args);
+		} else {
+			error(...args);
+		}
+	};
+}
+
 // Metro can't bundle the library: every build of it calls `import()` with a
 // computed path, which Metro rejects. Its script build defines a global
 // `Vision` instead.
 function loadVision(): Promise<typeof Vision> {
+	demoteInfoLogs();
 	return new Promise((resolve, reject) => {
 		const script = document.createElement("script");
 		script.src = `${ASSETS}/vision_bundle.js`;

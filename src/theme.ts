@@ -37,6 +37,9 @@ export const colors = {
 	chosen: "#F5F5F7",
 	onChosen: "#0A0A0B",
 	chosenSoft: "rgba(255, 255, 255, 0.16)",
+	// Around every color swatch, so black shows on the dark UI and white on a
+	// light photo.
+	swatchRing: "rgba(255, 255, 255, 0.3)",
 	// Frosted panels floating over the canvas. Where the platform can't blur
 	// behind a view (Android), `glassFallback` stands in, nearly opaque.
 	// Dense enough that white text on it still reads over a white photo.

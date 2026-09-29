@@ -135,8 +135,8 @@ type EditorCanvasProps = {
 	onDrawShape?: (placement: ShapePlacement) => void;
 	// Where a tap, or a drag's end, picks a color, in document space.
 	onPickPoint?: (point: Point) => void;
-	// While set, this image's adjustments are being changed: it's outlined,
-	// and the canvas holds still.
+	// While set, this image's adjustments are being changed: it's outlined
+	// when there are other images, and the canvas holds still.
 	adjusting?: LiveAdjustment | null;
 	// Temporary detector proposals. While present, taps toggle them instead of
 	// selecting or drawing on the document.
@@ -578,8 +578,10 @@ export function EditorCanvas({
 			},
 		[tool, strokePoints, strokeId, landedStrokeId, selectedLayer],
 	);
+	// Outlined only where it could be mistaken for another image.
 	const adjustedLayer =
 		adjusting &&
+		document.layers.filter((layer) => layer.type === "image").length > 1 &&
 		document.layers.find((layer) => layer.id === adjusting.layerId);
 	const outlinedLayer =
 		((tool?.type === "redactBox" || tool?.type === "redactBrush") &&

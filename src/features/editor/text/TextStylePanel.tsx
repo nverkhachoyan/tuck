@@ -464,8 +464,10 @@ const styles = StyleSheet.create({
 		borderRadius: TARGET / 2,
 		justifyContent: "center",
 	},
+	// Sized by its label, then sharing what's left, so a long label like
+	// "Outline" isn't squeezed to the width of "Box".
 	tab: {
-		flex: 1,
+		flexGrow: 1,
 	},
 	segment: {
 		height: TRACK - 6,

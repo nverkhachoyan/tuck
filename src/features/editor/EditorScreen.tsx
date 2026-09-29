@@ -544,8 +544,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	};
 	const toggleDetection = () => {
 		setToolOptionsOpen(false);
-		if (findOpen) closeDetection();
-		else setFindOpen(true);
+		if (findOpen) {
+			closeDetection();
+			return;
+		}
+		setFindOpen(true);
+		startDetection();
 	};
 	const startDetection = () => {
 		if (detectedImage) detection.start(detectedImage.uri);

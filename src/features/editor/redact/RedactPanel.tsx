@@ -284,8 +284,8 @@ const styles = StyleSheet.create({
 		width: 22,
 		height: 22,
 		borderRadius: 6,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.borderStrong,
+		borderWidth: 1,
+		borderColor: colors.swatchRing,
 	},
 	halo: {
 		alignItems: "center",
