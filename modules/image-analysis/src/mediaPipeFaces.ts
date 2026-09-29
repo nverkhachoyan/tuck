@@ -1,86 +1,18 @@
 import type * as Vision from "@mediapipe/tasks-vision";
 import type { Rect, Size } from "./ImageAnalysis.types";
+import { ASSETS, decode, lazyTask } from "./mediaPipe";
 
-// Copied into public/ by scripts/copy-web-assets.mjs, so nothing is fetched
-// from a CDN or Google's storage.
-const ASSETS = "/mediapipe";
-
-let detector: Promise<Vision.FaceDetector> | undefined;
-
-// Started on first use, so neither the library nor its WebAssembly loads
-// until someone looks for faces.
-function faceDetector(): Promise<Vision.FaceDetector> {
-	if (!detector) {
-		const starting = loadVision().then(
-			async ({ FaceDetector, FilesetResolver }) =>
-				FaceDetector.createFromOptions(
-					await FilesetResolver.forVisionTasks(ASSETS),
-					{
-						// The full-range model finds the small faces in group
-						// photos, which the default, made for selfies, misses.
-						baseOptions: {
-							modelAssetPath: `${ASSETS}/blaze_face_full_range.tflite`,
-						},
-						runningMode: "IMAGE",
-					},
-				),
-		);
-		// Try again next time, say once the connection is back.
-		starting.catch(() => {
-			if (detector === starting) detector = undefined;
-		});
-		detector = starting;
-	}
-	return detector;
-}
-
-// MediaPipe's WebAssembly writes every log line to stderr, which reaches
-// `console.error`, so the development build's overlay showed "INFO: Created
-// TensorFlow Lite XNNPACK delegate" as an error after every first Find.
-let infoLogsDemoted = false;
-function demoteInfoLogs() {
-	if (infoLogsDemoted) return;
-	infoLogsDemoted = true;
-	const error = console.error;
-	console.error = (...args: unknown[]) => {
-		if (typeof args[0] === "string" && args[0].startsWith("INFO: ")) {
-			console.info(...args);
-		} else {
-			error(...args);
-		}
-	};
-}
-
-// Metro can't bundle the library: every build of it calls `import()` with a
-// computed path, which Metro rejects. Its script build defines a global
-// `Vision` instead.
-function loadVision(): Promise<typeof Vision> {
-	demoteInfoLogs();
-	return new Promise((resolve, reject) => {
-		const script = document.createElement("script");
-		script.src = `${ASSETS}/vision_bundle.js`;
-		script.onload = () => {
-			const vision = (globalThis as { Vision?: typeof Vision }).Vision;
-			if (vision) resolve(vision);
-			else reject(new Error("MediaPipe didn't load"));
-		};
-		script.onerror = () => {
-			script.remove();
-			reject(new Error("Couldn't load MediaPipe"));
-		};
-		document.head.append(script);
-	});
-}
-
-// MediaPipe looks at the pixels it's handed, so the image is decoded with its
-// EXIF orientation applied first.
-async function decode(uri: string): Promise<ImageBitmap> {
-	const response = await fetch(uri);
-	if (!response.ok) throw new Error(`Couldn't read the image at ${uri}`);
-	return createImageBitmap(await response.blob(), {
-		imageOrientation: "from-image",
-	});
-}
+const faceDetector = lazyTask(
+	(vision, fileset): Promise<Vision.FaceDetector> =>
+		vision.FaceDetector.createFromOptions(fileset, {
+			// The full-range model finds the small faces in group photos, which
+			// the default, made for selfies, misses.
+			baseOptions: {
+				modelAssetPath: `${ASSETS}/blaze_face_full_range.tflite`,
+			},
+			runningMode: "IMAGE",
+		}),
+);
 
 export async function imageSize(uri: string): Promise<Size> {
 	const image = await decode(uri);

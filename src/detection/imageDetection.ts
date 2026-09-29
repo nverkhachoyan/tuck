@@ -4,16 +4,32 @@ import {
 	type Feature,
 	isAvailable,
 	type Rect,
+	type SubjectMask,
+	subjectMask,
 } from "image-analysis";
 
-export type DetectionFeature = Feature;
+export type DetectionFeature = Exclude<Feature, "background">;
 export type DetectionRect = Rect;
+export type { SubjectMask };
 
 const cachedDetections = new Map<string, Promise<DetectionRect[]>>();
 
 /** Whether this device can run a detector. */
 export function isDetectionAvailable(feature: DetectionFeature): boolean {
 	return isAvailable(feature);
+}
+
+/** Whether this device can find a photo's subject to cut out. */
+export function isCutOutAvailable(): boolean {
+	return isAvailable("background");
+}
+
+/**
+ * A mask of the subject in the image at `uri`, as a new image file of its
+ * own, or null when there's none. On web it's whatever is at the center.
+ */
+export function findSubjectMask(uri: string): Promise<SubjectMask | null> {
+	return subjectMask(uri);
 }
 
 /**

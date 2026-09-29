@@ -23,6 +23,7 @@ import {
 	restyleShape,
 	type ShapeLayer,
 	withAdjustments,
+	withMask,
 } from "./document.ts";
 
 const landscape = () =>
@@ -99,6 +100,9 @@ describe("hasEdits", () => {
 					brightness: 0.2,
 				});
 			},
+			(document) => {
+				document.layers[0] = withMask(photo(document), "file:///mask.png");
+			},
 		];
 		for (const edit of edits) {
 			const document = landscape();
@@ -163,6 +167,15 @@ describe("hasTransparency", () => {
 			hasTransparency(createBlankDocument(10, 10, "#FFFFFF")),
 			false,
 		);
+	});
+
+	test("is true while only a cut-out photo covers the canvas", () => {
+		const document = landscape();
+		document.layers[0] = withMask(
+			document.layers[0] as ImageLayer,
+			"file:///mask.png",
+		);
+		assert.equal(hasTransparency(document), true);
 	});
 
 	test("is true while only a transparent image covers the canvas", () => {
@@ -633,5 +646,23 @@ describe("withAdjustments", () => {
 		);
 		assert.equal("adjustments" in reset, false);
 		assert.deepEqual(reset, layer);
+	});
+});
+
+describe("withMask", () => {
+	const photo = () => landscape().layers[0] as ImageLayer;
+
+	test("sets a mask, and leaves the layer be when it's the same", () => {
+		const cut = withMask(photo(), "file:///mask.png");
+		assert.equal(cut.mask, "file:///mask.png");
+		assert.equal(withMask(cut, "file:///mask.png"), cut);
+	});
+
+	test("takes the mask back off, leaving no trace of it", () => {
+		const layer = photo();
+		assert.equal(withMask(layer, null), layer);
+		const restored = withMask(withMask(layer, "file:///mask.png"), null);
+		assert.equal("mask" in restored, false);
+		assert.deepEqual(restored, layer);
 	});
 });

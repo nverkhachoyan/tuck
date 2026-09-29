@@ -1,6 +1,13 @@
 import { NativeModule, registerWebModule } from "expo";
-import type { Feature, Rect, Size, TextRegion } from "./ImageAnalysis.types";
+import type {
+	Feature,
+	Rect,
+	Size,
+	SubjectMask,
+	TextRegion,
+} from "./ImageAnalysis.types";
 import { imageSize, mediaPipeFaces } from "./mediaPipeFaces";
+import { mediaPipeSubject } from "./mediaPipeSubject";
 import { tesseractText } from "./tesseractText";
 
 class ImageAnalysisModule extends NativeModule {
@@ -14,6 +21,8 @@ class ImageAnalysisModule extends NativeModule {
 				);
 			case "text":
 				return typeof Worker === "function";
+			case "background":
+				return typeof OffscreenCanvas === "function";
 		}
 	}
 
@@ -27,6 +36,10 @@ class ImageAnalysisModule extends NativeModule {
 
 	detectText(uri: string): Promise<TextRegion[]> {
 		return tesseractText(uri);
+	}
+
+	subjectMask(uri: string): Promise<SubjectMask | null> {
+		return mediaPipeSubject(uri);
 	}
 }
 

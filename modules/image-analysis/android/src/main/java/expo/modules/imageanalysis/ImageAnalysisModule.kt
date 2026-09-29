@@ -19,6 +19,9 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
+import com.google.mlkit.vision.segmentation.subject.SubjectSegmenter
+import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -28,6 +31,10 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.FloatBuffer
+import java.util.UUID
 import java.util.concurrent.ExecutionException
 
 class ImageAnalysisModule : Module() {
@@ -36,12 +43,13 @@ class ImageAnalysisModule : Module() {
 
 	private var faceDetector: FaceDetector? = null
 	private var textRecognizer: TextRecognizer? = null
+	private var subjectSegmenter: SubjectSegmenter? = null
 
 	override fun definition() = ModuleDefinition {
 		Name("ImageAnalysis")
 
 		Function("isAvailable") { feature: String ->
-			(feature == "text" || feature == "faces") && hasPlayServices()
+			(feature == "text" || feature == "faces" || feature == "background") && hasPlayServices()
 		}
 
 		AsyncFunction("imageSize") { uri: String ->
@@ -97,9 +105,26 @@ class ImageAnalysisModule : Module() {
 			}
 		}
 
+		// Every subject together. ML Kit looks at the image small and scales its
+		// mask back up, so it's given no more than `MAX_MASK_SIDE`.
+		AsyncFunction("subjectMask") { uri: String ->
+			val bitmap = shrink(loadUpright(Uri.parse(uri)), MAX_MASK_SIDE)
+			val segmenter = subjectSegmenter ?: SubjectSegmentation.getClient(
+				SubjectSegmenterOptions.Builder().enableForegroundConfidenceMask().build()
+			).also { subjectSegmenter = it }
+			try {
+				val result = await(segmenter, segmenter.process(InputImage.fromBitmap(bitmap, 0)), "Background")
+				val confidences = result.foregroundConfidenceMask
+				confidences?.let { writeMask(it, bitmap.width, bitmap.height) }
+			} finally {
+				bitmap.recycle()
+			}
+		}
+
 		OnDestroy {
 			faceDetector?.close()
 			textRecognizer?.close()
+			subjectSegmenter?.close()
 		}
 	}
 
@@ -114,6 +139,29 @@ class ImageAnalysisModule : Module() {
 		val upright = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 		if (upright !== bitmap) bitmap.recycle()
 		return upright
+	}
+
+	// A grayscale PNG in the cache, or null when no pixel is more likely the
+	// subject than not.
+	private fun writeMask(confidences: FloatBuffer, width: Int, height: Int): SubjectMaskRecord? {
+		val pixels = IntArray(width * height)
+		var found = false
+		confidences.rewind()
+		for (i in pixels.indices) {
+			val confidence = confidences.get().coerceIn(0f, 1f)
+			if (confidence >= 0.5f) found = true
+			val value = (confidence * 255 + 0.5f).toInt()
+			pixels[i] = (0xFF shl 24) or (value shl 16) or (value shl 8) or value
+		}
+		if (!found) return null
+		val mask = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+		val file = File(context.cacheDir, "mask-${UUID.randomUUID()}.png")
+		try {
+			FileOutputStream(file).use { mask.compress(Bitmap.CompressFormat.PNG, 100, it) }
+		} finally {
+			mask.recycle()
+		}
+		return SubjectMaskRecord(Uri.fromFile(file).toString(), width.toDouble(), height.toDouble())
 	}
 
 	private fun readOrientation(uri: Uri): Int =
@@ -137,6 +185,23 @@ class ImageAnalysisModule : Module() {
 			}
 			throw cause ?: e
 		}
+}
+
+private const val MAX_MASK_SIDE = 2048
+
+// `bitmap` itself if it fits in `maxSide`, or else a smaller copy of it,
+// which recycles the original.
+private fun shrink(bitmap: Bitmap, maxSide: Int): Bitmap {
+	val scale = maxSide.toFloat() / maxOf(bitmap.width, bitmap.height)
+	if (scale >= 1f) return bitmap
+	val shrunk = Bitmap.createScaledBitmap(
+		bitmap,
+		(bitmap.width * scale).toInt().coerceAtLeast(1),
+		(bitmap.height * scale).toInt().coerceAtLeast(1),
+		true,
+	)
+	if (shrunk !== bitmap) bitmap.recycle()
+	return shrunk
 }
 
 private val SIDEWAYS = setOf(
@@ -176,6 +241,12 @@ class RectRecord(
 ) : Record
 
 class SizeRecord(
+	@Field val width: Double = 0.0,
+	@Field val height: Double = 0.0,
+) : Record
+
+class SubjectMaskRecord(
+	@Field val uri: String = "",
 	@Field val width: Double = 0.0,
 	@Field val height: Double = 0.0,
 ) : Record

@@ -6,6 +6,7 @@ import {
 	createTextLayer,
 	type EditorDocument,
 	type ImageLayer,
+	withMask,
 } from "../model/document.ts";
 import {
 	isImageFile,
@@ -406,6 +407,29 @@ describe("added photos", () => {
 
 		await projects.closeProject(id, withoutPhoto);
 		assert.equal(harness.images.has(id), false);
+	});
+
+	test("a mask is kept with the project while its layer uses it", async () => {
+		const harness = createHarness();
+		const { projects } = harness;
+		const { id, document } = await projects.createProject(photo);
+		const mask = await projects.addImage(id, "mask", false);
+		const [layer] = imageLayers(document);
+		const cut = { ...document, layers: [withMask(layer, mask)] };
+		await projects.closeProject(id, cut);
+
+		const [saved] = imageLayers(savedProject(harness, id).document);
+		assert.ok(saved.mask && isImageFile(saved.mask), saved.mask);
+		assert.equal(harness.images.get(id)?.size, 2);
+		const [reopened] = imageLayers(await projects.openProject(id));
+		assert.equal(reopened.mask, `blob:${id}/${saved.mask}`);
+
+		// Taken back off, the mask's file goes once the project closes.
+		await projects.closeProject(id, {
+			...cut,
+			layers: [withMask(reopened, null)],
+		});
+		assert.deepEqual([...(harness.images.get(id) ?? [])], [PHOTO_FILE]);
 	});
 
 	test("closing removes files an earlier session left behind", async () => {

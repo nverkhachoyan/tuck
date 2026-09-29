@@ -1,3 +1,4 @@
+import CoreImage
 import ExpoModulesCore
 import ImageIO
 import Vision
@@ -7,7 +8,11 @@ public class ImageAnalysisModule: Module {
 		Name("ImageAnalysis")
 
 		Function("isAvailable") { (feature: String) -> Bool in
-			feature == "text" || feature == "faces"
+			if feature == "background" {
+				if #available(iOS 17.0, *) { return true }
+				return false
+			}
+			return feature == "text" || feature == "faces"
 		}
 
 		AsyncFunction("imageSize") { (uri: URL) -> SizeRecord in
@@ -47,6 +52,41 @@ public class ImageAnalysisModule: Module {
 				}
 				return TextRegionRecord(line: image.rect(observation.boundingBox), words: words)
 			}
+		}
+
+		// Every prominent subject together, at the image's full size. It needs
+		// the Neural Engine or a real GPU, so it fails on the simulator.
+		AsyncFunction("subjectMask") { (uri: URL) -> SubjectMaskRecord? in
+			guard #available(iOS 17.0, *) else {
+				throw FeatureUnavailableException("background")
+			}
+			let image = try SourceImage(url: uri)
+			let handler = image.requestHandler()
+			let request = VNGenerateForegroundInstanceMaskRequest()
+			try handler.perform([request])
+			guard let observation = request.results?.first, !observation.allInstances.isEmpty else {
+				return nil
+			}
+			let buffer = try observation.generateScaledMaskForImage(
+				forInstances: observation.allInstances,
+				from: handler
+			)
+			let mask = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
+			let file = FileManager.default.temporaryDirectory
+				.appendingPathComponent("mask-\(UUID().uuidString).png")
+			// The mask's values are coverage, not colors, so nothing converts them.
+			let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+			try context.writePNGRepresentation(
+				of: mask,
+				to: file,
+				format: .L8,
+				colorSpace: CGColorSpaceCreateDeviceGray()
+			)
+			return SubjectMaskRecord(
+				uri: file.absoluteString,
+				width: mask.extent.width,
+				height: mask.extent.height
+			)
 		}
 	}
 }
@@ -171,6 +211,26 @@ struct TextRegionRecord: Record {
 	init(line: RectRecord, words: [RectRecord]) {
 		self.line = line
 		self.words = words
+	}
+}
+
+struct SubjectMaskRecord: Record {
+	@Field var uri: String = ""
+	@Field var width: Double = 0
+	@Field var height: Double = 0
+
+	init() {}
+
+	init(uri: String, width: Double, height: Double) {
+		self.uri = uri
+		self.width = width
+		self.height = height
+	}
+}
+
+final class FeatureUnavailableException: GenericException<String>, @unchecked Sendable {
+	override var reason: String {
+		"Finding the \(param) isn't available on this device"
 	}
 }
 

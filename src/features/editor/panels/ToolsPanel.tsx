@@ -1,13 +1,38 @@
 import { TOOL_KEYS } from "../shortcuts";
 import { ToolButton, ToolRow } from "../ToolButton";
 
+/** Whether the image Cut out acts on is cut out already, or being cut out. */
+export type CutOutState = "whole" | "cutting" | "cut";
+
+/**
+ * Cuts the subject out of an image, spinning while it's found, or once it
+ * has, brings the background back.
+ */
+export function CutOutButton({
+	state,
+	onPress,
+}: {
+	state: CutOutState;
+	onPress: () => void;
+}) {
+	return (
+		<ToolButton
+			label={state === "cut" ? "Restore" : "Cut out"}
+			icon={state === "cut" ? "image-refresh-outline" : "scissors-cutting"}
+			shortcut={TOOL_KEYS.cutOut}
+			busy={state === "cutting"}
+			onPress={onPress}
+		/>
+	);
+}
+
 /**
  * The editing tools, in the dock while no layer is selected. On web, each
  * shows the letter that picks it up (see `TOOL_KEYS`) on hover. Add opens
  * the sheet of photos and stickers, and spins while one is on its way.
- * Find and Adjust show only with an image to scan or adjust. `vertical`
- * stacks them for a wide screen's rail, where they stay while a tool is in
- * use, marking it.
+ * Find, Adjust, and Cut out show only with an image to scan, adjust, or cut
+ * out. `vertical` stacks them for a wide screen's rail, where they stay
+ * while a tool is in use, marking it.
  */
 export function ToolsPanel({
 	vertical = false,
@@ -20,6 +45,8 @@ export function ToolsPanel({
 	onAdd,
 	onCrop,
 	onAdjust,
+	cutOut,
+	onCutOut,
 }: {
 	vertical?: boolean;
 	tool?: "text" | "draw" | "redact" | "find" | "adjust" | null;
@@ -31,6 +58,8 @@ export function ToolsPanel({
 	onAdd: () => void;
 	onCrop: () => void;
 	onAdjust?: () => void;
+	cutOut?: CutOutState;
+	onCutOut?: () => void;
 }) {
 	return (
 		<ToolRow vertical={vertical}>
@@ -86,6 +115,7 @@ export function ToolsPanel({
 					onPress={onAdjust}
 				/>
 			)}
+			{cutOut && onCutOut && <CutOutButton state={cutOut} onPress={onCutOut} />}
 		</ToolRow>
 	);
 }

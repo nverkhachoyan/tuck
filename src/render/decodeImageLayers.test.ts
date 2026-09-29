@@ -7,6 +7,7 @@ import {
 	createDocumentFromImage,
 	duplicateLayer,
 	type ImageLayer,
+	withMask,
 } from "../model/document.ts";
 import { decodeImageLayers } from "./decodeImageLayers.ts";
 
@@ -37,8 +38,8 @@ describe("decodeImageLayers", () => {
 		const result = await decodeImageLayers(document.layers, cache);
 
 		assert.equal(calls, 1);
-		assert.equal(result.images.get(photo.id), decoded.image);
-		assert.equal(result.images.get(copy.id), decoded.image);
+		assert.deepEqual([...result.images], [[photo.uri, decoded.image]]);
+		assert.equal(copy.uri, photo.uri);
 		result.release();
 		result.release();
 		await nextTask();
@@ -62,11 +63,28 @@ describe("decodeImageLayers", () => {
 		await nextTask();
 
 		assert.equal(calls, 1);
-		assert.equal(result.images.get(photo.id), decoded.image);
+		assert.equal(result.images.get(photo.uri), decoded.image);
 		assert.equal(decoded.disposals(), 0);
 		editor.release();
 		await nextTask();
 		assert.equal(decoded.disposals(), 1);
+	});
+
+	test("decodes a cut-out's mask with its image", async () => {
+		const document = createDocumentFromImage("photo.jpg", 100, 80, true);
+		document.layers[0] = withMask(document.layers[0] as ImageLayer, "mask.png");
+		const photo = fakeImage();
+		const mask = fakeImage();
+		const cache = createImageCache(async (uri) =>
+			uri === "mask.png" ? mask.image : photo.image,
+		);
+
+		const result = await decodeImageLayers(document.layers, cache);
+		assert.equal(result.images.get("photo.jpg"), photo.image);
+		assert.equal(result.images.get("mask.png"), mask.image);
+		result.release();
+		await nextTask();
+		assert.equal(mask.disposals(), 1);
 	});
 
 	test("releases earlier images when a later decode fails", async () => {

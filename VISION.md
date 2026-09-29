@@ -614,15 +614,15 @@ type TextRegion = {
   words: Rect[];
 };
 
-type SegmentationResult = {
-  maskUri: string;
+type SubjectMask = {
+  uri: string; // a grayscale image: white where the subject is
   width: number;
   height: number;
 };
 
 detectFaces(imageUri: string): Promise<Rect[]>;
 detectText(imageUri: string): Promise<TextRegion[]>;
-removeBackground(imageUri: string): Promise<SegmentationResult>;
+subjectMask(imageUri: string): Promise<SubjectMask | null>;
 ```
 
 Rectangles are in the image's pixels. The editor should not care which implementation produced them or the mask.
@@ -1030,18 +1030,11 @@ Any architecture that makes those two substantially different should be examined
 
 # Current Priority
 
-Stages 1 through 3 are built and confirmed on a real device, and much of Stage 5 was built early alongside them (see Status below). The current milestone is:
+Stages 1 through 4 are built, and much of Stage 5 was built early alongside them (see Status below). Background removal, the last of Stage 4, still needs trying on a real iPhone. What's next:
 
-> **Stage 4 — Background removal and detection**
-
-In order:
-
-1. Move from Expo Go to a development build, and add the local `modules/image-analysis/` module.
-2. Find text, so screenshots can be redacted in a tap. Apple Vision's text recognition runs on the simulator.
-3. Find faces. Apple Vision's face detection runs on the simulator only when pinned to the CPU.
-4. Remove backgrounds. On iOS this can only be tried on a real device.
-
-The dependencies and their reasons are in [docs/on-device-detection.md](docs/on-device-detection.md).
+1. Try background removal on a real iPhone (the simulator can't run it).
+2. Open photos shared from other apps ("Edit in Tuck" in the share sheet).
+3. Then polish and performance.
 
 Stage 1's product test still holds, and new work shouldn't slow it down:
 
@@ -1079,7 +1072,9 @@ Missing: the later additions (highlights, shadows, exposure, vignette, sharpen).
 
 ### Stage 4 — Background Removal + Detection
 
-Finding faces and text is built: a native module on iOS and Android (Apple Vision and Google ML Kit) and MediaPipe/Tesseract on web detect faces and text lines in a photo. In the Redact tool, Find detects regions, outlines candidates over the photo, and adds chosen ones as redaction boxes in one undo step, following photo transforms, flips, and crops. Missing: background removal (needs a real iOS device).
+Finding faces and text is built: a native module on iOS and Android (Apple Vision and Google ML Kit) and MediaPipe/Tesseract on web detect faces and text lines in a photo. In the Redact tool, Find detects regions, outlines candidates over the photo, and adds chosen ones as redaction boxes in one undo step, following photo transforms, flips, and crops.
+
+Background removal is built: Cut out, in the tools and in a selected photo's actions (B on web), finds the photo's subject and keeps it as a mask on the image layer, a grayscale file of its own in the project. The photo's file is untouched, so Restore brings the background back, and either is one undo step. The editor, export, and thumbnails draw the image through its mask, and a cut-out makes the canvas export as PNG. Apple Vision finds the subject on iOS 17 and later, ML Kit's subject segmentation on Android, and MediaPipe's MagicTouch on web, which takes the subject at the photo's center. It's been tried on web and the Android emulator; iOS can only run it on a real device, which hasn't been tried yet. Missing: saving a cut-out as a sticker (Sticker is hidden on one for now), and taps on a cut-out's transparent parts still select it.
 
 ### Stage 5 — Polish + Projects
 

@@ -22,8 +22,10 @@ import {
 // did pens' `tip`: builds from before it draw every pen as a plain one. So
 // did image layers' `sticker`: builds from before it list a sticker as a
 // photo. So did image layers' `adjustments`: builds from before them show
-// the image unadjusted.
-export const PROJECT_VERSION = 4;
+// the image unadjusted. 5 added image layers' `mask`, a file of its own: a
+// build from before it would show the whole photo, and remove the mask's
+// file as unused when it closed the project.
+export const PROJECT_VERSION = 5;
 
 // The file of the photo a project was made from. Saved image layers name a
 // file in the project as their `uri`: this one, or an added photo's.
@@ -82,7 +84,7 @@ export type ProjectSummary =
 	  }
 	| { id: string; status: "unavailable" };
 
-/** `document` with every image layer's `uri` passed through `map`. */
+/** `document` with every image layer's `uri` and `mask` passed through `map`. */
 export function mapImageUris(
 	document: EditorDocument,
 	map: (uri: string) => string,
@@ -90,9 +92,28 @@ export function mapImageUris(
 	return {
 		...document,
 		layers: document.layers.map((layer) =>
-			layer.type === "image" ? { ...layer, uri: map(layer.uri) } : layer,
+			layer.type === "image"
+				? {
+						...layer,
+						uri: map(layer.uri),
+						...(layer.mask !== undefined && { mask: map(layer.mask) }),
+					}
+				: layer,
 		),
 	};
+}
+
+/** The files a document's image layers use: their images, and their masks. */
+export function imageFiles(document: EditorDocument): Set<string> {
+	return new Set(
+		document.layers.flatMap((layer) =>
+			layer.type !== "image"
+				? []
+				: layer.mask === undefined
+					? [layer.uri]
+					: [layer.uri, layer.mask],
+		),
+	);
 }
 
 /** A saved project read back from JSON, or null if it isn't one this app can open. */
@@ -175,9 +196,14 @@ function upgradeProject(value: unknown): unknown {
 			? { ...upgraded, version: 3 }
 			: upgraded,
 	);
-	return isFields(opaque) && opaque.version === 3 && isFields(opaque.document)
-		? { ...opaque, version: 4, document: { ...opaque.document, groups: [] } }
-		: opaque;
+	const grouped =
+		isFields(opaque) && opaque.version === 3 && isFields(opaque.document)
+			? { ...opaque, version: 4, document: { ...opaque.document, groups: [] } }
+			: opaque;
+	// Every version 4 project is also a version 5 one, with nothing cut out.
+	return isFields(grouped) && grouped.version === 4
+		? { ...grouped, version: 5 }
+		: grouped;
 }
 
 /**
@@ -307,7 +333,8 @@ function isLayer(value: unknown): boolean {
 				typeof value.flipped === "boolean" &&
 				typeof value.opaque === "boolean" &&
 				(value.sticker === undefined || typeof value.sticker === "boolean") &&
-				(value.adjustments === undefined || isAdjustments(value.adjustments))
+				(value.adjustments === undefined || isAdjustments(value.adjustments)) &&
+				(value.mask === undefined || typeof value.mask === "string")
 			);
 		case "text":
 			return (

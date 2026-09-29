@@ -7,6 +7,7 @@ import {
 	hasEdits,
 } from "../model/document.ts";
 import {
+	imageFiles,
 	isImageFile,
 	mapImageUris,
 	newImageFile,
@@ -68,19 +69,8 @@ function createProjectId() {
 	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** The distinct `uri`s of a document's image layers. */
-function imageUris(document: EditorDocument): Set<string> {
-	return new Set(
-		document.layers.flatMap((layer) =>
-			layer.type === "image" ? [layer.uri] : [],
-		),
-	);
-}
-
 function hasKnownImageUris(saved: SavedProject): boolean {
-	return saved.document.layers.every(
-		(layer) => layer.type !== "image" || isImageFile(layer.uri),
-	);
+	return [...imageFiles(saved.document)].every(isImageFile);
 }
 
 export function createProjectLifecycle(storage: ProjectStorage) {
@@ -259,7 +249,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			if (json === null) throw new Error("This project no longer exists.");
 			const saved = parseSavedProject(json);
 			if (!saved || !hasKnownImageUris(saved)) return null;
-			const urls = await imageUrls(id, imageUris(saved.document));
+			const urls = await imageUrls(id, imageFiles(saved.document));
 			const document = mapImageUris(
 				saved.document,
 				(file) => urls.get(file) ?? file,
@@ -355,7 +345,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 
 	/**
 	 * Moves a picked photo into an open project as a file of its own, and
-	 * returns its URL there, for a new image layer's `uri`.
+	 * returns its URL there, for a new image layer's `uri` or `mask`.
 	 */
 	async function addImage(
 		id: string,
@@ -385,7 +375,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		try {
 			const saved = savedDocument(id, document);
 			if (!saved) return;
-			const used = imageUris(saved);
+			const used = imageFiles(saved);
 			for (const file of await storage.listImages(id)) {
 				if (!used.has(file)) await storage.removeImage(id, file);
 			}
@@ -497,7 +487,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				throw new Error("Couldn't start the copy.");
 			}
 			try {
-				for (const file of imageUris(saved.document)) {
+				for (const file of imageFiles(saved.document)) {
 					await storage.copyImage(id, file, copyId);
 				}
 				const now = Date.now();
@@ -585,7 +575,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			if (!saved || !hasKnownImageUris(saved)) return null;
 			const { updatedAt } = saved;
 			if (saved.thumbnail?.updatedAt === updatedAt) return null;
-			const urls = await imageUrls(id, imageUris(saved.document));
+			const urls = await imageUrls(id, imageFiles(saved.document));
 			let url: string;
 			try {
 				url = await render(

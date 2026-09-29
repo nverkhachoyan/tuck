@@ -10,11 +10,13 @@ export type ToolKey =
 	| "add"
 	| "photo"
 	| "crop"
-	| "adjust";
+	| "adjust"
+	| "cutOut";
 
 // A letter picks up a tool, and L shows or hides the layers. Each tool's
 // button shows its key on hover. A opens the Add sheet, and P goes straight
-// to its photo picker. E adjusts, since A is Add's.
+// to its photo picker. E adjusts, since A is Add's, and B cuts out the
+// subject, taking its background away.
 export const TOOL_KEYS: Record<ToolKey, string> = {
 	text: "T",
 	draw: "D",
@@ -24,6 +26,7 @@ export const TOOL_KEYS: Record<ToolKey, string> = {
 	photo: "P",
 	crop: "C",
 	adjust: "E",
+	cutOut: "B",
 };
 export const LAYERS_KEY = "L";
 
@@ -136,6 +139,7 @@ export const SHORTCUT_GROUPS: {
 			{ keys: TOOL_KEYS.photo, action: "Add a photo" },
 			{ keys: TOOL_KEYS.crop, action: "Crop" },
 			{ keys: TOOL_KEYS.adjust, action: "Adjust" },
+			{ keys: TOOL_KEYS.cutOut, action: "Cut out, or restore the background" },
 			{ keys: LAYERS_KEY, action: "Show or hide layers" },
 		],
 	},

@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
   s.name           = 'ImageAnalysis'
   s.version        = '1.0.0'
-  s.summary        = 'Finds faces and text in images with Apple Vision'
+  s.summary        = 'Finds faces, text, and subjects in images with Apple Vision'
   s.author         = ''
   s.homepage       = 'https://docs.expo.dev/modules/'
   s.platforms      = { :ios => '16.4' }

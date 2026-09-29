@@ -54,7 +54,7 @@ for (const build of ["", "_nosimd"]) {
 for (const file of mediaPipeFiles) {
 	copy(require.resolve(`@mediapipe/tasks-vision/${file}`), `mediapipe/${file}`);
 }
-copy(
-	"modules/image-analysis/models/blaze_face_full_range.tflite",
-	"mediapipe/blaze_face_full_range.tflite",
-);
+// The same goes for background removal's model, version 1 of MagicTouch.
+for (const model of ["blaze_face_full_range.tflite", "magic_touch.tflite"]) {
+	copy(`modules/image-analysis/models/${model}`, `mediapipe/${model}`);
+}

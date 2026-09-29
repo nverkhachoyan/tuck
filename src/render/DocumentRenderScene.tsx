@@ -10,9 +10,9 @@ import type { EditorDocument, Layer } from "@/model/document";
 
 /**
  * The document's background and layers in document space, with no selection
- * chrome or gesture state. `images` must be pre-decoded: the offscreen
- * renderer draws a single frame, so async loaders like `useImage` would
- * still be null.
+ * chrome or gesture state. `images`, by file, must be pre-decoded (see
+ * `decodeImageLayers`): the offscreen renderer draws a single frame, so async
+ * loaders like `useImage` would still be null.
  */
 export function DocumentRenderScene({
 	document,
@@ -49,8 +49,12 @@ function LayerContent({
 }) {
 	switch (layer.type) {
 		case "image": {
-			const image = images.get(layer.id);
-			return image ? <ImageLayerView layer={layer} image={image} /> : null;
+			const image = images.get(layer.uri);
+			const mask = layer.mask === undefined ? null : images.get(layer.mask);
+			if (!image || mask === undefined) return null;
+			return (
+				<ImageLayerView layer={layer} image={image} mask={mask ?? undefined} />
+			);
 		}
 		case "text":
 			return <TextLayerView layer={layer} />;

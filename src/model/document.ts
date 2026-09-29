@@ -29,7 +29,10 @@ type LayerBase = {
 // `opaque` is whether every pixel is: photos are, a PNG may not be.
 // `sticker` marks one added from the sticker sheet, which is only named
 // differently: its file is copied into the project like a photo's.
-// `adjustments` is left out while none are made.
+// `adjustments` is left out while none are made. `mask`, when the subject
+// has been cut out of the image, is a grayscale image file stretched over it:
+// the image shows where the mask is white, and not where it's black. The
+// image's own file is untouched, so the cut can be undone or taken back.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
@@ -39,6 +42,7 @@ export type ImageLayer = LayerBase & {
 	opaque: boolean;
 	sticker?: boolean;
 	adjustments?: Adjustments;
+	mask?: string;
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -358,6 +362,7 @@ export function hasEdits(document: EditorDocument): boolean {
 		document.height !== first.height ||
 		first.flipped ||
 		first.adjustments !== undefined ||
+		first.mask !== undefined ||
 		!transformsEqual(
 			first.transform,
 			centeredTransform(first.width, first.height),
@@ -384,7 +389,14 @@ export function hasTransparency(document: EditorDocument): boolean {
 		{ x: 0, y: document.height },
 	];
 	return !document.layers.some((layer) => {
-		if (layer.type !== "image" || layer.hidden || !layer.opaque) return false;
+		if (
+			layer.type !== "image" ||
+			layer.hidden ||
+			!layer.opaque ||
+			layer.mask !== undefined
+		) {
+			return false;
+		}
 		const box = {
 			halfWidth: layer.width / 2 + COVER_TOLERANCE,
 			halfHeight: layer.height / 2 + COVER_TOLERANCE,
@@ -651,6 +663,17 @@ export function withAdjustments(
 	return current && adjustmentsEqual(current, adjustments)
 		? layer
 		: { ...layer, adjustments };
+}
+
+/**
+ * `layer` shown through `mask` (see `ImageLayer`), or whole again when it's
+ * null, or `layer` itself when that's how it's shown already.
+ */
+export function withMask(layer: ImageLayer, mask: string | null): ImageLayer {
+	if ((layer.mask ?? null) === mask) return layer;
+	if (mask !== null) return { ...layer, mask };
+	const { mask: _, ...rest } = layer;
+	return rest;
 }
 
 /**

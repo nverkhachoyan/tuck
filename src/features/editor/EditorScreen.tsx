@@ -61,7 +61,10 @@ import {
 	type ArrangeMove,
 	SelectionBar,
 } from "@/features/editor/panels/SelectionBar";
-import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
+import {
+	type CutOutState,
+	ToolsPanel,
+} from "@/features/editor/panels/ToolsPanel";
 import {
 	DetectionOptions,
 	FindPanel,
@@ -100,6 +103,7 @@ import {
 	withTextEdit,
 } from "@/features/editor/text/textSettings";
 import { useAddImage } from "@/features/editor/useAddImage";
+import { useCutOut } from "@/features/editor/useCutOut";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { importPhoto } from "@/import/photoImport";
 import type { TextSelection } from "@/layers/textEditing";
@@ -577,6 +581,24 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		cancelSession();
 		finishTool();
 	};
+	// The selected photo, or else the main one, like Find.
+	const cutOut = useCutOut({
+		projectId,
+		// The mask moves into the project, so autosave knows its file.
+		keep: async (uri) =>
+			projectId === null ? uri : addImage(projectId, uri, false),
+	});
+	const cutOutTarget = cutOut ? detectedImage : null;
+	const cutOutState: CutOutState | undefined = !cutOutTarget
+		? undefined
+		: cutOut?.cutting === cutOutTarget.id
+			? "cutting"
+			: cutOutTarget.mask !== undefined
+				? "cut"
+				: "whole";
+	const toggleCutOut = () => {
+		if (cutOut && cutOutTarget) void cutOut.toggle(cutOutTarget);
+	};
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
 		if (!detectedImage) return;
@@ -831,6 +853,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		photo: pickPhoto,
 		crop: startCrop,
 		adjust: startAdjusting,
+		cutOut: toggleCutOut,
 	};
 
 	// Shrunk the way a saved sticker is, so a large photo doesn't make one.
@@ -1140,6 +1163,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									onAdd={fromRail(openAdd)}
 									onCrop={fromRail(startCrop)}
 									onAdjust={adjustable ? fromRail(startAdjusting) : undefined}
+									cutOut={cutOutState}
+									onCutOut={fromRail(toggleCutOut)}
 								/>
 							</View>
 						)}
@@ -1232,13 +1257,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 											? startFinding
 											: undefined
 									}
+									cutOut={
+										cutOutTarget === selectedLayer ? cutOutState : undefined
+									}
+									onCutOut={toggleCutOut}
 									sticker={
 										stickerSave?.layerId === selectedLayer.id
 											? stickerSave.status
 											: undefined
 									}
 									onSaveSticker={
-										selectedLayer.type === "image" && !selectedLayer.sticker
+										// A sticker is kept from the image's file, which a
+										// cut-out's mask isn't part of.
+										selectedLayer.type === "image" &&
+										!selectedLayer.sticker &&
+										selectedLayer.mask === undefined
 											? saveSelectedAsSticker
 											: undefined
 									}
@@ -1255,6 +1288,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									onAdd={openAdd}
 									onCrop={startCrop}
 									onAdjust={adjustable ? startAdjusting : undefined}
+									cutOut={cutOutState}
+									onCutOut={toggleCutOut}
 								/>
 							)}
 						</Dock>

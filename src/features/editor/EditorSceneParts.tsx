@@ -65,7 +65,10 @@ export function LayerContent({
 	}
 }
 
-/** Draws nothing until the image has decoded, or if it can't be. */
+/**
+ * Draws nothing until the image, and its mask if it has one, have decoded,
+ * or if either can't be: a cut-out never shows its background meanwhile.
+ */
 function AsyncImage({
 	layer,
 	matrix,
@@ -76,6 +79,14 @@ function AsyncImage({
 	onError: (error: unknown) => void;
 }) {
 	const image = useDecodedImage(layer.uri, onError);
-	if (!image) return null;
-	return <ImageLayerView layer={layer} image={image} matrix={matrix} />;
+	const mask = useDecodedImage(layer.mask ?? null, onError);
+	if (!image || (layer.mask && !mask)) return null;
+	return (
+		<ImageLayerView
+			layer={layer}
+			image={image}
+			mask={mask ?? undefined}
+			matrix={matrix}
+		/>
+	);
 }

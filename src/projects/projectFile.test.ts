@@ -13,9 +13,11 @@ import {
 	type EditorDocument,
 	type ImageLayer,
 	withAdjustments,
+	withMask,
 } from "../model/document.ts";
 import {
 	copyName,
+	imageFiles,
 	isImageFile,
 	mapImageUris,
 	newImageFile,
@@ -79,6 +81,18 @@ describe("mapImageUris", () => {
 		assert.deepEqual(
 			mapImageUris(saved, () => "file:///photo.jpg"),
 			document,
+		);
+	});
+});
+
+describe("imageFiles", () => {
+	test("names each image and mask file once", () => {
+		const document = documentWithText("TOP TEXT");
+		const [photo] = document.layers as ImageLayer[];
+		document.layers.push(withMask(photo, "file:///mask.png"), photo);
+		assert.deepEqual(
+			[...imageFiles(document)],
+			["file:///photo.jpg", "file:///mask.png"],
 		);
 	});
 });
@@ -231,6 +245,37 @@ describe("parseSavedProject", () => {
 		const saved = mapImageUris(document, () => PHOTO_FILE);
 		const project = parseSavedProject(savedJson({ document: saved }));
 		assert.deepEqual(project?.document, saved);
+	});
+
+	test("reads a cut-out image, its mask in a file of its own", () => {
+		const document = documentWithText();
+		document.layers[0] = withMask(
+			document.layers[0] as ImageLayer,
+			"image-abc-123.png",
+		);
+		const saved = mapImageUris(document, (uri) =>
+			uri === "image-abc-123.png" ? uri : PHOTO_FILE,
+		);
+		const project = parseSavedProject(savedJson({ document: saved }));
+		assert.deepEqual(project?.document, saved);
+		assert.equal(
+			parseSavedProject(
+				savedJson({
+					document: {
+						...saved,
+						layers: [{ ...saved.layers[0], mask: 1 } as unknown as ImageLayer],
+					},
+				}),
+			),
+			null,
+		);
+	});
+
+	test("reads version 4, from before cut-outs, as it was", () => {
+		const document = mapImageUris(documentWithText("A"), () => PHOTO_FILE);
+		const project = parseSavedProject(savedJson({ version: 4, document }));
+		assert.equal(project?.version, PROJECT_VERSION);
+		assert.deepEqual(project?.document, document);
 	});
 
 	test("reads a drawing, with pen and eraser strokes", () => {

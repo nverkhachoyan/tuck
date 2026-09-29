@@ -46,6 +46,9 @@ function storeWithText() {
 	return { store, text };
 }
 
+const firstImage = (store: ReturnType<typeof createTestStore>) =>
+	store.getState().document?.layers[0] as ImageLayer;
+
 function textLayers(store: ReturnType<typeof createTestStore>) {
 	return (store.getState().document?.layers ?? []).filter(
 		(layer): layer is TextLayer => layer.type === "text",
@@ -1060,9 +1063,6 @@ describe("editorSlice", () => {
 
 	describe("adjustments", () => {
 		const warm = { ...neutralAdjustments, temperature: 0.5 };
-		const firstImage = (store: ReturnType<typeof createTestStore>) =>
-			store.getState().document?.layers[0] as ImageLayer;
-
 		test("adjusting is one undo step, and undo takes it back", () => {
 			const { store } = storeWithText();
 			const steps = store.getState().past.length;
@@ -1089,6 +1089,37 @@ describe("editorSlice", () => {
 			const before = store.getState().document;
 			store.getState().setAdjustments(text.id, warm);
 			store.getState().setAdjustments("missing", warm);
+			assert.equal(store.getState().document, before);
+		});
+	});
+
+	describe("setMask", () => {
+		test("cutting out is one undo step, and undo brings the background back", () => {
+			const { store } = storeWithText();
+			const steps = store.getState().past.length;
+			store.getState().setMask("photo", "file:///mask.png");
+			assert.equal(firstImage(store).mask, "file:///mask.png");
+			assert.equal(store.getState().past.length, steps + 1);
+			store.getState().undo();
+			assert.equal("mask" in firstImage(store), false);
+		});
+
+		test("the same mask isn't a step, and null takes it off", () => {
+			const { store } = storeWithText();
+			store.getState().setMask("photo", "file:///mask.png");
+			const steps = store.getState().past.length;
+			store.getState().setMask("photo", "file:///mask.png");
+			assert.equal(store.getState().past.length, steps);
+			store.getState().setMask("photo", null);
+			assert.equal("mask" in firstImage(store), false);
+			assert.equal(store.getState().past.length, steps + 1);
+		});
+
+		test("only images take a mask", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			store.getState().setMask(text.id, "file:///mask.png");
+			store.getState().setMask("missing", "file:///mask.png");
 			assert.equal(store.getState().document, before);
 		});
 	});
