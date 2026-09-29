@@ -99,7 +99,7 @@ function Routes() {
 			<Stack.Screen
 				name="projects/[id]/export"
 				options={{
-					presentation: "transparentModal",
+					presentation: "containedTransparentModal",
 					animation: "fade",
 					contentStyle: { backgroundColor: "transparent" },
 				}}

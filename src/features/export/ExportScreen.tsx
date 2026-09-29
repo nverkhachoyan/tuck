@@ -5,7 +5,7 @@ import {
 	useLocalSearchParams,
 	useRouter,
 } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Linking,
@@ -13,6 +13,7 @@ import {
 	Pressable,
 	StyleSheet,
 	Text,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import { errorMessage } from "@/lib/errorMessage";
@@ -144,9 +145,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	};
 
 	const ready = state.status === "ready";
+	// On iOS the modal's frame starts below the window's top but is laid out
+	// as tall as the stack, which leaves a gap under the sheet. Measured from
+	// where the screen starts, which its own height doesn't move, the
+	// container reaches the window's bottom exactly.
+	const screenSize = useWindowDimensions();
+	const containerRef = useRef<View>(null);
+	const [originY, setOriginY] = useState(0);
 
 	return (
-		<View style={styles.container}>
+		<View
+			ref={containerRef}
+			style={[styles.container, { height: screenSize.height - originY }]}
+			onLayout={() =>
+				containerRef.current?.measureInWindow((_x, y) => setOriginY(y))
+			}
+		>
 			{/* Behind the sheet, not around it: on web, a click on the sheet
 			    would bubble up to it and close the sheet. */}
 			<Pressable
@@ -346,7 +360,10 @@ function sizeName(index: number, sizes: ExportSize[]) {
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
 		justifyContent: "flex-end",
 		alignItems: "center",
 	},
