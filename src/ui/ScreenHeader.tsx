@@ -1,20 +1,18 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import {
-	colors,
-	fonts,
-	HEADER_HEIGHT,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, HEADER_HEIGHT, typography, webTransition } from "@/theme";
 import { interaction } from "./interaction";
+import { useTooltip } from "./Tooltip";
+
+const BACK_SIZE = 44;
 
 /**
  * Top bar with a Back action, an optional centered title, and an optional
- * trailing action. `backLabel` names where Back goes, when that says more
- * than "Back". Without `onBack`, the title takes Back's place, as in a
- * tool's header: centered, it could run into a phone's Reset, undo, and redo.
+ * trailing action. Back is a chevron; `backLabel` names where it goes, for
+ * assistive tech and as its tooltip on web. Without `onBack`, the title takes
+ * Back's place, as in a tool's header: centered, it could run into a phone's
+ * Reset, undo, and redo.
  */
 export function ScreenHeader({
 	title,
@@ -54,25 +52,28 @@ function BackButton({
 	label: string;
 	onPress: () => void;
 }) {
+	const { anchor, tooltip } = useTooltip(label);
 	return (
-		<Pressable
-			hitSlop={6}
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={label}
-			style={(state) => {
-				const { pressed, hovered } = interaction(state);
-				return [
-					styles.back,
-					webTransition,
-					hovered && styles.backHovered,
-					pressed && styles.backPressed,
-				];
-			}}
-		>
-			<Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-			<Text style={styles.backLabel}>{label}</Text>
-		</Pressable>
+		<>
+			<Pressable
+				{...anchor}
+				onPress={onPress}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.back,
+						webTransition,
+						hovered && styles.backHovered,
+						pressed && styles.backPressed,
+					];
+				}}
+			>
+				<Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
+			</Pressable>
+			{tooltip}
+		</>
 	);
 }
 
@@ -92,28 +93,22 @@ const styles = StyleSheet.create({
 		pointerEvents: "none",
 	},
 	title: {
-		fontFamily: fonts.display,
-		fontSize: 26,
+		...typography.title,
 		color: colors.textPrimary,
 	},
-	// The chevron's own side bearing does for the highlight's left padding.
+	// Pulled left so the chevron, not its target, lines up with the edge.
 	back: {
-		flexDirection: "row",
+		width: BACK_SIZE,
+		height: BACK_SIZE,
+		marginLeft: -10,
+		borderRadius: BACK_SIZE / 2,
 		alignItems: "center",
-		height: 36,
-		paddingLeft: 4,
-		paddingRight: 12,
-		marginLeft: -6,
-		borderRadius: 18,
+		justifyContent: "center",
 	},
 	backHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
 	backPressed: {
 		backgroundColor: colors.pressedOverlay,
-	},
-	backLabel: {
-		...typography.body,
-		color: colors.textPrimary,
 	},
 });

@@ -154,7 +154,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		<View style={styles.container}>
 			<ScreenHeader
 				title="Export"
-				backLabel="Edit"
+				backLabel="Back to editor"
 				onBack={() => router.back()}
 				action={
 					// Saved, the edit is finished: straight back to the projects,

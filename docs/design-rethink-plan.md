@@ -67,7 +67,9 @@ Apply rule 3 everywhere:
 * Swatches (`ColorSwatches.tsx`, `ui/RingChoice.tsx`, `ui/BackgroundPicker.tsx`, the Style glyphs in Draw and Redact): hairline ring on every swatch, gap ring when chosen.
 * Give the outline one home (a style in `theme.ts` or a small helper in `ui/`) so tools, crop ratios, and adjustments share it rather than each spelling out the `boxShadow`.
 
-### 1.4 Headers
+### 1.4 Headers (done)
+
+Built as described. Back's label now names its destination ("Back to projects", "Back to editor"), since it's only heard or seen as a tooltip. Layers already sat beside undo and redo; the 22pt gaps between them made it look adrift, so they're 14pt now, with a little more before Export.
 
 * Screen and mode titles use the system font at `title` size (`ui/ScreenHeader.tsx`). Home's "Recent" and the wordmark keep the serif.
 * Back is an icon with a 44pt target, with its label kept for accessibility and shown as a tooltip on web, instead of "‹ Projects", "‹ Edit", or "‹ Back".

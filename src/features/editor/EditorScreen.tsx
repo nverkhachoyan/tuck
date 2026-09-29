@@ -157,7 +157,10 @@ export default function EditorScreen() {
 
 	return (
 		<View style={styles.container}>
-			<ScreenHeader backLabel="Projects" onBack={() => leaveEditor(router)} />
+			<ScreenHeader
+				backLabel="Back to projects"
+				onBack={() => leaveEditor(router)}
+			/>
 			<View style={styles.status}>
 				{session.status === "opening" ? (
 					<ActivityIndicator color={colors.textSecondary} />
@@ -806,7 +809,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		<View style={styles.container}>
 			<ScreenHeader
 				title={tool ? TOOL_TITLES[tool] : undefined}
-				backLabel="Projects"
+				backLabel="Back to projects"
 				onBack={tool ? undefined : () => leaveEditor(router)}
 				action={
 					<View style={styles.headerActions}>
@@ -842,13 +845,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onPress={redo}
 						/>
 						{!tool && (
-							<Button
-								label="Export"
-								icon="share-outline"
-								variant="primary"
-								size="small"
-								onPress={() => router.push(exportHref(projectId))}
-							/>
+							<View style={styles.exportAction}>
+								<Button
+									label="Export"
+									icon="share-outline"
+									variant="primary"
+									size="small"
+									onPress={() => router.push(exportHref(projectId))}
+								/>
+							</View>
 						)}
 					</View>
 				}
@@ -1151,7 +1156,10 @@ const styles = StyleSheet.create({
 	headerActions: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 22,
+		gap: 14,
+	},
+	exportAction: {
+		marginLeft: 6,
 	},
 	status: {
 		flex: 1,
