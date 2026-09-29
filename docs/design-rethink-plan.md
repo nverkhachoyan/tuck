@@ -123,7 +123,9 @@ Each adjustment is an icon over its name. While the dial moves, the value shows 
 
 ## Phase 4: Export and home
 
-### 4.1 Export as a sheet (Propose first)
+### 4.1 Export as a sheet (done, except quick copy)
+
+The export route stays and is presented as a `transparentModal`, so the editor shows behind the sheet and features still don't import each other. Sizes are named Full size (or Largest), Medium, and Small; picking JPEG for a transparent canvas says it fills transparency black. A saved export offers Back to Projects. Opened from a link or a reload, the route still sends the user to the editor, without the sheet. Long-press to copy is deferred (see Later): it needs export's sizing and clipboard code in a shared module and a toast to confirm.
 
 * Export opens a sheet over the editor instead of navigating. It holds size as a two-way choice with names ("Full size", "Smaller") and pixels as the detail, format (JPEG or PNG, defaulting as `exportFormatFor` does, with "keeps transparency" under PNG), then Save (Download on web) as the primary action and Share and Copy side by side.
 * The `/projects/[id]/export` route still has to work from a link or a reload: send it to the editor with the sheet open, and keep `vercel.json`'s rewrite. Update AGENTS.md's routing learning.
@@ -149,6 +151,8 @@ Each adjustment is an icon over its name. While the dial moves, the value shows 
 * `?` opens an overlay listing the keyboard shortcuts from `features/editor/shortcuts.ts`.
 
 ## Later, not in this plan
+
+* Long-press Export (⌘⇧C on web) to copy the full-size image without opening the sheet. Move `exportSizes` and `copyImage` somewhere the editor can import (say `render/`), and add a small toast for "Copied".
 
 * First-use hints for pinch and tap-to-edit (carried over from `ui-polish-plan.md`).
 * Offering detected regions as soon as Redact opens.
