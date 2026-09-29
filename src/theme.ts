@@ -4,9 +4,10 @@ import { Platform, type ViewStyle } from "react-native";
 // the photo's own colors look. The accent carries the warmth.
 export const colors = {
 	background: "#0A0A0B",
-	// Behind the canvas: lighter than the bars around it, so a black canvas
-	// and the shadow under it still show.
-	canvasWell: "#141416",
+	// Behind the canvas: the screen's own color, so the photo sits on the
+	// same surface as the bars around it. The canvas's hairline edge keeps a
+	// black one visible.
+	canvasWell: "#0A0A0B",
 	surface: "#151517",
 	surfaceHover: "#1D1D20",
 	surfacePressed: "#26262A",

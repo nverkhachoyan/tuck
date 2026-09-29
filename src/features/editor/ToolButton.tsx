@@ -22,7 +22,9 @@ const ROW_GAP = 12;
 type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /**
- * An editing tool in the dock: an icon tile with a label under it.
+ * An editing tool in the dock: an icon with a label under it, and no tile
+ * around it until it's hovered, pressed, or the tool in use, which a thin
+ * outline marks.
  * `busy` swaps the icon for a spinner while the tool's work runs, and blocks
  * a second press meanwhile. With a `shortcut`, web shows it on hover.
  * `selected` marks the tool in use, and `glyph`, when given, is drawn in
@@ -158,23 +160,19 @@ const styles = StyleSheet.create({
 	tile: {
 		width: 48,
 		height: 48,
-		borderRadius: radii.large,
+		borderRadius: radii.small,
 		borderCurve: "continuous",
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.glassControl,
 	},
 	tileSelected: {
-		backgroundColor: colors.chosenSoft,
-		boxShadow: `inset 0 0 0 1px ${colors.chosenSoft}`,
+		boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
 	},
 	tileHovered: {
-		backgroundColor: colors.glassControlHover,
-		transform: [{ translateY: -1 }],
+		backgroundColor: colors.hoverOverlay,
 	},
 	tileDanger: {
 		backgroundColor: colors.dangerSoft,
-		transform: [{ translateY: -1 }],
 	},
 	tilePressed: {
 		backgroundColor: colors.pressedOverlay,

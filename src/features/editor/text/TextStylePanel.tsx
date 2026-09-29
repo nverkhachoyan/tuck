@@ -63,9 +63,9 @@ type AlignIcon =
 	| "format-align-right";
 
 // Where a scrolling row fades out, hinting there's more past the edge: to
-// the glass's color, nearly opaque, so a chip under it clearly runs on.
+// the dock's color (`colors.background`), so a chip under it clearly runs on.
 const FADE_WIDTH = 56;
-const FADE_COLOR = "rgba(28, 28, 32, 0.96)";
+const FADE_COLOR = "rgba(10, 10, 11, 1)";
 
 /** A text layer's colors, which its Color, Outline, and Box tabs pick. */
 export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
 		width: FADE_WIDTH,
 		pointerEvents: "none",
 		...gradientBackground(
-			`linear-gradient(to right, rgba(28, 28, 32, 0), ${FADE_COLOR})`,
+			`linear-gradient(to right, rgba(10, 10, 11, 0), ${FADE_COLOR})`,
 		),
 	},
 	aligns: {

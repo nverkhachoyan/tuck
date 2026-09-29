@@ -849,7 +849,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					</View>
 				}
 			/>
-			{/* The dock floats over the stage, which runs under it. */}
+			{/* The dock covers the stage's bottom, which runs under it. */}
 			<CanvasStage ref={stageRef} toBottom>
 				<EditorCanvas
 					ref={canvasRef}
@@ -1000,10 +1000,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					end={
 						tool || textEdit ? (
 							<DockButton
-								icon="checkmark"
+								icon="checkmark-outline"
 								label="Done"
 								shortcut="Escape"
-								primary
 								onPress={tool ? finishTool : finishTextEdit}
 							/>
 						) : undefined

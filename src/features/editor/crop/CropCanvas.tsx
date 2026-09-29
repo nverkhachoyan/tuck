@@ -176,8 +176,10 @@ export function CropCanvas({
 									/>
 								),
 							)}
+							{/* Only over what's drawn, so the empty space around the photo
+							    keeps the screen's color. */}
 							<Group clip={box} invertClip>
-								<Fill color={colors.scrim} />
+								<Fill color={colors.scrim} blendMode="srcATop" />
 							</Group>
 							<CropFrame crop={crop} viewport={viewport} dragging={dragging} />
 						</Group>
@@ -312,7 +314,7 @@ function CropFrame({
 }
 
 const styles = StyleSheet.create({
-	// The editor's well, so the photo doesn't jump in shade entering the tool.
+	// The editor stage's color, so nothing jumps in shade entering the tool.
 	container: {
 		flex: 1,
 		backgroundColor: colors.canvasWell,

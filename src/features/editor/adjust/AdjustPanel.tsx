@@ -6,7 +6,7 @@ import {
 	type Adjustments,
 	adjustmentKeys,
 } from "@/model/adjustments";
-import { colors, webTransition } from "@/theme";
+import { colors, radii, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 import { Dial, type DialScale } from "../Dial";
@@ -137,18 +137,17 @@ const styles = StyleSheet.create({
 		gap: 14,
 	},
 	choice: {
-		width: 36,
-		height: 36,
-		borderRadius: 18,
+		width: 40,
+		height: 40,
+		borderRadius: radii.small,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.glassControl,
 	},
 	choiceHovered: {
-		backgroundColor: colors.glassControlHover,
+		backgroundColor: colors.hoverOverlay,
 	},
 	choiceSelected: {
-		backgroundColor: colors.chosenSoft,
+		boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
 	},
 	choicePressed: {
 		backgroundColor: colors.pressedOverlay,

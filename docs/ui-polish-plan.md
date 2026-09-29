@@ -2,7 +2,7 @@
 
 An audit of every screen, done on 2026-09-27, and the changes agreed from it. With the promised features in place, the work now is making Tuck feel clean, modern, and quick: a Swiss army knife for photos and screenshots, where every tool is obvious and every edit takes seconds.
 
-The audit ran the web build at iPhone width (390 × 844) and at desktop width. The foundations are sound and stay: the neutral grays with one warm accent (`theme.ts`), the frosted dock, the welcome screen, and the New Canvas and Export screens. What's wrong is mostly inconsistency between tools, controls without names, and two layout bugs.
+The audit ran the web build at iPhone width (390 × 844) and at desktop width. The foundations are sound and stay: the neutral grays with one warm accent (`theme.ts`), the welcome screen, and the New Canvas and Export screens. (The frosted dock didn't stay: see "A flat editor" below.) What's wrong is mostly inconsistency between tools, controls without names, and two layout bugs.
 
 ## How to work through it
 
@@ -13,7 +13,13 @@ The audit ran the web build at iPhone width (390 × 844) and at desktop width. T
 
 ## Decisions already made
 
-* **Every tool finishes with a round Done beside the dock.** Revised on 2026-09-28 from Done at the top right (step 2), which was out of a thumb's reach on a phone. Done is a round accent ✓ just right of the dock (`DockButton` in the dock's `end` slot), and Crop adds a round glass ✕ Cancel to its left (`start`). They sit beside the dock rather than in it, so the dock keeps its height and the canvas never moves; the dock narrows to make room. While typing, the dock rides the keyboard, bringing the style panel and Done with it. A tool's header keeps its title, undo and redo, and Reset. Export stays at the editor's top right: it leaves the editor, like Back.
+* **Every tool finishes with Done at the dock's right end.** Revised on 2026-09-28 from Done at the top right (step 2), which was out of a thumb's reach on a phone, then flattened the same day (see "A flat editor"). Done is a plain ✓ glyph at the dock's right end (`DockButton` in the dock's `end` slot), and Crop adds a plain ✕ Cancel at its left end (`start`). They're part of the dock's own row, so the dock keeps its height and the canvas never moves. While typing, the dock rides the keyboard, bringing the style panel and Done with it. A tool's header keeps its title, undo and redo, and Reset. Export stays at the editor's top right: it leaves the editor, like Back.
+* **A flat editor**, decided on 2026-09-28 after comparing with Snapseed. The photo is the only thing that stands out, so the editor's chrome is one surface in `colors.background`:
+  * The dock is an opaque bar across the bottom, down to the screen's edge, not a frosted panel floating over the canvas (`Dock.tsx`). The canvas stage behind the photo is the same color, with no rounded, lighter well (`CanvasStage.tsx`); the canvas's own hairline edge keeps a black photo visible.
+  * Controls have no fill of their own. A tool is an icon over its label (`ToolButton`); Done and Cancel are bare glyphs. Hover and press lay `hoverOverlay` and `pressedOverlay` over them.
+  * The chosen option among controls (a tool, an adjustment, an aspect ratio) gets a thin outline in `colors.chosen` with `radii.small` corners, not a filled tile. Color stays for what really is a color, like a Style tile's swatch.
+  * The accent is for Export and for the value being changed (a dial's marker), not for finishing a tool.
+  * Still to decide: the cards and bars that float over the canvas (tool options, the selection bar, the Find card, the layers sidebar) are still frosted `GlassView`s with large corners. Either make them opaque with small corners and a hairline border, or have options rise out of the dock in its color, as Snapseed's do. Adjust could also show its value large above the dial.
 * The user approved every item below, including the clipboard features and the new `expo-clipboard` dependency they need.
 
 ## Step 1 — Fix what's broken (done)
@@ -71,7 +77,7 @@ Recommended direction, to propose:
 
 An alternative to show alongside: keep the style panel in the dock whenever text is selected, and move Duplicate, Delete, Stretch, and Arrange for every layer type into a small labeled bar that floats by the selection. It's more modern, but much more work with the Skia canvas and its gestures.
 
-## Step 4 — Draw: Brush, Shape, Eraser, Style
+## Step 4 — Draw: Brush, Shape, Eraser, Style (done)
 
 Today the dock shows Pen, Marker, Neon, Shape, and Eraser (`draw/DrawPanel.tsx`). Color and size open only when the tool in use is tapped a second time, which a small colored dot on its tile is meant to hint at. Redact, by contrast, has a visible Style button. Make Draw match Redact:
 
@@ -83,7 +89,7 @@ Today the dock shows Pen, Marker, Neon, Shape, and Eraser (`draw/DrawPanel.tsx`)
 
 `draw/brushSettings.ts` is a saved preference. Keep reading what older builds wrote: `tool` can still be "pen", "marker", or "neon". Add whatever field remembers the last brush type, so that Brush → Shape → Brush returns to the neon pen, and give it a parser default. Cover it in `brushSettings.test.ts`.
 
-## Step 5 — Redact
+## Step 5 — Redact (done)
 
 * **Label the effects.** The Style card's Effect row (`redact/RedactPanel.tsx`) shows three icons with no names. Give them visible captions: Solid, Blur, and Pixelate. Check that the captions still leave room for the color row on a phone.
 * **One tap finds everything.** Today Find asks "Faces or Text?" first. Instead, Find looks for faces and text together, using whichever detectors this device has, and shows every region it finds, all selected (`useImageDetection` already preselects). The card says how many it found and how many are selected, offers All and None, and has a primary "Redact 5" (today it says "Add 5"). Run the two detectors one after the other, not at once, because on web MediaPipe and Tesseract are both heavy. If one detector fails or isn't available, still show what the other found, and mention it in one line. If both find nothing, show "Nothing found" with Try Again. This changes `detection/useImageDetection.ts`'s state from one `feature` to both; regions could carry their kind, if faces and text should be outlined differently. Keep detection's rule from VISION.md: it proposes redactions and never applies them by itself.

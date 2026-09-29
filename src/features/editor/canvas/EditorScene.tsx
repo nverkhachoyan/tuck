@@ -75,7 +75,7 @@ const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
 const SELECTION_HALO_PX = 3.5;
 const SELECTION_HALO = "rgba(0, 0, 0, 0.22)";
-// The canvas's shadow on the well around it, and the hairline at its edge
+// The canvas's shadow on the stage around it, and the hairline at its edge
 // that keeps a black canvas visible, in screen pixels.
 const SHADOW_OFFSET_PX = 6;
 const SHADOW_BLUR_PX = 18;
@@ -166,7 +166,7 @@ type EditorSceneProps = {
  *
  * A locked image is cut off at the canvas's edge, like a crop. Once unlocked
  * it moves like any layer, so it fades past the edge instead. The canvas
- * sits on the well like a print, with a shadow and an edge around it.
+ * sits on the stage like a print, with a shadow and an edge around it.
  */
 export function EditorScene({
 	document,

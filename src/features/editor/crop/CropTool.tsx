@@ -12,7 +12,7 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import { colors, webTransition } from "@/theme";
+import { colors, radii, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { interaction } from "@/ui/interaction";
@@ -216,7 +216,7 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 				panel="crop"
 				start={
 					<DockButton
-						icon="close"
+						icon="close-outline"
 						label="Cancel"
 						shortcut="Escape"
 						onPress={onCancel}
@@ -224,10 +224,9 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 				}
 				end={
 					<DockButton
-						icon="checkmark"
+						icon="checkmark-outline"
 						label="Done"
 						shortcut="Enter"
-						primary
 						onPress={controller.done}
 					/>
 				}
@@ -377,16 +376,15 @@ const styles = StyleSheet.create({
 	},
 	chip: {
 		height: 32,
-		paddingHorizontal: 14,
-		borderRadius: 16,
-		backgroundColor: colors.glassControl,
+		paddingHorizontal: 12,
+		borderRadius: radii.small,
 		justifyContent: "center",
 	},
 	chipHovered: {
-		backgroundColor: colors.glassControlHover,
+		backgroundColor: colors.hoverOverlay,
 	},
 	chipSelected: {
-		backgroundColor: colors.chosen,
+		boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
 	},
 	chipPressed: {
 		transform: [{ scale: 0.96 }],
@@ -397,7 +395,7 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	chipLabelSelected: {
-		color: colors.onChosen,
+		color: colors.textPrimary,
 		fontWeight: "600",
 	},
 	actions: {
