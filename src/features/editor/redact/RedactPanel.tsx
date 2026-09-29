@@ -70,7 +70,7 @@ export function RedactPanel({
 			<ToolButton
 				label="Find"
 				icon="image-search-outline"
-				selected={findOpen}
+				open={findOpen}
 				busy={finding}
 				disabled={!hasTarget}
 				onPress={onToggleFind}
@@ -79,7 +79,7 @@ export function RedactPanel({
 				label="Style"
 				icon="palette-outline"
 				glyph={<EffectGlyph settings={settings} effect={settings.effect} />}
-				selected={optionsOpen}
+				open={optionsOpen}
 				onPress={onToggleOptions}
 			/>
 		</ToolRow>
@@ -87,7 +87,7 @@ export function RedactPanel({
 }
 
 /**
- * How the redaction looks, and the brush's size, in a card over the canvas
+ * How the redaction looks, and the brush's size, in a tray above the dock
  * (see `ToolOptions`). A box has no size, and an eraser no look.
  */
 export function RedactOptions({
@@ -199,7 +199,7 @@ export function RedactOptions({
 	);
 }
 
-/** An effect icon and its visible name, compact enough to leave the card room. */
+/** An effect icon and its visible name, compact enough to leave the tray room. */
 function EffectChoice({
 	label,
 	selected,

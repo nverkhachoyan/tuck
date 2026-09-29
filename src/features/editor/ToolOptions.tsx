@@ -1,15 +1,63 @@
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { PenTip } from "@/model/document";
 import { colors, radii, typography } from "@/theme";
-import { GlassView } from "@/ui/GlassView";
+
+// The dock's widest, so a tray lines up with the dock it rises out of.
+const TRAY_MAX_WIDTH = 520;
 
 /**
- * A tool's options, in a card over the canvas, `bottomInset` up from its
- * bottom, just above the dock. A tap anywhere else on the canvas closes it,
- * rather than drawing.
+ * Told the open tray's height, or 0 once it closes, so the canvas can fit
+ * the document above it rather than behind it.
  */
+export const TrayHeight = createContext<(height: number) => void>(() => {});
+
+/**
+ * A panel rising out of the dock, which sits `bottomInset` up from the
+ * canvas's bottom. It's opaque, so it reads the same over any photo, and
+ * the canvas refits above it (see `TrayHeight`). With `onDismiss`, a tap
+ * anywhere else on the canvas closes it rather than drawing.
+ */
+export function Tray({
+	bottomInset,
+	dismissLabel,
+	onDismiss,
+	children,
+}: {
+	bottomInset: number;
+	dismissLabel?: string;
+	onDismiss?: () => void;
+	children: ReactNode;
+}) {
+	const setHeight = useContext(TrayHeight);
+	useEffect(() => () => setHeight(0), [setHeight]);
+	return (
+		<View style={styles.layer}>
+			{/* Behind the tray, not around it: on web, a click on the tray would
+			    bubble up to it and close the tray. */}
+			{onDismiss && (
+				<Pressable
+					style={StyleSheet.absoluteFill}
+					onPress={onDismiss}
+					accessibilityLabel={dismissLabel}
+				/>
+			)}
+			<View style={[styles.trayArea, { bottom: bottomInset }]}>
+				<Animated.View
+					entering={FadeIn.duration(160)}
+					exiting={FadeOut.duration(100)}
+					style={styles.tray}
+					onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
+				>
+					{children}
+				</Animated.View>
+			</View>
+		</View>
+	);
+}
+
+/** A tool's options, in a tray. */
 export function ToolOptions({
 	closeLabel,
 	bottomInset,
@@ -22,29 +70,18 @@ export function ToolOptions({
 	children: ReactNode;
 }) {
 	return (
-		<Animated.View
-			entering={FadeIn.duration(120)}
-			exiting={FadeOut.duration(100)}
-			style={StyleSheet.absoluteFill}
+		<Tray
+			bottomInset={bottomInset}
+			dismissLabel={closeLabel}
+			onDismiss={onClose}
 		>
-			{/* Behind the card, not around it: on web, a click on the card would
-				bubble up to it and close the card. */}
-			<Pressable
-				style={StyleSheet.absoluteFill}
-				onPress={onClose}
-				accessibilityLabel={closeLabel}
-			/>
-			<View style={[styles.cardArea, { bottom: bottomInset + 10 }]}>
-				<GlassView style={styles.card} contentStyle={styles.cardContent}>
-					{children}
-				</GlassView>
-			</View>
-		</Animated.View>
+			<View style={styles.options}>{children}</View>
+		</Tray>
 	);
 }
 
 /**
- * One of the card's options: its name, then its choices under it, which
+ * One of the tray's options: its name, then its choices under it, which
  * leaves a phone room for a row of seven swatches.
  */
 export function ToolOption({
@@ -104,20 +141,34 @@ export function SizeDot({
 }
 
 const styles = StyleSheet.create({
-	cardArea: {
+	// Plain views pass touches through where there's no tray; Reanimated's
+	// animated view would drop `box-none` on web.
+	layer: {
+		...StyleSheet.absoluteFill,
+		pointerEvents: "box-none",
+	},
+	trayArea: {
 		position: "absolute",
-		left: 10,
-		right: 10,
+		left: 0,
+		right: 0,
 		alignItems: "center",
 		pointerEvents: "box-none",
 	},
-	card: {
-		borderRadius: radii.large,
+	tray: {
+		width: "100%",
+		maxWidth: TRAY_MAX_WIDTH,
+		borderTopLeftRadius: radii.large,
+		borderTopRightRadius: radii.large,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderBottomWidth: 0,
+		borderColor: colors.border,
+		backgroundColor: colors.surface,
 	},
-	cardContent: {
+	options: {
 		gap: 6,
 		paddingHorizontal: 20,
-		paddingVertical: 10,
+		paddingTop: 12,
+		paddingBottom: 10,
 	},
 	option: {
 		gap: 2,

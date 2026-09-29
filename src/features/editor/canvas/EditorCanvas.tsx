@@ -19,7 +19,9 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+	Easing,
 	useAnimatedStyle,
+	useDerivedValue,
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
@@ -83,6 +85,8 @@ import { usePaintGesture } from "./usePaintGesture";
 import { type TextPressPhase, useTextEditGesture } from "./useTextEditGesture";
 import { useTrackpadPinch } from "./useTrackpadPinch";
 
+// How the drawing eases to a new fit.
+const REFIT = { duration: 250, easing: Easing.bezier(0.2, 0, 0, 1) };
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 16;
@@ -268,6 +272,23 @@ export function EditorCanvas({
 		[documentSize, size, bottomInset],
 	);
 	const { scale, offsetX, offsetY } = viewport;
+	// What the canvas draws eases to a new fit, as when a tray opens or the
+	// keyboard rises, rather than jumping. Gestures use the new fit at once.
+	const shownX = useSharedValue(offsetX);
+	const shownY = useSharedValue(offsetY);
+	const shownScale = useSharedValue(scale);
+	useLayoutEffect(() => {
+		const ease = shownScale.value > 0 && scale > 0;
+		const to = (value: number) => (ease ? withTiming(value, REFIT) : value);
+		shownX.value = to(offsetX);
+		shownY.value = to(offsetY);
+		shownScale.value = to(scale);
+	}, [offsetX, offsetY, scale, shownX, shownY, shownScale]);
+	const shownTransform = useDerivedValue(() => [
+		{ translateX: shownX.value },
+		{ translateY: shownY.value },
+		{ scale: shownScale.value },
+	]);
 
 	const targets = useMemo(
 		() => (scale > 0 ? layerTargets(document, scale) : []),
@@ -665,13 +686,7 @@ export function EditorCanvas({
 				    work in the canvas's color space, so a P3 one would look stronger. */}
 					<Canvas style={styles.canvas} colorSpace="srgb">
 						{scale > 0 && (
-							<Group
-								transform={[
-									{ translateX: offsetX },
-									{ translateY: offsetY },
-									{ scale },
-								]}
-							>
+							<Group transform={shownTransform}>
 								<EditorScene
 									document={document}
 									selectedLayerId={holdingStill ? null : selectedLayerId}

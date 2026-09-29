@@ -31,7 +31,7 @@ const TOOL_ICONS = {
 /**
  * The drawing tools, in place of the toolbar while drawing: Brush returns to
  * the last pen, Shape drags its shown kind, Eraser removes marks, and Style
- * opens the shared options card. Tapping the active tool opens that card too.
+ * opens the shared options tray. Tapping the active tool opens that tray too.
  */
 export function DrawPanel({
 	settings,
@@ -76,7 +76,7 @@ export function DrawPanel({
 				label="Style"
 				icon="palette-outline"
 				glyph={<ColorGlyph color={settings.color} />}
-				selected={optionsOpen}
+				open={optionsOpen}
 				onPress={onToggleOptions}
 			/>
 		</ToolRow>
@@ -84,8 +84,8 @@ export function DrawPanel({
 }
 
 /**
- * The brush's color and size, and the shape tool's kind, in a card over the
- * canvas (see `ToolOptions`). The custom swatch opens a picker for any color
+ * The brush's color and size, and the shape tool's kind, in a tray above the
+ * dock (see `ToolOptions`). The custom swatch opens a picker for any color
  * (see `ColorOptions`).
  */
 export function BrushOptions({

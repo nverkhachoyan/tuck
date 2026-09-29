@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { ImageDetectionState } from "@/detection/useImageDetection";
-import { colors, radii, typography } from "@/theme";
+import { colors, typography } from "@/theme";
 import { Button } from "@/ui/Button";
-import { GlassView } from "@/ui/GlassView";
+import { Tray } from "../ToolOptions";
 
-// Narrower than this, a card's text goes above its buttons rather than beside
+// Narrower than this, the tray's text goes above its buttons rather than beside
 // them, where the buttons would leave it a few letters' width.
 const STACK_BELOW_WIDTH = 480;
 
-/** The compact workflow for finding, choosing, and applying redactions. */
+/**
+ * The compact workflow for finding, choosing, and applying redactions, in a
+ * tray. It has no backdrop: taps on the canvas toggle the regions found.
+ */
 export function DetectionOptions({
 	state,
 	visibleIndices,
@@ -32,64 +34,52 @@ export function DetectionOptions({
 	onApply: () => void;
 	onClose: () => void;
 }) {
-	// The card's own width, not the window's: the layers sidebar can narrow
+	// The tray's own width, not the window's: the layers sidebar can narrow
 	// the canvas on web.
 	const [stacked, setStacked] = useState(false);
 	return (
-		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+		<Tray bottomInset={bottomInset}>
 			<View
-				pointerEvents="box-none"
-				style={[styles.area, { bottom: bottomInset + 10 }]}
+				style={[styles.content, stacked && styles.stacked]}
+				onLayout={(event) =>
+					setStacked(event.nativeEvent.layout.width < STACK_BELOW_WIDTH)
+				}
 			>
-				<Animated.View
-					entering={FadeIn.duration(120)}
-					exiting={FadeOut.duration(100)}
-					style={styles.cardWrapper}
-					onLayout={(event) =>
-						setStacked(event.nativeEvent.layout.width < STACK_BELOW_WIDTH)
-					}
-				>
-					<GlassView
-						style={styles.card}
-						contentStyle={[styles.content, stacked && styles.stacked]}
-					>
-						{state.status === "idle" && (
-							<Start onStart={onStart} onClose={onClose} />
-						)}
-						{state.status === "working" && (
-							<Status
-								busy
-								title="Finding faces and text…"
-								message="This can take a moment the first time."
-								onClose={onClose}
-							/>
-						)}
-						{state.status === "found" && (
-							<Found
-								count={visibleIndices.length}
-								selected={selectedCount}
-								onSelectAll={onSelectAll}
-								onClear={onClear}
-								onApply={onApply}
-								issue={state.issues[0]?.message}
-								onClose={onClose}
-							/>
-						)}
-						{state.status === "empty" && (
-							<Status
-								title="Nothing found"
-								message={
-									state.issues[0]?.message ?? "Try another photo or scan again."
-								}
-								action="Try Again"
-								onAction={onStart}
-								onClose={onClose}
-							/>
-						)}
-					</GlassView>
-				</Animated.View>
+				{state.status === "idle" && (
+					<Start onStart={onStart} onClose={onClose} />
+				)}
+				{state.status === "working" && (
+					<Status
+						busy
+						title="Finding faces and text…"
+						message="This can take a moment the first time."
+						onClose={onClose}
+					/>
+				)}
+				{state.status === "found" && (
+					<Found
+						count={visibleIndices.length}
+						selected={selectedCount}
+						onSelectAll={onSelectAll}
+						onClear={onClear}
+						onApply={onApply}
+						issue={state.issues[0]?.message}
+						onClose={onClose}
+					/>
+				)}
+				{state.status === "empty" && (
+					<Status
+						title="Nothing found"
+						message={
+							state.issues[0]?.message ?? "Try another photo or scan again."
+						}
+						action="Try Again"
+						onAction={onStart}
+						onClose={onClose}
+					/>
+				)}
 			</View>
-		</View>
+		</Tray>
 	);
 }
 
@@ -213,21 +203,6 @@ function Status({
 }
 
 const styles = StyleSheet.create({
-	area: {
-		position: "absolute",
-		left: 10,
-		right: 10,
-		alignItems: "center",
-	},
-	cardWrapper: {
-		width: "100%",
-		maxWidth: 540,
-	},
-	card: {
-		width: "100%",
-		maxWidth: 540,
-		borderRadius: radii.large,
-	},
 	content: {
 		flexDirection: "row",
 		alignItems: "center",

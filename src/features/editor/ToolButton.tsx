@@ -33,8 +33,10 @@ type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
  * outline marks.
  * `busy` swaps the icon for a spinner while the tool's work runs, and blocks
  * a second press meanwhile. With a `shortcut`, web shows it on hover.
- * `selected` marks the tool in use, and `glyph`, when given, is drawn in
- * place of the icon (which still names the tool to the type checker).
+ * `selected` marks the tool in use, and `open` a button whose tray is open,
+ * by its label alone, so only the tool in use is outlined. `glyph`, when
+ * given, is drawn in place of the icon (which still names the tool to the
+ * type checker).
  */
 export function ToolButton({
 	label,
@@ -44,6 +46,7 @@ export function ToolButton({
 	tone = "default",
 	disabled = false,
 	selected,
+	open = false,
 	busy = false,
 	onPress,
 }: {
@@ -54,6 +57,7 @@ export function ToolButton({
 	tone?: "default" | "danger";
 	disabled?: boolean;
 	selected?: boolean;
+	open?: boolean;
 	busy?: boolean;
 	onPress: () => void;
 }) {
@@ -69,7 +73,12 @@ export function ToolButton({
 				onPress={onPress}
 				accessibilityRole="button"
 				accessibilityLabel={label}
-				accessibilityState={{ disabled: inactive, busy, selected }}
+				accessibilityState={{
+					disabled: inactive,
+					busy,
+					selected,
+					expanded: open,
+				}}
 				style={[styles.container, disabled && styles.disabled]}
 			>
 				{(state) => {
@@ -100,7 +109,11 @@ export function ToolButton({
 								)}
 							</View>
 							<Text
-								style={[styles.label, (lit || selected) && styles.labelLit]}
+								style={[
+									styles.label,
+									(lit || selected || open) && styles.labelLit,
+									open && styles.labelOpen,
+								]}
 							>
 								{label}
 							</Text>
@@ -189,5 +202,8 @@ const styles = StyleSheet.create({
 	},
 	labelLit: {
 		color: colors.textPrimary,
+	},
+	labelOpen: {
+		fontWeight: "700",
 	},
 });

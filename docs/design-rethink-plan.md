@@ -98,7 +98,9 @@ Built in `store/editorSlice.ts` as `beginSession`, `commitSession`, and `cancelS
 
 ## Phase 3: Trays
 
-### 3.1 Trays replace the floating cards (Propose first)
+### 3.1 Trays replace the floating cards (done)
+
+Built with the review's mockup as the proposal. `Tray` in `ToolOptions.tsx` sits on the dock and reports its height through the `TrayHeight` context, and the editor fits the canvas above the dock and the tray. `EditorCanvas` eases what it draws to any new fit over 250ms (so the keyboard and the layers sidebar ease it too), while gestures use the new fit at once. Crop's aspect row already sat on the dock's color above it, so it stays. `ToolButton` takes `open` for Style and Find.
 
 * Draw's and Redact's Style cards (`ToolOptions.tsx`, `draw/DrawPanel.tsx`, `redact/RedactPanel.tsx`), the Find card (`redact/DetectionOptions.tsx`), and Crop's aspect row become trays that rise out of the dock, opaque, in `colors.surface`.
 * The canvas refits above an open tray, animated over about 250ms (`useDockInset` grows by the tray's height). Selection changes never move it.
