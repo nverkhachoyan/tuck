@@ -440,7 +440,8 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		flexWrap: "wrap",
 		gap: GAP,
-		paddingBottom: 12,
+		// Clear of the fade over the list's foot when the tiles are below it.
+		paddingBottom: 24,
 	},
 	card: {
 		gap: 6,

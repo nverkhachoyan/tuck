@@ -35,8 +35,14 @@ import {
 } from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
+import { gradientBackground } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { LogoMark } from "@/ui/LogoMark";
+
+// Wide enough to be used with a mouse, where reach doesn't matter: the ways
+// to start head the projects, as a web app's "new" actions usually do.
+// Narrower, they sit at the bottom, under the thumb.
+const START_ON_TOP_MIN_WIDTH = 1024;
 
 const choosePhotoLabels: Record<HomeStatus, string> = {
 	loading: "Loading…",
@@ -62,8 +68,10 @@ export default function HomeScreen() {
 		duplicateProject,
 		deleteProject,
 	} = useHomeProjects();
+	const { width } = useWindowDimensions();
 	// Room for the hint about pasting and dropping.
-	const wide = useWindowDimensions().width >= 560;
+	const wide = width >= 560;
+	const startOnTop = width >= START_ON_TOP_MIN_WIDTH;
 	const { bottom } = useSafeAreaInsets();
 
 	// On web, an image pasted or dropped here opens like a chosen one. Only
@@ -89,10 +97,13 @@ export default function HomeScreen() {
 
 	const hasProjects = projects.length > 0;
 	const blocked = status !== "idle";
+	// A bar under the projects gives up less of the grid.
+	const compact = hasProjects && !startOnTop;
 	const start = (
 		<View style={styles.start}>
 			<StartTile
 				label={choosePhotoLabels[status]}
+				compact={compact}
 				icon="images-outline"
 				primary
 				disabled={blocked}
@@ -100,12 +111,14 @@ export default function HomeScreen() {
 			/>
 			<StartTile
 				label="Paste"
+				compact={compact}
 				icon="clipboard-outline"
 				disabled={blocked}
 				onPress={pasteImage}
 			/>
 			<StartTile
 				label="New Canvas"
+				compact={compact}
 				icon="add"
 				disabled={blocked}
 				onPress={() => router.push("/create")}
@@ -148,17 +161,21 @@ export default function HomeScreen() {
 				</View>
 			)}
 
-			{hasProjects && start}
+			{hasProjects && startOnTop && start}
 
 			{hasProjects && (
-				<ProjectList
-					projects={projects}
-					disabled={blocked}
-					onOpen={openProject}
-					onRename={renameProject}
-					onDuplicate={duplicateProject}
-					onDelete={deleteProject}
-				/>
+				<View style={styles.projects}>
+					<ProjectList
+						projects={projects}
+						disabled={blocked}
+						onOpen={openProject}
+						onRename={renameProject}
+						onDuplicate={duplicateProject}
+						onDelete={deleteProject}
+					/>
+					{/* The grid scrolls out of sight softly above the bar. */}
+					{!startOnTop && <View style={styles.projectsFade} />}
+				</View>
 			)}
 
 			{status === "saveFailed" && (
@@ -181,6 +198,8 @@ export default function HomeScreen() {
 				</View>
 			)}
 
+			{hasProjects && !startOnTop && start}
+
 			{!hasProjects && (
 				<View style={styles.startArea}>
 					{start}
@@ -201,12 +220,14 @@ function StartTile({
 	label,
 	icon,
 	primary = false,
+	compact,
 	disabled,
 	onPress,
 }: {
 	label: string;
 	icon: ComponentProps<typeof Ionicons>["name"];
 	primary?: boolean;
+	compact: boolean;
 	disabled: boolean;
 	onPress: () => void;
 }) {
@@ -221,6 +242,7 @@ function StartTile({
 				const { pressed, hovered } = interaction(state);
 				return [
 					styles.tile,
+					compact && styles.tileCompact,
 					primary && styles.tilePrimary,
 					webTransition,
 					hovered && (primary ? styles.tilePrimaryHovered : styles.tileHovered),
@@ -316,6 +338,20 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 		textAlign: "center",
 	},
+	projects: {
+		flex: 1,
+	},
+	projectsFade: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		height: space.lg,
+		pointerEvents: "none",
+		...gradientBackground(
+			"linear-gradient(to bottom, rgba(10, 10, 11, 0), rgba(10, 10, 11, 1))",
+		),
+	},
 	startArea: {
 		gap: 14,
 	},
@@ -335,6 +371,9 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.border,
 		backgroundColor: colors.surface,
+	},
+	tileCompact: {
+		height: 64,
 	},
 	tilePrimary: {
 		borderColor: colors.accent,
