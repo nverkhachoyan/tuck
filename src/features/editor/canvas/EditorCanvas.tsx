@@ -36,7 +36,6 @@ import {
 	hitTestBox,
 	type Point,
 	type Rect,
-	type Size,
 	type Transform,
 	toLayerSpace,
 } from "@/model/geometry";
@@ -51,17 +50,7 @@ import {
 	cursorStyle,
 } from "../handles/canvasCursor";
 import { handleMetrics, handleUnder } from "../handles/handleMetrics";
-import {
-	areaMiddle,
-	type DocumentViewport,
-	type ViewFrame,
-	type ViewZoom,
-	viewPointToDocument,
-	viewportForZoom,
-	visibleDocumentArea,
-	zoomForViewport,
-	zoomViewportAbout,
-} from "../viewport";
+import { type ViewFrame, viewPointToDocument } from "../viewport";
 import { createDoubleTap } from "./doubleTap";
 import {
 	type CanvasTool,
@@ -88,22 +77,14 @@ import {
 	placeSelectionBar,
 	selectionScreenBounds,
 } from "./selectionBarPlacement";
-import {
-	readShownViewport,
-	type ShownViewport,
-	useShownViewport,
-} from "./shownViewport";
+import { readShownViewport, type ShownViewport } from "./shownViewport";
 import { insideDocument, strokeIntent, TAP_SLOP_PX } from "./strokeIntent";
+import { useCanvasZoom } from "./useCanvasZoom";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
 import { type TextPressPhase, useTextEditGesture } from "./useTextEditGesture";
 import { useViewGesture } from "./useViewGesture";
-import { useWheelZoom } from "./useWheelZoom";
 
-// How much each zoom in or out by key scales the view.
-const ZOOM_STEP = 2;
-// A double tap where there's nothing to select zooms in by this much.
-const DOUBLE_TAP_ZOOM = 3;
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 16;
@@ -319,75 +300,21 @@ export function EditorCanvas({
 		}),
 		[documentSize, size, bottomInset, leftInset, rightInset],
 	);
-	// Kept with the size it was zoomed at, so a crop drops it.
-	const [zoomed, setZoomed] = useState<{
-		zoom: ViewZoom;
-		documentSize: Size;
-	} | null>(null);
-	const zoom = zoomed?.documentSize === documentSize ? zoomed.zoom : null;
-	const viewport = useMemo(() => viewportForZoom(frame, zoom), [frame, zoom]);
+	const {
+		zoom,
+		viewport,
+		shown,
+		commitViewport,
+		tapOnNothing,
+		zoomView,
+		visibleArea,
+	} = useCanvasZoom(frame, containerRef);
 	const { scale } = viewport;
-	// What the canvas draws eases to a new viewport, as when a tray opens or
-	// the keyboard rises, rather than jumping. Gestures use the new one at
-	// once.
-	const shown = useShownViewport(viewport);
 	const shownTransform = useDerivedValue(() => [
 		{ translateX: shown.offsetX.value },
 		{ translateY: shown.offsetY.value },
 		{ scale: shown.scale.value },
 	]);
-	// Where the view is headed, as of its last change: a render, or a zoom
-	// that's still to render.
-	const latestViewport = useRef(viewport);
-	useLayoutEffect(() => {
-		latestViewport.current = viewport;
-	}, [viewport]);
-	const setZoom = useCallback(
-		(zoom: ViewZoom | null) => {
-			latestViewport.current = viewportForZoom(frame, zoom);
-			setZoomed(zoom && { zoom, documentSize });
-		},
-		[frame, documentSize],
-	);
-	const commitViewport = useCallback(
-		(next: DocumentViewport) => setZoom(zoomForViewport(frame, next)),
-		[frame, setZoom],
-	);
-	const flushWheel = useWheelZoom({
-		target: containerRef,
-		shown,
-		frame,
-		onCommit: commitViewport,
-	});
-	// Scales the view by `factor` about `point`, or returns it to the fit
-	// without one, easing there.
-	const zoomTo = useCallback(
-		(factor: number | null, point: Point) => {
-			flushWheel();
-			setZoom(
-				factor === null
-					? null
-					: zoomForViewport(
-							frame,
-							zoomViewportAbout(frame, latestViewport.current, factor, point),
-						),
-			);
-		},
-		[flushWheel, frame, setZoom],
-	);
-	const [emptyTaps] = useState(createDoubleTap);
-	// A tap on nothing to select: a second one soon after the first, and near
-	// it, zooms in there, or back to the fit. Any other tap calls it with
-	// null, so it doesn't count toward one.
-	const tapOnNothing = useCallback(
-		(point: Point | null) => {
-			if (!point) emptyTaps.reset();
-			else if (emptyTaps.tap(point)) {
-				zoomTo(zoom ? null : DOUBLE_TAP_ZOOM, point);
-			}
-		},
-		[emptyTaps, zoom, zoomTo],
-	);
 
 	const targets = useMemo(
 		() => (scale > 0 ? layerTargets(document, scale) : []),
@@ -588,18 +515,6 @@ export function EditorCanvas({
 		dragAlone,
 		onCommit: commitViewport,
 	});
-	const zoomView = useCallback(
-		(to: "in" | "out" | "fit") => {
-			const factor =
-				to === "fit" ? null : to === "in" ? ZOOM_STEP : 1 / ZOOM_STEP;
-			zoomTo(factor, areaMiddle(frame.area));
-		},
-		[zoomTo, frame],
-	);
-	const visibleArea = useCallback(() => {
-		flushWheel();
-		return visibleDocumentArea(frame, latestViewport.current);
-	}, [flushWheel, frame]);
 	const nudgeSelection = useCallback(
 		(dx: number, dy: number) => {
 			if (!selectedLayer || scale === 0) return;

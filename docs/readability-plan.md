@@ -163,7 +163,9 @@ Built as described. `canvas/strokeIntent.ts` returns one of `pick`, `tapAway`, `
 * A `detectionAt(regions, point, padding)` hit test beside `hitTest.ts`, preferring the smallest region, with tests.
 * One double-tap tracker used by the empty-tap zoom and the text word selection.
 
-### 3.2 A zoom hook
+### 3.2 A zoom hook (done)
+
+Built as described: `canvas/useCanvasZoom.ts` takes the frame and the wheel's target, and returns `zoom`, `viewport`, `shown`, `commitViewport`, `tapOnNothing`, `zoomView`, and `visibleArea`. The canvas lost about 95 lines. Checked on web in headless Chrome: ⌘+, ⌘−, and ⌘0; Fit; a trackpad pinch (a wheel with Ctrl) and a plain wheel panning while zoomed; a tray opening while zoomed; a double tap back to the fit; and crops on a landscape canvas, where one that keeps the size keeps the zoom and a 90° turn drops it. Checked on the iOS simulator: a two-finger pinch, and Fit.
 
 Move finding 6's state and callbacks into `canvas/useCanvasZoom.ts`, returning the viewport, `zoom`, what the imperative handle needs (`zoomView`, `visibleArea`), `commitViewport`, and `tapOnNothing`. Verify: pinch, trackpad pinch and wheel on web, ⌘+ ⌘− ⌘0, double tap on nothing, Fit, a crop resetting the zoom, and a tray opening while zoomed.
 
