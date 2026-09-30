@@ -52,13 +52,74 @@ Built as described. `runAction` in `ExportScreen.tsx` takes the busy state, the 
 
 The goal is a `ScreenContent` that reads as composition: hooks that each own one concern, and JSX that places what they return. A reasonable target is under 400 lines.
 
-### 2.1 An editor mode reducer — **Propose first**
+### 2.1 An editor mode reducer — **Propose first** (done)
+
+Built as approved. `editorMode.ts` holds the mode union, its reducer, `settle`, `shortcutCommand`, and `takesKeys`, with 26 tests: the transitions, each correction, and each key rule. `useEditorMode.ts` holds it for the screen and settles it as it renders. In `ScreenContent`, nine `useState`s and three render-time corrections became one hook, and `handleShortcut` became a lookup plus a `switch` that runs the result. `TextColorKey` moved to `editorMode.ts`. Checked on web with headless Chrome: each tool from the rail, its key, and the dock; Escape at each level (eyedropper, tool, Add, the shortcuts list, crop, typing); the eyedropper from Draw, Redact, Find, and a text color picker while typing; the layers sheet closing for a tool and staying open under crop at 390pt; Find and Adjust put down by a redo, with Draw then opening with its tray closed; and a picker closed by undo selecting other text, which redo doesn't reopen. Bug 1 still reproduces, as intended until 2.1b.
 
 Put findings 1 and 4's precedence in one pure module, `features/editor/editorMode.ts`, with tests. Roughly: a base mode (`idle`, `tool` with its options' open state, `text` with its edit, `crop`), overlays that sit on a mode (the eyedropper, a text color picker), and sheets (layers, Add, shortcuts). Its transitions carry the rules that are scattered today: starting anything closes the layers sheet, starting a tool from the rail finishes the one in use, and a tool whose target is gone reads as no tool. It's derived from the document, not corrected by a `setState` during render.
 
 * Move `handleShortcut`'s precedence into a pure function of the mode, the selection, and the shortcut, returning what to do, and test it against today's behavior shortcut by shortcut.
 * Before building, write down today's precedence from `handleShortcut`, `fromRail`, and the render-time corrections, and show the proposed state type beside it.
 * Verify: each tool opens and closes from the dock, the rail (at 1024pt and wider), and its key; Escape at each level; the eyedropper from Draw, Redact, Find, and a text color picker while typing; the layers sheet closing when a tool starts.
+
+#### Proposal (approved)
+
+Approved on 2026-09-30, with the tray's open state inside the tool mode. That fixes the leftover open tray in bug 2 by construction, and it's the one behavior change 2.1 makes. The corrections settle and are kept.
+
+**Today.** Ten pieces of state: `tool`, `adjustedId`, `toolOptionsOpen`, `textEdit`, `cropping`, `eyedropper`, `textPicker`, `layersOpen`, `addOpen`, and `shortcutsOpen`. The rules they follow:
+
+* Keys (`handleShortcut`): the first rule that matches wins, and a key no rule uses passes to the browser.
+  1. With the shortcuts list open, ? or Escape closes it, and every other key is held.
+  2. ? opens the list.
+  3. Undo and redo always run, even over a tool, the Add sheet, or the eyedropper.
+  4. With the Add sheet open, Escape or A closes it, and other keys pass.
+  5. Zoom always runs.
+  6. While the eyedropper waits, Escape stops it, and other keys pass.
+  7. With a tool open, Escape is Done (Find redacts what's chosen), and other keys pass.
+  8. A tool's key starts it. Each start checks its own target: Find and Cut out need a photo, Adjust an image.
+  9. L shows or hides the layers.
+  10. With nothing selected, the rest pass. With a selection, E edits text (text only), and Delete, Escape (deselect), duplicate, reorder, and nudge act on it.
+
+  Typing and cropping switch these keys off, since each handles its own. A text color picker has no keys: Escape deselects its text, which closes it.
+* Starting Text, text editing, Draw, Redact, Find, Adjust, or Add closes the layers sheet. Crop, Photo, and Cut out leave it open: the crop screen covers the sheet, and it's still open afterwards. A tool starts with its tray closed, because finishing a tool always closes the tray.
+* The rail (`fromRail`, at 1024pt and wider) finishes an open tool and commits text being typed, then starts the new one. Finishing Find this way doesn't redact what it found, and finishing a tool also stops the eyedropper.
+* Three render-time corrections: Adjust puts itself down when its image is gone or hidden, and Find does when no photo is left. Neither closes the tray or stops the eyedropper. A text color picker closes when a tool is open, or when the text being styled is another layer.
+* Some can be on together: a tray and the eyedropper (Style reopens the tray while the eyedropper waits), a text color picker and the eyedropper (the dock opens a picker for another color), and the shortcuts list over the Add sheet. The layers and Add sheets can't: the Add sheet's scrim covers the Layers button, and L is held while it's open.
+
+**Proposed.** `features/editor/editorMode.ts`, pure, with tests:
+
+```ts
+export type EditorMode<TextEdit> =
+	| { type: "idle" }
+	| { type: "tool"; tool: "draw" | "redact" | "find"; optionsOpen: boolean }
+	| { type: "tool"; tool: "adjust"; layerId: string }
+	| { type: "text"; edit: TextEdit }
+	| { type: "crop" };
+
+export type EditorModeState<TextEdit> = {
+	mode: EditorMode<TextEdit>;
+	textPicker: { layerId: string; key: TextColorKey } | null;
+	eyedropper: { apply: (color: string) => void } | null;
+	sheet: "layers" | "add" | null;
+	shortcutsOpen: boolean;
+};
+```
+
+* The text edit is a type parameter because the editor root doesn't import from `text/` or `canvas/`. `TextColorKey` moves to the root.
+* A reducer carries the transitions: starting a tool, Adjust, text, crop, or the Add sheet; finishing and canceling; the tray, the text picker, the eyedropper, and the sheets. Side effects stay with the screen: committing text, Find's redaction, `cancelSession`, and `detection.reset`.
+* `shortcutCommand(state, selection, shortcut)` returns what to do (`undo`, `closeAdd`, `doneWithTool`, `start` with a `ToolKey`, `deselect`, …), `"held"`, or null for a key that passes, and the screen runs the command. Its tests go through the key rules above, one case each.
+* `settle(state, targets)` replaces the three corrections. It puts Adjust or Find down when its target is gone, and closes a picker whose text isn't the one being styled. `useEditorMode` applies it once per render and keeps the result (React's "adjusting state when a prop changes" pattern), so something that's gone stays gone. Deriving it without keeping the result would change behavior: open text A's color picker, select text B, then select A again, and A's picker would reopen, where today it stays closed.
+
+**Bugs found, not fixed.** Bug 1 and the redo in bug 2 are kept as they are in 2.1, and fixed in step 2.1b after it.
+
+1. Starting a tool from the rail while the eyedropper waits for a text color leaves the eyedropper waiting. The hint stays up over the new tool, and the first tap picks a color for the text instead of drawing. `fromRail` stops the eyedropper only when a tool was open. Checked on web at 1280pt: text color picker, then the eyedropper, then Draw in the rail.
+2. Redo works inside a tool's session and replays steps from before the session began: `beginSession` doesn't clear `future`, and only undo is held to the session's start. If the redone step deletes Find's photo, Find puts itself down through the render-time correction, which leaves `toolOptionsOpen` set, so the next tool opens with its tray already open. Checked on web: paste a photo, delete it, undo, then Find, Style, Redo, and Draw opens with its tray showing.
+
+### 2.1b Fix the bugs found in 2.1
+
+* Starting anything stops the eyedropper, from the rail too (bug 1).
+* Redo is held to a tool session's start, as undo is (bug 2).
+* Verify both scenarios from 2.1's notes on web.
 
 ### 2.2 A hook per tool, in its folder
 

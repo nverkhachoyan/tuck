@@ -29,6 +29,7 @@ import { gradientBackground } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { ColorPicker } from "../ColorPicker";
 import { ColorSwatches, isCustomColor } from "../ColorSwatches";
+import type { TextColorKey } from "../editorMode";
 import { ToolOption, ToolOptions } from "../ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
@@ -73,9 +74,6 @@ type AlignIcon =
 // the dock's color (`colors.background`), so a chip under it clearly runs on.
 const FADE_WIDTH = 56;
 const FADE_COLOR = "rgba(10, 10, 11, 1)";
-
-/** A text layer's colors, which its Color, Outline, and Box tabs pick. */
-export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
 
 const COLOR_NAMES: Record<TextColorKey, string> = {
 	color: "Text color",

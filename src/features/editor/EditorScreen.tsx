@@ -52,6 +52,11 @@ import {
 	withShape,
 } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
+import {
+	type ShortcutCommand,
+	shortcutCommand,
+	takesKeys,
+} from "@/features/editor/editorMode";
 import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
 import { layerKindName } from "@/features/editor/panels/LayerRow";
 import {
@@ -95,7 +100,6 @@ import {
 	type TextEditorHandle,
 } from "@/features/editor/text/TextEditor";
 import {
-	type TextColorKey,
 	TextColorPicker,
 	TextStylePanel,
 } from "@/features/editor/text/TextStylePanel";
@@ -105,6 +109,7 @@ import {
 } from "@/features/editor/text/textSettings";
 import { useAddImage } from "@/features/editor/useAddImage";
 import { useCutOut } from "@/features/editor/useCutOut";
+import { useEditorMode } from "@/features/editor/useEditorMode";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { importPhoto } from "@/import/photoImport";
 import type { TextSelection } from "@/layers/textEditing";
@@ -177,6 +182,23 @@ const FOUND_GROUP_NAMES: Record<DetectionFeature, string> = {
 };
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
+
+// Text being typed on the canvas: a new layer, added once editing ends, or
+// the selected one, changed then. What's typed and restyled meanwhile stays
+// here, so the whole edit is one undo step. New text is placed in `area`,
+// the part of the photo in view when it began.
+type TextEditing = TextEditState & {
+	initialSelection: TextSelection;
+	area?: Rect;
+};
+
+// An image Adjust can work on: there, and shown.
+function adjustableImage(document: EditorDocument, id: string) {
+	return document.layers.find(
+		(layer): layer is ImageLayer =>
+			layer.type === "image" && !layer.hidden && layer.id === id,
+	);
+}
 
 export default function EditorScreen() {
 	const router = useRouter();
@@ -265,19 +287,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
 
-	// Text being typed on the canvas: a new layer, added once editing ends,
-	// or the selected one, changed then. What's typed and restyled meanwhile
-	// stays here, so the whole edit is one undo step. New text is placed in
-	// `area`, the part of the photo in view when it began.
-	const [textEdit, setTextEdit] = useState<
-		(TextEditState & { initialSelection: TextSelection; area?: Rect }) | null
-	>(null);
+	// What the editor is doing, and what's open over it. Adjust puts itself
+	// down if its image goes away, Find if its photo does, and a text color
+	// picker closes if other text is styled.
+	const detectedImage = detectionTarget(document, selectedLayer);
+	const [modeState, dispatchMode] = useEditorMode<TextEditing>({
+		isAdjustable: (id) => adjustableImage(document, id) !== undefined,
+		canFind: detectedImage !== null,
+		selectedTextId: selectedTextLayer?.id ?? null,
+	});
+	const { mode, textPicker, eyedropper } = modeState;
+	const textEdit = mode.type === "text" ? mode.edit : null;
 	const textEditorRef = useRef<TextEditorHandle>(null);
-	const [cropping, setCropping] = useState(false);
-	// Typing and cropping take the keyboard, and pasted photos, for themselves.
-	const keysTaken = textEdit !== null || cropping;
-	const [layersOpen, setLayersOpen] = useState(false);
-	const [addOpen, setAddOpen] = useState(false);
+	const cropping = mode.type === "crop";
+	const keysTaken = takesKeys(mode);
+	const layersOpen = modeState.sheet === "layers";
+	const addOpen = modeState.sheet === "add";
 	const savedStickers = useSavedStickers();
 	// A photo being kept as a sticker, or kept already this session.
 	const [stickerSave, setStickerSave] = useState<{
@@ -301,19 +326,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
 	// what's found. While adjusting, the canvas holds still. A tap away from
 	// what the tool works on puts it down, as Done does.
-	const [tool, setTool] = useState<
-		"draw" | "redact" | "find" | "adjust" | null
-	>(null);
-	// The image being adjusted. The tool puts itself down if it goes away.
-	const [adjustedId, setAdjustedId] = useState<string | null>(null);
+	const tool = mode.type === "tool" ? mode.tool : null;
+	const toolOptionsOpen =
+		mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen;
 	const adjustedLayer =
-		tool === "adjust"
-			? document.layers.find(
-					(layer): layer is ImageLayer =>
-						layer.type === "image" && !layer.hidden && layer.id === adjustedId,
-				)
+		mode.type === "tool" && mode.tool === "adjust"
+			? adjustableImage(document, mode.layerId)
 			: undefined;
-	if (tool === "adjust" && !adjustedLayer) setTool(null);
 	// A tool's changes are one session: one undo step, or none if canceled.
 	// Closing the tool any way, leaving the editor included, keeps them.
 	useEffect(() => {
@@ -329,7 +348,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				: null,
 		[adjustedLayer, adjustController.matrix],
 	);
-	const [toolOptionsOpen, setToolOptionsOpen] = useState(false);
 	// The tools' settings, and the custom color, are kept between sessions.
 	const [brushSettings, setBrushSettings] = usePreference(
 		"brushSettings",
@@ -350,30 +368,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// The text the dock styles: what's being typed, or else the selection.
 	const styledText: TextLayer | undefined =
 		textEdit?.layer ?? selectedTextLayer;
-	// Which of a text layer's colors has a picker open over the canvas. It
-	// belongs to that layer, and closes if another is styled.
-	const [textPicker, setTextPicker] = useState<{
-		layerId: string;
-		key: TextColorKey;
-	} | null>(null);
-	if (textPicker && (tool || textPicker.layerId !== styledText?.id)) {
-		setTextPicker(null);
-	}
-	// While set, the canvas's next tap picks a color from what it shows, for
-	// `apply` to give to whatever asked for it. The picker it came from
-	// closes meanwhile, so the canvas is in view.
-	const [eyedropper, setEyedropper] = useState<{
-		apply: (color: string) => void;
-	} | null>(null);
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
-	const detectedImage = detectionTarget(document, selectedLayer);
 	const detectedImageKey = detectionTargetKey(document, detectedImage);
 	const detection = useImageDetection(detectedImageKey);
-	// Find puts itself down if its photo goes away.
-	if (tool === "find" && !detectedImage) setTool(null);
 	const mappedDetections = useMemo(
 		() =>
 			detectedImage && detection.state.status === "found"
@@ -494,7 +494,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (!color) return;
 		target.apply(color);
 		if (isCustomColor(color)) setCustomColor(color);
-		setEyedropper((current) => (current === target ? null : current));
+		dispatchMode({ type: "stopEyedropper", eyedropper: target });
 	};
 	const handleDrawBox = (rect: Rect) => {
 		if (canvasTool?.type === "redactBox") {
@@ -540,7 +540,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// pen for a drawing. Otherwise the tool used last, but never the eraser,
 	// so the first stroke shows. Its color and sizes stay.
 	const startDrawing = () => {
-		setLayersOpen(false);
 		setBrushSettings((settings) => {
 			if (selectedLayer?.type === "shape") {
 				return { ...settings, tool: "shape" };
@@ -551,13 +550,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				? { ...settings, tool: settings.lastBrush }
 				: settings;
 		});
-		setTool("draw");
+		dispatchMode({ type: "startTool", tool: "draw" });
 	};
 	// With the tool that adds to the selected redaction, if there is one.
 	// Otherwise the last one used, but never the eraser, so the first drag
 	// shows.
 	const startRedacting = () => {
-		setLayersOpen(false);
 		setRedactSettings((settings) => ({
 			...settings,
 			tool: selectedRedaction
@@ -568,21 +566,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					? "brush"
 					: settings.tool,
 		}));
-		setTool("redact");
+		dispatchMode({ type: "startTool", tool: "redact" });
 	};
 	// The selected image, or else the photo, if there's an image at all.
 	const adjustable = adjustTarget(document, selectedLayer);
 	const startAdjusting = () => {
 		if (!adjustable) return;
-		setLayersOpen(false);
-		setAdjustedId(adjustable.id);
-		setTool("adjust");
+		dispatchMode({ type: "startAdjust", layerId: adjustable.id });
 	};
 	const finishTool = () => {
-		setTool(null);
-		setToolOptionsOpen(false);
+		dispatchMode({ type: "endTool" });
 		detection.reset();
-		setEyedropper(null);
 	};
 	const cancelTool = () => {
 		cancelSession();
@@ -609,8 +603,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
 		if (!detectedImage) return;
-		setLayersOpen(false);
-		setTool("find");
+		dispatchMode({ type: "startTool", tool: "find" });
 	};
 	// Picking what's already found keeps the regions chosen from it.
 	const findRegions = (scope: DetectionScope) => {
@@ -647,35 +640,43 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const doneWithTool = tool === "find" ? finishFinding : finishTool;
 
 	const changeTextEdit = (change: Partial<TextEditState>) =>
-		setTextEdit((edit) => edit && { ...edit, ...change });
+		dispatchMode({
+			type: "changeText",
+			change: (edit) => ({ ...edit, ...change }),
+		});
 	const changeEditedText = (patch: TextLayerEdit) =>
-		setTextEdit(
-			(edit) => edit && { ...edit, layer: { ...edit.layer, ...patch } },
-		);
+		dispatchMode({
+			type: "changeText",
+			change: (edit) => ({ ...edit, layer: { ...edit.layer, ...patch } }),
+		});
 	const startNewText = () => {
-		setLayersOpen(false);
 		const start = { start: 0, end: 0 };
 		const area = canvasRef.current?.visibleArea();
-		setTextEdit({
-			layer: createTextLayer(document, "", textStyle, area),
-			isNew: true,
-			selection: start,
-			initialSelection: start,
-			focused: false,
-			area,
+		dispatchMode({
+			type: "startText",
+			edit: {
+				layer: createTextLayer(document, "", textStyle, area),
+				isNew: true,
+				selection: start,
+				initialSelection: start,
+				focused: false,
+				area,
+			},
 		});
 	};
 	// With the caret at `index`, or the end.
 	const editSelectedText = (index?: number) => {
 		if (!selectedTextLayer) return;
-		setLayersOpen(false);
 		const at = index ?? selectedTextLayer.text.length;
-		setTextEdit({
-			layer: selectedTextLayer,
-			isNew: false,
-			selection: { start: at, end: at },
-			initialSelection: { start: at, end: at },
-			focused: false,
+		dispatchMode({
+			type: "startText",
+			edit: {
+				layer: selectedTextLayer,
+				isNew: false,
+				selection: { start: at, end: at },
+				initialSelection: { start: at, end: at },
+				focused: false,
+			},
 		});
 	};
 	// Finishing with no text discards a new layer and deletes an existing one.
@@ -692,7 +693,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		} else {
 			deleteLayer(layer.id);
 		}
-		setTextEdit(null);
+		dispatchMode({ type: "endText" });
 	};
 	// Restyles the text being typed, or else the selected text, and new text
 	// starts in the same style. On web, the dock's buttons take focus from
@@ -711,103 +712,84 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		changeTextEdit({ selection });
 	};
 
-	const startCrop = () => setCropping(true);
-	const closeCrop = useCallback(() => setCropping(false), []);
+	const startCrop = () => dispatchMode({ type: "startCrop" });
+	const closeCrop = useCallback(
+		() => dispatchMode({ type: "endCrop" }),
+		[dispatchMode],
+	);
 	const finishCrop = (framing: Framing, turnLayers: boolean) => {
 		reframe(framing, turnLayers);
 		closeCrop();
 	};
 
 	// Stable, so the sheets' swipes aren't rebuilt on every render.
-	const closeLayers = useCallback(() => setLayersOpen(false), []);
-	const closeAdd = useCallback(() => setAddOpen(false), []);
-	const [shortcutsOpen, setShortcutsOpen] = useState(false);
-	const openAdd = () => {
-		setLayersOpen(false);
-		setAddOpen(true);
-	};
+	const closeLayers = useCallback(
+		() => dispatchMode({ type: "closeLayers" }),
+		[dispatchMode],
+	);
+	const closeAdd = useCallback(
+		() => dispatchMode({ type: "closeAdd" }),
+		[dispatchMode],
+	);
+	const openAdd = () => dispatchMode({ type: "openAdd" });
 
+	// Which shortcut does what, given what's open, is `shortcutCommand`'s.
 	const handleShortcut = (shortcut: Shortcut): boolean => {
-		// The list of shortcuts closes with its own key or Escape, and holds
-		// the rest back.
-		if (shortcutsOpen) {
-			if (shortcut.type === "help" || shortcut.type === "deselect") {
-				setShortcutsOpen(false);
-			}
-			return true;
-		}
-		if (shortcut.type === "help") {
-			setShortcutsOpen(true);
-			return true;
-		}
-		if (shortcut.type === "undo") {
-			undo();
-			return true;
-		}
-		if (shortcut.type === "redo") {
-			redo();
-			return true;
-		}
-		// The Add sheet's own key, or Escape, closes it; the rest wait.
-		if (addOpen) {
-			if (
-				shortcut.type !== "deselect" &&
-				!(shortcut.type === "tool" && shortcut.tool === "add")
-			) {
-				return false;
-			}
-			closeAdd();
-			return true;
-		}
-		// The view zooms whatever's in use.
-		if (shortcut.type === "zoom") {
-			canvasRef.current?.zoom(shortcut.to);
-			return true;
-		}
-		// Escape stops picking a color, or puts the tool down; the rest pick
-		// up another tool or act on a selection, which holds still while a
-		// tool is in use.
-		if (eyedropper) {
-			if (shortcut.type !== "deselect") return false;
-			setEyedropper(null);
-			return true;
-		}
-		if (tool) {
-			if (shortcut.type !== "deselect") return false;
-			doneWithTool();
-			return true;
-		}
-		if (shortcut.type === "tool") {
-			startTool[shortcut.tool]();
-			return true;
-		}
-		if (shortcut.type === "layers") {
-			setLayersOpen((open) => !open);
-			return true;
-		}
-		if (!selectedLayer) return false;
-		switch (shortcut.type) {
+		const command = shortcutCommand(
+			modeState,
+			selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
+			shortcut,
+		);
+		if (command === null) return false;
+		if (command !== "held") runShortcut(command);
+		return true;
+	};
+	const runShortcut = (command: ShortcutCommand) => {
+		switch (command.type) {
+			case "openShortcuts":
+			case "closeShortcuts":
+			case "closeAdd":
+			case "stopEyedropper":
+				dispatchMode({ type: command.type });
+				break;
+			case "undo":
+				undo();
+				break;
+			case "redo":
+				redo();
+				break;
+			case "zoom":
+				canvasRef.current?.zoom(command.to);
+				break;
+			case "doneWithTool":
+				doneWithTool();
+				break;
+			case "tool":
+				startTool[command.tool]();
+				break;
+			case "layers":
+				dispatchMode({ type: "toggleLayers" });
+				break;
 			case "edit":
-				if (!selectedTextLayer) return false;
 				editSelectedText();
-				return true;
+				break;
 			case "delete":
-				deleteLayer(selectedLayer.id);
-				return true;
+				if (selectedLayer) deleteLayer(selectedLayer.id);
+				break;
 			case "deselect":
 				selectLayer(null);
-				return true;
+				break;
 			case "duplicate":
 				duplicateSelectedLayer();
-				return true;
+				break;
 			case "reorder":
-				moveSelected(shortcut.step);
-				return true;
+				moveSelected(command.step);
+				break;
 			case "nudge":
-				canvasRef.current?.nudgeSelection(shortcut.dx, shortcut.dy);
-				return true;
+				canvasRef.current?.nudgeSelection(command.dx, command.dy);
+				break;
 			default:
-				return assertNever(shortcut);
+				assertNever(command);
 		}
 	};
 	useEditorShortcuts({
@@ -941,7 +923,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										label="Layers"
 										shortcut={LAYERS_KEY}
 										selected={layersOpen}
-										onPress={() => setLayersOpen((open) => !open)}
+										onPress={() => dispatchMode({ type: "toggleLayers" })}
 									/>
 								)}
 								<IconButton
@@ -1010,7 +992,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onDrawBox={handleDrawBox}
 							onDrawShape={handleDrawShape}
 							onPickPoint={handlePickPoint}
-							onToolInteractionEnd={() => setToolOptionsOpen(false)}
+							onToolInteractionEnd={() =>
+								dispatchMode({ type: "closeToolOptions" })
+							}
 							onTapAway={doneWithTool}
 							adjusting={adjusting}
 							bottomInset={wide ? 0 : dockInset + trayHeight}
@@ -1054,13 +1038,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									setCustomColor(color);
 								}}
 								onEyedropper={() => {
-									setToolOptionsOpen(false);
-									setEyedropper({
-										apply: (color) =>
-											changeDrawSettings({ ...drawSettings, color }),
+									dispatchMode({
+										type: "startEyedropper",
+										eyedropper: {
+											apply: (color) =>
+												changeDrawSettings({ ...drawSettings, color }),
+										},
 									});
 								}}
-								onClose={() => setToolOptionsOpen(false)}
+								onClose={() => dispatchMode({ type: "closeToolOptions" })}
 							/>
 						)}
 						{tool === "redact" && toolOptionsOpen && (
@@ -1074,13 +1060,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									setCustomColor(color);
 								}}
 								onEyedropper={() => {
-									setToolOptionsOpen(false);
-									setEyedropper({
-										apply: (color) =>
-											changeRedactSettings({ ...redactSettings, color }),
+									dispatchMode({
+										type: "startEyedropper",
+										eyedropper: {
+											apply: (color) =>
+												changeRedactSettings({ ...redactSettings, color }),
+										},
 									});
 								}}
-								onClose={() => setToolOptionsOpen(false)}
+								onClose={() => dispatchMode({ type: "closeToolOptions" })}
 							/>
 						)}
 						{tool === "find" && toolOptionsOpen && (
@@ -1096,13 +1084,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									setCustomColor(color);
 								}}
 								onEyedropper={() => {
-									setToolOptionsOpen(false);
-									setEyedropper({
-										apply: (color) =>
-											setRedactSettings((settings) => ({ ...settings, color })),
+									dispatchMode({
+										type: "startEyedropper",
+										eyedropper: {
+											apply: (color) =>
+												setRedactSettings((settings) => ({
+													...settings,
+													color,
+												})),
+										},
 									});
 								}}
-								onClose={() => setToolOptionsOpen(false)}
+								onClose={() => dispatchMode({ type: "closeToolOptions" })}
 							/>
 						)}
 						{tool === "find" && !toolOptionsOpen && !eyedropper && (
@@ -1130,16 +1123,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								onPickCustom={setCustomColor}
 								onEyedropper={() => {
 									const { key } = textPicker;
-									setTextPicker(null);
-									setEyedropper({
-										apply: (color) => styleText({ [key]: color }),
+									dispatchMode({
+										type: "startEyedropper",
+										eyedropper: {
+											apply: (color) => styleText({ [key]: color }),
+										},
 									});
 								}}
-								onClose={() => setTextPicker(null)}
+								onClose={() => dispatchMode({ type: "closeTextPicker" })}
 							/>
 						)}
 						{eyedropper && (
-							<EyedropperHint onCancel={() => setEyedropper(null)} />
+							<EyedropperHint
+								onCancel={() => dispatchMode({ type: "stopEyedropper" })}
+							/>
 						)}
 						{saveProblem && (
 							<SaveErrorBanner
@@ -1190,7 +1187,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								) : textEdit ? (
 									<DockFooter
 										title="Text"
-										onCancel={() => setTextEdit(null)}
+										onCancel={() => dispatchMode({ type: "endText" })}
 										onDone={finishTextEdit}
 										doneShortcut="Escape"
 									/>
@@ -1209,7 +1206,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									settings={drawSettings}
 									optionsOpen={toolOptionsOpen}
 									onChange={changeDrawSettings}
-									onToggleOptions={() => setToolOptionsOpen((open) => !open)}
+									onToggleOptions={() =>
+										dispatchMode({ type: "toggleToolOptions" })
+									}
 								/>
 							) : tool === "adjust" ? (
 								<AdjustPanel
@@ -1221,7 +1220,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									settings={redactSettings}
 									optionsOpen={toolOptionsOpen}
 									onChange={changeRedactSettings}
-									onToggleOptions={() => setToolOptionsOpen((open) => !open)}
+									onToggleOptions={() =>
+										dispatchMode({ type: "toggleToolOptions" })
+									}
 								/>
 							) : tool === "find" ? (
 								<FindPanel
@@ -1229,7 +1230,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									settings={chosenRedactSettings}
 									optionsOpen={toolOptionsOpen}
 									onFind={findRegions}
-									onToggleOptions={() => setToolOptionsOpen((open) => !open)}
+									onToggleOptions={() =>
+										dispatchMode({ type: "toggleToolOptions" })
+									}
 								/>
 							) : styledText ? (
 								<TextStylePanel
@@ -1237,7 +1240,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									customColor={customColor}
 									onChange={styleText}
 									onOpenPicker={(key) =>
-										setTextPicker({ layerId: styledText.id, key })
+										dispatchMode({
+											type: "openTextPicker",
+											layerId: styledText.id,
+											key,
+										})
 									}
 								/>
 							) : selectedLayer ? (
@@ -1350,8 +1357,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onDone={finishTextEdit}
 						/>
 					)}
-					{shortcutsOpen && (
-						<ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />
+					{modeState.shortcutsOpen && (
+						<ShortcutsOverlay
+							onClose={() => dispatchMode({ type: "closeShortcuts" })}
+						/>
 					)}
 				</View>
 			</TrayPlacement.Provider>
