@@ -302,6 +302,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		"customColor",
 		parseCustomColor,
 	);
+	// For a tray whose colors go to `apply`: a color from its picker, which
+	// becomes the custom color too, and the eyedropper, for a color from the
+	// canvas.
+	const colorTarget = (apply: (color: string) => void) => ({
+		onPickCustom: (color: string) => {
+			apply(color);
+			setCustomColor(color);
+		},
+		onEyedropper: () =>
+			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
+	});
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
@@ -745,19 +756,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								customColor={customColor}
 								bottomInset={dockInset}
 								onChange={draw.change}
-								onPickCustom={(color) => {
-									draw.change({ ...draw.settings, color });
-									setCustomColor(color);
-								}}
-								onEyedropper={() => {
-									dispatchMode({
-										type: "startEyedropper",
-										eyedropper: {
-											apply: (color) =>
-												draw.change({ ...draw.settings, color }),
-										},
-									});
-								}}
+								{...colorTarget((color) =>
+									draw.change({ ...draw.settings, color }),
+								)}
 								onClose={() => dispatchMode({ type: "closeToolOptions" })}
 							/>
 						)}
@@ -767,19 +768,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								customColor={customColor}
 								bottomInset={dockInset}
 								onChange={redact.change}
-								onPickCustom={(color) => {
-									redact.change({ ...redact.settings, color });
-									setCustomColor(color);
-								}}
-								onEyedropper={() => {
-									dispatchMode({
-										type: "startEyedropper",
-										eyedropper: {
-											apply: (color) =>
-												redact.change({ ...redact.settings, color }),
-										},
-									});
-								}}
+								{...colorTarget((color) =>
+									redact.change({ ...redact.settings, color }),
+								)}
 								onClose={() => dispatchMode({ type: "closeToolOptions" })}
 							/>
 						)}
@@ -791,22 +782,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								onChange={({ tool: _, ...style }) =>
 									redact.setChosen((settings) => ({ ...settings, ...style }))
 								}
-								onPickCustom={(color) => {
-									redact.setChosen((settings) => ({ ...settings, color }));
-									setCustomColor(color);
-								}}
-								onEyedropper={() => {
-									dispatchMode({
-										type: "startEyedropper",
-										eyedropper: {
-											apply: (color) =>
-												redact.setChosen((settings) => ({
-													...settings,
-													color,
-												})),
-										},
-									});
-								}}
+								{...colorTarget((color) =>
+									redact.setChosen((settings) => ({ ...settings, color })),
+								)}
 								onClose={() => dispatchMode({ type: "closeToolOptions" })}
 							/>
 						)}
@@ -828,17 +806,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								layer={styledText}
 								colorKey={textPicker.key}
 								bottomInset={dockInset}
-								onChange={textEditing.style}
-								onPickCustom={setCustomColor}
-								onEyedropper={() => {
-									const { key } = textPicker;
-									dispatchMode({
-										type: "startEyedropper",
-										eyedropper: {
-											apply: (color) => textEditing.style({ [key]: color }),
-										},
-									});
-								}}
+								{...colorTarget((color) =>
+									textEditing.style({ [textPicker.key]: color }),
+								)}
 								onClose={() => dispatchMode({ type: "closeTextPicker" })}
 							/>
 						)}

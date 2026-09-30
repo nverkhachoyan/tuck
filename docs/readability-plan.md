@@ -137,7 +137,9 @@ Move finding 3's logic into hooks beside the panels they feed, which the screen 
 
 Each hook selects only the store actions it uses, which retires most of the screen's one-by-one subscriptions (finding 4).
 
-### 2.3 One color target
+### 2.3 One color target (done)
+
+Built as described, except that `colorTarget(apply)` returns only `onPickCustom` and `onEyedropper`. The trays take `customColor` on its own, because `TextColorPicker` shows no custom swatch, and spreading the color in would pass it a prop it doesn't take. `TextColorPicker` now gives its picked color to `onPickCustom` alone, as the trays do, and lost its `onChange`: the screen still applies the color, then keeps it as the custom color. Checked on web: a color from each of the four pickers (Draw, Redact, Find, text) became both that tool's color and the custom color, and the eyedropper still works from each.
 
 Replace the four copies of the custom-color and eyedropper wiring with a helper that takes what a color applies to and returns `customColor`, `onPickCustom`, and `onEyedropper` for a tray.
 
