@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { pasteClipboardImage } from "@/import/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
+import { importSharedPhoto } from "@/import/sharedPhoto";
 import { errorMessage } from "@/lib/errorMessage";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import { copyName, type ProjectSummary } from "@/projects/projectFile";
@@ -170,6 +171,12 @@ export function useHomeProjects() {
 	const openImage = (uri: string) =>
 		open("Couldn't open image", async () => openPhoto(await importPhoto(uri)));
 
+	/** Opens a photo shared from another app, as a chosen photo opens. */
+	const openSharedPhoto = (name: string) =>
+		open("Couldn't open the shared photo", async () =>
+			openPhoto(await importSharedPhoto(name)),
+		);
+
 	/** Reads the clipboard only from this user action, so iOS can prompt here. */
 	const pasteImage = () =>
 		open("Couldn't paste image", async () => {
@@ -251,6 +258,7 @@ export function useHomeProjects() {
 		finishSession,
 		choosePhoto,
 		openImage,
+		openSharedPhoto,
 		pasteImage,
 		openProject: openSavedProject,
 		renameProject: renameSavedProject,

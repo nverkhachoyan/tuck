@@ -5,8 +5,8 @@ import {
 	RadialGradient,
 	vec,
 } from "@shopify/react-native-skia";
-import { useIsFocused, useRouter } from "expo-router";
-import type { ComponentProps } from "react";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
+import { type ComponentProps, useEffect } from "react";
 import {
 	Platform,
 	Pressable,
@@ -55,6 +55,7 @@ export default function HomeScreen() {
 		finishSession,
 		choosePhoto,
 		openImage,
+		openSharedPhoto,
 		pasteImage,
 		openProject,
 		renameProject,
@@ -74,6 +75,17 @@ export default function HomeScreen() {
 			await openImage(uri);
 		},
 	});
+
+	// A photo shared from another app opens once the editor's session has
+	// ended: coming back from the editor, this screen is idle for a render
+	// before it starts saving. The param goes at once, so it opens only once.
+	const { shared } = useLocalSearchParams<{ shared?: string }>();
+	const sessionOpen = useStore((state) => state.document !== null);
+	useEffect(() => {
+		if (!shared || !focused || status !== "idle" || sessionOpen) return;
+		router.setParams({ shared: undefined });
+		void openSharedPhoto(shared);
+	}, [shared, focused, status, sessionOpen, router, openSharedPhoto]);
 
 	const hasProjects = projects.length > 0;
 	const blocked = status !== "idle";

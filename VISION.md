@@ -1032,9 +1032,8 @@ Any architecture that makes those two substantially different should be examined
 
 Stages 1 through 4 are built, and much of Stage 5 was built early alongside them (see Status below). Background removal, the last of Stage 4, still needs trying on a real iPhone. What's next:
 
-1. Try background removal on a real iPhone (the simulator can't run it).
-2. Open photos shared from other apps ("Edit in Tuck" in the share sheet).
-3. Then polish and performance.
+1. Try background removal, and sharing a photo to Tuck, on a real iPhone (the simulator can't run the first, and the second needs the App Group registered for a device build).
+2. Then polish and performance.
 
 Stage 1's product test still holds, and new work shouldn't slow it down:
 
@@ -1087,3 +1086,4 @@ Built early, alongside the stages above:
 * Shapes, in the Draw tool beside the pens and sharing their colors: rectangles, ellipses, lines, and arrows, each dragged out as its own layer. Rectangles and ellipses resize by their sides, and a line or arrow by dragging either end, which settles on level and upright. A tap inside an outline reaches what's under it, and the eraser removes a shape it passes over whole.
 * Saved projects: each session autosaves as a local project (on web too, in IndexedDB), listed with thumbnails on the welcome screen to reopen, rename, duplicate, or delete. A project without a name is listed by its top text. Each project has its own route, so links and reloads open it.
 * Stickers: an Add button in the dock opens a sheet with a Photo row (the old Photo tool) and 123 emoji stickers from Google's Noto Emoji (Apache 2.0) in five categories. A sticker is copied into the project as an image layer, sized to the canvas, so it moves, resizes, and exports like an added photo, and older builds open it as one. People can keep their own images as stickers too, from the sheet's Yours tab or with Sticker on a selected photo; they're kept on the device, most recently used first.
+* Opening photos shared from other apps: a share extension on iOS and a share activity on Android ("Edit in Tuck") take a single image and open it as a new project, saving whatever was open first. Tried on the iOS simulator (from Photos) and the Android emulator; not yet on a real iPhone. On iOS 26 the share sheet names it "Tuck", after the app.
