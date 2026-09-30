@@ -115,7 +115,9 @@ export type EditorModeState<TextEdit> = {
 1. Starting a tool from the rail while the eyedropper waits for a text color leaves the eyedropper waiting. The hint stays up over the new tool, and the first tap picks a color for the text instead of drawing. `fromRail` stops the eyedropper only when a tool was open. Checked on web at 1280pt: text color picker, then the eyedropper, then Draw in the rail.
 2. Redo works inside a tool's session and replays steps from before the session began: `beginSession` doesn't clear `future`, and only undo is held to the session's start. If the redone step deletes Find's photo, Find puts itself down through the render-time correction, which leaves `toolOptionsOpen` set, so the next tool opens with its tray already open. Checked on web: paste a photo, delete it, undo, then Find, Style, Redo, and Draw opens with its tray showing.
 
-### 2.1b Fix the bugs found in 2.1
+### 2.1b Fix the bugs found in 2.1 (done)
+
+Built as described. In `editorMode.ts`, starting a tool, Adjust, text, crop, or the Add sheet stops the eyedropper. The store's session keeps `redoStop`, the redo step that was next when the session began, and `selectCanRedo` and `redo` stop there. The redo stack itself is untouched, so a session that ends without changes leaves the redo steps from before it. Tests cover both, and both scenarios were checked on web: Draw from the rail now draws on the first tap, and inside Find, Redo is disabled and its key does nothing.
 
 * Starting anything stops the eyedropper, from the rail too (bug 1).
 * Redo is held to a tool session's start, as undo is (bug 2).

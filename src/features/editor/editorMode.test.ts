@@ -171,14 +171,20 @@ describe("editorModeReducer", () => {
 		assert.equal(run(waiting, { type: "stopEyedropper" }).eyedropper, null);
 	});
 
-	test("a tool started while the eyedropper waits for text leaves it waiting (bug 1)", () => {
-		const picker = eyedropper();
-		const state = run(
-			initialEditorMode,
-			{ type: "startEyedropper", eyedropper: picker },
+	test("starting anything stops the eyedropper", () => {
+		const waiting = run(initialEditorMode, {
+			type: "startEyedropper",
+			eyedropper: eyedropper(),
+		});
+		for (const action of [
 			{ type: "startTool", tool: "draw" },
-		);
-		assert.equal(state.eyedropper, picker);
+			{ type: "startAdjust", layerId: "photo" },
+			{ type: "startText", edit: edit("text") },
+			{ type: "startCrop" },
+			{ type: "openAdd" },
+		] satisfies EditorModeAction<Edit>[]) {
+			assert.equal(run(waiting, action).eyedropper, null, action.type);
+		}
 	});
 
 	test("text changes only while typing, and ends with it", () => {

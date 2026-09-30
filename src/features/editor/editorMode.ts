@@ -89,10 +89,8 @@ const idle = { type: "idle" } as const;
 /**
  * Starting a tool or typing closes the layers sheet. Cropping leaves it: the
  * crop screen covers it, and it's open again after. A tool starts with its
- * tray closed, and closes a text color picker. Ending a tool stops the
- * eyedropper, which its tray may have started. Starting one doesn't, so an
- * eyedropper started for text keeps waiting (bug 1 in the readability
- * plan).
+ * tray closed, and closes a text color picker. Starting anything, and
+ * ending a tool, stops the eyedropper: what it was picking for has moved on.
  */
 export function editorModeReducer<TextEdit extends EditedText>(
 	state: EditorModeState<TextEdit>,
@@ -105,6 +103,7 @@ export function editorModeReducer<TextEdit extends EditedText>(
 				...state,
 				mode: { type: "tool", tool: action.tool, optionsOpen: false },
 				textPicker: null,
+				eyedropper: null,
 				sheet: withoutLayers(state.sheet),
 			};
 		case "startAdjust":
@@ -112,6 +111,7 @@ export function editorModeReducer<TextEdit extends EditedText>(
 				...state,
 				mode: { type: "tool", tool: "adjust", layerId: action.layerId },
 				textPicker: null,
+				eyedropper: null,
 				sheet: withoutLayers(state.sheet),
 			};
 		case "endTool":
@@ -132,6 +132,7 @@ export function editorModeReducer<TextEdit extends EditedText>(
 			return {
 				...state,
 				mode: { type: "text", edit: action.edit },
+				eyedropper: null,
 				sheet: withoutLayers(state.sheet),
 			};
 		case "changeText":
@@ -143,7 +144,7 @@ export function editorModeReducer<TextEdit extends EditedText>(
 		case "startCrop":
 			return mode.type === "crop"
 				? state
-				: { ...state, mode: { type: "crop" } };
+				: { ...state, mode: { type: "crop" }, eyedropper: null };
 		case "endCrop":
 			return mode.type === "crop" ? { ...state, mode: idle } : state;
 		case "openTextPicker":
@@ -174,7 +175,7 @@ export function editorModeReducer<TextEdit extends EditedText>(
 		case "closeLayers":
 			return state.sheet === "layers" ? { ...state, sheet: null } : state;
 		case "openAdd":
-			return { ...state, sheet: "add" };
+			return { ...state, sheet: "add", eyedropper: null };
 		case "closeAdd":
 			return state.sheet === "add" ? { ...state, sheet: null } : state;
 		case "openShortcuts":

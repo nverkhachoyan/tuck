@@ -59,6 +59,13 @@ export type EditorSnapshot = {
 	selectedLayerId: string | null;
 };
 
+// While a tool is open, where it started, and the redo step that was next
+// then. Undo stops at the start, and redo at that step, so a tool never
+// steps into changes from before it opened.
+export type EditorSession = EditorSnapshot & {
+	redoStop: EditorSnapshot | undefined;
+};
+
 export type EditorSlice = {
 	document: EditorDocument | null;
 	// The saved project the document belongs to; null if it couldn't be saved.
@@ -68,7 +75,7 @@ export type EditorSlice = {
 	future: EditorSnapshot[];
 	// While a tool is open, where it started: Cancel returns there, and its
 	// changes become one undo step when it's done.
-	session: EditorSnapshot | null;
+	session: EditorSession | null;
 	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
 	// A new layer goes in `area`, the part of the document in view, or else
@@ -169,7 +176,8 @@ export const selectSelectedShape = (
 export const selectCanUndo = ({ past, document, session }: EditorSlice) =>
 	past.length > 0 && document !== session?.document;
 
-export const selectCanRedo = ({ future }: EditorSlice) => future.length > 0;
+export const selectCanRedo = ({ future, session }: EditorSlice) =>
+	future.length > 0 && future[0] !== session?.redoStop;
 
 export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	const setDocument = (
@@ -674,7 +682,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		redo: () => {
 			const { document, selectedLayerId, past, future } = get();
 			const [next, ...rest] = future;
-			if (!document || !next) return;
+			if (!document || !next || !selectCanRedo(get())) return;
 			set(
 				{
 					...next,
@@ -687,10 +695,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		},
 
 		beginSession: () => {
-			const { document, selectedLayerId, session } = get();
+			const { document, selectedLayerId, future, session } = get();
 			if (!document || session) return;
 			set(
-				{ session: { document, selectedLayerId } },
+				{ session: { document, selectedLayerId, redoStop: future[0] } },
 				false,
 				"editor/beginSession",
 			);
@@ -706,7 +714,9 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			}
 			set(
 				{
-					past: [...pastBefore(past, session), session].slice(-MAX_HISTORY),
+					past: [...pastBefore(past, session), snapshotOf(session)].slice(
+						-MAX_HISTORY,
+					),
 					future: [],
 					session: null,
 				},
@@ -724,7 +734,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			}
 			set(
 				{
-					...session,
+					...snapshotOf(session),
 					past: pastBefore(past, session),
 					future: [],
 					session: null,
@@ -735,6 +745,13 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		},
 	};
 };
+
+function snapshotOf({
+	document,
+	selectedLayerId,
+}: EditorSnapshot): EditorSnapshot {
+	return { document, selectedLayerId };
+}
 
 /**
  * The undo steps from before `session`. Its first change recorded where it

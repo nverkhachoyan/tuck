@@ -19,6 +19,7 @@ import { documentFraming } from "../model/framing.ts";
 import {
 	createEditorSlice,
 	MAX_HISTORY,
+	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
 	selectSelectedRedaction,
@@ -1088,6 +1089,35 @@ describe("editorSlice", () => {
 			store.getState().undo();
 			store.getState().undo();
 			assert.equal(textLayers(store).length, 1);
+		});
+
+		test("redo stops at the session's start, as undo does", () => {
+			const { store } = storeWithText();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().undo();
+			const before = store.getState().document;
+			store.getState().beginSession();
+			assert.equal(selectCanRedo(store.getState()), false);
+			store.getState().redo();
+			assert.equal(store.getState().document, before);
+
+			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			store.getState().undo();
+			assert.equal(selectCanRedo(store.getState()), true);
+			store.getState().redo();
+			assert.notEqual(store.getState().document, before);
+		});
+
+		test("a session without changes leaves the redo steps from before it", () => {
+			const { store } = storeWithText();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			const drawn = store.getState().document;
+			store.getState().undo();
+			store.getState().beginSession();
+			store.getState().commitSession();
+			assert.equal(selectCanRedo(store.getState()), true);
+			store.getState().redo();
+			assert.equal(store.getState().document, drawn);
 		});
 
 		test("undoing within a session, then drawing again, still commits one step", () => {
