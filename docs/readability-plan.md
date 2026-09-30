@@ -155,7 +155,9 @@ Built as described. `HeaderActions` selects undo and redo itself. `ToolTrays` ow
 
 `EditorCanvas.tsx` already has its gestures in hooks (`useLayerTransformGesture`, `usePaintGesture`, `useTextEditGesture`, `useViewGesture`, `useWheelZoom`). What's left is decisions and state that sit in the component body. The AGENTS.md lessons on worklets, `Gesture.Simultaneous`, and `scheduleOnUI` all apply here, so the pure steps come first.
 
-### 3.1 Pure gesture results
+### 3.1 Pure gesture results (done)
+
+Built as described. `canvas/strokeIntent.ts` returns one of `pick`, `tapAway`, `paint`, `box`, `shape`, `select`, or `none`, and `handleStroke` switches on it. The hit test for a tap that selects stays in the canvas, which holds the targets. `TAP_SLOP_PX` and `insideDocument` moved with it. `detectionAt` is in `hitTest.ts`. `createDoubleTap` in `canvas/doubleTap.ts` serves both the zoom and the word selection. All three have tests (15 new). Checked on web in headless Chrome: paint, a box, a thin box dropped, a shape, a tap selecting a box or nothing, a tap off the document putting Draw down, a double tap zooming in and back out while two slow taps don't, a double tap selecting a word of edited text, and taps on found faces leaving one out, putting it back, and missing onto the photo. Checked on the iOS simulator: a box drag.
 
 * `canvas/strokeIntent.ts`: a function from the tool, the stroke's points, the view scale, and the document size to what the stroke means (a color pick, a tap away, paint, a box, a shape, a tap that selects, or nothing). `handleStroke` then only dispatches. Test each outcome, including thin boxes and a line.
 * A `detectionAt(regions, point, padding)` hit test beside `hitTest.ts`, preferring the smallest region, with tests.

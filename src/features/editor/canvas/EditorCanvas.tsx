@@ -27,22 +27,15 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import type { MappedDetectionRect } from "@/detection/mapDetectionRects";
 import { layerBounds } from "@/layers/layerBounds";
 import { type TextSelection, wordRange } from "@/layers/textEditing";
 import { textIndexAt } from "@/layers/textLayerLayout";
-import {
-	type EditorDocument,
-	isLineShape,
-	type Layer,
-	type ShapePlacement,
-} from "@/model/document";
+import type { EditorDocument, Layer, ShapePlacement } from "@/model/document";
 import {
 	type Box,
 	hitTestBox,
 	type Point,
 	type Rect,
-	rectFromCorners,
 	type Size,
 	type Transform,
 	toLayerSpace,
@@ -69,6 +62,7 @@ import {
 	zoomForViewport,
 	zoomViewportAbout,
 } from "../viewport";
+import { createDoubleTap } from "./doubleTap";
 import {
 	type CanvasTool,
 	type DetectionOverlayRegion,
@@ -76,7 +70,12 @@ import {
 	type LiveAdjustment,
 	type LiveStroke,
 } from "./EditorScene";
-import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
+import {
+	detectionAt,
+	findLayerAt,
+	hitsLayer,
+	type LayerTarget,
+} from "./hitTest";
 import { HIT_PADDING_PX, layerTargets, resizeMode } from "./layerTargets";
 import {
 	type LiveTransform,
@@ -89,12 +88,12 @@ import {
 	placeSelectionBar,
 	selectionScreenBounds,
 } from "./selectionBarPlacement";
-import { shapeFromDrag } from "./shapeDrag";
 import {
 	readShownViewport,
 	type ShownViewport,
 	useShownViewport,
 } from "./shownViewport";
+import { insideDocument, strokeIntent, TAP_SLOP_PX } from "./strokeIntent";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
 import { type TextPressPhase, useTextEditGesture } from "./useTextEditGesture";
@@ -103,18 +102,11 @@ import { useWheelZoom } from "./useWheelZoom";
 
 // How much each zoom in or out by key scales the view.
 const ZOOM_STEP = 2;
+// A double tap where there's nothing to select zooms in by this much.
 const DOUBLE_TAP_ZOOM = 3;
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 16;
-// A box or a line dragged no further than this either way, in screen
-// pixels, was a tap; a box this thin in only one way is dropped.
-const TAP_SLOP_PX = 6;
-// A second tap this soon after the first, and this near it in screen
-// pixels, selects a word of edited text, or zooms where there's nothing to
-// select, by `DOUBLE_TAP_ZOOM`.
-const DOUBLE_TAP_MS = 300;
-const DOUBLE_TAP_SLOP_PX = 12;
 // The selection bar's distance from the selection, above it past the rotate
 // knob or below it past the handles, and from the view's edges.
 const SELECTION_BAR_GAPS = {
@@ -383,24 +375,18 @@ export function EditorCanvas({
 		},
 		[flushWheel, frame, setZoom],
 	);
-	const lastEmptyTap = useRef({ time: 0, x: 0, y: 0 });
+	const [emptyTaps] = useState(createDoubleTap);
 	// A tap on nothing to select: a second one soon after the first, and near
 	// it, zooms in there, or back to the fit. Any other tap calls it with
 	// null, so it doesn't count toward one.
 	const tapOnNothing = useCallback(
 		(point: Point | null) => {
-			const last = lastEmptyTap.current;
-			const double =
-				point !== null &&
-				Date.now() - last.time < DOUBLE_TAP_MS &&
-				Math.hypot(point.x - last.x, point.y - last.y) < DOUBLE_TAP_SLOP_PX;
-			lastEmptyTap.current =
-				point && !double
-					? { time: Date.now(), ...point }
-					: { time: 0, x: 0, y: 0 };
-			if (double) zoomTo(zoom ? null : DOUBLE_TAP_ZOOM, point);
+			if (!point) emptyTaps.reset();
+			else if (emptyTaps.tap(point)) {
+				zoomTo(zoom ? null : DOUBLE_TAP_ZOOM, point);
+			}
 		},
-		[zoom, zoomTo],
+		[emptyTaps, zoom, zoomTo],
 	);
 
 	const targets = useMemo(
@@ -648,7 +634,8 @@ export function EditorCanvas({
 		anchor: number | null;
 		onText: boolean;
 	} | null>(null);
-	const lastTextTap = useRef({ time: 0, x: 0, y: 0 });
+	// A double tap on edited text selects a word.
+	const [textTaps] = useState(createDoubleTap);
 	const handleTextPress = useCallback(
 		(phase: TextPressPhase, screenX: number, screenY: number) => {
 			if (!textEdit) return;
@@ -659,11 +646,8 @@ export function EditorCanvas({
 			}
 			if (phase === "begin") {
 				const index = textIndexUnder(screenX, screenY);
-				const last = lastTextTap.current;
 				const double =
-					index !== null &&
-					Date.now() - last.time < DOUBLE_TAP_MS &&
-					Math.hypot(screenX - last.x, screenY - last.y) < DOUBLE_TAP_SLOP_PX;
+					index !== null && textTaps.tap({ x: screenX, y: screenY });
 				textPress.current = {
 					x: screenX,
 					y: screenY,
@@ -671,9 +655,6 @@ export function EditorCanvas({
 					onText: index !== null,
 				};
 				if (index === null) return;
-				lastTextTap.current = double
-					? { time: 0, x: 0, y: 0 }
-					: { time: Date.now(), x: screenX, y: screenY };
 				onTextSelect?.(
 					double
 						? wordRange(textEdit.layer.text, index)
@@ -698,7 +679,7 @@ export function EditorCanvas({
 				onTextEditDone?.();
 			}
 		},
-		[textEdit, textIndexUnder, onTextSelect, onTextEditDone],
+		[textEdit, textIndexUnder, textTaps, onTextSelect, onTextEditDone],
 	);
 	const handleTextHover = useCallback(
 		(screenX: number, screenY: number) =>
@@ -741,42 +722,32 @@ export function EditorCanvas({
 			if (!tool || points.length < 2) return;
 			setLandedStrokeId(id);
 			onToolInteractionEnd?.();
-			if (tool.type === "pickColor") {
-				const end = points.length - 2;
-				onPickPoint?.({ x: points[end], y: points[end + 1] });
-				return;
-			}
-			const start = { x: points[0], y: points[1] };
-			if (
-				!insideDocument(documentSize, start) &&
-				staysWithin(points, TAP_SLOP_PX / scale)
-			) {
-				tapAway(start);
-				return;
-			}
-			if (tool.type !== "redactBox" && tool.type !== "drawShape") {
-				onPaintStroke?.(points);
-				return;
-			}
-			const end = {
-				x: points[points.length - 2],
-				y: points[points.length - 1],
-			};
-			const line = tool.type === "drawShape" && isLineShape(tool.shape);
-			const box = rectFromCorners(start, end);
-			// A box too thin to show is dropped, rather than taken for a tap.
-			if (Math.max(box.width, box.height) * scale >= TAP_SLOP_PX) {
-				if (!line && Math.min(box.width, box.height) * scale < TAP_SLOP_PX) {
-					return;
+			const intent = strokeIntent(tool, points, scale, documentSize);
+			switch (intent.type) {
+				case "pick":
+					onPickPoint?.(intent.point);
+					break;
+				case "tapAway":
+					tapAway(intent.point);
+					break;
+				case "paint":
+					onPaintStroke?.(points);
+					break;
+				case "box":
+					onDrawBox?.(intent.rect);
+					break;
+				case "shape":
+					onDrawShape?.(intent.placement);
+					break;
+				case "select": {
+					const hit = findLayerAt(targets, intent.point);
+					const tapped = document.layers.find((layer) => layer.id === hit?.id);
+					onSelectLayer?.(tapped?.type === intent.kind ? tapped.id : null);
+					break;
 				}
-				if (tool.type === "redactBox") onDrawBox?.(box);
-				else onDrawShape?.(shapeFromDrag(tool.shape, start, end));
-				return;
+				case "none":
+					break;
 			}
-			const hit = findLayerAt(targets, start);
-			const tapped = document.layers.find((layer) => layer.id === hit?.id);
-			const kind = tool.type === "redactBox" ? "redaction" : "shape";
-			onSelectLayer?.(tapped?.type === kind ? tapped.id : null);
 		},
 		[
 			tool,
@@ -847,23 +818,7 @@ export function EditorCanvas({
 		(screenX: number, screenY: number) => {
 			if (!detection || scale === 0) return;
 			const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
-			const padding = 10 / scale;
-			let hit: MappedDetectionRect | null = null;
-			for (const region of detection.regions) {
-				if (
-					hitTestBox(
-						region.transform,
-						{
-							halfWidth: region.width / 2 + padding,
-							halfHeight: region.height / 2 + padding,
-						},
-						point,
-					) &&
-					(!hit || region.width * region.height < hit.width * hit.height)
-				) {
-					hit = region;
-				}
-			}
+			const hit = detectionAt(detection.regions, point, 10 / scale);
 			if (hit) {
 				tapOnNothing(null);
 				detection.onToggle(hit.sourceIndex);
@@ -1103,25 +1058,6 @@ function SelectionBarFrame({
 			</Animated.View>
 		</View>
 	);
-}
-
-function insideDocument(size: { width: number; height: number }, point: Point) {
-	return (
-		point.x >= 0 &&
-		point.y >= 0 &&
-		point.x <= size.width &&
-		point.y <= size.height
-	);
-}
-
-/** Whether a stroke's points, flat pairs, all stay within `slop` of its first. */
-function staysWithin(points: number[], slop: number): boolean {
-	for (let i = 2; i < points.length; i += 2) {
-		if (Math.hypot(points[i] - points[0], points[i + 1] - points[1]) > slop) {
-			return false;
-		}
-	}
-	return true;
 }
 
 /** Whether `tool`'s strokes join `layer`, rather than starting a new one. */
