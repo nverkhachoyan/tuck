@@ -13,6 +13,7 @@ import {
 	defaultTextStyle,
 	duplicateLayer,
 	type EditorDocument,
+	effectsEqual,
 	hasEdits,
 	hasTransparency,
 	type ImageLayer,
@@ -664,5 +665,26 @@ describe("withMask", () => {
 		const restored = withMask(withMask(layer, "file:///mask.png"), null);
 		assert.equal("mask" in restored, false);
 		assert.deepEqual(restored, layer);
+	});
+});
+
+describe("effectsEqual", () => {
+	const black = { type: "solid", color: "#000000" } as const;
+	const blur = { type: "blur", radius: 16 } as const;
+	const pixels = { type: "pixelate", size: 16 } as const;
+
+	test("matches a copy of each effect", () => {
+		for (const effect of [black, blur, pixels]) {
+			assert.equal(effectsEqual(effect, { ...effect }), true);
+		}
+	});
+
+	test("tells apart another setting or another effect", () => {
+		assert.equal(effectsEqual(black, { ...black, color: "#FFFFFF" }), false);
+		assert.equal(effectsEqual(blur, { ...blur, radius: 24 }), false);
+		assert.equal(effectsEqual(pixels, { ...pixels, size: 8 }), false);
+		assert.equal(effectsEqual(blur, pixels), false, "the same number");
+		assert.equal(effectsEqual(pixels, blur), false);
+		assert.equal(effectsEqual(black, blur), false);
 	});
 });

@@ -13,6 +13,7 @@ import {
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
+	effectsEqual,
 	groupsForLayers,
 	isLineShape,
 	type Layer,
@@ -211,11 +212,73 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	const addOnTop = (action: string, layer: Layer) =>
 		setLayers(action, (layers) => [...layers, layer], layer.id);
 
+	const replaceLayer = (
+		action: string,
+		target: Layer,
+		next: Layer,
+		nextSelectedLayerId?: string | null,
+	) =>
+		setLayers(
+			action,
+			(layers) => layers.map((layer) => (layer === target ? next : layer)),
+			nextSelectedLayerId,
+		);
+
 	const findLayer = (id: string) =>
 		get().document?.layers.find((layer) => layer.id === id);
 
 	const findUnlockedLayer = (id: string) =>
 		get().document?.layers.find((layer) => !layer.locked && layer.id === id);
+
+	// The selection, or null if it's one of `ids`.
+	const selectionWithout = (ids: ReadonlySet<string>) => {
+		const { selectedLayerId } = get();
+		return selectedLayerId !== null && ids.has(selectedLayerId)
+			? null
+			: selectedLayerId;
+	};
+
+	// A hidden or locked layer can't be selected, so hiding or locking the
+	// selection clears it.
+	const setLayerFlag = (
+		action: string,
+		id: string,
+		flag: "hidden" | "locked",
+		value: boolean,
+	) => {
+		const target = findLayer(id);
+		if (!target || target[flag] === value) return;
+		replaceLayer(
+			action,
+			target,
+			{ ...target, [flag]: value },
+			value ? selectionWithout(new Set([id])) : get().selectedLayerId,
+		);
+	};
+
+	const setLayerGroupFlag = (
+		action: string,
+		id: string,
+		flag: "hidden" | "locked",
+		value: boolean,
+	) => {
+		const group = get().document?.groups?.find(
+			(candidate) => candidate.id === id,
+		);
+		if (!group) return;
+		const ids = new Set(group.layerIds);
+		const changes = (layer: Layer) =>
+			ids.has(layer.id) && layer[flag] !== value;
+		if (!(get().document?.layers ?? []).some(changes)) return;
+		setLayers(
+			action,
+			(layers) =>
+				layers.map((layer) =>
+					changes(layer) ? { ...layer, [flag]: value } : layer,
+				),
+			value ? selectionWithout(ids) : get().selectedLayerId,
+		);
+	};
 
 	// The document the last nudge produced. While it's still the current one,
 	// nothing else has changed since, so the next nudge joins its undo step.
@@ -295,7 +358,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		// eraser also removes each shape it passes over, whole, in the same undo
 		// step; a shape is one mark, so it's never left in pieces.
 		drawStroke: (stroke) => {
-			const { document, selectedLayerId } = get();
+			const { document } = get();
 			if (!document || stroke.points.length < 2) return;
 			const selected = selectSelectedLayer(get());
 			const target =
@@ -322,9 +385,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 							.map((layer) =>
 								layer === target ? addStroke(target, stroke) : layer,
 							),
-					selectedLayerId !== null && erased.has(selectedLayerId)
-						? null
-						: selectedLayerId,
+					selectionWithout(erased),
 				);
 			} else if (stroke.type === "pen") {
 				addOnTop("editor/drawStroke", createDrawingLayer(stroke));
@@ -364,61 +425,21 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
-		setLayerGroupHidden: (id, hidden) => {
-			const group = get().document?.groups?.find(
-				(candidate) => candidate.id === id,
-			);
-			if (!group) return;
-			const ids = new Set(group.layerIds);
-			if (
-				!(get().document?.layers ?? []).some(
-					(layer) => ids.has(layer.id) && layer.hidden !== hidden,
-				)
-			) {
-				return;
-			}
-			const selectedLayerId = get().selectedLayerId;
-			setLayers(
+		setLayerGroupHidden: (id, hidden) =>
+			setLayerGroupFlag(
 				hidden ? "editor/hideLayerGroup" : "editor/showLayerGroup",
-				(layers) =>
-					layers.map((layer) =>
-						ids.has(layer.id) && layer.hidden !== hidden
-							? { ...layer, hidden }
-							: layer,
-					),
-				selectedLayerId !== null && ids.has(selectedLayerId) && hidden
-					? null
-					: selectedLayerId,
-			);
-		},
+				id,
+				"hidden",
+				hidden,
+			),
 
-		setLayerGroupLocked: (id, locked) => {
-			const group = get().document?.groups?.find(
-				(candidate) => candidate.id === id,
-			);
-			if (!group) return;
-			const ids = new Set(group.layerIds);
-			if (
-				!(get().document?.layers ?? []).some(
-					(layer) => ids.has(layer.id) && layer.locked !== locked,
-				)
-			) {
-				return;
-			}
-			const selectedLayerId = get().selectedLayerId;
-			setLayers(
+		setLayerGroupLocked: (id, locked) =>
+			setLayerGroupFlag(
 				locked ? "editor/lockLayerGroup" : "editor/unlockLayerGroup",
-				(layers) =>
-					layers.map((layer) =>
-						ids.has(layer.id) && layer.locked !== locked
-							? { ...layer, locked }
-							: layer,
-					),
-				selectedLayerId !== null && ids.has(selectedLayerId) && locked
-					? null
-					: selectedLayerId,
-			);
-		},
+				id,
+				"locked",
+				locked,
+			),
 
 		deleteLayerGroup: (id) => {
 			const group = get().document?.groups?.find(
@@ -426,7 +447,6 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 			if (!group) return;
 			const ids = new Set(group.layerIds);
-			const { selectedLayerId } = get();
 			setDocument(
 				"editor/deleteLayerGroup",
 				(document) => ({
@@ -436,7 +456,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 						(candidate) => candidate !== group,
 					),
 				}),
-				selectedLayerId && ids.has(selectedLayerId) ? null : selectedLayerId,
+				selectionWithout(ids),
 			);
 		},
 
@@ -450,10 +470,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				selected.shape === "strokes" &&
 				!selected.locked
 			) {
-				setLayers("editor/paintRedaction", (layers) =>
-					layers.map((layer) =>
-						layer === selected ? addStroke(selected, stroke) : layer,
-					),
+				replaceLayer(
+					"editor/paintRedaction",
+					selected,
+					addStroke(selected, stroke),
 				);
 			} else if (stroke.type === "pen") {
 				addOnTop(
@@ -468,11 +488,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			if (target?.type !== "redaction" || effectsEqual(target.effect, effect)) {
 				return;
 			}
-			setLayers("editor/setRedactionEffect", (layers) =>
-				layers.map((layer) =>
-					layer === target ? { ...target, effect } : layer,
-				),
-			);
+			replaceLayer("editor/setRedactionEffect", target, { ...target, effect });
 		},
 
 		// On top and selected, like a redaction's box, so restyling it right
@@ -488,9 +504,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			if (target?.type !== "shape") return;
 			const restyled = restyleShape(target, edit);
 			if (restyled === target) return;
-			setLayers("editor/setShapeStyle", (layers) =>
-				layers.map((layer) => (layer === target ? restyled : layer)),
-			);
+			replaceLayer("editor/setShapeStyle", target, restyled);
 		},
 
 		// By id, like `transformLayer`: a dial's drag belongs to the image it
@@ -500,9 +514,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			if (target?.type !== "image") return;
 			const adjusted = withAdjustments(target, adjustments);
 			if (adjusted === target) return;
-			setLayers("editor/setAdjustments", (layers) =>
-				layers.map((layer) => (layer === target ? adjusted : layer)),
-			);
+			replaceLayer("editor/setAdjustments", target, adjusted);
 		},
 
 		// By id: the mask was found for the image it started on, which may no
@@ -512,9 +524,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			if (target?.type !== "image") return;
 			const masked = withMask(target, mask);
 			if (masked === target) return;
-			setLayers("editor/setMask", (layers) =>
-				layers.map((layer) => (layer === target ? masked : layer)),
-			);
+			replaceLayer("editor/setMask", target, masked);
 		},
 
 		updateSelectedText: (patch) => {
@@ -529,23 +539,15 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			if (target?.type !== "text") return;
 			const keys = Object.keys(patch) as (keyof TextLayerEdit)[];
 			if (keys.every((key) => target[key] === patch[key])) return;
-			setLayers("editor/updateTextLayer", (layers) =>
-				layers.map((layer) =>
-					layer === target ? { ...target, ...patch } : layer,
-				),
-			);
+			replaceLayer("editor/updateTextLayer", target, { ...target, ...patch });
 		},
 
 		// By id rather than "the selected layer": a gesture can end just as the
 		// selection moves on, and its result belongs to the layer it moved.
 		transformLayer: (id, transform) => {
-			const layer = findUnlockedLayer(id);
-			if (!layer || transformsEqual(layer.transform, transform)) return;
-			setLayers("editor/transformLayer", (layers) =>
-				layers.map((layer) =>
-					layer.id === id ? { ...layer, transform } : layer,
-				),
-			);
+			const target = findUnlockedLayer(id);
+			if (!target || transformsEqual(target.transform, transform)) return;
+			replaceLayer("editor/transformLayer", target, { ...target, transform });
 		},
 
 		// Like `transformLayer`, for a box resized by its handles, a redaction's
@@ -553,12 +555,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		// that did. A line's length is `width`, and its ends turn it too.
 		resizeBox: (id, transform, width, height) => {
 			const target = findUnlockedLayer(id);
-			const resized =
-				target && resizeLayerBox(target, transform, width, height);
+			if (!target) return;
+			const resized = resizeLayerBox(target, transform, width, height);
 			if (!resized) return;
-			setLayers("editor/resizeBox", (layers) =>
-				layers.map((layer) => (layer === target ? resized : layer)),
-			);
+			replaceLayer("editor/resizeBox", target, resized);
 		},
 
 		setLayerResizable: (id, resizable) => {
@@ -569,11 +569,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			) {
 				return;
 			}
-			setLayers("editor/setLayerResizable", (layers) =>
-				layers.map((layer) =>
-					layer === target ? { ...target, resizable } : layer,
-				),
-			);
+			replaceLayer("editor/setLayerResizable", target, {
+				...target,
+				resizable,
+			});
 		},
 
 		// Moves a layer by a document-space offset. A run of nudges to the same
@@ -629,43 +628,28 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			setLayers("editor/moveLayer", () => reordered);
 		},
 
-		// A hidden layer can't be selected, so hiding the selection clears it.
-		setLayerHidden: (id, hidden) => {
-			const target = findLayer(id);
-			if (!target || target.hidden === hidden) return;
-			const { selectedLayerId } = get();
-			setLayers(
+		setLayerHidden: (id, hidden) =>
+			setLayerFlag(
 				hidden ? "editor/hideLayer" : "editor/showLayer",
-				(layers) =>
-					layers.map((layer) =>
-						layer === target ? { ...target, hidden } : layer,
-					),
-				hidden && selectedLayerId === id ? null : selectedLayerId,
-			);
-		},
+				id,
+				"hidden",
+				hidden,
+			),
 
-		// A locked layer can't be selected, so locking the selection clears it.
-		setLayerLocked: (id, locked) => {
-			const target = findLayer(id);
-			if (!target || target.locked === locked) return;
-			const { selectedLayerId } = get();
-			setLayers(
+		setLayerLocked: (id, locked) =>
+			setLayerFlag(
 				locked ? "editor/lockLayer" : "editor/unlockLayer",
-				(layers) =>
-					layers.map((layer) =>
-						layer === target ? { ...target, locked } : layer,
-					),
-				locked && selectedLayerId === id ? null : selectedLayerId,
-			);
-		},
+				id,
+				"locked",
+				locked,
+			),
 
 		deleteLayer: (id) => {
 			if (!findLayer(id)) return;
-			const { selectedLayerId } = get();
 			setLayers(
 				"editor/deleteLayer",
 				(layers) => layers.filter((layer) => layer.id !== id),
-				selectedLayerId === id ? null : selectedLayerId,
+				selectionWithout(new Set([id])),
 			);
 		},
 
@@ -766,15 +750,4 @@ function pastBefore(
 		if (past[index].document === session.document) return past.slice(0, index);
 	}
 	return [];
-}
-
-function effectsEqual(left: RedactionEffect, right: RedactionEffect): boolean {
-	switch (left.type) {
-		case "solid":
-			return right.type === "solid" && left.color === right.color;
-		case "blur":
-			return right.type === "blur" && left.radius === right.radius;
-		case "pixelate":
-			return right.type === "pixelate" && left.size === right.size;
-	}
 }

@@ -28,7 +28,9 @@ What each phase fixes, with where it comes from.
 
 ## Phase 1: Warm-up on tested code
 
-### 1.1 Store slice helpers
+### 1.1 Store slice helpers (done)
+
+Built as described. `replaceLayer` makes ten single-layer updates one line each. `nudgeLayer` keeps its own `map`, because it writes one replaced list two ways (a new undo step, or joining the last nudge's), and splitting that list across the two branches would hide that they write the same thing. `setLayerFlag` and `setLayerGroupFlag` back the four hidden and locked actions. `selectionWithout(ids)` replaces the seven selection checks. `effectsEqual` is exported from `model/document.ts` and has its own test. Group lock, hide, and delete had no store tests; they have them now, and those tests pass against the old slice too. No bugs found.
 
 `src/store/editorSlice.ts` has 1,126 lines of tests, so this step has the least risk and shows the working rhythm.
 

@@ -130,6 +130,20 @@ export type RedactionEffect =
 	| { type: "blur"; radius: number }
 	| { type: "pixelate"; size: number };
 
+export function effectsEqual(
+	left: RedactionEffect,
+	right: RedactionEffect,
+): boolean {
+	switch (left.type) {
+		case "solid":
+			return right.type === "solid" && left.color === right.color;
+		case "blur":
+			return right.type === "blur" && left.radius === right.radius;
+		case "pixelate":
+			return right.type === "pixelate" && left.size === right.size;
+	}
+}
+
 type RedactionBase = LayerBase & {
 	type: "redaction";
 	effect: RedactionEffect;

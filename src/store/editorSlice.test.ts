@@ -489,6 +489,19 @@ describe("editorSlice", () => {
 			);
 		}
 
+		function storeWithGroup() {
+			const { store, text } = storeWithText();
+			const found = (x: number) => ({
+				width: 60,
+				height: 40,
+				transform: { x, y: 300, scaleX: 1, scaleY: 1, rotation: 0 },
+			});
+			store.getState().addRedactionBoxes([found(200), found(500)], blur);
+			const group = store.getState().document?.groups?.[0];
+			assert.ok(group);
+			return { store, text, group, boxes: redactions(store) };
+		}
+
 		test("a box goes on top, centered on what it covers, and is selected", () => {
 			const { store } = storeWithText();
 			store.getState().addRedactionBox(box, black);
@@ -582,6 +595,50 @@ describe("editorSlice", () => {
 
 			store.getState().undo();
 			assert.equal(store.getState().document, before);
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("a group's boxes lock and hide together, clearing a selection among them", () => {
+			const { store, text, group, boxes } = storeWithGroup();
+			store.getState().selectLayer(text.id);
+			store.getState().setLayerGroupLocked(group.id, true);
+			assert.ok(redactions(store).every((layer) => layer.locked));
+			assert.equal(store.getState().selectedLayerId, text.id);
+
+			store.getState().setLayerGroupLocked(group.id, false);
+			store.getState().selectLayer(boxes[1].id);
+			store.getState().setLayerGroupHidden(group.id, true);
+			assert.ok(redactions(store).every((layer) => layer.hidden));
+			assert.equal(store.getState().selectedLayerId, null);
+
+			store.getState().undo();
+			assert.deepEqual(redactions(store), boxes);
+			assert.equal(store.getState().selectedLayerId, boxes[1].id);
+			store.getState().setLayerGroupLocked(group.id, true);
+			assert.equal(store.getState().selectedLayerId, null);
+		});
+
+		test("a group's flags change nothing when its boxes already have them", () => {
+			const { store, group } = storeWithGroup();
+			const before = store.getState();
+			before.setLayerGroupHidden(group.id, false);
+			before.setLayerGroupLocked(group.id, false);
+			before.setLayerGroupLocked("missing", true);
+			before.deleteLayerGroup("missing");
+			assert.equal(store.getState(), before);
+		});
+
+		test("deleting a group removes its boxes, and a selection among them", () => {
+			const { store, text, group, boxes } = storeWithGroup();
+			store.getState().selectLayer(boxes[0].id);
+			store.getState().deleteLayerGroup(group.id);
+			assert.deepEqual(redactions(store), []);
+			assert.deepEqual(store.getState().document?.groups, []);
+			assert.equal(store.getState().selectedLayerId, null);
+
+			store.getState().undo();
+			store.getState().selectLayer(text.id);
+			store.getState().deleteLayerGroup(group.id);
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
