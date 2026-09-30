@@ -1,6 +1,8 @@
 // What the editor is doing, and what's open over it. Plain TypeScript, so
 // the rules for what can be on together are tested; `useEditorMode` holds
 // the state for the screen.
+import type { TextSelection } from "../../layers/textEditing.ts";
+import type { TextLayer } from "../../model/document.ts";
 import type { Shortcut } from "./shortcuts.ts";
 
 /** A text layer's colors, which its Color, Outline, and Box tabs pick. */
@@ -9,6 +11,18 @@ export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
 // While set, the canvas's next tap picks a color from what it shows, for
 // `apply` to give to whatever asked for it.
 export type Eyedropper = { apply: (color: string) => void };
+
+/**
+ * Text being edited in place: its layer as typed so far, which is drawn in
+ * place of the document's (or on top when `isNew`: it's added once editing
+ * ends), and its caret or selection. The caret shows while `focused`.
+ */
+export type TextEditState = {
+	layer: TextLayer;
+	isNew: boolean;
+	selection: TextSelection;
+	focused: boolean;
+};
 
 // All the mode needs to know of text being typed: which layer it is.
 export type EditedText = { layer: { id: string } };

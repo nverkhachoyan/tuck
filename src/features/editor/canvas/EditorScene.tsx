@@ -41,7 +41,7 @@ import {
 } from "@/layers/RedactionLayerView";
 import { shapePath } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
-import { clampSelection, type TextSelection } from "@/layers/textEditing";
+import { clampSelection } from "@/layers/textEditing";
 import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
 import type { ColorMatrix } from "@/model/adjustments";
 import {
@@ -65,6 +65,7 @@ import { rectFromCorners, transformsEqual } from "@/model/geometry";
 import { lineReach, shapeBox } from "@/model/shapes";
 import { colors } from "@/theme";
 import { CanvasBackground, LayerContent } from "../EditorSceneParts";
+import type { TextEditState } from "../editorMode";
 import { handleSides } from "../handles/handleGeometry";
 import { handleMetrics, shownHandles } from "../handles/handleMetrics";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
@@ -120,18 +121,6 @@ export type LiveStroke = {
 	id: SharedValue<number>;
 	landedId: number;
 	targetId: string | null;
-};
-
-/**
- * Text being edited in place: its layer as typed so far, which is drawn in
- * place of the document's (or on top when `isNew`: it's added once editing
- * ends), and its caret or selection. The caret shows while `focused`.
- */
-export type TextEditState = {
-	layer: TextLayer;
-	isNew: boolean;
-	selection: TextSelection;
-	focused: boolean;
 };
 
 /**

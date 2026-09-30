@@ -2,22 +2,12 @@ import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
-	Platform,
 	StyleSheet,
 	Text,
 	useWindowDimensions,
 	View,
 } from "react-native";
-import {
-	detectionTarget,
-	detectionTargetKey,
-} from "@/detection/detectionTarget";
-import type { DetectionFeature } from "@/detection/imageDetection";
-import { mapDetectionRects } from "@/detection/mapDetectionRects";
-import {
-	type DetectionScope,
-	useImageDetection,
-} from "@/detection/useImageDetection";
+import { detectionTarget } from "@/detection/detectionTarget";
 import { AddSheet } from "@/features/editor/add/AddSheet";
 import { AdjustPanel } from "@/features/editor/adjust/AdjustPanel";
 import {
@@ -30,10 +20,7 @@ import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/features/editor/canvas/EditorCanvas";
-import type {
-	CanvasTool,
-	TextEditState,
-} from "@/features/editor/canvas/EditorScene";
+import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
 import {
 	Dock,
@@ -43,15 +30,9 @@ import {
 	InspectorBackdrop,
 	useDockInset,
 } from "@/features/editor/Dock";
-import {
-	type BrushSettings,
-	brushFor,
-	parseBrushSettings,
-	shapeEdit,
-	shapeStyleFor,
-	withShape,
-} from "@/features/editor/draw/brushSettings";
+import { brushFor, shapeStyleFor } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
+import { useDrawTool } from "@/features/editor/draw/useDrawTool";
 import {
 	type ShortcutCommand,
 	shortcutCommand,
@@ -81,12 +62,10 @@ import {
 } from "@/features/editor/redact/RedactPanel";
 import {
 	maskBrush,
-	parseRedactSettings,
-	type RedactSettings,
 	redactionEffect,
-	sameEffect,
-	withEffect,
 } from "@/features/editor/redact/redactSettings";
+import { useFindTool } from "@/features/editor/redact/useFindTool";
+import { useRedactTool } from "@/features/editor/redact/useRedactTool";
 import { SaveErrorBanner } from "@/features/editor/SaveErrorBanner";
 import { ShortcutsOverlay } from "@/features/editor/ShortcutsOverlay";
 import {
@@ -95,24 +74,20 @@ import {
 	type ToolKey,
 } from "@/features/editor/shortcuts";
 import { TrayHeight, TrayPlacement } from "@/features/editor/ToolOptions";
-import {
-	TextEditor,
-	type TextEditorHandle,
-} from "@/features/editor/text/TextEditor";
+import { TextEditor } from "@/features/editor/text/TextEditor";
 import {
 	TextColorPicker,
 	TextStylePanel,
 } from "@/features/editor/text/TextStylePanel";
 import {
-	parseTextStyle,
-	withTextEdit,
-} from "@/features/editor/text/textSettings";
+	type TextEditing,
+	useTextEditing,
+} from "@/features/editor/text/useTextEditing";
 import { useAddImage } from "@/features/editor/useAddImage";
 import { useCutOut } from "@/features/editor/useCutOut";
 import { useEditorMode } from "@/features/editor/useEditorMode";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
-import { importPhoto } from "@/import/photoImport";
-import type { TextSelection } from "@/layers/textEditing";
+import { useStickerSave } from "@/features/editor/useStickerSave";
 import { textIndexAt } from "@/layers/textLayerLayout";
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
@@ -120,15 +95,10 @@ import { errorMessage } from "@/lib/errorMessage";
 import { usePreference } from "@/lib/usePreference";
 import { neutralAdjustments } from "@/model/adjustments";
 import {
-	createTextLayer,
 	type EditorDocument,
 	type ImageLayer,
-	isLine,
-	isLineShape,
 	maxNewImageShortSide,
 	type ShapePlacement,
-	type TextLayer,
-	type TextLayerEdit,
 } from "@/model/document";
 import type { Framing } from "@/model/framing";
 import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
@@ -137,7 +107,6 @@ import { addImage } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
 import { useProjectSession } from "@/projects/useProjectSession";
 import { renderThumbnail, sampleColor } from "@/render/renderDocument";
-import { SAVED_STICKER_MAX_SIDE } from "@/stickers/savedStickers";
 import { bundledStickerImage } from "@/stickers/stickerFile";
 import { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";
@@ -145,8 +114,6 @@ import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
-	selectSelectedRedaction,
-	selectSelectedShape,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
 import { colors, typography } from "@/theme";
@@ -175,22 +142,7 @@ const TOOL_TITLES = {
 	adjust: "Adjust",
 };
 
-// What Find names the group of boxes it adds, when they're all one kind.
-const FOUND_GROUP_NAMES: Record<DetectionFeature, string> = {
-	faces: "Face results",
-	text: "Text results",
-};
-
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
-
-// Text being typed on the canvas: a new layer, added once editing ends, or
-// the selected one, changed then. What's typed and restyled meanwhile stays
-// here, so the whole edit is one undo step. New text is placed in `area`,
-// the part of the photo in view when it began.
-type TextEditing = TextEditState & {
-	initialSelection: TextSelection;
-	area?: Rect;
-};
 
 // An image Adjust can work on: there, and shown.
 function adjustableImage(document: EditorDocument, id: string) {
@@ -245,11 +197,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
-	const selectedRedaction = useStore(selectSelectedRedaction);
-	const selectedShape = useStore(selectSelectedShape);
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
-	const addTextLayer = useStore((state) => state.addTextLayer);
 	const addImageLayer = useStore((state) => state.addImageLayer);
 	const addStickerLayer = useStore((state) => state.addStickerLayer);
 	const duplicateSelectedLayer = useStore(
@@ -257,17 +206,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 	const drawStroke = useStore((state) => state.drawStroke);
 	const addRedactionBox = useStore((state) => state.addRedactionBox);
-	const addRedactionBoxes = useStore((state) => state.addRedactionBoxes);
 	const setLayerGroupHidden = useStore((state) => state.setLayerGroupHidden);
 	const setLayerGroupLocked = useStore((state) => state.setLayerGroupLocked);
 	const deleteLayerGroup = useStore((state) => state.deleteLayerGroup);
 	const paintRedaction = useStore((state) => state.paintRedaction);
-	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
 	const addShape = useStore((state) => state.addShape);
-	const setShapeStyle = useStore((state) => state.setShapeStyle);
 	const setAdjustments = useStore((state) => state.setAdjustments);
-	const updateSelectedText = useStore((state) => state.updateSelectedText);
-	const updateTextLayer = useStore((state) => state.updateTextLayer);
 	const transformLayer = useStore((state) => state.transformLayer);
 	const resizeBox = useStore((state) => state.resizeBox);
 	const nudgeLayer = useStore((state) => state.nudgeLayer);
@@ -297,25 +241,28 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		selectedTextId: selectedTextLayer?.id ?? null,
 	});
 	const { mode, textPicker, eyedropper } = modeState;
-	const textEdit = mode.type === "text" ? mode.edit : null;
-	const textEditorRef = useRef<TextEditorHandle>(null);
+	const textEditing = useTextEditing({
+		document,
+		edit: mode.type === "text" ? mode.edit : null,
+		dispatchMode,
+	});
+	const { styledText } = textEditing;
 	const cropping = mode.type === "crop";
 	const keysTaken = takesKeys(mode);
 	const layersOpen = modeState.sheet === "layers";
 	const addOpen = modeState.sheet === "add";
 	const savedStickers = useSavedStickers();
-	// A photo being kept as a sticker, or kept already this session.
-	const [stickerSave, setStickerSave] = useState<{
-		layerId: string;
-		status: "saving" | "saved";
-	} | null>(null);
+	const stickerSave = useStickerSave(savedStickers.save);
 	const windowWidth = useWindowDimensions().width;
 	const layersBeside = windowWidth >= SIDEBAR_MIN_WIDTH;
 	const wide = windowWidth >= INSPECTOR_MIN_WIDTH;
 	// While typing, the dock rides the keyboard, bringing the text's style
 	// and Done, and the document fits above them.
 	const stageRef = useRef<View>(null);
-	const keyboardOverlap = useKeyboardOverlap(stageRef, textEdit !== null);
+	const keyboardOverlap = useKeyboardOverlap(
+		stageRef,
+		textEditing.edit !== null,
+	);
 	const barInset = useDockInset(keyboardOverlap);
 	// As an inspector, the dock covers none of the canvas's bottom.
 	const dockInset = wide ? 0 : barInset;
@@ -348,136 +295,39 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				: null,
 		[adjustedLayer, adjustController.matrix],
 	);
-	// The tools' settings, and the custom color, are kept between sessions.
-	const [brushSettings, setBrushSettings] = usePreference(
-		"brushSettings",
-		parseBrushSettings,
-	);
-	const [chosenRedactSettings, setRedactSettings] = usePreference(
-		"redactSettings",
-		parseRedactSettings,
-	);
 	// The last color picked from a color picker, which every custom swatch
-	// keeps while a preset is in use. Null until there's one.
+	// keeps while a preset is in use. Null until there's one. Like the tools'
+	// settings, it's kept between sessions.
 	const [customColor, setCustomColor] = usePreference(
 		"customColor",
 		parseCustomColor,
 	);
-	// New text starts in the style text was last given.
-	const [textStyle, setTextStyle] = usePreference("textStyle", parseTextStyle);
-	// The text the dock styles: what's being typed, or else the selection.
-	const styledText: TextLayer | undefined =
-		textEdit?.layer ?? selectedTextLayer;
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
-	const detectedImageKey = detectionTargetKey(document, detectedImage);
-	const detection = useImageDetection(detectedImageKey);
-	const mappedDetections = useMemo(
-		() =>
-			detectedImage && detection.state.status === "found"
-				? detection.state.regions.flatMap(
-						({ feature, ...region }, sourceIndex) =>
-							mapDetectionRects(
-								detectedImage,
-								[region],
-								documentSize,
-								feature,
-							).map((mapped) => ({ ...mapped, sourceIndex, feature })),
-					)
-				: [],
-		[detectedImage, detection.state, documentSize],
-	);
-	const foundDetection =
-		detection.state.status === "found" ? detection.state : null;
-	const detectionOverlay = useMemo(
-		() =>
-			mappedDetections.map((region) => ({
-				...region,
-				selected: foundDetection?.selected.has(region.sourceIndex) ?? false,
-			})),
-		[mappedDetections, foundDetection],
-	);
-	const visibleDetectionIndices = useMemo(
-		() => mappedDetections.map(({ sourceIndex }) => sourceIndex),
-		[mappedDetections],
-	);
-	const selectedDetectionCount = foundDetection
-		? visibleDetectionIndices.filter((index) =>
-				foundDetection.selected.has(index),
-			).length
-		: 0;
-	// The style shows the selected redaction's, which new ones then share, so
-	// a redaction can be picked to match. Changing it restyles that one too.
-	const redactSettings = useMemo(
-		() =>
-			selectedRedaction
-				? withEffect(
-						chosenRedactSettings,
-						selectedRedaction.effect,
-						documentSize,
-					)
-				: chosenRedactSettings,
-		[chosenRedactSettings, selectedRedaction, documentSize],
-	);
-	const changeRedactSettings = (next: RedactSettings) => {
-		setRedactSettings(next);
-		if (selectedRedaction && !sameEffect(redactSettings, next)) {
-			setRedactionEffect(
-				selectedRedaction.id,
-				redactionEffect(next, documentSize),
-			);
-		}
-	};
-	// Likewise, the shape tool shows the selected shape's style, and changing
-	// it restyles that one. A kind it can't become, a box for a line or a line
-	// for a box, starts a new shape instead.
-	const restyledShape =
-		tool === "draw" && brushSettings.tool === "shape"
-			? selectedShape
-			: undefined;
-	const drawSettings = useMemo(
-		() =>
-			restyledShape
-				? withShape(brushSettings, restyledShape, documentSize)
-				: brushSettings,
-		[brushSettings, restyledShape, documentSize],
-	);
-	const changeDrawSettings = (next: BrushSettings) => {
-		setBrushSettings(next);
-		if (!restyledShape) return;
-		const edit = shapeEdit(
-			drawSettings,
-			next,
-			documentSize,
-			restyledShape.transform.scaleX,
-		);
-		if (edit.shape && isLineShape(edit.shape) !== isLine(restyledShape)) {
-			selectLayer(null);
-		} else {
-			setShapeStyle(restyledShape.id, edit);
-		}
-	};
+	const draw = useDrawTool(tool === "draw", documentSize);
+	const redact = useRedactTool(documentSize);
+	const find = useFindTool(document, detectedImage);
 	const canvasTool = useMemo((): CanvasTool | null => {
 		if (eyedropper) return { type: "pickColor" };
-		if (tool === "draw" && drawSettings.tool === "shape") {
+		if (tool === "draw" && draw.settings.tool === "shape") {
 			return {
 				type: "drawShape",
-				shape: drawSettings.shape,
-				style: shapeStyleFor(drawSettings, documentSize),
+				shape: draw.settings.shape,
+				style: shapeStyleFor(draw.settings, documentSize),
 			};
 		}
 		if (tool === "draw") {
-			return { type: "draw", brush: brushFor(drawSettings, documentSize) };
+			return { type: "draw", brush: brushFor(draw.settings, documentSize) };
 		}
 		if (tool !== "redact") return null;
-		const effect = redactionEffect(redactSettings, documentSize);
-		const brush = maskBrush(redactSettings, documentSize);
+		const effect = redactionEffect(redact.settings, documentSize);
+		const brush = maskBrush(redact.settings, documentSize);
 		return brush
 			? { type: "redactBrush", brush, effect }
 			: { type: "redactBox", effect };
-	}, [eyedropper, tool, drawSettings, redactSettings, documentSize]);
+	}, [eyedropper, tool, draw.settings, redact.settings, documentSize]);
 	const handlePaintStroke = (points: number[]) => {
 		if (canvasTool?.type === "draw") {
 			drawStroke({ ...canvasTool.brush, points });
@@ -536,36 +386,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		}
 	};
 
-	// With the tool that fits the selection: the shape tool for a shape, and a
-	// pen for a drawing. Otherwise the tool used last, but never the eraser,
-	// so the first stroke shows. Its color and sizes stay.
 	const startDrawing = () => {
-		setBrushSettings((settings) => {
-			if (selectedLayer?.type === "shape") {
-				return { ...settings, tool: "shape" };
-			}
-			const onDrawing = selectedLayer?.type === "drawing";
-			return settings.tool === "eraser" ||
-				(onDrawing && settings.tool === "shape")
-				? { ...settings, tool: settings.lastBrush }
-				: settings;
-		});
+		draw.chooseTool();
 		dispatchMode({ type: "startTool", tool: "draw" });
 	};
-	// With the tool that adds to the selected redaction, if there is one.
-	// Otherwise the last one used, but never the eraser, so the first drag
-	// shows.
 	const startRedacting = () => {
-		setRedactSettings((settings) => ({
-			...settings,
-			tool: selectedRedaction
-				? selectedRedaction.shape === "box"
-					? "box"
-					: "brush"
-				: settings.tool === "eraser"
-					? "brush"
-					: settings.tool,
-		}));
+		redact.chooseTool();
 		dispatchMode({ type: "startTool", tool: "redact" });
 	};
 	// The selected image, or else the photo, if there's an image at all.
@@ -576,7 +402,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	};
 	const finishTool = () => {
 		dispatchMode({ type: "endTool" });
-		detection.reset();
+		find.reset();
 	};
 	const cancelTool = () => {
 		cancelSession();
@@ -605,112 +431,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (!detectedImage) return;
 		dispatchMode({ type: "startTool", tool: "find" });
 	};
-	// Picking what's already found keeps the regions chosen from it.
-	const findRegions = (scope: DetectionScope) => {
-		const { state } = detection;
-		if (state.status === "found" && state.scope === scope) return;
-		if (detectedImage) detection.start(detectedImage.uri, scope);
-	};
-	// Done redacts the regions chosen, together in one group, in the style
-	// last picked rather than a selected redaction's.
+	// Done redacts the regions chosen in the style last picked, rather than a
+	// selected redaction's.
 	const finishFinding = () => {
-		const found = detection.state;
-		const chosen =
-			found.status === "found"
-				? mappedDetections.filter(({ sourceIndex }) =>
-						found.selected.has(sourceIndex),
-					)
-				: [];
-		if (chosen.length > 0) {
-			const features = new Set(chosen.map(({ feature }) => feature));
-			addRedactionBoxes(
-				chosen.map(({ width, height, transform }) => ({
-					width,
-					height,
-					transform,
-				})),
-				redactionEffect(chosenRedactSettings, documentSize),
-				features.size > 1
-					? "Find results"
-					: FOUND_GROUP_NAMES[chosen[0].feature],
-			);
-		}
+		find.redactChosen(redactionEffect(redact.chosen, documentSize));
 		finishTool();
 	};
 	const doneWithTool = tool === "find" ? finishFinding : finishTool;
 
-	const changeTextEdit = (change: Partial<TextEditState>) =>
-		dispatchMode({
-			type: "changeText",
-			change: (edit) => ({ ...edit, ...change }),
-		});
-	const changeEditedText = (patch: TextLayerEdit) =>
-		dispatchMode({
-			type: "changeText",
-			change: (edit) => ({ ...edit, layer: { ...edit.layer, ...patch } }),
-		});
-	const startNewText = () => {
-		const start = { start: 0, end: 0 };
-		const area = canvasRef.current?.visibleArea();
-		dispatchMode({
-			type: "startText",
-			edit: {
-				layer: createTextLayer(document, "", textStyle, area),
-				isNew: true,
-				selection: start,
-				initialSelection: start,
-				focused: false,
-				area,
-			},
-		});
-	};
-	// With the caret at `index`, or the end.
-	const editSelectedText = (index?: number) => {
-		if (!selectedTextLayer) return;
-		const at = index ?? selectedTextLayer.text.length;
-		dispatchMode({
-			type: "startText",
-			edit: {
-				layer: selectedTextLayer,
-				isNew: false,
-				selection: { start: at, end: at },
-				initialSelection: { start: at, end: at },
-				focused: false,
-			},
-		});
-	};
-	// Finishing with no text discards a new layer and deletes an existing one.
-	const finishTextEdit = () => {
-		if (!textEdit) return;
-		const { layer, isNew, area } = textEdit;
-		const text = layer.text.trim();
-		const { font, color, outlineColor, backgroundColor, align } = layer;
-		const style = { font, color, outlineColor, backgroundColor, align };
-		if (isNew) {
-			if (text) addTextLayer(text, style, area);
-		} else if (text) {
-			updateTextLayer(layer.id, { text, ...style });
-		} else {
-			deleteLayer(layer.id);
-		}
-		dispatchMode({ type: "endText" });
-	};
-	// Restyles the text being typed, or else the selected text, and new text
-	// starts in the same style. On web, the dock's buttons take focus from
-	// the text being typed, so it takes the keyboard back.
-	const styleText = (patch: TextLayerEdit) => {
-		setTextStyle((style) => withTextEdit(style, patch));
-		if (!textEdit) {
-			updateSelectedText(patch);
-			return;
-		}
-		changeEditedText(patch);
-		if (Platform.OS === "web") textEditorRef.current?.focus();
-	};
-	const selectText = (selection: TextSelection) => {
-		textEditorRef.current?.select(selection);
-		changeTextEdit({ selection });
-	};
+	const startNewText = () =>
+		textEditing.startNew(canvasRef.current?.visibleArea());
 
 	const startCrop = () => dispatchMode({ type: "startCrop" });
 	const closeCrop = useCallback(
@@ -771,7 +501,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				dispatchMode({ type: "toggleLayers" });
 				break;
 			case "edit":
-				editSelectedText();
+				textEditing.editSelected();
 				break;
 			case "delete":
 				if (selectedLayer) deleteLayer(selectedLayer.id);
@@ -843,33 +573,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		cutOut: toggleCutOut,
 	};
 
-	// Shrunk the way a saved sticker is, so a large photo doesn't make one.
-	const saveSelectedAsSticker = async () => {
-		if (selectedLayer?.type !== "image" || stickerSave?.status === "saving") {
-			return;
-		}
-		const layerId = selectedLayer.id;
-		setStickerSave({ layerId, status: "saving" });
-		try {
-			await savedStickers.save(
-				await importPhoto(selectedLayer.uri, {
-					maxLongSide: SAVED_STICKER_MAX_SIDE,
-				}),
-			);
-			setStickerSave({ layerId, status: "saved" });
-		} catch (error) {
-			setStickerSave(null);
-			showAlert("Couldn't save sticker", errorMessage(error));
-		}
-	};
-
 	const layerList = {
 		layers: document.layers,
 		groups: document.groups ?? [],
 		background: document.background,
 		selectedLayerId: selectedLayer?.id ?? null,
 		onSelect: (id: string) => {
-			finishTextEdit();
+			textEditing.finish();
 			selectLayer(id);
 		},
 		onMove: moveLayer,
@@ -895,7 +605,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// A tool picked from the rail while another is open finishes that one.
 	const fromRail = (start: () => void) => () => {
 		if (tool) finishTool();
-		if (textEdit) finishTextEdit();
+		if (textEditing.edit) textEditing.finish();
 		start();
 	};
 
@@ -960,14 +670,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							ref={canvasRef}
 							document={document}
 							selectedLayer={selectedLayer}
-							textEdit={textEdit}
-							onTextSelect={selectText}
-							onTextEditDone={finishTextEdit}
+							textEdit={textEditing.edit}
+							onTextSelect={textEditing.select}
+							onTextEditDone={textEditing.finish}
 							onSelectLayer={selectLayer}
 							onTapSelectedLayer={
 								selectedTextLayer
 									? (point) =>
-											editSelectedText(
+											textEditing.editSelected(
 												textIndexAt(
 													selectedTextLayer,
 													toLayerSpace(selectedTextLayer.transform, point),
@@ -982,9 +692,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							detection={
 								tool === "find" && detectedImage && !eyedropper
 									? {
-											regions: detectionOverlay,
+											regions: find.overlay,
 											imageId: detectedImage.id,
-											onToggle: detection.toggle,
+											onToggle: find.toggle,
 										}
 									: null
 							}
@@ -1006,7 +716,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										canMoveForward={selectedIndex < document.layers.length - 1}
 										canMoveBackward={selectedIndex > 0}
 										onEdit={
-											selectedTextLayer ? () => editSelectedText() : undefined
+											selectedTextLayer
+												? () => textEditing.editSelected()
+												: undefined
 										}
 										stretched={selectedLayer.resizable === true}
 										onToggleStretch={
@@ -1029,12 +741,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						{wide && <InspectorBackdrop />}
 						{tool === "draw" && toolOptionsOpen && (
 							<BrushOptions
-								settings={drawSettings}
+								settings={draw.settings}
 								customColor={customColor}
 								bottomInset={dockInset}
-								onChange={changeDrawSettings}
+								onChange={draw.change}
 								onPickCustom={(color) => {
-									changeDrawSettings({ ...drawSettings, color });
+									draw.change({ ...draw.settings, color });
 									setCustomColor(color);
 								}}
 								onEyedropper={() => {
@@ -1042,7 +754,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										type: "startEyedropper",
 										eyedropper: {
 											apply: (color) =>
-												changeDrawSettings({ ...drawSettings, color }),
+												draw.change({ ...draw.settings, color }),
 										},
 									});
 								}}
@@ -1051,12 +763,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						)}
 						{tool === "redact" && toolOptionsOpen && (
 							<RedactOptions
-								settings={redactSettings}
+								settings={redact.settings}
 								customColor={customColor}
 								bottomInset={dockInset}
-								onChange={changeRedactSettings}
+								onChange={redact.change}
 								onPickCustom={(color) => {
-									changeRedactSettings({ ...redactSettings, color });
+									redact.change({ ...redact.settings, color });
 									setCustomColor(color);
 								}}
 								onEyedropper={() => {
@@ -1064,7 +776,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										type: "startEyedropper",
 										eyedropper: {
 											apply: (color) =>
-												changeRedactSettings({ ...redactSettings, color }),
+												redact.change({ ...redact.settings, color }),
 										},
 									});
 								}}
@@ -1073,14 +785,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						)}
 						{tool === "find" && toolOptionsOpen && (
 							<RedactOptions
-								settings={{ ...chosenRedactSettings, tool: "box" }}
+								settings={{ ...redact.chosen, tool: "box" }}
 								customColor={customColor}
 								bottomInset={dockInset}
 								onChange={({ tool: _, ...style }) =>
-									setRedactSettings((settings) => ({ ...settings, ...style }))
+									redact.setChosen((settings) => ({ ...settings, ...style }))
 								}
 								onPickCustom={(color) => {
-									setRedactSettings((settings) => ({ ...settings, color }));
+									redact.setChosen((settings) => ({ ...settings, color }));
 									setCustomColor(color);
 								}}
 								onEyedropper={() => {
@@ -1088,7 +800,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										type: "startEyedropper",
 										eyedropper: {
 											apply: (color) =>
-												setRedactSettings((settings) => ({
+												redact.setChosen((settings) => ({
 													...settings,
 													color,
 												})),
@@ -1100,17 +812,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						)}
 						{tool === "find" && !toolOptionsOpen && !eyedropper && (
 							<DetectionOptions
-								state={detection.state}
-								visibleIndices={visibleDetectionIndices}
-								selectedCount={selectedDetectionCount}
+								state={find.state}
+								visibleIndices={find.visibleIndices}
+								selectedCount={find.selectedCount}
 								bottomInset={dockInset}
-								onRetry={() => {
-									const { state } = detection;
-									if (state.status !== "idle") findRegions(state.scope);
-								}}
-								onStop={detection.reset}
-								onSelectAll={() => detection.select(visibleDetectionIndices)}
-								onClear={() => detection.select([])}
+								onRetry={find.retry}
+								onStop={find.reset}
+								onSelectAll={find.selectAll}
+								onClear={find.clear}
 								onApply={finishFinding}
 							/>
 						)}
@@ -1119,14 +828,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								layer={styledText}
 								colorKey={textPicker.key}
 								bottomInset={dockInset}
-								onChange={styleText}
+								onChange={textEditing.style}
 								onPickCustom={setCustomColor}
 								onEyedropper={() => {
 									const { key } = textPicker;
 									dispatchMode({
 										type: "startEyedropper",
 										eyedropper: {
-											apply: (color) => styleText({ [key]: color }),
+											apply: (color) => textEditing.style({ [key]: color }),
 										},
 									});
 								}}
@@ -1156,7 +865,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							<View style={styles.rail}>
 								<ToolsPanel
 									vertical
-									tool={textEdit ? "text" : tool}
+									tool={textEditing.edit ? "text" : tool}
 									addBusy={addBusy}
 									onAddText={fromRail(startNewText)}
 									onDraw={fromRail(startDrawing)}
@@ -1184,11 +893,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										onDone={doneWithTool}
 										doneShortcut="Escape"
 									/>
-								) : textEdit ? (
+								) : textEditing.edit ? (
 									<DockFooter
 										title="Text"
 										onCancel={() => dispatchMode({ type: "endText" })}
-										onDone={finishTextEdit}
+										onDone={textEditing.finish}
 										doneShortcut="Escape"
 									/>
 								) : selectedLayer ? (
@@ -1203,9 +912,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						>
 							{tool === "draw" ? (
 								<DrawPanel
-									settings={drawSettings}
+									settings={draw.settings}
 									optionsOpen={toolOptionsOpen}
-									onChange={changeDrawSettings}
+									onChange={draw.change}
 									onToggleOptions={() =>
 										dispatchMode({ type: "toggleToolOptions" })
 									}
@@ -1217,19 +926,19 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								/>
 							) : tool === "redact" ? (
 								<RedactPanel
-									settings={redactSettings}
+									settings={redact.settings}
 									optionsOpen={toolOptionsOpen}
-									onChange={changeRedactSettings}
+									onChange={redact.change}
 									onToggleOptions={() =>
 										dispatchMode({ type: "toggleToolOptions" })
 									}
 								/>
 							) : tool === "find" ? (
 								<FindPanel
-									state={detection.state}
-									settings={chosenRedactSettings}
+									state={find.state}
+									settings={redact.chosen}
 									optionsOpen={toolOptionsOpen}
-									onFind={findRegions}
+									onFind={find.find}
 									onToggleOptions={() =>
 										dispatchMode({ type: "toggleToolOptions" })
 									}
@@ -1238,7 +947,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<TextStylePanel
 									layer={styledText}
 									customColor={customColor}
-									onChange={styleText}
+									onChange={textEditing.style}
 									onOpenPicker={(key) =>
 										dispatchMode({
 											type: "openTextPicker",
@@ -1273,20 +982,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										cutOutTarget === selectedLayer ? cutOutState : undefined
 									}
 									onCutOut={toggleCutOut}
-									sticker={
-										stickerSave?.layerId === selectedLayer.id
-											? stickerSave.status
-											: undefined
-									}
-									onSaveSticker={
-										// A sticker is kept from the image's file, which a
-										// cut-out's mask isn't part of.
-										selectedLayer.type === "image" &&
-										!selectedLayer.sticker &&
-										selectedLayer.mask === undefined
-											? saveSelectedAsSticker
-											: undefined
-									}
+									sticker={stickerSave.status}
+									onSaveSticker={stickerSave.save}
 								/>
 							) : wide ? (
 								<LayersPanel {...layerList} layout="inspector" open />
@@ -1346,15 +1043,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onDone={finishCrop}
 						/>
 					)}
-					{textEdit && (
+					{textEditing.edit && (
 						<TextEditor
-							ref={textEditorRef}
-							text={textEdit.layer.text}
-							initialSelection={textEdit.initialSelection}
-							onChangeText={(text) => changeEditedText({ text })}
-							onSelectionChange={(selection) => changeTextEdit({ selection })}
-							onFocusChange={(focused) => changeTextEdit({ focused })}
-							onDone={finishTextEdit}
+							ref={textEditing.editorRef}
+							text={textEditing.edit.layer.text}
+							initialSelection={textEditing.edit.initialSelection}
+							onChangeText={textEditing.changeText}
+							onSelectionChange={textEditing.changeSelection}
+							onFocusChange={textEditing.changeFocus}
+							onDone={textEditing.finish}
 						/>
 					)}
 					{modeState.shortcutsOpen && (

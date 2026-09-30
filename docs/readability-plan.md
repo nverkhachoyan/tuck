@@ -123,7 +123,9 @@ Built as described. In `editorMode.ts`, starting a tool, Adjust, text, crop, or 
 * Redo is held to a tool session's start, as undo is (bug 2).
 * Verify both scenarios from 2.1's notes on web.
 
-### 2.2 A hook per tool, in its folder
+### 2.2 A hook per tool, in its folder (done)
+
+Built as described: `draw/useDrawTool.ts`, `redact/useRedactTool.ts`, `redact/useFindTool.ts`, `text/useTextEditing.ts`, and `useStickerSave.ts` at the root. Find's pure part, `chosenBoxes` in `redact/findResults.ts`, has tests. `TextEditState` moved to `editorMode.ts`, because `text/` can't import `canvas/`. The hooks took 8 of the screen's store subscriptions. The other 30 or so are layer and canvas actions, which the render split in 2.4 may take further. `ScreenContent` went from about 1,140 lines to about 870. Checked on web: typing and restyling text, both while typing and while selected; a shape restyled in Draw, and Draw starting with the shape tool on a selected shape; a box restyled to blur in Redact; the pasted group photo kept as a sticker; and Find finding 28 faces, redacted into a "Face results" group.
 
 Move finding 3's logic into hooks beside the panels they feed, which the screen composes. Folders still don't import each other.
 

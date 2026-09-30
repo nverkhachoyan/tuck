@@ -51,6 +51,7 @@ import { colors, radii, space, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
+import type { TextEditState } from "../editorMode";
 import {
 	type CanvasCursor,
 	cursorForHandle,
@@ -74,7 +75,6 @@ import {
 	EditorScene,
 	type LiveAdjustment,
 	type LiveStroke,
-	type TextEditState,
 } from "./EditorScene";
 import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
 import { HIT_PADDING_PX, layerTargets, resizeMode } from "./layerTargets";
