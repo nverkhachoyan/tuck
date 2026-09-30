@@ -12,6 +12,7 @@ import {
 	detectionTarget,
 	detectionTargetKey,
 } from "@/detection/detectionTarget";
+import type { DetectionFeature } from "@/detection/imageDetection";
 import { mapDetectionRects } from "@/detection/mapDetectionRects";
 import {
 	type DetectionScope,
@@ -167,6 +168,12 @@ const TOOL_TITLES = {
 	redact: "Redact",
 	find: "Find",
 	adjust: "Adjust",
+};
+
+// What Find names the group of boxes it adds, when they're all one kind.
+const FOUND_GROUP_NAMES: Record<DetectionFeature, string> = {
+	faces: "Face results",
+	text: "Text results",
 };
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
@@ -632,9 +639,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				redactionEffect(chosenRedactSettings, documentSize),
 				features.size > 1
 					? "Find results"
-					: features.has("faces")
-						? "Face results"
-						: "Text results",
+					: FOUND_GROUP_NAMES[chosen[0].feature],
 			);
 		}
 		finishTool();

@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import type { SkImage } from "@shopify/react-native-skia";
 import {
 	Redirect,
 	useIsFocused,
@@ -42,6 +43,8 @@ import { type ExportSize, exportSizes } from "./exportSizes";
 import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";
 import { useRenderedDocument } from "./useRenderedDocument";
 
+type Busy = "saving" | "sharing" | "copying";
+
 /**
  * Export, as a sheet over the editor, which shows what will be saved: its
  * size and format, then Save, Share, and Copy.
@@ -72,9 +75,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		exportFormatFor(document),
 	);
 	const { state, retry } = useRenderedDocument(document, exportSize.scale);
-	const [busy, setBusy] = useState<"saving" | "sharing" | "copying" | null>(
-		null,
-	);
+	const [busy, setBusy] = useState<Busy | null>(null);
 	const [saved, setSaved] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [canShare] = useState(canShareImages);
@@ -93,11 +94,27 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		setCopied(false);
 	};
 
-	const handleSave = async () => {
+	// Save, Share, and Copy each run alone, with the others off until it's
+	// done, and alert under `failureTitle` if it throws.
+	const runAction = async (
+		action: Busy,
+		failureTitle: string,
+		run: (image: SkImage) => Promise<void>,
+	) => {
 		if (state.status !== "ready") return;
-		setBusy("saving");
+		setBusy(action);
 		try {
-			const result = await saveImage(state.image, format);
+			await run(state.image);
+		} catch (error) {
+			showAlert(failureTitle, errorMessage(error));
+		} finally {
+			setBusy(null);
+		}
+	};
+
+	const handleSave = () =>
+		runAction("saving", "Save failed", async (image) => {
+			const result = await saveImage(image, format);
 			if (result.status === "saved") {
 				setSaved(true);
 			} else {
@@ -110,39 +127,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					],
 				);
 			}
-		} catch (error) {
-			showAlert("Save failed", errorMessage(error));
-		} finally {
-			setBusy(null);
-		}
-	};
+		});
 
-	const handleShare = async () => {
-		if (state.status !== "ready") return;
-		setBusy("sharing");
-		try {
-			if (!(await shareImage(state.image, format))) {
+	const handleShare = () =>
+		runAction("sharing", "Share failed", async (image) => {
+			if (!(await shareImage(image, format))) {
 				showAlert("Sharing unavailable", "This device can't share files.");
 			}
-		} catch (error) {
-			showAlert("Share failed", errorMessage(error));
-		} finally {
-			setBusy(null);
-		}
-	};
+		});
 
-	const handleCopy = async () => {
-		if (state.status !== "ready") return;
-		setBusy("copying");
-		try {
-			await copyImage(state.image);
+	const handleCopy = () =>
+		runAction("copying", "Copy failed", async (image) => {
+			await copyImage(image);
 			setCopied(true);
-		} catch (error) {
-			showAlert("Copy failed", errorMessage(error));
-		} finally {
-			setBusy(null);
-		}
-	};
+		});
 
 	const ready = state.status === "ready";
 	// On iOS the modal's frame starts below the window's top but is laid out

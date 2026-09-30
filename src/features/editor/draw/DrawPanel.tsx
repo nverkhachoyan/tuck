@@ -28,6 +28,12 @@ const TOOL_ICONS = {
 	eraser: "eraser",
 } as const;
 
+const BRUSH_NAMES: Record<BrushTool, string> = {
+	pen: "Pen",
+	marker: "Marker",
+	neon: "Neon",
+};
+
 /**
  * The drawing tools, in place of the toolbar while drawing: Brush returns to
  * the last pen, Shape drags its shown kind, Eraser removes marks, and Style
@@ -131,13 +137,7 @@ export function BrushOptions({
 							<RingChoice
 								key={brush}
 								variant="outline"
-								label={
-									brush === "pen"
-										? "Pen"
-										: brush === "marker"
-											? "Marker"
-											: "Neon"
-								}
+								label={BRUSH_NAMES[brush]}
 								selected={settings.tool === brush}
 								onPress={() => pickBrush(brush)}
 							>

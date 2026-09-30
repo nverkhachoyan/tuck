@@ -39,7 +39,11 @@ Built as described. `replaceLayer` makes ten single-layer updates one line each.
 * Add a helper that keeps the selection unless it's among some ids, for the seven places that repeat it.
 * Move `effectsEqual` into `model/document.ts` beside `RedactionEffect`, with a test.
 
-### 1.2 Small cleanups
+### 1.2 Small cleanups (done)
+
+Built as described. `runAction` in `ExportScreen.tsx` takes the busy state, the failure alert's title, and what to do with the rendered image. Checked on web: Copy shows Copied with clipboard access and "Copy failed" without it, and the buttons come back either way. `BRUSH_NAMES`, `EFFECT_NAMES`, and `FOUND_GROUP_NAMES` are records keyed by their types, so a new brush, effect, or detector without a name fails to type-check.
+
+**Bug found, not fixed:** in a document with no layers (a new blank canvas), the layers panel's empty text ("Text, drawings, photos, and stickers you add appear here.") wraps to two lines at 390pt and in the 1024pt inspector, and the Background row is drawn over its second line. `styles.empty` in `panels/LayersPanel.tsx` fixes both `height` and `lineHeight` to `ROW_HEIGHT`, so the second line spills out of its box.
 
 * `ExportScreen.tsx`: Save, Share, and Copy each repeat the same busy flag, `try`, `catch`, and `finally`. Give them one helper that takes the action and its error title.
 * Replace nested-ternary label choices with records: Draw's brush names (`DrawPanel.tsx`), Redact's effect names (`RedactPanel.tsx`), and Find's group name in `finishFinding`.

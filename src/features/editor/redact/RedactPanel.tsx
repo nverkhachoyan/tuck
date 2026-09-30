@@ -14,6 +14,12 @@ import {
 } from "../ToolOptions";
 import type { RedactSettings, RedactTool } from "./redactSettings";
 
+const EFFECT_NAMES: Record<RedactSettings["effect"], string> = {
+	solid: "Solid",
+	blur: "Blur",
+	pixelate: "Pixelate",
+};
+
 const STRENGTH_NAMES = {
 	blur: ["Light blur", "Medium blur", "Strong blur"],
 	pixelate: ["Small pixels", "Medium pixels", "Large pixels"],
@@ -115,13 +121,7 @@ export function RedactOptions({
 							{(["solid", "blur", "pixelate"] as const).map((choice) => (
 								<EffectChoice
 									key={choice}
-									label={
-										choice === "solid"
-											? "Solid"
-											: choice === "blur"
-												? "Blur"
-												: "Pixelate"
-									}
+									label={EFFECT_NAMES[choice]}
 									selected={effect === choice}
 									onPress={() => onChange({ ...settings, effect: choice })}
 								>
