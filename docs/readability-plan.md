@@ -143,7 +143,9 @@ Built as described, except that `colorTarget(apply)` returns only `onPickCustom`
 
 Replace the four copies of the custom-color and eyedropper wiring with a helper that takes what a color applies to and returns `customColor`, `onPickCustom`, and `onEyedropper` for a tray.
 
-### 2.4 Split the render
+### 2.4 Split the render (done)
+
+Built as described. `HeaderActions` selects undo and redo itself. `ToolTrays` owns `colorTarget`. `DockContent` is a `switch` on the panel kind, whose last kind is now `idle`: the tools in the dock, or the layers in the inspector. All three live in `EditorScreen.tsx`, since only the screen may compose subfolders. `toolButtons(wrap)` builds `ToolsPanel`'s props for the dock, and for the rail through `fromRail`. The selected layer's actions are one object. `ScreenContent` is now about 705 lines, short of the 400-line target. What's left is the canvas's tool wiring (`canvasTool` and its stroke, box, shape, and pick handlers), the shortcut runner, and the layer list and its arrange handlers; each could become a hook if the target matters. Checked on web at 390, 900, and 1280pt: the header's actions, the tools in the dock or rail, the layers as a sheet, sidebar, or inspector, a photo's actions, Draw's panel and tray, and typing. Checked on the iOS simulator with the software keyboard up while typing: the dock rode the keyboard with the style tabs and footer. A stroke, Cancel, typing, Done, and Undo all worked there.
 
 * The header's actions, the tool trays over the canvas, and the dock's content (a `switch` on the panel kind, replacing the eight-way ternary) each become a component in `EditorScreen.tsx` or beside it.
 * Build `ToolsPanel`'s props once for the rail and the dock.

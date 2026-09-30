@@ -1,5 +1,13 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ComponentProps,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	ActivityIndicator,
 	StyleSheet,
@@ -34,6 +42,9 @@ import { brushFor, shapeStyleFor } from "@/features/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
 import { useDrawTool } from "@/features/editor/draw/useDrawTool";
 import {
+	type EditorModeAction,
+	type EditorModeState,
+	type EditorTool,
 	type ShortcutCommand,
 	shortcutCommand,
 	takesKeys,
@@ -93,7 +104,7 @@ import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { usePreference } from "@/lib/usePreference";
-import { neutralAdjustments } from "@/model/adjustments";
+import { type Adjustments, neutralAdjustments } from "@/model/adjustments";
 import {
 	type EditorDocument,
 	type ImageLayer,
@@ -133,6 +144,10 @@ const SIDEBAR_MIN_WIDTH = 900;
 const INSPECTOR_MIN_WIDTH = 1024;
 const RAIL_WIDTH = 76;
 const INSPECTOR_TRAY = { top: INSPECTOR_TRAY_TOP, width: INSPECTOR_WIDTH };
+
+// What the dock shows: a tool's panel, text's style, the selected layer's
+// actions, or, with nothing selected, the tools or the layers.
+type DockPanel = EditorTool | "text" | "layer" | "idle";
 
 // What a tool's footer calls it.
 const TOOL_TITLES = {
@@ -197,8 +212,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
-	const canUndo = useStore(selectCanUndo);
-	const canRedo = useStore(selectCanRedo);
 	const addImageLayer = useStore((state) => state.addImageLayer);
 	const addStickerLayer = useStore((state) => state.addStickerLayer);
 	const duplicateSelectedLayer = useStore(
@@ -240,7 +253,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		canFind: detectedImage !== null,
 		selectedTextId: selectedTextLayer?.id ?? null,
 	});
-	const { mode, textPicker, eyedropper } = modeState;
+	const { mode, eyedropper } = modeState;
 	const textEditing = useTextEditing({
 		document,
 		edit: mode.type === "text" ? mode.edit : null,
@@ -302,17 +315,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		"customColor",
 		parseCustomColor,
 	);
-	// For a tray whose colors go to `apply`: a color from its picker, which
-	// becomes the custom color too, and the eyedropper, for a color from the
-	// canvas.
-	const colorTarget = (apply: (color: string) => void) => ({
-		onPickCustom: (color: string) => {
-			apply(color);
-			setCustomColor(color);
-		},
-		onEyedropper: () =>
-			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-	});
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
@@ -538,13 +540,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onShortcut: handleShortcut,
 	});
 
-	const panelKind = tool
+	const panelKind: DockPanel = tool
 		? tool
 		: styledText
 			? "text"
 			: selectedLayer
 				? "layer"
-				: "tools";
+				: "idle";
 
 	const focused = useIsFocused();
 	const {
@@ -619,6 +621,39 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (textEditing.edit) textEditing.finish();
 		start();
 	};
+	// The tools' buttons, for the dock and, through `fromRail`, the rail.
+	const toolButtons = (wrap = (start: () => void) => start) => ({
+		addBusy,
+		cutOut: cutOutState,
+		onAddText: wrap(startNewText),
+		onDraw: wrap(startDrawing),
+		onRedact: wrap(startRedacting),
+		onFind: detectedImage ? wrap(startFinding) : undefined,
+		onAdd: wrap(openAdd),
+		onCrop: wrap(startCrop),
+		onAdjust: adjustable ? wrap(startAdjusting) : undefined,
+		onCutOut: wrap(toggleCutOut),
+	});
+	// What the dock offers for the selected layer, by its kind.
+	const layerActions = selectedLayer && {
+		onDraw:
+			selectedLayer.type === "drawing" || selectedLayer.type === "shape"
+				? startDrawing
+				: undefined,
+		onRedact:
+			selectedLayer.type === "redaction" || selectedLayer.type === "image"
+				? startRedacting
+				: undefined,
+		onAdjust: selectedLayer.type === "image" ? startAdjusting : undefined,
+		onFind:
+			selectedLayer.type === "image" && !selectedLayer.hidden
+				? startFinding
+				: undefined,
+		cutOut: cutOutTarget === selectedLayer ? cutOutState : undefined,
+		onCutOut: toggleCutOut,
+		sticker: stickerSave.status,
+		onSaveSticker: stickerSave.save,
+	};
 
 	return (
 		<TrayHeight.Provider value={setTrayHeight}>
@@ -628,51 +663,25 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						backLabel="Back to projects"
 						onBack={tool ? undefined : () => leaveEditor(router)}
 						action={
-							<View style={styles.headerActions}>
-								{adjustedLayer?.adjustments && (
-									<TextButton
-										label="Reset"
-										onPress={() =>
-											setAdjustments(adjustedLayer.id, neutralAdjustments)
-										}
-									/>
-								)}
-								{/* A wide screen's inspector always shows them. */}
-								{!tool && !wide && (
-									<IconButton
-										icon="layers-outline"
-										label="Layers"
-										shortcut={LAYERS_KEY}
-										selected={layersOpen}
-										onPress={() => dispatchMode({ type: "toggleLayers" })}
-									/>
-								)}
-								<IconButton
-									icon="arrow-undo-outline"
-									label="Undo"
-									shortcut="mod+Z"
-									disabled={!canUndo}
-									onPress={undo}
-								/>
-								<IconButton
-									icon="arrow-redo-outline"
-									label="Redo"
-									shortcut="mod+shift+Z"
-									disabled={!canRedo}
-									onPress={redo}
-								/>
-								{!tool && (
-									<View style={styles.exportAction}>
-										<Button
-											label="Export"
-											icon="share-outline"
-											variant="primary"
-											size="small"
-											onPress={() => router.push(exportHref(projectId))}
-										/>
-									</View>
-								)}
-							</View>
+							<HeaderActions
+								onReset={
+									adjustedLayer?.adjustments
+										? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
+										: undefined
+								}
+								// A wide screen's inspector always shows the layers.
+								layers={
+									!tool && !wide
+										? {
+												open: layersOpen,
+												onToggle: () => dispatchMode({ type: "toggleLayers" }),
+											}
+										: undefined
+								}
+								onExport={
+									tool ? undefined : () => router.push(exportHref(projectId))
+								}
+							/>
 						}
 					/>
 					{/* The dock covers the stage's bottom, which runs under it. */}
@@ -750,73 +759,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							}
 						/>
 						{wide && <InspectorBackdrop />}
-						{tool === "draw" && toolOptionsOpen && (
-							<BrushOptions
-								settings={draw.settings}
-								customColor={customColor}
-								bottomInset={dockInset}
-								onChange={draw.change}
-								{...colorTarget((color) =>
-									draw.change({ ...draw.settings, color }),
-								)}
-								onClose={() => dispatchMode({ type: "closeToolOptions" })}
-							/>
-						)}
-						{tool === "redact" && toolOptionsOpen && (
-							<RedactOptions
-								settings={redact.settings}
-								customColor={customColor}
-								bottomInset={dockInset}
-								onChange={redact.change}
-								{...colorTarget((color) =>
-									redact.change({ ...redact.settings, color }),
-								)}
-								onClose={() => dispatchMode({ type: "closeToolOptions" })}
-							/>
-						)}
-						{tool === "find" && toolOptionsOpen && (
-							<RedactOptions
-								settings={{ ...redact.chosen, tool: "box" }}
-								customColor={customColor}
-								bottomInset={dockInset}
-								onChange={({ tool: _, ...style }) =>
-									redact.setChosen((settings) => ({ ...settings, ...style }))
-								}
-								{...colorTarget((color) =>
-									redact.setChosen((settings) => ({ ...settings, color })),
-								)}
-								onClose={() => dispatchMode({ type: "closeToolOptions" })}
-							/>
-						)}
-						{tool === "find" && !toolOptionsOpen && !eyedropper && (
-							<DetectionOptions
-								state={find.state}
-								visibleIndices={find.visibleIndices}
-								selectedCount={find.selectedCount}
-								bottomInset={dockInset}
-								onRetry={find.retry}
-								onStop={find.reset}
-								onSelectAll={find.selectAll}
-								onClear={find.clear}
-								onApply={finishFinding}
-							/>
-						)}
-						{textPicker && styledText && (
-							<TextColorPicker
-								layer={styledText}
-								colorKey={textPicker.key}
-								bottomInset={dockInset}
-								{...colorTarget((color) =>
-									textEditing.style({ [textPicker.key]: color }),
-								)}
-								onClose={() => dispatchMode({ type: "closeTextPicker" })}
-							/>
-						)}
-						{eyedropper && (
-							<EyedropperHint
-								onCancel={() => dispatchMode({ type: "stopEyedropper" })}
-							/>
-						)}
+						<ToolTrays
+							modeState={modeState}
+							dispatchMode={dispatchMode}
+							draw={draw}
+							redact={redact}
+							find={find}
+							textEditing={textEditing}
+							customColor={customColor}
+							onCustomColor={setCustomColor}
+							bottomInset={dockInset}
+							onRedactFound={finishFinding}
+						/>
 						{saveProblem && (
 							<SaveErrorBanner
 								message={saveProblem}
@@ -836,16 +790,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<ToolsPanel
 									vertical
 									tool={textEditing.edit ? "text" : tool}
-									addBusy={addBusy}
-									onAddText={fromRail(startNewText)}
-									onDraw={fromRail(startDrawing)}
-									onRedact={fromRail(startRedacting)}
-									onFind={detectedImage ? fromRail(startFinding) : undefined}
-									onAdd={fromRail(openAdd)}
-									onCrop={fromRail(startCrop)}
-									onAdjust={adjustable ? fromRail(startAdjusting) : undefined}
-									cutOut={cutOutState}
-									onCutOut={fromRail(toggleCutOut)}
+									{...toolButtons(fromRail)}
 								/>
 							</View>
 						)}
@@ -866,7 +811,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								) : textEditing.edit ? (
 									<DockFooter
 										title="Text"
-										onCancel={() => dispatchMode({ type: "endText" })}
+										onCancel={textEditing.cancel}
 										onDone={textEditing.finish}
 										doneShortcut="Escape"
 									/>
@@ -880,97 +825,26 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							}
 							keyboardOverlap={keyboardOverlap}
 						>
-							{tool === "draw" ? (
-								<DrawPanel
-									settings={draw.settings}
-									optionsOpen={toolOptionsOpen}
-									onChange={draw.change}
-									onToggleOptions={() =>
-										dispatchMode({ type: "toggleToolOptions" })
-									}
-								/>
-							) : tool === "adjust" ? (
-								<AdjustPanel
-									controller={adjustController}
-									adjustments={adjustedLayer?.adjustments}
-								/>
-							) : tool === "redact" ? (
-								<RedactPanel
-									settings={redact.settings}
-									optionsOpen={toolOptionsOpen}
-									onChange={redact.change}
-									onToggleOptions={() =>
-										dispatchMode({ type: "toggleToolOptions" })
-									}
-								/>
-							) : tool === "find" ? (
-								<FindPanel
-									state={find.state}
-									settings={redact.chosen}
-									optionsOpen={toolOptionsOpen}
-									onFind={find.find}
-									onToggleOptions={() =>
-										dispatchMode({ type: "toggleToolOptions" })
-									}
-								/>
-							) : styledText ? (
-								<TextStylePanel
-									layer={styledText}
-									customColor={customColor}
-									onChange={textEditing.style}
-									onOpenPicker={(key) =>
-										dispatchMode({
-											type: "openTextPicker",
-											layerId: styledText.id,
-											key,
-										})
-									}
-								/>
-							) : selectedLayer ? (
-								<LayerActionsPanel
-									onDraw={
-										selectedLayer.type === "drawing" ||
-										selectedLayer.type === "shape"
-											? startDrawing
-											: undefined
-									}
-									onRedact={
-										selectedLayer.type === "redaction" ||
-										selectedLayer.type === "image"
-											? startRedacting
-											: undefined
-									}
-									onAdjust={
-										selectedLayer.type === "image" ? startAdjusting : undefined
-									}
-									onFind={
-										selectedLayer.type === "image" && !selectedLayer.hidden
-											? startFinding
-											: undefined
-									}
-									cutOut={
-										cutOutTarget === selectedLayer ? cutOutState : undefined
-									}
-									onCutOut={toggleCutOut}
-									sticker={stickerSave.status}
-									onSaveSticker={stickerSave.save}
-								/>
-							) : wide ? (
-								<LayersPanel {...layerList} layout="inspector" open />
-							) : (
-								<ToolsPanel
-									addBusy={addBusy}
-									onAddText={startNewText}
-									onDraw={startDrawing}
-									onRedact={startRedacting}
-									onFind={detectedImage ? startFinding : undefined}
-									onAdd={openAdd}
-									onCrop={startCrop}
-									onAdjust={adjustable ? startAdjusting : undefined}
-									cutOut={cutOutState}
-									onCutOut={toggleCutOut}
-								/>
-							)}
+							<DockContent
+								panel={panelKind}
+								optionsOpen={toolOptionsOpen}
+								dispatchMode={dispatchMode}
+								draw={draw}
+								redact={redact}
+								find={find}
+								adjustController={adjustController}
+								adjustments={adjustedLayer?.adjustments}
+								textEditing={textEditing}
+								customColor={customColor}
+								layerActions={layerActions}
+								idle={
+									wide ? (
+										<LayersPanel {...layerList} layout="inspector" open />
+									) : (
+										<ToolsPanel {...toolButtons()} />
+									)
+								}
+							/>
 						</Dock>
 					</CanvasStage>
 					{!layersBeside && layersPanel}
@@ -1033,6 +907,268 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			</TrayPlacement.Provider>
 		</TrayHeight.Provider>
 	);
+}
+
+/**
+ * The header's actions: Reset while the image being adjusted has changes,
+ * the layers where the inspector doesn't show them, undo and redo, and
+ * Export while no tool is open.
+ */
+function HeaderActions({
+	onReset,
+	layers,
+	onExport,
+}: {
+	onReset?: () => void;
+	layers?: { open: boolean; onToggle: () => void };
+	onExport?: () => void;
+}) {
+	const canUndo = useStore(selectCanUndo);
+	const canRedo = useStore(selectCanRedo);
+	const undo = useStore((state) => state.undo);
+	const redo = useStore((state) => state.redo);
+	return (
+		<View style={styles.headerActions}>
+			{onReset && <TextButton label="Reset" onPress={onReset} />}
+			{layers && (
+				<IconButton
+					icon="layers-outline"
+					label="Layers"
+					shortcut={LAYERS_KEY}
+					selected={layers.open}
+					onPress={layers.onToggle}
+				/>
+			)}
+			<IconButton
+				icon="arrow-undo-outline"
+				label="Undo"
+				shortcut="mod+Z"
+				disabled={!canUndo}
+				onPress={undo}
+			/>
+			<IconButton
+				icon="arrow-redo-outline"
+				label="Redo"
+				shortcut="mod+shift+Z"
+				disabled={!canRedo}
+				onPress={redo}
+			/>
+			{onExport && (
+				<View style={styles.exportAction}>
+					<Button
+						label="Export"
+						icon="share-outline"
+						variant="primary"
+						size="small"
+						onPress={onExport}
+					/>
+				</View>
+			)}
+		</View>
+	);
+}
+
+type ModeProps = {
+	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
+	draw: ReturnType<typeof useDrawTool>;
+	redact: ReturnType<typeof useRedactTool>;
+	find: ReturnType<typeof useFindTool>;
+	textEditing: ReturnType<typeof useTextEditing>;
+	customColor: string | null;
+};
+
+/**
+ * What opens over the canvas, above the dock: the tool's tray, Find's
+ * results, a text color picker, and the eyedropper's hint.
+ */
+function ToolTrays({
+	modeState,
+	dispatchMode,
+	draw,
+	redact,
+	find,
+	textEditing,
+	customColor,
+	onCustomColor,
+	bottomInset,
+	onRedactFound,
+}: ModeProps & {
+	modeState: EditorModeState<TextEditing>;
+	onCustomColor: (color: string) => void;
+	bottomInset: number;
+	onRedactFound: () => void;
+}) {
+	const { mode, textPicker, eyedropper } = modeState;
+	const { styledText } = textEditing;
+	const tray =
+		mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen
+			? mode.tool
+			: null;
+	const closeTray = () => dispatchMode({ type: "closeToolOptions" });
+	// For a tray whose colors go to `apply`: a color from its picker, which
+	// becomes the custom color too, and the eyedropper, for a color from the
+	// canvas.
+	const colorTarget = (apply: (color: string) => void) => ({
+		onPickCustom: (color: string) => {
+			apply(color);
+			onCustomColor(color);
+		},
+		onEyedropper: () =>
+			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
+	});
+	return (
+		<>
+			{tray === "draw" && (
+				<BrushOptions
+					settings={draw.settings}
+					customColor={customColor}
+					bottomInset={bottomInset}
+					onChange={draw.change}
+					{...colorTarget((color) => draw.change({ ...draw.settings, color }))}
+					onClose={closeTray}
+				/>
+			)}
+			{tray === "redact" && (
+				<RedactOptions
+					settings={redact.settings}
+					customColor={customColor}
+					bottomInset={bottomInset}
+					onChange={redact.change}
+					{...colorTarget((color) =>
+						redact.change({ ...redact.settings, color }),
+					)}
+					onClose={closeTray}
+				/>
+			)}
+			{tray === "find" && (
+				<RedactOptions
+					settings={{ ...redact.chosen, tool: "box" }}
+					customColor={customColor}
+					bottomInset={bottomInset}
+					onChange={({ tool: _, ...style }) =>
+						redact.setChosen((settings) => ({ ...settings, ...style }))
+					}
+					{...colorTarget((color) =>
+						redact.setChosen((settings) => ({ ...settings, color })),
+					)}
+					onClose={closeTray}
+				/>
+			)}
+			{mode.type === "tool" && mode.tool === "find" && !tray && !eyedropper && (
+				<DetectionOptions
+					state={find.state}
+					visibleIndices={find.visibleIndices}
+					selectedCount={find.selectedCount}
+					bottomInset={bottomInset}
+					onRetry={find.retry}
+					onStop={find.reset}
+					onSelectAll={find.selectAll}
+					onClear={find.clear}
+					onApply={onRedactFound}
+				/>
+			)}
+			{textPicker && styledText && (
+				<TextColorPicker
+					layer={styledText}
+					colorKey={textPicker.key}
+					bottomInset={bottomInset}
+					{...colorTarget((color) =>
+						textEditing.style({ [textPicker.key]: color }),
+					)}
+					onClose={() => dispatchMode({ type: "closeTextPicker" })}
+				/>
+			)}
+			{eyedropper && (
+				<EyedropperHint
+					onCancel={() => dispatchMode({ type: "stopEyedropper" })}
+				/>
+			)}
+		</>
+	);
+}
+
+/**
+ * What the dock holds: the open tool's panel, the style of the text being
+ * typed or selected, the selected layer's actions, or else `idle`.
+ */
+function DockContent({
+	panel,
+	optionsOpen,
+	dispatchMode,
+	draw,
+	redact,
+	find,
+	adjustController,
+	adjustments,
+	textEditing,
+	customColor,
+	layerActions,
+	idle,
+}: ModeProps & {
+	panel: DockPanel;
+	optionsOpen: boolean;
+	adjustController: ReturnType<typeof useAdjustController>;
+	adjustments: Adjustments | undefined;
+	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
+	idle: ReactNode;
+}) {
+	const toggleOptions = () => dispatchMode({ type: "toggleToolOptions" });
+	const { styledText } = textEditing;
+	switch (panel) {
+		case "draw":
+			return (
+				<DrawPanel
+					settings={draw.settings}
+					optionsOpen={optionsOpen}
+					onChange={draw.change}
+					onToggleOptions={toggleOptions}
+				/>
+			);
+		case "redact":
+			return (
+				<RedactPanel
+					settings={redact.settings}
+					optionsOpen={optionsOpen}
+					onChange={redact.change}
+					onToggleOptions={toggleOptions}
+				/>
+			);
+		case "find":
+			return (
+				<FindPanel
+					state={find.state}
+					settings={redact.chosen}
+					optionsOpen={optionsOpen}
+					onFind={find.find}
+					onToggleOptions={toggleOptions}
+				/>
+			);
+		case "adjust":
+			return (
+				<AdjustPanel controller={adjustController} adjustments={adjustments} />
+			);
+		case "text":
+			return (
+				styledText && (
+					<TextStylePanel
+						layer={styledText}
+						customColor={customColor}
+						onChange={textEditing.style}
+						onOpenPicker={(key) =>
+							dispatchMode({
+								type: "openTextPicker",
+								layerId: styledText.id,
+								key,
+							})
+						}
+					/>
+				)
+			);
+		case "layer":
+			return layerActions && <LayerActionsPanel {...layerActions} />;
+		case "idle":
+			return idle;
+	}
 }
 
 const styles = StyleSheet.create({

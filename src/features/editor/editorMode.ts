@@ -40,6 +40,8 @@ export type EditorMode<TextEdit> =
 	| { type: "text"; edit: TextEdit }
 	| { type: "crop" };
 
+export type EditorTool = Extract<EditorMode<never>, { type: "tool" }>["tool"];
+
 type TrayTool = Extract<EditorMode<never>, { optionsOpen: boolean }>;
 
 /**
