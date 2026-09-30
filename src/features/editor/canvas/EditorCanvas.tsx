@@ -28,8 +28,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { layerBounds } from "@/layers/layerBounds";
-import { type TextSelection, wordRange } from "@/layers/textEditing";
-import { textIndexAt } from "@/layers/textLayerLayout";
+import type { TextSelection } from "@/layers/textEditing";
 import type { EditorDocument, Layer, ShapePlacement } from "@/model/document";
 import {
 	type Box,
@@ -37,7 +36,6 @@ import {
 	type Point,
 	type Rect,
 	type Transform,
-	toLayerSpace,
 } from "@/model/geometry";
 import { colors, radii, space, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
@@ -51,7 +49,6 @@ import {
 } from "../handles/canvasCursor";
 import { handleMetrics, handleUnder } from "../handles/handleMetrics";
 import { type ViewFrame, viewPointToDocument } from "../viewport";
-import { createDoubleTap } from "./doubleTap";
 import {
 	type CanvasTool,
 	type DetectionOverlayRegion,
@@ -65,7 +62,7 @@ import {
 	hitsLayer,
 	type LayerTarget,
 } from "./hitTest";
-import { HIT_PADDING_PX, layerTargets, resizeMode } from "./layerTargets";
+import { layerTargets, resizeMode } from "./layerTargets";
 import {
 	type LiveTransform,
 	readLiveBox,
@@ -82,7 +79,7 @@ import { insideDocument, strokeIntent, TAP_SLOP_PX } from "./strokeIntent";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
-import { type TextPressPhase, useTextEditGesture } from "./useTextEditGesture";
+import { useTextEditGesture } from "./useTextEditGesture";
 import { useViewGesture } from "./useViewGesture";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
@@ -523,107 +520,12 @@ export function EditorCanvas({
 		[selectedLayer, scale, onNudgeLayer],
 	);
 
-	// Where the edited text is under a point reported by the view: the index
-	// of its text there, or null off it, or outside its box.
-	const textIndexUnder = useCallback(
-		(screenX: number, screenY: number, clampToText = false) => {
-			if (!textEdit || scale === 0) return null;
-			const { layer } = textEdit;
-			const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
-			const padding = HIT_PADDING_PX / (scale * layer.transform.scaleX);
-			if (
-				!clampToText &&
-				!hitTestBox(layer.transform, layerBounds(layer, padding), point)
-			) {
-				return null;
-			}
-			return textIndexAt(layer, toLayerSpace(layer.transform, point));
-		},
-		[textEdit, scale, viewport],
-	);
-	// The press under way on edited text: where it landed, and the index a
-	// drag selects from, or null when it's off the text or selected a word.
-	const textPress = useRef<{
-		x: number;
-		y: number;
-		anchor: number | null;
-		onText: boolean;
-	} | null>(null);
-	// A double tap on edited text selects a word.
-	const [textTaps] = useState(createDoubleTap);
-	const handleTextPress = useCallback(
-		(phase: TextPressPhase, screenX: number, screenY: number) => {
-			if (!textEdit) return;
-			// A second finger landed, to zoom.
-			if (phase === "cancel") {
-				textPress.current = null;
-				return;
-			}
-			if (phase === "begin") {
-				const index = textIndexUnder(screenX, screenY);
-				const double =
-					index !== null && textTaps.tap({ x: screenX, y: screenY });
-				textPress.current = {
-					x: screenX,
-					y: screenY,
-					anchor: double ? null : index,
-					onText: index !== null,
-				};
-				if (index === null) return;
-				onTextSelect?.(
-					double
-						? wordRange(textEdit.layer.text, index)
-						: { start: index, end: index },
-				);
-				return;
-			}
-			const press = textPress.current;
-			if (!press) return;
-			if (phase === "end") textPress.current = null;
-			if (press.anchor !== null) {
-				const index = textIndexUnder(screenX, screenY, true) ?? press.anchor;
-				onTextSelect?.({
-					start: Math.min(press.anchor, index),
-					end: Math.max(press.anchor, index),
-				});
-				return;
-			}
-			// A tap off the text finishes; a drag there does nothing.
-			const travel = Math.hypot(screenX - press.x, screenY - press.y);
-			if (phase === "end" && !press.onText && travel < TAP_SLOP_PX) {
-				onTextEditDone?.();
-			}
-		},
-		[textEdit, textIndexUnder, textTaps, onTextSelect, onTextEditDone],
-	);
-	const handleTextHover = useCallback(
-		(screenX: number, screenY: number) =>
-			setCursor(textIndexUnder(screenX, screenY) === null ? "default" : "text"),
-		[textIndexUnder],
-	);
-	// The handlers change with every keystroke, and a new gesture could cut
-	// off a drag that's selecting, so the gesture keeps stable ones that call
-	// the latest.
-	const textHandlers = useRef({
-		press: handleTextPress,
-		hover: handleTextHover,
-	});
-	useLayoutEffect(() => {
-		textHandlers.current = { press: handleTextPress, hover: handleTextHover };
-	});
-	const onTextPress = useCallback(
-		(phase: TextPressPhase, x: number, y: number) =>
-			textHandlers.current.press(phase, x, y),
-		[],
-	);
-	const onTextHover = useCallback(
-		(x: number, y: number) => textHandlers.current.hover(x, y),
-		[],
-	);
 	const textGesture = useTextEditGesture({
-		onPress: onTextPress,
-		onHover: onTextHover,
-		onHoverEnd: handleHoverEnd,
+		edit: textEdit,
+		viewport,
+		onSelect: onTextSelect,
+		onDone: onTextEditDone,
+		onCursor: setCursor,
 	});
 
 	const strokePoints = useSharedValue<number[]>([]);

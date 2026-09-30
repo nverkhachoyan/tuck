@@ -169,7 +169,9 @@ Built as described: `canvas/useCanvasZoom.ts` takes the frame and the wheel's ta
 
 Move finding 6's state and callbacks into `canvas/useCanvasZoom.ts`, returning the viewport, `zoom`, what the imperative handle needs (`zoomView`, `visibleArea`), `commitViewport`, and `tapOnNothing`. Verify: pinch, trackpad pinch and wheel on web, ⌘+ ⌘− ⌘0, double tap on nothing, Fit, a crop resetting the zoom, and a tray opening while zoomed.
 
-### 3.3 Text presses with their gesture
+### 3.3 Text presses with their gesture (done)
+
+Built into `useTextEditGesture`, which now takes the edit, the viewport, and `onSelect`, `onDone`, and `onCursor`, and returns the gesture. The index under a point, the press under way, the double-tap tracker, and the latest-handler refs moved in with it. The canvas makes one call, and lost about 105 lines (it's now 949). Checked on web in headless Chrome: placing the caret, dragging a selection, a double tap for a word, the text cursor over the text and the default off it, and a tap off the text finishing. Checked on the iOS simulator: a two-finger pinch over the text while typing zoomed the view without moving the caret, and a tap afterwards placed the caret.
 
 Move the text press and hover handling, with its latest-handler refs, next to `useTextEditGesture` (or into it), so the canvas passes the edit and gets a gesture back. Verify: placing the caret, dragging a selection, double tap for a word, a tap off the text finishing, and a second finger zooming mid-press on iOS.
 
