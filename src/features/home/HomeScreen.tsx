@@ -47,9 +47,9 @@ const START_ON_TOP_MIN_WIDTH = 1024;
 const choosePhotoLabels: Record<HomeStatus, string> = {
 	loading: "Loading…",
 	saving: "Saving…",
-	saveFailed: "Choose Photo",
+	saveFailed: "Photo",
 	opening: "Opening…",
-	idle: "Choose Photo",
+	idle: "Photo",
 };
 
 export default function HomeScreen() {
@@ -103,6 +103,8 @@ export default function HomeScreen() {
 		<View style={styles.start}>
 			<StartTile
 				label={choosePhotoLabels[status]}
+				// The icon says what "Photo" does; a screen reader needs the verb.
+				accessibilityLabel={blocked ? undefined : "Choose Photo"}
 				compact={compact}
 				icon="images-outline"
 				primary
@@ -219,12 +221,14 @@ export default function HomeScreen() {
 function StartTile({
 	label,
 	icon,
+	accessibilityLabel = label,
 	primary = false,
 	compact,
 	disabled,
 	onPress,
 }: {
 	label: string;
+	accessibilityLabel?: string;
 	icon: ComponentProps<typeof Ionicons>["name"];
 	primary?: boolean;
 	compact: boolean;
@@ -236,7 +240,7 @@ function StartTile({
 			disabled={disabled}
 			onPress={onPress}
 			accessibilityRole="button"
-			accessibilityLabel={label}
+			accessibilityLabel={accessibilityLabel}
 			accessibilityState={{ disabled }}
 			style={(state) => {
 				const { pressed, hovered } = interaction(state);
