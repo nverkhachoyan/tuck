@@ -49,6 +49,7 @@ import {
 } from "../handles/canvasCursor";
 import { handleMetrics, handleUnder } from "../handles/handleMetrics";
 import { type ViewFrame, viewPointToDocument } from "../viewport";
+import { type CanvasInput, inputRules } from "./canvasInput";
 import {
 	type CanvasTool,
 	type DetectionOverlayRegion,
@@ -87,6 +88,8 @@ import { useViewGesture } from "./useViewGesture";
 const PHOTO_INSET = 16;
 // The selection bar's distance from the selection, above it past the rotate
 // knob or below it past the handles, and from the view's edges.
+const SELECT: CanvasInput = { type: "select" };
+const NO_DETECTIONS: readonly DetectionOverlayRegion[] = [];
 const SELECTION_BAR_GAPS = {
 	above: handleMetrics.knobOffset + handleMetrics.size / 2 + 10,
 	below: handleMetrics.size / 2 + 12,
@@ -97,8 +100,12 @@ type EditorCanvasProps = {
 	ref?: Ref<EditorCanvasHandle>;
 	document: EditorDocument;
 	selectedLayer?: Layer;
-	// While set, this text is edited in place (see `TextEditState`). Presses
-	// on it place the caret or select, and a tap off it finishes.
+	// What input does (see `CanvasInput`). With no tool or text, it selects
+	// and transforms layers.
+	input?: CanvasInput;
+	// Text being edited in place (see `TextEditState`), drawn as typed. With
+	// an `editText` input, presses on it place the caret or select, and a tap
+	// off it finishes.
 	textEdit?: TextEditState | null;
 	onTextSelect?: (selection: TextSelection) => void;
 	onTextEditDone?: () => void;
@@ -116,9 +123,6 @@ type EditorCanvasProps = {
 	) => void;
 	// Moves a layer by a document-space offset (see `nudgeSelection`).
 	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
-	// While set, dragging paints or drags out boxes with this tool instead of
-	// selecting and moving layers.
-	tool?: CanvasTool | null;
 	// A finished stroke's points, in document space.
 	onPaintStroke?: (points: number[]) => void;
 	// A finished redaction box, in document space.
@@ -134,17 +138,12 @@ type EditorCanvasProps = {
 	// adjusting. The editor puts the tool down, and the tap then selects what's
 	// under it, as it would without a tool.
 	onTapAway?: () => void;
-	// While set, this image's adjustments are being changed: it's outlined
-	// when there are other images, and the canvas holds still.
+	// While set, this image's adjustments are being changed, drawn live. With
+	// an `adjust` input, it's outlined when there are other images.
 	adjusting?: LiveAdjustment | null;
-	// Temporary detector proposals, found in the image `imageId`. While
-	// present, taps toggle them instead of selecting or drawing on the
-	// document.
-	detection?: {
-		regions: readonly DetectionOverlayRegion[];
-		imageId: string;
-		onToggle: (sourceIndex: number) => void;
-	} | null;
+	// Temporary detector proposals, drawn over the document; a `find` input's
+	// taps toggle them.
+	detections?: readonly DetectionOverlayRegion[];
 	// How much of the view's bottom is covered by panels floating over it,
 	// and by the keyboard they ride on. The document fits above them, and
 	// what's past its edges shows under.
@@ -188,12 +187,12 @@ export type EditorCanvasHandle = {
  * the UI thread shares so a drag can pick its layer there. With a mouse, the
  * cursor shows what a press at the pointer would do.
  *
- * With a `tool`, a single gesture paints instead, into the selected layer
+ * With a `tool` input, a single gesture paints instead, into the selected layer
  * if the tool can add to it, or drags out a shape or a redaction's box. The
  * selection then holds still, and only a redaction's or a shape's is
  * outlined, to show what the tool's style changes. Dragging out a box or a
  * shape, a tap picks the one to change, or none. Picking a color, where the
- * finger lifts is the point. While `adjusting`, presses do nothing.
+ * finger lifts is the point. While adjusting, presses do nothing.
  *
  * A tap away from what a tool works on calls `onTapAway`: off the document
  * while painting, off the searched image while finding, and anywhere while
@@ -206,6 +205,7 @@ export function EditorCanvas({
 	ref,
 	document,
 	selectedLayer,
+	input = SELECT,
 	textEdit = null,
 	onTextSelect,
 	onTextEditDone,
@@ -214,7 +214,6 @@ export function EditorCanvas({
 	onCommitTransform,
 	onResizeBox,
 	onNudgeLayer,
-	tool = null,
 	onPaintStroke,
 	onDrawBox,
 	onDrawShape,
@@ -222,7 +221,7 @@ export function EditorCanvas({
 	onToolInteractionEnd,
 	onTapAway,
 	adjusting = null,
-	detection = null,
+	detections = NO_DETECTIONS,
 	bottomInset = 0,
 	leftInset = 0,
 	rightInset = 0,
@@ -323,13 +322,11 @@ export function EditorCanvas({
 	}, [sharedTargets, targets]);
 
 	const selectedLayerId = selectedLayer?.id ?? null;
-	// What gestures move: nothing while painting, typing, or adjusting.
-	const holdingStill =
-		tool !== null ||
-		textEdit !== null ||
-		adjusting !== null ||
-		detection !== null;
-	const movableLayer = holdingStill ? undefined : selectedLayer;
+	const rules = inputRules(input, zoom !== null);
+	const tool = input.type === "tool" ? input.tool : null;
+	// What gestures move: nothing while painting, typing, finding, or
+	// adjusting.
+	const movableLayer = rules.holdsStill ? undefined : selectedLayer;
 
 	// Keep the gesture-driven values in step with the selected layer: when the
 	// selection changes, and when that layer does (a commit, undo, restyle).
@@ -412,14 +409,7 @@ export function EditorCanvas({
 	// layer under it, or moves the selection. Painting and typing keep one
 	// finger for themselves. Both the view's gesture and the layers' ask it,
 	// once, where the finger lands.
-	const oneFingerMode =
-		tool !== null || textEdit !== null
-			? null
-			: detection !== null || adjusting !== null
-				? "anywhere"
-				: zoom
-					? "offSelection"
-					: null;
+	const oneFingerMode = rules.oneFinger;
 	const dragAlone = useMemo(() => {
 		if (oneFingerMode === null) return null;
 		if (oneFingerMode === "anywhere") {
@@ -607,13 +597,15 @@ export function EditorCanvas({
 		document.layers.filter((layer) => layer.type === "image").length > 1 &&
 		document.layers.find((layer) => layer.id === adjusting.layerId);
 	const outlinedLayer =
-		((tool?.type === "redactBox" || tool?.type === "redactBrush") &&
-			selectedLayer?.type === "redaction") ||
-		(tool?.type === "drawShape" && selectedLayer?.type === "shape")
-			? selectedLayer
-			: !tool && textEdit
-				? textEdit.layer
-				: adjustedLayer || null;
+		input.type === "tool"
+			? restyles(input.tool, selectedLayer)
+				? selectedLayer
+				: null
+			: input.type === "editText"
+				? (textEdit?.layer ?? null)
+				: input.type === "adjust"
+					? adjustedLayer || null
+					: null;
 	const handleIdleTap = useCallback(
 		(screenX: number, screenY: number) => {
 			if (scale === 0) return;
@@ -633,32 +625,31 @@ export function EditorCanvas({
 	);
 	const handleDetectionTap = useCallback(
 		(screenX: number, screenY: number) => {
-			if (!detection || scale === 0) return;
+			if (input.type !== "find" || scale === 0) return;
 			const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
-			const hit = detectionAt(detection.regions, point, 10 / scale);
+			const hit = detectionAt(detections, point, 10 / scale);
 			if (hit) {
 				tapOnNothing(null);
-				detection.onToggle(hit.sourceIndex);
+				input.onToggle(hit.sourceIndex);
 				return;
 			}
 			// A miss on the image, as by a face, keeps finding, and a second one
 			// zooms (see `tapOnNothing`). Where the image is
 			// locked, it has no hit box, and shows only inside the document.
 			const under = findLayerAt(targets, point)?.id ?? null;
-			const image = document.layers.find(
-				(layer) => layer.id === detection.imageId,
-			);
+			const image = document.layers.find((layer) => layer.id === input.imageId);
 			const onImage =
 				under === null
 					? image !== undefined &&
 						insideDocument(documentSize, point) &&
 						hitTestBox(image.transform, layerBounds(image), point)
-					: under === detection.imageId;
+					: under === input.imageId;
 			if (onImage) tapOnNothing({ x: screenX, y: screenY });
 			else tapAway(point);
 		},
 		[
-			detection,
+			input,
+			detections,
 			scale,
 			viewport,
 			targets,
@@ -678,15 +669,13 @@ export function EditorCanvas({
 		[handleDetectionTap],
 	);
 
-	const modeGesture = detection
-		? detectionGesture
-		: tool
-			? paintGesture
-			: textEdit
-				? textGesture
-				: adjusting
-					? idleGesture
-					: gesture;
+	const modeGesture = {
+		select: gesture,
+		tool: paintGesture,
+		editText: textGesture,
+		find: detectionGesture,
+		adjust: idleGesture,
+	}[input.type];
 	// The view's gestures join at the top, one by one: a `Simultaneous` nested
 	// in another drops the outer one's relations, so the mode's gestures and
 	// the view's would race, the first to start cancelling the other.
@@ -708,17 +697,7 @@ export function EditorCanvas({
 					ref={containerRef}
 					style={[
 						styles.container,
-						cursorStyle(
-							detection
-								? "pointer"
-								: tool
-									? "crosshair"
-									: adjusting
-										? zoom
-											? "grab"
-											: "default"
-										: cursor,
-						),
+						cursorStyle(rules.cursor === "hover" ? cursor : rules.cursor),
 					]}
 					onLayout={handleLayout}
 				>
@@ -729,7 +708,7 @@ export function EditorCanvas({
 							<Group transform={shownTransform}>
 								<EditorScene
 									document={document}
-									selectedLayerId={holdingStill ? null : selectedLayerId}
+									selectedLayerId={rules.holdsStill ? null : selectedLayerId}
 									textEdit={textEdit}
 									viewScale={shown.scale}
 									settledScale={scale}
@@ -737,7 +716,7 @@ export function EditorCanvas({
 									stroke={liveStroke}
 									outlinedLayer={outlinedLayer}
 									adjusting={adjusting}
-									detections={detection?.regions ?? []}
+									detections={detections}
 									onImageError={handleImageError}
 								/>
 							</Group>
@@ -875,6 +854,20 @@ function SelectionBarFrame({
 			</Animated.View>
 		</View>
 	);
+}
+
+/** Whether `tool`'s style shows, and changes, `layer`'s: a redaction's or a shape's. */
+function restyles(tool: CanvasTool, layer: Layer | undefined): layer is Layer {
+	switch (tool.type) {
+		case "redactBox":
+		case "redactBrush":
+			return layer?.type === "redaction";
+		case "drawShape":
+			return layer?.type === "shape";
+		case "draw":
+		case "pickColor":
+			return false;
+	}
 }
 
 /** Whether `tool`'s strokes join `layer`, rather than starting a new one. */

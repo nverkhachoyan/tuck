@@ -24,6 +24,7 @@ import {
 } from "@/features/editor/adjust/useAdjustController";
 import { EyedropperHint } from "@/features/editor/ColorPicker";
 import { isCustomColor } from "@/features/editor/ColorSwatches";
+import type { CanvasInput } from "@/features/editor/canvas/canvasInput";
 import {
 	EditorCanvas,
 	type EditorCanvasHandle,
@@ -341,6 +342,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			? { type: "redactBrush", brush, effect }
 			: { type: "redactBox", effect };
 	}, [eyedropper, tool, draw.settings, redact.settings, documentSize]);
+	// What input on the canvas does: the eyedropper's or a painting tool's,
+	// then Find's taps, Adjust's stillness, typing, or else selecting.
+	const editingText = textEditing.edit !== null;
+	const canvasInput = useMemo((): CanvasInput => {
+		if (canvasTool) return { type: "tool", tool: canvasTool };
+		if (tool === "find" && detectedImage) {
+			return {
+				type: "find",
+				imageId: detectedImage.id,
+				onToggle: find.toggle,
+			};
+		}
+		if (tool === "adjust") return { type: "adjust" };
+		if (editingText) return { type: "editText" };
+		return { type: "select" };
+	}, [canvasTool, tool, detectedImage, find.toggle, editingText]);
 	const handlePaintStroke = (points: number[]) => {
 		if (canvasTool?.type === "draw") {
 			drawStroke({ ...canvasTool.brush, points });
@@ -708,15 +725,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onCommitTransform={transformLayer}
 							onResizeBox={resizeBox}
 							onNudgeLayer={nudgeLayer}
-							tool={canvasTool}
-							detection={
-								tool === "find" && detectedImage && !eyedropper
-									? {
-											regions: find.overlay,
-											imageId: detectedImage.id,
-											onToggle: find.toggle,
-										}
-									: null
+							input={canvasInput}
+							detections={
+								tool === "find" && !eyedropper ? find.overlay : undefined
 							}
 							onPaintStroke={handlePaintStroke}
 							onDrawBox={handleDrawBox}

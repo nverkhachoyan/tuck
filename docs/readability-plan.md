@@ -175,9 +175,51 @@ Built into `useTextEditGesture`, which now takes the edit, the viewport, and `on
 
 Move the text press and hover handling, with its latest-handler refs, next to `useTextEditGesture` (or into it), so the canvas passes the edit and gets a gesture back. Verify: placing the caret, dragging a selection, double tap for a word, a tap off the text finishing, and a second finger zooming mid-press on iOS.
 
-### 3.4 One input mode — **Propose first**
+### 3.4 One input mode — **Propose first** (done)
+
+Built as approved. `canvas/canvasInput.ts` holds `CanvasInput` and `inputRules`, with 5 tests. The canvas takes `input`, plus `textEdit`, `adjusting`, and `detections` for drawing only. The gesture is a lookup by `input.type`. The cursor, the one-finger pan, and holding still read `inputRules`, and the outline checks `input` in one place (`restyles` sits beside `canAddTo`). The screen derives the input once from its mode. Checked on web in headless Chrome: for selecting, the move cursor over a layer, a drag off the layers holding still at the fit, and panning and a grab cursor when zoomed in; for a tool, a crosshair, and one finger painting while zoomed in; for Find, a pointer, and one finger panning while zoomed in; for Adjust, the default cursor at the fit, grab zoomed in, one finger panning, and a tap off the photo putting it down; for editing text, the text cursor; and picking a color while typing, with a crosshair, the pick landing, and typing going on. Checked on the iOS simulator, zoomed in: one finger panned while selecting, finding, and adjusting, and painted with Draw.
+
+**Bug found, not fixed:** if the pointer has hovered the canvas while selecting, then once typing starts, the cursor over the text stays as that hover left it (default, or grab if zoomed in) rather than the text cursor, because the text gesture's hover doesn't report. Without that earlier hover, the text cursor shows. It reproduces with the canvas and text gesture from before 3.3 (headless Chrome, same steps), so it predates phase 3.
 
 Pass the canvas one union for what input does (select and transform, paint with a tool, pick a color, edit text, find, adjust), derived once from phase 2's mode, and keep the props that only affect drawing (the text being edited, the live adjustment, the detection overlay) separate. The gesture, the cursor, holding still, the one-finger pan, and the outline then each read the one value. The overlap in finding 2 (picking a color while text stays drawn) must survive. Show the union, and a table of today's five derivations beside it, before building. Verify every mode on web and the iOS simulator, including one-finger pan while zoomed, and pan while finding and adjusting.
+
+#### Proposal (approved)
+
+Approved as written on 2026-09-30.
+
+**Today.** `EditorCanvas` takes four nullable props that decide what input does: `tool` (a brush, a box, a shape, or `pickColor`), `textEdit`, `adjusting`, and `detection`. The screen can set them together only in one way: `pickColor` with `textEdit`, the eyedropper picking a color while text is typed. There, the pick wins and the text stays drawn. Five derivations each check them in their own order:
+
+| Derivation | Today |
+|---|---|
+| Holding still (no handles, no selection bar, two fingers zoom) | `tool` or `textEdit` or `adjusting` or `detection` |
+| One-finger pan | `tool` or `textEdit`: none. `detection` or `adjusting`: anywhere. Zoomed in: off the selection. Else none. |
+| The gesture | `detection`: taps toggle. `tool`: paint. `textEdit`: text presses. `adjusting`: a tap puts it down. Else select and transform. |
+| The cursor | `detection`: pointer. `tool`: crosshair. `adjusting`: grab when zoomed, else default. Else what the hover set (move, grab, text, …). |
+| The outline | A redact tool on a selected redaction, or the shape tool on a selected shape: that layer. No `tool` with `textEdit`: the text. `adjusting` with other images: that image. Else none. |
+
+**Proposed.** One prop for what input does, and the rest only for drawing:
+
+```ts
+// canvas/canvasInput.ts
+export type CanvasInput =
+	| { type: "select" } // select and transform layers
+	| { type: "tool"; tool: CanvasTool } // paint, drag a box or shape, or pick a color
+	| { type: "editText" } // presses on `textEdit` place its caret or select
+	| { type: "find"; imageId: string; onToggle: (sourceIndex: number) => void }
+	| { type: "adjust" }; // holds still; a tap off the image puts it down
+
+/** What each input asks of the canvas's shared behavior. Tested per input. */
+export function inputRules(input: CanvasInput, zoomed: boolean): {
+	holdsStill: boolean;
+	oneFinger: "anywhere" | "offSelection" | null;
+	cursor: "pointer" | "crosshair" | "grab" | "default" | "hover";
+};
+```
+
+* The canvas keeps `textEdit`, `adjusting`, and a `detections` list as drawing props. Find's taps hit-test the drawn `detections`, so what shows is what can be tapped.
+* Picking a color stays a `tool` (`pickColor`), because it shares painting's gesture (a stroke's end is the point), cursor, and pan rule. So the union has five kinds, where the plan listed six. Picking a color while typing is `{ type: "tool", tool: pickColor }` with `textEdit` still passed for drawing, which keeps finding 2's overlap.
+* The screen derives the input once from its mode, in the same order as today: the eyedropper or a painting tool is `tool`, then Find with a photo, Adjust, text being typed, and else `select`. It passes `detections` only while finding without the eyedropper, as today.
+* In the canvas, the gesture is a `switch` on `input.type`, the cursor and the pan read `inputRules`, holding still is `holdsStill`, and the outline checks `input` in one place.
 
 ## Phase 4: Optional
 
