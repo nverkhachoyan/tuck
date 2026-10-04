@@ -3,6 +3,15 @@
 /** A range of a text layer's text, in UTF-16 code units, `start <= end`. */
 export type TextSelection = { start: number; end: number };
 
+// Drawn faded in text being edited while it's empty, so the box reads as a
+// place to type. Never part of the document.
+export const TEXT_PLACEHOLDER = "Your text";
+
+/** `layer` with the placeholder for its text while it has none. */
+export function withPlaceholder<T extends { text: string }>(layer: T): T {
+	return layer.text === "" ? { ...layer, text: TEXT_PLACEHOLDER } : layer;
+}
+
 // Measured, never drawn: narrow, so it sits about where an empty line's
 // alignment would put a caret, and not whitespace, which Skia gives no box
 // on a line of its own.

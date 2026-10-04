@@ -3,6 +3,7 @@ import {
 	Fill,
 	Group,
 	ImageFilter,
+	Paint,
 	Path,
 	Picture,
 	Rect,
@@ -11,7 +12,7 @@ import {
 	Skia,
 	type SkRect,
 } from "@shopify/react-native-skia";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 import {
 	cancelAnimation,
 	type DerivedValue,
@@ -41,7 +42,7 @@ import {
 } from "@/layers/RedactionLayerView";
 import { shapePath } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
-import { clampSelection } from "@/layers/textEditing";
+import { clampSelection, withPlaceholder } from "@/layers/textEditing";
 import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
 import type { ColorMatrix } from "@/model/adjustments";
 import {
@@ -89,6 +90,8 @@ const showEdge = colorScheme === "dark";
 const CARET_PX = 2;
 const CARET_HALO_PX = 1;
 const CARET_BLINK_MS = 530;
+// Faint enough to read as a hint rather than text that's there.
+const PLACEHOLDER_OPACITY = 0.45;
 // Over the text rather than under it, where a box would hide it.
 const TEXT_SELECTION = "rgba(88, 166, 255, 0.4)";
 // A detected region's check mark's radius, in screen pixels.
@@ -443,7 +446,8 @@ function StrokeTarget({
 
 /**
  * Text being edited, in its layer's space: what's typed so far, with the
- * selection over it, or the caret, blinking while it holds still.
+ * selection over it, or the caret, blinking while it holds still. Empty, it
+ * shows the placeholder, faded, with the caret at its start.
  */
 function EditedText({
 	edit,
@@ -453,6 +457,7 @@ function EditedText({
 	viewScale: DerivedValue<number>;
 }) {
 	const { layer, focused } = edit;
+	const shown = useMemo(() => withPlaceholder(layer), [layer]);
 	const selection = clampSelection(edit.selection, layer.text.length);
 	const collapsed = selection.start === selection.end;
 	// One screen pixel, across the layer, in its own units.
@@ -471,11 +476,19 @@ function EditedText({
 	}
 	return (
 		<>
-			<TextLayerView layer={layer} />
+			{shown === layer ? (
+				<TextLayerView layer={layer} />
+			) : (
+				// A layer, faded as a whole: a paragraph keeps its own paints, which
+				// a group's opacity doesn't reach.
+				<Group layer={<Paint opacity={PLACEHOLDER_OPACITY} />}>
+					<TextLayerView layer={shown} />
+				</Group>
+			)}
 			{highlight && <Path path={highlight} color={TEXT_SELECTION} />}
 			{focused && collapsed && (
 				<Caret
-					layer={layer}
+					layer={shown}
 					index={selection.start}
 					pixel={pixel}
 					key={`${selection.start}:${layer.text}`}

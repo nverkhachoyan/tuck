@@ -1,7 +1,13 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { caretText, clampSelection, wordRange } from "./textEditing.ts";
+import {
+	caretText,
+	clampSelection,
+	TEXT_PLACEHOLDER,
+	withPlaceholder,
+	wordRange,
+} from "./textEditing.ts";
 
 describe("caretText", () => {
 	test("leaves text without empty lines as it is", () => {
@@ -84,5 +90,21 @@ describe("clampSelection", () => {
 			start: 0,
 			end: 3,
 		});
+	});
+});
+
+describe("withPlaceholder", () => {
+	test("fills empty text with the placeholder", () => {
+		const layer = { id: "a", text: "" };
+		assert.deepEqual(withPlaceholder(layer), {
+			id: "a",
+			text: TEXT_PLACEHOLDER,
+		});
+		assert.equal(layer.text, "");
+	});
+
+	test("leaves text that has something, and keeps the same layer", () => {
+		const layer = { id: "a", text: " " };
+		assert.equal(withPlaceholder(layer), layer);
 	});
 });

@@ -28,7 +28,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { layerBounds } from "@/layers/layerBounds";
-import type { TextSelection } from "@/layers/textEditing";
+import { type TextSelection, withPlaceholder } from "@/layers/textEditing";
 import type { EditorDocument, Layer, ShapePlacement } from "@/model/document";
 import {
 	type Box,
@@ -596,13 +596,19 @@ export function EditorCanvas({
 		adjusting &&
 		document.layers.filter((layer) => layer.type === "image").length > 1 &&
 		document.layers.find((layer) => layer.id === adjusting.layerId);
+	// Empty, text being edited is outlined around its placeholder.
+	const textEditLayer = textEdit?.layer ?? null;
+	const editedLayer = useMemo(
+		() => textEditLayer && withPlaceholder(textEditLayer),
+		[textEditLayer],
+	);
 	const outlinedLayer =
 		input.type === "tool"
 			? restyles(input.tool, selectedLayer)
 				? selectedLayer
 				: null
 			: input.type === "editText"
-				? (textEdit?.layer ?? null)
+				? editedLayer
 				: input.type === "adjust"
 					? adjustedLayer || null
 					: null;
