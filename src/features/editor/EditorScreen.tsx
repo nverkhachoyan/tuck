@@ -97,6 +97,7 @@ import {
 } from "@/features/editor/text/useTextEditing";
 import { useAddImage } from "@/features/editor/useAddImage";
 import { useCutOut } from "@/features/editor/useCutOut";
+import { useEditorActions } from "@/features/editor/useEditorActions";
 import { useEditorMode } from "@/features/editor/useEditorMode";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { useStickerSave } from "@/features/editor/useStickerSave";
@@ -213,35 +214,35 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
-	const addImageLayer = useStore((state) => state.addImageLayer);
-	const addStickerLayer = useStore((state) => state.addStickerLayer);
-	const duplicateSelectedLayer = useStore(
-		(state) => state.duplicateSelectedLayer,
-	);
-	const drawStroke = useStore((state) => state.drawStroke);
-	const addRedactionBox = useStore((state) => state.addRedactionBox);
-	const setLayerGroupHidden = useStore((state) => state.setLayerGroupHidden);
-	const setLayerGroupLocked = useStore((state) => state.setLayerGroupLocked);
-	const deleteLayerGroup = useStore((state) => state.deleteLayerGroup);
-	const paintRedaction = useStore((state) => state.paintRedaction);
-	const addShape = useStore((state) => state.addShape);
-	const setAdjustments = useStore((state) => state.setAdjustments);
-	const transformLayer = useStore((state) => state.transformLayer);
-	const resizeBox = useStore((state) => state.resizeBox);
-	const nudgeLayer = useStore((state) => state.nudgeLayer);
-	const moveLayer = useStore((state) => state.moveLayer);
-	const setLayerHidden = useStore((state) => state.setLayerHidden);
-	const setLayerLocked = useStore((state) => state.setLayerLocked);
-	const setLayerResizable = useStore((state) => state.setLayerResizable);
-	const setBackground = useStore((state) => state.setBackground);
-	const reframe = useStore((state) => state.reframe);
-	const deleteLayer = useStore((state) => state.deleteLayer);
-	const selectLayer = useStore((state) => state.selectLayer);
-	const undo = useStore((state) => state.undo);
-	const redo = useStore((state) => state.redo);
-	const beginSession = useStore((state) => state.beginSession);
-	const commitSession = useStore((state) => state.commitSession);
-	const cancelSession = useStore((state) => state.cancelSession);
+	const {
+		addImageLayer,
+		addStickerLayer,
+		duplicateSelectedLayer,
+		drawStroke,
+		addRedactionBox,
+		setLayerGroupHidden,
+		setLayerGroupLocked,
+		deleteLayerGroup,
+		paintRedaction,
+		addShape,
+		setAdjustments,
+		transformLayer,
+		resizeBox,
+		nudgeLayer,
+		moveLayer,
+		setLayerHidden,
+		setLayerLocked,
+		setLayerResizable,
+		setBackground,
+		reframe,
+		deleteLayer,
+		selectLayer,
+		undo,
+		redo,
+		beginSession,
+		commitSession,
+		cancelSession,
+	} = useEditorActions();
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
 
@@ -936,8 +937,7 @@ function HeaderActions({
 }) {
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
-	const undo = useStore((state) => state.undo);
-	const redo = useStore((state) => state.redo);
+	const { undo, redo } = useEditorActions();
 	return (
 		<View style={styles.headerActions}>
 			{onReset && <TextButton label="Reset" onPress={onReset} />}
