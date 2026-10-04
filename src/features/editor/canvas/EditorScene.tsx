@@ -235,7 +235,7 @@ export function EditorScene({
 						dx={0}
 						dy={shadowOffset}
 						blur={shadowBlur}
-						color="rgba(0, 0, 0, 0.6)"
+						color={colors.shadow}
 						shadowOnly
 					/>
 				</Rect>
@@ -314,25 +314,25 @@ function DetectionOutline({
 		<Group transform={toTransformList(transform)}>
 			<Rect
 				rect={box}
-				color={selected ? colors.accentSoft : "rgba(0, 0, 0, 0.18)"}
+				color={selected ? colors.selectionSoft : "rgba(0, 0, 0, 0.18)"}
 			/>
 			<Rect
 				rect={box}
-				color={selected ? colors.accent : colors.textSecondary}
+				color={selected ? colors.selection : colors.textSecondary}
 				style="stroke"
 				strokeWidth={outline}
 			/>
-			<Path path={disc} color={selected ? colors.accent : colors.surface} />
+			<Path path={disc} color={selected ? colors.selection : colors.surface} />
 			<Path
 				path={disc}
-				color={selected ? colors.accent : colors.textSecondary}
+				color={selected ? colors.selection : colors.textSecondary}
 				style="stroke"
 				strokeWidth={ring}
 			/>
 			{selected && (
 				<Path
 					path={check}
-					color={colors.onAccent}
+					color={colors.onSelection}
 					style="stroke"
 					strokeWidth={tick}
 					strokeCap="round"
@@ -877,7 +877,7 @@ function SnapGuides({
 	return (
 		<Path
 			path={path}
-			color={colors.accent}
+			color={colors.selection}
 			style="stroke"
 			strokeWidth={outline}
 		/>

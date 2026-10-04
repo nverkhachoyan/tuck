@@ -3,7 +3,7 @@ import { colors, radii, typography, webTransition } from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 
-type TextButtonTone = "default" | "accent" | "danger";
+type TextButtonTone = "default" | "strong" | "danger";
 
 // The highlight's reach past the label on each side, taken back by a
 // negative margin, so the button lays out at the label's own size.
@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
 		...typography.body,
 		color: colors.textPrimary,
 	},
-	accent: {
-		color: colors.accent,
+	strong: {
+		color: colors.textPrimary,
 		fontWeight: "600",
 	},
 	danger: {

@@ -245,11 +245,11 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.borderStrong,
 		overflow: "hidden",
-		boxShadow: "0 4px 12px rgba(0, 0, 0, 0.45)",
+		boxShadow: `0 4px 12px ${colors.shadow}`,
 	},
 	previewLifted: {
 		transform: [{ translateY: -3 }],
-		boxShadow: "0 10px 20px rgba(0, 0, 0, 0.55)",
+		boxShadow: `0 10px 20px ${colors.shadow}`,
 	},
 	name: {
 		...typography.bodyStrong,

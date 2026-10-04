@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
 	halo: {
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "rgba(245, 245, 247, 0.28)",
+		backgroundColor: colors.borderStrong,
 	},
 	core: {
 		width: 8,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
 	pixel: {
 		width: "50%",
 		height: "50%",
-		backgroundColor: "rgba(245, 245, 247, 0.28)",
+		backgroundColor: colors.borderStrong,
 	},
 	pixelLit: {
 		backgroundColor: colors.textPrimary,

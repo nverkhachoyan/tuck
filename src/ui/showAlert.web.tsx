@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.borderStrong,
 		backgroundColor: colors.surface,
-		boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
+		boxShadow: `0 24px 60px ${colors.shadow}`,
 		animationKeyframes: [
 			{
 				from: { opacity: 0, transform: "scale(0.96) translateY(6px)" },

@@ -40,18 +40,18 @@ export function LogoMark({ size }: { size: number }) {
 							width={64}
 							height={64}
 							r={5}
-							color={colors.accent}
+							color={colors.highlight}
 						/>
 						<Circle
 							cx={63}
 							cy={35}
 							r={5.8}
-							color={colors.onAccent}
+							color={colors.onHighlight}
 							opacity={0.25}
 						/>
 						<Path
 							path="M21.8 82 L41 60.2 L60.2 82 Z"
-							color={colors.onAccent}
+							color={colors.onHighlight}
 							opacity={0.25}
 						/>
 					</Group>
@@ -72,7 +72,7 @@ export function LogoMark({ size }: { size: number }) {
 						]}
 					>
 						<Path path="M0 0 L13 -6 L13 6 Z" color={STEEL} />
-						<Path path="M0 0 L5 -2.3 L5 2.3 Z" color={colors.onAccent} />
+						<Path path="M0 0 L5 -2.3 L5 2.3 Z" color={colors.onHighlight} />
 						<RoundedRect
 							x={13}
 							y={-7}

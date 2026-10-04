@@ -192,9 +192,7 @@ export function Dial({
 
 	return (
 		<View style={styles.container}>
-			<Text style={[styles.readout, steps !== 0 && styles.readoutActive]}>
-				{readout(steps)}
-			</Text>
+			<Text style={styles.readout}>{readout(steps)}</Text>
 			<GestureDetector gesture={gesture}>
 				<View
 					{...webKeyProps}
@@ -247,9 +245,6 @@ const styles = StyleSheet.create({
 		fontVariant: ["tabular-nums"],
 		color: colors.textPrimary,
 	},
-	readoutActive: {
-		color: colors.accent,
-	},
 	// Tall enough to grab comfortably, though the ticks are short.
 	track: {
 		alignSelf: "stretch",
@@ -267,19 +262,19 @@ const styles = StyleSheet.create({
 		top: 12,
 		width: 1,
 		height: 12,
-		backgroundColor: colors.textSecondary,
+		backgroundColor: colors.textTertiary,
 	},
 	majorTick: {
 		top: 8,
 		height: 20,
-		backgroundColor: colors.textPrimary,
+		backgroundColor: colors.textSecondary,
 	},
 	indicator: {
 		position: "absolute",
 		top: 4,
-		width: 2,
+		width: 3,
 		height: 28,
-		borderRadius: 1,
-		backgroundColor: colors.accent,
+		borderRadius: 1.5,
+		backgroundColor: colors.primary,
 	},
 });

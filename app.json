@@ -1,8 +1,8 @@
 {
 	"expo": {
 		"scheme": "photo-editor",
-		"userInterfaceStyle": "dark",
-		"backgroundColor": "#0A0A0B",
+		"userInterfaceStyle": "automatic",
+		"backgroundColor": "#FFFFFF",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"ios": {
@@ -18,9 +18,9 @@
 		"web": {
 			"output": "static",
 			"favicon": "./assets/favicon.png",
-			"backgroundColor": "#0A0A0B",
-			"themeColor": "#0A0A0B",
-			"barStyle": "black-translucent"
+			"backgroundColor": "#FFFFFF",
+			"themeColor": "#FFFFFF",
+			"barStyle": "default"
 		},
 		"plugins": [
 			"expo-router",

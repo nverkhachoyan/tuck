@@ -26,7 +26,7 @@ export function SaveErrorBanner({
 				<Ionicons
 					name="cloud-offline-outline"
 					size={20}
-					color={colors.accent}
+					color={colors.danger}
 				/>
 				<Text style={styles.message}>{message}</Text>
 				{onRetry && <Button label="Retry" size="small" onPress={onRetry} />}

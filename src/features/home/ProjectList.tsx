@@ -74,7 +74,7 @@ export function ProjectList({
 				</Text>
 				<TextButton
 					label={editing ? "Done" : "Edit"}
-					tone={editing ? "accent" : "default"}
+					tone={editing ? "strong" : "default"}
 					onPress={() => setEditing((on) => !on)}
 				/>
 			</View>
@@ -471,13 +471,14 @@ const styles = StyleSheet.create({
 			"linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75))",
 		),
 	},
+	// White on the shade, in either palette.
 	hoverLabel: {
 		...typography.labelStrong,
-		color: colors.textPrimary,
+		color: "#FFFFFF",
 	},
 	hoverDate: {
 		...typography.caption,
-		color: colors.textSecondary,
+		color: "rgba(255, 255, 255, 0.75)",
 	},
 	caption: {
 		gap: 2,
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
 		borderRadius: 15,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "rgba(20, 20, 22, 0.8)",
+		backgroundColor: colors.surface,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.borderStrong,
 	},

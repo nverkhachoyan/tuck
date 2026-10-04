@@ -25,7 +25,7 @@ import {
 	typography,
 	webTransition,
 } from "@/theme";
-import { gradientBackground } from "@/ui/gradient";
+import { fadeTo } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { ColorPicker } from "../ColorPicker";
 import { ColorSwatches, isCustomColor } from "../ColorSwatches";
@@ -73,7 +73,6 @@ type AlignIcon =
 // Where a scrolling row fades out, hinting there's more past the edge: to
 // the dock's color (`colors.background`), so a chip under it clearly runs on.
 const FADE_WIDTH = 56;
-const FADE_COLOR = "rgba(10, 10, 11, 1)";
 
 const COLOR_NAMES: Record<TextColorKey, string> = {
 	color: "Text color",
@@ -496,9 +495,7 @@ const styles = StyleSheet.create({
 		right: 0,
 		width: FADE_WIDTH,
 		pointerEvents: "none",
-		...gradientBackground(
-			`linear-gradient(to right, rgba(10, 10, 11, 0), ${FADE_COLOR})`,
-		),
+		...fadeTo("right", colors.background),
 	},
 	aligns: {
 		flexDirection: "row",

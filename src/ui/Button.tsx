@@ -36,7 +36,7 @@ export function Button({
 	const { anchor, tooltip } = useTooltip(label, shortcut);
 	const enabled = !props.disabled;
 	const labelColor =
-		variant === "primary" ? colors.onAccent : colors.textPrimary;
+		variant === "primary" ? colors.onPrimary : colors.textPrimary;
 	const tone = TONES[variant];
 
 	return (
@@ -86,9 +86,9 @@ export function Button({
 
 const TONES = {
 	primary: StyleSheet.create({
-		rest: { backgroundColor: colors.accent },
-		hovered: { backgroundColor: colors.accentHover },
-		pressed: { backgroundColor: colors.accentPressed },
+		rest: { backgroundColor: colors.primary },
+		hovered: { backgroundColor: colors.primaryHover },
+		pressed: { backgroundColor: colors.primaryPressed },
 	}),
 	secondary: StyleSheet.create({
 		rest: { backgroundColor: colors.surface, borderColor: colors.border },

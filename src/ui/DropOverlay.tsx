@@ -16,7 +16,7 @@ export function DropOverlay({ label }: { label: string }) {
 		>
 			<View style={styles.frame}>
 				<View style={styles.badge}>
-					<Ionicons name="image-outline" size={28} color={colors.accent} />
+					<Ionicons name="image-outline" size={28} color={colors.textPrimary} />
 				</View>
 				<Text style={styles.label}>{label}</Text>
 			</View>
@@ -40,8 +40,8 @@ const styles = StyleSheet.create({
 		borderRadius: radii.large,
 		borderWidth: 2,
 		borderStyle: "dashed",
-		borderColor: colors.accentBorder,
-		backgroundColor: colors.accentSoft,
+		borderColor: colors.highlightBorder,
+		backgroundColor: colors.highlightSoft,
 	},
 	badge: {
 		width: 64,
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
 		borderRadius: 32,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.accentSoft,
+		backgroundColor: colors.highlightSoft,
 	},
 	label: {
 		...typography.title,

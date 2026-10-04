@@ -4,7 +4,10 @@ import {
 } from "expo-router/html";
 import type { ReactNode } from "react";
 
-const documentBackground = "#0A0A0B";
+// The day and night palettes' `background` (`theme.ts`): this page is
+// rendered ahead of time, before the browser says which the app will use.
+const dayBackground = "#FFFFFF";
+const nightBackground = "#17181B";
 
 /**
  * The browser paints the space outside React Native Web's root. Make that
@@ -23,9 +26,18 @@ export default function Root({ children }: { children: ReactNode }) {
 					name="viewport"
 					content="width=device-width, initial-scale=1, viewport-fit=cover"
 				/>
-				<meta name="theme-color" content={documentBackground} />
-				<meta name="color-scheme" content="dark" />
-				<style>{`html, body, #root { background-color: ${documentBackground}; color-scheme: dark; }`}</style>
+				<meta
+					name="theme-color"
+					media="(prefers-color-scheme: light)"
+					content={dayBackground}
+				/>
+				<meta
+					name="theme-color"
+					media="(prefers-color-scheme: dark)"
+					content={nightBackground}
+				/>
+				<meta name="color-scheme" content="light dark" />
+				<style>{`html, body, #root { background-color: ${dayBackground}; color-scheme: light; } @media (prefers-color-scheme: dark) { html, body, #root { background-color: ${nightBackground}; color-scheme: dark; } }`}</style>
 				<ScrollViewStyleReset />
 				{headNodes}
 			</head>

@@ -1,10 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import {
-	Canvas,
-	Circle,
-	RadialGradient,
-	vec,
-} from "@shopify/react-native-skia";
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { type ComponentProps, useEffect } from "react";
 import {
@@ -35,7 +29,7 @@ import {
 } from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
-import { gradientBackground } from "@/ui/gradient";
+import { fadeTo } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { LogoMark } from "@/ui/LogoMark";
 
@@ -142,7 +136,6 @@ export default function HomeScreen() {
 					{listed && (
 						<>
 							<Animated.View entering={FadeInDown.duration(500)}>
-								<Glow />
 								<LogoMark size={LOGO_SIZE} />
 							</Animated.View>
 							<Animated.Text
@@ -182,7 +175,7 @@ export default function HomeScreen() {
 
 			{status === "saveFailed" && (
 				<View style={styles.saveRecovery}>
-					<Ionicons name="warning-outline" size={20} color={colors.accent} />
+					<Ionicons name="warning-outline" size={20} color={colors.danger} />
 					<View style={styles.saveRecoveryBody}>
 						<Text style={styles.saveRecoveryText}>
 							Your edits are still open. Retry saving or return to the editor.
@@ -258,7 +251,7 @@ function StartTile({
 			<Ionicons
 				name={icon}
 				size={24}
-				color={primary ? colors.onAccent : colors.textPrimary}
+				color={primary ? colors.onPrimary : colors.textPrimary}
 			/>
 			<Text
 				style={[styles.tileLabel, primary && styles.tileLabelPrimary]}
@@ -271,25 +264,6 @@ function StartTile({
 }
 
 const LOGO_SIZE = 96;
-const GLOW_SIZE = 360;
-
-/** A soft light in the accent's color, behind the logo it's centered on. */
-function Glow() {
-	const center = vec(GLOW_SIZE / 2, GLOW_SIZE / 2);
-	return (
-		<Animated.View entering={FadeIn.duration(1200)} style={styles.glow}>
-			<Canvas style={styles.glowCanvas}>
-				<Circle c={center} r={GLOW_SIZE / 2}>
-					<RadialGradient
-						c={center}
-						r={GLOW_SIZE / 2}
-						colors={["rgba(255, 107, 74, 0.16)", "rgba(255, 107, 74, 0)"]}
-					/>
-				</Circle>
-			</Canvas>
-		</Animated.View>
-	);
-}
 
 const styles = StyleSheet.create({
 	// A phone-width column, or a little wider for the grid, so a wide browser
@@ -309,7 +283,7 @@ const styles = StyleSheet.create({
 		gap: 10,
 	},
 	brandName: {
-		fontFamily: fonts.displayItalic,
+		fontFamily: fonts.display,
 		fontSize: 34,
 		color: colors.textPrimary,
 	},
@@ -319,19 +293,9 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		gap: 6,
 	},
-	glow: {
-		position: "absolute",
-		top: (LOGO_SIZE - GLOW_SIZE) / 2,
-		left: (LOGO_SIZE - GLOW_SIZE) / 2,
-		pointerEvents: "none",
-	},
-	glowCanvas: {
-		width: GLOW_SIZE,
-		height: GLOW_SIZE,
-	},
 	wordmark: {
 		marginTop: 18,
-		fontFamily: fonts.displayItalic,
+		fontFamily: fonts.display,
 		fontSize: 64,
 		lineHeight: 70,
 		color: colors.textPrimary,
@@ -352,9 +316,7 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		height: space.lg,
 		pointerEvents: "none",
-		...gradientBackground(
-			"linear-gradient(to bottom, rgba(10, 10, 11, 0), rgba(10, 10, 11, 1))",
-		),
+		...fadeTo("bottom", colors.background),
 	},
 	startArea: {
 		gap: 14,
@@ -380,14 +342,14 @@ const styles = StyleSheet.create({
 		height: 64,
 	},
 	tilePrimary: {
-		borderColor: colors.accent,
-		backgroundColor: colors.accent,
+		borderColor: colors.primary,
+		backgroundColor: colors.primary,
 	},
 	tileHovered: {
 		backgroundColor: colors.surfaceHover,
 	},
 	tilePrimaryHovered: {
-		backgroundColor: colors.accentHover,
+		backgroundColor: colors.primaryHover,
 	},
 	tilePressed: {
 		transform: [{ scale: 0.97 }],
@@ -400,7 +362,7 @@ const styles = StyleSheet.create({
 		color: colors.textPrimary,
 	},
 	tileLabelPrimary: {
-		color: colors.onAccent,
+		color: colors.onPrimary,
 	},
 	hint: {
 		...typography.label,
@@ -413,7 +375,7 @@ const styles = StyleSheet.create({
 		padding: 16,
 		borderRadius: radii.medium,
 		borderWidth: 1,
-		borderColor: colors.accentSoft,
+		borderColor: colors.border,
 		backgroundColor: colors.surface,
 	},
 	saveRecoveryBody: {

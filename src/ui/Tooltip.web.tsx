@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
-import { colors, radii, space, typography } from "@/theme";
+import { colors, floatingShadow, radii, space, typography } from "@/theme";
 import type { TooltipAnchorProps } from "./Tooltip";
 
 const SHOW_DELAY_MS = 500;
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.borderStrong,
 		backgroundColor: colors.surfaceHover,
-		boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
+		boxShadow: floatingShadow,
 		pointerEvents: "none",
 	} as unknown as ViewStyle,
 	measuring: {

@@ -1,0 +1,50 @@
+# Light table plan
+
+A third design pass, from a review on 2026-10-04 at https://claude.ai/artifact/9WTBq6je6oxPMGRhqESQrv. The user didn't feel like using the app. The review's diagnosis: Tuck looked like a darkroom (a mostly empty black editor, gray controls that read as disabled, one coral button) while its jobs are quick marker work, the first caption looked weak, home was a splash screen, and nothing chosen looked chosen.
+
+The direction: the photo is a print on a light table, the bars are paper, ink is black, and the app's one color is highlighter yellow, swiped behind whatever is chosen. The primary button is a solid black bar, the shape of a redaction. The wordmark is set in Anton, the typeface Tuck uses for meme captions.
+
+It follows `design-rethink-plan.md`, whose structure stays: one bottom bar, trays, tool sessions, Export as a sheet, the desktop rail and inspector. It overturns that plan's rule 3: a chosen option is highlighted, not outlined.
+
+## Decisions
+
+Taken by the user on 2026-10-04.
+
+* **Light by default, following the phone.** The palette is picked once at launch from the system's setting (`colorScheme` in `theme.ts`), and the app's native interface style is pinned to it, so the keyboard, alerts, and status bar match until the next launch. Night is the same system on a graphite table.
+* **Anton** for the wordmark and home's headings, replacing Instrument Serif.
+* **Two rows of four tools** on a phone, so none sits off-screen.
+
+## Steps
+
+Work one step at a time, verify at 390 × 844 and desktop width on web in both palettes, and on the iOS simulator for anything native. Stop after each step with a Conventional Commits message for the user to commit.
+
+### 1. Palette and type (done)
+
+Built as described. `colors` gained `primary`/`onPrimary` (the main button), `highlight`/`onHighlight` and `highlightSoft`/`highlightBorder` (drop targets and confirmations), `onSelection`, and `shadow`; every `accent` token is gone. Snap guides and detection's picks are drawn in `selection`. Home's coral glow is gone; the wordmark and headings use Anton, loaded with the caption fonts. `@expo-google-fonts/instrument-serif` is uninstalled. The dial's indicator is a 3pt ink bar over lighter ticks. Native needs a rebuild (`npx expo prebuild --clean`) for `userInterfaceStyle`.
+
+* `theme.ts` gets a day and a night palette and picks one at launch. The coral accent retires: `primary` (ink) is the main button's fill, `highlight` (yellow) marks a chosen thing, and `selection` (blue) stays for selected layers and anything drawn over the photo, such as snap guides and detection candidates.
+* `app.json` follows the system (`userInterfaceStyle: automatic`, which needs a native rebuild); the status bar, the web document's background, and the web theme color follow the palette.
+* Anton replaces Instrument Serif for the wordmark and home's headings.
+* Fix the colors written outside the theme that assume a dark screen (fades, shadows, tile tints).
+
+### 2. Chosen means highlighted
+
+* One `Highlight` in `ui/` draws the highlighter swipe behind a chosen tool, font, ratio, size, format, or effect. It replaces `chosenOutline` and `chosenUnderline`; a chosen tab is ink and semibold with a short swipe under its label. Color swatches keep their ring.
+
+### 3. The canvas
+
+* Smaller margins around the photo, and a soft shadow under it in place of the hairline edge.
+
+### 4. Tools
+
+* Two rows of four on a phone: Text, Draw, Redact, Sticker, Crop, Adjust, Cut out, Photo. Find becomes one of Redact's tools; Add splits into Sticker (the sheet's stickers) and Photo (add a photo). The desktop rail keeps one column.
+* Redact's effect and color sit in view rather than behind its Style tile, if they fit.
+
+### 5. The default caption
+
+* A heavier outline, about twice today's (`outlinePaint` in `layers/textLayerLayout.ts`), so the first caption reads on any photo. Existing projects get it too.
+
+### 6. Home
+
+* Two columns of projects as prints with a name and when they were last changed.
+* One black bar opens a photo; Paste and Blank canvas sit under it. The wordmark has the highlighter swipe. The app icon follows the new mark.

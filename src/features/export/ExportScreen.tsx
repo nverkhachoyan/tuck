@@ -222,7 +222,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<Ionicons
 									name="checkmark-circle"
 									size={22}
-									color={colors.accent}
+									color={colors.textPrimary}
 								/>
 								<Text style={styles.doneLabel}>{saveLabels.done}</Text>
 							</View>
@@ -255,7 +255,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										<Ionicons
 											name="checkmark-circle"
 											size={22}
-											color={colors.accent}
+											color={colors.textPrimary}
 										/>
 										<Text style={styles.doneLabel}>Copied</Text>
 									</View>
@@ -448,8 +448,8 @@ const styles = StyleSheet.create({
 		gap: space.xs,
 		borderRadius: radii.medium,
 		borderWidth: 1,
-		borderColor: colors.accentBorder,
-		backgroundColor: colors.accentSoft,
+		borderColor: colors.highlightBorder,
+		backgroundColor: colors.highlightSoft,
 	},
 	doneLabel: {
 		...typography.title,

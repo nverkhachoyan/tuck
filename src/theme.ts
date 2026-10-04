@@ -1,55 +1,120 @@
-import { Platform, type TextStyle, type ViewStyle } from "react-native";
+import {
+	Appearance,
+	Platform,
+	type TextStyle,
+	type ViewStyle,
+} from "react-native";
 
-// Neutral grays, like a photo editor's surround: a tinted UI would shift how
-// the photo's own colors look. The accent carries the warmth.
-export const colors = {
-	background: "#0A0A0B",
-	// Behind the canvas: the screen's own color, so the photo sits on the
-	// same surface as the bars around it. The canvas's hairline edge keeps a
-	// black one visible.
-	canvasWell: "#0A0A0B",
-	surface: "#151517",
-	surfaceHover: "#1D1D20",
-	surfacePressed: "#26262A",
+/**
+ * The palette follows the system's setting when the app starts and keeps it
+ * until the next launch: every style reads `colors` once, as it's created.
+ * Native controls (the keyboard, alerts, the status bar) are pinned to the
+ * same scheme so they match.
+ */
+export const colorScheme: "light" | "dark" =
+	Appearance.getColorScheme() === "dark" ? "dark" : "light";
+if (Platform.OS !== "web") Appearance.setColorScheme(colorScheme);
+
+// The photo is a print on a light table: a pale gray surround, paper bars,
+// and black ink. Grays stay neutral so the photo's colors read true. The one
+// color of the app's own is the highlighter behind a chosen thing.
+const day = {
+	// The bars, the dock, and every screen.
+	background: "#FFFFFF",
+	// The table behind the canvas.
+	canvasWell: "#E2E3E6",
+	// Trays, sheets, and cards floating over the canvas.
+	surface: "#FFFFFF",
+	surfaceHover: "#F2F3F5",
+	surfacePressed: "#E7E8EB",
 	// Laid over whatever is behind a borderless control, so one pair of
 	// colors serves every background.
+	hoverOverlay: "rgba(0, 0, 0, 0.05)",
+	pressedOverlay: "rgba(0, 0, 0, 0.1)",
+	border: "#E1E2E6",
+	borderStrong: "#C8CACF",
+	textPrimary: "#000000",
+	textSecondary: "#5D5F66",
+	textTertiary: "#9A9CA3",
+	// The main action's fill: a solid bar of ink.
+	primary: "#000000",
+	primaryHover: "#26272B",
+	primaryPressed: "#3A3B40",
+	onPrimary: "#FFFFFF",
+	// The highlighter swiped behind a chosen thing, and the wordmark's.
+	highlight: "#FFE433",
+	onHighlight: "#000000",
+	// Behind a drop target or a confirmation.
+	highlightSoft: "rgba(255, 228, 51, 0.28)",
+	highlightBorder: "#E8C800",
+	// The selected layer, and anything else drawn over the photo (snap
+	// guides, detection's picks): cool, so it stands apart from most photos'
+	// warm tones.
+	selection: "#2F6BFF",
+	selectionSoft: "rgba(47, 107, 255, 0.16)",
+	selectionBorder: "rgba(47, 107, 255, 0.55)",
+	onSelection: "#FFFFFF",
+	// A chosen color's ring.
+	chosen: "#000000",
+	// Around every color swatch, so white shows on the paper and black on a
+	// dark photo.
+	swatchRing: "rgba(0, 0, 0, 0.2)",
+	danger: "#D92D20",
+	dangerHover: "#C2261A",
+	dangerPressed: "#A82016",
+	dangerSoft: "rgba(217, 45, 32, 0.1)",
+	// Dims the canvas behind modal editing UI.
+	scrim: "rgba(0, 0, 0, 0.45)",
+	// Lighter still, behind a sheet the canvas stays in view past.
+	sheetScrim: "rgba(0, 0, 0, 0.22)",
+	// The checkerboard that stands for transparency.
+	checkerDark: "#D3D5D9",
+	checkerLight: "#EDEEF0",
+	// Under anything floating over the canvas.
+	shadow: "rgba(0, 0, 0, 0.16)",
+};
+
+// The same system after dark, on a graphite table: lighter than black, so
+// the photo still sits on something.
+const night: typeof day = {
+	background: "#17181B",
+	canvasWell: "#2B2C30",
+	surface: "#202125",
+	surfaceHover: "#2A2B30",
+	surfacePressed: "#34353A",
 	hoverOverlay: "rgba(255, 255, 255, 0.07)",
 	pressedOverlay: "rgba(255, 255, 255, 0.13)",
-	border: "#26262A",
-	borderStrong: "#3A3A40",
-	textPrimary: "#F5F5F7",
-	textSecondary: "#8E8E93",
-	textTertiary: "#5C5C62",
-	accent: "#FF6B4A",
-	accentHover: "#FF8263",
-	accentPressed: "#E95A3A",
-	// Behind something selected, or the accent's glow.
-	accentSoft: "rgba(255, 107, 74, 0.14)",
-	accentBorder: "rgba(255, 107, 74, 0.5)",
-	onAccent: "#1A0D08",
-	// The selected layer, on the canvas and in the layers list. Cool, so it
-	// stands apart from the accent and from most photos' warm tones.
-	selection: "#58A6FF",
-	selectionSoft: "rgba(88, 166, 255, 0.16)",
-	selectionBorder: "rgba(88, 166, 255, 0.55)",
-	// A chosen option's outline, ring, or underline (see `chosenOutline`): the
-	// UI stays neutral, and color is left to the photo and the accent.
-	chosen: "#F5F5F7",
-	// Around every color swatch, so black shows on the dark UI and white on a
-	// light photo.
+	border: "#2E3035",
+	borderStrong: "#45474D",
+	textPrimary: "#F3F3F1",
+	textSecondary: "#9A9CA3",
+	textTertiary: "#64666D",
+	primary: "#F3F3F1",
+	primaryHover: "#FFFFFF",
+	primaryPressed: "#D9D9D7",
+	onPrimary: "#000000",
+	highlight: "#FFE433",
+	onHighlight: "#000000",
+	highlightSoft: "rgba(255, 228, 51, 0.16)",
+	highlightBorder: "rgba(255, 228, 51, 0.6)",
+	selection: "#5B8CFF",
+	selectionSoft: "rgba(91, 140, 255, 0.18)",
+	selectionBorder: "rgba(91, 140, 255, 0.6)",
+	onSelection: "#FFFFFF",
+	chosen: "#F3F3F1",
 	swatchRing: "rgba(255, 255, 255, 0.3)",
-	danger: "#FF453A",
-	dangerHover: "#FF6259",
-	dangerPressed: "#E0352B",
-	dangerSoft: "rgba(255, 69, 58, 0.16)",
-	// Dims the canvas behind modal editing UI.
+	danger: "#FF5A4F",
+	dangerHover: "#FF766D",
+	dangerPressed: "#E6463B",
+	dangerSoft: "rgba(255, 90, 79, 0.16)",
 	scrim: "rgba(0, 0, 0, 0.65)",
-	// Lighter still, behind a sheet the canvas stays in view past.
-	sheetScrim: "rgba(0, 0, 0, 0.3)",
-	// The checkerboard that stands for transparency.
-	checkerDark: "#2E2E33",
-	checkerLight: "#45454B",
+	sheetScrim: "rgba(0, 0, 0, 0.35)",
+	checkerDark: "#36373C",
+	checkerLight: "#48494F",
+	shadow: "rgba(0, 0, 0, 0.5)",
 };
+
+export const colors = colorScheme === "dark" ? night : day;
 
 export const radii = {
 	// Controls, chips, and a chosen option's outline.
@@ -88,13 +153,14 @@ export const typography = {
 } satisfies Record<string, TextStyle>;
 
 // Under anything floating over the canvas.
-export const floatingShadow = "0 12px 32px rgba(0, 0, 0, 0.45)";
+export const floatingShadow = `0 10px 28px ${colors.shadow}`;
 
-// The wordmark and screen titles. Until it loads, or if it can't, the system
-// font stands in. Controls keep the system font, which suits each platform.
+// The wordmark and home's headings, in Anton, the typeface of the captions
+// people make (`TEXT_FONTS.classic`, registered under this name). Until it
+// loads, the system font stands in. Controls keep the system font, which
+// suits each platform.
 export const fonts = {
-	display: "InstrumentSerif-Regular",
-	displayItalic: "InstrumentSerif-Italic",
+	display: "Anton",
 };
 
 // A chosen option among controls (a tool, a font, an aspect ratio): a thin
