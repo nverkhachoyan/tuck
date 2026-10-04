@@ -34,7 +34,10 @@ Built as described in `ui/Highlight.tsx`, behind tools (the rail's too), header 
 
 * One `Highlight` in `ui/` draws the highlighter swipe behind a chosen tool, font, ratio, size, format, or effect. It replaces `chosenOutline` and `chosenUnderline`; a chosen tab is ink and semibold with a short swipe under its label. Color swatches keep their ring.
 
-### 3. The canvas
+### 3. The canvas (done)
+
+The photo's inset in the view went from 16 to 12pt, which still leaves the corner handles room. The canvas casts a print's two shadows (a tight contact shadow and a soft lift), drawn as two shapes since image filters on one shape chain. The hairline edge stays only at night, where a shadow barely shows on the graphite table.
+
 
 * Smaller margins around the photo, and a soft shadow under it in place of the hairline edge.
 

@@ -63,7 +63,7 @@ import {
 import { drawingBox } from "@/model/drawing";
 import { rectFromCorners, transformsEqual } from "@/model/geometry";
 import { lineReach, shapeBox } from "@/model/shapes";
-import { colors } from "@/theme";
+import { colorScheme, colors } from "@/theme";
 import { CanvasBackground, LayerContent } from "../EditorSceneParts";
 import type { TextEditState } from "../editorMode";
 import { handleSides } from "../handles/handleGeometry";
@@ -75,11 +75,15 @@ const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
 const SELECTION_HALO_PX = 3.5;
 const SELECTION_HALO = "rgba(0, 0, 0, 0.22)";
-// The canvas's shadow on the stage around it, and the hairline at its edge
-// that keeps a black canvas visible, in screen pixels.
-const SHADOW_OFFSET_PX = 6;
-const SHADOW_BLUR_PX = 18;
+// The canvas's shadows on the table around it, as a print's: a tight one
+// where it touches and a soft one that lifts it, in screen pixels. At night,
+// where a shadow barely shows, a hairline edge keeps a black canvas visible.
+const CONTACT_OFFSET_PX = 1;
+const CONTACT_BLUR_PX = 1.5;
+const LIFT_OFFSET_PX = 8;
+const LIFT_BLUR_PX = 14;
 const EDGE_PX = 1;
+const showEdge = colorScheme === "dark";
 // A caret's width, and its halo's on each side, in screen pixels, and how
 // long it stays on, then off, as it blinks.
 const CARET_PX = 2;
@@ -159,7 +163,7 @@ type EditorSceneProps = {
  *
  * A locked image is cut off at the canvas's edge, like a crop. Once unlocked
  * it moves like any layer, so it fades past the edge instead. The canvas
- * sits on the stage like a print, with a shadow and an edge around it.
+ * sits on the table like a print, with a shadow around it.
  *
  * What's sized in screen pixels (outlines, handles, the shadow) keeps its
  * size on screen at any zoom, following `viewScale` on the UI thread.
@@ -179,8 +183,10 @@ export function EditorScene({
 }: EditorSceneProps) {
 	const editedId = textEdit && !textEdit.isNew ? textEdit.layer.id : null;
 	const canvas = rect(0, 0, document.width, document.height);
-	const shadowOffset = useScreenPixels(viewScale, SHADOW_OFFSET_PX);
-	const shadowBlur = useScreenPixels(viewScale, SHADOW_BLUR_PX);
+	const contactOffset = useScreenPixels(viewScale, CONTACT_OFFSET_PX);
+	const contactBlur = useScreenPixels(viewScale, CONTACT_BLUR_PX);
+	const liftOffset = useScreenPixels(viewScale, LIFT_OFFSET_PX);
+	const liftBlur = useScreenPixels(viewScale, LIFT_BLUR_PX);
 	// Doubled, as the canvas clips away its inner half.
 	const edge = useScreenPixels(viewScale, EDGE_PX * 2);
 	return (
@@ -230,21 +236,33 @@ export function EditorScene({
 			)}
 			<Group clip={canvas} invertClip>
 				<Fill color={colors.canvasWell} opacity={0.7} />
+				{/* One shape each: image filters on one shape chain. */}
 				<Rect rect={canvas} color="black">
 					<Shadow
 						dx={0}
-						dy={shadowOffset}
-						blur={shadowBlur}
+						dy={contactOffset}
+						blur={contactBlur}
 						color={colors.shadow}
 						shadowOnly
 					/>
 				</Rect>
-				<Rect
-					rect={canvas}
-					style="stroke"
-					strokeWidth={edge}
-					color={colors.hoverOverlay}
-				/>
+				<Rect rect={canvas} color="black">
+					<Shadow
+						dx={0}
+						dy={liftOffset}
+						blur={liftBlur}
+						color={colors.shadow}
+						shadowOnly
+					/>
+				</Rect>
+				{showEdge && (
+					<Rect
+						rect={canvas}
+						style="stroke"
+						strokeWidth={edge}
+						color={colors.hoverOverlay}
+					/>
+				)}
 			</Group>
 			{detections.length > 0 && (
 				<Group clip={canvas}>

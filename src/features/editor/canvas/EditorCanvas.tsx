@@ -85,7 +85,7 @@ import { useViewGesture } from "./useViewGesture";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
-const PHOTO_INSET = 16;
+const PHOTO_INSET = 12;
 // The selection bar's distance from the selection, above it past the rotate
 // knob or below it past the handles, and from the view's edges.
 const SELECT: CanvasInput = { type: "select" };
