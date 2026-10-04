@@ -155,7 +155,7 @@ function AdjustmentChoice({
 							<MaterialCommunityIcons
 								name={icon}
 								size={20}
-								color={selected ? colors.onHighlight : colors.textSecondary}
+								color={selected ? colors.onHighlight : colors.textPrimary}
 							/>
 							{changed && (
 								<View
@@ -166,7 +166,6 @@ function AdjustmentChoice({
 						<Text
 							style={[
 								styles.choiceLabel,
-								hovered && styles.choiceLabelLit,
 								selected && styles.choiceLabelSelected,
 							]}
 						>
@@ -237,9 +236,6 @@ const styles = StyleSheet.create({
 	},
 	choiceLabel: {
 		...typography.caption,
-		color: colors.textSecondary,
-	},
-	choiceLabelLit: {
 		color: colors.textPrimary,
 	},
 	choiceLabelSelected: {

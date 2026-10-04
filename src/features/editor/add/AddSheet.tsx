@@ -175,23 +175,17 @@ function CategoryChip({
 			accessibilityRole="tab"
 			accessibilityState={{ selected }}
 			style={(state) => {
-				const { pressed } = interaction(state);
-				return [styles.chip, webTransition, pressed && styles.pressed];
+				const { pressed, hovered } = interaction(state);
+				return [
+					styles.chip,
+					webTransition,
+					hovered && styles.chipHovered,
+					pressed && styles.pressed,
+				];
 			}}
 		>
-			{(state) => (
-				<>
-					{selected && <Highlight under />}
-					<Text
-						style={[
-							styles.chipLabel,
-							(selected || interaction(state).hovered) && styles.chipLabelLit,
-						]}
-					>
-						{label}
-					</Text>
-				</>
-			)}
+			{selected && <Highlight under style={styles.chipUnder} />}
+			<Text style={styles.chipLabel}>{label}</Text>
 		</Pressable>
 	);
 }
@@ -388,15 +382,22 @@ const styles = StyleSheet.create({
 		paddingBottom: 6,
 	},
 	// A tab: its label, underlined while chosen.
+	// The hover tint reaches past the label, taken back by the margin.
 	chip: {
-		paddingHorizontal: 2,
+		paddingHorizontal: 8,
+		marginHorizontal: -6,
 		paddingVertical: 7,
+		borderRadius: radii.small,
+	},
+	chipHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	// As far past the label as on any other tab.
+	chipUnder: {
+		marginHorizontal: 4,
 	},
 	chipLabel: {
 		...typography.labelStrong,
-		color: colors.textSecondary,
-	},
-	chipLabelLit: {
 		color: colors.textPrimary,
 	},
 	gridScroll: {

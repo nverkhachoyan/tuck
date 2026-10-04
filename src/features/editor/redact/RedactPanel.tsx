@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
 	},
 	effectLabel: {
 		...typography.caption,
-		color: colors.textSecondary,
+		color: colors.textPrimary,
 	},
 	effectLabelSelected: {
 		color: colors.onHighlight,

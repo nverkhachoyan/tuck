@@ -348,24 +348,17 @@ function Tab({
 			onPress={onPress}
 			accessibilityRole="tab"
 			accessibilityState={{ selected: active }}
-			style={[styles.target, styles.tab]}
+			style={(state) => [
+				styles.target,
+				styles.tab,
+				webTransition,
+				interaction(state).hovered && styles.tabHovered,
+			]}
 		>
-			{(state) => {
-				const { hovered } = interaction(state);
-				return (
-					<View style={styles.segment}>
-						{active && <Highlight under />}
-						<Text
-							style={[
-								styles.tabLabel,
-								(active || hovered) && styles.tabLabelActive,
-							]}
-						>
-							{label}
-						</Text>
-					</View>
-				);
-			}}
+			<View style={styles.segment}>
+				{active && <Highlight under />}
+				<Text style={styles.tabLabel}>{label}</Text>
+			</View>
 		</Pressable>
 	);
 }
@@ -447,6 +440,9 @@ const styles = StyleSheet.create({
 	tab: {
 		flexGrow: 1,
 	},
+	tabHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
 	// As wide as its label, so the underline is too.
 	segment: {
 		alignSelf: "center",
@@ -456,9 +452,6 @@ const styles = StyleSheet.create({
 	},
 	tabLabel: {
 		...typography.labelStrong,
-		color: colors.textSecondary,
-	},
-	tabLabelActive: {
 		color: colors.textPrimary,
 	},
 	// One height for every tab, so switching tabs never shifts the row above.

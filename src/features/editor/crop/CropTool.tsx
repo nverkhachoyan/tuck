@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
 	chipLabel: {
 		...typography.label,
 		fontVariant: ["tabular-nums"],
-		color: colors.textSecondary,
+		color: colors.textPrimary,
 	},
 	chipLabelSelected: {
 		color: colors.onHighlight,
