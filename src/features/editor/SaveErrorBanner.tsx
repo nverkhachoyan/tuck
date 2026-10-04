@@ -26,7 +26,7 @@ export function SaveErrorBanner({
 			<Announcement message={message} />
 			<Surface style={styles.banner} contentStyle={styles.bannerContent}>
 				<Ionicons
-					name="cloud-offline-outline"
+					name="alert-circle-outline"
 					size={20}
 					color={colors.danger}
 				/>
