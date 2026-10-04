@@ -3,7 +3,7 @@
 	<!-- Source for favicon.png: a rounded white tile with a hairline, so the mark reads on light and dark browser tabs. It's the app icon's mark (see icon.svg). -->
 	<rect x="16" y="16" width="992" height="992" rx="224" fill="#FFFFFF" stroke="#C8CACF" stroke-width="16"/>
 	<g transform="translate(512 512) scale(0.92) translate(-512 -509)">
-		<path d="M296 612 Q294 580 326 578 L740 560 Q776 558 776 592 L772 722 Q770 754 736 756 L314 774 Q282 776 284 744 Z" fill="#FFE433" transform="rotate(-3 530 667)"/>
+		<path d="M226 232 Q226 196 262 194 L742 178 Q800 176 802 234 L806 790 Q806 830 766 832 L292 846 Q228 848 226 784 Z" fill="#FFE433" transform="rotate(-3 516 512)"/>
 		<rect x="300" y="248" width="424" height="140" fill="#000"/>
 		<rect x="437" y="248" width="150" height="540" fill="#000"/>
 	</g>

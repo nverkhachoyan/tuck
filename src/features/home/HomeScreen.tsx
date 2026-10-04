@@ -23,7 +23,7 @@ import {
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import { colorScheme, colors, fonts, radii, space, typography } from "@/theme";
+import { colors, fonts, radii, space, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Highlight } from "@/ui/Highlight";
@@ -225,19 +225,17 @@ export default function HomeScreen() {
 }
 
 /**
- * "Tuck" in Anton, the captions' typeface, with the highlighter swiped
- * through its lower half. At night, light letters wouldn't read on yellow,
- * so the swipe covers the word, which is in black. It swipes in as it
- * appears.
+ * "Tuck" in Anton, the captions' typeface, in black on a highlighter swipe:
+ * one mark that reads on paper and on the night palette's graphite, and
+ * matches the app icon. It swipes in as it appears.
  */
 function Wordmark({ size }: { size: number }) {
-	const covered = colorScheme === "dark";
 	return (
 		<View accessibilityRole="header">
 			<Highlight
 				style={{
-					top: size * (covered ? 0.16 : 0.55),
-					bottom: size * (covered ? 0.06 : 0.12),
+					top: size * 0.16,
+					bottom: size * 0.06,
 					left: -size * 0.12,
 					right: -size * 0.16,
 				}}
@@ -245,7 +243,6 @@ function Wordmark({ size }: { size: number }) {
 			<Text
 				style={[
 					styles.wordmarkText,
-					covered && styles.wordmarkCovered,
 					{ fontSize: size, lineHeight: size * 1.2 },
 				]}
 			>
@@ -290,9 +287,6 @@ const styles = StyleSheet.create({
 	},
 	wordmarkText: {
 		fontFamily: fonts.display,
-		color: colors.textPrimary,
-	},
-	wordmarkCovered: {
 		color: colors.onHighlight,
 	},
 	hero: {

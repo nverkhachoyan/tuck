@@ -58,7 +58,7 @@ The outline's stroke is a fifth of the font size (`OUTLINE_WIDTH` in `layers/tex
 
 ### 6. Home (done)
 
-Home is paper bars around the table, as the editor is. The header has the wordmark (Anton with the highlighter through its lower half; at night the swipe covers it and the word is black) and Edit, which home now owns. Projects are prints on the table with their name and date always shown, two across on a phone (`MIN_CARD_WIDTH` 150, at most five), so the hover caption and "Recent" are gone. The bottom bar is the black Open a photo over Paste and Blank canvas; from 1024pt they head the projects in a row. Empty, home is the wordmark and tagline over the same bar. `LogoMark` is gone. The app icon, adaptive icon, and favicon are a black T over a highlighter swipe on white (`assets/*.svg`, rendered to PNG in headless Chrome); the adaptive icon's background is white. The icon needs a native rebuild to show.
+Home is paper bars around the table, as the editor is. The header has the wordmark (black Anton on a highlighter swipe, the same in both palettes) and Edit, which home now owns. Projects are prints on the table with their name and date always shown, two across on a phone (`MIN_CARD_WIDTH` 150, at most five), so the hover caption and "Recent" are gone. The bottom bar is the black Open a photo over Paste and Blank canvas; from 1024pt they head the projects in a row. Empty, home is the wordmark and tagline over the same bar. `LogoMark` is gone. The app icon, adaptive icon, and favicon are a black T on a highlighter swipe, on white (`assets/*.svg`, rendered to PNG in headless Chrome); the adaptive icon's background is white. The icon needs a native rebuild to show.
 
 
 * Two columns of projects as prints with a name and when they were last changed.
@@ -67,3 +67,4 @@ Home is paper bars around the table, as the editor is. The header has the wordma
 ## After the plan
 
 * **Back and Export stay through every tool** (2026-10-04). The header hid them while Draw, Redact, Find, or Adjust was open, so the way out seemed to vanish, most of all on web, where the browser's Back still left. Leaving mid-tool keeps the tool's changes, as it always did. Crop, which covers the editor like a dialog, keeps its own header without them.
+* **One mark everywhere** (2026-10-04). The wordmark had a half swipe in day and a full one at night, which read as two logos side by side. It's black on a full swipe in both now, and the icons are a black T on the same label.
