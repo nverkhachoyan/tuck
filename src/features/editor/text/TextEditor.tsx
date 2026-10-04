@@ -111,7 +111,7 @@ export function TextEditor({
 				}}
 				multiline
 				keyboardAppearance="dark"
-				accessibilityLabel="Text"
+				accessibilityLabel="Caption"
 				style={styles.input}
 			/>
 			<ScreenHeader />
