@@ -17,8 +17,9 @@ const BACK_SIZE = 44;
  * Top bar with a Back action, an optional centered title, and an optional
  * trailing action. Back is a chevron; `backLabel` names where it goes, for
  * assistive tech and as its tooltip on web. Without `onBack`, the title, if
- * any, takes Back's place. A tool's header has neither: its name is in the
- * dock's footer, and the header keeps only its actions.
+ * any, takes Back's place. Crop's header has neither: it covers the editor
+ * like a dialog, its name is in the dock's footer, and it keeps only its
+ * actions.
  */
 export function ScreenHeader({
 	title,

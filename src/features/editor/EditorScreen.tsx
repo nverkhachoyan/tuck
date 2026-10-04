@@ -679,9 +679,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		<TrayHeight.Provider value={setTrayHeight}>
 			<TrayPlacement.Provider value={wide ? INSPECTOR_TRAY : null}>
 				<View style={styles.container}>
+					{/* Back and Export stay through every tool: leaving keeps the
+					    tool's changes, as the browser's own Back does. */}
 					<ScreenHeader
 						backLabel="Back to projects"
-						onBack={tool ? undefined : () => leaveEditor(router)}
+						onBack={() => leaveEditor(router)}
 						action={
 							<HeaderActions
 								onReset={
@@ -698,9 +700,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 											}
 										: undefined
 								}
-								onExport={
-									tool ? undefined : () => router.push(exportHref(projectId))
-								}
+								onExport={() => router.push(exportHref(projectId))}
 							/>
 						}
 					/>
@@ -1050,7 +1050,7 @@ function layerActionsFor({
 /**
  * The header's actions: Reset while the image being adjusted has changes,
  * the layers where the inspector doesn't show them, undo and redo, and
- * Export while no tool is open.
+ * Export.
  */
 function HeaderActions({
 	onReset,
@@ -1059,7 +1059,7 @@ function HeaderActions({
 }: {
 	onReset?: () => void;
 	layers?: { open: boolean; onToggle: () => void };
-	onExport?: () => void;
+	onExport: () => void;
 }) {
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
@@ -1090,17 +1090,15 @@ function HeaderActions({
 				disabled={!canRedo}
 				onPress={redo}
 			/>
-			{onExport && (
-				<View style={styles.exportAction}>
-					<Button
-						label="Export"
-						icon="share-outline"
-						variant="primary"
-						size="small"
-						onPress={onExport}
-					/>
-				</View>
-			)}
+			<View style={styles.exportAction}>
+				<Button
+					label="Export"
+					icon="share-outline"
+					variant="primary"
+					size="small"
+					onPress={onExport}
+				/>
+			</View>
 		</View>
 	);
 }

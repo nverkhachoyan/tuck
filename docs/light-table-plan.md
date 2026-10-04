@@ -63,3 +63,7 @@ Home is paper bars around the table, as the editor is. The header has the wordma
 
 * Two columns of projects as prints with a name and when they were last changed.
 * One black bar opens a photo; Paste and Blank canvas sit under it. The wordmark has the highlighter swipe. The app icon follows the new mark.
+
+## After the plan
+
+* **Back and Export stay through every tool** (2026-10-04). The header hid them while Draw, Redact, Find, or Adjust was open, so the way out seemed to vanish, most of all on web, where the browser's Back still left. Leaving mid-tool keeps the tool's changes, as it always did. Crop, which covers the editor like a dialog, keeps its own header without them.
