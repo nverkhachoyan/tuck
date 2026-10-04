@@ -4,10 +4,13 @@ import {
 } from "expo-router/html";
 import type { ReactNode } from "react";
 
-// The day and night palettes' `background` (`theme.ts`): this page is
-// rendered ahead of time, before the browser says which the app will use.
+// The day and night palettes' `background` and `textPrimary` (`theme.ts`):
+// this page is rendered ahead of time, before the browser says which the app
+// will use.
 const dayBackground = "#FFFFFF";
 const nightBackground = "#17181B";
+const dayInk = "#000000";
+const nightInk = "#F3F3F1";
 
 /**
  * The browser paints the space outside React Native Web's root. Make that
@@ -38,6 +41,9 @@ export default function Root({ children }: { children: ReactNode }) {
 				/>
 				<meta name="color-scheme" content="light dark" />
 				<style>{`html, body, #root { background-color: ${dayBackground}; color-scheme: light; } @media (prefers-color-scheme: dark) { html, body, #root { background-color: ${nightBackground}; color-scheme: dark; } }`}</style>
+				{/* Keyboard focus in ink, like every other control, rather than the
+				    browser's blue, which the app keeps for marks over the photo. */}
+				<style>{`:focus-visible { outline: 2px solid ${dayInk}; outline-offset: 2px; } @media (prefers-color-scheme: dark) { :focus-visible { outline-color: ${nightInk}; } }`}</style>
 				<ScrollViewStyleReset />
 				{headNodes}
 			</head>
