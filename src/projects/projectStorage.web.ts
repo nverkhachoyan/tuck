@@ -1,5 +1,5 @@
-import { MISSING_IMAGE_MESSAGE, type ProjectStorage } from "./projectLifecycle";
 import { PHOTO_FILE } from "./projectFile";
+import { MISSING_IMAGE_MESSAGE, type ProjectStorage } from "./projectLifecycle";
 
 // Browsers give the app no file system to keep projects in, so they live in
 // IndexedDB: each project's JSON in one store, and its image files' bytes,
