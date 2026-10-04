@@ -1,4 +1,5 @@
 import { Directory, File, Paths } from "expo-file-system";
+import { MISSING_IMAGE_MESSAGE, type ProjectStorage } from "./projectLifecycle";
 
 // `projectStorage.web.ts` implements the same API for browsers. Each project
 // is a folder holding its image files, if it has any, and once it has been
@@ -44,7 +45,7 @@ export async function copyImage(fromId: string, file: string, toId: string) {
 export async function imageUrl(id: string, file: string): Promise<string> {
 	const image = new File(projectDirectory(id), file);
 	if (!image.exists) {
-		throw new Error("One of this project's photos is missing.");
+		throw new Error(MISSING_IMAGE_MESSAGE);
 	}
 	return image.uri;
 }
@@ -115,3 +116,23 @@ export async function listProjectIds(): Promise<string[]> {
 		.filter((entry) => entry instanceof Directory)
 		.map((entry) => entry.name);
 }
+
+// Checked against the shared contract here, so a drift from it fails in
+// this file rather than at the wiring in `projectService.ts`.
+const storage: ProjectStorage = {
+	claimProject,
+	releaseProject,
+	storeImage,
+	copyImage,
+	imageUrl,
+	releaseImage,
+	listImages,
+	removeImage,
+	readProjectFile,
+	writeProjectFile,
+	removeProject,
+	removeInactiveProject,
+	listProjectIds,
+};
+
+export default storage;

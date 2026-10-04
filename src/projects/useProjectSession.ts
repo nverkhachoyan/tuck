@@ -3,7 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
 import type { EditorDocument } from "@/model/document";
 import { useStore } from "@/store";
-import type { RenderThumbnail } from "./projectLifecycle";
+import {
+	NEWER_VERSION_MESSAGE,
+	type RenderThumbnail,
+} from "./projectLifecycle";
 import { projectRouteId, UNSAVED_PROJECT } from "./projectRoute";
 import { closeProject, openProject } from "./projectService";
 
@@ -87,7 +90,7 @@ async function switchToProject(
 
 	const opened = await openProject(routeId);
 	if (!opened) {
-		throw new Error("It may have been saved by a newer version of the app.");
+		throw new Error(NEWER_VERSION_MESSAGE);
 	}
 	// Left before it opened: close it again, rather than leave it open
 	// behind the screen the user went to.

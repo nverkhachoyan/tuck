@@ -41,6 +41,13 @@ export type ProjectStorage = {
 	listProjectIds(): Promise<string[]>;
 };
 
+// The contract's shared messages, so both storage implementations and the
+// lifecycle word them the same.
+export const MISSING_IMAGE_MESSAGE = "One of this project's photos is missing.";
+export const NEWER_VERSION_MESSAGE =
+	"It may have been saved by a newer version of the app.";
+const PROJECT_GONE_MESSAGE = "This project no longer exists.";
+
 type OpenProject = {
 	// The file behind each image URL the document may use: every file the
 	// project had when opened, or has been given since. They're kept until it
@@ -246,7 +253,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		let opened = false;
 		try {
 			const json = await storage.readProjectFile(id);
-			if (json === null) throw new Error("This project no longer exists.");
+			if (json === null) throw new Error(PROJECT_GONE_MESSAGE);
 			const saved = parseSavedProject(json);
 			if (!saved || !hasKnownImageUris(saved)) return null;
 			const urls = await imageUrls(id, imageFiles(saved.document));
@@ -447,10 +454,10 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	/** A closed project's saved file, which this version can open. */
 	async function readSaved(id: string): Promise<SavedProject> {
 		const json = await storage.readProjectFile(id);
-		if (json === null) throw new Error("This project no longer exists.");
+		if (json === null) throw new Error(PROJECT_GONE_MESSAGE);
 		const saved = parseSavedProject(json);
 		if (!saved || !hasKnownImageUris(saved)) {
-			throw new Error("It may have been saved by a newer version of the app.");
+			throw new Error(NEWER_VERSION_MESSAGE);
 		}
 		return saved;
 	}

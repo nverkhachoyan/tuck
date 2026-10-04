@@ -1,3 +1,4 @@
+import { MISSING_IMAGE_MESSAGE, type ProjectStorage } from "./projectLifecycle";
 import { PHOTO_FILE } from "./projectFile";
 
 // Browsers give the app no file system to keep projects in, so they live in
@@ -132,7 +133,7 @@ export async function copyImage(fromId: string, file: string, toId: string) {
 	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
 		t.objectStore(PHOTOS).get(imageKey(fromId, file)),
 	);
-	if (!blob) throw new Error("One of this project's photos is missing.");
+	if (!blob) throw new Error(MISSING_IMAGE_MESSAGE);
 	await run([PHOTOS], "readwrite", (t) =>
 		t.objectStore(PHOTOS).put(blob, imageKey(toId, file)),
 	);
@@ -142,7 +143,7 @@ export async function imageUrl(id: string, file: string): Promise<string> {
 	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
 		t.objectStore(PHOTOS).get(imageKey(id, file)),
 	);
-	if (!blob) throw new Error("One of this project's photos is missing.");
+	if (!blob) throw new Error(MISSING_IMAGE_MESSAGE);
 	return URL.createObjectURL(blob);
 }
 
@@ -229,3 +230,23 @@ export async function listProjectIds(): Promise<string[]> {
 		.map((key) => String(Array.isArray(key) ? key[0] : key));
 	return [...new Set(ids)];
 }
+
+// Checked against the shared contract here, so a drift from it fails in
+// this file rather than at the wiring in `projectService.ts`.
+const storage: ProjectStorage = {
+	claimProject,
+	releaseProject,
+	storeImage,
+	copyImage,
+	imageUrl,
+	releaseImage,
+	listImages,
+	removeImage,
+	readProjectFile,
+	writeProjectFile,
+	removeProject,
+	removeInactiveProject,
+	listProjectIds,
+};
+
+export default storage;
