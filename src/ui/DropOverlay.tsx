@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { colors, radii, typography } from "@/theme";
+import { colors, radii, space, typography } from "@/theme";
 
 /**
  * Covers the screen while files are dragged over it, saying what dropping
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
 	overlay: {
 		...StyleSheet.absoluteFill,
 		zIndex: 10,
-		padding: 16,
+		padding: space.md,
 		backgroundColor: colors.scrim,
 		pointerEvents: "none",
 	},

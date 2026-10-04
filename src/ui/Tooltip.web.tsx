@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
-import { colors, radii, typography } from "@/theme";
+import { colors, radii, space, typography } from "@/theme";
 import type { TooltipAnchorProps } from "./Tooltip";
 
 const SHOW_DELAY_MS = 500;
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
 		zIndex: 1000,
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 8,
+		gap: space.xs,
 		paddingHorizontal: 9,
 		paddingVertical: 5,
 		borderRadius: radii.small,

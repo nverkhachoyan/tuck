@@ -60,7 +60,8 @@ export const radii = {
 	large: 20,
 };
 
-// Every gap and padding is one of these.
+// Gaps and paddings come from these; a one-off that fits no step stays
+// literal.
 export const space = {
 	xxs: 4,
 	xs: 8,

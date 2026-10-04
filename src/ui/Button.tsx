@@ -7,7 +7,7 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { colors, radii, typography, webTransition } from "@/theme";
+import { colors, radii, space, typography, webTransition } from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 8,
+		gap: space.xs,
 		borderWidth: 1,
 		borderColor: "transparent",
 	},

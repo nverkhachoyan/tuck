@@ -8,7 +8,7 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { colors, radii, typography } from "@/theme";
+import { colors, radii, space, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 
 /**
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
 		zIndex: 2000,
 		alignItems: "center",
 		justifyContent: "center",
-		padding: 24,
+		padding: space.lg,
 		backgroundColor: colors.scrim,
 		animationKeyframes: [{ from: { opacity: 0 }, to: { opacity: 1 } }],
 		animationDuration: "140ms",

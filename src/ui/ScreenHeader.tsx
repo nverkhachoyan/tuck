@@ -1,7 +1,13 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, HEADER_HEIGHT, typography, webTransition } from "@/theme";
+import {
+	colors,
+	HEADER_HEIGHT,
+	space,
+	typography,
+	webTransition,
+} from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 
@@ -83,7 +89,7 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		paddingHorizontal: 16,
+		paddingHorizontal: space.md,
 	},
 	// Centered on the whole bar rather than the space left of Back.
 	titleContainer: {
