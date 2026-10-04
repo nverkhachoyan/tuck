@@ -76,7 +76,6 @@ export function DetectionOptions({
 	onStop,
 	onSelectAll,
 	onClear,
-	onApply,
 }: {
 	state: ImageDetectionState;
 	visibleIndices: readonly number[];
@@ -86,7 +85,6 @@ export function DetectionOptions({
 	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
-	onApply: () => void;
 }) {
 	// The tray's own width, not the window's: the layers sidebar can narrow
 	// the canvas on web.
@@ -120,7 +118,6 @@ export function DetectionOptions({
 						selected={selectedCount}
 						onSelectAll={onSelectAll}
 						onClear={onClear}
-						onApply={onApply}
 						issue={state.issues[0]?.message}
 					/>
 				)}
@@ -148,14 +145,12 @@ function Found({
 	selected,
 	onSelectAll,
 	onClear,
-	onApply,
 	issue,
 }: {
 	count: number;
 	selected: number;
 	onSelectAll: () => void;
 	onClear: () => void;
-	onApply: () => void;
 	issue?: string;
 }) {
 	return (
@@ -170,20 +165,13 @@ function Found({
 				<Text style={styles.message}>
 					{count === 0
 						? "The detector found regions, but none are inside the canvas."
-						: "Tap an outlined region to include or leave it out."}
+						: "Tap a region to include or leave it out, then ✓ to redact."}
 				</Text>
 			</View>
 			{count > 0 && (
 				<View style={styles.actions}>
 					<Button label="All" size="small" onPress={onSelectAll} />
 					<Button label="None" size="small" onPress={onClear} />
-					<Button
-						label={`Redact selected (${selected})`}
-						variant="primary"
-						size="small"
-						disabled={selected === 0}
-						onPress={onApply}
-					/>
 				</View>
 			)}
 		</>

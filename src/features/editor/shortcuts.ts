@@ -169,7 +169,7 @@ export const SHORTCUT_GROUPS: {
 		title: "Crop",
 		items: [
 			{ keys: "Enter", action: "Apply" },
-			{ keys: "Escape", action: "Cancel" },
+			{ keys: "Escape", action: "Apply" },
 		],
 	},
 	{

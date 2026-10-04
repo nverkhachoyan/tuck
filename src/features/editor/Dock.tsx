@@ -133,12 +133,15 @@ export function DockFooter({
 	onCancel,
 	cancelShortcut,
 	onDone,
+	doneLabel = "Done",
 	doneShortcut,
 }: {
 	title: string;
 	onCancel?: () => void;
 	cancelShortcut?: string;
 	onDone: () => void;
+	// What Done does, for its tooltip and screen readers, when it's more.
+	doneLabel?: string;
 	doneShortcut?: string;
 }) {
 	return (
@@ -159,7 +162,7 @@ export function DockFooter({
 			<View style={[styles.footerEnd, styles.footerEndRight]}>
 				<DockButton
 					icon="checkmark-outline"
-					label="Done"
+					label={doneLabel}
 					shortcut={doneShortcut}
 					onPress={onDone}
 				/>

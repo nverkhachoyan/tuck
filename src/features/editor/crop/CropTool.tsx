@@ -86,22 +86,25 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 		const subscription = BackHandler.addEventListener(
 			"hardwareBackPress",
 			() => {
-				onCancel();
+				controller.done();
 				return true;
 			},
 		);
 		return () => subscription.remove();
-	}, [onCancel]);
+	}, [controller.done]);
 
 	// Return applies from the canvas, while controls keep their normal keyboard
-	// behavior. Escape cancels from anywhere in the tool.
+	// behavior. Escape applies from anywhere in the tool, as it's Done in the
+	// other tools; the crop is one undo step.
 	useEffect(() => {
 		if (Platform.OS !== "web") return;
 		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Enter" && !isInteractiveElement(event.target)) {
+			if (
+				event.key === "Escape" ||
+				(event.key === "Enter" && !isInteractiveElement(event.target))
+			) {
 				controller.done();
-			} else if (event.key === "Escape") onCancel();
-			else return;
+			} else return;
 			event.preventDefault();
 		};
 		window.addEventListener("keydown", handleKeyDown);
@@ -218,7 +221,6 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 					<DockFooter
 						title="Crop"
 						onCancel={onCancel}
-						cancelShortcut="Escape"
 						onDone={controller.done}
 						doneShortcut="Enter"
 					/>

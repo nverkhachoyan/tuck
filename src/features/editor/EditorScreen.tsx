@@ -472,16 +472,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (!detectedImage) return;
 		dispatchMode({ type: "startTool", tool: "find" });
 	};
-	// Find is one of Redact's tools, so it goes back to Redact. Done redacts
-	// the regions chosen in the style last picked, rather than a selected
-	// redaction's.
+	// Find is one of Redact's tools, so Cancel goes back to Redact. Done
+	// redacts the regions chosen, in the style last picked rather than a
+	// selected redaction's, and goes back to the tools, as Redact's Done does.
 	const backToRedacting = () => {
 		find.reset();
 		startRedacting();
 	};
 	const finishFinding = () => {
 		find.redactChosen(redactionEffect(redact.chosen, documentSize));
-		backToRedacting();
+		closeTool();
+		selectLayer(null);
 	};
 	const doneWithTool = tool === "find" ? finishFinding : finishTool;
 	const cancelWithTool = tool === "find" ? backToRedacting : cancelTool;
@@ -789,7 +790,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							customColor={customColor}
 							onCustomColor={setCustomColor}
 							bottomInset={dockInset}
-							onRedactFound={finishFinding}
 						/>
 						{saveProblem && (
 							<SaveErrorBanner
@@ -826,6 +826,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										title={TOOL_TITLES[tool]}
 										onCancel={cancelWithTool}
 										onDone={doneWithTool}
+										doneLabel={
+											tool === "find" && find.selectedCount > 0
+												? `Redact ${find.selectedCount} selected`
+												: undefined
+										}
 										doneShortcut="Escape"
 									/>
 								) : textEditing.edit ? (
@@ -1132,12 +1137,10 @@ function ToolTrays({
 	customColor,
 	onCustomColor,
 	bottomInset,
-	onRedactFound,
 }: ModeProps & {
 	modeState: EditorModeState<TextEditing>;
 	onCustomColor: (color: string) => void;
 	bottomInset: number;
-	onRedactFound: () => void;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = textEditing;
@@ -1205,7 +1208,6 @@ function ToolTrays({
 					onStop={find.reset}
 					onSelectAll={find.selectAll}
 					onClear={find.clear}
-					onApply={onRedactFound}
 				/>
 			)}
 			{textPicker && styledText && (
