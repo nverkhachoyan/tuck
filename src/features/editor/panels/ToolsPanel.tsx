@@ -19,7 +19,7 @@ export function CutOutButton({
 }) {
 	return (
 		<ToolButton
-			label={state === "cut" ? "Restore" : "Cut out"}
+			label={state === "cut" ? "Undo cut" : "Cut out"}
 			icon={state === "cut" ? "image-refresh-outline" : "scissors-cutting"}
 			shortcut={TOOL_KEYS.cutOut}
 			busy={state === "cutting"}
@@ -34,7 +34,7 @@ export function CutOutButton({
  * phone (see `ToolGrid`), or with `vertical`, a column for a wide screen's
  * rail, where they stay while a tool is in use, marking it (Find is
  * Redact's). On web, each shows the letter that picks it up (see
- * `TOOL_KEYS`) on hover. Sticker opens the sheet of stickers; Photo picks a
+ * `TOOL_KEYS`) on hover. Sticker opens the sheet of stickers; Add photo picks a
  * photo to add, and spins while one is on its way. Adjust and Cut out show
  * only with an image to adjust or cut out.
  */
@@ -131,7 +131,7 @@ export function ToolsPanel({
 		),
 		<ToolButton
 			key="photo"
-			label="Photo"
+			label="Add photo"
 			icon="image-plus-outline"
 			shortcut={TOOL_KEYS.photo}
 			compact={compact}

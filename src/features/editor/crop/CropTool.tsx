@@ -40,7 +40,7 @@ const DEGREES: DialScale = {
 const TABS: { tab: CropTab; label: string; icon: IconName }[] = [
 	{ tab: "crop", label: "Crop", icon: "crop" },
 	{ tab: "rotate", label: "Rotate", icon: "format-rotate-90" },
-	{ tab: "canvas", label: "Canvas", icon: "checkerboard" },
+	{ tab: "canvas", label: "Fill", icon: "checkerboard" },
 ];
 
 // Room for the tallest tab's controls, so the canvas holds still as tabs
@@ -205,7 +205,7 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 						</>
 					) : (
 						<View style={styles.fill}>
-							<Text style={styles.fillLabel}>Fill</Text>
+							<Text style={styles.fillLabel}>Background</Text>
 							<BackgroundPicker
 								value={background}
 								onPick={controller.setBackground}
