@@ -1,0 +1,632 @@
+{
+	"schemaVersion": 2,
+	"generatedAt": "2026-10-04T21:29:50.398Z",
+	"title": "Design System: Tuck",
+	"extensions": {
+		"colorMeta": {
+			"highlighter": {
+				"role": "primary",
+				"displayName": "Highlighter",
+				"canonical": "oklch(91.4% 0.179 99.9)",
+				"tonalRamp": [
+					"#0E0B00",
+					"#2B2500",
+					"#4C4200",
+					"#6F6205",
+					"#948307",
+					"#BBA608",
+					"#E4CA08",
+					"#FFF19B"
+				]
+			},
+			"on-highlighter": {
+				"role": "primary",
+				"displayName": "On Highlighter",
+				"canonical": "oklch(0.0% 0.000 0.0)",
+				"tonalRamp": [
+					"#0B0B0B",
+					"#252525",
+					"#424242",
+					"#616161",
+					"#828282",
+					"#A5A5A5",
+					"#C9C9C9",
+					"#EEEEEE"
+				]
+			},
+			"highlighter-soft": {
+				"role": "primary",
+				"displayName": "Highlighter Soft"
+			},
+			"highlighter-edge": {
+				"role": "primary",
+				"displayName": "Highlighter Edge",
+				"canonical": "oklch(83.5% 0.172 97.4)",
+				"tonalRamp": [
+					"#0F0B00",
+					"#2C2500",
+					"#4D4203",
+					"#716104",
+					"#978204",
+					"#BFA404",
+					"#E8C801",
+					"#FFF0A7"
+				]
+			},
+			"ink": {
+				"role": "primary",
+				"displayName": "Ink",
+				"canonical": "oklch(0.0% 0.000 0.0)",
+				"tonalRamp": [
+					"#0B0B0B",
+					"#252525",
+					"#424242",
+					"#616161",
+					"#828282",
+					"#A5A5A5",
+					"#C9C9C9",
+					"#EEEEEE"
+				]
+			},
+			"ink-hover": {
+				"role": "primary",
+				"displayName": "Ink Hover",
+				"canonical": "oklch(27.3% 0.007 274.7)",
+				"tonalRamp": [
+					"#0A0B0E",
+					"#242529",
+					"#414246",
+					"#606166",
+					"#818287",
+					"#A3A5AA",
+					"#C7C9CE",
+					"#EDEEF4"
+				]
+			},
+			"ink-pressed": {
+				"role": "primary",
+				"displayName": "Ink Pressed",
+				"canonical": "oklch(35.3% 0.009 276.9)",
+				"tonalRamp": [
+					"#0A0B0F",
+					"#242529",
+					"#414247",
+					"#606166",
+					"#818288",
+					"#A3A5AB",
+					"#C7C9CF",
+					"#EDEEF4"
+				]
+			},
+			"on-ink": {
+				"role": "primary",
+				"displayName": "On Ink",
+				"canonical": "oklch(100.0% 0.000 89.9)",
+				"tonalRamp": [
+					"#0B0B0B",
+					"#252525",
+					"#424242",
+					"#616161",
+					"#828282",
+					"#A5A5A5",
+					"#C9C9C9",
+					"#EEEEEE"
+				]
+			},
+			"paper": {
+				"role": "neutral",
+				"displayName": "Paper",
+				"canonical": "oklch(100.0% 0.000 89.9)",
+				"tonalRamp": [
+					"#0B0B0B",
+					"#252525",
+					"#424242",
+					"#616161",
+					"#828282",
+					"#A5A5A5",
+					"#C9C9C9",
+					"#EEEEEE"
+				]
+			},
+			"paper-hover": {
+				"role": "neutral",
+				"displayName": "Paper Hover",
+				"canonical": "oklch(96.4% 0.003 264.5)",
+				"tonalRamp": [
+					"#0A0B0C",
+					"#242526",
+					"#414243",
+					"#606163",
+					"#818284",
+					"#A4A5A7",
+					"#C8C9CB",
+					"#EDEEF0"
+				]
+			},
+			"paper-pressed": {
+				"role": "neutral",
+				"displayName": "Paper Pressed",
+				"canonical": "oklch(93.1% 0.004 271.4)",
+				"tonalRamp": [
+					"#0A0B0D",
+					"#242527",
+					"#414244",
+					"#606164",
+					"#818285",
+					"#A4A5A8",
+					"#C8C9CC",
+					"#EDEEF1"
+				]
+			},
+			"light-table": {
+				"role": "neutral",
+				"displayName": "Light Table",
+				"canonical": "oklch(91.6% 0.004 271.4)",
+				"tonalRamp": [
+					"#0A0B0D",
+					"#242527",
+					"#414244",
+					"#606164",
+					"#818285",
+					"#A4A5A8",
+					"#C8C9CC",
+					"#EDEEF1"
+				]
+			},
+			"hairline": {
+				"role": "neutral",
+				"displayName": "Hairline",
+				"canonical": "oklch(91.3% 0.006 275.0)",
+				"tonalRamp": [
+					"#0A0B0E",
+					"#242528",
+					"#414245",
+					"#606164",
+					"#818286",
+					"#A4A5A8",
+					"#C8C9CD",
+					"#EDEEF2"
+				]
+			},
+			"hairline-strong": {
+				"role": "neutral",
+				"displayName": "Hairline Strong",
+				"canonical": "oklch(83.9% 0.007 268.5)",
+				"tonalRamp": [
+					"#0A0B0E",
+					"#232529",
+					"#404246",
+					"#5F6165",
+					"#808287",
+					"#A3A5AA",
+					"#C7C9CE",
+					"#ECEEF3"
+				]
+			},
+			"text-secondary": {
+				"role": "neutral",
+				"displayName": "Text Secondary",
+				"canonical": "oklch(48.6% 0.011 273.2)",
+				"tonalRamp": [
+					"#090B10",
+					"#23252B",
+					"#404248",
+					"#5F6168",
+					"#808289",
+					"#A2A5AC",
+					"#C6C9D1",
+					"#ECEEF6"
+				]
+			},
+			"text-tertiary": {
+				"role": "neutral",
+				"displayName": "Text Tertiary",
+				"canonical": "oklch(69.3% 0.010 273.3)",
+				"tonalRamp": [
+					"#0A0B10",
+					"#23252A",
+					"#404248",
+					"#5F6167",
+					"#808289",
+					"#A3A5AC",
+					"#C7C9D0",
+					"#ECEEF6"
+				]
+			},
+			"selection-blue": {
+				"role": "secondary",
+				"displayName": "Selection Blue",
+				"canonical": "oklch(58.1% 0.229 263.9)",
+				"tonalRamp": [
+					"#000036",
+					"#00146C",
+					"#0028B0",
+					"#164DE0",
+					"#3D77FE",
+					"#76A2FE",
+					"#AEC9FF",
+					"#E7EFFF"
+				]
+			},
+			"danger": {
+				"role": "tertiary",
+				"displayName": "Danger Red",
+				"canonical": "oklch(57.6% 0.209 29.5)",
+				"tonalRamp": [
+					"#1F0000",
+					"#4D0100",
+					"#800401",
+					"#B80400",
+					"#E43A2B",
+					"#FF7462",
+					"#FFB3A7",
+					"#FFE9E5"
+				]
+			},
+			"danger-soft": {
+				"role": "tertiary",
+				"displayName": "Danger Soft"
+			},
+			"shadow": {
+				"role": "neutral",
+				"displayName": "Shadow"
+			},
+			"checker-dark": {
+				"role": "neutral",
+				"displayName": "Checker Dark",
+				"canonical": "oklch(87.3% 0.006 264.5)",
+				"tonalRamp": [
+					"#0A0B0E",
+					"#242528",
+					"#404245",
+					"#5F6165",
+					"#808286",
+					"#A3A5A9",
+					"#C7C9CD",
+					"#ECEEF3"
+				]
+			},
+			"checker-light": {
+				"role": "neutral",
+				"displayName": "Checker Light",
+				"canonical": "oklch(94.9% 0.003 264.5)",
+				"tonalRamp": [
+					"#0A0B0C",
+					"#242526",
+					"#414243",
+					"#606163",
+					"#818284",
+					"#A4A5A7",
+					"#C8C9CB",
+					"#EDEEF0"
+				]
+			},
+			"graphite-paper": {
+				"role": "neutral",
+				"displayName": "Graphite Paper",
+				"canonical": "oklch(20.9% 0.006 271.1)",
+				"tonalRamp": [
+					"#0A0B0E",
+					"#242528",
+					"#414245",
+					"#606165",
+					"#818286",
+					"#A3A5A9",
+					"#C7C9CD",
+					"#EDEEF3"
+				]
+			},
+			"graphite-surface": {
+				"role": "neutral",
+				"displayName": "Graphite Surface",
+				"canonical": "oklch(24.8% 0.008 274.6)",
+				"tonalRamp": [
+					"#0A0B0E",
+					"#242529",
+					"#414246",
+					"#606166",
+					"#818287",
+					"#A3A5AA",
+					"#C7C9CE",
+					"#EDEEF4"
+				]
+			},
+			"graphite-table": {
+				"role": "neutral",
+				"displayName": "Graphite Table",
+				"canonical": "oklch(29.4% 0.007 274.7)",
+				"tonalRamp": [
+					"#0A0B0E",
+					"#242529",
+					"#414246",
+					"#606165",
+					"#818287",
+					"#A3A5AA",
+					"#C7C9CE",
+					"#EDEEF4"
+				]
+			},
+			"graphite-hairline": {
+				"role": "neutral",
+				"displayName": "Graphite Hairline",
+				"canonical": "oklch(30.9% 0.009 268.4)",
+				"tonalRamp": [
+					"#090B0F",
+					"#23252A",
+					"#404247",
+					"#5F6167",
+					"#808288",
+					"#A2A5AB",
+					"#C6C9CF",
+					"#ECEEF5"
+				]
+			},
+			"graphite-ink": {
+				"role": "neutral",
+				"displayName": "Graphite Ink",
+				"canonical": "oklch(96.4% 0.003 106.4)",
+				"tonalRamp": [
+					"#0B0B0A",
+					"#252524",
+					"#424240",
+					"#616160",
+					"#828281",
+					"#A5A5A3",
+					"#C9C9C7",
+					"#EEEEEC"
+				]
+			},
+			"graphite-selection-blue": {
+				"role": "secondary",
+				"displayName": "Graphite Selection Blue",
+				"canonical": "oklch(66.2% 0.179 264.6)",
+				"tonalRamp": [
+					"#000035",
+					"#020379",
+					"#0F329F",
+					"#2C57C5",
+					"#4B7BEC",
+					"#78A2FE",
+					"#AFC9FF",
+					"#E7EFFE"
+				]
+			},
+			"graphite-danger": {
+				"role": "tertiary",
+				"displayName": "Graphite Danger",
+				"canonical": "oklch(68.7% 0.202 27.5)",
+				"tonalRamp": [
+					"#1F0001",
+					"#4D0103",
+					"#810007",
+					"#B8020F",
+					"#E23D36",
+					"#FF7367",
+					"#FFB3A9",
+					"#FFE9E6"
+				]
+			}
+		},
+		"typographyMeta": {
+			"display": {
+				"displayName": "Display",
+				"purpose": "Anton, for the wordmark and home's headings only."
+			},
+			"title": {
+				"displayName": "Title",
+				"purpose": "Large buttons, and screen and mode titles."
+			},
+			"body": {
+				"displayName": "Body",
+				"purpose": "Running text in sheets and dialogs, and the tagline."
+			},
+			"body-strong": {
+				"displayName": "Body Strong",
+				"purpose": "Medium button labels and sheet titles."
+			},
+			"label": {
+				"displayName": "Label",
+				"purpose": "Chips, tabs, rows, and small buttons."
+			},
+			"label-strong": {
+				"displayName": "Label Strong",
+				"purpose": "Project names and emphasized labels."
+			},
+			"caption": {
+				"displayName": "Caption",
+				"purpose": "Tool labels, dates, hints, and tooltips."
+			},
+			"figure": {
+				"displayName": "Figure",
+				"purpose": "A changing value read at a glance, with tabular numerals."
+			}
+		},
+		"shadows": [
+			{
+				"name": "print-contact",
+				"value": "0 1px 1.5px rgba(0, 0, 0, 0.16)",
+				"purpose": "The tight shadow where a print (the canvas, a project thumbnail) touches the table."
+			},
+			{
+				"name": "print-lift",
+				"value": "0 8px 18px -6px rgba(0, 0, 0, 0.16)",
+				"purpose": "The soft shadow that raises a print. The canvas draws it in Skia as 8px offset, 14px blur."
+			},
+			{
+				"name": "floating",
+				"value": "0 10px 28px rgba(0, 0, 0, 0.16)",
+				"purpose": "Sheets, the selection bar, and tooltips over the canvas. 50% black at night."
+			}
+		],
+		"motion": [
+			{
+				"name": "ease-standard",
+				"value": "cubic-bezier(0.2, 0, 0, 1)",
+				"purpose": "Hover and press transitions on web (160ms), and sheets arriving (280ms)."
+			},
+			{
+				"name": "ease-exit",
+				"value": "cubic-bezier(0.3, 0, 1, 1)",
+				"purpose": "Sheets leaving (200ms)."
+			},
+			{
+				"name": "highlight-swipe",
+				"value": "160ms cubic-bezier(0.33, 1, 0.68, 1)",
+				"purpose": "The highlighter swiping in from the left; instant under Reduce Motion."
+			},
+			{
+				"name": "tooltip-appear",
+				"value": "120ms ease-out",
+				"purpose": "Tooltips fade and rise 2px."
+			}
+		],
+		"breakpoints": [
+			{
+				"name": "home-wide",
+				"value": "560px"
+			},
+			{
+				"name": "editor-rail",
+				"value": "900px"
+			},
+			{
+				"name": "inspector",
+				"value": "1024px"
+			}
+		]
+	},
+	"components": [
+		{
+			"name": "Primary Button",
+			"kind": "button",
+			"refersTo": "button-primary",
+			"description": "The solid ink bar: one per screen, for the thing the user came to do.",
+			"html": "<button class=\"ds-btn-primary\">Open a photo</button>",
+			"css": ".ds-btn-primary{height:56px;padding:0 20px;background:#000;color:#fff;font:600 17px system-ui, -apple-system, Roboto, sans-serif;border:1px solid transparent;border-radius:12px;cursor:pointer;transition:background-color 160ms cubic-bezier(0.2,0,0,1),transform 160ms cubic-bezier(0.2,0,0,1)}.ds-btn-primary:hover{background:#26272B}.ds-btn-primary:active{background:#3A3B40;transform:scale(0.98)}.ds-btn-primary:focus-visible{outline:2px solid #2F6BFF;outline-offset:2px}"
+		},
+		{
+			"name": "Secondary Button",
+			"kind": "button",
+			"refersTo": "button-secondary",
+			"description": "Paper with a hairline border, for the other ways in.",
+			"html": "<button class=\"ds-btn-secondary\">Blank canvas</button>",
+			"css": ".ds-btn-secondary{height:44px;padding:0 18px;background:#fff;color:#000;font:600 15px system-ui, -apple-system, Roboto, sans-serif;border:1px solid #E1E2E6;border-radius:12px;cursor:pointer;transition:background-color 160ms cubic-bezier(0.2,0,0,1),border-color 160ms cubic-bezier(0.2,0,0,1),transform 160ms}.ds-btn-secondary:hover{background:#F2F3F5;border-color:#C8CACF}.ds-btn-secondary:active{background:#E7E8EB;transform:scale(0.98)}.ds-btn-secondary:focus-visible{outline:2px solid #2F6BFF;outline-offset:2px}"
+		},
+		{
+			"name": "Small Header Button",
+			"kind": "button",
+			"refersTo": "button-small",
+			"description": "The pill in a 56pt header, such as Export.",
+			"html": "<button class=\"ds-btn-small\">Export</button>",
+			"css": ".ds-btn-small{height:34px;padding:0 14px;background:#000;color:#fff;font:600 15px system-ui, -apple-system, Roboto, sans-serif;border:none;border-radius:17px;cursor:pointer;transition:background-color 160ms cubic-bezier(0.2,0,0,1)}.ds-btn-small:hover{background:#26272B}.ds-btn-small:active{background:#3A3B40;transform:scale(0.98)}.ds-btn-small:focus-visible{outline:2px solid #2F6BFF;outline-offset:2px}"
+		},
+		{
+			"name": "Tool Grid",
+			"kind": "nav",
+			"refersTo": "tool-button",
+			"description": "The dock's main tools: borderless icon tiles with ink labels; the tool in use is highlighted.",
+			"html": "<div class=\"ds-tools\"><button class=\"ds-tool ds-tool-chosen\"><span class=\"ds-highlight\"></span><svg viewBox=\"0 0 24 24\"><path d=\"M18.5 4l1.16 4.35-.96.26c-.45-.87-.91-1.74-1.44-2.18C16.73 6 16.11 6 15.5 6H13v10.5c0 .5 0 1 .33 1.25.34.25 1 .25 1.67.25v1H9v-1c.67 0 1.33 0 1.67-.25.33-.25.33-.75.33-1.25V6H8.5c-.61 0-1.23 0-1.76.43-.53.44-.99 1.31-1.44 2.18l-.96-.26L5.5 4h13z\"/></svg><span class=\"ds-tool-label\">Text</span></button><button class=\"ds-tool\"><svg viewBox=\"0 0 24 24\"><path d=\"M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z\"/></svg><span class=\"ds-tool-label\">Draw</span></button><button class=\"ds-tool\"><svg viewBox=\"0 0 24 24\"><path d=\"M3 5h18v4H3zM3 11h12v4H3zM3 17h16v2H3z\"/></svg><span class=\"ds-tool-label\">Redact</span></button><button class=\"ds-tool\"><svg viewBox=\"0 0 24 24\"><path d=\"M7 17V1H5v4H1v2h4v10a2 2 0 002 2h10v4h2v-4h4v-2m-6-2h2V7a2 2 0 00-2-2H9v2h8v8z\"/></svg><span class=\"ds-tool-label\">Crop</span></button></div>",
+			"css": ".ds-tools{display:flex;gap:12px;padding:12px;background:#fff}.ds-tool{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:56px;padding:0;background:none;border:none;cursor:pointer}.ds-tool svg{position:relative;z-index:1;width:24px;height:24px;padding:10px;border-radius:8px;fill:#000;transition:background-color 160ms cubic-bezier(0.2,0,0,1),transform 160ms}.ds-tool:hover svg{background:rgba(0,0,0,0.05)}.ds-tool:active svg{background:rgba(0,0,0,0.1);transform:scale(0.92)}.ds-tool:focus-visible{outline:2px solid #2F6BFF;outline-offset:2px;border-radius:8px}.ds-tool-label{position:relative;z-index:1;font:500 12px system-ui, -apple-system, Roboto, sans-serif;letter-spacing:0.1px;color:#000}.ds-tool-chosen .ds-highlight{bottom:-4px}.ds-highlight{position:absolute;inset:0;background:#FFE433;transform:rotate(-2deg);transform-origin:left center;border-radius:4px 10px 5px 12px;z-index:0}"
+		},
+		{
+			"name": "Highlighted Choice",
+			"kind": "chip",
+			"refersTo": "tool-button-chosen",
+			"description": "The signature chosen state: a tilted highlighter swipe behind the option, never an outline.",
+			"html": "<div class=\"ds-choices\"><button class=\"ds-choice ds-choice-on\"><span class=\"ds-highlight\"></span><span class=\"ds-choice-label\">1:1</span></button><button class=\"ds-choice\"><span class=\"ds-choice-label\">4:3</span></button><button class=\"ds-choice\"><span class=\"ds-choice-label\">16:9</span></button></div>",
+			"css": ".ds-choices{display:flex;gap:8px}.ds-choice{position:relative;height:36px;padding:0 12px;background:none;border:none;border-radius:8px;cursor:pointer;transition:background-color 160ms cubic-bezier(0.2,0,0,1)}.ds-choice:hover{background:rgba(0,0,0,0.05)}.ds-choice-on:hover{background:none}.ds-choice:focus-visible{outline:2px solid #2F6BFF;outline-offset:2px}.ds-choice-label{position:relative;z-index:1;font:600 13px system-ui, -apple-system, Roboto, sans-serif;color:#000}.ds-highlight{position:absolute;inset:0;background:#FFE433;transform:rotate(-2deg);transform-origin:left center;border-radius:4px 10px 5px 12px;z-index:0}@keyframes ds-swipe{from{opacity:0;transform:rotate(-2deg) scaleX(0.5)}}.ds-choice-on .ds-highlight{animation:ds-swipe 160ms cubic-bezier(0.33,1,0.68,1)}"
+		},
+		{
+			"name": "Color Ring",
+			"kind": "custom",
+			"refersTo": "ring-choice",
+			"description": "Color swatches: the one choice ringed instead of highlighted.",
+			"html": "<div class=\"ds-rings\"><button class=\"ds-ring ds-ring-on\" aria-label=\"White\"><span style=\"background:#fff\"></span></button><button class=\"ds-ring\" aria-label=\"Black\"><span style=\"background:#000\"></span></button><button class=\"ds-ring\" aria-label=\"Yellow\"><span style=\"background:#FFE433\"></span></button></div>",
+			"css": ".ds-rings{display:flex}.ds-ring{width:44px;height:44px;display:grid;place-items:center;padding:0;background:none;border:none;cursor:pointer}.ds-ring span{width:28px;height:28px;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,0.2),0 0 0 4px #fff,0 0 0 6px transparent;transition:box-shadow 160ms cubic-bezier(0.2,0,0,1),transform 160ms}.ds-ring:hover span{box-shadow:0 0 0 1px rgba(0,0,0,0.2),0 0 0 4px #fff,0 0 0 6px #C8CACF}.ds-ring-on span,.ds-ring-on:hover span{box-shadow:0 0 0 1px rgba(0,0,0,0.2),0 0 0 4px #fff,0 0 0 6px #000}.ds-ring:active span{transform:scale(0.92)}.ds-ring:focus-visible{outline:2px solid #2F6BFF;border-radius:50%}"
+		},
+		{
+			"name": "Bottom Sheet",
+			"kind": "card",
+			"refersTo": "sheet",
+			"description": "Opaque paper over the canvas with a grabber, a title, and a close button.",
+			"html": "<div class=\"ds-sheet\"><div class=\"ds-sheet-head\"><span class=\"ds-grabber\"></span><span class=\"ds-sheet-title\">Export</span><button class=\"ds-close\" aria-label=\"Close\">✕</button></div><div class=\"ds-sheet-body\">Save to Photos or share as JPEG.</div></div>",
+			"css": ".ds-sheet{width:360px;background:#fff;border:0.5px solid #C8CACF;border-bottom:none;border-radius:20px 20px 0 0;box-shadow:0 10px 28px rgba(0,0,0,0.16);overflow:hidden}.ds-sheet-head{position:relative;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 20px;border-bottom:0.5px solid #E1E2E6}.ds-grabber{position:absolute;top:6px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:2.5px;background:#C8CACF}.ds-sheet-title{font:600 15px system-ui, -apple-system, Roboto, sans-serif;color:#000}.ds-close{width:36px;height:36px;margin-right:-7px;border:none;border-radius:50%;background:none;font-size:18px;color:#000;cursor:pointer}.ds-close:hover{background:rgba(0,0,0,0.05)}.ds-close:focus-visible{outline:2px solid #2F6BFF}.ds-sheet-body{padding:16px 20px 24px;font:400 15px system-ui, -apple-system, Roboto, sans-serif;color:#5D5F66}"
+		},
+		{
+			"name": "Project Print",
+			"kind": "card",
+			"refersTo": "project-print",
+			"description": "A saved project on the light table: a near-square print with two shadows and its name and date beneath.",
+			"html": "<div class=\"ds-table\"><a class=\"ds-print-card\" href=\"#\"><span class=\"ds-print\"></span><span class=\"ds-print-name\">Beach day</span><span class=\"ds-print-date\">Yesterday</span></a></div>",
+			"css": ".ds-table{padding:16px;background:#E2E3E6}.ds-print-card{display:flex;flex-direction:column;gap:2px;width:150px;text-decoration:none}.ds-print{display:block;height:190px;margin-bottom:6px;border-radius:3px;background:linear-gradient(160deg,#9DB4C8,#D9C9A8);box-shadow:0 1px 1.5px rgba(0,0,0,0.16),0 8px 18px -6px rgba(0,0,0,0.16);transition:opacity 160ms}.ds-print-card:active .ds-print{opacity:0.8}.ds-print-card:focus-visible{outline:2px solid #2F6BFF;outline-offset:4px}.ds-print-name{padding:0 2px;font:600 13px system-ui, -apple-system, Roboto, sans-serif;color:#000}.ds-print-date{padding:0 2px;font:500 12px system-ui, -apple-system, Roboto, sans-serif;color:#5D5F66}"
+		},
+		{
+			"name": "Wordmark",
+			"kind": "custom",
+			"description": "Tuck in Anton, black on a full highlighter swipe, the same in both palettes.",
+			"html": "<div class=\"ds-wordmark\"><span class=\"ds-highlight\"></span><span class=\"ds-wordmark-text\">Tuck</span></div>",
+			"css": ".ds-wordmark{position:relative;display:inline-block}.ds-wordmark .ds-highlight{inset:11px -11px 4px -9px}.ds-wordmark-text{position:relative;z-index:1;font:400 72px/1.2 Anton,Impact,system-ui,sans-serif;color:#000}.ds-highlight{position:absolute;inset:0;background:#FFE433;transform:rotate(-2deg);transform-origin:left center;border-radius:4px 10px 5px 12px;z-index:0}"
+		}
+	],
+	"narrative": {
+		"northStar": "Print, Ink & Highlighter",
+		"overview": "Tuck treats every photo as a print laid on a pale light table, and the app as the stationery around it. The bars, the dock, and every sheet are white paper. Controls, labels, and the main action are black ink. The app's only color of its own is a highlighter-yellow swipe, drawn behind whatever is chosen: a tool, a font, a size, a format. Everything else stays neutral gray, so the photo's own colors read true.\n\nThe system is quick and decisive. People use Tuck one-handed, for jobs that take seconds, so the main action is always a solid black bar, the shape of a redaction. Targets are generous, every tool shows at once in two rows, and a press answers immediately. Expression lives in a few precise details: the swipe's slight tilt, the print's two shadows, and the Anton wordmark, which uses the same typeface as the meme captions people make with Tuck.\n\nNight is the same system on a graphite table, not a darkroom. The paper turns charcoal and the ink turns off-white, but the highlighter stays the same yellow with black ink on it, so the mark and every chosen state look identical in both palettes. The palette is picked once at launch from the system setting and kept until the next launch.",
+		"keyCharacteristics": [
+			"The photo is a print: it sits on a gray table with a contact shadow and a soft lift.",
+			"The UI is paper and ink: white bars, black labels, hairline edges.",
+			"The only color of the app's own is highlighter yellow, and it means \"chosen\".",
+			"Blue is reserved for anything drawn over the photo (selection, snap guides, detection picks), and red for destructive actions.",
+			"Controls use the platform's system font. Anton appears only in the wordmark and home's headings."
+		],
+		"rules": [
+			{
+				"name": "The One Marker Rule",
+				"body": "Yellow means \"chosen\", and nothing else is yellow. No yellow buttons, badges, or decoration. If two things on screen are yellow, each must be a chosen option.",
+				"section": "colors"
+			},
+			{
+				"name": "The Off-Limits Photo Rule",
+				"body": "The app's chrome never tints, frosts, or overlaps the photo with color. Only selection blue draws over it, and only to show what's selected or proposed.",
+				"section": "colors"
+			},
+			{
+				"name": "The Same Mark Rule",
+				"body": "The highlighter and its black ink are identical by day and at night. The wordmark, the icon, and every chosen state must look the same in both palettes.",
+				"section": "colors"
+			},
+			{
+				"name": "The Poster Only Rule",
+				"body": "Anton appears in the wordmark and home's headings, never on a button, label, or title. Literal font sizes are allowed only for Anton, font previews, and the text editor's hidden 16px input.",
+				"section": "typography"
+			},
+			{
+				"name": "The No Gray Label Rule",
+				"body": "A control's label is ink. Gray is for metadata, never for something you can press.",
+				"section": "typography"
+			},
+			{
+				"name": "The Print Rule",
+				"body": "Only prints and floating panels cast shadows. A bar, row, or button with a shadow is a bug.",
+				"section": "elevation"
+			}
+		],
+		"dos": [
+			"Do take every color from `colors` in `theme.ts`, which is the day or the night palette. Never write a literal that assumes one of them.",
+			"Do mark a chosen option with `<Highlight />` as the control's first child, and draw what's over it in `on-highlighter`.",
+			"Do keep one ink-bar primary action per screen, and make it the thing the user came to do.",
+			"Do draw anything over the photo in selection blue, with the dark halo under its lines.",
+			"Do take sizes from `typography`, corners from `radii`, and gaps from `space`.",
+			"Do give every tappable control at least a 44pt target, with `hitSlop` where the visible shape is smaller.",
+			"Do pad each bar and sheet's bottom content by the safe-area inset, and let its paper run to the screen's edge.",
+			"Do check every change in both palettes. The highlighter must look the same in each."
+		],
+		"donts": [
+			"Don't build a darkroom: no mostly black editor, and no gray controls that look disabled. Night is a graphite table, never pure black.",
+			"Don't mark a chosen option with an outline, an underline alone, or a filled chip. Chosen means highlighted. Only color swatches get a ring.",
+			"Don't add a second accent. No coral, no brand gradients, and no yellow outside a chosen state or the wordmark.",
+			"Don't put frosted or translucent glass over the photo. Panels are opaque paper.",
+			"Don't give bars, rows, or buttons a shadow. Only prints and floating panels lift.",
+			"Don't set controls in Anton or a caption font. The poster face belongs to the wordmark and home's headings."
+		]
+	}
+}
