@@ -1,7 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useFocusEffect } from "expo-router";
 import type { ComponentProps } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
 	Image,
 	type LayoutChangeEvent,
@@ -20,93 +19,86 @@ import {
 	type ProjectSummary,
 	projectName,
 } from "@/projects/projectFile";
-import { colors, fonts, radii, typography, webTransition } from "@/theme";
+import { colors, radii, space, typography, webTransition } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
-import { gradientBackground } from "@/ui/gradient";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
-import { TextButton } from "@/ui/TextButton";
 
-const GAP = 4;
-const MIN_CARD_WIDTH = 100;
-const MAX_COLUMNS = 6;
+// The home screen's content column, so a wide browser window doesn't
+// stretch it, and its side padding.
+export const HOME_MAX_WIDTH = 760;
+const PADDING = 16;
+const GAP = 16;
+const MIN_CARD_WIDTH = 150;
+const MAX_COLUMNS = 5;
 // Cards after this many appear together, so a long list doesn't trickle in.
 const STAGGERED = 8;
 
 type ProjectListProps = {
 	projects: ProjectSummary[];
+	editing: boolean;
 	disabled: boolean;
 	onOpen: (id: string) => void;
 	onRename: (id: string, name: string) => void;
 	onDuplicate: (id: string) => void;
 	onDelete: (id: string) => void;
+	onStartEditing: () => void;
 };
 
 /**
- * The saved projects as a grid of thumbnails, like a photo library's, which
- * open them. A long press offers Duplicate, Rename, and Delete; with a
- * mouse, hovering shows the name and those buttons. Edit puts each name in
- * a field under its thumbnail to rename it.
+ * The saved projects as prints on the table, each with its name and when it
+ * was last changed, which open them. A long press offers Duplicate, Rename,
+ * and Delete; with a mouse, hovering shows those buttons. `editing` (home's
+ * Edit) puts each name in a field to rename it.
  */
 export function ProjectList({
 	projects,
+	editing,
 	disabled,
 	onOpen,
 	onRename,
 	onDuplicate,
 	onDelete,
+	onStartEditing,
 }: ProjectListProps) {
-	const [editing, setEditing] = useState(false);
 	const [width, setWidth] = useState(0);
-	// Leaving the screen ends editing, so coming back shows the plain grid.
-	useFocusEffect(useCallback(() => () => setEditing(false), []));
+	const inner = Math.min(width, HOME_MAX_WIDTH) - PADDING * 2;
 	const columns = Math.max(
 		1,
-		Math.min(MAX_COLUMNS, Math.floor((width + GAP) / (MIN_CARD_WIDTH + GAP))),
+		Math.min(MAX_COLUMNS, Math.floor((inner + GAP) / (MIN_CARD_WIDTH + GAP))),
 	);
-	const cardWidth = (width - GAP * (columns - 1)) / columns;
+	const cardWidth = (inner - GAP * (columns - 1)) / columns;
 
 	return (
-		<View style={styles.container}>
-			<View style={styles.header}>
-				<Text style={styles.heading} accessibilityRole="header">
-					Recent
-				</Text>
-				<TextButton
-					label={editing ? "Done" : "Edit"}
-					tone={editing ? "strong" : "default"}
-					onPress={() => setEditing((on) => !on)}
-				/>
-			</View>
-			<ScrollView
-				contentContainerStyle={styles.grid}
-				showsVerticalScrollIndicator={false}
-				// So a name being typed stays above the keyboard, and a tap on
-				// another card's field moves straight to it.
-				automaticallyAdjustKeyboardInsets
-				keyboardShouldPersistTaps="handled"
-				onLayout={(event: LayoutChangeEvent) =>
-					setWidth(event.nativeEvent.layout.width)
-				}
-			>
-				{width > 0 &&
-					projects.map((project, index) => (
-						<ProjectCard
-							key={project.id}
-							project={project}
-							width={cardWidth}
-							order={Math.min(index, STAGGERED)}
-							editing={editing}
-							disabled={disabled}
-							onOpen={onOpen}
-							onRename={onRename}
-							onDuplicate={onDuplicate}
-							onDelete={onDelete}
-							onStartEditing={() => setEditing(true)}
-						/>
-					))}
-			</ScrollView>
-		</View>
+		<ScrollView
+			style={styles.scroll}
+			contentContainerStyle={styles.grid}
+			showsVerticalScrollIndicator={false}
+			// So a name being typed stays above the keyboard, and a tap on
+			// another card's field moves straight to it.
+			automaticallyAdjustKeyboardInsets
+			keyboardShouldPersistTaps="handled"
+			onLayout={(event: LayoutChangeEvent) =>
+				setWidth(event.nativeEvent.layout.width)
+			}
+		>
+			{width > 0 &&
+				projects.map((project, index) => (
+					<ProjectCard
+						key={project.id}
+						project={project}
+						width={cardWidth}
+						order={Math.min(index, STAGGERED)}
+						editing={editing}
+						disabled={disabled}
+						onOpen={onOpen}
+						onRename={onRename}
+						onDuplicate={onDuplicate}
+						onDelete={onDelete}
+						onStartEditing={onStartEditing}
+					/>
+				))}
+		</ScrollView>
 	);
 }
 
@@ -184,30 +176,32 @@ function ProjectCard({
 				{(state) => {
 					const { pressed } = interaction(state);
 					return (
-						<View
-							style={[
-								styles.thumbnail,
-								{ height: width },
-								webTransition,
-								pressed && styles.thumbnailPressed,
-							]}
-						>
-							<Thumbnail
-								url={unavailable ? null : project.thumbnail}
-								unavailable={unavailable}
-								size={width}
-							/>
-							{pointerOver && !editing && (
-								<View style={styles.hoverCaption}>
-									<Text style={styles.hoverLabel} numberOfLines={1}>
+						<>
+							<View
+								style={[
+									styles.print,
+									{ height: width },
+									webTransition,
+									pressed && styles.printPressed,
+								]}
+							>
+								<Thumbnail
+									url={unavailable ? null : project.thumbnail}
+									unavailable={unavailable}
+									size={width}
+								/>
+							</View>
+							{!editing && (
+								<View style={styles.caption}>
+									<Text style={styles.label} numberOfLines={1}>
 										{label}
 									</Text>
-									<Text style={styles.hoverDate} numberOfLines={1}>
+									<Text style={styles.date} numberOfLines={1}>
 										{detail}
 									</Text>
 								</View>
 							)}
-						</View>
+						</>
 					);
 				}}
 			</Pressable>
@@ -422,63 +416,33 @@ function startOfDay(date: Date) {
 }
 
 const styles = StyleSheet.create({
-	container: {
+	scroll: {
 		flex: 1,
-		gap: 14,
-	},
-	header: {
-		flexDirection: "row",
-		alignItems: "baseline",
-		justifyContent: "space-between",
-	},
-	heading: {
-		fontFamily: fonts.display,
-		fontSize: 28,
-		color: colors.textPrimary,
 	},
 	grid: {
+		width: "100%",
+		maxWidth: HOME_MAX_WIDTH,
+		alignSelf: "center",
 		flexDirection: "row",
 		flexWrap: "wrap",
-		gap: GAP,
-		// Clear of the fade over the list's foot when the tiles are below it.
-		paddingBottom: 24,
+		columnGap: GAP,
+		rowGap: 20,
+		padding: PADDING,
 	},
 	card: {
-		gap: 6,
+		gap: space.xs,
 	},
-	thumbnail: {
+	// A print on the table, with the canvas's shadows (see `EditorScene`).
+	print: {
 		alignItems: "center",
 		justifyContent: "center",
 		overflow: "hidden",
-		borderRadius: radii.small,
-		borderCurve: "continuous",
+		borderRadius: 3,
 		backgroundColor: colors.surface,
+		boxShadow: `0 1px 1.5px ${colors.shadow}, 0 8px 18px -6px ${colors.shadow}`,
 	},
-	thumbnailPressed: {
+	printPressed: {
 		opacity: 0.8,
-	},
-	// Over the thumbnail's foot, on a shade that keeps it legible on any
-	// image.
-	hoverCaption: {
-		position: "absolute",
-		left: 0,
-		right: 0,
-		bottom: 0,
-		paddingHorizontal: 8,
-		paddingTop: 20,
-		paddingBottom: 6,
-		...gradientBackground(
-			"linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75))",
-		),
-	},
-	// White on the shade, in either palette.
-	hoverLabel: {
-		...typography.labelStrong,
-		color: "#FFFFFF",
-	},
-	hoverDate: {
-		...typography.caption,
-		color: "rgba(255, 255, 255, 0.75)",
 	},
 	caption: {
 		gap: 2,

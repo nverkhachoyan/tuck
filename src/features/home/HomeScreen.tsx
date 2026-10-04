@@ -1,17 +1,21 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { type ComponentProps, useEffect } from "react";
+import {
+	useFocusEffect,
+	useIsFocused,
+	useLocalSearchParams,
+	useRouter,
+} from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
 	Platform,
-	Pressable,
 	StyleSheet,
 	Text,
 	useWindowDimensions,
 	View,
 } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ProjectList } from "@/features/home/ProjectList";
+import { HOME_MAX_WIDTH, ProjectList } from "@/features/home/ProjectList";
 import {
 	type HomeStatus,
 	useHomeProjects,
@@ -19,31 +23,23 @@ import {
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import {
-	colors,
-	fonts,
-	radii,
-	space,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colorScheme, colors, fonts, radii, space, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
-import { fadeTo } from "@/ui/gradient";
-import { interaction } from "@/ui/interaction";
-import { LogoMark } from "@/ui/LogoMark";
+import { Highlight } from "@/ui/Highlight";
+import { TextButton } from "@/ui/TextButton";
 
 // Wide enough to be used with a mouse, where reach doesn't matter: the ways
 // to start head the projects, as a web app's "new" actions usually do.
 // Narrower, they sit at the bottom, under the thumb.
 const START_ON_TOP_MIN_WIDTH = 1024;
 
-const choosePhotoLabels: Record<HomeStatus, string> = {
+const openPhotoLabels: Record<HomeStatus, string> = {
 	loading: "Loading…",
 	saving: "Saving…",
-	saveFailed: "Photo",
+	saveFailed: "Open a photo",
 	opening: "Opening…",
-	idle: "Photo",
+	idle: "Open a photo",
 };
 
 export default function HomeScreen() {
@@ -91,61 +87,75 @@ export default function HomeScreen() {
 
 	const hasProjects = projects.length > 0;
 	const blocked = status !== "idle";
-	// A bar under the projects gives up less of the grid.
-	const compact = hasProjects && !startOnTop;
+	// Editing names, which leaving the screen ends.
+	const [editing, setEditing] = useState(false);
+	useFocusEffect(useCallback(() => () => setEditing(false), []));
+
 	const start = (
-		<View style={styles.start}>
-			<StartTile
-				label={choosePhotoLabels[status]}
-				// The icon says what "Photo" does; a screen reader needs the verb.
-				accessibilityLabel={blocked ? undefined : "Choose Photo"}
-				compact={compact}
-				icon="images-outline"
-				primary
-				disabled={blocked}
-				onPress={choosePhoto}
-			/>
-			<StartTile
-				label="Paste"
-				compact={compact}
-				icon="clipboard-outline"
-				disabled={blocked}
-				onPress={pasteImage}
-			/>
-			<StartTile
-				label="New Canvas"
-				compact={compact}
-				icon="add"
-				disabled={blocked}
-				onPress={() => router.push("/create")}
-			/>
+		<View style={[styles.start, startOnTop && styles.startRow]}>
+			<View style={startOnTop && styles.startShare}>
+				<Button
+					label={openPhotoLabels[status]}
+					// The label changes while busy; a screen reader needs the verb.
+					accessibilityLabel={blocked ? undefined : "Open a photo"}
+					icon="images-outline"
+					variant="primary"
+					size={startOnTop ? "medium" : "large"}
+					disabled={blocked}
+					onPress={choosePhoto}
+				/>
+			</View>
+			<View style={[styles.startSecondary, startOnTop && styles.startShare]}>
+				<View style={styles.flex}>
+					<Button
+						label="Paste"
+						icon="clipboard-outline"
+						disabled={blocked}
+						onPress={pasteImage}
+					/>
+				</View>
+				<View style={styles.flex}>
+					<Button
+						label="Blank canvas"
+						icon="add"
+						disabled={blocked}
+						onPress={() => router.push("/create")}
+					/>
+				</View>
+			</View>
 		</View>
 	);
 
 	return (
-		<View style={[styles.container, { paddingBottom: 24 + bottom }]}>
+		<View
+			style={[
+				styles.screen,
+				hasProjects && listed && styles.screenWithProjects,
+			]}
+		>
 			{hasProjects ? (
-				<Animated.View entering={FadeIn.duration(300)} style={styles.brand}>
-					<LogoMark size={34} />
-					<Text style={styles.brandName}>Tuck</Text>
-				</Animated.View>
+				<View style={styles.header}>
+					<View style={[styles.column, styles.headerColumn]}>
+						<View style={styles.headerRow}>
+							<Wordmark size={34} />
+							<TextButton
+								label={editing ? "Done" : "Edit"}
+								tone={editing ? "strong" : "default"}
+								onPress={() => setEditing((on) => !on)}
+							/>
+						</View>
+						{startOnTop && start}
+					</View>
+				</View>
 			) : (
 				<View style={styles.hero}>
 					{/* Only once the list is known to be empty, so a returning
 						user's projects don't replace a flash of it. */}
 					{listed && (
 						<>
-							<Animated.View entering={FadeInDown.duration(500)}>
-								<LogoMark size={LOGO_SIZE} />
-							</Animated.View>
+							<Wordmark size={72} />
 							<Animated.Text
-								entering={FadeInDown.delay(80).duration(500)}
-								style={styles.wordmark}
-							>
-								Tuck
-							</Animated.Text>
-							<Animated.Text
-								entering={FadeInDown.delay(160).duration(500)}
+								entering={FadeIn.delay(160).duration(400)}
 								style={styles.tagline}
 							>
 								The last touch for photos and screenshots.{"\n"}No account, no
@@ -156,53 +166,57 @@ export default function HomeScreen() {
 				</View>
 			)}
 
-			{hasProjects && startOnTop && start}
-
 			{hasProjects && (
-				<View style={styles.projects}>
-					<ProjectList
-						projects={projects}
-						disabled={blocked}
-						onOpen={openProject}
-						onRename={renameProject}
-						onDuplicate={duplicateProject}
-						onDelete={deleteProject}
-					/>
-					{/* The grid scrolls out of sight softly above the bar. */}
-					{!startOnTop && <View style={styles.projectsFade} />}
-				</View>
+				<ProjectList
+					projects={projects}
+					editing={editing}
+					disabled={blocked}
+					onOpen={openProject}
+					onRename={renameProject}
+					onDuplicate={duplicateProject}
+					onDelete={deleteProject}
+					onStartEditing={() => setEditing(true)}
+				/>
 			)}
 
 			{status === "saveFailed" && (
-				<View style={styles.saveRecovery}>
-					<Ionicons name="warning-outline" size={20} color={colors.danger} />
-					<View style={styles.saveRecoveryBody}>
-						<Text style={styles.saveRecoveryText}>
-							Your edits are still open. Retry saving or return to the editor.
-						</Text>
-						<View style={styles.saveActions}>
-							<Button label="Retry Save" onPress={finishSession} />
-							<Button
-								label="Return to Editor"
-								onPress={() =>
-									router.push(editorHref(useStore.getState().projectId))
-								}
-							/>
+				<View style={[styles.column, styles.saveRecoveryArea]}>
+					<View style={styles.saveRecovery}>
+						<Ionicons name="warning-outline" size={20} color={colors.danger} />
+						<View style={styles.saveRecoveryBody}>
+							<Text style={styles.saveRecoveryText}>
+								Your edits are still open. Retry saving or return to the editor.
+							</Text>
+							<View style={styles.saveActions}>
+								<Button label="Retry Save" onPress={finishSession} />
+								<Button
+									label="Return to Editor"
+									onPress={() =>
+										router.push(editorHref(useStore.getState().projectId))
+									}
+								/>
+							</View>
 						</View>
 					</View>
 				</View>
 			)}
 
-			{hasProjects && !startOnTop && start}
-
-			{!hasProjects && (
-				<View style={styles.startArea}>
-					{start}
-					{Platform.OS === "web" && wide && (
-						<Text style={styles.hint}>
-							Or paste a screenshot, or drop an image anywhere.
-						</Text>
-					)}
+			{!(hasProjects && startOnTop) && (
+				<View
+					style={[
+						styles.bottomBar,
+						hasProjects && styles.bottomBarOverProjects,
+						{ paddingBottom: space.md + bottom },
+					]}
+				>
+					<View style={[styles.column, styles.bottomColumn]}>
+						{start}
+						{!hasProjects && Platform.OS === "web" && wide && (
+							<Text style={styles.hint}>
+								Or paste a screenshot, or drop an image anywhere.
+							</Text>
+						)}
+					</View>
 				</View>
 			)}
 			{dragging && <DropOverlay label="Drop to open" />}
@@ -210,95 +224,83 @@ export default function HomeScreen() {
 	);
 }
 
-/** One way to start: an icon over its name, in a tile a third of the row. */
-function StartTile({
-	label,
-	icon,
-	accessibilityLabel = label,
-	primary = false,
-	compact,
-	disabled,
-	onPress,
-}: {
-	label: string;
-	accessibilityLabel?: string;
-	icon: ComponentProps<typeof Ionicons>["name"];
-	primary?: boolean;
-	compact: boolean;
-	disabled: boolean;
-	onPress: () => void;
-}) {
+/**
+ * "Tuck" in Anton, the captions' typeface, with the highlighter swiped
+ * through its lower half. At night, light letters wouldn't read on yellow,
+ * so the swipe covers the word, which is in black. It swipes in as it
+ * appears.
+ */
+function Wordmark({ size }: { size: number }) {
+	const covered = colorScheme === "dark";
 	return (
-		<Pressable
-			disabled={disabled}
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={accessibilityLabel}
-			accessibilityState={{ disabled }}
-			style={(state) => {
-				const { pressed, hovered } = interaction(state);
-				return [
-					styles.tile,
-					compact && styles.tileCompact,
-					primary && styles.tilePrimary,
-					webTransition,
-					hovered && (primary ? styles.tilePrimaryHovered : styles.tileHovered),
-					pressed && styles.tilePressed,
-					disabled && styles.tileDisabled,
-				];
-			}}
-		>
-			<Ionicons
-				name={icon}
-				size={24}
-				color={primary ? colors.onPrimary : colors.textPrimary}
+		<View accessibilityRole="header">
+			<Highlight
+				style={{
+					top: size * (covered ? 0.16 : 0.55),
+					bottom: size * (covered ? 0.06 : 0.12),
+					left: -size * 0.12,
+					right: -size * 0.16,
+				}}
 			/>
 			<Text
-				style={[styles.tileLabel, primary && styles.tileLabelPrimary]}
-				numberOfLines={1}
+				style={[
+					styles.wordmarkText,
+					covered && styles.wordmarkCovered,
+					{ fontSize: size, lineHeight: size * 1.2 },
+				]}
 			>
-				{label}
+				Tuck
 			</Text>
-		</Pressable>
+		</View>
 	);
 }
 
-const LOGO_SIZE = 96;
-
 const styles = StyleSheet.create({
-	// A phone-width column, or a little wider for the grid, so a wide browser
-	// window doesn't stretch it.
-	container: {
+	// Paper, or with projects, the table they lie on between the bars.
+	screen: {
 		flex: 1,
-		width: "100%",
-		maxWidth: 760,
-		alignSelf: "center",
-		gap: 24,
-		paddingHorizontal: 24,
-		paddingTop: 20,
+		backgroundColor: colors.background,
 	},
-	brand: {
+	screenWithProjects: {
+		backgroundColor: colors.canvasWell,
+	},
+	flex: {
+		flex: 1,
+	},
+	column: {
+		width: "100%",
+		maxWidth: HOME_MAX_WIDTH,
+		alignSelf: "center",
+		paddingHorizontal: space.md,
+	},
+	header: {
+		backgroundColor: colors.background,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+	},
+	headerColumn: {
+		gap: space.md,
+		paddingTop: space.xs,
+		paddingBottom: space.md,
+	},
+	headerRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 10,
+		justifyContent: "space-between",
 	},
-	brandName: {
+	wordmarkText: {
 		fontFamily: fonts.display,
-		fontSize: 34,
 		color: colors.textPrimary,
+	},
+	wordmarkCovered: {
+		color: colors.onHighlight,
 	},
 	hero: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 6,
-	},
-	wordmark: {
-		marginTop: 18,
-		fontFamily: fonts.display,
-		fontSize: 64,
-		lineHeight: 70,
-		color: colors.textPrimary,
+		gap: space.sm,
+		paddingHorizontal: space.lg,
 	},
 	tagline: {
 		...typography.body,
@@ -306,68 +308,41 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 		textAlign: "center",
 	},
-	projects: {
-		flex: 1,
+	bottomBar: {
+		backgroundColor: colors.background,
+		paddingTop: space.md,
 	},
-	projectsFade: {
-		position: "absolute",
-		left: 0,
-		right: 0,
-		bottom: 0,
-		height: space.lg,
-		pointerEvents: "none",
-		...fadeTo("bottom", colors.background),
+	bottomBarOverProjects: {
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
 	},
-	startArea: {
-		gap: 14,
+	bottomColumn: {
+		gap: space.sm,
 	},
+	// Stacked under the thumb: the photo first, the other ways under it. In a
+	// row across a wide screen's header.
 	start: {
-		flexDirection: "row",
 		gap: space.xs,
 	},
-	tile: {
+	startRow: {
+		flexDirection: "row",
+	},
+	// Half the row each, in a row only: in a column, a flex child would
+	// collapse to nothing on native.
+	startShare: {
 		flex: 1,
-		height: 80,
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 6,
-		paddingHorizontal: space.xs,
-		borderRadius: radii.medium,
-		borderCurve: "continuous",
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.border,
-		backgroundColor: colors.surface,
 	},
-	tileCompact: {
-		height: 64,
-	},
-	tilePrimary: {
-		borderColor: colors.primary,
-		backgroundColor: colors.primary,
-	},
-	tileHovered: {
-		backgroundColor: colors.surfaceHover,
-	},
-	tilePrimaryHovered: {
-		backgroundColor: colors.primaryHover,
-	},
-	tilePressed: {
-		transform: [{ scale: 0.97 }],
-	},
-	tileDisabled: {
-		opacity: 0.5,
-	},
-	tileLabel: {
-		...typography.labelStrong,
-		color: colors.textPrimary,
-	},
-	tileLabelPrimary: {
-		color: colors.onPrimary,
+	startSecondary: {
+		flexDirection: "row",
+		gap: space.xs,
 	},
 	hint: {
 		...typography.label,
 		color: colors.textTertiary,
 		textAlign: "center",
+	},
+	saveRecoveryArea: {
+		paddingVertical: space.sm,
 	},
 	saveRecovery: {
 		flexDirection: "row",

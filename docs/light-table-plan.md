@@ -56,7 +56,10 @@ The outline's stroke is a fifth of the font size (`OUTLINE_WIDTH` in `layers/tex
 
 * A heavier outline, about twice today's (`outlinePaint` in `layers/textLayerLayout.ts`), so the first caption reads on any photo. Existing projects get it too.
 
-### 6. Home
+### 6. Home (done)
+
+Home is paper bars around the table, as the editor is. The header has the wordmark (Anton with the highlighter through its lower half; at night the swipe covers it and the word is black) and Edit, which home now owns. Projects are prints on the table with their name and date always shown, two across on a phone (`MIN_CARD_WIDTH` 150, at most five), so the hover caption and "Recent" are gone. The bottom bar is the black Open a photo over Paste and Blank canvas; from 1024pt they head the projects in a row. Empty, home is the wordmark and tagline over the same bar. `LogoMark` is gone. The app icon, adaptive icon, and favicon are a black T over a highlighter swipe on white (`assets/*.svg`, rendered to PNG in headless Chrome); the adaptive icon's background is white. The icon needs a native rebuild to show.
+
 
 * Two columns of projects as prints with a name and when they were last changed.
 * One black bar opens a photo; Paste and Blank canvas sit under it. The wordmark has the highlighter swipe. The app icon follows the new mark.
