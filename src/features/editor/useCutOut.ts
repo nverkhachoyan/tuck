@@ -16,7 +16,8 @@ import { showAlert } from "@/ui/showAlert";
  * second cut meanwhile does nothing. A mask found once is used again this
  * session, whose project keeps its file until it closes. `keep` puts a new
  * mask's file where the document can use it, and returns its URL there.
- * Null while this device can't find subjects.
+ * `news` says what the last toggle did, for a screen reader. Null while this
+ * device can't find subjects.
  */
 export function useCutOut({
 	projectId,
@@ -27,6 +28,7 @@ export function useCutOut({
 }) {
 	const setMask = useStore((state) => state.setMask);
 	const [cutting, setCutting] = useState<string | null>(null);
+	const [news, setNews] = useState<string | null>(null);
 	const busy = useRef(false);
 	// The mask found for each image file in this project.
 	const found = useRef({ projectId, masks: new Map<string, string>() });
@@ -39,19 +41,23 @@ export function useCutOut({
 		if (layer.mask !== undefined) {
 			masks.set(layer.uri, layer.mask);
 			setMask(layer.id, null);
+			setNews("Background restored");
 			return;
 		}
 		const known = masks.get(layer.uri);
 		if (known !== undefined) {
 			setMask(layer.id, known);
+			setNews("Background removed");
 			return;
 		}
 		if (busy.current) return;
 		busy.current = true;
 		setCutting(layer.id);
+		setNews("Removing the background");
 		try {
 			const mask = await findSubjectMask(layer.uri);
 			if (!mask) {
+				setNews(null);
 				showAlert(
 					"Nothing to cut out",
 					"There's no clear subject in front of the background.",
@@ -61,7 +67,9 @@ export function useCutOut({
 			const url = await keep(mask.uri);
 			masks.set(layer.uri, url);
 			setMask(layer.id, url);
+			setNews("Background removed");
 		} catch (error) {
+			setNews(null);
 			showAlert(
 				"Couldn't remove the background",
 				isDetectionModelDownloading(error)
@@ -74,5 +82,5 @@ export function useCutOut({
 		}
 	};
 
-	return isCutOutAvailable() ? { cutting, toggle } : null;
+	return isCutOutAvailable() ? { cutting, news, toggle } : null;
 }

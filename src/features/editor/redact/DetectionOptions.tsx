@@ -5,6 +5,7 @@ import type {
 	ImageDetectionState,
 } from "@/detection/useImageDetection";
 import { colors, typography } from "@/theme";
+import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { ToolButton, ToolRow } from "../ToolButton";
 import { Tray } from "../ToolOptions";
@@ -91,6 +92,9 @@ export function DetectionOptions({
 	const [stacked, setStacked] = useState(false);
 	return (
 		<Tray bottomInset={bottomInset}>
+			<Announcement
+				message={announcement(state, visibleIndices.length, selectedCount)}
+			/>
 			<View
 				style={[styles.content, stacked && styles.stacked]}
 				onLayout={(event) =>
@@ -134,6 +138,26 @@ export function DetectionOptions({
 			</View>
 		</Tray>
 	);
+}
+
+// What a screen reader hears as the scan goes and the choice changes.
+function announcement(
+	state: ImageDetectionState,
+	count: number,
+	selected: number,
+): string | null {
+	switch (state.status) {
+		case "idle":
+			return null;
+		case "working":
+			return `Finding ${scopeName(state.scope)}`;
+		case "found":
+			return count === 0
+				? "Nothing found in the visible crop"
+				: `${selected} of ${count} selected`;
+		case "empty":
+			return `No ${scopeName(state.scope)} found`;
+	}
 }
 
 function scopeName(scope: DetectionScope): string {

@@ -134,6 +134,7 @@ import {
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
 import { colors, typography } from "@/theme";
+import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
@@ -791,6 +792,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onCustomColor={setCustomColor}
 							bottomInset={dockInset}
 						/>
+						<Announcement message={cutOut?.news ?? null} />
 						{saveProblem && (
 							<SaveErrorBanner
 								message={saveProblem}

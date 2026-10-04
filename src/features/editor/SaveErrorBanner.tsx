@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radii, typography } from "@/theme";
+import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { Surface } from "@/ui/Surface";
 
@@ -22,6 +23,7 @@ export function SaveErrorBanner({
 		<View
 			style={[styles.area, rightInset !== undefined && { right: rightInset }]}
 		>
+			<Announcement message={message} />
 			<Surface style={styles.banner} contentStyle={styles.bannerContent}>
 				<Ionicons
 					name="cloud-offline-outline"
