@@ -5,7 +5,6 @@ import {
 	ActivityIndicator,
 	Image,
 	type ImageSourcePropType,
-	Platform,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -27,8 +26,6 @@ import { BottomSheet } from "@/ui/BottomSheet";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
-import { useTooltip } from "@/ui/Tooltip";
-import { TOOL_KEYS } from "../shortcuts";
 
 const TILE = 56;
 const GRID_GAP = 4;
@@ -58,13 +55,12 @@ type SavedStickerProps = {
 };
 
 type AddContentProps = SavedStickerProps & {
-	onAddPhoto: () => void;
 	onAddSticker: (sticker: Sticker) => void;
 };
 
 /**
- * What can be added to the canvas besides text and drawings: a photo, at the
- * top, then stickers by category, remembering the last one shown. Yours
+ * The stickers to add to the canvas, by category, remembering the last one
+ * shown (photos are added with the dock's Photo). Yours
  * holds the person's own: `onSaveNew` picks an image to keep as one, and a
  * long press (or on web, a hovered delete button) deletes one once
  * confirmed. A tap outside the sheet, or swiping it down, closes it. Stays
@@ -97,7 +93,7 @@ export function AddSheet({
 			)}
 			<View style={styles.column}>
 				{open && (
-					<BottomSheet title="Add" closeLabel="Close" onClose={onClose}>
+					<BottomSheet title="Stickers" closeLabel="Close" onClose={onClose}>
 						<AddContent {...content} />
 					</BottomSheet>
 				)}
@@ -106,7 +102,7 @@ export function AddSheet({
 	);
 }
 
-function AddContent({ onAddPhoto, onAddSticker, ...saved }: AddContentProps) {
+function AddContent({ onAddSticker, ...saved }: AddContentProps) {
 	const [tab, setTab] = usePreference("stickerCategory", parseTab);
 	// Measured inside the scroll view, clear of a web scrollbar.
 	const [gridWidth, setGridWidth] = useState(0);
@@ -119,7 +115,6 @@ function AddContent({ onAddPhoto, onAddSticker, ...saved }: AddContentProps) {
 
 	return (
 		<>
-			<PhotoRow onPress={onAddPhoto} />
 			<ScrollView
 				horizontal
 				showsHorizontalScrollIndicator={false}
@@ -160,44 +155,6 @@ function AddContent({ onAddPhoto, onAddSticker, ...saved }: AddContentProps) {
 						))}
 				</View>
 			</ScrollView>
-		</>
-	);
-}
-
-function PhotoRow({ onPress }: { onPress: () => void }) {
-	const { anchor, tooltip } = useTooltip("Add a photo", TOOL_KEYS.photo);
-	return (
-		<>
-			<Pressable
-				{...anchor}
-				onPress={onPress}
-				accessibilityRole="button"
-				accessibilityLabel="Photo"
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.photoRow,
-						webTransition,
-						hovered && styles.hovered,
-						pressed && styles.pressed,
-					];
-				}}
-			>
-				<View style={styles.photoIcon}>
-					<MaterialCommunityIcons
-						name="image-plus"
-						size={22}
-						color={colors.textPrimary}
-					/>
-				</View>
-				<View>
-					<Text style={styles.photoLabel}>Photo</Text>
-					<Text style={styles.photoHint}>
-						{Platform.OS === "web" ? "From your files" : "From your library"}
-					</Text>
-				</View>
-			</Pressable>
-			{tooltip}
 		</>
 	);
 }
@@ -413,34 +370,6 @@ const styles = StyleSheet.create({
 		maxWidth: 560,
 		maxHeight: "75%",
 		pointerEvents: "box-none",
-	},
-	photoRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 12,
-		marginHorizontal: 12,
-		marginTop: 12,
-		padding: 10,
-		borderRadius: radii.medium,
-		borderCurve: "continuous",
-		backgroundColor: colors.surfaceHover,
-	},
-	photoIcon: {
-		width: 40,
-		height: 40,
-		borderRadius: radii.medium,
-		borderCurve: "continuous",
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: colors.surfacePressed,
-	},
-	photoLabel: {
-		...typography.bodyStrong,
-		color: colors.textPrimary,
-	},
-	photoHint: {
-		...typography.label,
-		color: colors.textSecondary,
 	},
 	hovered: {
 		backgroundColor: colors.surfacePressed,

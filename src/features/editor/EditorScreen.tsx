@@ -466,13 +466,19 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (!detectedImage) return;
 		dispatchMode({ type: "startTool", tool: "find" });
 	};
-	// Done redacts the regions chosen in the style last picked, rather than a
-	// selected redaction's.
+	// Find is one of Redact's tools, so it goes back to Redact. Done redacts
+	// the regions chosen in the style last picked, rather than a selected
+	// redaction's.
+	const backToRedacting = () => {
+		find.reset();
+		startRedacting();
+	};
 	const finishFinding = () => {
 		find.redactChosen(redactionEffect(redact.chosen, documentSize));
-		finishTool();
+		backToRedacting();
 	};
 	const doneWithTool = tool === "find" ? finishFinding : finishTool;
+	const cancelWithTool = tool === "find" ? backToRedacting : cancelTool;
 
 	const startNewText = () =>
 		textEditing.startNew(canvasRef.current?.visibleArea());
@@ -648,8 +654,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onAddText: startNewText,
 		onDraw: startDrawing,
 		onRedact: startRedacting,
-		onFind: detectedImage ? startFinding : undefined,
-		onAdd: openAdd,
+		onSticker: openAdd,
+		onPhoto: pickPhoto,
 		onCrop: startCrop,
 		onAdjust: adjustable ? startAdjusting : undefined,
 		onCutOut: toggleCutOut,
@@ -812,7 +818,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								tool ? (
 									<DockFooter
 										title={TOOL_TITLES[tool]}
-										onCancel={cancelTool}
+										onCancel={cancelWithTool}
 										onDone={doneWithTool}
 										doneShortcut="Escape"
 									/>
@@ -836,6 +842,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							<DockContent
 								panel={panelKind}
 								optionsOpen={toolOptionsOpen}
+								onFind={detectedImage ? startFinding : undefined}
 								dispatchMode={dispatchMode}
 								draw={draw}
 								redact={redact}
@@ -859,10 +866,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					<AddSheet
 						open={addOpen}
 						onClose={closeAdd}
-						onAddPhoto={() => {
-							closeAdd();
-							pickPhoto();
-						}}
 						onAddSticker={(sticker) => {
 							closeAdd();
 							addSticker(() => bundledStickerImage(sticker));
@@ -979,8 +982,8 @@ type ToolStarters = {
 	onAddText: () => void;
 	onDraw: () => void;
 	onRedact: () => void;
-	onFind: (() => void) | undefined;
-	onAdd: () => void;
+	onSticker: () => void;
+	onPhoto: () => void;
 	onCrop: () => void;
 	onAdjust: (() => void) | undefined;
 	onCutOut: () => void;
@@ -997,8 +1000,8 @@ function toolButtonsFor(
 		onAddText: wrap(starters.onAddText),
 		onDraw: wrap(starters.onDraw),
 		onRedact: wrap(starters.onRedact),
-		onFind: starters.onFind === undefined ? undefined : wrap(starters.onFind),
-		onAdd: wrap(starters.onAdd),
+		onSticker: wrap(starters.onSticker),
+		onPhoto: wrap(starters.onPhoto),
 		onCrop: wrap(starters.onCrop),
 		onAdjust:
 			starters.onAdjust === undefined ? undefined : wrap(starters.onAdjust),
@@ -1238,9 +1241,11 @@ function DockContent({
 	customColor,
 	layerActions,
 	idle,
+	onFind,
 }: ModeProps & {
 	panel: DockPanel;
 	optionsOpen: boolean;
+	onFind: (() => void) | undefined;
 	adjustController: ReturnType<typeof useAdjustController>;
 	adjustments: Adjustments | undefined;
 	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
@@ -1265,6 +1270,7 @@ function DockContent({
 					optionsOpen={optionsOpen}
 					onChange={redact.change}
 					onToggleOptions={toggleOptions}
+					onFind={onFind}
 				/>
 			);
 		case "find":

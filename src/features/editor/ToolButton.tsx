@@ -1,5 +1,11 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Children, type ComponentProps, type ReactNode, useState } from "react";
+import {
+	Children,
+	type ComponentProps,
+	isValidElement,
+	type ReactNode,
+	useState,
+} from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -30,7 +36,8 @@ type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
  * `selected` marks the tool in use, and `open` a button whose tray is open,
  * by its label alone, so only the tool in use is highlighted. `glyph`, when
  * given, is drawn in place of the icon (which still names the tool to the
- * type checker).
+ * type checker). In a `ToolGrid`, it's drawn a little smaller, to fit two
+ * rows in the dock.
  */
 export function ToolButton({
 	label,
@@ -42,6 +49,7 @@ export function ToolButton({
 	selected,
 	open = false,
 	busy = false,
+	compact = false,
 	onPress,
 }: {
 	label: string;
@@ -53,6 +61,7 @@ export function ToolButton({
 	selected?: boolean;
 	open?: boolean;
 	busy?: boolean;
+	compact?: boolean;
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
@@ -73,7 +82,11 @@ export function ToolButton({
 					selected,
 					expanded: open,
 				}}
-				style={[styles.container, disabled && styles.disabled]}
+				style={[
+					styles.container,
+					compact && styles.compact,
+					disabled && styles.disabled,
+				]}
 			>
 				{(state) => {
 					const { pressed, hovered } = interaction(state);
@@ -89,6 +102,7 @@ export function ToolButton({
 							<View
 								style={[
 									styles.tile,
+									compact && styles.compactTile,
 									webTransition,
 									lit && (danger ? styles.tileDanger : styles.tileHovered),
 									!inactive && pressed && styles.tilePressed,
@@ -105,7 +119,6 @@ export function ToolButton({
 							<Text
 								style={[
 									styles.label,
-									(lit || open) && styles.labelLit,
 									selected && styles.labelSelected,
 									open && styles.labelOpen,
 								]}
@@ -118,6 +131,27 @@ export function ToolButton({
 			</Pressable>
 			{shortcut && tooltip}
 		</>
+	);
+}
+
+/**
+ * The main tools in two rows, balanced (four over three, three over three),
+ * so all of them show on a phone at once. Its `ToolButton`s are `compact`.
+ */
+export function ToolGrid({ children }: { children: ReactNode }) {
+	const tools = Children.toArray(children);
+	const columns = Math.min(4, Math.ceil(tools.length / 2));
+	return (
+		<View style={styles.grid}>
+			{tools.map((tool) => (
+				<View
+					key={isValidElement(tool) ? tool.key : null}
+					style={[styles.cell, { width: `${100 / columns}%` }]}
+				>
+					{tool}
+				</View>
+			))}
+		</View>
 	);
 }
 
@@ -190,6 +224,21 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 6,
 	},
+	compact: {
+		gap: 2,
+	},
+	grid: {
+		flex: 1,
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "center",
+		alignContent: "center",
+		rowGap: 6,
+		paddingHorizontal: 8,
+	},
+	cell: {
+		alignItems: "center",
+	},
 	// Down past the label's descenders.
 	highlight: {
 		bottom: -4,
@@ -211,6 +260,10 @@ const styles = StyleSheet.create({
 	tileDanger: {
 		backgroundColor: colors.dangerSoft,
 	},
+	compactTile: {
+		width: 44,
+		height: 44,
+	},
 	tilePressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],
@@ -218,9 +271,6 @@ const styles = StyleSheet.create({
 	label: {
 		...typography.caption,
 		letterSpacing: 0.1,
-		color: colors.textSecondary,
-	},
-	labelLit: {
 		color: colors.textPrimary,
 	},
 	labelSelected: {

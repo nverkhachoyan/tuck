@@ -5,6 +5,7 @@ import { colors, radii, typography } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorOptions } from "../ColorPicker";
+import { TOOL_KEYS } from "../shortcuts";
 import { ToolButton, ToolRow } from "../ToolButton";
 import {
 	SIZE_DOTS,
@@ -28,19 +29,22 @@ const STRENGTH_NAMES = {
 
 /**
  * The redact tools, in place of the toolbar while redacting: a box to drag
- * out, a brush, its eraser, and their style, which opens over the canvas.
- * Tapping the tool that's in use opens the style too.
+ * out, a brush, Find (with a photo to look in, for faces and text), the
+ * brush's eraser, and their style, which opens over the canvas. Tapping the
+ * tool that's in use opens the style too.
  */
 export function RedactPanel({
 	settings,
 	optionsOpen,
 	onChange,
 	onToggleOptions,
+	onFind,
 }: {
 	settings: RedactSettings;
 	optionsOpen: boolean;
 	onChange: (settings: RedactSettings) => void;
 	onToggleOptions: () => void;
+	onFind?: () => void;
 }) {
 	const pickTool = (tool: RedactTool) => {
 		if (tool === settings.tool) onToggleOptions();
@@ -60,6 +64,14 @@ export function RedactPanel({
 				selected={settings.tool === "brush"}
 				onPress={() => pickTool("brush")}
 			/>
+			{onFind && (
+				<ToolButton
+					label="Find"
+					icon="image-search-outline"
+					shortcut={TOOL_KEYS.find}
+					onPress={onFind}
+				/>
+			)}
 			<ToolButton
 				label="Eraser"
 				icon="eraser"

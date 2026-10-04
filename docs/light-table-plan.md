@@ -41,7 +41,10 @@ The photo's inset in the view went from 16 to 12pt, which still leaves the corne
 
 * Smaller margins around the photo, and a soft shadow under it in place of the hairline edge.
 
-### 4. Tools
+### 4. Tools (done)
+
+The main tools are a `ToolGrid` (`ToolButton.tsx`), two balanced rows of `compact` tools that take the dock's whole height, since there's no footer while nothing's open: eight with a photo, three over three on a blank canvas. Find is a tool in Redact's row and returns to Redact when it ends, either way; the rail marks Redact while it's open. Sticker opens the sheet, now titled Stickers without its Photo row, and Photo picks a photo. Tool labels are ink rather than gray, since the highlight marks the chosen tool. Redact's effect and color stayed behind Style: its row holds five tools now, leaving no room.
+
 
 * Two rows of four on a phone: Text, Draw, Redact, Sticker, Crop, Adjust, Cut out, Photo. Find becomes one of Redact's tools; Add splits into Sticker (the sheet's stickers) and Photo (add a photo). The desktop rail keeps one column.
 * Redact's effect and color sit in view rather than behind its Style tile, if they fit.

@@ -8,9 +8,9 @@ import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 
 // The dock's one fixed height, shared by every panel, so the canvas, fitted
-// above the dock, never moves when the selection or tool changes. The panel
-// takes the top, and a mode's footer the rest. The main tools leave the
-// footer's row empty, so their row doesn't jump as a mode opens.
+// above the dock, never moves when the selection or tool changes. A mode's
+// panel takes the top, and its footer the rest. The main tools, with no
+// footer, take it all for their two rows.
 const CONTENT_HEIGHT = 100;
 const FOOTER_HEIGHT = 44;
 const DOCK_HEIGHT = CONTENT_HEIGHT + FOOTER_HEIGHT;
@@ -102,7 +102,7 @@ export function Dock({
 			]}
 		>
 			<View style={styles.column}>
-				<View style={styles.content}>
+				<View style={footer ? styles.content : styles.fullContent}>
 					<Animated.View
 						key={panel}
 						entering={PANEL_IN}
@@ -112,7 +112,7 @@ export function Dock({
 						{children}
 					</Animated.View>
 				</View>
-				{footer ?? <View style={styles.footer} />}
+				{footer}
 			</View>
 		</View>
 	);
@@ -229,6 +229,9 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		height: CONTENT_HEIGHT,
+	},
+	fullContent: {
+		height: DOCK_HEIGHT,
 	},
 	inspector: {
 		position: "absolute",
