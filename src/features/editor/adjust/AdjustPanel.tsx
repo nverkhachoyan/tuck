@@ -12,13 +12,8 @@ import {
 	type Adjustments,
 	adjustmentKeys,
 } from "@/model/adjustments";
-import {
-	chosenOutline,
-	colors,
-	radii,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { Dial, type DialScale } from "../Dial";
 import { ADJUST_DIAL_MAX, type AdjustController } from "./useAdjustController";
@@ -148,26 +143,31 @@ function AdjustmentChoice({
 				const { pressed, hovered } = interaction(state);
 				return (
 					<>
+						{selected && <Highlight style={styles.highlight} />}
 						<View
 							style={[
 								styles.choiceIcon,
 								webTransition,
 								hovered && styles.choiceHovered,
-								selected && chosenOutline,
 								pressed && styles.choicePressed,
 							]}
 						>
 							<MaterialCommunityIcons
 								name={icon}
 								size={20}
-								color={selected ? colors.textPrimary : colors.textSecondary}
+								color={selected ? colors.onHighlight : colors.textSecondary}
 							/>
-							{changed && <View style={styles.changed} />}
+							{changed && (
+								<View
+									style={[styles.changed, selected && styles.changedSelected]}
+								/>
+							)}
 						</View>
 						<Text
 							style={[
 								styles.choiceLabel,
-								(selected || hovered) && styles.choiceLabelLit,
+								hovered && styles.choiceLabelLit,
+								selected && styles.choiceLabelSelected,
 							]}
 						>
 							{label}
@@ -242,6 +242,14 @@ const styles = StyleSheet.create({
 	choiceLabelLit: {
 		color: colors.textPrimary,
 	},
+	choiceLabelSelected: {
+		color: colors.onHighlight,
+	},
+	// Around the icon and its name, and a little past the name's descenders.
+	highlight: {
+		top: -2,
+		bottom: -4,
+	},
 	changed: {
 		position: "absolute",
 		top: 1,
@@ -250,5 +258,8 @@ const styles = StyleSheet.create({
 		height: 6,
 		borderRadius: 3,
 		backgroundColor: colors.primary,
+	},
+	changedSelected: {
+		backgroundColor: colors.onHighlight,
 	},
 });

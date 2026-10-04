@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { chosenOutline, colors, radii, webTransition } from "@/theme";
+import { colors, radii, webTransition } from "@/theme";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 
 // The minimum comfortable touch target, and the ring that marks the chosen
@@ -11,8 +12,9 @@ const RING = 36;
 /**
  * One of a row of round choices, like a color, ringed when it's the one
  * chosen. `children` is what it shows, at most `RING` across. An icon
- * rather than a color or a dot takes the `outline` variant, marked as other
- * options are.
+ * rather than a color or a dot takes the `highlight` variant, marked as
+ * other options are; its `children` can be a function of the color to draw
+ * the icon in, which changes while it's highlighted.
  */
 export function RingChoice({
 	label,
@@ -23,11 +25,12 @@ export function RingChoice({
 }: {
 	label: string;
 	selected: boolean;
-	variant?: "ring" | "outline";
+	variant?: "ring" | "highlight";
 	onPress: () => void;
-	children: ReactNode;
+	children: ReactNode | ((ink: string) => ReactNode);
 }) {
-	const outline = variant === "outline";
+	const highlight = variant === "highlight";
+	const ink = highlight && selected ? colors.onHighlight : colors.textPrimary;
 	return (
 		<Pressable
 			onPress={onPress}
@@ -42,14 +45,15 @@ export function RingChoice({
 					<View
 						style={[
 							styles.ring,
-							outline && styles.outline,
+							highlight && styles.plain,
 							webTransition,
-							hovered && (outline ? styles.outlineHovered : styles.ringHovered),
-							selected && (outline ? chosenOutline : styles.ringSelected),
+							hovered && (highlight ? styles.plainHovered : styles.ringHovered),
+							selected && !highlight && styles.ringSelected,
 							pressed && styles.ringPressed,
 						]}
 					>
-						{children}
+						{highlight && selected && <Highlight />}
+						{typeof children === "function" ? children(ink) : children}
 					</View>
 				);
 			}}
@@ -80,11 +84,11 @@ const styles = StyleSheet.create({
 	ringSelected: {
 		borderColor: colors.chosen,
 	},
-	outline: {
+	plain: {
 		borderWidth: 0,
 		borderRadius: radii.small,
 	},
-	outlineHovered: {
+	plainHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
 	ringPressed: {

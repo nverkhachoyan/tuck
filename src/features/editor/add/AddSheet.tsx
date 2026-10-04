@@ -22,14 +22,9 @@ import {
 	stickerCategories,
 } from "@/stickers/stickers";
 import type { ShownSticker } from "@/stickers/useSavedStickers";
-import {
-	chosenUnderline,
-	colors,
-	radii,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
 import { useTooltip } from "@/ui/Tooltip";
@@ -224,23 +219,21 @@ function CategoryChip({
 			accessibilityState={{ selected }}
 			style={(state) => {
 				const { pressed } = interaction(state);
-				return [
-					styles.chip,
-					webTransition,
-					pressed && styles.pressed,
-					selected && styles.chipSelected,
-				];
+				return [styles.chip, webTransition, pressed && styles.pressed];
 			}}
 		>
 			{(state) => (
-				<Text
-					style={[
-						styles.chipLabel,
-						(selected || interaction(state).hovered) && styles.chipLabelLit,
-					]}
-				>
-					{label}
-				</Text>
+				<>
+					{selected && <Highlight under />}
+					<Text
+						style={[
+							styles.chipLabel,
+							(selected || interaction(state).hovered) && styles.chipLabelLit,
+						]}
+					>
+						{label}
+					</Text>
+				</>
 			)}
 		</Pressable>
 	);
@@ -470,7 +463,6 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 2,
 		paddingVertical: 7,
 	},
-	chipSelected: chosenUnderline,
 	chipLabel: {
 		...typography.labelStrong,
 		color: colors.textSecondary,

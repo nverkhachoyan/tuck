@@ -27,7 +27,10 @@ Built as described. `colors` gained `primary`/`onPrimary` (the main button), `hi
 * Anton replaces Instrument Serif for the wordmark and home's headings.
 * Fix the colors written outside the theme that assume a dark screen (fades, shadows, tile tints).
 
-### 2. Chosen means highlighted
+### 2. Chosen means highlighted (done)
+
+Built as described in `ui/Highlight.tsx`, behind tools (the rail's too), header and selection-bar toggles, Draw's brushes and shapes (`RingChoice`'s `highlight` variant, whose children can take the ink color), Redact's effects, adjustments, crop ratios and actions, fonts and alignments, and Export's size and format, whose unchosen options lost their boxes. Tabs (the text style panel's and the Add sheet's) get `<Highlight under />`, a short stroke under the label, so the label keeps its color in night. It swipes in from the left over 160ms with a shared value: Reanimated's entering animations pin a view's position on web while a parent animates in, which put Export's highlights a row too low.
+
 
 * One `Highlight` in `ui/` draws the highlighter swipe behind a chosen tool, font, ratio, size, format, or effect. It replaces `chosenOutline` and `chosenUnderline`; a chosen tab is ink and semibold with a short swipe under its label. Color swatches keep their ring.
 

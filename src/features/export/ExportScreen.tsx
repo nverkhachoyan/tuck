@@ -21,16 +21,10 @@ import { errorMessage } from "@/lib/errorMessage";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import {
-	chosenOutline,
-	colors,
-	radii,
-	space,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, radii, space, typography, webTransition } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
 import { copyImage } from "./copyImage";
@@ -288,7 +282,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 /**
  * A row of two or three choices, each a name over a detail, with the chosen
- * one outlined.
+ * one highlighted.
  */
 function Segmented({
 	label,
@@ -324,11 +318,11 @@ function Segmented({
 									styles.segment,
 									webTransition,
 									hovered && styles.segmentHovered,
-									chosen && chosenOutline,
 									pressed && styles.segmentPressed,
 								];
 							}}
 						>
+							{chosen && <Highlight />}
 							<Text
 								style={[
 									styles.segmentTitle,
@@ -337,7 +331,14 @@ function Segmented({
 							>
 								{title}
 							</Text>
-							<Text style={styles.segmentDetail}>{detail}</Text>
+							<Text
+								style={[
+									styles.segmentDetail,
+									chosen && styles.segmentDetailChosen,
+								]}
+							>
+								{detail}
+							</Text>
 						</Pressable>
 					);
 				})}
@@ -397,8 +398,6 @@ const styles = StyleSheet.create({
 		paddingHorizontal: space.xs,
 		paddingVertical: space.xs,
 		borderRadius: radii.small,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: colors.border,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 2,
@@ -414,13 +413,17 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	segmentTitleChosen: {
-		color: colors.textPrimary,
+		color: colors.onHighlight,
 	},
 	segmentDetail: {
 		...typography.caption,
 		fontVariant: ["tabular-nums"],
 		color: colors.textTertiary,
 		textAlign: "center",
+	},
+	segmentDetailChosen: {
+		color: colors.onHighlight,
+		opacity: 0.6,
 	},
 	status: {
 		flexDirection: "row",

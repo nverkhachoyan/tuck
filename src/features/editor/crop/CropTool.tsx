@@ -12,15 +12,10 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import {
-	chosenOutline,
-	colors,
-	radii,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
@@ -272,10 +267,10 @@ function AspectChip({
 							styles.chip,
 							webTransition,
 							hovered && styles.chipHovered,
-							selected && styles.chipSelected,
 							pressed && styles.chipPressed,
 						]}
 					>
+						{selected && <Highlight />}
 						<Text
 							style={[styles.chipLabel, selected && styles.chipLabelSelected]}
 						>
@@ -300,7 +295,7 @@ function isInteractiveElement(target: EventTarget | null): boolean {
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-/** An icon over a small label; `selected` shows a toggle that's on. */
+/** An icon over a small label; `selected` highlights a toggle that's on. */
 function ActionButton({
 	icon,
 	label,
@@ -332,14 +327,14 @@ function ActionButton({
 								styles.actionIcon,
 								webTransition,
 								hovered && styles.actionIconHovered,
-								selected && styles.actionIconSelected,
 								pressed && styles.actionIconPressed,
 							]}
 						>
+							{selected && <Highlight />}
 							<MaterialCommunityIcons
 								name={icon}
 								size={22}
-								color={colors.textPrimary}
+								color={selected ? colors.onHighlight : colors.textPrimary}
 							/>
 						</View>
 						<Text style={styles.actionLabel}>{label}</Text>
@@ -381,7 +376,6 @@ const styles = StyleSheet.create({
 	chipHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	chipSelected: chosenOutline,
 	chipPressed: {
 		transform: [{ scale: 0.96 }],
 	},
@@ -391,7 +385,7 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	chipLabelSelected: {
-		color: colors.textPrimary,
+		color: colors.onHighlight,
 	},
 	actions: {
 		flexDirection: "row",
@@ -417,7 +411,6 @@ const styles = StyleSheet.create({
 	actionIconHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	actionIconSelected: chosenOutline,
 	actionIconPressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],

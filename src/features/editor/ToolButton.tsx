@@ -8,13 +8,8 @@ import {
 	Text,
 	View,
 } from "react-native";
-import {
-	chosenOutline,
-	colors,
-	radii,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 
@@ -29,12 +24,11 @@ type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /**
  * An editing tool in the dock: an icon with a label under it, and no tile
- * around it until it's hovered, pressed, or the tool in use, which a thin
- * outline marks.
+ * around it until it's hovered or pressed. The tool in use is highlighted.
  * `busy` swaps the icon for a spinner while the tool's work runs, and blocks
  * a second press meanwhile. With a `shortcut`, web shows it on hover.
  * `selected` marks the tool in use, and `open` a button whose tray is open,
- * by its label alone, so only the tool in use is outlined. `glyph`, when
+ * by its label alone, so only the tool in use is highlighted. `glyph`, when
  * given, is drawn in place of the icon (which still names the tool to the
  * type checker).
  */
@@ -84,34 +78,35 @@ export function ToolButton({
 				{(state) => {
 					const { pressed, hovered } = interaction(state);
 					const lit = !inactive && (hovered || pressed);
+					const ink = danger
+						? colors.danger
+						: selected
+							? colors.onHighlight
+							: colors.textPrimary;
 					return (
 						<>
+							{selected && <Highlight style={styles.highlight} />}
 							<View
 								style={[
 									styles.tile,
 									webTransition,
 									lit && (danger ? styles.tileDanger : styles.tileHovered),
-									// Over the hover's colors, keeping its lift.
-									selected && styles.tileSelected,
 									!inactive && pressed && styles.tilePressed,
 								]}
 							>
 								{busy ? (
-									<ActivityIndicator color={colors.textPrimary} />
+									<ActivityIndicator color={ink} />
 								) : (
 									(glyph ?? (
-										<MaterialCommunityIcons
-											name={icon}
-											size={24}
-											color={danger ? colors.danger : colors.textPrimary}
-										/>
+										<MaterialCommunityIcons name={icon} size={24} color={ink} />
 									))
 								)}
 							</View>
 							<Text
 								style={[
 									styles.label,
-									(lit || selected || open) && styles.labelLit,
+									(lit || open) && styles.labelLit,
+									selected && styles.labelSelected,
 									open && styles.labelOpen,
 								]}
 							>
@@ -195,6 +190,10 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 6,
 	},
+	// Down past the label's descenders.
+	highlight: {
+		bottom: -4,
+	},
 	disabled: {
 		opacity: 0.35,
 	},
@@ -206,7 +205,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 	},
-	tileSelected: chosenOutline,
 	tileHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
@@ -224,6 +222,9 @@ const styles = StyleSheet.create({
 	},
 	labelLit: {
 		color: colors.textPrimary,
+	},
+	labelSelected: {
+		color: colors.onHighlight,
 	},
 	labelOpen: {
 		fontWeight: "700",

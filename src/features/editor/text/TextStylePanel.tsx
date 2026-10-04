@@ -17,15 +17,9 @@ import {
 	type TextLayerEdit,
 	textFonts,
 } from "@/model/document";
-import {
-	chosenOutline,
-	chosenUnderline,
-	colors,
-	radii,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
 import { fadeTo } from "@/ui/gradient";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { ColorPicker } from "../ColorPicker";
 import { ColorSwatches, isCustomColor } from "../ColorSwatches";
@@ -320,14 +314,14 @@ function AlignPicker({
 										styles.alignChip,
 										webTransition,
 										hovered && styles.fontChipHovered,
-										selected && styles.fontChipSelected,
 										pressed && styles.fontChipPressed,
 									]}
 								>
+									{selected && <Highlight />}
 									<MaterialCommunityIcons
 										name={icon}
 										size={20}
-										color={colors.textPrimary}
+										color={selected ? colors.onHighlight : colors.textPrimary}
 									/>
 								</View>
 							);
@@ -339,7 +333,7 @@ function AlignPicker({
 	);
 }
 
-/** One tab; the active one is underlined. */
+/** One tab; the active one is underlined with the highlighter. */
 function Tab({
 	label,
 	active,
@@ -359,13 +353,8 @@ function Tab({
 			{(state) => {
 				const { hovered } = interaction(state);
 				return (
-					<View
-						style={[
-							styles.segment,
-							webTransition,
-							active && styles.segmentActive,
-						]}
-					>
+					<View style={styles.segment}>
+						{active && <Highlight under />}
 						<Text
 							style={[
 								styles.tabLabel,
@@ -412,13 +401,14 @@ function FontPicker({
 										styles.fontChip,
 										webTransition,
 										hovered && styles.fontChipHovered,
-										selected && styles.fontChipSelected,
 										pressed && styles.fontChipPressed,
 									]}
 								>
+									{selected && <Highlight />}
 									<Text
 										style={[
 											styles.fontLabel,
+											selected && styles.fontLabelSelected,
 											{ fontFamily: TEXT_FONTS[font].family },
 										]}
 									>
@@ -464,7 +454,6 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 2,
 		justifyContent: "center",
 	},
-	segmentActive: chosenUnderline,
 	tabLabel: {
 		...typography.labelStrong,
 		color: colors.textSecondary,
@@ -515,12 +504,14 @@ const styles = StyleSheet.create({
 	fontChipHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	fontChipSelected: chosenOutline,
 	fontChipPressed: {
 		transform: [{ scale: 0.96 }],
 	},
 	fontLabel: {
 		fontSize: 16,
 		color: colors.textPrimary,
+	},
+	fontLabelSelected: {
+		color: colors.onHighlight,
 	},
 });

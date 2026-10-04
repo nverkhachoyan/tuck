@@ -1,13 +1,8 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ComponentProps, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import {
-	chosenOutline,
-	colors,
-	radii,
-	typography,
-	webTransition,
-} from "@/theme";
+import { colors, radii, typography, webTransition } from "@/theme";
+import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
@@ -118,7 +113,7 @@ export function SelectionBar({
 	);
 }
 
-/** An icon over its label; `selected` shows a toggle that's on. */
+/** An icon over its label; `selected` highlights a toggle that's on. */
 function BarButton({
 	icon,
 	label,
@@ -137,7 +132,11 @@ function BarButton({
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
-	const color = danger ? colors.danger : colors.textPrimary;
+	const color = danger
+		? colors.danger
+		: selected
+			? colors.onHighlight
+			: colors.textPrimary;
 	return (
 		<>
 			<Pressable
@@ -158,12 +157,12 @@ function BarButton({
 						styles.button,
 						webTransition,
 						!disabled && hovered && styles.hovered,
-						selected && styles.selected,
 						!disabled && pressed && styles.pressed,
 						disabled && styles.disabled,
 					];
 				}}
 			>
+				{selected && <Highlight />}
 				<MaterialCommunityIcons name={icon} size={20} color={color} />
 				<Text style={[styles.label, { color }]} numberOfLines={1}>
 					{label}
@@ -196,7 +195,6 @@ const styles = StyleSheet.create({
 	hovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
-	selected: chosenOutline,
 	pressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.94 }],

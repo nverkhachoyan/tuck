@@ -1,7 +1,8 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { chosenOutline, colors, radii, typography } from "@/theme";
+import { colors, radii, typography } from "@/theme";
+import { Highlight } from "@/ui/Highlight";
 import { RingChoice } from "@/ui/RingChoice";
 import { ColorOptions } from "../ColorPicker";
 import { ToolButton, ToolRow } from "../ToolButton";
@@ -125,7 +126,11 @@ export function RedactOptions({
 									selected={effect === choice}
 									onPress={() => onChange({ ...settings, effect: choice })}
 								>
-									<EffectGlyph settings={settings} effect={choice} />
+									<EffectGlyph
+										settings={settings}
+										effect={choice}
+										color={effect === choice ? colors.onHighlight : undefined}
+									/>
 								</EffectChoice>
 							))}
 						</ToolChoices>
@@ -202,8 +207,9 @@ function EffectChoice({
 			accessibilityRole="button"
 			accessibilityLabel={label}
 			accessibilityState={{ selected }}
-			style={[styles.effectChoice, selected && styles.effectChoiceSelected]}
+			style={styles.effectChoice}
 		>
+			{selected && <Highlight />}
 			{children}
 			<Text
 				style={[styles.effectLabel, selected && styles.effectLabelSelected]}
@@ -214,20 +220,25 @@ function EffectChoice({
 	);
 }
 
-/** A solid effect's color as a tile, or blur's or pixelation's mark. */
+/**
+ * A solid effect's color as a tile, or blur's or pixelation's mark, drawn in
+ * `color`.
+ */
 export function EffectGlyph({
 	settings,
 	effect,
+	color = colors.textPrimary,
 }: {
 	settings: RedactSettings;
 	effect: RedactSettings["effect"];
+	color?: string;
 }) {
 	if (effect !== "solid") {
 		return (
 			<MaterialCommunityIcons
 				name={effect === "blur" ? "blur" : "checkerboard"}
 				size={24}
-				color={colors.textPrimary}
+				color={color}
 			/>
 		);
 	}
@@ -305,12 +316,11 @@ const styles = StyleSheet.create({
 		gap: 3,
 		borderRadius: radii.small,
 	},
-	effectChoiceSelected: chosenOutline,
 	effectLabel: {
 		...typography.caption,
 		color: colors.textSecondary,
 	},
 	effectLabelSelected: {
-		color: colors.textPrimary,
+		color: colors.onHighlight,
 	},
 });

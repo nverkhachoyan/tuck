@@ -136,16 +136,18 @@ export function BrushOptions({
 						{(["pen", "marker", "neon"] as const).map((brush) => (
 							<RingChoice
 								key={brush}
-								variant="outline"
+								variant="highlight"
 								label={BRUSH_NAMES[brush]}
 								selected={settings.tool === brush}
 								onPress={() => pickBrush(brush)}
 							>
-								<MaterialCommunityIcons
-									name={TOOL_ICONS[brush]}
-									size={22}
-									color={colors.textPrimary}
-								/>
+								{(ink) => (
+									<MaterialCommunityIcons
+										name={TOOL_ICONS[brush]}
+										size={22}
+										color={ink}
+									/>
+								)}
 							</RingChoice>
 						))}
 					</ToolChoices>
@@ -157,16 +159,18 @@ export function BrushOptions({
 						{shapeKinds.map((shape) => (
 							<RingChoice
 								key={shape}
-								variant="outline"
+								variant="highlight"
 								label={SHAPE_NAMES[shape]}
 								selected={settings.shape === shape}
 								onPress={() => onChange({ ...settings, shape })}
 							>
-								<MaterialCommunityIcons
-									name={SHAPE_ICONS[shape]}
-									size={22}
-									color={colors.textPrimary}
-								/>
+								{(ink) => (
+									<MaterialCommunityIcons
+										name={SHAPE_ICONS[shape]}
+										size={22}
+										color={ink}
+									/>
+								)}
 							</RingChoice>
 						))}
 					</ToolChoices>

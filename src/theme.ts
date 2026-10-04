@@ -54,7 +54,8 @@ const day = {
 	selectionSoft: "rgba(47, 107, 255, 0.16)",
 	selectionBorder: "rgba(47, 107, 255, 0.55)",
 	onSelection: "#FFFFFF",
-	// A chosen color's ring.
+	// A chosen color's ring (`RingChoice`). Other choices are highlighted
+	// (`ui/Highlight.tsx`).
 	chosen: "#000000",
 	// Around every color swatch, so white shows on the paper and black on a
 	// dark photo.
@@ -117,7 +118,7 @@ const night: typeof day = {
 export const colors = colorScheme === "dark" ? night : day;
 
 export const radii = {
-	// Controls, chips, and a chosen option's outline.
+	// Controls and chips.
 	small: 8,
 	// Buttons, cards, and the selection bar.
 	medium: 12,
@@ -161,18 +162,6 @@ export const floatingShadow = `0 10px 28px ${colors.shadow}`;
 // suits each platform.
 export const fonts = {
 	display: "Anton",
-};
-
-// A chosen option among controls (a tool, a font, an aspect ratio): a thin
-// outline with `radii.small` corners, never a fill. Fill is left for what
-// really is a color.
-export const chosenOutline: ViewStyle = {
-	boxShadow: `inset 0 0 0 1.5px ${colors.chosen}`,
-};
-
-// The chosen tab: an underline along its label's bottom edge.
-export const chosenUnderline: ViewStyle = {
-	boxShadow: `inset 0 -2px 0 ${colors.chosen}`,
 };
 
 // Every bar across the top of a screen, so switching screens and tools never

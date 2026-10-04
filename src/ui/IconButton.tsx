@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
 import { Pressable, StyleSheet } from "react-native";
-import { chosenOutline, colors, webTransition } from "@/theme";
+import { colors, webTransition } from "@/theme";
+import { Highlight } from "./Highlight";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 
@@ -16,7 +17,7 @@ const HALO_INSET = (HALO - ICON_SIZE) / 2;
 /**
  * A borderless icon-only button. `label` is required because it's the only
  * name a screen reader gets, and on web it's the tooltip, with `shortcut`
- * (see `useTooltip`). `selected` shows a toggle that's on.
+ * (see `useTooltip`). `selected` highlights a toggle that's on.
  *
  * Its halo overhangs by a negative margin, so the button lays out at the
  * icon's own size wherever it's placed.
@@ -43,7 +44,9 @@ export function IconButton({
 		? colors.textTertiary
 		: tone === "danger"
 			? colors.danger
-			: colors.textPrimary;
+			: selected
+				? colors.onHighlight
+				: colors.textPrimary;
 	return (
 		<>
 			<Pressable
@@ -59,7 +62,6 @@ export function IconButton({
 					return [
 						styles.halo,
 						webTransition,
-						selected && styles.selected,
 						hovered &&
 							!disabled &&
 							(tone === "danger" ? styles.dangerHovered : styles.hovered),
@@ -67,6 +69,7 @@ export function IconButton({
 					];
 				}}
 			>
+				{selected && <Highlight />}
 				<Ionicons name={icon} size={ICON_SIZE} color={color} />
 			</Pressable>
 			{tooltip}
@@ -89,7 +92,6 @@ const styles = StyleSheet.create({
 	dangerHovered: {
 		backgroundColor: colors.dangerSoft,
 	},
-	selected: chosenOutline,
 	pressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],
