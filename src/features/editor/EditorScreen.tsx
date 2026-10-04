@@ -435,13 +435,19 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		if (!adjustable) return;
 		dispatchMode({ type: "startAdjust", layerId: adjustable.id });
 	};
-	const finishTool = () => {
+	const closeTool = () => {
 		dispatchMode({ type: "endTool" });
 		find.reset();
 	};
+	// Done with Draw or Redact goes back to the tools, not to the last stroke
+	// or box, still selected, where a stray drag would move it.
+	const finishTool = () => {
+		closeTool();
+		if (tool === "draw" || tool === "redact") selectLayer(null);
+	};
 	const cancelTool = () => {
 		cancelSession();
-		finishTool();
+		closeTool();
 	};
 	// The selected photo, or else the main one, like Find.
 	const cutOut = useCutOut({

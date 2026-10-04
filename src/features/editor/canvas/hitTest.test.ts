@@ -41,6 +41,7 @@ function target(
 		strokes: options.strokes ?? null,
 		clipped: false,
 		resizeMode: "none",
+		anchored: false,
 	};
 }
 

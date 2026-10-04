@@ -70,7 +70,8 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  * once: it's hit-tested here, on the UI thread, against `layers`, and
  * `onSelect` tells React. Two fingers never pick one up: with nothing
  * selected, they zoom the view (see `useViewGesture`). Dragging empty space
- * keeps moving the selection, which helps with small text. A one-finger drag
+ * keeps moving the selection, which helps with small text, unless it's
+ * `anchored` (a redaction, which moves only from on itself). A one-finger drag
  * from where `dragsView` says the view moves instead is left alone, from
  * touch-down to lift.
  *
@@ -148,6 +149,8 @@ export function useLayerTransformGesture({
 	const snapLines = useSharedValue({ x: NO_LINES, y: NO_LINES });
 	// Whether this pan's drag moves the view, and the pan stands aside.
 	const aside = useSharedValue(false);
+	// Whether this pan started off an anchored selection, which stays put.
+	const pinned = useSharedValue(false);
 
 	return useMemo(() => {
 		const toDocument = (screenX: number, screenY: number) => {
@@ -357,10 +360,10 @@ export function useLayerTransformGesture({
 				travel.value = continueTravel(travel.value, event);
 				if (aside.value) return;
 				gestureStarted();
+				pinned.value = false;
 				// Picks up the layer under the touch-down point, unless it grabbed a
 				// handle or more than one finger is at work.
 				if (
-					onSelect &&
 					dragHandle.value === null &&
 					activeCount.value === 1 &&
 					event.numberOfPointers === 1
@@ -369,9 +372,14 @@ export function useLayerTransformGesture({
 						layers.value,
 						toDocument(downX.value, downY.value),
 					);
-					if (target && target.id !== live.activeId.value) {
+					const activeId = live.activeId.value;
+					if (onSelect && target && target.id !== activeId) {
 						holdLayer(live, target.id, target);
 						scheduleOnRN(onSelect, target.id);
+					} else if (target?.id !== activeId) {
+						pinned.value =
+							layers.value.find((layer) => layer.id === activeId)?.anchored ??
+							false;
 					}
 				}
 				startX.value = live.x.value;
@@ -413,6 +421,7 @@ export function useLayerTransformGesture({
 					return;
 				}
 
+				if (pinned.value) return;
 				moveTo(
 					startX.value + dx / viewport.scale,
 					startY.value + dy / viewport.scale,
@@ -488,6 +497,7 @@ export function useLayerTransformGesture({
 		onHoverEnd,
 		dragsView,
 		aside,
+		pinned,
 		downX,
 		downY,
 		travel,

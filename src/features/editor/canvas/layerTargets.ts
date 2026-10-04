@@ -33,6 +33,7 @@ export function layerTargets(
 				strokes: layer.locked ? null : layerStrokes(layer),
 				clipped: layer.type === "image" && layer.locked,
 				resizeMode: resizeMode(layer),
+				anchored: layer.type === "redaction",
 			};
 		});
 }
