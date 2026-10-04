@@ -25,11 +25,7 @@ export function SaveErrorBanner({
 		>
 			<Announcement message={message} />
 			<Surface style={styles.banner} contentStyle={styles.bannerContent}>
-				<Ionicons
-					name="alert-circle-outline"
-					size={20}
-					color={colors.danger}
-				/>
+				<Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
 				<Text style={styles.message}>{message}</Text>
 				{onRetry && <Button label="Retry" size="small" onPress={onRetry} />}
 			</Surface>

@@ -97,6 +97,7 @@ import {
 } from "@/features/editor/text/useTextEditing";
 import { useAddImage } from "@/features/editor/useAddImage";
 import { useCutOut } from "@/features/editor/useCutOut";
+import { useDeleteNotice } from "@/features/editor/useDeleteNotice";
 import {
 	type EditorActions,
 	useEditorActions,
@@ -133,7 +134,7 @@ import {
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 } from "@/store/editorSlice";
-import { colors, typography } from "@/theme";
+import { colors, space, typography } from "@/theme";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
@@ -142,6 +143,7 @@ import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
 import { TextButton } from "@/ui/TextButton";
+import { Toast } from "@/ui/Toast";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
@@ -403,6 +405,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
 
+	const deleteNotice = useDeleteNotice(document);
+	const deleteWithNotice = (id: string) => {
+		const layer = document.layers.find((candidate) => candidate.id === id);
+		if (!layer) return;
+		deleteNotice.deleted(`${layerKindName(layer)} deleted`, () =>
+			deleteLayer(id),
+		);
+	};
+	const deleteGroupWithNotice = (id: string) => {
+		const group = document.groups?.find((candidate) => candidate.id === id);
+		if (!group) return;
+		deleteNotice.deleted(`${group.name} deleted`, () => deleteLayerGroup(id));
+	};
+
 	const selectedIndex = selectedLayer
 		? document.layers.indexOf(selectedLayer)
 		: -1;
@@ -553,7 +569,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				textEditing.editSelected();
 				break;
 			case "delete":
-				if (selectedLayer) deleteLayer(selectedLayer.id);
+				if (selectedLayer) deleteWithNotice(selectedLayer.id);
 				break;
 			case "deselect":
 				selectLayer(null);
@@ -630,10 +646,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			moveLayer,
 			setLayerHidden,
 			setLayerLocked,
-			deleteLayer,
+			deleteLayer: deleteWithNotice,
 			setLayerGroupHidden,
 			setLayerGroupLocked,
-			deleteLayerGroup,
+			deleteLayerGroup: deleteGroupWithNotice,
 			setBackground,
 		},
 		onFinishText: textEditing.finish,
@@ -775,7 +791,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										}
 										onArrange={arrangeSelected}
 										onDuplicate={duplicateSelectedLayer}
-										onDelete={() => deleteLayer(selectedLayer.id)}
+										onDelete={() => deleteWithNotice(selectedLayer.id)}
 									/>
 								)
 							}
@@ -876,6 +892,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						</Dock>
 					</CanvasStage>
 					{!layersBeside && layersPanel}
+					{deleteNotice.message && (
+						<Toast
+							message={deleteNotice.message}
+							action="Undo"
+							onAction={deleteNotice.undo}
+							inset={{
+								left: wide ? RAIL_WIDTH : 0,
+								right: wide
+									? INSPECTOR_WIDTH
+									: layersBeside && layersOpen
+										? LAYERS_SIDEBAR_INSET
+										: 0,
+								bottom: dockInset + trayHeight + space.md,
+							}}
+						/>
+					)}
 					<AddSheet
 						open={addOpen}
 						onClose={closeAdd}
