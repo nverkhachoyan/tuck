@@ -97,7 +97,10 @@ import {
 } from "@/features/editor/text/useTextEditing";
 import { useAddImage } from "@/features/editor/useAddImage";
 import { useCutOut } from "@/features/editor/useCutOut";
-import { useEditorActions } from "@/features/editor/useEditorActions";
+import {
+	type EditorActions,
+	useEditorActions,
+} from "@/features/editor/useEditorActions";
 import { useEditorMode } from "@/features/editor/useEditorMode";
 import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { useStickerSave } from "@/features/editor/useStickerSave";
@@ -110,6 +113,7 @@ import { type Adjustments, neutralAdjustments } from "@/model/adjustments";
 import {
 	type EditorDocument,
 	type ImageLayer,
+	type Layer,
 	maxNewImageShortSide,
 	type ShapePlacement,
 } from "@/model/document";
@@ -604,26 +608,24 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		cutOut: toggleCutOut,
 	};
 
-	const layerList = {
-		layers: document.layers,
-		groups: document.groups ?? [],
-		background: document.background,
-		selectedLayerId: selectedLayer?.id ?? null,
-		onSelect: (id: string) => {
-			textEditing.finish();
-			selectLayer(id);
+	const layerList = layerListProps({
+		document,
+		selectedLayer,
+		actions: {
+			selectLayer,
+			moveLayer,
+			setLayerHidden,
+			setLayerLocked,
+			deleteLayer,
+			setLayerGroupHidden,
+			setLayerGroupLocked,
+			deleteLayerGroup,
+			setBackground,
 		},
-		onMove: moveLayer,
-		onSetHidden: setLayerHidden,
-		onSetLocked: setLayerLocked,
-		onDelete: deleteLayer,
-		onSetGroupHidden: setLayerGroupHidden,
-		onSetGroupLocked: setLayerGroupLocked,
-		onDeleteGroup: deleteLayerGroup,
-		onSetBackground: setBackground,
+		onFinishText: textEditing.finish,
 		onClose: closeLayers,
 		bottomInset: dockInset,
-	};
+	});
 	// The sidebar stops above the dock, which stays usable.
 	const layersPanel = (
 		<LayersPanel
@@ -640,38 +642,32 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		start();
 	};
 	// The tools' buttons, for the dock and, through `fromRail`, the rail.
-	const toolButtons = (wrap = (start: () => void) => start) => ({
+	const toolStarters: ToolStarters = {
 		addBusy,
 		cutOut: cutOutState,
-		onAddText: wrap(startNewText),
-		onDraw: wrap(startDrawing),
-		onRedact: wrap(startRedacting),
-		onFind: detectedImage ? wrap(startFinding) : undefined,
-		onAdd: wrap(openAdd),
-		onCrop: wrap(startCrop),
-		onAdjust: adjustable ? wrap(startAdjusting) : undefined,
-		onCutOut: wrap(toggleCutOut),
-	});
-	// What the dock offers for the selected layer, by its kind.
-	const layerActions = selectedLayer && {
-		onDraw:
-			selectedLayer.type === "drawing" || selectedLayer.type === "shape"
-				? startDrawing
-				: undefined,
-		onRedact:
-			selectedLayer.type === "redaction" || selectedLayer.type === "image"
-				? startRedacting
-				: undefined,
-		onAdjust: selectedLayer.type === "image" ? startAdjusting : undefined,
-		onFind:
-			selectedLayer.type === "image" && !selectedLayer.hidden
-				? startFinding
-				: undefined,
-		cutOut: cutOutTarget === selectedLayer ? cutOutState : undefined,
+		onAddText: startNewText,
+		onDraw: startDrawing,
+		onRedact: startRedacting,
+		onFind: detectedImage ? startFinding : undefined,
+		onAdd: openAdd,
+		onCrop: startCrop,
+		onAdjust: adjustable ? startAdjusting : undefined,
 		onCutOut: toggleCutOut,
-		sticker: stickerSave.status,
-		onSaveSticker: stickerSave.save,
 	};
+	// What the dock offers for the selected layer, by its kind.
+	const layerActions =
+		selectedLayer &&
+		layerActionsFor({
+			layer: selectedLayer,
+			onDraw: startDrawing,
+			onRedact: startRedacting,
+			onAdjust: startAdjusting,
+			onFind: startFinding,
+			cutOut: cutOutTarget === selectedLayer ? cutOutState : undefined,
+			onCutOut: toggleCutOut,
+			sticker: stickerSave.status,
+			onSaveSticker: stickerSave.save,
+		});
 
 	return (
 		<TrayHeight.Provider value={setTrayHeight}>
@@ -802,7 +798,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<ToolsPanel
 									vertical
 									tool={textEditing.edit ? "text" : tool}
-									{...toolButtons(fromRail)}
+									{...toolButtonsFor(toolStarters, fromRail)}
 								/>
 							</View>
 						)}
@@ -853,7 +849,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									wide ? (
 										<LayersPanel {...layerList} layout="inspector" open />
 									) : (
-										<ToolsPanel {...toolButtons()} />
+										<ToolsPanel {...toolButtonsFor(toolStarters)} />
 									)
 								}
 							/>
@@ -919,6 +915,133 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			</TrayPlacement.Provider>
 		</TrayHeight.Provider>
 	);
+}
+
+/** The store actions the layers panel uses. */
+type LayerListActions = Pick<
+	EditorActions,
+	| "selectLayer"
+	| "moveLayer"
+	| "setLayerHidden"
+	| "setLayerLocked"
+	| "deleteLayer"
+	| "setLayerGroupHidden"
+	| "setLayerGroupLocked"
+	| "deleteLayerGroup"
+	| "setBackground"
+>;
+
+/**
+ * The layers panel's props, from the document, the selection, and the store.
+ * Picking a layer ends any text being edited first.
+ */
+function layerListProps({
+	document,
+	selectedLayer,
+	actions,
+	onFinishText,
+	onClose,
+	bottomInset,
+}: {
+	document: EditorDocument;
+	selectedLayer: Layer | undefined;
+	actions: LayerListActions;
+	onFinishText: () => void;
+	onClose: () => void;
+	bottomInset: number;
+}) {
+	return {
+		layers: document.layers,
+		groups: document.groups ?? [],
+		background: document.background,
+		selectedLayerId: selectedLayer?.id ?? null,
+		onSelect: (id: string) => {
+			onFinishText();
+			actions.selectLayer(id);
+		},
+		onMove: actions.moveLayer,
+		onSetHidden: actions.setLayerHidden,
+		onSetLocked: actions.setLayerLocked,
+		onDelete: actions.deleteLayer,
+		onSetGroupHidden: actions.setLayerGroupHidden,
+		onSetGroupLocked: actions.setLayerGroupLocked,
+		onDeleteGroup: actions.deleteLayerGroup,
+		onSetBackground: actions.setBackground,
+		onClose,
+		bottomInset,
+	};
+}
+
+/** What picking each tool does, before `wrap` adapts it for its place. */
+type ToolStarters = {
+	addBusy: boolean;
+	cutOut: CutOutState | undefined;
+	onAddText: () => void;
+	onDraw: () => void;
+	onRedact: () => void;
+	onFind: (() => void) | undefined;
+	onAdd: () => void;
+	onCrop: () => void;
+	onAdjust: (() => void) | undefined;
+	onCutOut: () => void;
+};
+
+/** The tools' buttons' props: each starter through `wrap` (see `fromRail`). */
+function toolButtonsFor(
+	starters: ToolStarters,
+	wrap: (start: () => void) => () => void = (start) => start,
+) {
+	return {
+		addBusy: starters.addBusy,
+		cutOut: starters.cutOut,
+		onAddText: wrap(starters.onAddText),
+		onDraw: wrap(starters.onDraw),
+		onRedact: wrap(starters.onRedact),
+		onFind: starters.onFind === undefined ? undefined : wrap(starters.onFind),
+		onAdd: wrap(starters.onAdd),
+		onCrop: wrap(starters.onCrop),
+		onAdjust:
+			starters.onAdjust === undefined ? undefined : wrap(starters.onAdjust),
+		onCutOut: wrap(starters.onCutOut),
+	};
+}
+
+/** What the dock offers for `layer`, by its kind. */
+function layerActionsFor({
+	layer,
+	onDraw,
+	onRedact,
+	onAdjust,
+	onFind,
+	cutOut,
+	onCutOut,
+	sticker,
+	onSaveSticker,
+}: {
+	layer: Layer;
+	onDraw: () => void;
+	onRedact: () => void;
+	onAdjust: () => void;
+	onFind: () => void;
+	cutOut: CutOutState | undefined;
+	onCutOut: () => void;
+	sticker: "saving" | "saved" | undefined;
+	onSaveSticker: (() => void) | undefined;
+}) {
+	return {
+		onDraw:
+			layer.type === "drawing" || layer.type === "shape" ? onDraw : undefined,
+		onRedact:
+			layer.type === "redaction" || layer.type === "image"
+				? onRedact
+				: undefined,
+		onAdjust: layer.type === "image" ? onAdjust : undefined,
+		onFind: layer.type === "image" && !layer.hidden ? onFind : undefined,
+		cutOut,
+		onCutOut,
+		sticker,
+		onSaveSticker,
+	};
 }
 
 /**
