@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
 	},
 	note: {
 		...typography.caption,
-		color: colors.textTertiary,
+		color: colors.textSecondary,
 	},
 	actions: {
 		flexDirection: "row",
