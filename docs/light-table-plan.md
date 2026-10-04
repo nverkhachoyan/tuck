@@ -49,7 +49,10 @@ The main tools are a `ToolGrid` (`ToolButton.tsx`), two balanced rows of `compac
 * Two rows of four on a phone: Text, Draw, Redact, Sticker, Crop, Adjust, Cut out, Photo. Find becomes one of Redact's tools; Add splits into Sticker (the sheet's stickers) and Photo (add a photo). The desktop rail keeps one column.
 * Redact's effect and color sit in view rather than behind its Style tile, if they fit.
 
-### 5. The default caption
+### 5. The default caption (done)
+
+The outline's stroke is a fifth of the font size (`OUTLINE_WIDTH` in `layers/textLayerLayout.ts`), so a tenth shows past the fill. A quarter, twice the old width, merged Anton's close-set letters into one shape. Serif's is 0.14: Playfair's hairlines and serifs clotted at a fifth. Existing projects' outlines grow too.
+
 
 * A heavier outline, about twice today's (`outlinePaint` in `layers/textLayerLayout.ts`), so the first caption reads on any photo. Existing projects get it too.
 

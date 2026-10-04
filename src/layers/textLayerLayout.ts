@@ -7,7 +7,7 @@ import {
 	TextAlign as SkTextAlign,
 	StrokeJoin,
 } from "@shopify/react-native-skia";
-import type { TextAlign, TextLayer } from "@/model/document";
+import type { TextAlign, TextFont, TextLayer } from "@/model/document";
 import type { Box, Point, Rect } from "@/model/geometry";
 import { getFontProvider, TEXT_FONTS } from "./fonts";
 import { type CaretText, caretText, type TextSelection } from "./textEditing";
@@ -200,11 +200,23 @@ export function textIndexAt(layer: TextLayer, point: Point): number {
 	return fromCaret[Math.max(0, Math.min(j, text.length))];
 }
 
+// The outline's stroke, as a share of the font size. The fill covers its
+// inner half, so a tenth of the size shows: enough to read on a busy photo,
+// short of merging Anton's close-set letters. Playfair's hairlines and
+// serifs clot at that, so Serif's is lighter.
+const OUTLINE_WIDTH: Record<TextFont, number> = {
+	classic: 0.2,
+	modern: 0.2,
+	serif: 0.14,
+	marker: 0.2,
+	typewriter: 0.2,
+};
+
 function outlinePaint(layer: TextLayer, color: string): SkPaint {
 	const paint = Skia.Paint();
 	paint.setAntiAlias(true);
 	paint.setStyle(PaintStyle.Stroke);
-	paint.setStrokeWidth(layer.fontSize * 0.12);
+	paint.setStrokeWidth(layer.fontSize * OUTLINE_WIDTH[layer.font]);
 	paint.setStrokeJoin(StrokeJoin.Round);
 	paint.setColor(Skia.Color(color));
 	return paint;
