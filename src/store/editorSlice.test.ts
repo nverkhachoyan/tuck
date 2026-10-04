@@ -1068,6 +1068,39 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().session, null);
 		});
 
+		test("redo brings a canceled session back as one step", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			store.getState().beginSession();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			store.getState().deleteLayer(text.id);
+			const { document: canceled, selectedLayerId } = store.getState();
+			store.getState().cancelSession();
+			assert.equal(selectCanRedo(store.getState()), true);
+
+			store.getState().redo();
+			assert.equal(store.getState().document, canceled);
+			assert.equal(store.getState().selectedLayerId, selectedLayerId);
+			store.getState().undo();
+			assert.equal(store.getState().document, before);
+		});
+
+		test("a canceled session keeps the steps undone within it", () => {
+			const { store } = storeWithText();
+			store.getState().beginSession();
+			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			const oneStroke = store.getState().document;
+			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			const twoStrokes = store.getState().document;
+			store.getState().undo();
+			store.getState().cancelSession();
+
+			store.getState().redo();
+			assert.equal(store.getState().document, oneStroke);
+			store.getState().redo();
+			assert.equal(store.getState().document, twoStrokes);
+		});
+
 		test("a session without changes leaves the history alone", () => {
 			const { store } = storeWithText();
 			const { document, past } = store.getState();

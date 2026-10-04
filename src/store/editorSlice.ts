@@ -73,8 +73,8 @@ export type EditorSlice = {
 	selectedLayerId: string | null;
 	past: EditorSnapshot[];
 	future: EditorSnapshot[];
-	// While a tool is open, where it started: Cancel returns there, and its
-	// changes become one undo step when it's done.
+	// While a tool is open, where it started: Cancel returns there (and redo
+	// undoes the cancel), and its changes become one undo step when it's done.
 	session: EditorSession | null;
 	openDocument: (document: EditorDocument, projectId: string | null) => void;
 	closeDocument: () => void;
@@ -725,9 +725,12 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
+		// Redo brings the canceled changes back as one step. Any change in the
+		// session cleared the redo steps from before it, so `future` holds only
+		// the session's own undone steps, which still follow on from there.
 		cancelSession: () => {
-			const { document, session, past } = get();
-			if (!session) return;
+			const { document, selectedLayerId, session, past, future } = get();
+			if (!document || !session) return;
 			if (document === session.document) {
 				set({ session: null }, false, "editor/cancelSession");
 				return;
@@ -736,7 +739,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				{
 					...snapshotOf(session),
 					past: pastBefore(past, session),
-					future: [],
+					future: [{ document, selectedLayerId }, ...future],
 					session: null,
 				},
 				false,
