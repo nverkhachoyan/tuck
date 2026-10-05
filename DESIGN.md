@@ -223,7 +223,7 @@ The fonts available for captions (Anton, Montserrat ExtraBold, Playfair Display 
 
 ## Layout
 
-The phone screen has three bands: a 56pt paper header (Back, a title, Export), the light table with the canvas inset 12pt from its edges, and the paper dock along the bottom. The dock's content area is 100pt tall, plus a 44pt footer (✕ · mode name · ✓) while a tool or a selected layer is open. It's at most 520pt wide and centered. With nothing open, the eight main tools fill the dock in two balanced rows of four (three over three on a blank canvas), each in an equal-width column with 6pt between the rows. Inside a tool, a row of tools centers while it fits, shrinks its 12pt gaps on a narrow screen, and scrolls sideways only once the gaps reach zero.
+The phone screen has three bands: a 56pt paper header (Back, Layers, Undo, Redo, Export; from 1024pt also the project's name, with "Saved on this device" under it), the light table with the canvas inset 12pt from its edges, and the paper dock along the bottom. The dock's content area is 100pt tall, plus a 44pt footer (✕ · mode name · ✓) while a tool or a selected layer is open. It's at most 520pt wide and centered. With nothing open, the eight main tools fill the dock in two balanced rows of four (three over three on a blank canvas), each in an equal-width column with 6pt between the rows. Inside a tool, a row of tools centers while it fits, shrinks its 12pt gaps on a narrow screen, and scrolls sideways only once the gaps reach zero.
 
 Bars and sheets reach the screen's bottom edge, and each pads its own content by the bottom safe-area inset. Nothing sits under the home indicator.
 
@@ -270,7 +270,7 @@ The dock's tools are an icon (24px MaterialCommunityIcons) in a borderless 48px 
 Every chosen option uses `ui/Highlight.tsx`: tools, fonts, alignments, brushes, shapes, crop ratios, redaction effects, export sizes and formats, and header and selection-bar toggles. It swipes in from the left over 160ms (ease-out cubic, opacity and scaleX from 0.5), or appears instantly when Reduce Motion is on. Whatever it highlights is drawn in black ink. A chosen tab gets the 4px stroke under its label, so the label keeps its own color at night. Color swatches are the one exception: a chosen swatch gets a 2px ink ring (`RingChoice`), since a yellow swipe would fight the color being chosen.
 
 ### Sheets and Floating Surfaces
-Opaque paper with a hairline edge in `hairline-strong` and the floating shadow, so it reads the same over any photo. A bottom sheet has 20px top corners, a 52pt header with a centered 36×5 grabber, a semibold title, and a close button. It slides up over 280ms (decelerating) and down over 200ms (accelerating), and can be swiped away. Behind a sheet the canvas stays in view under a 22% black scrim. Dialogs, overlays, and the photo outside the crop box get a 45% scrim.
+Opaque paper with a hairline edge in `hairline-strong` and the floating shadow, so it reads the same over any photo. A toast (`ui/Toast.tsx`), such as "Redaction deleted · Undo", is the same paper with 12px corners, floats centered above the dock, rises 6px over 160ms, and leaves after five seconds or once anything else changes. A bottom sheet has 20px top corners, a 52pt header with a centered 36×5 grabber, a semibold title, and a close button. It slides up over 280ms (decelerating) and down over 200ms (accelerating), and can be swiped away. Behind a sheet the canvas stays in view under a 22% black scrim. Dialogs, overlays, and the photo outside the crop box get a 45% scrim.
 
 ### Project Prints
 Home lays saved projects on the light table as prints: a 3px-cornered thumbnail with both print shadows, with its name (Label Strong) and last-changed date (Caption, secondary) underneath. Long-pressing a print offers Duplicate, Rename, and Delete. With a mouse, hovering shows them as 30px round paper buttons in the print's corner, and Delete fills red on hover.
@@ -282,7 +282,10 @@ A selected layer gets a 1.5px selection-blue outline over its 3.5px dark halo, w
 "Tuck" in Anton, in black on a full highlighter swipe, identical in both palettes. The app icon and favicon are a black T on the same swipe, on white.
 
 ### Tooltips (web)
-A small paper bubble (Paper Hover fill, a `hairline-strong` hairline, 8px corners, the floating shadow) with a caption label and its keyboard shortcut in secondary tabular numerals. It fades and rises 2px over 120ms.
+A small paper bubble (Paper Hover fill, a `hairline-strong` hairline, 8px corners, the floating shadow) with a caption label and its keyboard shortcut in secondary tabular numerals. It fades and rises 2px over 120ms. It shows below a control, or beside one in the rail, where below would cover the next tool.
+
+### Keyboard Focus (web)
+A 2px ink outline, 2px out from the control (`graphite-ink` at night), set in `src/app/+html.tsx`. Never the browser's blue, which belongs to marks over the photo.
 
 ## Do's and Don'ts
 

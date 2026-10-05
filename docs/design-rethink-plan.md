@@ -142,9 +142,9 @@ Built with the review's mockup as the proposal. Paste now works on web too, read
 
 ## Phase 5: Desktop
 
-### 5.1 Rail and inspector (done, except the project's name)
+### 5.1 Rail and inspector (done)
 
-Built with the review's mockup as the proposal. From 1024pt, `EditorScreen` puts `ToolsPanel` in a rail at the left (the tool in use outlined; picking another finishes it) and renders the `Dock` as an `inspector` at the right: the footer heads it, then the mode's panel, then any tray, which `TrayPlacement` sends there, over `InspectorBackdrop`. At rest it shows the layers (`LayersPanel`'s `inspector` layout), and the header drops its Layers button. `EditorCanvas` fits between them with `leftInset` and `rightInset`. Crop keeps its own full-width layout. The header doesn't show the project's name yet: the editor only knows the document, not a name given by renaming, so it needs the name carried into the session first.
+Built with the review's mockup as the proposal. From 1024pt, `EditorScreen` puts `ToolsPanel` in a rail at the left (the tool in use outlined; picking another finishes it) and renders the `Dock` as an `inspector` at the right: the footer heads it, then the mode's panel, then any tray, which `TrayPlacement` sends there, over `InspectorBackdrop`. At rest it shows the layers (`LayersPanel`'s `inspector` layout), and the header drops its Layers button. `EditorCanvas` fits between them with `leftInset` and `rightInset`. Crop keeps its own full-width layout. The header shows the project's name from 1024pt (`openProjectName` reads it from the open session, which can't be renamed), or else its text, with its save status under it.
 
 * From 1024pt wide, the dock's tools become a rail at the left and trays become an inspector at the right (about 300pt). The canvas takes the space between.
 * The inspector's resting state is the layers list, replacing the floating layers panel.
