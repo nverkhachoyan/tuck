@@ -186,4 +186,6 @@ appear.
    ```
 
    The last number trims Android's 63-pixel status bar. The feature graphic
-   is `feature.html`, rendered at 1024 × 500 with headless Chrome.
+   is `feature.html`, rendered at 1024 × 500 with headless Chrome. The web
+   app's link preview, `public/og.jpg`, is `og.html` rendered the same way
+   at 1200 × 630.

@@ -4,15 +4,33 @@ import {
 	type TextStyle,
 	type ViewStyle,
 } from "react-native";
+import { readPreference } from "@/lib/preferenceStore";
+
+/** The palette chosen in Settings: the system's, or always one of them. */
+export type ThemeSetting = "system" | "light" | "dark";
+
+// Also read by `+html.tsx`'s script, as `tuck:theme` in localStorage.
+export const THEME_PREFERENCE = "theme";
+
+export function parseThemeSetting(saved: unknown): ThemeSetting {
+	return saved === "light" || saved === "dark" ? saved : "system";
+}
+
+export const themeSetting = parseThemeSetting(readPreference(THEME_PREFERENCE));
 
 /**
- * The palette follows the system's setting when the app starts and keeps it
- * until the next launch: every style reads `colors` once, as it's created.
- * Native controls (the keyboard, alerts, the status bar) are pinned to the
- * same scheme so they match.
+ * The palette is picked when the app starts, from Settings or the system's
+ * setting, and kept until the next launch: every style reads `colors` once,
+ * as it's created, so changing the setting reloads the app. Native controls
+ * (the keyboard, alerts, the status bar) are pinned to the same scheme so
+ * they match.
  */
 export const colorScheme: "light" | "dark" =
-	Appearance.getColorScheme() === "dark" ? "dark" : "light";
+	themeSetting !== "system"
+		? themeSetting
+		: Appearance.getColorScheme() === "dark"
+			? "dark"
+			: "light";
 if (Platform.OS !== "web") Appearance.setColorScheme(colorScheme);
 
 // The photo is a print on a light table: a pale gray surround, paper bars,

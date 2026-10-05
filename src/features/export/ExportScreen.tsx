@@ -21,11 +21,10 @@ import { errorMessage } from "@/lib/errorMessage";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import { colors, radii, space, typography, webTransition } from "@/theme";
+import { colors, radii, space, typography } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
-import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
+import { Segmented } from "@/ui/Segmented";
 import { showAlert } from "@/ui/showAlert";
 import { copyImage } from "./copyImage";
 import {
@@ -281,73 +280,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 }
 
 /**
- * A row of two or three choices, each a name over a detail, with the chosen
- * one highlighted.
- */
-function Segmented({
-	label,
-	options,
-	selected,
-	disabled,
-	onSelect,
-}: {
-	label: string;
-	options: { title: string; detail: string; accessibilityLabel?: string }[];
-	selected: number;
-	disabled: boolean;
-	onSelect: (index: number) => void;
-}) {
-	return (
-		<View style={styles.segmented} accessibilityRole="radiogroup">
-			<Text style={styles.segmentedLabel}>{label}</Text>
-			<View style={styles.segments}>
-				{options.map(({ title, detail, accessibilityLabel }, index) => {
-					const chosen = index === selected;
-					return (
-						<Pressable
-							key={title}
-							disabled={disabled}
-							onPress={() => onSelect(index)}
-							accessibilityRole="radio"
-							accessibilityLabel={accessibilityLabel ?? `${title}, ${detail}`}
-							accessibilityState={{ checked: chosen, disabled }}
-							aria-checked={chosen}
-							style={(state) => {
-								const { pressed, hovered } = interaction(state);
-								return [
-									styles.segment,
-									webTransition,
-									hovered && styles.segmentHovered,
-									pressed && styles.segmentPressed,
-								];
-							}}
-						>
-							{chosen && <Highlight />}
-							<Text
-								style={[
-									styles.segmentTitle,
-									chosen && styles.segmentTitleChosen,
-								]}
-							>
-								{title}
-							</Text>
-							<Text
-								style={[
-									styles.segmentDetail,
-									chosen && styles.segmentDetailChosen,
-								]}
-							>
-								{detail}
-							</Text>
-						</Pressable>
-					);
-				})}
-			</View>
-		</View>
-	);
-}
-
-/**
  * A size's name: the document's own size (or the largest export can hold,
  * when that's too big), then smaller ones for sharing.
  */
@@ -380,50 +312,6 @@ const styles = StyleSheet.create({
 		paddingHorizontal: space.md,
 		paddingTop: space.md,
 		paddingBottom: space.lg,
-	},
-	segmented: {
-		gap: space.xs,
-	},
-	segmentedLabel: {
-		...typography.labelStrong,
-		color: colors.textSecondary,
-	},
-	segments: {
-		flexDirection: "row",
-		gap: space.xs,
-	},
-	segment: {
-		flex: 1,
-		minHeight: 52,
-		paddingHorizontal: space.xs,
-		paddingVertical: space.xs,
-		borderRadius: radii.small,
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 2,
-	},
-	segmentHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	segmentPressed: {
-		backgroundColor: colors.pressedOverlay,
-	},
-	segmentTitle: {
-		...typography.labelStrong,
-		color: colors.textSecondary,
-	},
-	segmentTitleChosen: {
-		color: colors.onHighlight,
-	},
-	segmentDetail: {
-		...typography.caption,
-		fontVariant: ["tabular-nums"],
-		color: colors.textTertiary,
-		textAlign: "center",
-	},
-	segmentDetailChosen: {
-		color: colors.onHighlight,
-		opacity: 0.6,
 	},
 	status: {
 		flexDirection: "row",

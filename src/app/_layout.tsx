@@ -71,6 +71,7 @@ function Routes() {
 		>
 			<Stack.Screen name="index" />
 			<Stack.Screen name="create" />
+			<Stack.Screen name="settings" />
 			<Stack.Screen name="support" />
 			<Stack.Screen name="privacy" />
 			<Stack.Screen name="licenses" />

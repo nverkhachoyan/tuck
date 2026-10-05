@@ -35,6 +35,7 @@ import {
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Highlight } from "@/ui/Highlight";
+import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
 
@@ -154,11 +155,18 @@ export default function HomeScreen() {
 					<View style={[styles.column, styles.headerColumn]}>
 						<View style={styles.headerRow}>
 							<Wordmark size={34} />
-							<TextButton
-								label={editing ? "Done" : "Edit"}
-								tone={editing ? "strong" : "default"}
-								onPress={() => setEditing((on) => !on)}
-							/>
+							<View style={styles.headerActions}>
+								<TextButton
+									label={editing ? "Done" : "Edit"}
+									tone={editing ? "strong" : "default"}
+									onPress={() => setEditing((on) => !on)}
+								/>
+								<IconButton
+									icon="settings-outline"
+									label="Settings"
+									onPress={() => router.push("/settings")}
+								/>
+							</View>
 						</View>
 						{startOnTop && start}
 					</View>
@@ -233,7 +241,7 @@ export default function HomeScreen() {
 								Or paste a screenshot, or drop an image anywhere.
 							</Text>
 						)}
-						{!hasProjects && <AboutLinks />}
+						{!hasProjects && <AboutLinks withSettings />}
 					</View>
 				</View>
 			)}
@@ -242,12 +250,19 @@ export default function HomeScreen() {
 	);
 }
 
-/** Quiet links to Support, Privacy, and Licenses, under everything else. */
-function AboutLinks() {
+/**
+ * Quiet links to Support, Privacy, and Licenses, under everything else, and
+ * to Settings `withSettings`: without projects, there's no header to hold
+ * its gear.
+ */
+function AboutLinks({ withSettings = false }: { withSettings?: boolean }) {
 	const router = useRouter();
+	const pages = withSettings
+		? [{ label: "Settings", href: "/settings" } as const, ...ABOUT_PAGES]
+		: ABOUT_PAGES;
 	return (
 		<View style={styles.aboutLinks}>
-			{ABOUT_PAGES.map(({ label, href }) => (
+			{pages.map(({ label, href }) => (
 				<Pressable
 					key={href}
 					hitSlop={8}
@@ -330,6 +345,11 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
+	},
+	headerActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: space.md,
 	},
 	wordmarkText: {
 		fontFamily: fonts.display,
