@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useRef, useState } from "react";
 import {
 	Image,
@@ -43,6 +43,8 @@ type ProjectListProps = {
 	onDuplicate: (id: string) => void;
 	onDelete: (id: string) => void;
 	onStartEditing: () => void;
+	// Under the last row, the width of the grid.
+	footer?: ReactNode;
 };
 
 /**
@@ -60,6 +62,7 @@ export function ProjectList({
 	onDuplicate,
 	onDelete,
 	onStartEditing,
+	footer,
 }: ProjectListProps) {
 	const [width, setWidth] = useState(0);
 	const inner = Math.min(width, HOME_MAX_WIDTH) - PADDING * 2;
@@ -98,6 +101,7 @@ export function ProjectList({
 						onStartEditing={onStartEditing}
 					/>
 				))}
+			{width > 0 && footer && <View style={styles.footer}>{footer}</View>}
 		</ScrollView>
 	);
 }
@@ -431,6 +435,10 @@ const styles = StyleSheet.create({
 	},
 	card: {
 		gap: space.xs,
+	},
+	footer: {
+		width: "100%",
+		paddingTop: space.sm,
 	},
 	// A print on the table, with the canvas's shadows (see `EditorScene`).
 	print: {

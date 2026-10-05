@@ -283,7 +283,11 @@
 			}
 		},
 		{
-			"includes": ["src/features/create/**", "src/features/export/**"],
+			"includes": [
+				"src/features/about/**",
+				"src/features/create/**",
+				"src/features/export/**"
+			],
 			"linter": {
 				"rules": {
 					"style": {

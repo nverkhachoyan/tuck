@@ -10,33 +10,29 @@ Store name: **Tuck: Photo Markup**. Home screen name: **Tuck**.
 
 ## 1. Pages the stores ask for
 
-Both stores ask for these URLs before you can submit, so put them up first.
+These are routes in the app (`src/features/about/`), so they're on the web
+and inside the app, linked from the bottom of the home screen. Each store
+listing points to the web copies once they're deployed:
 
-- **Privacy policy** (required by both stores). Say what's true: photos are
-  edited on the device and never uploaded, there's no account, analytics, or
-  ads, and the web version keeps projects in the browser. On Android, Google's
-  ML Kit (face and text detection, cut out) sends Google diagnostic data:
-  the device model and OS, the app's package and version, performance
-  numbers, and an ID for the installation that isn't meant to identify a
-  person. Vercel, which hosts the web version, keeps standard server logs.
-- **Support page** (Apple requires a Support URL). Its job is to give a way
-  to reach you, such as an email address at tuck.tools.
-- **Licenses** (not checked by either store, but owed). The caption fonts are
-  under the SIL Open Font License, and Permanent Marker, the Noto Emoji
-  stickers, MediaPipe, and Tesseract are under Apache 2.0. Both licenses ask
-  that their notice ship with the app, so link the page from inside the app
-  too.
-- Terms of use are optional: Apple's standard license agreement applies by
-  default, and Google Play doesn't require terms.
+- Privacy policy: https://www.tuck.tools/privacy
+- Support URL: https://www.tuck.tools/support (support@tuck.tools)
+- Licenses: https://www.tuck.tools/licenses
+
+Keep the privacy policy true when the app changes: a new SDK, analytics, or
+anything that sends data off the device needs a new paragraph and date, and
+new answers in App Privacy and Data safety. Add a new font, sticker set, or
+library to `src/features/about/credits.ts`. Terms of use are optional:
+Apple's standard license agreement applies by default, and Google Play
+doesn't require terms.
 
 ## 2. Accounts and tools
 
-- [ ] Buy tuck.tools, add it to the Vercel project, and redirect
-      tuck.nverk.me to it. Browsers store projects for each site separately,
-      and the web's storage was renamed for Tuck, so projects saved on
-      tuck.nverk.me won't appear on tuck.tools.
-- [ ] Set up an email address at tuck.tools for support (registrar
-      forwarding or Cloudflare Email Routing works).
+- [x] Buy tuck.tools and serve the site at www.tuck.tools.
+- [ ] Redirect tuck.nverk.me to www.tuck.tools in Vercel. Browsers store
+      projects for each site separately, and the web's storage was renamed
+      for Tuck, so projects saved on tuck.nverk.me won't appear on
+      tuck.tools.
+- [x] Set up support@tuck.tools.
 - [ ] Expo account: `npx eas-cli@latest login`, then `npx eas-cli@latest init`
       in the repo. It writes `extra.eas.projectId` and `owner` into
       `app.json`; commit that.

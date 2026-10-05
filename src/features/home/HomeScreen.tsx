@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import {
 	Platform,
+	Pressable,
 	StyleSheet,
 	Text,
 	useWindowDimensions,
@@ -23,16 +24,31 @@ import {
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import { colors, fonts, radii, space, typography } from "@/theme";
+import {
+	colors,
+	fonts,
+	radii,
+	space,
+	typography,
+	webTransition,
+} from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Highlight } from "@/ui/Highlight";
+import { interaction } from "@/ui/interaction";
 import { TextButton } from "@/ui/TextButton";
 
 // Wide enough to be used with a mouse, where reach doesn't matter: the ways
 // to start head the projects, as a web app's "new" actions usually do.
 // Narrower, they sit at the bottom, under the thumb.
 const START_ON_TOP_MIN_WIDTH = 1024;
+
+// The pages the app stores link to, which belong in the app too.
+const ABOUT_PAGES = [
+	{ label: "Support", href: "/support" },
+	{ label: "Privacy", href: "/privacy" },
+	{ label: "Licenses", href: "/licenses" },
+] as const;
 
 const openPhotoLabels: Record<HomeStatus, string> = {
 	loading: "Loading…",
@@ -176,6 +192,7 @@ export default function HomeScreen() {
 					onDuplicate={duplicateProject}
 					onDelete={deleteProject}
 					onStartEditing={() => setEditing(true)}
+					footer={<AboutLinks />}
 				/>
 			)}
 
@@ -216,10 +233,39 @@ export default function HomeScreen() {
 								Or paste a screenshot, or drop an image anywhere.
 							</Text>
 						)}
+						{!hasProjects && <AboutLinks />}
 					</View>
 				</View>
 			)}
 			{dragging && <DropOverlay label="Drop to open" />}
+		</View>
+	);
+}
+
+/** Quiet links to Support, Privacy, and Licenses, under everything else. */
+function AboutLinks() {
+	const router = useRouter();
+	return (
+		<View style={styles.aboutLinks}>
+			{ABOUT_PAGES.map(({ label, href }) => (
+				<Pressable
+					key={href}
+					hitSlop={8}
+					accessibilityRole="link"
+					onPress={() => router.push(href)}
+					style={(state) => {
+						const { pressed, hovered } = interaction(state);
+						return [
+							styles.aboutLink,
+							webTransition,
+							hovered && styles.aboutLinkHovered,
+							pressed && styles.aboutLinkPressed,
+						];
+					}}
+				>
+					<Text style={styles.aboutLinkLabel}>{label}</Text>
+				</Pressable>
+			))}
 		</View>
 	);
 }
@@ -334,6 +380,26 @@ const styles = StyleSheet.create({
 		...typography.label,
 		color: colors.textTertiary,
 		textAlign: "center",
+	},
+	aboutLinks: {
+		flexDirection: "row",
+		justifyContent: "center",
+		gap: space.xs,
+	},
+	aboutLink: {
+		paddingHorizontal: space.xs,
+		paddingVertical: space.xxs,
+		borderRadius: radii.small,
+	},
+	aboutLinkHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	aboutLinkPressed: {
+		backgroundColor: colors.pressedOverlay,
+	},
+	aboutLinkLabel: {
+		...typography.caption,
+		color: colors.textSecondary,
 	},
 	saveRecoveryArea: {
 		paddingVertical: space.sm,

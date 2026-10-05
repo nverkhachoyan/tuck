@@ -71,6 +71,9 @@ function Routes() {
 		>
 			<Stack.Screen name="index" />
 			<Stack.Screen name="create" />
+			<Stack.Screen name="support" />
+			<Stack.Screen name="privacy" />
+			<Stack.Screen name="licenses" />
 			<Stack.Screen name="projects/[id]/index" />
 			{/* A sheet over the editor, which stays in view behind it. */}
 			<Stack.Screen
