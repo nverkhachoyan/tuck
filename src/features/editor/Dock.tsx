@@ -21,8 +21,10 @@ const DOCK_MARGIN = 10;
 // Between the dock and the keyboard, while it's up.
 const KEYBOARD_GAP = 8;
 const BUTTON_SIZE = 44;
-// A wide screen's inspector, along the right, which the dock becomes.
-export const INSPECTOR_WIDTH = 300;
+// A wide screen's inspector, along the right, which the dock becomes. Wide
+// enough for a row of five tools at their full spacing (see `ToolRow`), the
+// most a tool's panel shows.
+export const INSPECTOR_WIDTH = 352;
 // Where a tray starts in the inspector: under its footer and panel.
 export const INSPECTOR_TRAY_TOP = FOOTER_HEIGHT + CONTENT_HEIGHT;
 const PANEL_IN = FadeIn.duration(220).easing(Easing.bezier(0.2, 0, 0, 1));

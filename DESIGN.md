@@ -227,7 +227,7 @@ The phone screen has three bands: a 56pt paper header (Back, a title, Export), t
 
 Bars and sheets reach the screen's bottom edge, and each pads its own content by the bottom safe-area inset. Nothing sits under the home indicator.
 
-Wider windows rearrange the same parts. From 900pt the tools move into a 76pt rail down the left side. From 1024pt a 300pt inspector panel on the right holds the open tool's options. Home's content column is at most 760pt wide. Its project prints tile at least 150pt wide with a 16pt column gap and 20pt row gap, up to five across (two on a phone). From 1024pt the start buttons move from the bottom bar up to head the projects in a row.
+Wider windows rearrange the same parts. From 900pt the tools move into a 76pt rail down the left side. From 1024pt a 352pt inspector panel on the right (room for five tools in a row) holds the open tool's options. Home's content column is at most 760pt wide. Its project prints tile at least 150pt wide with a 16pt column gap and 20pt row gap, up to five across (two on a phone). From 1024pt the start buttons move from the bottom bar up to head the projects in a row.
 
 Gaps come from the spacing scale (4, 8, 12, 16, 24, 32). A one-off that matches no step may stay literal.
 
