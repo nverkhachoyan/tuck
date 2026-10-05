@@ -8,8 +8,7 @@ import {
 	View,
 } from "react-native";
 import type { TextSelection } from "@/layers/textEditing";
-import { colorScheme, colors } from "@/theme";
-import { ScreenHeader } from "@/ui/ScreenHeader";
+import { colorScheme, HEADER_HEIGHT } from "@/theme";
 
 export type TextEditorHandle = {
 	// Takes the keyboard back, keeping the caret where it was.
@@ -32,11 +31,10 @@ type TextEditorProps = {
 
 /**
  * Typing into text on the canvas, which draws it in place, caret and all
- * (see `TextEditState`). This is the header over the screen's, a tool's
- * like any other, and the input the keyboard types into, which is hidden
- * under the bar: the canvas shows what it holds exactly as the text will
- * look, at its size, angle, and wrapping, which no input could. Done is
- * beside the dock, which rides the keyboard.
+ * (see `TextEditState`). This is the input the keyboard types into, hidden
+ * behind the screen's header, which stays in use: the canvas shows what it
+ * holds exactly as the text will look, at its size, angle, and wrapping,
+ * which no input could. Done is beside the dock, which rides the keyboard.
  */
 export function TextEditor({
 	ref,
@@ -83,7 +81,7 @@ export function TextEditor({
 	}, [onDone]);
 
 	return (
-		<View style={styles.toolbar}>
+		<View style={styles.field}>
 			<TextInput
 				ref={input}
 				value={text}
@@ -114,7 +112,6 @@ export function TextEditor({
 				accessibilityLabel="Caption"
 				style={styles.input}
 			/>
-			<ScreenHeader />
 		</View>
 	);
 }
@@ -129,15 +126,17 @@ function setInputSelection(input: TextInput, { start, end }: TextSelection) {
 }
 
 const styles = StyleSheet.create({
-	// Opaque, over the screen's header, whose actions wait until editing ends.
-	toolbar: {
+	// Where the header is, at the top, so focusing it never scrolls the
+	// screen, and letting touches through to the header's buttons.
+	field: {
 		position: "absolute",
 		top: 0,
 		left: 0,
 		right: 0,
-		backgroundColor: colors.background,
+		height: HEADER_HEIGHT,
+		pointerEvents: "none",
 	},
-	// Hidden under the bar, and out of the way of its buttons. At least 16px,
+	// Hidden, and out of the way of the header's buttons. At least 16px,
 	// or Safari on iOS zooms the page into it. On web, lines only break
 	// where the text does, so the arrow keys move up and down by those.
 	input: {

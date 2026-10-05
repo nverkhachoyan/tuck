@@ -504,7 +504,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const doneWithTool = tool === "find" ? finishFinding : finishTool;
 	const cancelWithTool = tool === "find" ? backToRedacting : cancelTool;
 
-	const openExport = () => router.push(exportHref(projectId));
+	// Text being typed is finished first, so it goes where the editor does.
+	const openExport = () => {
+		if (textEditing.edit) textEditing.finish();
+		router.push(exportHref(projectId));
+	};
+	const leave = () => {
+		if (textEditing.edit) textEditing.finish();
+		leaveEditor(router);
+	};
 
 	const startNewText = () =>
 		textEditing.startNew(canvasRef.current?.visibleArea());
@@ -708,13 +716,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		<TrayHeight.Provider value={setTrayHeight}>
 			<TrayPlacement.Provider value={wide ? INSPECTOR_TRAY : null}>
 				<View style={styles.container}>
-					{/* Back and Export stay through every tool: leaving keeps the
-					    tool's changes, as the browser's own Back does. */}
+					{/* Back and Export stay through every tool and while typing:
+					    leaving keeps the changes, as the browser's own Back does. */}
 					<ScreenHeader
 						backLabel="Back to projects"
-						onBack={() => leaveEditor(router)}
+						onBack={leave}
 						action={
 							<HeaderActions
+								typing={textEditing.edit !== null}
 								onReset={
 									adjustedLayer?.adjustments
 										? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
@@ -722,7 +731,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								}
 								// A wide screen's inspector always shows the layers.
 								layers={
-									!tool && !wide
+									!tool && !textEditing.edit && !wide
 										? {
 												open: layersOpen,
 												onToggle: () => dispatchMode({ type: "toggleLayers" }),
@@ -1100,19 +1109,21 @@ function layerActionsFor({
 /**
  * The header's actions: Reset while the image being adjusted has changes,
  * the layers where the inspector doesn't show them, undo and redo, and
- * Export.
+ * Export. While `typing`, undo and redo wait: the text isn't a step yet.
  */
 function HeaderActions({
+	typing,
 	onReset,
 	layers,
 	onExport,
 }: {
+	typing: boolean;
 	onReset?: () => void;
 	layers?: { open: boolean; onToggle: () => void };
 	onExport: () => void;
 }) {
-	const canUndo = useStore(selectCanUndo);
-	const canRedo = useStore(selectCanRedo);
+	const canUndo = useStore(selectCanUndo) && !typing;
+	const canRedo = useStore(selectCanRedo) && !typing;
 	const { undo, redo } = useEditorActions();
 	return (
 		<View style={styles.headerActions}>
