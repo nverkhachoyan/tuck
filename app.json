@@ -1,70 +1,102 @@
 {
-	"expo": {
-		"scheme": "tuck",
-		"userInterfaceStyle": "automatic",
-		"backgroundColor": "#FFFFFF",
-		"orientation": "portrait",
-		"icon": "./assets/icon.png",
-		"version": "1.0.0",
-		"ios": {
-			"bundleIdentifier": "com.nverk.tuck",
-			"config": {
-				"usesNonExemptEncryption": false
-			}
-		},
-		"android": {
-			"package": "com.nverk.tuck",
-			"blockedPermissions": [
-				"android.permission.READ_MEDIA_IMAGES",
-				"android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-				"android.permission.SYSTEM_ALERT_WINDOW"
-			],
-			"adaptiveIcon": {
-				"foregroundImage": "./assets/adaptive-icon.png",
-				"backgroundColor": "#FFFFFF"
-			}
-		},
-		"web": {
-			"output": "static",
-			"favicon": "./assets/favicon.png",
-			"backgroundColor": "#FFFFFF",
-			"themeColor": "#FFFFFF",
-			"barStyle": "default"
-		},
-		"plugins": [
-			"expo-router",
-			[
-				"expo-image-picker",
-				{
-					"photosPermission": "Used to open the photos you choose for editing. They stay on your device.",
-					"cameraPermission": false,
-					"microphonePermission": false,
-					"colors": {
-						"cropToolbarColor": "#000000"
-					},
-					"dark": {
-						"colors": {
-							"cropToolbarColor": "#000000"
-						}
-					}
-				}
-			],
-			[
-				"expo-media-library",
-				{
-					"photosPermission": "Used to open the photos you choose for editing. They stay on your device.",
-					"savePhotosPermission": "Used to save your edited photos to your library.",
-					"granularPermissions": ["photo"]
-				}
-			],
-			"expo-sharing",
-			"expo-asset",
-			"expo-font",
-			"./modules/image-analysis/app.plugin.js",
-			"./modules/share-target/app.plugin.js",
-			"./plugins/withSceneLifecycle.js"
-		],
-		"name": "Tuck",
-		"slug": "tuck"
-	}
+  "expo": {
+    "scheme": "tuck",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#FFFFFF",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "version": "1.0.0",
+    "ios": {
+      "bundleIdentifier": "com.nverk.tuck",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.nverk.tuck",
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#FFFFFF",
+      "themeColor": "#FFFFFF",
+      "barStyle": "default"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Used to open the photos you choose for editing. They stay on your device.",
+          "cameraPermission": false,
+          "microphonePermission": false,
+          "colors": {
+            "cropToolbarColor": "#000000"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#000000"
+            }
+          }
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Used to open the photos you choose for editing. They stay on your device.",
+          "savePhotosPermission": "Used to save your edited photos to your library.",
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ],
+      "expo-sharing",
+      "expo-asset",
+      "expo-font",
+      "./modules/image-analysis/app.plugin.js",
+      "./modules/share-target/app.plugin.js",
+      "./plugins/withSceneLifecycle.js"
+    ],
+    "name": "Tuck",
+    "slug": "tuck",
+    "extra": {
+      "router": {},
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "ShareExtension",
+                  "bundleIdentifier": "com.nverk.tuck.ShareExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.nverk.tuck"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "8b117e85-77df-4e3c-8732-73d5f94c6e9b"
+      }
+    },
+    "owner": "nverkhachoyan"
+  }
 }
