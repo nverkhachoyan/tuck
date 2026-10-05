@@ -37,11 +37,11 @@ Tagline in use: "The last touch for photos and screenshots." Alternative: "Make 
 - Built with Expo and React Native. Skia draws the canvas and the export alike. Native code only for detection and the share target. Runs in a development build, not Expo Go.
 - No backend, accounts, cloud storage, remote processing, or AI APIs. Not planned: generative fill, prompt editing, face recognition, template galleries, feeds, or "AI Studio"-style surfaces.
 - Not built yet: highlights, shadows, exposure, vignette, and sharpen; saving a cut-out as a sticker; PDF redaction (researched, deferred).
-- Undecided: the final name (see Brand Commitments) and any public release.
+- Undecided: the public release date.
 
 ## Brand Commitments
 
-- Name: **Tuck**, a working name that may change before release. Internal IDs (`photo-editor` slug, scheme, package, and the web IndexedDB database name) stay as they are.
+- Name: **Tuck**, listed in the App Store and Google Play as "Tuck: Photo Markup". The bundle ID and Android package are `com.nverk.tuck`, the URL scheme and Expo slug `tuck`, and the web is moving to tuck.tools. Only the repository and its folder are still named `photo-editor`.
 - Voice: plain, short, and confident, with no hype. The home tagline sets the tone: "The last touch for photos and screenshots. No account, no waiting." Tool names are verbs or plain nouns (Text, Redact, Crop, Adjust, Draw, Cut out).
 - Assets: wordmark, app icon (`assets/icon.svg`, `assets/adaptive-icon.svg`, `assets/favicon.svg`), bundled caption fonts, and Noto Emoji stickers (Apache 2.0).
 - The current visual identity, the "light table", is recorded in `docs/light-table-plan.md`.

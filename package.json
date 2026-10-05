@@ -1,5 +1,5 @@
 {
-  "name": "photo-editor",
+  "name": "tuck",
   "main": "index",
   "scripts": {
     "start": "expo start",

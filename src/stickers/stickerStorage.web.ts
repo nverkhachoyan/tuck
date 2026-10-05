@@ -9,7 +9,7 @@ import {
 // a database of their own, so adding them didn't mean upgrading the
 // projects' database under another open tab.
 
-const DATABASE = "photo-editor-stickers";
+const DATABASE = "tuck-stickers";
 const STICKERS = "stickers";
 
 type StickerRecord = { sticker: SavedSticker; image: Blob };

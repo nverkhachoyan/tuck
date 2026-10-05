@@ -3,7 +3,7 @@
 // server render) or throw (storage that's full or turned off), and then
 // preferences just aren't kept.
 
-const PREFIX = "photo-editor:";
+const PREFIX = "tuck:";
 
 /**
  * What was last saved under `key`, or undefined. It isn't checked: it may

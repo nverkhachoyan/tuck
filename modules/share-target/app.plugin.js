@@ -20,6 +20,8 @@ const ENTITLEMENTS_FILE = `${TARGET}.entitlements`;
 
 const label = (config) => `Edit in ${config.name}`;
 const appGroup = (config) => `group.${config.ios.bundleIdentifier}`;
+const extensionBundleId = (config) =>
+	`${config.ios.bundleIdentifier}.${TARGET}`;
 
 // The extension and the app share this group's folder.
 function withAppGroup(config) {
@@ -31,6 +33,39 @@ function withAppGroup(config) {
 		}
 		return config;
 	});
+}
+
+// EAS Build signs only the targets it's told about, so it makes the
+// extension's provisioning profile, App Group included, from this entry.
+function withEasAppExtension(config) {
+	const eas = config.extra?.eas ?? {};
+	const experimental = eas.build?.experimental ?? {};
+	const others = (experimental.ios?.appExtensions ?? []).filter(
+		(extension) => extension.targetName !== TARGET,
+	);
+	const extension = {
+		targetName: TARGET,
+		bundleIdentifier: extensionBundleId(config),
+		entitlements: {
+			"com.apple.security.application-groups": [appGroup(config)],
+		},
+	};
+	return {
+		...config,
+		extra: {
+			...config.extra,
+			eas: {
+				...eas,
+				build: {
+					...eas.build,
+					experimental: {
+						...experimental,
+						ios: { ...experimental.ios, appExtensions: [...others, extension] },
+					},
+				},
+			},
+		},
+	};
 }
 
 function writeExtensionFiles(config, folder) {
@@ -98,8 +133,12 @@ function withShareExtension(config) {
 		objects.PBXTargetDependency ??= {};
 		objects.PBXContainerItemProxy ??= {};
 
-		const bundleId = `${config.ios.bundleIdentifier}.${TARGET}`;
-		const target = project.addTarget(TARGET, "app_extension", TARGET, bundleId);
+		const target = project.addTarget(
+			TARGET,
+			"app_extension",
+			TARGET,
+			extensionBundleId(config),
+		);
 		project.addBuildPhase(
 			[SWIFT_FILE],
 			"PBXSourcesBuildPhase",
@@ -206,4 +245,6 @@ function withShareActivity(config) {
 }
 
 module.exports = (config) =>
-	withShareActivity(withShareExtension(withAppGroup(config)));
+	withShareActivity(
+		withShareExtension(withAppGroup(withEasAppExtension(config))),
+	);

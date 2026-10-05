@@ -6,7 +6,7 @@ import { MISSING_IMAGE_MESSAGE, type ProjectStorage } from "./projectLifecycle";
 // if it has any, in another.
 // A transaction either completes or leaves nothing, so saves need no draft.
 
-const DATABASE = "photo-editor";
+const DATABASE = "tuck";
 const PROJECTS = "projects";
 const PHOTOS = "photos";
 
@@ -29,7 +29,7 @@ const heldLocks = new Map<
 	string,
 	{ release: () => void; finished: Promise<void> }
 >();
-const lockName = (id: string) => `photo-editor-project-${id}`;
+const lockName = (id: string) => `tuck-project-${id}`;
 
 /** Keep a project claimed until its editor closes, including across tabs. */
 export async function claimProject(id: string): Promise<boolean> {
