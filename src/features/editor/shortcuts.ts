@@ -46,6 +46,7 @@ export type Shortcut =
 	| { type: "zoom"; to: "in" | "out" | "fit" }
 	| { type: "tool"; tool: ToolKey }
 	| { type: "layers" }
+	| { type: "export" }
 	| { type: "help" };
 
 export type KeyPress = {
@@ -78,6 +79,8 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 				return { type: "redo" };
 			case "d":
 				return { type: "duplicate" };
+			case "e":
+				return { type: "export" };
 			case "]":
 				return { type: "reorder", step: 1 };
 			case "[":
@@ -148,6 +151,7 @@ export const SHORTCUT_GROUPS: {
 		items: [
 			{ keys: "mod+Z", action: "Undo" },
 			{ keys: "mod+shift+Z", action: "Redo" },
+			{ keys: "mod+E", action: "Export" },
 			{ keys: "mod+D", action: "Duplicate" },
 			{ keys: "mod+]", action: "Bring forward" },
 			{ keys: "mod+[", action: "Send backward" },

@@ -29,6 +29,15 @@ describe("shortcutFor", () => {
 		});
 	});
 
+	test("exports with the modifier and E", () => {
+		assert.deepEqual(shortcutFor(press("e", { metaKey: true })), {
+			type: "export",
+		});
+		assert.deepEqual(shortcutFor(press("E", { ctrlKey: true })), {
+			type: "export",
+		});
+	});
+
 	test("duplicates and reorders with the modifier", () => {
 		assert.deepEqual(shortcutFor(press("d", { metaKey: true })), {
 			type: "duplicate",

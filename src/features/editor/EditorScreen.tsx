@@ -504,6 +504,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const doneWithTool = tool === "find" ? finishFinding : finishTool;
 	const cancelWithTool = tool === "find" ? backToRedacting : cancelTool;
 
+	const openExport = () => router.push(exportHref(projectId));
+
 	const startNewText = () =>
 		textEditing.startNew(canvasRef.current?.visibleArea());
 
@@ -552,6 +554,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				break;
 			case "redo":
 				redo();
+				break;
+			case "export":
+				openExport();
 				break;
 			case "zoom":
 				canvasRef.current?.zoom(command.to);
@@ -724,7 +729,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 											}
 										: undefined
 								}
-								onExport={() => router.push(exportHref(projectId))}
+								onExport={openExport}
 							/>
 						}
 					/>
@@ -1141,6 +1146,7 @@ function HeaderActions({
 					icon="share-outline"
 					variant="primary"
 					size="small"
+					shortcut="mod+E"
 					onPress={onExport}
 				/>
 			</View>

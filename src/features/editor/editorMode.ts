@@ -270,8 +270,9 @@ export function shortcutCommand(
 			(shortcut.type === "tool" && shortcut.tool === "add");
 		return closes ? { type: "closeAdd" } : null;
 	}
-	// The view zooms whatever's in use.
-	if (shortcut.type === "zoom") return shortcut;
+	// The view zooms whatever's in use, and Export takes it as it is, as the
+	// header's button does.
+	if (shortcut.type === "zoom" || shortcut.type === "export") return shortcut;
 	// Escape stops picking a color, or puts the tool down; the rest pick up
 	// another tool or act on a selection, which holds still while a tool is
 	// in use.

@@ -360,6 +360,14 @@ describe("shortcutCommand", () => {
 		}
 	});
 
+	test("Export runs over a tool and the eyedropper, but not the Add sheet", () => {
+		const exporting: Shortcut = { type: "export" };
+		for (const state of [initialEditorMode, drawing, picking]) {
+			assert.equal(shortcutCommand(state, null, exporting), exporting);
+		}
+		assert.equal(shortcutCommand(adding, null, exporting), null);
+	});
+
 	test("the Add sheet closes with Escape or A, and lets other keys pass", () => {
 		assert.deepEqual(shortcutCommand(adding, null, esc), {
 			type: "closeAdd",
