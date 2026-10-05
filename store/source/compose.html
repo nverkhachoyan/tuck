@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+	@font-face {
+		font-family: Anton;
+		src: url("../../node_modules/@expo-google-fonts/anton/400Regular/Anton_400Regular.ttf");
+	}
+	* { box-sizing: border-box; margin: 0; }
+	html, body { overflow: hidden; }
+	body {
+		background: #e2e3e6;
+		font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	h1 {
+		font-family: Anton, sans-serif;
+		font-weight: 400;
+		color: #000;
+		text-align: center;
+		line-height: 1.08;
+		letter-spacing: 0.005em;
+	}
+	/* The highlighter swipe: a little off square, as a marker stroke is. */
+	mark {
+		background: none;
+		color: inherit;
+		position: relative;
+		white-space: nowrap;
+	}
+	mark::before {
+		content: "";
+		position: absolute;
+		left: -0.12em;
+		right: -0.14em;
+		top: 0.16em;
+		bottom: 0.04em;
+		background: #ffe433;
+		border-radius: 0.06em 0.12em 0.08em 0.1em;
+		transform: rotate(-2deg);
+		z-index: -1;
+	}
+	p {
+		color: #5d5f66;
+		text-align: center;
+	}
+	/* The screenshot as a print on the table: a contact shadow and a soft lift. */
+	.print {
+		overflow: hidden;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16), 0 30px 70px rgba(0, 0, 0, 0.16);
+	}
+</style>
+</head>
+<body>
+<h1 id="head">Tuck</h1>
+<p id="sub"></p>
+<div id="frame" class="print"><img id="shot" alt="The app" /></div>
+<script>
+	const q = new URLSearchParams(location.search);
+	const W = +q.get("w");
+	const H = +q.get("h");
+	// Sizes scale with the canvas's width; a phone frame is the reference.
+	const u = W / 1320;
+	document.body.style.width = `${W}px`;
+	document.body.style.height = `${H}px`;
+	const head = document.getElementById("head");
+	head.innerHTML = q.get("head");
+	head.style.fontSize = `${(+q.get("size") || 128) * u}px`;
+	head.style.marginTop = `${(+q.get("top") || 150) * u}px`;
+	head.style.maxWidth = `${W * 0.86}px`;
+	const sub = document.getElementById("sub");
+	sub.textContent = q.get("sub") ?? "";
+	sub.style.fontSize = `${46 * u}px`;
+	sub.style.marginTop = `${(q.get("sub") ? 28 : 0) * u}px`;
+	const shot = document.getElementById("shot");
+	const frame = document.getElementById("frame");
+	// Rows to leave off the top of the screenshot, such as a status bar.
+	const trim = +q.get("trim") || 0;
+	shot.onload = () => {
+		const gap = 80 * u;
+		const bottom = (+q.get("bottom") || 90) * u;
+		const used = head.offsetTop + head.offsetHeight + sub.offsetHeight + gap;
+		const maxH = H - used - bottom;
+		const maxW = W * (+q.get("width") || 0.84);
+		const height = shot.naturalHeight - trim;
+		const scale = Math.min(maxW / shot.naturalWidth, maxH / height);
+		shot.style.display = "block";
+		shot.style.width = `${shot.naturalWidth * scale}px`;
+		shot.style.marginTop = `${-trim * scale}px`;
+		frame.style.width = `${shot.naturalWidth * scale}px`;
+		frame.style.height = `${height * scale}px`;
+		frame.style.marginTop = `${gap}px`;
+		frame.style.borderRadius = `${(+q.get("radius") || 0.11) * shot.naturalWidth * scale}px`;
+		document.title = "ready";
+	};
+	shot.src = q.get("shot");
+</script>
+</body>
+</html>

@@ -60,8 +60,8 @@ doesn't require terms.
   - Age rating questionnaire (expect 4+).
   - Digital Services Act trader status, needed to sell in the EU. A trader's
     address, phone, and email are shown on the listing.
-  - Screenshots for the 6.9" iPhone (1320 × 2868). The app is iPhone only,
-    so no iPad screenshots are needed.
+  - Screenshots for the 6.9" iPhone and the 13" iPad, and the listing text:
+    both are in `store/screenshots/` and `docs/store-listing.md`.
   - Export compliance is already answered (`usesNonExemptEncryption: false`).
   - Review notes: no sign-in needed; mention the share extension.
 
@@ -92,6 +92,5 @@ doesn't require terms.
   - No photo and video permissions declaration: the app doesn't ask to read
     the library (`READ_MEDIA_IMAGES` is blocked in `app.json`). It picks
     photos with the system picker and saves without reading.
-- [ ] Store listing: short description (80 characters), full description,
-      a 512 × 512 icon, a 1024 × 500 feature graphic, and at least two phone
-      screenshots.
+- [ ] Store listing: the text in `docs/store-listing.md`, and the icon,
+      feature graphic, and phone screenshots in `store/screenshots/`.

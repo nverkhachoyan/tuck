@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0}
+body{width:393px;height:852px;font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;background:#fff;color:#111;overflow:hidden}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px 36px;font-weight:600;font-size:16px}
+.status .r{display:flex;gap:6px;align-items:center}
+.bar{width:25px;height:12px;border:1.5px solid #111;border-radius:4px;position:relative}.bar:after{content:"";position:absolute;inset:1.5px;right:5px;background:#111;border-radius:1.5px}
+.head{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0 12px;border-bottom:1px solid #eee}
+.av{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f6b26b,#e06666);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:20px}
+.name{font-size:13px;color:#333}
+.thread{padding:14px 14px;display:flex;flex-direction:column;gap:6px;font-size:16.5px;line-height:1.3}
+.t{align-self:center;font-size:12px;color:#8a8a8e;margin:6px 0}
+.in,.out{max-width:76%;padding:9px 13px;border-radius:19px}
+.in{align-self:flex-start;background:#ececf0}
+.out{align-self:flex-end;background:#2b2d33;color:#fff}
+.card{align-self:flex-start;width:76%;border-radius:16px;overflow:hidden;background:#ececf0}
+.map{height:120px;background:
+ linear-gradient(90deg,transparent 46%,#fff 46%,#fff 50%,transparent 50%),
+ linear-gradient(0deg,transparent 58%,#fff 58%,#fff 62%,transparent 62%),
+ linear-gradient(25deg,transparent 30%,#f7e7a6 30%,#f7e7a6 34%,transparent 34%),
+ #dfe8d6;position:relative}
+.pin{position:absolute;left:47%;top:44%;width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#e0463d;border:3px solid #fff}
+.addr{padding:9px 12px;font-size:14.5px}
+.addr b{display:block;font-size:15px}
+</style></head><body>
+<div class="status"><span>9:41</span><span class="r"><span class="bar"></span></span></div>
+<div class="head"><div class="av" id="av">MR</div><div class="name" id="name">Maya Reyes</div></div>
+<div class="thread">
+<div class="t">Today 9:12 AM</div>
+<div class="in">Are you still coming Saturday? 🎉</div>
+<div class="out">Wouldn't miss it! Send me the address again?</div>
+<div class="in">It's at my sister's place</div>
+<div class="card"><div class="map"><div class="pin"></div></div><div class="addr"><span id="addr"><b>48 Linden Street, Apt 4B</b>Riverside, CA 92501</span></div></div>
+<div class="in">Gate code is <span id="code">4471</span>. Call me if it doesn't work: <span id="phone">(415) 555-0142</span></div>
+<div class="out">Perfect, see you at 7!</div>
+<div class="in">Bring a jacket, it's on the roof 🌙</div>
+<div class="t">9:20 AM</div>
+<div class="out">Can I bring Sam?</div>
+<div class="in">Of course! The more the merrier</div>
+</div></body></html>
