@@ -43,7 +43,8 @@ const signed = (steps: number) => (steps > 0 ? `+${steps}` : `${steps}`);
 /**
  * The Adjust tool's dock panel: a choice of adjustment, each marked while
  * `adjustments` changes it, over the dial that changes the chosen one.
- * While the dial moves, its value shows large just above the dock.
+ * While the dial moves, its value shows large just above the dock, rather
+ * than over the ruler, which leaves the dock no room for it.
  */
 export function AdjustPanel({
 	controller,
@@ -77,7 +78,6 @@ export function AdjustPanel({
 				label={label}
 				increaseLabel={`Increase ${label.toLowerCase()}`}
 				decreaseLabel={`Decrease ${label.toLowerCase()}`}
-				readout={signed}
 				valueText={signed}
 				onBegin={controller.begin}
 				onChange={controller.change}
@@ -179,11 +179,14 @@ function AdjustmentChoice({
 }
 
 const styles = StyleSheet.create({
+	// Lowered a little: the highlight reaches above the choices, and the
+	// dial's track is empty below its ticks.
 	panel: {
 		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 12,
-		gap: 2,
+		paddingTop: 6,
+		gap: 8,
 	},
 	// Just above the dock, over the canvas, touching nothing.
 	changingArea: {
@@ -213,16 +216,17 @@ const styles = StyleSheet.create({
 	choices: {
 		flexDirection: "row",
 		justifyContent: "center",
-		gap: 8,
+		gap: 4,
 	},
+	// Padded, so the highlight clears the longest name, as it does a tool's.
 	choice: {
 		minWidth: 64,
 		alignItems: "center",
-		gap: 2,
+		paddingHorizontal: 6,
 	},
 	choiceIcon: {
 		width: 32,
-		height: 28,
+		height: 24,
 		borderRadius: radii.small,
 		alignItems: "center",
 		justifyContent: "center",

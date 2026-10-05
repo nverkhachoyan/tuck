@@ -44,8 +44,9 @@ type WebKeyDownEvent = {
 /**
  * A ruler dragged sideways to set a value within ±`max`, like a photo app's
  * straighten or adjustment dial. It settles on 0 with a haptic tick, and a
- * double tap returns it there. `value` is shown, above the ruler as
- * `readout` of its steps, and read out to assistive tech as `valueText`.
+ * double tap returns it there. `value` is shown above the ruler as
+ * `readout` of its steps, when given, and read out to assistive tech as
+ * `valueText`.
  * The callbacks run on the UI thread (they must be worklets), bracketing
  * each change.
  */
@@ -68,7 +69,7 @@ export function Dial({
 	label: string;
 	increaseLabel: string;
 	decreaseLabel: string;
-	readout: (steps: number) => string;
+	readout?: (steps: number) => string;
 	valueText: (steps: number) => string;
 	onBegin: () => void;
 	onChange: (value: number) => void;
@@ -192,7 +193,7 @@ export function Dial({
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.readout}>{readout(steps)}</Text>
+			{readout && <Text style={styles.readout}>{readout(steps)}</Text>}
 			<GestureDetector gesture={gesture}>
 				<View
 					{...webKeyProps}
