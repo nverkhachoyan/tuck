@@ -192,7 +192,9 @@ export type EditorCanvasHandle = {
  * if the tool can add to it, or drags out a shape or a redaction's box. The
  * selection then holds still, and only a redaction's or a shape's is
  * outlined, to show what the tool's style changes. Dragging out a box or a
- * shape, a tap picks the one to change, or none. Picking a color, where the
+ * shape, a tap picks the one to change, or none, and the one picked, or
+ * just drawn, shows its handles: a drag from on it or them moves or resizes
+ * it, and one from anywhere else draws another. Picking a color, where the
  * finger lifts is the point. While adjusting, a sideways drag anywhere turns
  * the adjustment's dial (`input.drag`).
  *
@@ -324,11 +326,12 @@ export function EditorCanvas({
 	}, [sharedTargets, targets]);
 
 	const selectedLayerId = selectedLayer?.id ?? null;
-	const rules = inputRules(input, zoom !== null);
+	const rules = inputRules(input, zoom !== null, selectedLayer);
 	const tool = input.type === "tool" ? input.tool : null;
 	// What gestures move: nothing while painting, typing, finding, or
-	// adjusting.
-	const movableLayer = rules.holdsStill ? undefined : selectedLayer;
+	// adjusting, except the box or shape a tool drags out.
+	const movableLayer = rules.selection === "still" ? undefined : selectedLayer;
+	const dragsSelection = rules.selection === "drags";
 
 	// Keep the gesture-driven values in step with the selected layer: when the
 	// selection changes, and when that layer does (a commit, undo, restyle).
@@ -437,6 +440,32 @@ export function EditorCanvas({
 		};
 	}, [oneFingerMode, live, sharedTargets, viewport]);
 
+	// Where a tool's drag moves the selection rather than drawing: on its
+	// handles, or on the selection where it's the topmost layer.
+	const selectionDrag = useMemo(() => {
+		if (!dragsSelection) return null;
+		const onSelection = (x: number, y: number) => {
+			"worklet";
+			const id = live.activeId.value;
+			if (id === null) return false;
+			const point = viewPointToDocument(viewport, { x, y });
+			return (
+				handleUnder(
+					readLiveTransform(live),
+					readLiveBox(live),
+					live.resizeMode.value,
+					point,
+					viewport.scale,
+				) !== null || findLayerAt(sharedTargets.value, point)?.id === id
+			);
+		};
+		const offSelection = (x: number, y: number) => {
+			"worklet";
+			return !onSelection(x, y);
+		};
+		return { onSelection, offSelection };
+	}, [dragsSelection, live, sharedTargets, viewport]);
+
 	// What a press at the pointer would do: grab a handle, move a layer, move
 	// the view, or nothing. Renders only when that changes, not on every
 	// pointer move.
@@ -446,6 +475,13 @@ export function EditorCanvas({
 			const handle = handleAt(screenX, screenY);
 			if (handle && selectedLayer) {
 				setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
+				return;
+			}
+			if (dragsSelection) {
+				const onSelection =
+					selectedLayerId !== null &&
+					layerAt(screenX, screenY) === selectedLayerId;
+				setCursor(onSelection ? "move" : "crosshair");
 				return;
 			}
 			if (zoom) {
@@ -459,6 +495,7 @@ export function EditorCanvas({
 			setCursor(layerAt(screenX, screenY) === null ? "default" : "move");
 		},
 		[
+			dragsSelection,
 			handleAt,
 			layerAt,
 			scale,
@@ -493,14 +530,16 @@ export function EditorCanvas({
 		onResize: handleResize,
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
-		dragsView: dragAlone,
+		standsAside: selectionDrag?.offSelection ?? dragAlone,
+		dragOnly: dragsSelection,
 	});
-	// Two fingers transform the selected layer while it can move.
+	// Two fingers transform the selected layer while it can, and a tool
+	// leaves them to the view.
 	const viewGesture = useViewGesture({
 		shown,
 		frame,
 		live,
-		twoFingers: movableLayer === undefined,
+		twoFingers: rules.selection !== "transforms",
 		dragAlone,
 		onCommit: commitViewport,
 	});
@@ -578,6 +617,7 @@ export function EditorCanvas({
 		points: strokePoints,
 		strokeId,
 		onStroke: handleStroke,
+		standsAside: selectionDrag?.onSelection,
 	});
 	const liveStroke = useMemo<LiveStroke | null>(
 		() =>
@@ -604,9 +644,10 @@ export function EditorCanvas({
 		() => textEditLayer && withPlaceholder(textEditLayer),
 		[textEditLayer],
 	);
+	// A selection with handles has its outline from them.
 	const outlinedLayer =
 		input.type === "tool"
-			? restyles(input.tool, selectedLayer)
+			? !dragsSelection && restyles(input.tool, selectedLayer)
 				? selectedLayer
 				: null
 			: input.type === "editText"
@@ -692,10 +733,17 @@ export function EditorCanvas({
 	}[input.type];
 	// The view's gestures join at the top, one by one: a `Simultaneous` nested
 	// in another drops the outer one's relations, so the mode's gestures and
-	// the view's would race, the first to start cancelling the other.
+	// the view's would race, the first to start cancelling the other. A tool
+	// that drags the selection shares one finger with it the same way, each
+	// standing aside where the other takes the drag (see `selectionDrag`).
 	const canvasGesture = useMemo(
-		() => Gesture.Simultaneous(modeGesture, ...viewGesture.toGestureArray()),
-		[modeGesture, viewGesture],
+		() =>
+			Gesture.Simultaneous(
+				modeGesture,
+				...(dragsSelection ? [gesture] : []),
+				...viewGesture.toGestureArray(),
+			),
+		[modeGesture, dragsSelection, gesture, viewGesture],
 	);
 
 	useImperativeHandle(
@@ -722,7 +770,7 @@ export function EditorCanvas({
 							<Group transform={shownTransform}>
 								<EditorScene
 									document={document}
-									selectedLayerId={rules.holdsStill ? null : selectedLayerId}
+									selectedLayerId={movableLayer ? selectedLayerId : null}
 									textEdit={textEdit}
 									viewScale={shown.scale}
 									settledScale={scale}
@@ -755,17 +803,20 @@ export function EditorCanvas({
 				</View>
 			</GestureDetector>
 			{/* Outside the gesture's view, so a press on the bar is the bar's. */}
-			{selectionBar && movableLayer && scale > 0 && (
-				<SelectionBarFrame
-					key={movableLayer.id}
-					live={live}
-					shown={shown}
-					width={size.width - rightInset}
-					height={size.height - bottomInset}
-				>
-					{selectionBar}
-				</SelectionBarFrame>
-			)}
+			{selectionBar &&
+				rules.selection === "transforms" &&
+				movableLayer &&
+				scale > 0 && (
+					<SelectionBarFrame
+						key={movableLayer.id}
+						live={live}
+						shown={shown}
+						width={size.width - rightInset}
+						height={size.height - bottomInset}
+					>
+						{selectionBar}
+					</SelectionBarFrame>
+				)}
 			{zoom && (
 				<View
 					style={[

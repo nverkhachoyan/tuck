@@ -1,4 +1,5 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
+import type { Layer } from "../../../model/document.ts";
 import type { DialDrag } from "../Dial.tsx";
 import type { CanvasTool } from "./EditorScene.tsx";
 
@@ -17,9 +18,11 @@ export type CanvasInput =
 	| { type: "adjust"; drag: DialDrag };
 
 export type InputRules = {
-	// The selection neither moves nor shows its handles, and two fingers
-	// zoom the view wherever they land.
-	holdsStill: boolean;
+	// What the selection does: holds still, without handles; transforms with
+	// any gesture; or, while dragging out boxes or shapes, moves and resizes
+	// with one finger that lands on it or its handles, which the tool's
+	// drags elsewhere leave be.
+	selection: "still" | "transforms" | "drags";
 	// Where one finger pans the view: anywhere, where taps don't drag; off
 	// the selection and its handles, while zoomed in; or nowhere.
 	oneFinger: "anywhere" | "offSelection" | null;
@@ -27,23 +30,50 @@ export type InputRules = {
 	cursor: "pointer" | "crosshair" | "grab" | "ew-resize" | "default" | "hover";
 };
 
-/** What `input` asks of the canvas's shared behavior, `zoomed` in or not. */
-export function inputRules(input: CanvasInput, zoomed: boolean): InputRules {
+/**
+ * What `input` asks of the canvas's shared behavior, `zoomed` in or not,
+ * with `selected` the selected layer.
+ */
+export function inputRules(
+	input: CanvasInput,
+	zoomed: boolean,
+	selected?: Layer,
+): InputRules {
 	switch (input.type) {
 		case "select":
 			return {
-				holdsStill: false,
+				selection: "transforms",
 				oneFinger: zoomed ? "offSelection" : null,
 				cursor: "hover",
 			};
 		case "tool":
-			return { holdsStill: true, oneFinger: null, cursor: "crosshair" };
+			return drags(input.tool, selected)
+				? { selection: "drags", oneFinger: null, cursor: "hover" }
+				: { selection: "still", oneFinger: null, cursor: "crosshair" };
 		case "editText":
-			return { holdsStill: true, oneFinger: null, cursor: "hover" };
+			return { selection: "still", oneFinger: null, cursor: "hover" };
 		case "find":
-			return { holdsStill: true, oneFinger: "anywhere", cursor: "pointer" };
+			return { selection: "still", oneFinger: "anywhere", cursor: "pointer" };
 		// One finger turns the dial, so two move the view.
 		case "adjust":
-			return { holdsStill: true, oneFinger: null, cursor: "ew-resize" };
+			return { selection: "still", oneFinger: null, cursor: "ew-resize" };
+	}
+}
+
+/**
+ * Whether `tool` moves `layer` when it's selected: one it drags out, a
+ * redaction or a shape, and not locked.
+ */
+function drags(tool: CanvasTool, layer: Layer | undefined): boolean {
+	if (!layer || layer.locked) return false;
+	switch (tool.type) {
+		case "redactBox":
+			return layer.type === "redaction";
+		case "drawShape":
+			return layer.type === "shape";
+		case "draw":
+		case "redactBrush":
+		case "pickColor":
+			return false;
 	}
 }

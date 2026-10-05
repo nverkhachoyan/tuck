@@ -72,8 +72,11 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  * selected, they zoom the view (see `useViewGesture`). Dragging empty space
  * keeps moving the selection, which helps with small text, unless it's
  * `anchored` (a redaction, which moves only from on itself). A one-finger drag
- * from where `dragsView` says the view moves instead is left alone, from
- * touch-down to lift.
+ * from where `standsAside` says another gesture takes it (the view's, or a
+ * tool's) is left alone, from touch-down to lift.
+ *
+ * With `dragOnly`, only one finger's drag moves the selection or its
+ * handles: there's no tap, pinch, or rotate, and no other layer is picked up.
  *
  * Moving snaps the layer's edges onto the edges of the document and the
  * other layers, or its center onto their centers; a side being resized
@@ -99,7 +102,8 @@ export function useLayerTransformGesture({
 	onResize,
 	onHover,
 	onHoverEnd,
-	dragsView = null,
+	standsAside = null,
+	dragOnly = false,
 }: {
 	live: LiveTransform;
 	aspectLocked: SharedValue<boolean>;
@@ -114,9 +118,9 @@ export function useLayerTransformGesture({
 	onResize: (id: string, transform: Transform, box: Box) => void;
 	onHover: (screenX: number, screenY: number) => void;
 	onHoverEnd: () => void;
-	// Whether one finger landing at a point moves the view rather than a
-	// layer. A worklet.
-	dragsView?: ((screenX: number, screenY: number) => boolean) | null;
+	// Whether one finger landing at a point is another gesture's. A worklet.
+	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
+	dragOnly?: boolean;
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
 	// variables captured by worklets are copied, so writes wouldn't persist.
@@ -147,7 +151,7 @@ export function useLayerTransformGesture({
 	const resizedBox = useSharedValue(false);
 	// What this drag's layer snaps onto, gathered when it starts.
 	const snapLines = useSharedValue({ x: NO_LINES, y: NO_LINES });
-	// Whether this pan's drag moves the view, and the pan stands aside.
+	// Whether this pan's drag is another gesture's, and the pan stands aside.
 	const aside = useSharedValue(false);
 	// Whether this pan started off an anchored selection, which stays put.
 	const pinned = useSharedValue(false);
@@ -339,9 +343,11 @@ export function useLayerTransformGesture({
 
 		// Starts on activation (after the finger moves), not touch-down, so a tap
 		// on an unselected layer stays a plain select.
+		// Dragging only, a second finger is the view's (10 is the default).
 		const pan = Gesture.Pan()
+			.maxPointers(dragOnly ? 1 : 10)
 			.onBegin((event) => {
-				aside.value = dragsView?.(event.x, event.y) ?? false;
+				aside.value = standsAside?.(event.x, event.y) ?? false;
 				downX.value = event.x;
 				downY.value = event.y;
 				travel.value = startTravel(event);
@@ -373,7 +379,7 @@ export function useLayerTransformGesture({
 						toDocument(downX.value, downY.value),
 					);
 					const activeId = live.activeId.value;
-					if (onSelect && target && target.id !== activeId) {
+					if (onSelect && !dragOnly && target && target.id !== activeId) {
 						holdLayer(live, target.id, target);
 						scheduleOnRN(onSelect, target.id);
 					} else if (target?.id !== activeId) {
@@ -479,10 +485,12 @@ export function useLayerTransformGesture({
 				scheduleOnRN(onHoverEnd);
 			});
 
-		return Gesture.Simultaneous(
-			hover,
-			Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotate)),
-		);
+		return dragOnly
+			? Gesture.Simultaneous(hover, pan)
+			: Gesture.Simultaneous(
+					hover,
+					Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotate)),
+				);
 	}, [
 		live,
 		aspectLocked,
@@ -495,7 +503,8 @@ export function useLayerTransformGesture({
 		onResize,
 		onHover,
 		onHoverEnd,
-		dragsView,
+		standsAside,
+		dragOnly,
 		aside,
 		pinned,
 		downX,

@@ -18,19 +18,26 @@ const MIN_POINT_GAP_PX = 1.5;
  * a pan once the finger moves, so a tap that doesn't would otherwise leave
  * no dot. For the same reason a second finger is watched for here rather
  * than failing the pan with `maxPointers`, which a tap would also look like.
+ *
+ * A stroke that starts where `standsAside` says, which is decided where the
+ * finger lands, is left alone to lift, and handed to no one.
  */
 export function usePaintGesture({
 	viewport,
 	points,
 	strokeId,
 	onStroke,
+	standsAside = null,
 }: {
 	viewport: DocumentViewport;
 	points: SharedValue<number[]>;
 	strokeId: SharedValue<number>;
 	onStroke: (points: number[], id: number) => void;
+	// Whether one finger landing at a point is another gesture's. A worklet.
+	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
 }) {
 	const cancelled = useSharedValue(false);
+	const aside = useSharedValue(false);
 
 	return useMemo(() => {
 		// Rounded as the model rounds strokes, so a saved stroke is what was drawn.
@@ -56,13 +63,15 @@ export function usePaintGesture({
 				else cancel();
 			})
 			.onBegin((event) => {
+				aside.value = standsAside?.(event.x, event.y) ?? false;
 				strokeId.value += 1;
-				points.value = cancelled.value ? [] : toDocument(event.x, event.y);
+				points.value =
+					cancelled.value || aside.value ? [] : toDocument(event.x, event.y);
 				if (event.numberOfPointers > 1) cancel();
 			})
 			.onUpdate((event) => {
 				if (event.numberOfPointers > 1) cancel();
-				if (cancelled.value) return;
+				if (cancelled.value || aside.value) return;
 				const [x, y] = toDocument(event.x, event.y);
 				const gap = MIN_POINT_GAP_PX / viewport.scale;
 				points.modify((line) => {
@@ -76,9 +85,9 @@ export function usePaintGesture({
 				});
 			})
 			.onFinalize(() => {
-				if (!cancelled.value) {
+				if (!cancelled.value && !aside.value) {
 					scheduleOnRN(onStroke, points.value, strokeId.value);
 				}
 			});
-	}, [viewport, points, strokeId, cancelled, onStroke]);
+	}, [viewport, points, strokeId, cancelled, aside, onStroke, standsAside]);
 }
