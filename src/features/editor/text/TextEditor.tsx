@@ -8,7 +8,7 @@ import {
 	View,
 } from "react-native";
 import type { TextSelection } from "@/layers/textEditing";
-import { colors } from "@/theme";
+import { colorScheme, colors } from "@/theme";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 
 export type TextEditorHandle = {
@@ -110,7 +110,7 @@ export function TextEditor({
 					}
 				}}
 				multiline
-				keyboardAppearance="dark"
+				keyboardAppearance={colorScheme}
 				accessibilityLabel="Caption"
 				style={styles.input}
 			/>
