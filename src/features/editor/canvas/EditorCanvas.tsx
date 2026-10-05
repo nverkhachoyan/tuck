@@ -78,6 +78,7 @@ import {
 import { readShownViewport, type ShownViewport } from "./shownViewport";
 import { insideDocument, strokeIntent, TAP_SLOP_PX } from "./strokeIntent";
 import { useCanvasZoom } from "./useCanvasZoom";
+import { useDialDragGesture } from "./useDialDragGesture";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
 import { useTextEditGesture } from "./useTextEditGesture";
@@ -177,8 +178,8 @@ export type EditorCanvasHandle = {
  * trackpad pinch or the wheel on web (`useWheelZoom`), by key through
  * `zoom`, and with a double tap on nothing to select, which zooms in there
  * or back out. While zoomed in, one finger pans it too, unless it lands on
- * the selected layer or its handles, and so does it anywhere while finding
- * or adjusting. While zoomed, a Fit button returns to the fit. A crop, which
+ * the selected layer or its handles, and so does it anywhere while
+ * finding. While zoomed, a Fit button returns to the fit. A crop, which
  * changes the document's size, starts afresh at the fit.
  *
  * All touch handling (tap-to-select, drag/pinch/rotate, the selection's
@@ -192,7 +193,8 @@ export type EditorCanvasHandle = {
  * selection then holds still, and only a redaction's or a shape's is
  * outlined, to show what the tool's style changes. Dragging out a box or a
  * shape, a tap picks the one to change, or none. Picking a color, where the
- * finger lifts is the point. While adjusting, presses do nothing.
+ * finger lifts is the point. While adjusting, a sideways drag anywhere turns
+ * the adjustment's dial (`input.drag`).
  *
  * A tap away from what a tool works on calls `onTapAway`: off the document
  * while painting, off the searched image while finding, and anywhere while
@@ -402,12 +404,12 @@ export function EditorCanvas({
 		],
 	);
 
-	// Where one finger moves the view too: anywhere while finding or
-	// adjusting, whose taps don't drag, and while zoomed in, anywhere off the
+	// Where one finger moves the view too: anywhere while finding, whose taps
+	// don't drag, and while zoomed in, anywhere off the
 	// selected layer and its handles, so another layer is tapped before it's
 	// dragged. At the fit, where the view can't move, a drag picks up the
-	// layer under it, or moves the selection. Painting and typing keep one
-	// finger for themselves. Both the view's gesture and the layers' ask it,
+	// layer under it, or moves the selection. Painting, typing, and
+	// adjusting keep one finger for themselves. Both the view's gesture and the layers' ask it,
 	// once, where the finger lands.
 	const oneFingerMode = rules.oneFinger;
 	const dragAlone = useMemo(() => {
@@ -629,6 +631,12 @@ export function EditorCanvas({
 				}),
 		[handleIdleTap],
 	);
+	// While adjusting, a sideways drag turns the dial, and a tap still puts
+	// the tool down.
+	const adjustGesture = useDialDragGesture(
+		input.type === "adjust" ? input.drag : null,
+		idleGesture,
+	);
 	const handleDetectionTap = useCallback(
 		(screenX: number, screenY: number) => {
 			if (input.type !== "find" || scale === 0) return;
@@ -680,7 +688,7 @@ export function EditorCanvas({
 		tool: paintGesture,
 		editText: textGesture,
 		find: detectionGesture,
-		adjust: idleGesture,
+		adjust: adjustGesture,
 	}[input.type];
 	// The view's gestures join at the top, one by one: a `Simultaneous` nested
 	// in another drops the outer one's relations, so the mode's gestures and

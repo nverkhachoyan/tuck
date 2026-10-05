@@ -1,5 +1,4 @@
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
 	useAnimatedReaction,
@@ -15,36 +14,29 @@ import {
 import { colors, radii, typography, webTransition } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
-import { Dial, type DialScale } from "../Dial";
-import { ADJUST_DIAL_MAX, type AdjustController } from "./useAdjustController";
+import { Dial } from "../Dial";
+import {
+	ADJUST_DIAL_MAX,
+	ADJUST_DIAL_SCALE,
+	type AdjustController,
+} from "./useAdjustController";
 
-type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
-
-const ADJUSTMENTS: Record<AdjustmentKey, { label: string; icon: IconName }> = {
-	brightness: { label: "Brightness", icon: "brightness-6" },
-	contrast: { label: "Contrast", icon: "contrast-circle" },
-	saturation: { label: "Saturation", icon: "water-outline" },
-	temperature: { label: "Warmth", icon: "thermometer" },
+const LABELS: Record<AdjustmentKey, string> = {
+	brightness: "Brightness",
+	contrast: "Contrast",
+	saturation: "Saturation",
+	temperature: "Warmth",
 };
 
-// A percent a step, with a tick every 5 and a long one every 25, settling on
-// 0 from 2 away.
-const PERCENT: DialScale = {
-	step: 1,
-	pxPerStep: 3,
-	tickEvery: 5,
-	majorEvery: 25,
-	snap: 2,
-	wholeSteps: true,
-};
+const CHIP_HEIGHT = 30;
 
 const signed = (steps: number) => (steps > 0 ? `+${steps}` : `${steps}`);
 
 /**
  * The Adjust tool's dock panel: a choice of adjustment, each marked while
- * `adjustments` changes it, over the dial that changes the chosen one.
- * While the dial moves, its value shows large just above the dock, rather
- * than over the ruler, which leaves the dock no room for it.
+ * `adjustments` changes it, over the dial that changes the chosen one, which
+ * a sideways drag over the photo turns too. While it changes, its value
+ * shows large just above the dock.
  */
 export function AdjustPanel({
 	controller,
@@ -54,7 +46,7 @@ export function AdjustPanel({
 	adjustments: Adjustments | undefined;
 }) {
 	const { chosen, choose } = controller;
-	const { label } = ADJUSTMENTS[chosen];
+	const label = LABELS[chosen];
 	return (
 		<View style={styles.panel}>
 			<ChangingValue controller={controller} label={label} />
@@ -62,7 +54,7 @@ export function AdjustPanel({
 				{adjustmentKeys.map((key) => (
 					<AdjustmentChoice
 						key={key}
-						adjustment={key}
+						label={LABELS[key]}
 						selected={key === chosen}
 						changed={(adjustments?.[key] ?? 0) !== 0}
 						onPress={() => choose(key)}
@@ -74,10 +66,11 @@ export function AdjustPanel({
 				key={chosen}
 				value={controller.dialValue}
 				max={ADJUST_DIAL_MAX}
-				scale={PERCENT}
+				scale={ADJUST_DIAL_SCALE}
 				label={label}
 				increaseLabel={`Increase ${label.toLowerCase()}`}
 				decreaseLabel={`Decrease ${label.toLowerCase()}`}
+				readout={signed}
 				valueText={signed}
 				onBegin={controller.begin}
 				onChange={controller.change}
@@ -118,51 +111,39 @@ function ChangingValue({
 	);
 }
 
+/** An adjustment's name as a chip, with a dot while it's changed. */
 function AdjustmentChoice({
-	adjustment,
+	label,
 	selected,
 	changed,
 	onPress,
 }: {
-	adjustment: AdjustmentKey;
+	label: string;
 	selected: boolean;
 	changed: boolean;
 	onPress: () => void;
 }) {
-	const { label, icon } = ADJUSTMENTS[adjustment];
 	return (
 		<Pressable
-			hitSlop={4}
+			// To a 44pt target.
+			hitSlop={{ top: 7, bottom: 7, left: 2, right: 2 }}
 			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={changed ? `${label}, changed` : label}
 			accessibilityState={{ selected }}
-			style={styles.choice}
 		>
 			{(state) => {
 				const { pressed, hovered } = interaction(state);
 				return (
-					<>
-						{selected && <Highlight style={styles.highlight} />}
-						<View
-							style={[
-								styles.choiceIcon,
-								webTransition,
-								hovered && styles.choiceHovered,
-								pressed && styles.choicePressed,
-							]}
-						>
-							<MaterialCommunityIcons
-								name={icon}
-								size={20}
-								color={selected ? colors.onHighlight : colors.textPrimary}
-							/>
-							{changed && (
-								<View
-									style={[styles.changed, selected && styles.changedSelected]}
-								/>
-							)}
-						</View>
+					<View
+						style={[
+							styles.choice,
+							webTransition,
+							hovered && styles.choiceHovered,
+							pressed && styles.choicePressed,
+						]}
+					>
+						{selected && <Highlight />}
 						<Text
 							style={[
 								styles.choiceLabel,
@@ -171,7 +152,12 @@ function AdjustmentChoice({
 						>
 							{label}
 						</Text>
-					</>
+						{changed && (
+							<View
+								style={[styles.changed, selected && styles.changedSelected]}
+							/>
+						)}
+					</View>
 				);
 			}}
 		</Pressable>
@@ -179,13 +165,13 @@ function AdjustmentChoice({
 }
 
 const styles = StyleSheet.create({
-	// Lowered a little: the highlight reaches above the choices, and the
-	// dial's track is empty below its ticks.
+	// Lowered a little: the highlight's tilt reaches above the chips, and the
+	// dial's ticks stop short of its track's foot.
 	panel: {
 		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 12,
-		paddingTop: 6,
+		paddingTop: 4,
 		gap: 8,
 	},
 	// Just above the dock, over the canvas, touching nothing.
@@ -218,42 +204,30 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		gap: 4,
 	},
-	// Padded, so the highlight clears the longest name, as it does a tool's.
 	choice: {
-		minWidth: 64,
+		height: CHIP_HEIGHT,
+		flexDirection: "row",
 		alignItems: "center",
-		paddingHorizontal: 6,
-	},
-	choiceIcon: {
-		width: 32,
-		height: 24,
+		gap: 4,
+		paddingHorizontal: 10,
 		borderRadius: radii.small,
-		alignItems: "center",
-		justifyContent: "center",
+		borderCurve: "continuous",
 	},
 	choiceHovered: {
 		backgroundColor: colors.hoverOverlay,
 	},
 	choicePressed: {
-		backgroundColor: colors.pressedOverlay,
-		transform: [{ scale: 0.92 }],
+		transform: [{ scale: 0.96 }],
 	},
 	choiceLabel: {
-		...typography.caption,
+		...typography.label,
 		color: colors.textPrimary,
 	},
+	// The same weight as the rest, so choosing one doesn't shift the row.
 	choiceLabelSelected: {
 		color: colors.onHighlight,
 	},
-	// Around the icon and its name, and a little past the name's descenders.
-	highlight: {
-		top: -2,
-		bottom: -4,
-	},
 	changed: {
-		position: "absolute",
-		top: 1,
-		right: 1,
 		width: 6,
 		height: 6,
 		borderRadius: 3,

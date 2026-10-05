@@ -19,6 +19,9 @@ import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
 import { colors, typography } from "@/theme";
 
+const TRACK = 28;
+const INDICATOR = 3;
+
 /**
  * How a dial's ruler measures its value: `step` is one unit of it, which
  * the readout counts and arrow keys move by, drawn `pxPerStep` apart. A
@@ -34,6 +37,44 @@ export type DialScale = {
 	snap: number;
 	wholeSteps?: boolean;
 };
+
+/**
+ * A value a drag outside the dial can change too, as dragging over the photo
+ * changes Adjust's: the dial's value, its scale and reach, and the worklets
+ * that bracket each change.
+ */
+export type DialDrag = {
+	value: DerivedValue<number>;
+	scale: DialScale;
+	max: number;
+	onBegin: () => void;
+	onChange: (value: number) => void;
+	onEnd: () => void;
+};
+
+/**
+ * Where a drag `travel` pixels along takes a dial's value from `start`,
+ * `current` being where it is now: within ±`max`, in whole steps if the
+ * scale takes only those, and settling on 0 near it with a haptic tick as it
+ * lands. A worklet.
+ */
+export function draggedDialValue(
+	start: number,
+	travel: number,
+	current: number,
+	scale: DialScale,
+	max: number,
+): number {
+	"worklet";
+	const { step, pxPerStep, snap, wholeSteps } = scale;
+	let next = Math.min(max, Math.max(-max, start + (travel / pxPerStep) * step));
+	if (wholeSteps) next = Math.round(next / step) * step;
+	if (Math.abs(next / step) < snap) {
+		if (current !== 0) scheduleOnRN(hapticTick);
+		next = 0;
+	}
+	return next;
+}
 
 type WebKeyDownEvent = {
 	nativeEvent: { key: string };
@@ -75,7 +116,7 @@ export function Dial({
 	onChange: (value: number) => void;
 	onEnd: () => void;
 }) {
-	const { step, pxPerStep, tickEvery, majorEvery, snap, wholeSteps } = scale;
+	const { step, pxPerStep, tickEvery, majorEvery } = scale;
 	const [width, setWidth] = useState(0);
 	const [steps, setSteps] = useState(0);
 	const start = useSharedValue(0);
@@ -98,15 +139,18 @@ export function Dial({
 				start.value = value.value;
 				onBegin();
 			})
+			// The ruler moves under the indicator, so dragging it left raises
+			// the value.
 			.onUpdate((event) => {
-				const raw = start.value - (event.translationX / pxPerStep) * step;
-				let next = Math.min(max, Math.max(-max, raw));
-				if (wholeSteps) next = Math.round(next / step) * step;
-				if (Math.abs(next / step) < snap) {
-					if (value.value !== 0) scheduleOnRN(hapticTick);
-					next = 0;
-				}
-				onChange(next);
+				onChange(
+					draggedDialValue(
+						start.value,
+						-event.translationX,
+						value.value,
+						scale,
+						max,
+					),
+				);
 			})
 			.onFinalize(() => {
 				if (!dragging.value) return;
@@ -122,23 +166,20 @@ export function Dial({
 				onEnd();
 			});
 		return Gesture.Race(pan, reset);
-	}, [
-		value,
-		start,
-		dragging,
-		max,
-		step,
-		pxPerStep,
-		snap,
-		wholeSteps,
-		onBegin,
-		onChange,
-		onEnd,
-	]);
+	}, [value, start, dragging, max, scale, onBegin, onChange, onEnd]);
 
 	const ruler = useAnimatedStyle(() => ({
 		transform: [{ translateX: width / 2 - (value.value / step) * pxPerStep }],
 	}));
+	// From 0 to the value, under the ticks, so how far it's moved reads at a
+	// glance.
+	const fill = useAnimatedStyle(() => {
+		const offset = (value.value / step) * pxPerStep;
+		return {
+			left: width / 2 - Math.max(offset, 0),
+			width: Math.abs(offset),
+		};
+	});
 
 	const ticks = useMemo(() => {
 		const last = Math.floor(maxSteps / tickEvery);
@@ -229,7 +270,10 @@ export function Dial({
 							/>
 						))}
 					</Animated.View>
-					<View style={[styles.indicator, { left: width / 2 - 1 }]} />
+					<Animated.View style={[styles.fill, fill]} />
+					<View
+						style={[styles.indicator, { left: width / 2 - INDICATOR / 2 }]}
+					/>
 				</View>
 			</GestureDetector>
 		</View>
@@ -246,10 +290,11 @@ const styles = StyleSheet.create({
 		fontVariant: ["tabular-nums"],
 		color: colors.textPrimary,
 	},
-	// Tall enough to grab comfortably, though the ticks are short.
+	// Slim, as the dial is only one way to change the value: Adjust takes a
+	// drag over the photo too.
 	track: {
 		alignSelf: "stretch",
-		height: 36,
+		height: TRACK,
 		overflow: "hidden",
 	},
 	ruler: {
@@ -260,22 +305,29 @@ const styles = StyleSheet.create({
 	},
 	tick: {
 		position: "absolute",
-		top: 12,
+		top: 9,
 		width: 1,
-		height: 12,
+		height: 8,
 		backgroundColor: colors.textTertiary,
 	},
 	majorTick: {
-		top: 8,
-		height: 20,
+		top: 6,
+		height: 14,
 		backgroundColor: colors.textSecondary,
+	},
+	fill: {
+		position: "absolute",
+		bottom: 2,
+		height: 2,
+		borderRadius: 1,
+		backgroundColor: colors.primary,
 	},
 	indicator: {
 		position: "absolute",
-		top: 4,
-		width: 3,
-		height: 28,
-		borderRadius: 1.5,
+		top: 2,
+		width: INDICATOR,
+		height: 22,
+		borderRadius: INDICATOR / 2,
 		backgroundColor: colors.primary,
 	},
 });

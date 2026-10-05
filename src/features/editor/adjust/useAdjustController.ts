@@ -16,9 +16,21 @@ import {
 } from "@/model/adjustments";
 import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
 import { framingAnchor } from "@/model/framing";
+import type { DialScale } from "../Dial";
 
 // The dial counts in percent: -100 to 100 for -1 to 1.
 export const ADJUST_DIAL_MAX = 100;
+
+// A percent a step, with a tick every 5 and a long one every 25, settling on
+// 0 from 2 away. A drag over the photo moves it at the same rate.
+export const ADJUST_DIAL_SCALE: DialScale = {
+	step: 1,
+	pxPerStep: 3,
+	tickEvery: 5,
+	majorEvery: 25,
+	snap: 2,
+	wholeSteps: true,
+};
 
 /**
  * The image the Adjust tool changes: the selected image, or else the photo

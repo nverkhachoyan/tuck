@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import type { DialDrag } from "../Dial.tsx";
 import { type CanvasInput, inputRules } from "./canvasInput.ts";
 
 const pen: CanvasInput = {
@@ -8,6 +9,8 @@ const pen: CanvasInput = {
 	tool: { type: "draw", brush: { type: "pen", color: "#FF3B30", width: 10 } },
 };
 const pick: CanvasInput = { type: "tool", tool: { type: "pickColor" } };
+// Only its type matters to the rules.
+const adjust: CanvasInput = { type: "adjust", drag: {} as DialDrag };
 const find: CanvasInput = {
 	type: "find",
 	imageId: "photo",
@@ -47,17 +50,21 @@ describe("inputRules", () => {
 		});
 	});
 
-	test("finding and adjusting pan with one finger anywhere", () => {
+	test("finding pans with one finger anywhere", () => {
 		assert.deepEqual(inputRules(find, false), {
 			holdsStill: true,
 			oneFinger: "anywhere",
 			cursor: "pointer",
 		});
-		assert.equal(inputRules({ type: "adjust" }, false).oneFinger, "anywhere");
 	});
 
-	test("adjusting shows a grab cursor only when zoomed", () => {
-		assert.equal(inputRules({ type: "adjust" }, false).cursor, "default");
-		assert.equal(inputRules({ type: "adjust" }, true).cursor, "grab");
+	test("adjusting keeps one finger for the dial, zoomed or not", () => {
+		for (const zoomed of [false, true]) {
+			assert.deepEqual(inputRules(adjust, zoomed), {
+				holdsStill: true,
+				oneFinger: null,
+				cursor: "ew-resize",
+			});
+		}
 	});
 });

@@ -19,6 +19,8 @@ import { detectionTarget } from "@/detection/detectionTarget";
 import { AddSheet } from "@/features/editor/add/AddSheet";
 import { AdjustPanel } from "@/features/editor/adjust/AdjustPanel";
 import {
+	ADJUST_DIAL_MAX,
+	ADJUST_DIAL_SCALE,
 	adjustTarget,
 	useAdjustController,
 } from "@/features/editor/adjust/useAdjustController";
@@ -31,6 +33,7 @@ import {
 } from "@/features/editor/canvas/EditorCanvas";
 import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
+import type { DialDrag } from "@/features/editor/Dial";
 import {
 	Dock,
 	DockFooter,
@@ -351,6 +354,19 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			? { type: "redactBrush", brush, effect }
 			: { type: "redactBox", effect };
 	}, [eyedropper, tool, draw.settings, redact.settings, documentSize]);
+	// A sideways drag over the photo turns Adjust's dial, as the dial does.
+	const { dialValue, begin, change, end } = adjustController;
+	const adjustDrag = useMemo(
+		(): DialDrag => ({
+			value: dialValue,
+			scale: ADJUST_DIAL_SCALE,
+			max: ADJUST_DIAL_MAX,
+			onBegin: begin,
+			onChange: change,
+			onEnd: end,
+		}),
+		[dialValue, begin, change, end],
+	);
 	// What input on the canvas does: the eyedropper's or a painting tool's,
 	// then Find's taps, Adjust's stillness, typing, or else selecting.
 	const editingText = textEditing.edit !== null;
@@ -363,10 +379,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				onToggle: find.toggle,
 			};
 		}
-		if (tool === "adjust") return { type: "adjust" };
+		if (tool === "adjust") return { type: "adjust", drag: adjustDrag };
 		if (editingText) return { type: "editText" };
 		return { type: "select" };
-	}, [canvasTool, tool, detectedImage, find.toggle, editingText]);
+	}, [canvasTool, tool, detectedImage, find.toggle, editingText, adjustDrag]);
 	const handlePaintStroke = (points: number[]) => {
 		if (canvasTool?.type === "draw") {
 			drawStroke({ ...canvasTool.brush, points });
