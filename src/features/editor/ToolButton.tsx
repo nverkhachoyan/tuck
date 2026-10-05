@@ -2,8 +2,10 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
 	Children,
 	type ComponentProps,
+	createContext,
 	isValidElement,
 	type ReactNode,
+	useContext,
 	useState,
 } from "react";
 import {
@@ -23,6 +25,10 @@ import { useTooltip } from "@/ui/Tooltip";
 // and at its ends while they fit.
 const TOOL_WIDTH = 56;
 const ROW_GAP = 12;
+
+// Whether tools stand in a column, whose tooltips go beside them rather than
+// over the next one down.
+const InRail = createContext(false);
 
 // Tools use MaterialCommunityIcons (photo-editor glyphs like format-text, crop,
 // blur); small inline actions use Ionicons via IconButton.
@@ -64,7 +70,12 @@ export function ToolButton({
 	compact?: boolean;
 	onPress: () => void;
 }) {
-	const { anchor, tooltip } = useTooltip(label, shortcut);
+	const inRail = useContext(InRail);
+	const { anchor, tooltip } = useTooltip(
+		label,
+		shortcut,
+		inRail ? "right" : "below",
+	);
 	const inactive = disabled || busy;
 	const danger = tone === "danger";
 	return (
@@ -171,12 +182,14 @@ export function ToolRow({
 	const [width, setWidth] = useState(0);
 	if (vertical) {
 		return (
-			<ScrollView
-				showsVerticalScrollIndicator={false}
-				contentContainerStyle={styles.column}
-			>
-				{children}
-			</ScrollView>
+			<InRail.Provider value={true}>
+				<ScrollView
+					showsVerticalScrollIndicator={false}
+					contentContainerStyle={styles.column}
+				>
+					{children}
+				</ScrollView>
+			</InRail.Provider>
 		);
 	}
 	const count = Children.toArray(children).length;

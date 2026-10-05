@@ -10,7 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { colors, floatingShadow, radii, space, typography } from "@/theme";
-import type { TooltipAnchorProps } from "./Tooltip";
+import type { TooltipAnchorProps, TooltipSide } from "./Tooltip";
 
 const SHOW_DELAY_MS = 500;
 // After one tooltip hides, the next shows at once for this long, so running
@@ -28,12 +28,14 @@ const isMac =
 
 /**
  * Shows the label after a moment of hover, below the control or above it
- * near the window's bottom. It's portaled to the page's body, so a scroll
- * view or a transformed parent can't clip it.
+ * near the window's bottom, or with `side` "right", beside it, for a column
+ * of controls, where below would cover the next one. It's portaled to the
+ * page's body, so a scroll view or a transformed parent can't clip it.
  */
 export function useTooltip(
 	text: string,
 	shortcut?: string,
+	side: TooltipSide = "below",
 ): { anchor: TooltipAnchorProps; tooltip: ReactNode } {
 	const ref = useRef<View>(null);
 	const [shown, setShown] = useState(false);
@@ -70,7 +72,7 @@ export function useTooltip(
 	return {
 		anchor: { ref, onHoverIn, onHoverOut, onPressIn },
 		tooltip: shown ? (
-			<Bubble anchor={ref} text={text} shortcut={shortcut} />
+			<Bubble anchor={ref} text={text} shortcut={shortcut} side={side} />
 		) : null,
 	};
 }
@@ -79,10 +81,12 @@ function Bubble({
 	anchor,
 	text,
 	shortcut,
+	side,
 }: {
 	anchor: RefObject<View | null>;
 	text: string;
 	shortcut?: string;
+	side: TooltipSide;
 }) {
 	const bubbleRef = useRef<View>(null);
 	const [position, setPosition] = useState<{ left: number; top: number }>();
@@ -94,6 +98,19 @@ function Bubble({
 		if (!target || !bubble) return;
 		const a = target.getBoundingClientRect();
 		const b = bubble.getBoundingClientRect();
+		if (side === "right") {
+			setPosition({
+				left: a.right + GAP,
+				top: Math.max(
+					MARGIN,
+					Math.min(
+						a.top + a.height / 2 - b.height / 2,
+						window.innerHeight - MARGIN - b.height,
+					),
+				),
+			});
+			return;
+		}
 		const fitsBelow = a.bottom + GAP + b.height <= window.innerHeight - MARGIN;
 		setPosition({
 			left: Math.max(
@@ -105,7 +122,7 @@ function Bubble({
 			),
 			top: fitsBelow ? a.bottom + GAP : a.top - GAP - b.height,
 		});
-	}, [anchor]);
+	}, [anchor, side]);
 
 	return createPortal(
 		<View

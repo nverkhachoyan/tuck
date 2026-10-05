@@ -1,6 +1,9 @@
 import type { ReactNode, RefObject } from "react";
 import type { View } from "react-native";
 
+/** Where the label shows: below the control, or beside it on its right. */
+export type TooltipSide = "below" | "right";
+
 export type TooltipAnchorProps = {
 	ref?: RefObject<View | null>;
 	onHoverIn?: () => void;
@@ -17,6 +20,7 @@ export type TooltipAnchorProps = {
 export function useTooltip(
 	_text: string,
 	_shortcut?: string,
+	_side?: TooltipSide,
 ): { anchor: TooltipAnchorProps; tooltip: ReactNode } {
 	return { anchor: {}, tooltip: null };
 }
