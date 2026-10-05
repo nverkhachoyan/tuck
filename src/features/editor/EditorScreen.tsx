@@ -120,8 +120,9 @@ import {
 } from "@/model/document";
 import type { Framing } from "@/model/framing";
 import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
+import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
-import { addImage } from "@/projects/projectService";
+import { addImage, openProjectName } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
 import { useProjectSession } from "@/projects/useProjectSession";
 import { renderThumbnail, sampleColor } from "@/render/renderDocument";
@@ -404,6 +405,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		projectId === null
 			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
+
+	// What home lists the project as: the name it was given, or its text.
+	const projectTitle = useMemo(
+		() =>
+			(projectId !== null && openProjectName(projectId)) ||
+			projectLabel(document),
+		[projectId, document],
+	);
 
 	const deleteNotice = useDeleteNotice(document);
 	const deleteWithNotice = (id: string) => {
@@ -721,6 +730,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					<ScreenHeader
 						backLabel="Back to projects"
 						onBack={leave}
+						// Only a wide screen has room between Back and the actions.
+						title={wide ? projectTitle : undefined}
+						subtitle={saveProblem ? "Not saved" : "Saved on this device"}
 						action={
 							<HeaderActions
 								typing={textEditing.edit !== null}

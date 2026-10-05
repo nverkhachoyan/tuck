@@ -112,6 +112,14 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		return autosaveError;
 	}
 
+	/**
+	 * The name an open project was given, if any. It can't be renamed while
+	 * it's open, so this holds for the session.
+	 */
+	function openProjectName(id: string): string | null {
+		return openProjects.get(id)?.name ?? null;
+	}
+
 	function savedDocument(id: string, document: EditorDocument) {
 		const project = openProjects.get(id);
 		if (!project) return null;
@@ -622,6 +630,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	return {
 		subscribeAutosave,
 		getAutosaveError,
+		openProjectName,
 		hasUnsavedChanges,
 		queueAutosave,
 		flushAutosave,

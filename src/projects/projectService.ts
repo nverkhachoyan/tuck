@@ -8,6 +8,7 @@ export const {
 	createProject,
 	createBlankProject,
 	openProject,
+	openProjectName,
 	addImage,
 	closeProject,
 	deleteProject,

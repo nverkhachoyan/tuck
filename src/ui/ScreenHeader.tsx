@@ -14,8 +14,8 @@ import { useTooltip } from "./Tooltip";
 const BACK_SIZE = 44;
 
 /**
- * Top bar with a Back action, an optional centered title, and an optional
- * trailing action. Back is a chevron; `backLabel` names where it goes, for
+ * Top bar with a Back action, an optional centered title (with a `subtitle`
+ * under it, in small print), and an optional trailing action. Back is a chevron; `backLabel` names where it goes, for
  * assistive tech and as its tooltip on web. Without `onBack`, the title, if
  * any, takes Back's place. Crop's header has neither: it covers the editor
  * like a dialog, its name is in the dock's footer, and it keeps only its
@@ -23,19 +23,28 @@ const BACK_SIZE = 44;
  */
 export function ScreenHeader({
 	title,
+	subtitle,
 	backLabel = "Back",
 	onBack,
 	action,
 }: {
 	title?: string;
+	subtitle?: string;
 	backLabel?: string;
 	onBack?: () => void;
 	action?: ReactNode;
 }) {
 	const heading = title ? (
-		<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
-			{title}
-		</Text>
+		<View style={styles.heading}>
+			<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
+				{title}
+			</Text>
+			{subtitle && (
+				<Text style={styles.subtitle} numberOfLines={1}>
+					{subtitle}
+				</Text>
+			)}
+		</View>
 	) : null;
 	return (
 		<View style={styles.container}>
@@ -99,9 +108,17 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		pointerEvents: "none",
 	},
+	heading: {
+		alignItems: "center",
+		maxWidth: "50%",
+	},
 	title: {
 		...typography.title,
 		color: colors.textPrimary,
+	},
+	subtitle: {
+		...typography.caption,
+		color: colors.textSecondary,
 	},
 	// Pulled left so the chevron, not its target, lines up with the edge.
 	back: {

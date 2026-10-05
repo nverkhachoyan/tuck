@@ -833,6 +833,18 @@ describe("renaming and duplicating", () => {
 		assert.equal(savedProject(harness, id).thumbnail?.url, "data:image/a");
 	});
 
+	test("an open project gives its name, and an unnamed one none", async () => {
+		const harness = createHarness();
+		const named = await createSavedProject(harness);
+		const unnamed = await createSavedProject(harness);
+		await harness.projects.renameProject(named, "Keeper");
+		assert.equal(harness.projects.openProjectName(named), null);
+		await harness.projects.openProject(named);
+		await harness.projects.openProject(unnamed);
+		assert.equal(harness.projects.openProjectName(named), "Keeper");
+		assert.equal(harness.projects.openProjectName(unnamed), null);
+	});
+
 	test("a copy has the document and the images it uses, on top", async (t) => {
 		let now = 0;
 		t.mock.method(Date, "now", () => (now += 1000));
