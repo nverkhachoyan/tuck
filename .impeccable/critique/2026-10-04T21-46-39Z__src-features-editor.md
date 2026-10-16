@@ -5,7 +5,7 @@ max_score: 40
 na_heuristics: 
 p0_count: 0
 p1_count: 2
-target_identity: "file:/Users/nverk/Dev/photo-editor/src/features/editor"
+target_identity: "file:/Users/nverk/Dev/tuck/src/features/editor"
 timestamp: 2026-10-04T21-46-39Z
 slug: src-features-editor
 ---

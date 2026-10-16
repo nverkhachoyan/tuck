@@ -41,7 +41,7 @@ Tagline in use: "The last touch for photos and screenshots." Alternative: "Make 
 
 ## Brand Commitments
 
-- Name: **Tuck**, listed in the App Store and Google Play as "Tuck: Photo Markup". The bundle ID and Android package are `com.nverk.tuck`, the URL scheme and Expo slug `tuck`, and the web is moving to tuck.tools. Only the repository and its folder are still named `photo-editor`.
+- Name: **Tuck**, listed in the App Store and Google Play as "Tuck: Photo Markup". The bundle ID and Android package are `com.nverk.tuck`, the URL scheme and Expo slug `tuck`, and the web is moving to tuck.tools. The repository and its folder are named `tuck` too.
 - Voice: plain, short, and confident, with no hype. The home tagline sets the tone: "The last touch for photos and screenshots. No account, no waiting." Tool names are verbs or plain nouns (Text, Redact, Crop, Adjust, Draw, Cut out).
 - Assets: wordmark, app icon (`assets/icon.svg`, `assets/adaptive-icon.svg`, `assets/favicon.svg`), bundled caption fonts, and Noto Emoji stickers (Apache 2.0).
 - The current visual identity, the "light table", is recorded in `docs/light-table-plan.md`.
