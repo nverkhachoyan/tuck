@@ -102,7 +102,9 @@ An unknown address gets Vercel's plain-text "The page could not be found / NOT_F
 
 ## Priority 3: Discoverability
 
-### 3.1 Give the home page content in its HTML
+### 3.1 Give the home page content in its HTML (done)
+
+Built as described: `HomeScreen` shows the hero when it's prerendered (on web, with no `window`), without the tagline's fade-in, which Reanimated starts from `visibility: hidden`. The page's HTML now has the wordmark as its `h1` and the tagline. In the browser nothing changed: someone with projects sees the hero while the app loads, then the list, as they saw an empty page before.
 
 The prerendered home page says only "Loading… Paste Blank canvas Settings Support Privacy Licenses": no wordmark, no tagline, no heading, because the hero waits until the project list is known to be empty. Search engines and anyone on a slow connection see nothing about what Tuck is.
 

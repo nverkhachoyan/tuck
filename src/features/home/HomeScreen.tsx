@@ -51,6 +51,11 @@ const ABOUT_PAGES = [
 	{ label: "Licenses", href: "/licenses" },
 ] as const;
 
+// The web export renders the page ahead of time, where there are no
+// projects to list, and its HTML is all a search engine or a slow connection
+// sees, so that render always shows the hero. (`window` is defined on native.)
+const prerendering = Platform.OS === "web" && typeof window === "undefined";
+
 const openPhotoLabels: Record<HomeStatus, string> = {
 	loading: "Loading…",
 	saving: "Saving…",
@@ -173,13 +178,16 @@ export default function HomeScreen() {
 				</View>
 			) : (
 				<View style={styles.hero}>
-					{/* Only once the list is known to be empty, so a returning
-						user's projects don't replace a flash of it. */}
-					{listed && (
+					{/* In the app, only once the list is known to be empty, so a
+						returning user's projects don't replace a flash of it. */}
+					{(listed || prerendering) && (
 						<>
 							<Wordmark size={72} />
 							<Animated.Text
-								entering={FadeIn.delay(160).duration(400)}
+								// Reanimated hides a view until it enters.
+								entering={
+									prerendering ? undefined : FadeIn.delay(160).duration(400)
+								}
 								style={styles.tagline}
 							>
 								The last touch for photos and screenshots.{"\n"}No account, no
