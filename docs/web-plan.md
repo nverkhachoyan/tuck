@@ -56,7 +56,9 @@ Fix, in `vercel.json` `headers`:
 * `/canvaskit.wasm`, `/mediapipe/(.*)`, `/tesseract/(.*)`: `public, max-age=86400, stale-while-revalidate=604800`. A library upgrade then reaches visitors within a day. Putting the package version in the path from `copy-web-assets.mjs` would let these be immutable too.
 * HTML keeps Vercel's default, so a deploy shows up at once.
 
-### 2.2 Security headers
+### 2.2 Security headers (done)
+
+Built with the CSP enforcing from the start, after a session through the app with it enforced on a local build (`serve` with the same headers): opening a photo, finding faces and text, Cut out, text, a sticker, crop, adjust, export, the home thumbnail, and reopening the project. Nothing the app needs was blocked. One thing was: MediaPipe sends usage logs (the task, timings, and an API key, no images) to `https://odml.pa.googleapis.com/v1/log` whenever a detector is made, and has no option to stop it. The live site has been sending them, which the privacy policy doesn't allow for; `connect-src 'self'` now blocks them, at the cost of a "Refused to connect" console error once per detector. `build:web` runs `scripts/check-csp.mjs`, which fails the build if a page has an inline script whose hash isn't in `script-src`.
 
 Only HSTS is sent. There's no Content Security Policy, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, or framing protection. A CSP matters more than usual here: `connect-src 'self'` is a promise the browser enforces that the page can't send photos anywhere, which backs up the privacy policy.
 

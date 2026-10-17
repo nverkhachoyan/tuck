@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\" \"modules/**/*.test.ts\"",
     "postinstall": "node scripts/copy-web-assets.mjs",
-    "build:web": "expo export -p web",
+    "build:web": "expo export -p web && node scripts/check-csp.mjs",
     "deploy": "npm run build:web && npx eas-cli@latest deploy"
   },
   "dependencies": {
