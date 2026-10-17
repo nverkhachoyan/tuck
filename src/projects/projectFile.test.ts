@@ -280,12 +280,20 @@ describe("parseSavedProject", () => {
 			width: 12,
 			points: [1, 2, 3, 4],
 		};
-		document.layers[0] = { ...photo, maskStrokes: [stroke] };
+		document.layers[0] = {
+			...photo,
+			maskStrokes: [stroke, { ...stroke, feather: 2 }],
+		};
 		assert.deepEqual(
 			parseSavedProject(savedJson({ document }))?.document,
 			document,
 		);
-		for (const maskStrokes of [[], [{ ...stroke, points: [1] }], "strokes"]) {
+		for (const maskStrokes of [
+			[],
+			[{ ...stroke, points: [1] }],
+			[{ ...stroke, feather: -1 }],
+			"strokes",
+		]) {
 			const damaged = {
 				...document,
 				layers: [{ ...photo, maskStrokes } as unknown as ImageLayer],

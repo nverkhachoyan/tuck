@@ -339,7 +339,7 @@ function isLayer(value: unknown): boolean {
 				(value.maskStrokes === undefined ||
 					(Array.isArray(value.maskStrokes) &&
 						value.maskStrokes.length > 0 &&
-						value.maskStrokes.every(isMaskStroke)))
+						value.maskStrokes.every(isCutStroke)))
 			);
 		case "text":
 			return (
@@ -424,6 +424,14 @@ function isMaskStroke(value: unknown): boolean {
 		value.points.length >= 2 &&
 		value.points.length % 2 === 0 &&
 		value.points.every(Number.isFinite)
+	);
+}
+
+function isCutStroke(value: unknown): boolean {
+	return (
+		isMaskStroke(value) &&
+		isFields(value) &&
+		(value.feather === undefined || isPositive(value.feather))
 	);
 }
 

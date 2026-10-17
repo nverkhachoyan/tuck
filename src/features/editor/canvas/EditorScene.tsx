@@ -48,6 +48,7 @@ import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
 import type { ColorMatrix } from "@/model/adjustments";
 import {
 	type Brush,
+	type CutStroke,
 	type EditorDocument,
 	identityTransform,
 	isLineShape,
@@ -114,7 +115,7 @@ export type CanvasTool =
 			brush: Omit<MaskStroke, "points">;
 			effect: RedactionEffect;
 	  }
-	| { type: "cutBrush"; layerId: string; brush: Omit<MaskStroke, "points"> }
+	| { type: "cutBrush"; layerId: string; brush: Omit<CutStroke, "points"> }
 	| { type: "pickSubject"; layerId: string };
 
 /**
@@ -760,7 +761,7 @@ function LiveCutPath({
 	brush,
 }: {
 	stroke: LiveStroke;
-	brush: Omit<MaskStroke, "points">;
+	brush: Omit<CutStroke, "points">;
 }) {
 	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
 	return <MaskStrokePath path={path} stroke={brush} />;

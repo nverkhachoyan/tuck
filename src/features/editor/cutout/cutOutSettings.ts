@@ -1,4 +1,4 @@
-import type { MaskStroke } from "../../../model/document.ts";
+import type { CutStroke } from "../../../model/document.ts";
 import type { Size } from "../../../model/geometry.ts";
 
 // Picks the subject under a tap, or paints the cut by hand: keeping what
@@ -10,17 +10,24 @@ export type CutOutSettings = {
 	// Indexes into `CUT_BRUSH_SIZES`; each brush keeps its own.
 	keepSize: number;
 	eraseSize: number;
+	// Whether both brushes' edges fade, like a found mask's.
+	soft: boolean;
 };
 
 export const defaultCutOutSettings: CutOutSettings = {
 	tool: "pick",
 	keepSize: 2,
 	eraseSize: 2,
+	soft: true,
 };
 
 // Brush widths as a share of the canvas's shorter side, like the other
 // tools' sizes. Finer than Redact's: they follow an edge, not cover a line.
 export const CUT_BRUSH_SIZES = [0.008, 0.016, 0.03, 0.05, 0.08];
+
+// A soft brush's feather, as a share of its width: its edge fades over about
+// half its width, and its middle stays solid.
+const SOFT_FEATHER = 1 / 6;
 
 const TOOLS: CutOutTool[] = ["pick", "keep", "erase"];
 
@@ -46,6 +53,10 @@ export function parseCutOutSettings(saved: unknown): CutOutSettings {
 		tool: TOOLS.find((tool) => tool === fields.tool) ?? "pick",
 		keepSize: indexOf("keepSize"),
 		eraseSize: indexOf("eraseSize"),
+		soft:
+			typeof fields.soft === "boolean"
+				? fields.soft
+				: defaultCutOutSettings.soft,
 	};
 }
 
@@ -62,17 +73,20 @@ export function cutOutTool(
 
 /**
  * The brush `tool` paints the cut with on a canvas of `size`: a pen keeps,
- * an eraser erases. Null for Pick, which taps rather than paints.
+ * an eraser erases, feathered when soft. Null for Pick, which taps rather
+ * than paints.
  */
 export function cutBrush(
 	settings: CutOutSettings,
 	tool: CutOutTool,
 	size: Size,
-): Omit<MaskStroke, "points"> | null {
+): Omit<CutStroke, "points"> | null {
 	if (tool === "pick") return null;
 	const index = tool === "keep" ? settings.keepSize : settings.eraseSize;
+	const width = CUT_BRUSH_SIZES[index] * Math.min(size.width, size.height);
 	return {
 		type: tool === "keep" ? "pen" : "eraser",
-		width: CUT_BRUSH_SIZES[index] * Math.min(size.width, size.height),
+		width,
+		...(settings.soft ? { feather: width * SOFT_FEATHER } : {}),
 	};
 }

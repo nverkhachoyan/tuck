@@ -1,4 +1,5 @@
 import {
+	BlurMask,
 	Group,
 	Mask,
 	Path,
@@ -9,7 +10,7 @@ import {
 } from "@shopify/react-native-skia";
 import { type ComponentProps, type ReactNode, useMemo } from "react";
 import { adjustmentMatrix, type ColorMatrix } from "@/model/adjustments";
-import type { ImageLayer, MaskStroke } from "@/model/document";
+import type { CutStroke, ImageLayer } from "@/model/document";
 import { pathFor } from "./DrawingLayerView";
 
 const MIRRORED = [{ scaleX: -1 }];
@@ -126,15 +127,15 @@ export function imageBox(layer: { width: number; height: number }) {
 /**
  * A stroke on a cut's mask: a pen paints white, which shows the image, and
  * an eraser black, which hides it. They're luminance, not colors, so they
- * don't follow the palette. `path` can be a shared value, for a stroke still
- * growing.
+ * don't follow the palette. A feathered one's edge is blurred. `path` can be
+ * a shared value, for a stroke still growing.
  */
 export function MaskStrokePath({
 	path,
 	stroke,
 }: {
 	path: ComponentProps<typeof Path>["path"];
-	stroke: Omit<MaskStroke, "points">;
+	stroke: Omit<CutStroke, "points">;
 }) {
 	return (
 		<Path
@@ -144,6 +145,10 @@ export function MaskStrokePath({
 			strokeJoin="round"
 			strokeWidth={stroke.width}
 			color={stroke.type === "pen" ? "white" : "black"}
-		/>
+		>
+			{stroke.feather !== undefined && (
+				<BlurMask blur={stroke.feather} style="normal" />
+			)}
+		</Path>
 	);
 }

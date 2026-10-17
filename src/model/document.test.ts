@@ -720,6 +720,26 @@ describe("addMaskStroke", () => {
 		assert.equal(isCutOut(layer), true);
 	});
 
+	test("scales a feather with the width, and leaves a hard edge without", () => {
+		const layer: ImageLayer = {
+			...photo(),
+			transform: { ...photo().transform, scaleX: 2, scaleY: 2 },
+		};
+		const [soft] =
+			addMaskStroke(layer, {
+				type: "pen",
+				width: 40,
+				feather: 6,
+				points: [0, 0],
+			}).maskStrokes ?? [];
+		assert.equal(soft.width, 20);
+		assert.equal(soft.feather, 3);
+		const [hard] =
+			addMaskStroke(layer, { type: "pen", width: 40, points: [0, 0] })
+				.maskStrokes ?? [];
+		assert.equal("feather" in hard, false);
+	});
+
 	test("follows the layer however it's placed, and flipped", () => {
 		const layer: ImageLayer = {
 			...photo(),

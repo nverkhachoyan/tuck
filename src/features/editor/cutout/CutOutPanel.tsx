@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
 import { ToolButton, ToolRow } from "../ToolButton";
@@ -93,7 +94,10 @@ export function CutOutPanel({
 	);
 }
 
-/** The size of the brush in use, in a tray above the dock. */
+/**
+ * The size of the brush in use, and whether both brushes' edges are soft,
+ * in a tray above the dock.
+ */
 export function CutOutOptions({
 	settings,
 	tool,
@@ -110,7 +114,7 @@ export function CutOutOptions({
 	const keep = tool === "keep";
 	return (
 		<ToolOptions
-			closeLabel="Close brush size"
+			closeLabel="Close brush options"
 			bottomInset={bottomInset}
 			onClose={onClose}
 			dismissOnOutsidePress={false}
@@ -133,6 +137,27 @@ export function CutOutOptions({
 							}
 						>
 							<SizeDot size={dot} color={keep ? colors.textPrimary : null} />
+						</RingChoice>
+					))}
+				</ToolChoices>
+			</ToolOption>
+			<ToolOption label="Edge">
+				<ToolChoices>
+					{[true, false].map((soft) => (
+						<RingChoice
+							key={String(soft)}
+							variant="highlight"
+							label={soft ? "Soft edge" : "Hard edge"}
+							selected={settings.soft === soft}
+							onPress={() => onChange({ ...settings, soft })}
+						>
+							{(ink) => (
+								<MaterialCommunityIcons
+									name={soft ? "blur-radial" : "circle"}
+									size={22}
+									color={ink}
+								/>
+							)}
 						</RingChoice>
 					))}
 				</ToolChoices>

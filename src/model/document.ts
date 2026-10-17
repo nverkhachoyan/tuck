@@ -49,7 +49,7 @@ export type ImageLayer = LayerBase & {
 	sticker?: boolean;
 	adjustments?: Adjustments;
 	mask?: string;
-	maskStrokes?: MaskStroke[];
+	maskStrokes?: CutStroke[];
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -125,6 +125,13 @@ export type MaskStroke = {
 	width: number;
 	points: number[];
 };
+
+/**
+ * A stroke on an image's cut: a mask stroke whose edge fades over
+ * `feather`, a blur's sigma in the same units as its width, to match a
+ * found mask's soft edges. It's hard without one.
+ */
+export type CutStroke = MaskStroke & { feather?: number };
 
 /**
  * How a redaction hides what's under it: covered with a color, blurred, or
@@ -715,12 +722,12 @@ export function withMask(
 /**
  * `layer` with a stroke painted in document space added to its cut, taken
  * into the image's own pixels, however the layer has been moved, scaled,
- * turned, or flipped since. Its width scales with the layer's average
- * scale: a stretched image stretches the brush too.
+ * turned, or flipped since. Its width and feather scale with the layer's
+ * average scale: a stretched image stretches the brush too.
  */
 export function addMaskStroke(
 	layer: ImageLayer,
-	stroke: MaskStroke,
+	stroke: CutStroke,
 ): ImageLayer {
 	const { transform } = layer;
 	const points: number[] = [];
@@ -737,7 +744,14 @@ export function addMaskStroke(
 		...layer,
 		maskStrokes: [
 			...(layer.maskStrokes ?? []),
-			{ type: stroke.type, width: roundPixel(stroke.width / scale), points },
+			{
+				type: stroke.type,
+				width: roundPixel(stroke.width / scale),
+				...(stroke.feather === undefined
+					? {}
+					: { feather: roundPixel(stroke.feather / scale) }),
+				points,
+			},
 		],
 	};
 }

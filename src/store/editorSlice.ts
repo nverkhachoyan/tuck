@@ -3,6 +3,7 @@
 import type { Adjustments } from "../model/adjustments.ts";
 import {
 	addMaskStroke,
+	type CutStroke,
 	createDrawingLayer,
 	createImageLayer,
 	createLayerGroup,
@@ -126,7 +127,7 @@ export type EditorSlice = {
 		mask: string | null,
 		options?: { keepStrokes?: boolean },
 	) => void;
-	paintMask: (id: string, stroke: MaskStroke) => void;
+	paintMask: (id: string, stroke: CutStroke) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;

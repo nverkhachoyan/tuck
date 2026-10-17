@@ -28,7 +28,7 @@ Cut out becomes a tool with Done and Cancel, like Adjust, working on one image:
 * **Opening it** on an image with no cut finds every subject, as Cut out does now, so one tap still cuts the photo out. On an image that's cut already, it opens to refine the cut.
 * **Subjects** finds every subject again, replacing the cut.
 * **Pick**: a tap on the photo cuts out only the subject under it. Once there's a cut, a tap adds the subject under it, or takes it out when the cut shows the photo where it was tapped: the masks are combined offscreen with Skia (the lighter of the two to add, the darker of the cut and the subject's inverse to take out) into a new grayscale PNG. `subjectMask(uri, point)` takes the point: iOS reads the instance label under it from `instanceMask`, Android asks ML Kit for each subject and keeps the one under it, and web gives MagicTouch the tap instead of the center (the biggest fix on web).
-* **Keep** and **Erase** brushes paint the cut by hand: Keep brings back what the model removed, Erase removes what it kept. Removed parts show faintly while the tool is open, so there's something to paint back.
+* **Keep** and **Erase** brushes paint the cut by hand: Keep brings back what the model removed, Erase removes what it kept. Removed parts show faintly while the tool is open, so there's something to paint back. Their edges are soft by default (a blur over about half the brush's width, `feather` on the stroke) so hand-fixed edges match the model's, or hard for a crisp line.
 * **Reset**, in the header as for Adjust, takes the cut off.
 * The brushes need no model, so the tool shows on every device, including iOS 16 and Android without Play services, where Subjects and Pick are left out.
 
