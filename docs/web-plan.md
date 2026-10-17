@@ -136,7 +136,9 @@ Built as described: home, Create, and the editor are `main` from their root, inf
 
 No page has a `main` landmark, and home's footer links aren't a `nav`. React Native Web maps `role="main"` and `role="navigation"` on a `View` to them. Add `main` to each screen's content and `navigation` to the footer links, so screen reader users can jump past the header.
 
-### 4.3 Load CanvasKit sooner
+### 4.3 Load CanvasKit sooner (done)
+
+Built the preload. On a local build, `canvaskit.wasm` now starts with the scripts (11 ms after navigation, from the `link`) instead of after they've run, and the app's own fetch reuses it: one request, no "preloaded but not used" warning. Not measured on a throttled phone, and async routes weren't tried.
 
 A first visit downloads 0.47 MB and 0.76 MB of JavaScript and 3.25 MB of CanvasKit (Brotli sizes) before anything works, and `canvaskit.wasm` is only requested once the first bundle has run. Add `<link rel="preload" href="/canvaskit.wasm" as="fetch" type="application/wasm" crossorigin>` to `+html.tsx` so it downloads alongside the JavaScript. Then measure with the web-perf skill (LCP and time until "Open a photo" is enabled, on a throttled phone profile) before trying anything bigger, like Expo Router's async routes.
 
