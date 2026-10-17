@@ -46,7 +46,7 @@ Fix: use `textSecondary` (6.4:1 and 6.5:1) for those three, and keep `textTertia
 
 ### 2.1 Cache headers (done)
 
-Built as described, checked in `npx vercel build`'s `.vercel/output/config.json`. Every file under `/assets/` has a content hash, including React Navigation's `@2x` images.
+Built as described, checked in `npx vercel build`'s `.vercel/output/config.json`. Every file under `/assets/` has a content hash, including React Navigation's `@2x` images. The day-long rule for `canvaskit.wasm`, `mediapipe/`, and `tesseract/` was taken back out: their names don't change when the library does, so after an upgrade a browser could pair the new JavaScript with an engine cached the day before. They revalidate on every load again (a 304), and the service worker (4.4) keeps them per version.
 
 Everything is served with `cache-control: public, max-age=0, must-revalidate`, so each visit asks the server again about every file. The JavaScript in `/_expo/static/` and the fonts in `/assets/` have content hashes in their names and never change, so they can be cached for a year. The WebAssembly and models (`canvaskit.wasm`, `mediapipe/`, `tesseract/`) don't have hashes, so they need a shorter lifetime.
 
