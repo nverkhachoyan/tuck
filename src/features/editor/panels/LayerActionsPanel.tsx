@@ -1,5 +1,5 @@
 import { ToolButton, ToolRow } from "../ToolButton";
-import { CutOutButton, type CutOutState } from "./ToolsPanel";
+import { CutOutButton } from "./ToolsPanel";
 
 /**
  * What only the selected photo, drawing, shape, or redaction can do, in
@@ -9,7 +9,7 @@ import { CutOutButton, type CutOutState } from "./ToolsPanel";
  * drawing on a drawing or restyles a shape, `onRedact` restyles a
  * redaction or paints on, `onAdjust` changes an image's colors, and
  * `onFind` looks in an image for faces or text to redact, and `onCutOut`
- * cuts its subject out or brings its background back.
+ * cuts its subject out or refines its cut.
  * `onSaveSticker` keeps a photo as a sticker; once it has, `sticker` is
  * "saved", and the button says so.
  */
@@ -18,7 +18,6 @@ export function LayerActionsPanel({
 	onRedact,
 	onAdjust,
 	onFind,
-	cutOut,
 	onCutOut,
 	sticker,
 	onSaveSticker,
@@ -27,7 +26,6 @@ export function LayerActionsPanel({
 	onRedact?: () => void;
 	onAdjust?: () => void;
 	onFind?: () => void;
-	cutOut?: CutOutState;
 	onCutOut?: () => void;
 	sticker?: "saving" | "saved";
 	onSaveSticker?: () => void;
@@ -42,7 +40,7 @@ export function LayerActionsPanel({
 			{onFind && (
 				<ToolButton label="Find" icon="image-search-outline" onPress={onFind} />
 			)}
-			{cutOut && onCutOut && <CutOutButton state={cutOut} onPress={onCutOut} />}
+			{onCutOut && <CutOutButton onPress={onCutOut} />}
 			{onSaveSticker && (
 				<ToolButton
 					label={sticker === "saved" ? "Saved" : "Sticker"}

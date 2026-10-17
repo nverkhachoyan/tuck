@@ -2,6 +2,7 @@
 // this slice loadable by Node's test runner.
 import type { Adjustments } from "../model/adjustments.ts";
 import {
+	addMaskStroke,
 	createDrawingLayer,
 	createImageLayer,
 	createLayerGroup,
@@ -15,6 +16,7 @@ import {
 	type EditorDocument,
 	effectsEqual,
 	groupsForLayers,
+	isCutOut,
 	isLineShape,
 	type Layer,
 	type MaskStroke,
@@ -120,6 +122,7 @@ export type EditorSlice = {
 	setShapeStyle: (id: string, edit: ShapeEdit) => void;
 	setAdjustments: (id: string, adjustments: Adjustments) => void;
 	setMask: (id: string, mask: string | null) => void;
+	paintMask: (id: string, stroke: MaskStroke) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
@@ -533,6 +536,16 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			const masked = withMask(target, mask);
 			if (masked === target) return;
 			replaceLayer("editor/setMask", target, masked);
+		},
+
+		// By id, like `setMask`: the stroke refines the image the tool is
+		// cutting out, whatever is selected. Keeping what's already whole
+		// changes nothing, so a pen on an uncut image isn't a step.
+		paintMask: (id, stroke) => {
+			const target = findLayer(id);
+			if (target?.type !== "image" || stroke.points.length < 2) return;
+			if (stroke.type === "pen" && !isCutOut(target)) return;
+			replaceLayer("editor/paintMask", target, addMaskStroke(target, stroke));
 		},
 
 		updateSelectedText: (patch) => {

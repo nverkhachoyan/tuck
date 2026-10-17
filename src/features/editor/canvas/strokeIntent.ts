@@ -15,7 +15,7 @@ export const TAP_SLOP_PX = 6;
 
 /** What a finished stroke with a tool asks for. */
 export type StrokeIntent =
-	// The color under the stroke's end.
+	// The color under the stroke's end, or the subject under a tap.
 	| { type: "pick"; point: Point }
 	// A tap off the document, which puts the tool down.
 	| { type: "tapAway"; point: Point }
@@ -48,6 +48,11 @@ export function strokeIntent(
 		staysWithin(points, TAP_SLOP_PX / scale)
 	) {
 		return { type: "tapAway", point: start };
+	}
+	if (tool.type === "pickSubject") {
+		return staysWithin(points, TAP_SLOP_PX / scale)
+			? { type: "pick", point: start }
+			: { type: "none" };
 	}
 	if (tool.type !== "redactBox" && tool.type !== "drawShape") {
 		return { type: "paint" };

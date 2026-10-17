@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { neutralAdjustments } from "./adjustments.ts";
 import {
+	addMaskStroke,
 	createBlankDocument,
 	createDocumentFromImage,
 	createImageLayer,
@@ -17,7 +18,9 @@ import {
 	hasEdits,
 	hasTransparency,
 	type ImageLayer,
+	imagePointAt,
 	initialFontSize,
+	isCutOut,
 	maxNewImageShortSide,
 	reorderLayer,
 	resizeLayerBox,
@@ -665,6 +668,96 @@ describe("withMask", () => {
 		const restored = withMask(withMask(layer, "file:///mask.png"), null);
 		assert.equal("mask" in restored, false);
 		assert.deepEqual(restored, layer);
+	});
+
+	test("drops strokes that refined the cut before", () => {
+		const refined = addMaskStroke(withMask(photo(), "file:///a.png"), {
+			type: "eraser",
+			width: 10,
+			points: [2000, 1500],
+		});
+		const recut = withMask(refined, "file:///a.png");
+		assert.equal(recut.mask, "file:///a.png");
+		assert.equal("maskStrokes" in recut, false);
+		assert.deepEqual(withMask(refined, null), photo());
+	});
+});
+
+describe("addMaskStroke", () => {
+	const photo = () => landscape().layers[0] as ImageLayer;
+
+	test("paints in the image's own pixels, centered on its middle", () => {
+		const layer = addMaskStroke(photo(), {
+			type: "pen",
+			width: 40,
+			points: [2000, 1500, 2100, 1400],
+		});
+		assert.deepEqual(layer.maskStrokes, [
+			{ type: "pen", width: 40, points: [0, 0, 100, -100] },
+		]);
+		assert.equal(isCutOut(layer), true);
+	});
+
+	test("follows the layer however it's placed, and flipped", () => {
+		const layer: ImageLayer = {
+			...photo(),
+			flipped: true,
+			transform: {
+				x: 100,
+				y: 200,
+				rotation: Math.PI / 2,
+				scaleX: 2,
+				scaleY: 2,
+			},
+		};
+		// Turned a quarter, a step right on the canvas is a step up the image;
+		// flipped, a step left in it.
+		const painted = addMaskStroke(layer, {
+			type: "eraser",
+			width: 40,
+			points: [100, 200, 120, 200],
+		});
+		assert.deepEqual(painted.maskStrokes, [
+			{ type: "eraser", width: 20, points: [0, 0, 0, -10] },
+		]);
+		const more = addMaskStroke(painted, {
+			type: "pen",
+			width: 40,
+			points: [100, 220],
+		});
+		assert.equal(more.maskStrokes?.length, 2);
+		assert.deepEqual(more.maskStrokes?.[1].points, [-10, 0]);
+	});
+});
+
+describe("imagePointAt", () => {
+	test("is a fraction of the image, from its top left, or null off it", () => {
+		const layer = landscape().layers[0] as ImageLayer;
+		assert.deepEqual(imagePointAt(layer, { x: 1000, y: 2250 }), {
+			x: 0.25,
+			y: 0.75,
+		});
+		assert.equal(imagePointAt(layer, { x: -10, y: 100 }), null);
+	});
+
+	test("follows a turned, scaled, flipped layer", () => {
+		const layer: ImageLayer = {
+			...(landscape().layers[0] as ImageLayer),
+			flipped: true,
+			transform: { x: 0, y: 0, rotation: Math.PI, scaleX: 0.5, scaleY: 0.5 },
+		};
+		// Turned half around, its top left is at the bottom right, and flipped,
+		// at the bottom left.
+		const point = imagePointAt(layer, { x: -999, y: 749 });
+		assert.ok(point && point.x < 0.001 && point.y < 0.001, String(point));
+	});
+});
+
+describe("isCutOut", () => {
+	test("is cut by a mask, by strokes, or by both", () => {
+		const layer = landscape().layers[0] as ImageLayer;
+		assert.equal(isCutOut(layer), false);
+		assert.equal(isCutOut(withMask(layer, "file:///a.png")), true);
 	});
 });
 

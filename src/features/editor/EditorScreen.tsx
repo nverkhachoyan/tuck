@@ -33,6 +33,17 @@ import {
 } from "@/features/editor/canvas/EditorCanvas";
 import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
 import { CropTool } from "@/features/editor/crop/CropTool";
+import {
+	CutOutOptions,
+	CutOutPanel,
+} from "@/features/editor/cutout/CutOutPanel";
+import {
+	type CutOutSettings,
+	cutBrush,
+	cutOutTool,
+	parseCutOutSettings,
+} from "@/features/editor/cutout/cutOutSettings";
+import { useCutOut } from "@/features/editor/cutout/useCutOut";
 import type { DialDrag } from "@/features/editor/Dial";
 import {
 	Dock,
@@ -63,10 +74,7 @@ import {
 	type ArrangeMove,
 	SelectionBar,
 } from "@/features/editor/panels/SelectionBar";
-import {
-	type CutOutState,
-	ToolsPanel,
-} from "@/features/editor/panels/ToolsPanel";
+import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
 import {
 	DetectionOptions,
 	FindPanel,
@@ -99,7 +107,6 @@ import {
 	useTextEditing,
 } from "@/features/editor/text/useTextEditing";
 import { useAddImage } from "@/features/editor/useAddImage";
-import { useCutOut } from "@/features/editor/useCutOut";
 import { useDeleteNotice } from "@/features/editor/useDeleteNotice";
 import {
 	type EditorActions,
@@ -117,6 +124,8 @@ import { type Adjustments, neutralAdjustments } from "@/model/adjustments";
 import {
 	type EditorDocument,
 	type ImageLayer,
+	imagePointAt,
+	isCutOut,
 	type Layer,
 	maxNewImageShortSide,
 	type ShapePlacement,
@@ -168,11 +177,12 @@ const TOOL_TITLES = {
 	redact: "Redact",
 	find: "Find",
 	adjust: "Adjust",
+	cutOut: "Cut out",
 };
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
-// An image Adjust can work on: there, and shown.
+// An image Adjust or Cut out can work on: there, and shown.
 function adjustableImage(document: EditorDocument, id: string) {
 	return document.layers.find(
 		(layer): layer is ImageLayer =>
@@ -237,6 +247,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		paintRedaction,
 		addShape,
 		setAdjustments,
+		setMask,
+		paintMask,
 		transformLayer,
 		resizeBox,
 		nudgeLayer,
@@ -297,13 +309,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// The tool in the dock. While drawing, strokes on the canvas go into the
 	// selected drawing, or a new one; while redacting, into the selected
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
-	// what's found. While adjusting, the canvas holds still. A tap away from
-	// what the tool works on puts it down, as Done does.
+	// what's found. While adjusting, the canvas holds still. While cutting
+	// out, taps pick a subject, or strokes paint the cut. A tap away from what
+	// the tool works on puts it down, as Done does.
 	const tool = mode.type === "tool" ? mode.tool : null;
 	const toolOptionsOpen =
 		mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen;
 	const adjustedLayer =
 		mode.type === "tool" && mode.tool === "adjust"
+			? adjustableImage(document, mode.layerId)
+			: undefined;
+	const cutLayer =
+		mode.type === "tool" && mode.tool === "cutOut"
 			? adjustableImage(document, mode.layerId)
 			: undefined;
 	// A tool's changes are one session: one undo step, or none if canceled.
@@ -335,8 +352,32 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const draw = useDrawTool(tool === "draw", documentSize);
 	const redact = useRedactTool(documentSize);
 	const find = useFindTool(document, detectedImage);
+	// A mask found after Cut out was put down, or moved to another image,
+	// isn't wanted any more.
+	const cutLayerId = useRef<string | null>(null);
+	cutLayerId.current = cutLayer?.id ?? null;
+	const cutOut = useCutOut({
+		projectId,
+		// The mask moves into the project, so autosave knows its file.
+		keep: async (uri) =>
+			projectId === null ? uri : addImage(projectId, uri, false),
+		onMask: (layerId, mask) => {
+			if (cutLayerId.current === layerId) setMask(layerId, mask);
+		},
+	});
+	const [cutSettings, setCutSettings] = usePreference(
+		"cutOut",
+		parseCutOutSettings,
+	);
+	const cutTool = cutOutTool(cutSettings, cutOut.canFind);
 	const canvasTool = useMemo((): CanvasTool | null => {
 		if (eyedropper) return { type: "pickColor" };
+		if (cutLayer) {
+			const brush = cutBrush(cutSettings, cutTool, documentSize);
+			return brush
+				? { type: "cutBrush", layerId: cutLayer.id, brush }
+				: { type: "pickSubject", layerId: cutLayer.id };
+		}
 		if (tool === "draw" && draw.settings.tool === "shape") {
 			return {
 				type: "drawShape",
@@ -353,7 +394,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		return brush
 			? { type: "redactBrush", brush, effect }
 			: { type: "redactBox", effect };
-	}, [eyedropper, tool, draw.settings, redact.settings, documentSize]);
+	}, [
+		eyedropper,
+		cutLayer,
+		cutSettings,
+		cutTool,
+		tool,
+		draw.settings,
+		redact.settings,
+		documentSize,
+	]);
 	// A sideways drag over the photo turns Adjust's dial, as the dial does.
 	const { dialValue, begin, change, end } = adjustController;
 	const adjustDrag = useMemo(
@@ -388,11 +438,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			drawStroke({ ...canvasTool.brush, points });
 		} else if (canvasTool?.type === "redactBrush") {
 			paintRedaction({ ...canvasTool.brush, points }, canvasTool.effect);
+		} else if (canvasTool?.type === "cutBrush") {
+			paintMask(canvasTool.layerId, { ...canvasTool.brush, points });
 		}
+	};
+	// A tap on the image being cut out cuts out only the subject there.
+	const pickSubject = (point: Point) => {
+		const at = cutLayer && imagePointAt(cutLayer, point);
+		if (cutLayer && at) void cutOut.find(cutLayer, at);
 	};
 	// A picked color becomes the custom color too, unless a swatch already
 	// has it. Where the canvas shows nothing, it keeps waiting for a tap.
 	const handlePickPoint = async (point: Point) => {
+		if (canvasTool?.type === "pickSubject") {
+			pickSubject(point);
+			return;
+		}
 		const target = eyedropper;
 		if (!target) return;
 		const color = await sampleColor(document, point).catch(() => null);
@@ -491,23 +552,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		cancelSession();
 		closeTool();
 	};
-	// The selected photo, or else the main one, like Find.
-	const cutOut = useCutOut({
-		projectId,
-		// The mask moves into the project, so autosave knows its file.
-		keep: async (uri) =>
-			projectId === null ? uri : addImage(projectId, uri, false),
-	});
-	const cutOutTarget = cutOut ? detectedImage : null;
-	const cutOutState: CutOutState | undefined = !cutOutTarget
-		? undefined
-		: cutOut?.cutting === cutOutTarget.id
-			? "cutting"
-			: cutOutTarget.mask !== undefined
-				? "cut"
-				: "whole";
-	const toggleCutOut = () => {
-		if (cutOut && cutOutTarget) void cutOut.toggle(cutOutTarget);
+	// The selected photo, or else the main one, like Find. An image that
+	// isn't cut yet has its subjects cut out at once, so one tap still does
+	// it; one that is opens to refine its cut.
+	const startCutOut = () => {
+		if (!detectedImage) return;
+		dispatchMode({ type: "startCutOut", layerId: detectedImage.id });
+		if (cutOut.canFind && !isCutOut(detectedImage)) {
+			cutLayerId.current = detectedImage.id;
+			void cutOut.find(detectedImage);
+		}
 	};
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
@@ -673,7 +727,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		photo: pickPhoto,
 		crop: startCrop,
 		adjust: startAdjusting,
-		cutOut: toggleCutOut,
+		cutOut: startCutOut,
 	};
 
 	const layerList = layerListProps({
@@ -712,7 +766,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// The tools' buttons, for the dock and, through `fromRail`, the rail.
 	const toolStarters: ToolStarters = {
 		addBusy,
-		cutOut: cutOutState,
 		onAddText: startNewText,
 		onDraw: startDrawing,
 		onRedact: startRedacting,
@@ -720,7 +773,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onPhoto: pickPhoto,
 		onCrop: startCrop,
 		onAdjust: adjustable ? startAdjusting : undefined,
-		onCutOut: toggleCutOut,
+		onCutOut: detectedImage ? startCutOut : undefined,
 	};
 	// What the dock offers for the selected layer, by its kind.
 	const layerActions =
@@ -731,8 +784,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			onRedact: startRedacting,
 			onAdjust: startAdjusting,
 			onFind: startFinding,
-			cutOut: cutOutTarget === selectedLayer ? cutOutState : undefined,
-			onCutOut: toggleCutOut,
+			onCutOut: startCutOut,
 			sticker: stickerSave.status,
 			onSaveSticker: stickerSave.save,
 		});
@@ -755,7 +807,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								onReset={
 									adjustedLayer?.adjustments
 										? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
-										: undefined
+										: cutLayer && isCutOut(cutLayer)
+											? () => setMask(cutLayer.id, null)
+											: undefined
 								}
 								// A wide screen's inspector always shows the layers.
 								layers={
@@ -845,12 +899,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							draw={draw}
 							redact={redact}
 							find={find}
+							cut={{
+								settings: cutSettings,
+								tool: cutTool,
+								onChange: setCutSettings,
+							}}
 							textEditing={textEditing}
 							customColor={customColor}
 							onCustomColor={setCustomColor}
 							bottomInset={dockInset}
 						/>
-						<Announcement message={cutOut?.news ?? null} />
+						<Announcement message={cutOut.news} />
 						{saveProblem && (
 							<SaveErrorBanner
 								message={saveProblem}
@@ -918,6 +977,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								draw={draw}
 								redact={redact}
 								find={find}
+								cut={{
+									settings: cutSettings,
+									tool: cutTool,
+									onChange: setCutSettings,
+									finding: cutOut.finding,
+									onFindAll:
+										cutOut.canFind && cutLayer
+											? () => void cutOut.find(cutLayer)
+											: undefined,
+								}}
 								adjustController={adjustController}
 								adjustments={adjustedLayer?.adjustments}
 								textEditing={textEditing}
@@ -1065,7 +1134,6 @@ function layerListProps({
 /** What picking each tool does, before `wrap` adapts it for its place. */
 type ToolStarters = {
 	addBusy: boolean;
-	cutOut: CutOutState | undefined;
 	onAddText: () => void;
 	onDraw: () => void;
 	onRedact: () => void;
@@ -1073,7 +1141,7 @@ type ToolStarters = {
 	onPhoto: () => void;
 	onCrop: () => void;
 	onAdjust: (() => void) | undefined;
-	onCutOut: () => void;
+	onCutOut: (() => void) | undefined;
 };
 
 /** The tools' buttons' props: each starter through `wrap` (see `fromRail`). */
@@ -1083,7 +1151,6 @@ function toolButtonsFor(
 ) {
 	return {
 		addBusy: starters.addBusy,
-		cutOut: starters.cutOut,
 		onAddText: wrap(starters.onAddText),
 		onDraw: wrap(starters.onDraw),
 		onRedact: wrap(starters.onRedact),
@@ -1092,7 +1159,8 @@ function toolButtonsFor(
 		onCrop: wrap(starters.onCrop),
 		onAdjust:
 			starters.onAdjust === undefined ? undefined : wrap(starters.onAdjust),
-		onCutOut: wrap(starters.onCutOut),
+		onCutOut:
+			starters.onCutOut === undefined ? undefined : wrap(starters.onCutOut),
 	};
 }
 
@@ -1103,7 +1171,6 @@ function layerActionsFor({
 	onRedact,
 	onAdjust,
 	onFind,
-	cutOut,
 	onCutOut,
 	sticker,
 	onSaveSticker,
@@ -1113,7 +1180,6 @@ function layerActionsFor({
 	onRedact: () => void;
 	onAdjust: () => void;
 	onFind: () => void;
-	cutOut: CutOutState | undefined;
 	onCutOut: () => void;
 	sticker: "saving" | "saved" | undefined;
 	onSaveSticker: (() => void) | undefined;
@@ -1127,8 +1193,7 @@ function layerActionsFor({
 				: undefined,
 		onAdjust: layer.type === "image" ? onAdjust : undefined,
 		onFind: layer.type === "image" && !layer.hidden ? onFind : undefined,
-		cutOut,
-		onCutOut,
+		onCutOut: layer.type === "image" && !layer.hidden ? onCutOut : undefined,
 		sticker,
 		onSaveSticker,
 	};
@@ -1193,11 +1258,22 @@ function HeaderActions({
 	);
 }
 
+// Cut out's settings, the tool they and the device give, and, for the dock,
+// what's being found and a way to find every subject again.
+type CutProps = {
+	settings: CutOutSettings;
+	tool: ReturnType<typeof cutOutTool>;
+	onChange: (settings: CutOutSettings) => void;
+	finding?: "all" | "one" | null;
+	onFindAll?: () => void;
+};
+
 type ModeProps = {
 	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
 	draw: ReturnType<typeof useDrawTool>;
 	redact: ReturnType<typeof useRedactTool>;
 	find: ReturnType<typeof useFindTool>;
+	cut: CutProps;
 	textEditing: ReturnType<typeof useTextEditing>;
 	customColor: string | null;
 };
@@ -1212,6 +1288,7 @@ function ToolTrays({
 	draw,
 	redact,
 	find,
+	cut,
 	textEditing,
 	customColor,
 	onCustomColor,
@@ -1277,6 +1354,15 @@ function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
+			{tray === "cutOut" && cut.tool !== "pick" && (
+				<CutOutOptions
+					settings={cut.settings}
+					tool={cut.tool}
+					bottomInset={bottomInset}
+					onChange={cut.onChange}
+					onClose={closeTray}
+				/>
+			)}
 			{mode.type === "tool" && mode.tool === "find" && !tray && !eyedropper && (
 				<DetectionOptions
 					state={find.state}
@@ -1320,6 +1406,7 @@ function DockContent({
 	draw,
 	redact,
 	find,
+	cut,
 	adjustController,
 	adjustments,
 	textEditing,
@@ -1371,6 +1458,18 @@ function DockContent({
 		case "adjust":
 			return (
 				<AdjustPanel controller={adjustController} adjustments={adjustments} />
+			);
+		case "cutOut":
+			return (
+				<CutOutPanel
+					settings={cut.settings}
+					tool={cut.tool}
+					finding={cut.finding ?? null}
+					optionsOpen={optionsOpen}
+					onChange={cut.onChange}
+					onToggleOptions={toggleOptions}
+					onFindAll={cut.onFindAll}
+				/>
 			);
 		case "text":
 			return (

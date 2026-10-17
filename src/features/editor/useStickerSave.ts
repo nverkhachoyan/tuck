@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { importPhoto } from "@/import/photoImport";
 import { errorMessage } from "@/lib/errorMessage";
+import { isCutOut } from "@/model/document";
 import { SAVED_STICKER_MAX_SIDE } from "@/stickers/savedStickers";
 import type { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";
@@ -25,7 +26,7 @@ export function useStickerSave(
 	const image =
 		selectedLayer?.type === "image" &&
 		!selectedLayer.sticker &&
-		selectedLayer.mask === undefined
+		!isCutOut(selectedLayer)
 			? selectedLayer
 			: undefined;
 	const save = async () => {

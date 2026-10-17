@@ -1,73 +1,70 @@
 import { useRef, useState } from "react";
 import {
 	findSubjectMask,
+	type ImagePoint,
 	isCutOutAvailable,
 	isDetectionModelDownloading,
 } from "@/detection/imageDetection";
 import { errorMessage } from "@/lib/errorMessage";
 import type { ImageLayer } from "@/model/document";
-import { useStore } from "@/store";
 import { showAlert } from "@/ui/showAlert";
 
 /**
- * Cuts an image's subject out of its background, or with one cut out
- * already, brings the background back, each as one undo step. `cutting` is
- * the id of the image being cut out, while its subject is being found; a
- * second cut meanwhile does nothing. A mask found once is used again this
- * session, whose project keeps its file until it closes. `keep` puts a new
- * mask's file where the document can use it, and returns its URL there.
- * `news` says what the last toggle did, for a screen reader. Null while this
- * device can't find subjects.
+ * Finds the subjects to cut out of an image: every one, or with a point,
+ * only the one there. `find` hands the mask to `onMask`, once `keep` has put
+ * its file where the document can use it; `onMask` decides whether the image
+ * still wants it. `finding` says which is being found, while one is: a
+ * second find meanwhile does nothing. Every subject found once is used again
+ * this session, whose project keeps its file until it closes. `news` says
+ * what the last find did, for a screen reader. `canFind` is false while this
+ * device can't find subjects, when only the brushes cut.
  */
 export function useCutOut({
 	projectId,
 	keep,
+	onMask,
 }: {
 	projectId: string | null;
 	keep: (uri: string) => Promise<string>;
+	onMask: (layerId: string, mask: string) => void;
 }) {
-	const setMask = useStore((state) => state.setMask);
-	const [cutting, setCutting] = useState<string | null>(null);
+	const [finding, setFinding] = useState<"all" | "one" | null>(null);
 	const [news, setNews] = useState<string | null>(null);
 	const busy = useRef(false);
-	// The mask found for each image file in this project.
+	// The mask of every subject found for each image file in this project.
 	const found = useRef({ projectId, masks: new Map<string, string>() });
 	if (found.current.projectId !== projectId) {
 		found.current = { projectId, masks: new Map() };
 	}
 
-	const toggle = async (layer: ImageLayer) => {
+	const find = async (layer: ImageLayer, at?: ImagePoint) => {
 		const { masks } = found.current;
-		if (layer.mask !== undefined) {
-			masks.set(layer.uri, layer.mask);
-			setMask(layer.id, null);
-			setNews("Background restored");
-			return;
-		}
-		const known = masks.get(layer.uri);
+		const known = at ? undefined : masks.get(layer.uri);
 		if (known !== undefined) {
-			setMask(layer.id, known);
+			onMask(layer.id, known);
 			setNews("Background removed");
 			return;
 		}
 		if (busy.current) return;
 		busy.current = true;
-		setCutting(layer.id);
-		setNews("Removing the background");
+		setFinding(at ? "one" : "all");
+		setNews(at ? "Finding the subject" : "Removing the background");
 		try {
-			const mask = await findSubjectMask(layer.uri);
+			const mask = await findSubjectMask(layer.uri, at);
 			if (!mask) {
 				setNews(null);
 				showAlert(
 					"Nothing to cut out",
-					"There's no clear subject in front of the background.",
+					at
+						? "There's no clear subject where you tapped. Try the middle of it, or paint the cut with Keep and Erase."
+						: "There's no clear subject in front of the background.",
 				);
 				return;
 			}
 			const url = await keep(mask.uri);
-			masks.set(layer.uri, url);
-			setMask(layer.id, url);
-			setNews("Background removed");
+			if (!at) masks.set(layer.uri, url);
+			onMask(layer.id, url);
+			setNews(at ? "Subject picked" : "Background removed");
 		} catch (error) {
 			setNews(null);
 			showAlert(
@@ -78,9 +75,9 @@ export function useCutOut({
 			);
 		} finally {
 			busy.current = false;
-			setCutting(null);
+			setFinding(null);
 		}
 	};
 
-	return isCutOutAvailable() ? { cutting, news, toggle } : null;
+	return { canFind: isCutOutAvailable(), finding, news, find };
 }

@@ -12,6 +12,7 @@ import {
 	createTextLayer,
 	type EditorDocument,
 	type ImageLayer,
+	type MaskStroke,
 	withAdjustments,
 	withMask,
 } from "../model/document.ts";
@@ -269,6 +270,28 @@ describe("parseSavedProject", () => {
 			),
 			null,
 		);
+	});
+
+	test("reads a cut refined by hand, and rejects damaged strokes", () => {
+		const document = mapImageUris(documentWithText(), () => PHOTO_FILE);
+		const photo = document.layers[0] as ImageLayer;
+		const stroke: MaskStroke = {
+			type: "eraser",
+			width: 12,
+			points: [1, 2, 3, 4],
+		};
+		document.layers[0] = { ...photo, maskStrokes: [stroke] };
+		assert.deepEqual(
+			parseSavedProject(savedJson({ document }))?.document,
+			document,
+		);
+		for (const maskStrokes of [[], [{ ...stroke, points: [1] }], "strokes"]) {
+			const damaged = {
+				...document,
+				layers: [{ ...photo, maskStrokes } as unknown as ImageLayer],
+			};
+			assert.equal(parseSavedProject(savedJson({ document: damaged })), null);
+		}
 	});
 
 	test("reads version 4, from before cut-outs, as it was", () => {

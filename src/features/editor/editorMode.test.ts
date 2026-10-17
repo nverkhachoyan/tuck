@@ -61,6 +61,20 @@ describe("editorModeReducer", () => {
 			layerId: "photo",
 		});
 		assert.equal(adjusting.sheet, null);
+
+		const cutting = run(
+			initialEditorMode,
+			{ type: "toggleLayers" },
+			{ type: "startCutOut", layerId: "photo" },
+			{ type: "toggleToolOptions" },
+		);
+		assert.deepEqual(cutting.mode, {
+			type: "tool",
+			tool: "cutOut",
+			layerId: "photo",
+			optionsOpen: true,
+		});
+		assert.equal(cutting.sheet, null);
 	});
 
 	test("typing closes the layers sheet, and cropping leaves it open", () => {
@@ -249,6 +263,19 @@ describe("settle", () => {
 		assert.equal(settle(adjusting, targets()), adjusting);
 		const settled = settle(
 			adjusting,
+			targets({ isAdjustable: (id) => id !== "photo" }),
+		);
+		assert.deepEqual(settled.mode, { type: "idle" });
+	});
+
+	test("puts Cut out down when its image is gone or hidden", () => {
+		const cutting = run(initialEditorMode, {
+			type: "startCutOut",
+			layerId: "photo",
+		});
+		assert.equal(settle(cutting, targets()), cutting);
+		const settled = settle(
+			cutting,
 			targets({ isAdjustable: (id) => id !== "photo" }),
 		);
 		assert.deepEqual(settled.mode, { type: "idle" });

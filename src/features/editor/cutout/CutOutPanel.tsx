@@ -1,0 +1,142 @@
+import { colors } from "@/theme";
+import { RingChoice } from "@/ui/RingChoice";
+import { ToolButton, ToolRow } from "../ToolButton";
+import {
+	SIZE_DOTS,
+	SizeDot,
+	ToolChoices,
+	ToolOption,
+	ToolOptions,
+} from "../ToolOptions";
+import type { CutOutSettings, CutOutTool } from "./cutOutSettings";
+
+/**
+ * Cut out's tools, in place of the toolbar while cutting an image out:
+ * Subjects cuts out every subject again, Pick the one under a tap, and Keep
+ * and Erase paint the cut by hand, with their size in a tray over the
+ * canvas. Tapping the brush in use opens its size too. Subjects and Pick
+ * show only where this device can find subjects (`onFindAll`), and spin
+ * while they're finding one (`finding`).
+ */
+export function CutOutPanel({
+	settings,
+	tool,
+	finding,
+	optionsOpen,
+	onChange,
+	onToggleOptions,
+	onFindAll,
+}: {
+	settings: CutOutSettings;
+	tool: CutOutTool;
+	finding: "all" | "one" | null;
+	optionsOpen: boolean;
+	onChange: (settings: CutOutSettings) => void;
+	onToggleOptions: () => void;
+	onFindAll?: () => void;
+}) {
+	const pickTool = (choice: CutOutTool) => {
+		if (choice === tool && choice !== "pick") onToggleOptions();
+		else onChange({ ...settings, tool: choice });
+	};
+	const brush = tool !== "pick";
+	return (
+		<ToolRow>
+			{onFindAll && (
+				<ToolButton
+					label="Subjects"
+					icon="auto-fix"
+					busy={finding === "all"}
+					onPress={onFindAll}
+				/>
+			)}
+			{onFindAll && (
+				<ToolButton
+					label="Pick"
+					icon="gesture-tap"
+					selected={tool === "pick"}
+					busy={finding === "one"}
+					onPress={() => pickTool("pick")}
+				/>
+			)}
+			<ToolButton
+				label="Keep"
+				icon="brush"
+				selected={tool === "keep"}
+				onPress={() => pickTool("keep")}
+			/>
+			<ToolButton
+				label="Erase"
+				icon="eraser"
+				selected={tool === "erase"}
+				onPress={() => pickTool("erase")}
+			/>
+			{brush && (
+				<ToolButton
+					label="Size"
+					icon="circle-medium"
+					glyph={
+						<SizeDot
+							size={
+								SIZE_DOTS[
+									tool === "keep" ? settings.keepSize : settings.eraseSize
+								]
+							}
+							color={tool === "keep" ? colors.textPrimary : null}
+						/>
+					}
+					open={optionsOpen}
+					onPress={onToggleOptions}
+				/>
+			)}
+		</ToolRow>
+	);
+}
+
+/** The size of the brush in use, in a tray above the dock. */
+export function CutOutOptions({
+	settings,
+	tool,
+	bottomInset,
+	onChange,
+	onClose,
+}: {
+	settings: CutOutSettings;
+	tool: "keep" | "erase";
+	bottomInset: number;
+	onChange: (settings: CutOutSettings) => void;
+	onClose: () => void;
+}) {
+	const keep = tool === "keep";
+	return (
+		<ToolOptions
+			closeLabel="Close brush size"
+			bottomInset={bottomInset}
+			onClose={onClose}
+			dismissOnOutsidePress={false}
+		>
+			<ToolOption label="Size">
+				<ToolChoices>
+					{SIZE_DOTS.map((dot, index) => (
+						<RingChoice
+							key={dot}
+							label={`Size ${index + 1} of ${SIZE_DOTS.length}`}
+							selected={
+								index === (keep ? settings.keepSize : settings.eraseSize)
+							}
+							onPress={() =>
+								onChange(
+									keep
+										? { ...settings, keepSize: index }
+										: { ...settings, eraseSize: index },
+								)
+							}
+						>
+							<SizeDot size={dot} color={keep ? colors.textPrimary : null} />
+						</RingChoice>
+					))}
+				</ToolChoices>
+			</ToolOption>
+		</ToolOptions>
+	);
+}

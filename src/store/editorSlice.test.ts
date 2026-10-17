@@ -1243,4 +1243,39 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().document, before);
 		});
 	});
+
+	describe("paintMask", () => {
+		const eraser: MaskStroke = { type: "eraser", width: 20, points: [10, 10] };
+		const pen: MaskStroke = { type: "pen", width: 20, points: [10, 10] };
+
+		test("erasing cuts a whole image by hand, a step at a time", () => {
+			const { store, text } = storeWithText();
+			const steps = store.getState().past.length;
+			store.getState().paintMask("photo", eraser);
+			store.getState().paintMask("photo", pen);
+			assert.equal(firstImage(store).maskStrokes?.length, 2);
+			assert.equal(store.getState().past.length, steps + 2);
+			assert.equal(store.getState().selectedLayerId, text.id, "kept");
+			store.getState().undo();
+			store.getState().undo();
+			assert.equal("maskStrokes" in firstImage(store), false);
+		});
+
+		test("keeping what's whole already isn't a step", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			store.getState().paintMask("photo", pen);
+			store.getState().paintMask(text.id, eraser);
+			store.getState().paintMask("missing", eraser);
+			assert.equal(store.getState().document, before);
+		});
+
+		test("a new mask takes the strokes off", () => {
+			const { store } = storeWithText();
+			store.getState().setMask("photo", "file:///mask.png");
+			store.getState().paintMask("photo", pen);
+			store.getState().setMask("photo", "file:///other.png");
+			assert.equal("maskStrokes" in firstImage(store), false);
+		});
+	});
 });

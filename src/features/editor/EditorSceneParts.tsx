@@ -33,24 +33,33 @@ export function CanvasBackground({
 
 /**
  * A layer's content in its own space, loading images asynchronously.
- * `stroke` is one still being drawn on a drawing layer, and `matrix` colors
- * an image in place of its adjustments (see `ImageLayerView`).
+ * `stroke` is one still being drawn on a drawing layer, or on an image's
+ * cut, which `showRemoved` shows what it cuts away from; `matrix` colors an
+ * image in place of its adjustments (see `ImageLayerView`).
  */
 export function LayerContent({
 	layer,
 	stroke,
 	matrix,
+	showRemoved,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke?: ReactNode;
 	matrix?: { value: ColorMatrix };
+	showRemoved?: boolean;
 	onImageError: (error: unknown) => void;
 }) {
 	switch (layer.type) {
 		case "image":
 			return (
-				<AsyncImage layer={layer} matrix={matrix} onError={onImageError} />
+				<AsyncImage
+					layer={layer}
+					matrix={matrix}
+					liveMask={stroke}
+					showRemoved={showRemoved}
+					onError={onImageError}
+				/>
 			);
 		case "text":
 			return <TextLayerView layer={layer} />;
@@ -72,10 +81,14 @@ export function LayerContent({
 function AsyncImage({
 	layer,
 	matrix,
+	liveMask,
+	showRemoved,
 	onError,
 }: {
 	layer: ImageLayer;
 	matrix?: { value: ColorMatrix };
+	liveMask?: ReactNode;
+	showRemoved?: boolean;
 	onError: (error: unknown) => void;
 }) {
 	const image = useDecodedImage(layer.uri, onError);
@@ -87,6 +100,8 @@ function AsyncImage({
 			image={image}
 			mask={mask ?? undefined}
 			matrix={matrix}
+			liveMask={liveMask}
+			showRemoved={showRemoved}
 		/>
 	);
 }

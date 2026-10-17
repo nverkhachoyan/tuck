@@ -26,6 +26,7 @@ import {
 } from "react-native-reanimated";
 import type { MappedDetectionRect } from "@/detection/mapDetectionRects";
 import { BrushStroke, strokePath } from "@/layers/DrawingLayerView";
+import { MaskStrokePath } from "@/layers/ImageLayerView";
 import { layerBounds } from "@/layers/layerBounds";
 import {
 	toInverseTransformList,
@@ -100,7 +101,8 @@ const MARKER_PX = 8;
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
  * brush, drags out a shape or a redaction's box, paints a redaction's
- * strokes, or picks a color where the finger lifts.
+ * strokes, picks a color where the finger lifts, paints the cut of the image
+ * `layerId`, or picks the subject to cut out of it with a tap.
  */
 export type CanvasTool =
 	| { type: "draw"; brush: Brush }
@@ -111,7 +113,9 @@ export type CanvasTool =
 			type: "redactBrush";
 			brush: Omit<MaskStroke, "points">;
 			effect: RedactionEffect;
-	  };
+	  }
+	| { type: "cutBrush"; layerId: string; brush: Omit<MaskStroke, "points"> }
+	| { type: "pickSubject"; layerId: string };
 
 /**
  * A stroke being painted with a tool: its points so far in document space,
@@ -153,6 +157,8 @@ type EditorSceneProps = {
 	// Outlined without handles, as a tool's target: it holds still.
 	outlinedLayer: Layer | null;
 	adjusting: LiveAdjustment | null;
+	// The image being cut out, which shows what it cuts away faintly.
+	cuttingOutId: string | null;
 	detections: readonly DetectionOverlayRegion[];
 	// An image layer's file couldn't be read or decoded. Must be stable.
 	onImageError: (error: unknown) => void;
@@ -181,6 +187,7 @@ export function EditorScene({
 	stroke,
 	outlinedLayer,
 	adjusting,
+	cuttingOutId,
 	detections,
 	onImageError,
 }: EditorSceneProps) {
@@ -218,6 +225,7 @@ export function EditorScene({
 											? adjusting.matrix
 											: undefined
 									}
+									showRemoved={cuttingOutId === layer.id}
 									onImageError={onImageError}
 								/>
 							)}
@@ -402,12 +410,14 @@ function StrokeTarget({
 	stroke,
 	live,
 	matrix,
+	showRemoved,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke: LiveStroke | null;
 	live: LiveTransform;
 	matrix?: DerivedValue<ColorMatrix>;
+	showRemoved: boolean;
 	onImageError: (error: unknown) => void;
 }) {
 	const tool = stroke?.tool;
@@ -423,6 +433,32 @@ function StrokeTarget({
 		return <LiveRedaction layer={layer} live={live} />;
 	}
 	if (layer.type === "shape") return <LiveShape layer={layer} live={live} />;
+	if (stroke && tool?.type === "cutBrush" && layer.type === "image") {
+		return (
+			<LayerContent
+				layer={layer}
+				// Into the image's own pixels: out of the layer's space, then
+				// unflipped, as `ImageLayerView` flips its cut with it.
+				stroke={
+					<Group
+						transform={[
+							...(layer.flipped ? [{ scaleX: -1 }] : []),
+							...toInverseTransformList(layer.transform),
+						]}
+					>
+						<LiveCutPath
+							key={stroke.landedId}
+							stroke={stroke}
+							brush={tool.brush}
+						/>
+					</Group>
+				}
+				matrix={matrix}
+				showRemoved={showRemoved}
+				onImageError={onImageError}
+			/>
+		);
+	}
 	return (
 		<LayerContent
 			layer={layer}
@@ -439,6 +475,7 @@ function StrokeTarget({
 				)
 			}
 			matrix={matrix}
+			showRemoved={showRemoved}
 			onImageError={onImageError}
 		/>
 	);
@@ -693,7 +730,10 @@ function NewLayerStroke({
 			);
 		case "drawShape":
 			return <LiveNewShape stroke={stroke} tool={tool} />;
+		// The cut's tools always have their image.
 		case "pickColor":
+		case "cutBrush":
+		case "pickSubject":
 			return null;
 	}
 }
@@ -712,6 +752,18 @@ function unlanded(stroke: LiveStroke): number[] {
 function LivePath({ stroke, brush }: { stroke: LiveStroke; brush: Brush }) {
 	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
 	return <BrushStroke path={path} brush={brush} />;
+}
+
+/** A stroke on an image's cut as it's being painted, in document space. */
+function LiveCutPath({
+	stroke,
+	brush,
+}: {
+	stroke: LiveStroke;
+	brush: Omit<MaskStroke, "points">;
+}) {
+	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
+	return <MaskStrokePath path={path} stroke={brush} />;
 }
 
 /**

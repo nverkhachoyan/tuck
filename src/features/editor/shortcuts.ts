@@ -142,7 +142,7 @@ export const SHORTCUT_GROUPS: {
 			{ keys: TOOL_KEYS.photo, action: "Add a photo" },
 			{ keys: TOOL_KEYS.crop, action: "Crop" },
 			{ keys: TOOL_KEYS.adjust, action: "Adjust" },
-			{ keys: TOOL_KEYS.cutOut, action: "Cut out, or restore the background" },
+			{ keys: TOOL_KEYS.cutOut, action: "Cut out" },
 			{ keys: LAYERS_KEY, action: "Show or hide layers" },
 		],
 	},

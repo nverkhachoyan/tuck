@@ -18,6 +18,8 @@ export function useEditorActions() {
 		paintRedaction: useStore((state) => state.paintRedaction),
 		addShape: useStore((state) => state.addShape),
 		setAdjustments: useStore((state) => state.setAdjustments),
+		setMask: useStore((state) => state.setMask),
+		paintMask: useStore((state) => state.paintMask),
 		transformLayer: useStore((state) => state.transformLayer),
 		resizeBox: useStore((state) => state.resizeBox),
 		nudgeLayer: useStore((state) => state.nudgeLayer),

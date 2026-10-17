@@ -24,7 +24,8 @@ import {
 // photo. So did image layers' `adjustments`: builds from before them show
 // the image unadjusted. 5 added image layers' `mask`, a file of its own: a
 // build from before it would show the whole photo, and remove the mask's
-// file as unused when it closed the project.
+// file as unused when it closed the project. Image layers' `maskStrokes`
+// kept it: builds from before them show the cut without its refinements.
 export const PROJECT_VERSION = 5;
 
 // The file of the photo a project was made from. Saved image layers name a
@@ -334,7 +335,11 @@ function isLayer(value: unknown): boolean {
 				typeof value.opaque === "boolean" &&
 				(value.sticker === undefined || typeof value.sticker === "boolean") &&
 				(value.adjustments === undefined || isAdjustments(value.adjustments)) &&
-				(value.mask === undefined || typeof value.mask === "string")
+				(value.mask === undefined || typeof value.mask === "string") &&
+				(value.maskStrokes === undefined ||
+					(Array.isArray(value.maskStrokes) &&
+						value.maskStrokes.length > 0 &&
+						value.maskStrokes.every(isMaskStroke)))
 			);
 		case "text":
 			return (

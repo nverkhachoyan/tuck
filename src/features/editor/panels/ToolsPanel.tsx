@@ -1,28 +1,22 @@
 import { TOOL_KEYS } from "../shortcuts";
 import { ToolButton, ToolGrid, ToolRow } from "../ToolButton";
 
-/** Whether the image Cut out acts on is cut out already, or being cut out. */
-export type CutOutState = "whole" | "cutting" | "cut";
-
-/**
- * Cuts the subject out of an image, spinning while it's found, or once it
- * has, brings the background back.
- */
+/** Opens Cut out, to cut an image's subject out or refine its cut. */
 export function CutOutButton({
-	state,
+	selected,
 	compact,
 	onPress,
 }: {
-	state: CutOutState;
+	selected?: boolean;
 	compact?: boolean;
 	onPress: () => void;
 }) {
 	return (
 		<ToolButton
-			label={state === "cut" ? "Undo cut" : "Cut out"}
-			icon={state === "cut" ? "image-refresh-outline" : "scissors-cutting"}
+			label="Cut out"
+			icon="scissors-cutting"
 			shortcut={TOOL_KEYS.cutOut}
-			busy={state === "cutting"}
+			selected={selected}
 			compact={compact}
 			onPress={onPress}
 		/>
@@ -49,11 +43,10 @@ export function ToolsPanel({
 	onPhoto,
 	onCrop,
 	onAdjust,
-	cutOut,
 	onCutOut,
 }: {
 	vertical?: boolean;
-	tool?: "text" | "draw" | "redact" | "find" | "adjust" | null;
+	tool?: "text" | "draw" | "redact" | "find" | "adjust" | "cutOut" | null;
 	addBusy: boolean;
 	onAddText: () => void;
 	onDraw: () => void;
@@ -62,7 +55,6 @@ export function ToolsPanel({
 	onPhoto: () => void;
 	onCrop: () => void;
 	onAdjust?: () => void;
-	cutOut?: CutOutState;
 	onCutOut?: () => void;
 }) {
 	const compact = !vertical;
@@ -121,10 +113,10 @@ export function ToolsPanel({
 				onPress={onAdjust}
 			/>
 		),
-		cutOut && onCutOut && (
+		onCutOut && (
 			<CutOutButton
 				key="cutOut"
-				state={cutOut}
+				selected={tool === "cutOut"}
 				compact={compact}
 				onPress={onCutOut}
 			/>

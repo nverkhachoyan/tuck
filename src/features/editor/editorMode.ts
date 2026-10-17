@@ -29,14 +29,15 @@ export type EditedText = { layer: { id: string } };
 
 /**
  * What the canvas and the dock are given over to, one at a time: nothing, a
- * tool in the dock (Draw, Redact, and Find with their trays, and Adjust with
- * the image it started on), text being typed on the canvas, or the crop
- * screen.
+ * tool in the dock (Draw, Redact, and Find with their trays, Adjust with the
+ * image it started on, and Cut out with both), text being typed on the
+ * canvas, or the crop screen.
  */
 export type EditorMode<TextEdit> =
 	| { type: "idle" }
 	| { type: "tool"; tool: "draw" | "redact" | "find"; optionsOpen: boolean }
 	| { type: "tool"; tool: "adjust"; layerId: string }
+	| { type: "tool"; tool: "cutOut"; layerId: string; optionsOpen: boolean }
 	| { type: "text"; edit: TextEdit }
 	| { type: "crop" };
 
@@ -69,7 +70,8 @@ export const initialEditorMode: EditorModeState<never> = {
 
 // What `settle` checks the mode against.
 export type ModeTargets = {
-	// Whether an image can still be adjusted: it's there, and shown.
+	// Whether an image can still be adjusted or cut out: it's there, and
+	// shown.
 	isAdjustable: (layerId: string) => boolean;
 	// Whether there's a photo for Find to search.
 	canFind: boolean;
@@ -80,6 +82,7 @@ export type ModeTargets = {
 export type EditorModeAction<TextEdit> =
 	| { type: "startTool"; tool: "draw" | "redact" | "find" }
 	| { type: "startAdjust"; layerId: string }
+	| { type: "startCutOut"; layerId: string }
 	| { type: "endTool" }
 	| { type: "toggleToolOptions" }
 	| { type: "closeToolOptions" }
@@ -126,6 +129,19 @@ export function editorModeReducer<TextEdit extends EditedText>(
 			return {
 				...state,
 				mode: { type: "tool", tool: "adjust", layerId: action.layerId },
+				textPicker: null,
+				eyedropper: null,
+				sheet: withoutLayers(state.sheet),
+			};
+		case "startCutOut":
+			return {
+				...state,
+				mode: {
+					type: "tool",
+					tool: "cutOut",
+					layerId: action.layerId,
+					optionsOpen: false,
+				},
 				textPicker: null,
 				eyedropper: null,
 				sheet: withoutLayers(state.sheet),
@@ -204,9 +220,10 @@ export function editorModeReducer<TextEdit extends EditedText>(
 }
 
 /**
- * `state` with what's gone put away: Adjust whose image is gone or hidden,
- * Find with no photo left to search, and a text color picker whose text
- * isn't the one styled any more. The same `state` when nothing is.
+ * `state` with what's gone put away: Adjust or Cut out whose image is gone
+ * or hidden, Find with no photo left to search, and a text color picker
+ * whose text isn't the one styled any more. The same `state` when nothing
+ * is.
  */
 export function settle<TextEdit extends EditedText>(
 	state: EditorModeState<TextEdit>,
@@ -215,7 +232,7 @@ export function settle<TextEdit extends EditedText>(
 	const { mode, textPicker } = state;
 	const toolGone =
 		mode.type === "tool" &&
-		(mode.tool === "adjust"
+		(mode.tool === "adjust" || mode.tool === "cutOut"
 			? !targets.isAdjustable(mode.layerId)
 			: mode.tool === "find" && !targets.canFind);
 	const styledTextId =

@@ -6,9 +6,11 @@ import {
 import { drawingBox, recenterDrawing } from "./drawing.ts";
 import {
 	hitTestBox,
+	type Point,
 	type Rect,
 	type Size,
 	type Transform,
+	toLayerSpace,
 	transformsEqual,
 } from "./geometry.ts";
 
@@ -33,6 +35,10 @@ type LayerBase = {
 // has been cut out of the image, is a grayscale image file stretched over it:
 // the image shows where the mask is white, and not where it's black. The
 // image's own file is untouched, so the cut can be undone or taken back.
+// `maskStrokes` refine the cut by hand, painted over the mask (or over the
+// whole image, without one) in the image's own pixels, centered on its
+// middle, before it's flipped: a pen shows the image, an eraser hides it.
+// They're left out while there are none.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
@@ -43,6 +49,7 @@ export type ImageLayer = LayerBase & {
 	sticker?: boolean;
 	adjustments?: Adjustments;
 	mask?: string;
+	maskStrokes?: MaskStroke[];
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -376,7 +383,7 @@ export function hasEdits(document: EditorDocument): boolean {
 		document.height !== first.height ||
 		first.flipped ||
 		first.adjustments !== undefined ||
-		first.mask !== undefined ||
+		isCutOut(first) ||
 		!transformsEqual(
 			first.transform,
 			centeredTransform(first.width, first.height),
@@ -407,7 +414,7 @@ export function hasTransparency(document: EditorDocument): boolean {
 			layer.type !== "image" ||
 			layer.hidden ||
 			!layer.opaque ||
-			layer.mask !== undefined
+			isCutOut(layer)
 		) {
 			return false;
 		}
@@ -679,16 +686,72 @@ export function withAdjustments(
 		: { ...layer, adjustments };
 }
 
+/** Whether some of `layer` is cut away: by a mask, or by hand. */
+export function isCutOut(layer: ImageLayer): boolean {
+	return layer.mask !== undefined || layer.maskStrokes !== undefined;
+}
+
 /**
  * `layer` shown through `mask` (see `ImageLayer`), or whole again when it's
- * null, or `layer` itself when that's how it's shown already.
+ * null, or `layer` itself when that's how it's shown already. Strokes that
+ * refined the cut before go with it: they were painted against the old one.
  */
 export function withMask(layer: ImageLayer, mask: string | null): ImageLayer {
-	if ((layer.mask ?? null) === mask) return layer;
-	if (mask !== null) return { ...layer, mask };
-	const { mask: _, ...rest } = layer;
-	return rest;
+	if ((layer.mask ?? null) === mask && layer.maskStrokes === undefined) {
+		return layer;
+	}
+	const { mask: _, maskStrokes: __, ...rest } = layer;
+	return mask === null ? rest : { ...rest, mask };
 }
+
+/**
+ * `layer` with a stroke painted in document space added to its cut, taken
+ * into the image's own pixels, however the layer has been moved, scaled,
+ * turned, or flipped since. Its width scales with the layer's average
+ * scale: a stretched image stretches the brush too.
+ */
+export function addMaskStroke(
+	layer: ImageLayer,
+	stroke: MaskStroke,
+): ImageLayer {
+	const { transform } = layer;
+	const points: number[] = [];
+	for (let i = 0; i < stroke.points.length; i += 2) {
+		const local = toLayerSpace(transform, {
+			x: stroke.points[i],
+			y: stroke.points[i + 1],
+		});
+		points.push(roundPixel(layer.flipped ? -local.x : local.x));
+		points.push(roundPixel(local.y));
+	}
+	const scale = Math.sqrt(Math.abs(transform.scaleX * transform.scaleY));
+	return {
+		...layer,
+		maskStrokes: [
+			...(layer.maskStrokes ?? []),
+			{ type: stroke.type, width: roundPixel(stroke.width / scale), points },
+		],
+	};
+}
+
+/**
+ * Where a point in document space falls on `layer`'s image, as fractions of
+ * its width and height from its top left, however the layer is placed or
+ * flipped, or null when it's off the image.
+ */
+export function imagePointAt(
+	layer: ImageLayer,
+	point: Point,
+): { x: number; y: number } | null {
+	const local = toLayerSpace(layer.transform, point);
+	const x = (layer.flipped ? -local.x : local.x) / layer.width + 0.5;
+	const y = local.y / layer.height + 0.5;
+	return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? { x, y } : null;
+}
+
+// Finer than a hundredth of a pixel is invisible, and would only make saved
+// projects bigger. Adding 0 turns a flipped -0 into 0.
+const roundPixel = (value: number) => Math.round(value * 100) / 100 + 0;
 
 /**
  * A layer with a box its handles resize, resized to `width` by `height` with
