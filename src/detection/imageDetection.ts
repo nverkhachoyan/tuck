@@ -2,6 +2,7 @@ import {
 	detectFaces,
 	detectText,
 	type Feature,
+	type ImagePoint,
 	isAvailable,
 	type Rect,
 	type SubjectMask,
@@ -24,12 +25,18 @@ export function isCutOutAvailable(): boolean {
 	return isAvailable("background");
 }
 
+export type { ImagePoint };
+
 /**
- * A mask of the subject in the image at `uri`, as a new image file of its
- * own, or null when there's none. On web it's whatever is at the center.
+ * A mask of the subjects in the image at `uri`, as a new image file of its
+ * own, or null when there's none. With `at`, it's only the subject there;
+ * without, on web it's whatever is at the center.
  */
-export function findSubjectMask(uri: string): Promise<SubjectMask | null> {
-	return subjectMask(uri);
+export function findSubjectMask(
+	uri: string,
+	at?: ImagePoint,
+): Promise<SubjectMask | null> {
+	return subjectMask(uri, at);
 }
 
 /**

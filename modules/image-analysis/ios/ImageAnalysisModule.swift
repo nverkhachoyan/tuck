@@ -56,7 +56,8 @@ public class ImageAnalysisModule: Module {
 
 		// Every prominent subject together, at the image's full size. It needs
 		// the Neural Engine or a real GPU, so it fails on the simulator.
-		AsyncFunction("subjectMask") { (uri: URL) -> SubjectMaskRecord? in
+		// With `at`, only the subject there.
+		AsyncFunction("subjectMask") { (uri: URL, at: PointRecord?) -> SubjectMaskRecord? in
 			guard #available(iOS 17.0, *) else {
 				throw FeatureUnavailableException("background")
 			}
@@ -67,8 +68,13 @@ public class ImageAnalysisModule: Module {
 			guard let observation = request.results?.first, !observation.allInstances.isEmpty else {
 				return nil
 			}
+			var instances = observation.allInstances
+			if let at {
+				guard let picked = instance(in: observation.instanceMask, at: at) else { return nil }
+				instances = IndexSet(integer: picked)
+			}
 			let buffer = try observation.generateScaledMaskForImage(
-				forInstances: observation.allInstances,
+				forInstances: instances,
 				from: handler
 			)
 			let mask = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
@@ -154,6 +160,39 @@ private func pinToCPUOnSimulator(_ request: VNRequest) {
 	#endif
 }
 
+/// How far from a tap a subject can be and still be picked, as a share of
+/// the mask's longer side: a tap just off its edge still means it.
+private let PICK_REACH = 0.02
+
+/// The subject under `point` in an instance mask, whose pixels are each
+/// subject's index and 0 for the background, or the nearest one within
+/// `PICK_REACH`. The mask is the upright image's, scaled down, with its first
+/// row at the top.
+private func instance(in mask: CVPixelBuffer, at point: PointRecord) -> Int? {
+	CVPixelBufferLockBaseAddress(mask, .readOnly)
+	defer { CVPixelBufferUnlockBaseAddress(mask, .readOnly) }
+	guard let base = CVPixelBufferGetBaseAddress(mask) else { return nil }
+	let width = CVPixelBufferGetWidth(mask)
+	let height = CVPixelBufferGetHeight(mask)
+	let rowBytes = CVPixelBufferGetBytesPerRow(mask)
+	let pixels = base.assumingMemoryBound(to: UInt8.self)
+	let x = min(max(Int(point.x * Double(width)), 0), width - 1)
+	let y = min(max(Int(point.y * Double(height)), 0), height - 1)
+	let reach = max(1, Int(PICK_REACH * Double(max(width, height))))
+	var nearest: (label: Int, distance: Int)?
+	for row in max(0, y - reach)...min(height - 1, y + reach) {
+		for column in max(0, x - reach)...min(width - 1, x + reach) {
+			let label = Int(pixels[row * rowBytes + column])
+			if label == 0 { continue }
+			let distance = (row - y) * (row - y) + (column - x) * (column - x)
+			if distance <= reach * reach, distance < nearest?.distance ?? .max {
+				nearest = (label, distance)
+			}
+		}
+	}
+	return nearest?.label
+}
+
 /// The ranges of `text` between whitespace, as ML Kit and Tesseract split words.
 private func wordRanges(_ text: String) -> [Range<String.Index>] {
 	var ranges: [Range<String.Index>] = []
@@ -188,6 +227,11 @@ struct RectRecord: Record {
 		self.width = width
 		self.height = height
 	}
+}
+
+struct PointRecord: Record {
+	@Field var x: Double = 0
+	@Field var y: Double = 0
 }
 
 struct SizeRecord: Record {
