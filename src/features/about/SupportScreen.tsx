@@ -53,6 +53,13 @@ export default function SupportScreen() {
 				</Paragraph>
 			</Section>
 
+			<Section title="Which browsers work?">
+				<Paragraph>
+					Recent versions of Chrome, Edge, Firefox, and Safari, on a computer or
+					a phone. If Tuck doesn't start, update your browser, or try another.
+				</Paragraph>
+			</Section>
+
 			<Section title="Redact doesn't find anything on Android">
 				<Paragraph>
 					The first time, Android downloads the detection models through Google

@@ -3,6 +3,7 @@ import {
 	useServerDocumentContext,
 } from "expo-router/html";
 import type { ReactNode } from "react";
+import { SUPPORT_EMAIL } from "@/features/about/InfoPage";
 
 // The day and night palettes' `background` and `textPrimary` (`theme.ts`):
 // this page is rendered ahead of time, before the browser says which the app
@@ -20,10 +21,38 @@ const SITE_DESCRIPTION =
 	"Blur, redact, caption, and mark up photos and screenshots in your browser. Every edit happens on your device: no account, no uploads, no watermark.";
 const PREVIEW_IMAGE = { url: `${SITE_URL}/og.jpg`, width: 1200, height: 630 };
 
-// The night palette's page, under `scope`: the system's when Settings
-// leaves it to the system, or forced by the attribute below.
-const nightRules = (scope: string) =>
-	`${scope}, ${scope} body, ${scope} #root { background-color: ${nightBackground}; color-scheme: dark; } ${scope} :focus-visible { outline-color: ${nightInk}; }`;
+const palette = (background: string, ink: string, scheme: string) =>
+	`--background: ${background}; --ink: ${ink}; color-scheme: ${scheme};`;
+
+// The page in the day palette, or the night one: the system's when Settings
+// leaves it to the system, or forced by the attribute the script below sets.
+// Keyboard focus is in the palette's ink, like every other control, rather
+// than the browser's blue, which the app keeps for marks over the photo.
+const pageStyle = `html { ${palette(dayBackground, dayInk, "light")} }
+@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { ${palette(nightBackground, nightInk, "dark")} } }
+html[data-theme="dark"] { ${palette(nightBackground, nightInk, "dark")} }
+html, body, #root { background-color: var(--background); }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.fallback { position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background-color: var(--background); color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; }
+.fallback h1 { margin: 0; font-size: 17px; font-weight: 600; }
+.fallback p { margin: 0; max-width: 340px; opacity: 0.7; }
+.fallback a { color: inherit; }
+.fallback button { margin-top: 12px; padding: 12px 24px; border: 0; border-radius: 12px; background-color: var(--ink); color: var(--background); font: inherit; font-weight: 600; cursor: pointer; }`;
+
+// Shown in place of the app when it can't start: without JavaScript, or, from
+// `index.web.ts`'s template, when CanvasKit or the app's code can't load.
+function Fallback({ title, children }: { title: string; children: ReactNode }) {
+	return (
+		<div className="fallback" role="alert">
+			<h1>{title}</h1>
+			{children}
+			<p>
+				Still stuck? Email{" "}
+				<a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+			</p>
+		</div>
+	);
+}
 
 // Before anything paints, applies a palette chosen in Settings (`theme.ts`
 // reads the same preference) to the page and the browser's chrome.
@@ -68,10 +97,7 @@ export default function Root({ children }: { children: ReactNode }) {
 				<meta name="color-scheme" content="light dark" />
 				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant script, which must run before the first paint. */}
 				<script dangerouslySetInnerHTML={{ __html: applySavedTheme }} />
-				{/* The palette's page, and keyboard focus in its ink, like every
-				    other control, rather than the browser's blue, which the app
-				    keeps for marks over the photo. */}
-				<style>{`html, body, #root { background-color: ${dayBackground}; color-scheme: light; } :focus-visible { outline: 2px solid ${dayInk}; outline-offset: 2px; } @media (prefers-color-scheme: dark) { ${nightRules('html:not([data-theme="light"])')} } ${nightRules('html[data-theme="dark"]')}`}</style>
+				<style>{pageStyle}</style>
 				<meta name="description" content={SITE_DESCRIPTION} />
 				<meta property="og:type" content="website" />
 				<meta property="og:site_name" content="Tuck" />
@@ -96,6 +122,23 @@ export default function Root({ children }: { children: ReactNode }) {
 			</head>
 			<body {...bodyAttributes}>
 				{children}
+				<noscript>
+					<Fallback title="Tuck needs JavaScript">
+						<p>
+							Turn on JavaScript in your browser's settings to edit photos with
+							Tuck.
+						</p>
+					</Fallback>
+				</noscript>
+				<template id="load-failure">
+					<Fallback title="Tuck couldn't start">
+						<p>
+							Part of it didn't load. Check your connection and try again. Tuck
+							needs a recent version of Chrome, Edge, Firefox, or Safari.
+						</p>
+						<button type="button">Try Again</button>
+					</Fallback>
+				</template>
 				{bodyNodes}
 			</body>
 		</html>

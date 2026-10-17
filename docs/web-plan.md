@@ -26,7 +26,9 @@ Fix: in `index.web.ts`, before importing `expo-router/entry`, set `globalThis.__
 
 The deeper fix is a palette of CSS custom properties on web (`colors.background` as `var(--background)`, both palettes defined in `+html.tsx`), which would also let the web follow the system's setting live and switch themes without a reload. It's a larger change: Skia needs real colors, so the canvas would read a resolved copy. Worth it only if live switching matters.
 
-### 1.2 The page hangs at "Loading…" if CanvasKit can't load
+### 1.2 The page hangs at "Loading…" if CanvasKit can't load (done)
+
+Built as described. `index.web.ts` catches a failure to load CanvasKit or the router and fills `#root` from a `<template>` in `+html.tsx`, with Try Again (a reload) and the support address; `<noscript>` shows the same layout. Both read the palette from CSS variables the page style now defines (`--background`, `--ink`), which the focus ring uses too. Support has a "Which browsers work?" section. Checked by serving a build without `canvaskit.wasm` in both palettes, then restoring it and pressing Try Again.
 
 `index.web.ts` calls `LoadSkiaWeb(...).then(...)` with no `catch`. When the WebAssembly can't be fetched or compiled (a dropped connection, a content blocker, a browser without WebGL or WebAssembly, a corporate proxy), the router never loads and the prerendered page stays at a disabled "Loading…" button with no explanation. Without JavaScript the same happens, with no `<noscript>`.
 

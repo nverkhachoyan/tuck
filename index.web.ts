@@ -15,7 +15,24 @@ import { LoadSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
 // first evaluated, and Expo Router evaluates every route at startup. So the
 // app's code may only load once CanvasKit has: nothing may import Skia above
 // this line, and the router is imported dynamically.
-LoadSkiaWeb({ locateFile: (file) => `/${file}` }).then(
-	// @ts-expect-error: untyped, and imported only for its side effect.
-	() => import("expo-router/entry"),
-);
+LoadSkiaWeb({ locateFile: (file) => `/${file}` })
+	.then(
+		// @ts-expect-error: untyped, and imported only for its side effect.
+		() => import("expo-router/entry"),
+	)
+	.catch(showLoadFailure);
+
+/**
+ * Without CanvasKit or the router, React never runs, so the page says so
+ * with the markup `+html.tsx` leaves in a template.
+ */
+function showLoadFailure(error: unknown) {
+	console.error(error);
+	const template = document.getElementById("load-failure");
+	const root = document.getElementById("root");
+	if (!(template instanceof HTMLTemplateElement) || !root) return;
+	root.replaceChildren(template.content.cloneNode(true));
+	root
+		.querySelector("button")
+		?.addEventListener("click", () => window.location.reload());
+}
