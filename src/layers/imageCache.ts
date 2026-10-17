@@ -9,18 +9,20 @@ type Entry = { decoded: Promise<SkImage>; users: number };
 
 /**
  * Decoded images by URI, shared by everyone holding the same one and freed
- * once they've all released it.
+ * once they've all released it, when `later` runs what it's given (see
+ * `decodedImages` for why that waits).
  */
 export function createImageCache(
 	decode: (uri: string) => Promise<SkImage>,
+	later: (free: () => void) => void = (free) => setTimeout(free, 0),
 ): ImageCache {
 	const entries = new Map<string, Entry>();
 
-	// Freed a moment later, so a user that takes the image straight back (a
-	// remount) reuses it rather than decoding it again.
+	// Freed later, so a user that takes the image straight back (a remount)
+	// reuses it rather than decoding it again.
 	function release(uri: string, entry: Entry) {
 		entry.users -= 1;
-		setTimeout(() => {
+		later(() => {
 			// Two users letting go together both get here; only the one that
 			// evicts the entry frees it.
 			if (entry.users > 0 || entries.get(uri) !== entry) return;
@@ -29,7 +31,7 @@ export function createImageCache(
 				(image) => image.dispose(),
 				() => {},
 			);
-		}, 0);
+		});
 	}
 
 	return {
