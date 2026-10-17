@@ -154,6 +154,16 @@ Built as described: the root `ErrorBoundary` has Copy Details (`expo-clipboard`)
 
 There's no error reporting, which the privacy policy promises, so failures in someone's browser are invisible. Keep it that way, and add "Copy details" to the root `ErrorBoundary`: the error, the route, the browser, and the build, for the user to paste into an email to support. Nothing leaves the device unless they send it.
 
+## Left open
+
+As of 2026-10-16, everything above is built except:
+
+* **2.6, retiring tuck.nverk.me.** It needs a decision on the projects people saved there, and a change in Vercel's dashboard.
+* **3.3, the store links.** They wait for the App Store and Google Play listings to go live.
+* **4.4's `file_handlers` and `share_target`.** Each needs a route that receives the file (a share target POSTs it to the service worker), so it's a change of its own.
+* **Two photos in `public/`.** `tuck-g20.jpg` and `tuck-solvay.jpg` came with the detection work and are served at tuck.tools, but nothing in the app loads them. If they were only for testing, move them out of `public/`; the service worker already leaves them out.
+* **Checks that need a deploy:** the headers and CSP on Vercel itself (`curl -sI`), Chrome's install prompt, the iOS home screen icon, and an update arriving through the service worker in production.
+
 ## Checked and fine
 
 * Brotli for JavaScript and WebAssembly, HTTPS with HSTS, the apex redirecting to `www` with a 308.
