@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
 		top: 10,
 		left: 12,
 		fontVariant: ["tabular-nums"],
-		color: colors.textTertiary,
+		color: colors.textSecondary,
 	},
 	previewArea: {
 		width: PREVIEW_SIZE,

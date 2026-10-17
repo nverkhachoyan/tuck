@@ -34,7 +34,9 @@ Built as described. `index.web.ts` catches a failure to load CanvasKit or the ro
 
 Fix: catch the failure and replace `#root`'s contents with plain DOM (React Native can't run yet): a sentence on what failed, a Reload button, and the support address. Add a `<noscript>` with the same message to `+html.tsx`. Say on the Support page which browsers work (recent Chrome, Edge, Firefox, and Safari).
 
-### 1.3 Tertiary text fails contrast
+### 1.3 Tertiary text fails contrast (done)
+
+Built as described: home's hint, Create's ratio labels, and `Segmented`'s detail line use `textSecondary`, and `theme.ts` keeps `textTertiary` for disabled controls and decoration.
 
 `textTertiary` is 2.7:1 on the day background and 3.1:1 on the night one; WCAG AA asks 4.5:1 for text this size. It's used for running text in three places: home's "Or paste a screenshot, or drop an image anywhere." (`HomeScreen.tsx`), a line on Create (`CreateScreen.tsx`), and `Segmented`'s detail line. Disabled icons (`IconButton`) can stay tertiary, since disabled controls are exempt.
 

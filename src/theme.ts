@@ -53,6 +53,8 @@ const day = {
 	borderStrong: "#C8CACF",
 	textPrimary: "#000000",
 	textSecondary: "#5D5F66",
+	// Disabled controls and decoration only: too faint for text people need
+	// to read.
 	textTertiary: "#9A9CA3",
 	// The main action's fill: a solid bar of ink.
 	primary: "#000000",

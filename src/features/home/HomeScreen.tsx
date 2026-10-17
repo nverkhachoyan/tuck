@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
 	},
 	hint: {
 		...typography.label,
-		color: colors.textTertiary,
+		color: colors.textSecondary,
 		textAlign: "center",
 	},
 	aboutLinks: {

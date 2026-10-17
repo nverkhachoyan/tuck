@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
 	detail: {
 		...typography.caption,
 		fontVariant: ["tabular-nums"],
-		color: colors.textTertiary,
+		color: colors.textSecondary,
 		textAlign: "center",
 	},
 	detailChosen: {
