@@ -23,6 +23,7 @@ import {
 	useHomeProjects,
 } from "@/features/home/useHomeProjects";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
+import { useUpdateReady } from "@/lib/serviceWorker";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
 import {
@@ -82,6 +83,7 @@ export default function HomeScreen() {
 		duplicateProject,
 		deleteProject,
 	} = useHomeProjects();
+	const applyUpdate = useUpdateReady();
 	const { width } = useWindowDimensions();
 	// Room for the hint about pasting and dropping.
 	const wide = width >= 560;
@@ -217,14 +219,14 @@ export default function HomeScreen() {
 			)}
 
 			{status === "saveFailed" && (
-				<View style={[styles.column, styles.saveRecoveryArea]}>
-					<View style={styles.saveRecovery}>
+				<View style={[styles.column, styles.noticeArea]}>
+					<View style={styles.notice}>
 						<Ionicons name="warning-outline" size={20} color={colors.danger} />
-						<View style={styles.saveRecoveryBody}>
-							<Text style={styles.saveRecoveryText}>
+						<View style={styles.noticeBody}>
+							<Text style={styles.noticeText}>
 								Your edits are still open. Retry saving or return to the editor.
 							</Text>
-							<View style={styles.saveActions}>
+							<View style={styles.noticeActions}>
 								<Button label="Retry Save" onPress={finishSession} />
 								<Button
 									label="Return to Editor"
@@ -232,6 +234,26 @@ export default function HomeScreen() {
 										router.push(editorHref(useStore.getState().projectId))
 									}
 								/>
+							</View>
+						</View>
+					</View>
+				</View>
+			)}
+
+			{applyUpdate && (
+				<View style={[styles.column, styles.noticeArea]}>
+					<View style={styles.notice}>
+						<Ionicons
+							name="arrow-up-circle-outline"
+							size={20}
+							color={colors.textPrimary}
+						/>
+						<View style={styles.noticeBody}>
+							<Text style={styles.noticeText}>
+								A new version of Tuck is ready.
+							</Text>
+							<View style={styles.noticeActions}>
+								<Button label="Reload" onPress={applyUpdate} />
 							</View>
 						</View>
 					</View>
@@ -440,10 +462,10 @@ const styles = StyleSheet.create({
 		...typography.caption,
 		color: colors.textSecondary,
 	},
-	saveRecoveryArea: {
+	noticeArea: {
 		paddingVertical: space.sm,
 	},
-	saveRecovery: {
+	notice: {
 		flexDirection: "row",
 		gap: 12,
 		padding: 16,
@@ -452,16 +474,16 @@ const styles = StyleSheet.create({
 		borderColor: colors.border,
 		backgroundColor: colors.surface,
 	},
-	saveRecoveryBody: {
+	noticeBody: {
 		flex: 1,
 		gap: 12,
 	},
-	saveRecoveryText: {
+	noticeText: {
 		...typography.label,
 		lineHeight: 18,
 		color: colors.textPrimary,
 	},
-	saveActions: {
+	noticeActions: {
 		flexDirection: "row",
 		flexWrap: "wrap",
 		gap: 8,

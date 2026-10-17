@@ -2,6 +2,7 @@
 // dynamic `import()` below needs on web.
 import "expo";
 import { LoadSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
+import { registerServiceWorker } from "@/lib/serviceWorker";
 
 // The export's pages are rendered ahead of time, and the browser renders them
 // afresh rather than hydrating them: the server has no palette preference, so
@@ -20,7 +21,7 @@ LoadSkiaWeb({ locateFile: (file) => `/${file}` })
 		// @ts-expect-error: untyped, and imported only for its side effect.
 		() => import("expo-router/entry"),
 	)
-	.catch(showLoadFailure);
+	.then(registerServiceWorker, showLoadFailure);
 
 /**
  * Without CanvasKit or the router, React never runs, so the page says so
