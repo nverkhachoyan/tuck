@@ -70,7 +70,9 @@ Fix, in `vercel.json` `headers` for every path:
 * `Strict-Transport-Security: max-age=63072000; includeSubDomains`, and `preload` once every subdomain is known to be on HTTPS.
 * A CSP, sent as `Content-Security-Policy-Report-Only` first and switched to enforcing once a session through every tool (open, paste, drop, detect faces and text, Cut out, export, share, a sticker) reports nothing. A starting point: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-…' 'sha256-…'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'`. The two hashes are for the inline theme script in `+html.tsx` and Expo's `__EXPO_ROUTER_HYDRATE__` script; `style-src` needs `'unsafe-inline'` because React Native Web writes its styles at runtime. Tesseract's worker and MediaPipe's loader may need more (`blob:` workers, `'unsafe-eval'` for Emscripten glue); the report-only phase finds out.
 
-### 2.3 Keep projects in the browser from being evicted
+### 2.3 Keep projects in the browser from being evicted (done)
+
+The audit was wrong about the request: `writeProjectFile` in `projectStorage.web.ts` already calls `navigator.storage.persist()` on the first save, and `persisted()` read false only because nothing had been saved in that browser. What was missing was telling people: Support's "Where are my projects?" now says browsers can clear a site's data on their own, and to save or share an edit worth keeping. The privacy page needed nothing.
 
 `navigator.storage.persisted()` is false, so projects in IndexedDB are "best effort": the browser can clear them under storage pressure, and Safari deletes all of a site's storage after seven days without a visit unless it's installed to the home screen. Someone who edits a screenshot, comes back two weeks later in Safari, and finds their projects gone has no way to know why.
 
