@@ -12,10 +12,17 @@ import ImageAnalysisModule from "./src/ImageAnalysisModule";
 export type {
 	Feature,
 	ImagePoint,
+	ObjectMasks,
 	Rect,
 	SubjectMask,
 	TextRegion,
 } from "./src/ImageAnalysis.types";
+export {
+	canSelectObjects,
+	objectMasks,
+	prepareObjects,
+	releaseObjects,
+} from "./src/objectSelection";
 
 /**
  * Whether this device can find `feature`. Android needs Google Play services,

@@ -45,6 +45,9 @@ app-example
 public/canvaskit.wasm
 public/tesseract/
 public/mediapipe/
+public/onnxruntime/
+public/mobile-sam/
+public/mobile-sam-worker.js
 
 # Vercel CLI (local `vercel build`)
 .vercel/

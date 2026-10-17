@@ -20,4 +20,10 @@ export type Size = { width: number; height: number };
  */
 export type SubjectMask = { uri: string; width: number; height: number };
 
+/**
+ * Masks of what's at a point, from a part of it to the whole, smallest
+ * first, and the index of the one the model thinks likeliest meant.
+ */
+export type ObjectMasks = { masks: SubjectMask[]; likeliest: number };
+
 export type Feature = "faces" | "text" | "background";

@@ -57,22 +57,23 @@ export async function cutShowsAt(
 
 /**
  * `mask` with `subject` added to it (the lighter of the two everywhere) or
- * taken out of it (the darker of it and the subject's inverse), as a
- * grayscale PNG's bytes. Both cover the whole image, so the result has the
- * larger one's pixels, and the other is stretched to fit.
+ * taken out of it (the darker of it and the subject's inverse), or without
+ * one, `subject` alone, as a grayscale PNG's bytes. Both cover the whole
+ * image, so the result has the larger one's pixels, and the other is
+ * stretched to fit.
  */
 export async function combineMasks(
-	mask: SkImage,
+	mask: SkImage | null,
 	subject: SkImage,
 	mode: "add" | "remove",
 ): Promise<Uint8Array> {
-	const width = Math.max(mask.width(), subject.width());
-	const height = Math.max(mask.height(), subject.height());
+	const width = Math.max(mask?.width() ?? 0, subject.width());
+	const height = Math.max(mask?.height() ?? 0, subject.height());
 	const box = { x: 0, y: 0, width, height };
 	const combined = await drawAsImage(
 		<Group>
 			<Fill color="black" />
-			<SkiaImage image={mask} {...box} fit="fill" />
+			{mask && <SkiaImage image={mask} {...box} fit="fill" />}
 			<SkiaImage
 				image={subject}
 				{...box}

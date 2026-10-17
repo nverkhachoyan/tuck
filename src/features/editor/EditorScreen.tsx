@@ -361,8 +361,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// isn't wanted any more.
 	const cutLayerId = useRef<string | null>(null);
 	cutLayerId.current = cutLayer?.id ?? null;
+	const [cutSettings, setCutSettings] = usePreference(
+		"cutOut",
+		parseCutOutSettings,
+	);
 	const cutOut = useCutOut({
 		projectId,
+		image: cutLayer,
+		picking: cutSettings.tool === "pick",
 		latest: (layerId) => {
 			const current = latestDocument();
 			return current ? adjustableImage(current, layerId) : undefined;
@@ -376,10 +382,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			}
 		},
 	});
-	const [cutSettings, setCutSettings] = usePreference(
-		"cutOut",
-		parseCutOutSettings,
-	);
 	const cutTool = cutOutTool(cutSettings, cutOut.canFind);
 	const canvasTool = useMemo((): CanvasTool | null => {
 		if (eyedropper) return { type: "pickColor" };
