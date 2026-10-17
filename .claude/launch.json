@@ -10,6 +10,16 @@
       ],
       "port": 8082,
       "autoPort": true
+    },
+    {
+      "name": "web-export",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "exec npx --yes serve@14.2.4 dist --listen \"${PORT:-8083}\""
+      ],
+      "port": 8083,
+      "autoPort": true
     }
   ]
 }

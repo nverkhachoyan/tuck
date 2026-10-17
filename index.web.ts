@@ -3,6 +3,14 @@
 import "expo";
 import { LoadSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
 
+// The export's pages are rendered ahead of time, and the browser renders them
+// afresh rather than hydrating them: the server has no palette preference, so
+// its HTML is in the day palette, whose class names React would keep in the
+// night one, and no icon font, so its icons are empty text, which fails
+// hydration in either.
+(globalThis as { __EXPO_ROUTER_HYDRATE__?: boolean }).__EXPO_ROUTER_HYDRATE__ =
+	false;
+
 // On web, Skia's module binds to CanvasKit (its WASM build) the moment it's
 // first evaluated, and Expo Router evaluates every route at startup. So the
 // app's code may only load once CanvasKit has: nothing may import Skia above
