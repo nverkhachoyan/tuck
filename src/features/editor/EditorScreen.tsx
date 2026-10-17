@@ -190,7 +190,7 @@ export default function EditorScreen() {
 	}
 
 	return (
-		<View style={styles.container}>
+		<View role="main" style={styles.container}>
 			<ScreenHeader
 				backLabel="Back to projects"
 				onBack={() => leaveEditor(router)}

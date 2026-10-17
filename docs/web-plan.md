@@ -130,7 +130,9 @@ Built with Expo Router's `Link`: `InlineLink` renders one (external addresses ge
 
 The footer links on home (`AboutLinks`) and `InlineLink` on the info pages are `Pressable`s and `Text`s with `accessibilityRole="link"` that navigate in `onPress`. On web they render as `<div role="link">` with no `href`: they can't be opened in a new tab, middle-clicked, copied, or hovered for their address, and crawlers don't follow them. Use Expo Router's `Link` (with `asChild` around the `Pressable`), or React Native Web's `href` prop on `Text`; both render an `<a href>`. External links get `hrefAttrs={{ target: "_blank", rel: "noopener" }}`.
 
-### 4.2 Landmarks
+### 4.2 Landmarks (done)
+
+Built as described: home, Create, and the editor are `main` from their root, info pages from their scroll view (below the header), and home's footer links are a `navigation` labeled "About Tuck". React Native Web renders them as `<main>` and `<nav>`. Screens left behind in the stack are `display: none` and `aria-hidden`, so only the visible screen's landmarks are exposed.
 
 No page has a `main` landmark, and home's footer links aren't a `nav`. React Native Web maps `role="main"` and `role="navigation"` on a `View` to them. Add `main` to each screen's content and `navigation` to the footer links, so screen reader users can jump past the header.
 

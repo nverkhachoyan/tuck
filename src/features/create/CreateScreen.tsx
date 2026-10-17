@@ -65,7 +65,7 @@ export default function CreateScreen() {
 	};
 
 	return (
-		<View style={styles.screen}>
+		<View role="main" style={styles.screen}>
 			<ScreenHeader
 				title="New Canvas"
 				onBack={() =>

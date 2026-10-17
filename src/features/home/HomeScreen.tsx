@@ -152,6 +152,7 @@ export default function HomeScreen() {
 
 	return (
 		<View
+			role="main"
 			style={[
 				styles.screen,
 				hasProjects && listed && styles.screenWithProjects,
@@ -271,7 +272,11 @@ function AboutLinks({ withSettings = false }: { withSettings?: boolean }) {
 		? [{ label: "Settings", href: "/settings" } as const, ...ABOUT_PAGES]
 		: ABOUT_PAGES;
 	return (
-		<View style={styles.aboutLinks}>
+		<View
+			role="navigation"
+			accessibilityLabel="About Tuck"
+			style={styles.aboutLinks}
+		>
 			{pages.map(({ label, href }) => (
 				// An anchor on web. Its slot replaces the Pressable's style, so the
 				// look that follows hover and press is on a view inside.

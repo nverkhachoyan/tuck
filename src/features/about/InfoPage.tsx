@@ -43,6 +43,7 @@ export function InfoPage({
 				}
 			/>
 			<ScrollView
+				role="main"
 				contentContainerStyle={[
 					styles.content,
 					{ paddingBottom: space.xl + bottom },
