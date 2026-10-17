@@ -37,6 +37,7 @@ import { DropOverlay } from "@/ui/DropOverlay";
 import { Highlight } from "@/ui/Highlight";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
+import { PageHead } from "@/ui/PageHead";
 import { TextButton } from "@/ui/TextButton";
 
 // Wide enough to be used with a mouse, where reach doesn't matter: the ways
@@ -155,6 +156,7 @@ export default function HomeScreen() {
 				hasProjects && listed && styles.screenWithProjects,
 			]}
 		>
+			<PageHead path="/" />
 			{hasProjects ? (
 				<View style={styles.header}>
 					<View style={[styles.column, styles.headerColumn]}>

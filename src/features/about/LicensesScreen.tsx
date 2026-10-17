@@ -8,7 +8,11 @@ import { InfoPage, Paragraph, Section } from "./InfoPage";
 
 export default function LicensesScreen() {
 	return (
-		<InfoPage title="Licenses">
+		<InfoPage
+			title="Licenses"
+			path="/licenses"
+			description="The open-source software and fonts in Tuck, and their licenses."
+		>
 			<Paragraph>
 				Tuck is built with fonts, images, and software that others made and
 				share under the licenses below. Thank you to everyone behind them.

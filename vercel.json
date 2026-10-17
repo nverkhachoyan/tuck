@@ -53,7 +53,8 @@
 	],
 	"redirects": [
 		{ "source": "/editor", "destination": "/", "permanent": false },
-		{ "source": "/export", "destination": "/", "permanent": false }
+		{ "source": "/export", "destination": "/", "permanent": false },
+		{ "source": "/_sitemap", "destination": "/", "permanent": false }
 	],
 	"rewrites": [
 		{ "source": "/projects/:id", "destination": "/projects/[id]" },

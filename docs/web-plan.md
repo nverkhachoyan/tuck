@@ -110,7 +110,9 @@ The prerendered home page says only "Loading… Paste Blank canvas Settings Supp
 
 Fix: render the hero in the server pass (the export has no projects, so the server can always show it) and keep the current rule in the browser. Hydration is off (1.1), so the browser replacing the hero with a project list is an ordinary render.
 
-### 3.2 Robots, sitemap, and canonical URLs
+### 3.2 Robots, sitemap, and canonical URLs (done)
+
+Built as described. Each page's title, description, Open Graph and Twitter title and description, canonical URL, and `og:url` come from `PageHead` (`ui/PageHead.tsx`): the layout renders the site's, and a page's own replaces it (Expo Router's `Head` keeps the deepest). Home, Support, Privacy, and Licenses give their path; the 404 page is `noindex`. `+html.tsx` keeps only what every page shares (the image, type, and site name). Expo Router's `/_sitemap` debug page, which the export includes, redirects home.
 
 `/robots.txt` and `/sitemap.xml` are 404s, and no page names its canonical URL.
 

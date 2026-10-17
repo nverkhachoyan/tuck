@@ -1,13 +1,13 @@
 import { type ErrorBoundaryProps, Stack } from "expo-router";
-import Head from "expo-router/head";
 import { Suspense } from "react";
-import { Platform, StatusBar, StyleSheet, Text } from "react-native";
+import { StatusBar, StyleSheet, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { LoadFonts, resetFailedFonts } from "@/layers/fonts";
 import { errorMessage } from "@/lib/errorMessage";
 import { colorScheme, colors, typography } from "@/theme";
 import { Button } from "@/ui/Button";
+import { PageHead } from "@/ui/PageHead";
 
 const barStyle = colorScheme === "dark" ? "light-content" : "dark-content";
 
@@ -15,13 +15,7 @@ export default function Layout() {
 	return (
 		<GestureHandlerRootView style={styles.flex}>
 			<SafeAreaProvider>
-				{/* The browser tab's title. Only on web: in an iOS build, Head also
-				    registers the screen with Handoff and Spotlight. */}
-				{Platform.OS === "web" && (
-					<Head>
-						<title>Tuck</title>
-					</Head>
-				)}
+				<PageHead />
 				<Suspense fallback={null}>
 					<LoadFonts />
 					<StatusBar barStyle={barStyle} />

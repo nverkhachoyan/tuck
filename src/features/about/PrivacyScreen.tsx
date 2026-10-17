@@ -12,7 +12,11 @@ const ML_KIT_DISCLOSURE =
 
 export default function PrivacyScreen() {
 	return (
-		<InfoPage title="Privacy">
+		<InfoPage
+			title="Privacy"
+			path="/privacy"
+			description="Tuck edits your photos on your own device. Nothing is uploaded, and nothing about you is collected: no account, no analytics, no ads, and no tracking."
+		>
 			<Paragraph muted>Last updated October 4, 2026</Paragraph>
 
 			<Section title="The short version">

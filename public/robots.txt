@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /projects/
+
+Sitemap: https://www.tuck.tools/sitemap.xml

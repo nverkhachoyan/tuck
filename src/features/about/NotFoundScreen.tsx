@@ -7,7 +7,7 @@ import { InfoPage, Paragraph, Section } from "./InfoPage";
 export default function NotFoundScreen() {
 	const router = useRouter();
 	return (
-		<InfoPage title="Not Found">
+		<InfoPage title="Not Found" noindex>
 			<Section title="There's nothing here">
 				<Paragraph>
 					This address isn't a page of Tuck. The link may be mistyped, or the

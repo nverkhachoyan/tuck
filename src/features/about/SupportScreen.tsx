@@ -14,7 +14,11 @@ const version = Constants.expoConfig?.version;
 
 export default function SupportScreen() {
 	return (
-		<InfoPage title="Support">
+		<InfoPage
+			title="Support"
+			path="/support"
+			description="Help with Tuck: where your projects are kept, which browsers work, saving to Photos, and how to reach us."
+		>
 			<Section title="Get in touch">
 				<Paragraph>
 					Found a bug, or missing something? Email {SUPPORT_EMAIL}. Say which

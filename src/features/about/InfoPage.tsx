@@ -1,16 +1,9 @@
 import { type Href, useRouter } from "expo-router";
-import Head from "expo-router/head";
 import type { ReactNode } from "react";
-import {
-	Linking,
-	Platform,
-	ScrollView,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, space, typography } from "@/theme";
+import { PageHead } from "@/ui/PageHead";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 
 // A line of running text this wide reads comfortably.
@@ -25,20 +18,24 @@ export const SUPPORT_EMAIL = "support@tuck.tools";
  */
 export function InfoPage({
 	title,
+	description,
+	path,
+	noindex,
 	children,
 }: {
 	title: string;
 	children: ReactNode;
-}) {
+} & Omit<Parameters<typeof PageHead>[0], "title">) {
 	const router = useRouter();
 	const { bottom } = useSafeAreaInsets();
 	return (
 		<View style={styles.screen}>
-			{Platform.OS === "web" && (
-				<Head>
-					<title>{`${title} · Tuck`}</title>
-				</Head>
-			)}
+			<PageHead
+				title={title}
+				description={description}
+				path={path}
+				noindex={noindex}
+			/>
 			<ScreenHeader
 				title={title}
 				onBack={() =>

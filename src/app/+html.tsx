@@ -4,6 +4,7 @@ import {
 } from "expo-router/html";
 import type { ReactNode } from "react";
 import { SUPPORT_EMAIL } from "@/features/about/InfoPage";
+import { SITE_URL } from "@/ui/PageHead";
 
 // The day and night palettes' `background` and `textPrimary` (`theme.ts`):
 // this page is rendered ahead of time, before the browser says which the app
@@ -13,12 +14,9 @@ const nightBackground = "#17181B";
 const dayInk = "#000000";
 const nightInk = "#F3F3F1";
 
-// What a link to the site shows in a chat or a post. The image must be an
-// absolute URL; it's made from `store/source/og.html`.
-const SITE_URL = "https://www.tuck.tools";
-const SITE_TITLE = "Tuck: Photo Markup";
-const SITE_DESCRIPTION =
-	"Blur, redact, caption, and mark up photos and screenshots in your browser. Every edit happens on your device: no account, no uploads, no watermark.";
+// The picture a link to any page shows in a chat or a post; each page's
+// title and description come from `PageHead`. The image must be an absolute
+// URL; it's made from `store/source/og.html`.
 const PREVIEW_IMAGE = { url: `${SITE_URL}/og.jpg`, width: 1200, height: 630 };
 
 const palette = (background: string, ink: string, scheme: string) =>
@@ -97,15 +95,12 @@ export default function Root({ children }: { children: ReactNode }) {
 				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant script, which must run before the first paint. */}
 				<script dangerouslySetInnerHTML={{ __html: applySavedTheme }} />
 				<style>{pageStyle}</style>
-				<meta name="description" content={SITE_DESCRIPTION} />
 				<link rel="manifest" href="/manifest.webmanifest" />
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
 				<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 				<meta name="apple-mobile-web-app-title" content="Tuck" />
 				<meta property="og:type" content="website" />
 				<meta property="og:site_name" content="Tuck" />
-				<meta property="og:title" content={SITE_TITLE} />
-				<meta property="og:description" content={SITE_DESCRIPTION} />
 				<meta property="og:image" content={PREVIEW_IMAGE.url} />
 				<meta property="og:image:width" content={String(PREVIEW_IMAGE.width)} />
 				<meta
@@ -117,8 +112,6 @@ export default function Root({ children }: { children: ReactNode }) {
 					content="The Tuck wordmark beside the editor redacting a chat and captioning a picture."
 				/>
 				<meta name="twitter:card" content="summary_large_image" />
-				<meta name="twitter:title" content={SITE_TITLE} />
-				<meta name="twitter:description" content={SITE_DESCRIPTION} />
 				<meta name="twitter:image" content={PREVIEW_IMAGE.url} />
 				<ScrollViewStyleReset />
 				{headNodes}
