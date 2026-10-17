@@ -1,11 +1,14 @@
+import * as Clipboard from "expo-clipboard";
+import Constants from "expo-constants";
 import { type ErrorBoundaryProps, Stack } from "expo-router";
-import { Suspense } from "react";
-import { StatusBar, StyleSheet, Text } from "react-native";
+import { Suspense, useState } from "react";
+import { Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SUPPORT_EMAIL } from "@/features/about/InfoPage";
 import { LoadFonts, resetFailedFonts } from "@/layers/fonts";
 import { errorMessage } from "@/lib/errorMessage";
-import { colorScheme, colors, typography } from "@/theme";
+import { colorScheme, colors, space, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { PageHead } from "@/ui/PageHead";
 
@@ -40,9 +43,14 @@ export default function Layout() {
  * providers; Expo Router's root provides the safe area.
  */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+	const [copied, setCopied] = useState(false);
 	const handleRetry = () => {
 		resetFailedFonts();
 		void retry();
+	};
+	const copyDetails = async () => {
+		await Clipboard.setStringAsync(errorDetails(error));
+		setCopied(true);
 	};
 
 	return (
@@ -50,9 +58,33 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 			<StatusBar barStyle={barStyle} />
 			<Text style={styles.failureTitle}>Something went wrong</Text>
 			<Text style={styles.failureMessage}>{errorMessage(error)}</Text>
-			<Button label="Try Again" onPress={handleRetry} />
+			<View style={styles.failureActions}>
+				<Button label="Try Again" variant="primary" onPress={handleRetry} />
+				<Button
+					label={copied ? "Copied" : "Copy Details"}
+					icon={copied ? "checkmark" : "copy-outline"}
+					onPress={() => void copyDetails()}
+				/>
+			</View>
+			<Text style={styles.failureHint}>
+				If it keeps happening, email the details to {SUPPORT_EMAIL}.
+			</Text>
 		</SafeAreaView>
 	);
+}
+
+/**
+ * What support needs to look into a crash, for the user to paste into an
+ * email. Tuck sends nothing itself.
+ */
+function errorDetails(error: Error): string {
+	return [
+		`Tuck ${Constants.expoConfig?.version ?? ""}`,
+		Platform.OS === "web"
+			? `${navigator.userAgent}\n${window.location.pathname}`
+			: `${Platform.OS} ${Platform.Version}`,
+		error.stack ?? `${error.name}: ${error.message}`,
+	].join("\n");
 }
 
 function Routes() {
@@ -107,5 +139,16 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		maxWidth: 320,
 		marginBottom: 12,
+	},
+	failureActions: {
+		flexDirection: "row",
+		gap: space.xs,
+	},
+	failureHint: {
+		...typography.label,
+		color: colors.textSecondary,
+		textAlign: "center",
+		maxWidth: 320,
+		marginTop: space.xs,
 	},
 });

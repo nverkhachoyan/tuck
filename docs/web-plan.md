@@ -146,7 +146,9 @@ A first visit downloads 0.47 MB and 0.76 MB of JavaScript and 3.25 MB of CanvasK
 
 Tuck does everything on the device, so it can work offline. A service worker that precaches the shell, the bundles, CanvasKit, and the fonts, and caches the detection models the first time they're used, would make the installed app open without a connection. The manifest can also add `file_handlers` (open images with Tuck from the desktop) and `share_target` (Android Chrome's share sheet, the web's version of `modules/share-target`). It's the biggest item here, and a stale service worker is hard to undo, so build it last, with a version in the cache name and a "New version: reload" prompt.
 
-### 4.5 A way to report web errors
+### 4.5 A way to report web errors (done)
+
+Built as described: the root `ErrorBoundary` has Copy Details (`expo-clipboard`), which copies the version, the browser and path on web (the OS and its version on native), and the stack, plus a line naming the support address. Checked on web with a temporary crash: the details copied and the label changed to Copied. Not checked on a phone.
 
 There's no error reporting, which the privacy policy promises, so failures in someone's browser are invisible. Keep it that way, and add "Copy details" to the root `ErrorBoundary`: the error, the route, the browser, and the build, for the user to paste into an email to support. Nothing leaves the device unless they send it.
 
