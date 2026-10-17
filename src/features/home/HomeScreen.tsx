@@ -22,6 +22,7 @@ import {
 	type HomeStatus,
 	useHomeProjects,
 } from "@/features/home/useHomeProjects";
+import { listenForLaunchedPhotos } from "@/import/sharedPhoto";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { useUpdateReady } from "@/lib/serviceWorker";
 import { editorHref } from "@/projects/projectRoute";
@@ -110,6 +111,12 @@ export default function HomeScreen() {
 		router.setParams({ shared: undefined });
 		void openSharedPhoto(shared);
 	}, [shared, focused, status, sessionOpen, router, openSharedPhoto]);
+	// On web, a photo the installed app is opened with ("Open with" on the
+	// desktop) comes the same way. Each opens its own window, at home.
+	useEffect(
+		() => listenForLaunchedPhotos((name) => router.setParams({ shared: name })),
+		[router],
+	);
 
 	const hasProjects = projects.length > 0;
 	const blocked = status !== "idle";

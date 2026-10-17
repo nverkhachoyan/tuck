@@ -51,3 +51,13 @@ function sharedFolder(): Directory | null {
 	const [container] = Object.values(Paths.appleSharedContainers);
 	return container ? new Directory(container, FOLDER) : null;
 }
+
+/**
+ * On web, hands `listener` the name of each photo the installed app is
+ * opened with, to open like a shared one. Native apps are only shared to.
+ */
+export function listenForLaunchedPhotos(
+	_listener: (name: string) => void,
+): () => void {
+	return () => {};
+}
