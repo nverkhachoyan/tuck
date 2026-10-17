@@ -124,7 +124,9 @@ When the App Store listing is up: add `<meta name="apple-itunes-app" content="ap
 
 ## Priority 4: Standards and polish
 
-### 4.1 Links are not anchors
+### 4.1 Links are not anchors (done)
+
+Built with Expo Router's `Link`: `InlineLink` renders one (external addresses get `target="_blank"` and `rel="noopener"` on web; on native, `Link` opens them with `Linking`), and `AboutLinks` wraps its `Pressable` in `Link asChild`, with its hover and press look on a view inside. Checked on web: anchors with `href` in the prerendered HTML, a plain click navigating without a reload, and the footer's padding and hover. Not checked on a phone.
 
 The footer links on home (`AboutLinks`) and `InlineLink` on the info pages are `Pressable`s and `Text`s with `accessibilityRole="link"` that navigate in `onPress`. On web they render as `<div role="link">` with no `href`: they can't be opened in a new tab, middle-clicked, copied, or hovered for their address, and crawlers don't follow them. Use Expo Router's `Link` (with `asChild` around the `Pressable`), or React Native Web's `href` prop on `Text`; both render an `<a href>`. External links get `hrefAttrs={{ target: "_blank", rel: "noopener" }}`.
 

@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
+	Link,
 	useFocusEffect,
 	useIsFocused,
 	useLocalSearchParams,
@@ -266,30 +267,33 @@ export default function HomeScreen() {
  * its gear.
  */
 function AboutLinks({ withSettings = false }: { withSettings?: boolean }) {
-	const router = useRouter();
 	const pages = withSettings
 		? [{ label: "Settings", href: "/settings" } as const, ...ABOUT_PAGES]
 		: ABOUT_PAGES;
 	return (
 		<View style={styles.aboutLinks}>
 			{pages.map(({ label, href }) => (
-				<Pressable
-					key={href}
-					hitSlop={8}
-					accessibilityRole="link"
-					onPress={() => router.push(href)}
-					style={(state) => {
-						const { pressed, hovered } = interaction(state);
-						return [
-							styles.aboutLink,
-							webTransition,
-							hovered && styles.aboutLinkHovered,
-							pressed && styles.aboutLinkPressed,
-						];
-					}}
-				>
-					<Text style={styles.aboutLinkLabel}>{label}</Text>
-				</Pressable>
+				// An anchor on web. Its slot replaces the Pressable's style, so the
+				// look that follows hover and press is on a view inside.
+				<Link key={href} href={href} asChild>
+					<Pressable hitSlop={8}>
+						{(state) => {
+							const { pressed, hovered } = interaction(state);
+							return (
+								<View
+									style={[
+										styles.aboutLink,
+										webTransition,
+										hovered && styles.aboutLinkHovered,
+										pressed && styles.aboutLinkPressed,
+									]}
+								>
+									<Text style={styles.aboutLinkLabel}>{label}</Text>
+								</View>
+							);
+						}}
+					</Pressable>
+				</Link>
 			))}
 		</View>
 	);

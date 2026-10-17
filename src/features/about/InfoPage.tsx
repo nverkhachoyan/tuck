@@ -1,6 +1,6 @@
-import { type Href, useRouter } from "expo-router";
+import { type Href, Link, useRouter } from "expo-router";
 import type { ReactNode } from "react";
-import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, space, typography } from "@/theme";
 import { PageHead } from "@/ui/PageHead";
@@ -108,20 +108,18 @@ export function InlineLink({
 	to: Href | `https:${string}` | `mailto:${string}`;
 	children: ReactNode;
 }) {
-	const router = useRouter();
 	const external =
 		typeof to === "string" &&
 		(to.startsWith("https:") || to.startsWith("mailto:"));
 	return (
-		<Text
-			accessibilityRole="link"
+		<Link
+			href={to}
 			style={styles.link}
-			onPress={() =>
-				external ? void Linking.openURL(to as string) : router.push(to)
-			}
+			// On web, the browser opens it, in a new tab.
+			{...(external && { target: "_blank", rel: "noopener" })}
 		>
 			{children}
-		</Text>
+		</Link>
 	);
 }
 
