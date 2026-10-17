@@ -694,14 +694,22 @@ export function isCutOut(layer: ImageLayer): boolean {
 /**
  * `layer` shown through `mask` (see `ImageLayer`), or whole again when it's
  * null, or `layer` itself when that's how it's shown already. Strokes that
- * refined the cut before go with it: they were painted against the old one.
+ * refined the cut before go with it, since they were painted against the
+ * old one, unless `keepStrokes`: a mask grown or shrunk from the old one
+ * (by a subject added to it or taken out) keeps them.
  */
-export function withMask(layer: ImageLayer, mask: string | null): ImageLayer {
-	if ((layer.mask ?? null) === mask && layer.maskStrokes === undefined) {
+export function withMask(
+	layer: ImageLayer,
+	mask: string | null,
+	{ keepStrokes = false } = {},
+): ImageLayer {
+	const strokes = keepStrokes ? layer.maskStrokes : undefined;
+	if ((layer.mask ?? null) === mask && layer.maskStrokes === strokes) {
 		return layer;
 	}
 	const { mask: _, maskStrokes: __, ...rest } = layer;
-	return mask === null ? rest : { ...rest, mask };
+	const shown = mask === null ? rest : { ...rest, mask };
+	return strokes ? { ...shown, maskStrokes: strokes } : shown;
 }
 
 /**

@@ -681,6 +681,28 @@ describe("withMask", () => {
 		assert.equal("maskStrokes" in recut, false);
 		assert.deepEqual(withMask(refined, null), photo());
 	});
+
+	test("keeps the strokes when asked, for a mask grown from the old one", () => {
+		const refined = addMaskStroke(withMask(photo(), "file:///a.png"), {
+			type: "eraser",
+			width: 10,
+			points: [2000, 1500],
+		});
+		const grown = withMask(refined, "file:///b.png", { keepStrokes: true });
+		assert.equal(grown.mask, "file:///b.png");
+		assert.deepEqual(grown.maskStrokes, refined.maskStrokes);
+		assert.equal(
+			withMask(refined, "file:///a.png", { keepStrokes: true }),
+			refined,
+		);
+		assert.equal(
+			"maskStrokes" in
+				withMask(photo(), "file:///b.png", {
+					keepStrokes: true,
+				}),
+			false,
+		);
+	});
 });
 
 describe("addMaskStroke", () => {

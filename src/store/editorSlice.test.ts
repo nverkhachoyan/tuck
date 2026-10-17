@@ -1277,5 +1277,18 @@ describe("editorSlice", () => {
 			store.getState().setMask("photo", "file:///other.png");
 			assert.equal("maskStrokes" in firstImage(store), false);
 		});
+
+		test("a mask grown from the old one can keep them", () => {
+			const { store } = storeWithText();
+			store.getState().setMask("photo", "file:///mask.png");
+			store.getState().paintMask("photo", pen);
+			const steps = store.getState().past.length;
+			store.getState().setMask("photo", "file:///grown.png", {
+				keepStrokes: true,
+			});
+			assert.equal(firstImage(store).mask, "file:///grown.png");
+			assert.equal(firstImage(store).maskStrokes?.length, 1);
+			assert.equal(store.getState().past.length, steps + 1);
+		});
 	});
 });

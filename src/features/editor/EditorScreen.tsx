@@ -227,7 +227,8 @@ function leaveEditor(router: ReturnType<typeof useRouter>) {
 	else router.replace("/");
 }
 
-// For a save as the app leaves the foreground, before React has rendered.
+// For a save as the app leaves the foreground, or a pick finished, before
+// React has rendered.
 const latestDocument = () => useStore.getState().document;
 
 function ScreenContent({ document }: { document: EditorDocument }) {
@@ -358,11 +359,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	cutLayerId.current = cutLayer?.id ?? null;
 	const cutOut = useCutOut({
 		projectId,
+		latest: (layerId) => {
+			const current = latestDocument();
+			return current ? adjustableImage(current, layerId) : undefined;
+		},
 		// The mask moves into the project, so autosave knows its file.
 		keep: async (uri) =>
 			projectId === null ? uri : addImage(projectId, uri, false),
-		onMask: (layerId, mask) => {
-			if (cutLayerId.current === layerId) setMask(layerId, mask);
+		onMask: (layerId, mask, picked) => {
+			if (cutLayerId.current === layerId) {
+				setMask(layerId, mask, { keepStrokes: picked });
+			}
 		},
 	});
 	const [cutSettings, setCutSettings] = usePreference(

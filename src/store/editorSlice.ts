@@ -121,7 +121,11 @@ export type EditorSlice = {
 	) => void;
 	setShapeStyle: (id: string, edit: ShapeEdit) => void;
 	setAdjustments: (id: string, adjustments: Adjustments) => void;
-	setMask: (id: string, mask: string | null) => void;
+	setMask: (
+		id: string,
+		mask: string | null,
+		options?: { keepStrokes?: boolean },
+	) => void;
 	paintMask: (id: string, stroke: MaskStroke) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
@@ -530,10 +534,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// By id: the mask was found for the image it started on, which may no
 		// longer be selected, or may be gone.
-		setMask: (id, mask) => {
+		setMask: (id, mask, options) => {
 			const target = findLayer(id);
 			if (target?.type !== "image") return;
-			const masked = withMask(target, mask);
+			const masked = withMask(target, mask, options);
 			if (masked === target) return;
 			replaceLayer("editor/setMask", target, masked);
 		},

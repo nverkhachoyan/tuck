@@ -47,12 +47,7 @@ export function ImageLayerView({
 		[adjustments],
 	);
 	const filter = matrix ?? saved;
-	const box = {
-		x: -layer.width / 2,
-		y: -layer.height / 2,
-		width: layer.width,
-		height: layer.height,
-	};
+	const box = imageBox(layer);
 	const content = (
 		<SkiaImage image={image} {...box} fit="fill">
 			{filter && <SkiaColorMatrix matrix={filter} />}
@@ -69,22 +64,9 @@ export function ImageLayerView({
 					mode="luminance"
 					clip={false}
 					mask={
-						<Group>
-							{mask ? (
-								<SkiaImage image={mask} {...box} fit="fill" />
-							) : (
-								<Rect {...box} color="white" />
-							)}
-							{maskStrokes?.map((stroke, index) => (
-								<MaskStrokePath
-									// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
-									key={index}
-									path={pathFor(stroke)}
-									stroke={stroke}
-								/>
-							))}
+						<CutMask layer={layer} mask={mask}>
 							{liveMask}
-						</Group>
+						</CutMask>
 					}
 				>
 					{content}
@@ -94,6 +76,51 @@ export function ImageLayerView({
 			)}
 		</Group>
 	);
+}
+
+/**
+ * What of an image layer its cut shows, in luminance, in the image's own
+ * space before it's flipped: its `mask` stretched over it (or white without
+ * one), with its `maskStrokes` and then `children` painted over that.
+ */
+export function CutMask({
+	layer,
+	mask,
+	children,
+}: {
+	layer: ImageLayer;
+	mask?: SkImage;
+	children?: ReactNode;
+}) {
+	const box = imageBox(layer);
+	return (
+		<Group>
+			{mask ? (
+				<SkiaImage image={mask} {...box} fit="fill" />
+			) : (
+				<Rect {...box} color="white" />
+			)}
+			{layer.maskStrokes?.map((stroke, index) => (
+				<MaskStrokePath
+					// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
+					key={index}
+					path={pathFor(stroke)}
+					stroke={stroke}
+				/>
+			))}
+			{children}
+		</Group>
+	);
+}
+
+/** An image layer's box in its own space, centered on the origin. */
+export function imageBox(layer: { width: number; height: number }) {
+	return {
+		x: -layer.width / 2,
+		y: -layer.height / 2,
+		width: layer.width,
+		height: layer.height,
+	};
 }
 
 /**

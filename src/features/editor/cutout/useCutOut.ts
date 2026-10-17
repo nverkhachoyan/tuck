@@ -5,15 +5,22 @@ import {
 	isCutOutAvailable,
 	isDetectionModelDownloading,
 } from "@/detection/imageDetection";
+import { decodedImages, decodeImage } from "@/layers/decodedImages";
 import { errorMessage } from "@/lib/errorMessage";
+import { deleteTemporaryFile, writeTemporaryPng } from "@/lib/temporaryFile";
 import type { ImageLayer } from "@/model/document";
 import { showAlert } from "@/ui/showAlert";
+import { combineMasks, cutShowsAt } from "./cutMask";
 
 /**
  * Finds the subjects to cut out of an image: every one, or with a point,
- * only the one there. `find` hands the mask to `onMask`, once `keep` has put
- * its file where the document can use it; `onMask` decides whether the image
- * still wants it. `finding` says which is being found, while one is: a
+ * the one there. A point on an image without a mask cuts out only that
+ * subject; on one with a mask, it adds the subject to the cut, or takes it
+ * out when the cut shows the image there. `latest` is the image as it is
+ * by then, which a pick changes. `find` hands the mask to `onMask`, once
+ * `keep` has put its file where the document can use it, saying whether it
+ * grew from the image's mask, which keeps the strokes that refined it;
+ * `onMask` decides whether the image still wants it. `finding` says which is being found, while one is: a
  * second find meanwhile does nothing. Every subject found once is used again
  * this session, whose project keeps its file until it closes. `news` says
  * what the last find did, for a screen reader. `canFind` is false while this
@@ -21,12 +28,14 @@ import { showAlert } from "@/ui/showAlert";
  */
 export function useCutOut({
 	projectId,
+	latest,
 	keep,
 	onMask,
 }: {
 	projectId: string | null;
+	latest: (layerId: string) => ImageLayer | undefined;
 	keep: (uri: string) => Promise<string>;
-	onMask: (layerId: string, mask: string) => void;
+	onMask: (layerId: string, mask: string, picked: boolean) => void;
 }) {
 	const [finding, setFinding] = useState<"all" | "one" | null>(null);
 	const [news, setNews] = useState<string | null>(null);
@@ -41,7 +50,7 @@ export function useCutOut({
 		const { masks } = found.current;
 		const known = at ? undefined : masks.get(layer.uri);
 		if (known !== undefined) {
-			onMask(layer.id, known);
+			onMask(layer.id, known, false);
 			setNews("Background removed");
 			return;
 		}
@@ -61,10 +70,24 @@ export function useCutOut({
 				);
 				return;
 			}
-			const url = await keep(mask.uri);
-			if (!at) masks.set(layer.uri, url);
-			onMask(layer.id, url);
-			setNews(at ? "Subject picked" : "Background removed");
+			if (!at) {
+				const url = await keep(mask.uri);
+				masks.set(layer.uri, url);
+				onMask(layer.id, url, false);
+				setNews("Background removed");
+				return;
+			}
+			const current = latest(layer.id);
+			if (!current) return;
+			const picked =
+				current.mask === undefined
+					? { uri: mask.uri, news: "Subject picked" }
+					: await pickInto(current, current.mask, mask.uri, at);
+			const url = await keep(picked.uri);
+			// Cut another way meanwhile, the pick no longer fits.
+			if (latest(layer.id)?.mask !== current.mask) return;
+			onMask(layer.id, url, true);
+			setNews(picked.news);
 		} catch (error) {
 			setNews(null);
 			showAlert(
@@ -80,4 +103,34 @@ export function useCutOut({
 	};
 
 	return { canFind: isCutOutAvailable(), finding, news, find };
+}
+
+/**
+ * `subject` added to `layer`'s cut, or taken out of it where the cut shows
+ * the image `at` the point tapped, as a new mask file.
+ */
+async function pickInto(
+	layer: ImageLayer,
+	mask: string,
+	subject: string,
+	at: ImagePoint,
+): Promise<{ uri: string; news: string }> {
+	const held = decodedImages.acquire(mask);
+	try {
+		const current = await held.decoded;
+		const add = !(await cutShowsAt(layer, current, at));
+		const picked = await decodeImage(subject);
+		try {
+			const bytes = await combineMasks(current, picked, add ? "add" : "remove");
+			return {
+				uri: writeTemporaryPng(bytes),
+				news: add ? "Subject added" : "Subject removed",
+			};
+		} finally {
+			picked.dispose();
+		}
+	} finally {
+		held.release();
+		deleteTemporaryFile(subject);
+	}
 }

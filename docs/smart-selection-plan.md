@@ -27,12 +27,12 @@ Cut out becomes a tool with Done and Cancel, like Adjust, working on one image:
 
 * **Opening it** on an image with no cut finds every subject, as Cut out does now, so one tap still cuts the photo out. On an image that's cut already, it opens to refine the cut.
 * **Subjects** finds every subject again, replacing the cut.
-* **Pick**: a tap on the photo cuts out only the subject under it. `subjectMask(uri, point)` takes the point: iOS reads the instance label under it from `instanceMask`, Android asks ML Kit for each subject and keeps the one under it, and web gives MagicTouch the tap instead of the center (the biggest fix on web).
+* **Pick**: a tap on the photo cuts out only the subject under it. Once there's a cut, a tap adds the subject under it, or takes it out when the cut shows the photo where it was tapped: the masks are combined offscreen with Skia (the lighter of the two to add, the darker of the cut and the subject's inverse to take out) into a new grayscale PNG. `subjectMask(uri, point)` takes the point: iOS reads the instance label under it from `instanceMask`, Android asks ML Kit for each subject and keeps the one under it, and web gives MagicTouch the tap instead of the center (the biggest fix on web).
 * **Keep** and **Erase** brushes paint the cut by hand: Keep brings back what the model removed, Erase removes what it kept. Removed parts show faintly while the tool is open, so there's something to paint back.
 * **Reset**, in the header as for Adjust, takes the cut off.
 * The brushes need no model, so the tool shows on every device, including iOS 16 and Android without Play services, where Subjects and Pick are left out.
 
-The document stores the brush strokes as `maskStrokes` on the image layer (`MaskStroke`s in the image's own pixels), drawn over the mask: a pen shows the image, an eraser hides it. The strokes stay editable, nothing is rasterized, and the editor, export, and thumbnails draw them through the same `ImageLayerView`. A new mask from Subjects or Pick drops the strokes, which refined the old one. Older builds show the cut without its strokes (as they show an image without adjustments), so the project version stays 5.
+The document stores the brush strokes as `maskStrokes` on the image layer (`MaskStroke`s in the image's own pixels), drawn over the mask: a pen shows the image, an eraser hides it. The strokes stay editable, nothing is rasterized, and the editor, export, and thumbnails draw them through the same `ImageLayerView`. A new mask from Subjects drops the strokes, which refined the old one, and so does Reset; a mask Pick grew or shrank from the old one keeps them. Older builds show the cut without its strokes (as they show an image without adjustments), so the project version stays 5.
 
 ### Stage 2: select any object (a promptable model)
 
