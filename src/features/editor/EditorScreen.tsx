@@ -137,7 +137,11 @@ import { exportHref } from "@/projects/projectRoute";
 import { addImage, openProjectName } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
 import { useProjectSession } from "@/projects/useProjectSession";
-import { renderThumbnail, sampleColor } from "@/render/renderDocument";
+import {
+	renderCutOut,
+	renderThumbnail,
+	sampleColor,
+} from "@/render/renderDocument";
 import { bundledStickerImage } from "@/stickers/stickerFile";
 import { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";
@@ -291,7 +295,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const layersOpen = modeState.sheet === "layers";
 	const addOpen = modeState.sheet === "add";
 	const savedStickers = useSavedStickers();
-	const stickerSave = useStickerSave(savedStickers.save);
+	const stickerSave = useStickerSave(savedStickers.save, renderCutOut);
 	const windowWidth = useWindowDimensions().width;
 	const layersBeside = windowWidth >= SIDEBAR_MIN_WIDTH;
 	const wide = windowWidth >= INSPECTOR_MIN_WIDTH;

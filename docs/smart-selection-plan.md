@@ -65,7 +65,7 @@ Open questions for stage 2:
 A selection becomes a mask that the editor's existing features can take:
 
 * **Redact a selection**: a redaction shaped by a mask rather than a box or strokes, to blur a person or a license plate exactly. The most on-brand of these for Tuck.
-* **Copy to a new layer or keep as a sticker**: the cut-out image, saved with its mask applied. `useStickerSave` leaves cut-outs out today.
+* **Copy to a new layer or keep as a sticker**: the cut-out image, saved with its mask applied. Keeping one as a sticker is built: `renderCutOut` draws what the cut keeps, trimmed to it, into a transparent PNG.
 * **Invert**: keep the background and remove the subject, or blur only the background.
 * **Adjust only the selection**.
 
