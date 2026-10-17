@@ -36,7 +36,8 @@
 	"redirects": [
 		{ "source": "/editor", "destination": "/", "permanent": false },
 		{ "source": "/export", "destination": "/", "permanent": false },
-		{ "source": "/_sitemap", "destination": "/", "permanent": false }
+		{ "source": "/_sitemap", "destination": "/", "permanent": false },
+		{ "source": "/share-target", "destination": "/", "statusCode": 303 }
 	],
 	"rewrites": [
 		{ "source": "/projects/:id", "destination": "/projects/[id]" },

@@ -14,6 +14,9 @@ const ENGINES = /^\/(mediapipe|tesseract)\//;
 // versions, under names with content hashes.
 const STICKERS_CACHE = "tuck-stickers";
 const STICKERS = /^\/assets\/assets\/stickers\//;
+// A photo shared to the installed app (the manifest's `share_target`),
+// kept until home opens it: `src/import/sharedPhoto.web.ts` reads it there.
+const SHARED_CACHE = "tuck-shared";
 
 const fetchFresh = (path) =>
 	fetch(path, HASHED.test(path) ? {} : { cache: "no-cache" });
@@ -60,7 +63,12 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
 	const { request } = event;
 	const url = new URL(request.url);
-	if (request.method !== "GET" || url.origin !== self.location.origin) return;
+	if (url.origin !== self.location.origin) return;
+	if (request.method === "POST" && url.pathname === "/share-target") {
+		event.respondWith(receiveShare(request));
+		return;
+	}
+	if (request.method !== "GET") return;
 	const path = url.pathname;
 	if (request.mode === "navigate") {
 		event.respondWith(page(request, path));
@@ -114,4 +122,29 @@ async function keptOnUse(cacheName, path) {
 	const response = await fetchFresh(path);
 	if (response.ok) await cache.put(path, response.clone());
 	return response;
+}
+
+// Keeps the shared photo under a new name and sends the page to home with
+// it, as native sharing does. Only the latest share is kept: one that never
+// opened would otherwise stay forever. With no photo, the name finds
+// nothing, and home says the share didn't come through.
+async function receiveShare(request) {
+	const name = crypto.randomUUID();
+	try {
+		const form = await request.formData();
+		const photo = form
+			.getAll("photo")
+			.find((file) => file instanceof File && file.type.startsWith("image/"));
+		if (photo) {
+			const cache = await caches.open(SHARED_CACHE);
+			for (const key of await cache.keys()) await cache.delete(key);
+			await cache.put(
+				`/shared-photos/${name}`,
+				new Response(photo, { headers: { "Content-Type": photo.type } }),
+			);
+		}
+	} catch (error) {
+		console.warn("Couldn't keep the shared photo", error);
+	}
+	return Response.redirect(`/?shared=${name}`, 303);
 }
