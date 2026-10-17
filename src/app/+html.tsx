@@ -79,7 +79,6 @@ export default function Root({ children }: { children: ReactNode }) {
 		<html lang="en" {...htmlAttributes}>
 			<head>
 				<meta charSet="utf-8" />
-				<meta httpEquiv="X-UA-Compatible" content="IE=edge" />
 				<meta
 					name="viewport"
 					content="width=device-width, initial-scale=1, viewport-fit=cover"
@@ -99,6 +98,10 @@ export default function Root({ children }: { children: ReactNode }) {
 				<script dangerouslySetInnerHTML={{ __html: applySavedTheme }} />
 				<style>{pageStyle}</style>
 				<meta name="description" content={SITE_DESCRIPTION} />
+				<link rel="manifest" href="/manifest.webmanifest" />
+				<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+				<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+				<meta name="apple-mobile-web-app-title" content="Tuck" />
 				<meta property="og:type" content="website" />
 				<meta property="og:site_name" content="Tuck" />
 				<meta property="og:title" content={SITE_TITLE} />

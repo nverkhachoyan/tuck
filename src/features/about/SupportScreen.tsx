@@ -35,8 +35,7 @@ export default function SupportScreen() {
 					projects don't sync between devices. On the web, they belong to the
 					browser you used, and clearing its data for tuck.tools deletes them.
 					Some browsers, Safari among them, also clear the data of sites you
-					haven't opened in a while, so save or share an edit you want to
-					keep.
+					haven't opened in a while, so save or share an edit you want to keep.
 				</Paragraph>
 			</Section>
 

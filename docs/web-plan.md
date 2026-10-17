@@ -78,7 +78,9 @@ The audit was wrong about the request: `writeProjectFile` in `projectStorage.web
 
 Fix: call `navigator.storage.persist()` after the first project is saved (Chrome and Firefox grant it to sites people use, Safari grants it to installed ones). Say on the privacy page and in Support that browser storage can be cleared, and that saving or sharing the edit is the way to keep it. Installing the app (2.4) is what makes Safari keep it.
 
-### 2.4 A web app manifest and icons
+### 2.4 A web app manifest and icons (done)
+
+Built as described. `public/manifest.webmanifest` uses the favicon's rounded tile for its `any` icons and a new `assets/maskable-icon.svg` (the mark at 80%, inside the safe zone) for the maskable one; `apple-touch-icon.png` is `icon.png` at 180 pixels and `favicon.svg` is `assets/favicon.svg`. The PNGs were rendered with `sips`, which reads SVG. Not checked: Chrome's install prompt and the iOS home screen icon, which need a deploy.
 
 There's no manifest, no `apple-touch-icon`, and only a 1.9 KB `favicon.ico`. Adding Tuck to the home screen on iOS shows a screenshot of the page as its icon, and Chrome doesn't offer to install it.
 

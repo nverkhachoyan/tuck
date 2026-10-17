@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+	<title>Tuck</title>
+	<!-- Source for public/icons/icon-maskable-512.png, the web app's icon where Android crops it to a shape: opaque, with the app icon's mark (see icon.svg) shrunk inside the safe zone, a circle 80% of the icon's width. -->
+	<rect width="1024" height="1024" fill="#FFFFFF"/>
+	<g transform="translate(512 512) scale(0.8) translate(-516 -512)">
+		<path d="M226 232 Q226 196 262 194 L742 178 Q800 176 802 234 L806 790 Q806 830 766 832 L292 846 Q228 848 226 784 Z" fill="#FFE433" transform="rotate(-3 516 512)"/>
+		<rect x="300" y="248" width="424" height="140" fill="#000"/>
+		<rect x="437" y="248" width="150" height="540" fill="#000"/>
+	</g>
+</svg>
