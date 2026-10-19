@@ -2,6 +2,7 @@ import {
 	BlurMask,
 	Group,
 	Mask,
+	Paint,
 	Path,
 	Rect,
 	type SkImage,
@@ -14,8 +15,12 @@ import type { CutStroke, ImageLayer } from "@/model/document";
 import { pathFor } from "./DrawingLayerView";
 
 const MIRRORED = [{ scaleX: -1 }];
-// What of a cut-out shows faintly while it's being refined.
-const REMOVED_OPACITY = 0.25;
+// While a cut is refined, what it keeps is washed green and what it
+// removes dimmed and washed red. They're over the photo, so they don't
+// follow the palette.
+const KEPT_TINT = "rgba(34, 197, 94, 0.35)";
+const REMOVED_TINT = "rgba(239, 68, 68, 0.5)";
+const REMOVED_OPACITY = 0.6;
 
 /**
  * Draws an already-decoded image layer in its own space, centered on the
@@ -24,8 +29,8 @@ const REMOVED_OPACITY = 0.25;
  * Callers position it with the layer's transform. A live `matrix` (a shared
  * value) colors it instead, while a control is changing its adjustments.
  * `liveMask` is a stroke still being painted on the cut, in the image's own
- * pixels, and `showRemoved` shows what's cut away faintly, so it can be
- * painted back.
+ * pixels, and `showRemoved` shows what's cut away too, tinted red, and
+ * what's kept tinted green, so both can be told apart and painted.
  */
 export function ImageLayerView({
 	layer,
@@ -57,7 +62,12 @@ export function ImageLayerView({
 	const cut = mask || maskStrokes || liveMask;
 	return (
 		<Group transform={layer.flipped ? MIRRORED : undefined}>
-			{cut && showRemoved && <Group opacity={REMOVED_OPACITY}>{content}</Group>}
+			{cut && showRemoved && (
+				<Group layer={<Paint opacity={REMOVED_OPACITY} />}>
+					{content}
+					<Tint layer={layer} color={REMOVED_TINT} />
+				</Group>
+			)}
 			{cut ? (
 				// The mask covers the image exactly, so nothing needs clipping
 				// to it, which would draw the image twice.
@@ -71,12 +81,26 @@ export function ImageLayerView({
 					}
 				>
 					{content}
+					{showRemoved && <Tint layer={layer} color={KEPT_TINT} />}
 				</Mask>
+			) : showRemoved ? (
+				<Group layer>
+					{content}
+					<Tint layer={layer} color={KEPT_TINT} />
+				</Group>
 			) : (
 				content
 			)}
 		</Group>
 	);
+}
+
+/**
+ * A wash of `color` over what's drawn before it in the same layer, only
+ * where that has pixels, so a transparent image isn't tinted as a box.
+ */
+function Tint({ layer, color }: { layer: ImageLayer; color: string }) {
+	return <Rect {...imageBox(layer)} color={color} blendMode="srcATop" />;
 }
 
 /**
