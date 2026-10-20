@@ -81,6 +81,7 @@ export function LayerContent({
 /**
  * Draws nothing until the image, and its mask if it has one, have decoded,
  * or if either can't be: a cut-out never shows its background meanwhile.
+ * A new mask shows once it has decoded, and the one before it until then.
  */
 function AsyncImage({
 	layer,
@@ -97,7 +98,7 @@ function AsyncImage({
 }) {
 	const image = useDecodedImage(layer.uri, onError);
 	const mask = useDecodedImage(layer.mask ?? null, onError);
-	if (!image || (layer.mask && !mask)) return null;
+	if (!image || mask === undefined) return null;
 	return (
 		<ImageLayerView
 			layer={layer}
