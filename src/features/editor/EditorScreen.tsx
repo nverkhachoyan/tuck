@@ -44,6 +44,7 @@ import {
 	parseCutOutSettings,
 } from "@/features/editor/cutout/cutOutSettings";
 import { useCutOut } from "@/features/editor/cutout/useCutOut";
+import { useCutRedaction } from "@/features/editor/cutout/useCutRedaction";
 import type { DialDrag } from "@/features/editor/Dial";
 import {
 	Dock,
@@ -139,6 +140,7 @@ import { useAutosave } from "@/projects/useAutosave";
 import { useProjectSession } from "@/projects/useProjectSession";
 import {
 	renderCutOut,
+	renderCutShape,
 	renderThumbnail,
 	sampleColor,
 } from "@/render/renderDocument";
@@ -246,6 +248,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		duplicateSelectedLayer,
 		drawStroke,
 		addRedactionBox,
+		addMaskedRedaction,
 		setLayerGroupHidden,
 		setLayerGroupLocked,
 		deleteLayerGroup,
@@ -380,6 +383,28 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			if (cutLayerId.current === layerId) {
 				setMask(layerId, mask, { keepStrokes: picked });
 			}
+		},
+	});
+	// Redacting the cut's selection puts the image back as it was before
+	// Cut out, with a redaction over what was selected, and goes on to
+	// Redact to choose how it hides it.
+	const cutRedaction = useCutRedaction({
+		renderShape: renderCutShape,
+		keep: async (uri) =>
+			projectId === null ? uri : addImage(projectId, uri, false),
+		onRedact: (layerId, mask, rect) => {
+			if (cutLayerId.current !== layerId) return;
+			cancelSession();
+			addMaskedRedaction(
+				layerId,
+				mask,
+				rect,
+				redactionEffect(redact.chosen, documentSize),
+			);
+			// Box, which moves the redaction, as `chooseTool` would pick
+			// once it's selected: this render hasn't seen it yet.
+			redact.setChosen((current) => ({ ...current, tool: "box" }));
+			dispatchMode({ type: "startTool", tool: "redact" });
 		},
 	});
 	const cutTool = cutOutTool(cutSettings, cutOut.canFind);
@@ -999,6 +1024,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										cutOut.canFind && cutLayer
 											? () => void cutOut.find(cutLayer)
 											: undefined,
+									redacting: cutRedaction.busy,
+									onRedact:
+										cutLayer && isCutOut(cutLayer)
+											? () => void cutRedaction.redact(cutLayer)
+											: undefined,
 								}}
 								adjustController={adjustController}
 								adjustments={adjustedLayer?.adjustments}
@@ -1272,13 +1302,16 @@ function HeaderActions({
 }
 
 // Cut out's settings, the tool they and the device give, and, for the dock,
-// what's being found and a way to find every subject again.
+// what's being found and a way to find every subject again, and redacting
+// the selection.
 type CutProps = {
 	settings: CutOutSettings;
 	tool: ReturnType<typeof cutOutTool>;
 	onChange: (settings: CutOutSettings) => void;
 	finding?: "all" | "one" | null;
 	onFindAll?: () => void;
+	redacting?: boolean;
+	onRedact?: () => void;
 };
 
 type ModeProps = {
@@ -1482,6 +1515,8 @@ function DockContent({
 					onChange={cut.onChange}
 					onToggleOptions={toggleOptions}
 					onFindAll={cut.onFindAll}
+					redacting={cut.redacting ?? false}
+					onRedact={cut.onRedact}
 				/>
 			);
 		case "text":

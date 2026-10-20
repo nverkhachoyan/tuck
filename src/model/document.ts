@@ -10,6 +10,7 @@ import {
 	type Rect,
 	type Size,
 	type Transform,
+	toDocumentSpace,
 	toLayerSpace,
 	transformsEqual,
 } from "./geometry.ts";
@@ -185,8 +186,21 @@ export type RedactionStrokes = RedactionBase & {
 	strokes: MaskStroke[];
 };
 
-/** Hides what's drawn under it, inside its box or strokes. */
-export type RedactionLayer = RedactionBox | RedactionStrokes;
+/**
+ * A redaction over a selection: inside a box `width` by `height`, centered
+ * on its origin, as far as `mask`, an image file stretched over the box,
+ * covers it. Opaque in the mask hides what's under it, transparent leaves
+ * it, so a soft edge fades. Its proportions hold, so its handles scale it.
+ */
+export type RedactionMask = RedactionBase & {
+	shape: "mask";
+	mask: string;
+	width: number;
+	height: number;
+};
+
+/** Hides what's drawn under it, inside its box, strokes, or mask. */
+export type RedactionLayer = RedactionBox | RedactionStrokes | RedactionMask;
 
 // Outlines the draw tool drags out. Named for how they look; `ShapeLayerView`
 // draws each.
@@ -626,6 +640,35 @@ export function createRedactionStrokes(
 	});
 }
 
+/**
+ * A redaction over a selection on `image`: `mask`, covering `rect` of the
+ * image's pixels as it shows (flipped, if it is), from its top left. It
+ * turns and scales with the image, so it lands on what was selected.
+ */
+export function createMaskedRedaction(
+	image: ImageLayer,
+	mask: string,
+	rect: Rect,
+	effect: RedactionEffect,
+): RedactionMask {
+	const center = toDocumentSpace(image.transform, {
+		x: rect.x + rect.width / 2 - image.width / 2,
+		y: rect.y + rect.height / 2 - image.height / 2,
+	});
+	return {
+		type: "redaction",
+		id: createLayerId("redaction"),
+		effect,
+		shape: "mask",
+		mask,
+		width: rect.width,
+		height: rect.height,
+		transform: { ...image.transform, ...center },
+		hidden: false,
+		locked: false,
+	};
+}
+
 /** Whether a shape of this kind is a line, rather than a box. */
 export function isLineShape(shape: ShapeKind): shape is LineShapeKind {
 	"worklet";
@@ -691,6 +734,19 @@ export function withAdjustments(
 	return current && adjustmentsEqual(current, adjustments)
 		? layer
 		: { ...layer, adjustments };
+}
+
+/**
+ * The image files a layer draws: an image layer's image and mask, or a
+ * masked redaction's mask.
+ */
+export function layerFiles(layer: Layer): string[] {
+	if (layer.type === "image") {
+		return layer.mask === undefined ? [layer.uri] : [layer.uri, layer.mask];
+	}
+	return layer.type === "redaction" && layer.shape === "mask"
+		? [layer.mask]
+		: [];
 }
 
 /** Whether some of `layer` is cut away: by a mask, or by hand. */
@@ -834,9 +890,9 @@ function duplicateOffset(layer: Layer): number {
 		case "drawing":
 			return strokesOffset(layer);
 		case "redaction":
-			return layer.shape === "box"
-				? Math.min(layer.width, layer.height) * 0.1
-				: strokesOffset(layer);
+			return layer.shape === "strokes"
+				? strokesOffset(layer)
+				: Math.min(layer.width, layer.height) * 0.1;
 		case "shape":
 			return isLine(layer)
 				? layer.length * 0.1

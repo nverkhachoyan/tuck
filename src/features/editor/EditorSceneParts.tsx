@@ -7,7 +7,7 @@ import { ShapeLayerView } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { ColorMatrix } from "@/model/adjustments";
-import type { ImageLayer, Layer } from "@/model/document";
+import type { ImageLayer, Layer, RedactionMask } from "@/model/document";
 import { CHECKER_CELL } from "@/theme";
 import { Checkerboard } from "@/ui/Checkerboard";
 import { useDecodedImage } from "./useDecodedImage";
@@ -66,7 +66,11 @@ export function LayerContent({
 		case "drawing":
 			return <DrawingLayerView layer={layer}>{stroke}</DrawingLayerView>;
 		case "redaction":
-			return <RedactionLayerView layer={layer} />;
+			return layer.shape === "mask" ? (
+				<AsyncMaskedRedaction layer={layer} onError={onImageError} />
+			) : (
+				<RedactionLayerView layer={layer} />
+			);
 		case "shape":
 			return <ShapeLayerView layer={layer} />;
 		default:
@@ -104,4 +108,16 @@ function AsyncImage({
 			showRemoved={showRemoved}
 		/>
 	);
+}
+
+/** Draws nothing until a masked redaction's mask has decoded. */
+function AsyncMaskedRedaction({
+	layer,
+	onError,
+}: {
+	layer: RedactionMask;
+	onError: (error: unknown) => void;
+}) {
+	const mask = useDecodedImage(layer.mask, onError);
+	return mask ? <RedactionLayerView layer={layer} mask={mask} /> : null;
 }

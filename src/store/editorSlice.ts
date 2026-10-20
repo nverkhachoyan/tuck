@@ -7,6 +7,7 @@ import {
 	createDrawingLayer,
 	createImageLayer,
 	createLayerGroup,
+	createMaskedRedaction,
 	createPlacedRedactionBox,
 	createRedactionBox,
 	createRedactionStrokes,
@@ -109,6 +110,12 @@ export type EditorSlice = {
 		placements: readonly RedactionBoxPlacement[],
 		effect: RedactionEffect,
 		groupName?: string,
+	) => void;
+	addMaskedRedaction: (
+		imageId: string,
+		mask: string,
+		rect: Rect,
+		effect: RedactionEffect,
 	) => void;
 	setLayerGroupHidden: (id: string, hidden: boolean) => void;
 	setLayerGroupLocked: (id: string, locked: boolean) => void;
@@ -438,6 +445,18 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 					],
 				}),
 				null,
+			);
+		},
+
+		// Over the image it was selected on, on top and selected, like a box.
+		addMaskedRedaction: (imageId, mask, rect, effect) => {
+			const image = findLayer(imageId);
+			if (image?.type !== "image" || rect.width <= 0 || rect.height <= 0) {
+				return;
+			}
+			addOnTop(
+				"editor/addMaskedRedaction",
+				createMaskedRedaction(image, mask, rect, effect),
 			);
 		},
 

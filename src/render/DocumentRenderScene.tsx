@@ -61,7 +61,12 @@ function LayerContent({
 		case "drawing":
 			return <DrawingLayerView layer={layer} />;
 		case "redaction":
-			return <RedactionLayerView layer={layer} />;
+			return (
+				<RedactionLayerView
+					layer={layer}
+					mask={layer.shape === "mask" ? images.get(layer.mask) : undefined}
+				/>
+			);
 		case "shape":
 			return <ShapeLayerView layer={layer} />;
 		default:

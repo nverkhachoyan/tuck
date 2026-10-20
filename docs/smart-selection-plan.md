@@ -66,7 +66,7 @@ Open questions for stage 2:
 
 A selection becomes a mask that the editor's existing features can take:
 
-* **Redact a selection**: a redaction shaped by a mask rather than a box or strokes, to blur a person or a license plate exactly. The most on-brand of these for Tuck.
+* **Redact a selection**: a redaction shaped by a mask rather than a box or strokes, to blur a person or a license plate exactly. The most on-brand of these for Tuck. Built: Cut out's **Redact** draws what the cut keeps (its mask and strokes, flipped with the image) as white over transparency, trimmed to it and at most 2048 pixels on its longer side (`renderCutShape`), and keeps it in the project as a PNG. A redaction with `shape: "mask"` (`RedactionMask`) stretches that file over its box, placed and turned with the image, and hides what's under it as far as the mask is opaque, so soft edges fade. It's recorded into a picture like brushed strokes, with the mask in place of the strokes. The image goes back to how it was before Cut out opened, and Redact opens with the new redaction selected, in the last style used, to restyle it. Its handles scale it, keeping its shape. Builds from before it list a project with one as unavailable, as they did for drawings, so the project version stays 5.
 * **Copy to a new layer or keep as a sticker**: the cut-out image, saved with its mask applied. Keeping one as a sticker is built: `renderCutOut` draws what the cut keeps, trimmed to it, into a transparent PNG.
 * **Invert**: keep the background and remove the subject, or blur only the background.
 * **Adjust only the selection**.

@@ -5,6 +5,7 @@ import {
 	createBlankDocument,
 	createDocumentFromImage,
 	createDrawingLayer,
+	createMaskedRedaction,
 	createRedactionBox,
 	createRedactionStrokes,
 	createShapeLayer,
@@ -94,6 +95,31 @@ describe("imageFiles", () => {
 		assert.deepEqual(
 			[...imageFiles(document)],
 			["file:///photo.jpg", "file:///mask.png"],
+		);
+	});
+
+	test("names a masked redaction's mask, and maps it", () => {
+		const document = documentWithText();
+		const [photo] = document.layers as ImageLayer[];
+		document.layers.push(
+			createMaskedRedaction(
+				photo,
+				"file:///selection.png",
+				{ x: 10, y: 20, width: 300, height: 400 },
+				{ type: "blur", radius: 24 },
+			),
+		);
+		assert.deepEqual(
+			[...imageFiles(document)],
+			["file:///photo.jpg", "file:///selection.png"],
+		);
+		const saved = mapImageUris(document, (uri) => uri.slice(8));
+		const [, redaction] = saved.layers;
+		assert.equal(
+			redaction.type === "redaction" &&
+				redaction.shape === "mask" &&
+				redaction.mask,
+			"selection.png",
 		);
 	});
 });
@@ -329,7 +355,7 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
-	test("reads redactions: boxes and brushed strokes, solid, blurred, and pixelated", () => {
+	test("reads redactions: boxes, brushed strokes, and masks, solid, blurred, and pixelated", () => {
 		const document = documentWithText();
 		const strokes = createRedactionStrokes(
 			{ type: "pen", width: 40, points: [0, 0, 100, 0] },
@@ -344,6 +370,12 @@ describe("parseSavedProject", () => {
 			strokes,
 			createRedactionBox(
 				{ x: 0, y: 0, width: 40, height: 40 },
+				{ type: "pixelate", size: 16 },
+			),
+			createMaskedRedaction(
+				document.layers[0] as ImageLayer,
+				"file:///selection.png",
+				{ x: 10, y: 20, width: 300, height: 400 },
 				{ type: "pixelate", size: 16 },
 			),
 		);

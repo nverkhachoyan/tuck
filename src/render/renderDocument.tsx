@@ -7,14 +7,16 @@ import {
 	ImageFormat,
 	type SkImage,
 } from "@shopify/react-native-skia";
+import type { ReactNode } from "react";
 import { decodedImages } from "@/layers/decodedImages";
-import { ImageLayerView } from "@/layers/ImageLayerView";
+import { CutCoverage, ImageLayerView } from "@/layers/ImageLayerView";
 import { averageColor } from "@/lib/color";
 import {
 	type EditorDocument,
 	hasTransparency,
 	type ImageLayer,
 } from "@/model/document";
+import type { Rect } from "@/model/geometry";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodeImageLayers } from "./decodeImageLayers";
 import { keptBounds } from "./keptBounds";
@@ -138,12 +140,44 @@ export async function renderCutOut(
 	layer: ImageLayer,
 	maxSide: number,
 ): Promise<SkImage> {
+	const { image } = await renderKept(layer, maxSide, (images, mask) => {
+		const image = images.get(layer.uri);
+		if (!image) throw new Error("Couldn't read the image");
+		return <ImageLayerView layer={layer} image={image} mask={mask} />;
+	});
+	return image;
+}
+
+/**
+ * The shape of what an image layer's cut keeps, as white over transparency,
+ * trimmed to it, its longer side `maxSide` pixels at most, and the part of
+ * the image it covers, in the image's pixels as it shows (flipped, if it
+ * is) from its top left. Throws when the cut keeps nothing.
+ */
+export function renderCutShape(
+	layer: ImageLayer,
+	maxSide: number,
+): Promise<{ image: SkImage; rect: Rect }> {
+	return renderKept(layer, maxSide, (_, mask) => (
+		<CutCoverage layer={layer} mask={mask} />
+	));
+}
+
+/**
+ * What `content` draws of an image layer, in its own space, trimmed to what
+ * shows, with its longer side `maxSide` pixels at most, and where that is
+ * in the layer (see `renderCutShape`). `content` gets the layer's decoded
+ * images and its mask. Throws when nothing shows.
+ */
+async function renderKept(
+	layer: ImageLayer,
+	maxSide: number,
+	content: (images: Map<string, SkImage>, mask?: SkImage) => ReactNode,
+): Promise<{ image: SkImage; rect: Rect }> {
 	const decoded = await decodeImageLayers([layer], decodedImages);
-	const image = decoded.images.get(layer.uri);
 	const mask =
 		layer.mask === undefined ? undefined : decoded.images.get(layer.mask);
-	if (!image) throw new Error("Couldn't read the image");
-	// The image's pixels from `left`, `top`, at `scale`.
+	// The layer's pixels from `left`, `top`, at `scale`.
 	const draw = (
 		left: number,
 		top: number,
@@ -161,7 +195,7 @@ export async function renderCutOut(
 						{ translateY: layer.height / 2 - top },
 					]}
 				>
-					<ImageLayerView layer={layer} image={image} mask={mask} />
+					{content(decoded.images, mask)}
 				</Group>
 			</Group>,
 			{ width, height },
@@ -207,7 +241,10 @@ export async function renderCutOut(
 			Math.max(1, Math.round((bottom - top) * scale)),
 		);
 		if (!result) throw new Error("Couldn't draw the cut-out");
-		return result;
+		return {
+			image: result,
+			rect: { x: left, y: top, width: right - left, height: bottom - top },
+		};
 	} finally {
 		decoded.release();
 	}

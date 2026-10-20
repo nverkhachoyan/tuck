@@ -12,6 +12,7 @@ export function useEditorActions() {
 		duplicateSelectedLayer: useStore((state) => state.duplicateSelectedLayer),
 		drawStroke: useStore((state) => state.drawStroke),
 		addRedactionBox: useStore((state) => state.addRedactionBox),
+		addMaskedRedaction: useStore((state) => state.addMaskedRedaction),
 		setLayerGroupHidden: useStore((state) => state.setLayerGroupHidden),
 		setLayerGroupLocked: useStore((state) => state.setLayerGroupLocked),
 		deleteLayerGroup: useStore((state) => state.deleteLayerGroup),

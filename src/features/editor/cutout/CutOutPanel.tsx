@@ -17,7 +17,9 @@ import type { CutOutSettings, CutOutTool } from "./cutOutSettings";
  * and Erase paint the cut by hand, with their size in a tray over the
  * canvas. Tapping the brush in use opens its size too. Subjects and Pick
  * show only where this device can find subjects (`onFindAll`), and spin
- * while they're finding one (`finding`).
+ * while they're finding one (`finding`). Redact hides what the cut keeps
+ * under a redaction instead, once there's a cut (`onRedact`), spinning
+ * while it's made (`redacting`).
  */
 export function CutOutPanel({
 	settings,
@@ -27,6 +29,8 @@ export function CutOutPanel({
 	onChange,
 	onToggleOptions,
 	onFindAll,
+	redacting,
+	onRedact,
 }: {
 	settings: CutOutSettings;
 	tool: CutOutTool;
@@ -35,6 +39,8 @@ export function CutOutPanel({
 	onChange: (settings: CutOutSettings) => void;
 	onToggleOptions: () => void;
 	onFindAll?: () => void;
+	redacting: boolean;
+	onRedact?: () => void;
 }) {
 	const pickTool = (choice: CutOutTool) => {
 		if (choice === tool && choice !== "pick") onToggleOptions();
@@ -88,6 +94,14 @@ export function CutOutPanel({
 					}
 					open={optionsOpen}
 					onPress={onToggleOptions}
+				/>
+			)}
+			{onRedact && (
+				<ToolButton
+					label="Redact"
+					icon="blur"
+					busy={redacting}
+					onPress={onRedact}
 				/>
 			)}
 		</ToolRow>

@@ -516,6 +516,23 @@ describe("editorSlice", () => {
 			);
 		});
 
+		test("a selection's redaction goes on top, over the image, and is selected", () => {
+			const { store } = storeWithText();
+			const image = firstImage(store);
+			store
+				.getState()
+				.addMaskedRedaction(
+					image.id,
+					"file:///selection.png",
+					{ x: 0, y: 0, width: 4000, height: 3000 },
+					blur,
+				);
+			const [redaction] = redactions(store);
+			assert.equal(selectSelectedRedaction(store.getState()), redaction);
+			assert.equal(redaction.shape, "mask");
+			assert.deepEqual(redaction.transform, image.transform);
+		});
+
 		test("detected boxes are added unselected and undone together", () => {
 			const { store, text } = storeWithText();
 			const before = store.getState().document;

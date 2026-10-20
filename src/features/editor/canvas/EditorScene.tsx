@@ -9,6 +9,7 @@ import {
 	Rect,
 	rect,
 	Shadow,
+	type SkImage,
 	Skia,
 	type SkRect,
 } from "@shopify/react-native-skia";
@@ -34,9 +35,11 @@ import {
 } from "@/layers/layerTransform";
 import {
 	type FilterEffect,
+	maskedRedactionPicture,
 	maskMarks,
 	RedactionLayerView,
 	recordLayerStrokes,
+	recordMaskedRedaction,
 	recordRedactionStrokes,
 	redactionFilter,
 	strokesPicture,
@@ -57,6 +60,7 @@ import {
 	type RedactionBox,
 	type RedactionEffect,
 	type RedactionLayer,
+	type RedactionMask,
 	type RedactionStrokes,
 	type ShapeKind,
 	type ShapeLayer,
@@ -71,6 +75,7 @@ import { CanvasBackground, LayerContent } from "../EditorSceneParts";
 import type { TextEditState } from "../editorMode";
 import { handleSides } from "../handles/handleGeometry";
 import { handleMetrics, shownHandles } from "../handles/handleMetrics";
+import { useDecodedImage } from "../useDecodedImage";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
 import { shapeFromDrag } from "./shapeDrag";
 
@@ -431,7 +436,9 @@ function StrokeTarget({
 		return <LiveRedactionStrokes layer={layer} stroke={stroke} tool={tool} />;
 	}
 	if (layer.type === "redaction") {
-		return <LiveRedaction layer={layer} live={live} />;
+		return (
+			<LiveRedaction layer={layer} live={live} onImageError={onImageError} />
+		);
 	}
 	if (layer.type === "shape") return <LiveShape layer={layer} live={live} />;
 	if (stroke && tool?.type === "cutBrush" && layer.type === "image") {
@@ -592,12 +599,23 @@ function Caret({
 function LiveRedaction({
 	layer,
 	live,
+	onImageError,
 }: {
 	layer: RedactionLayer;
 	live: LiveTransform;
+	onImageError: (error: unknown) => void;
 }) {
 	if (layer.shape === "box") {
 		return <LiveRedactionBox layer={layer} live={live} />;
+	}
+	if (layer.shape === "mask") {
+		return (
+			<LiveMaskedRedaction
+				layer={layer}
+				live={live}
+				onImageError={onImageError}
+			/>
+		);
 	}
 	if (layer.effect.type !== "solid") {
 		return (
@@ -701,6 +719,49 @@ function LiveFilteredStrokes({
 			? committed
 			: recordLayerStrokes(effect, marks, box, current);
 	}, [layer]);
+	return <Picture picture={picture} />;
+}
+
+/**
+ * A masked redaction, once its mask has decoded. A blurred or pixelated one
+ * is recorded again for the live transform while it's off the document's,
+ * like `LiveFilteredStrokes`.
+ */
+function LiveMaskedRedaction({
+	layer,
+	live,
+	onImageError,
+}: {
+	layer: RedactionMask;
+	live: LiveTransform;
+	onImageError: (error: unknown) => void;
+}) {
+	const mask = useDecodedImage(layer.mask, onImageError);
+	if (!mask) return null;
+	if (layer.effect.type === "solid") {
+		return <RedactionLayerView layer={layer} mask={mask} />;
+	}
+	return <LiveMaskedPicture layer={layer} mask={mask} live={live} />;
+}
+
+function LiveMaskedPicture({
+	layer,
+	mask,
+	live,
+}: {
+	layer: RedactionMask;
+	mask: SkImage;
+	live: LiveTransform;
+}) {
+	const { id, effect, width, height, transform } = layer;
+	const committed = maskedRedactionPicture(layer, mask);
+	const picture = useDerivedValue(() => {
+		const current =
+			live.activeId.value === id ? readLiveTransform(live) : transform;
+		return transformsEqual(current, transform)
+			? committed
+			: recordMaskedRedaction(effect, mask, width, height, current);
+	}, [layer, mask]);
 	return <Picture picture={picture} />;
 }
 

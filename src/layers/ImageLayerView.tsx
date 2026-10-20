@@ -138,6 +138,30 @@ export function CutMask({
 	);
 }
 
+/**
+ * What an image layer's cut keeps, as white over transparency, in the
+ * layer's own space: flipped with it, so it lies over what it keeps.
+ */
+export function CutCoverage({
+	layer,
+	mask,
+}: {
+	layer: ImageLayer;
+	mask?: SkImage;
+}) {
+	return (
+		<Group transform={layer.flipped ? MIRRORED : undefined}>
+			<Mask
+				mode="luminance"
+				clip={false}
+				mask={<CutMask layer={layer} mask={mask} />}
+			>
+				<Rect {...imageBox(layer)} color="white" />
+			</Mask>
+		</Group>
+	);
+}
+
 /** An image layer's box in its own space, centered on the origin. */
 export function imageBox(layer: { width: number; height: number }) {
 	return {
