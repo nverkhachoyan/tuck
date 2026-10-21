@@ -1,4 +1,5 @@
 {
+	"disable_ai": true,
 	"code_actions_on_format": {
 		"source.fixAll": true,
 		"source.organizeImports": true
