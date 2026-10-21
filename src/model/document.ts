@@ -6,9 +6,12 @@ import {
 import { drawingBox, recenterDrawing } from "./drawing.ts";
 import {
 	hitTestBox,
+	type Point,
 	type Rect,
 	type Size,
 	type Transform,
+	toDocumentSpace,
+	toLayerSpace,
 	transformsEqual,
 } from "./geometry.ts";
 
@@ -33,6 +36,10 @@ type LayerBase = {
 // has been cut out of the image, is a grayscale image file stretched over it:
 // the image shows where the mask is white, and not where it's black. The
 // image's own file is untouched, so the cut can be undone or taken back.
+// `maskStrokes` refine the cut by hand, painted over the mask (or over the
+// whole image, without one) in the image's own pixels, centered on its
+// middle, before it's flipped: a pen shows the image, an eraser hides it.
+// They're left out while there are none.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
@@ -43,6 +50,7 @@ export type ImageLayer = LayerBase & {
 	sticker?: boolean;
 	adjustments?: Adjustments;
 	mask?: string;
+	maskStrokes?: CutStroke[];
 };
 
 export type TextAlign = "left" | "center" | "right";
@@ -120,6 +128,13 @@ export type MaskStroke = {
 };
 
 /**
+ * A stroke on an image's cut: a mask stroke whose edge fades over
+ * `feather`, a blur's sigma in the same units as its width, to match a
+ * found mask's soft edges. It's hard without one.
+ */
+export type CutStroke = MaskStroke & { feather?: number };
+
+/**
  * How a redaction hides what's under it: covered with a color, blurred, or
  * pixelated. `radius` is the blur's sigma, and `size` a pixel's side, in
  * document pixels, however the layer is scaled, so resizing one never
@@ -171,8 +186,21 @@ export type RedactionStrokes = RedactionBase & {
 	strokes: MaskStroke[];
 };
 
-/** Hides what's drawn under it, inside its box or strokes. */
-export type RedactionLayer = RedactionBox | RedactionStrokes;
+/**
+ * A redaction over a selection: inside a box `width` by `height`, centered
+ * on its origin, as far as `mask`, an image file stretched over the box,
+ * covers it. Opaque in the mask hides what's under it, transparent leaves
+ * it, so a soft edge fades. Its proportions hold, so its handles scale it.
+ */
+export type RedactionMask = RedactionBase & {
+	shape: "mask";
+	mask: string;
+	width: number;
+	height: number;
+};
+
+/** Hides what's drawn under it, inside its box, strokes, or mask. */
+export type RedactionLayer = RedactionBox | RedactionStrokes | RedactionMask;
 
 // Outlines the draw tool drags out. Named for how they look; `ShapeLayerView`
 // draws each.
@@ -376,7 +404,7 @@ export function hasEdits(document: EditorDocument): boolean {
 		document.height !== first.height ||
 		first.flipped ||
 		first.adjustments !== undefined ||
-		first.mask !== undefined ||
+		isCutOut(first) ||
 		!transformsEqual(
 			first.transform,
 			centeredTransform(first.width, first.height),
@@ -407,7 +435,7 @@ export function hasTransparency(document: EditorDocument): boolean {
 			layer.type !== "image" ||
 			layer.hidden ||
 			!layer.opaque ||
-			layer.mask !== undefined
+			isCutOut(layer)
 		) {
 			return false;
 		}
@@ -612,6 +640,35 @@ export function createRedactionStrokes(
 	});
 }
 
+/**
+ * A redaction over a selection on `image`: `mask`, covering `rect` of the
+ * image's pixels as it shows (flipped, if it is), from its top left. It
+ * turns and scales with the image, so it lands on what was selected.
+ */
+export function createMaskedRedaction(
+	image: ImageLayer,
+	mask: string,
+	rect: Rect,
+	effect: RedactionEffect,
+): RedactionMask {
+	const center = toDocumentSpace(image.transform, {
+		x: rect.x + rect.width / 2 - image.width / 2,
+		y: rect.y + rect.height / 2 - image.height / 2,
+	});
+	return {
+		type: "redaction",
+		id: createLayerId("redaction"),
+		effect,
+		shape: "mask",
+		mask,
+		width: rect.width,
+		height: rect.height,
+		transform: { ...image.transform, ...center },
+		hidden: false,
+		locked: false,
+	};
+}
+
 /** Whether a shape of this kind is a line, rather than a box. */
 export function isLineShape(shape: ShapeKind): shape is LineShapeKind {
 	"worklet";
@@ -680,15 +737,99 @@ export function withAdjustments(
 }
 
 /**
- * `layer` shown through `mask` (see `ImageLayer`), or whole again when it's
- * null, or `layer` itself when that's how it's shown already.
+ * The image files a layer draws: an image layer's image and mask, or a
+ * masked redaction's mask.
  */
-export function withMask(layer: ImageLayer, mask: string | null): ImageLayer {
-	if ((layer.mask ?? null) === mask) return layer;
-	if (mask !== null) return { ...layer, mask };
-	const { mask: _, ...rest } = layer;
-	return rest;
+export function layerFiles(layer: Layer): string[] {
+	if (layer.type === "image") {
+		return layer.mask === undefined ? [layer.uri] : [layer.uri, layer.mask];
+	}
+	return layer.type === "redaction" && layer.shape === "mask"
+		? [layer.mask]
+		: [];
 }
+
+/** Whether some of `layer` is cut away: by a mask, or by hand. */
+export function isCutOut(layer: ImageLayer): boolean {
+	return layer.mask !== undefined || layer.maskStrokes !== undefined;
+}
+
+/**
+ * `layer` shown through `mask` (see `ImageLayer`), or whole again when it's
+ * null, or `layer` itself when that's how it's shown already. Strokes that
+ * refined the cut before go with it, since they were painted against the
+ * old one, unless `keepStrokes`: a mask grown or shrunk from the old one
+ * (by a subject added to it or taken out) keeps them.
+ */
+export function withMask(
+	layer: ImageLayer,
+	mask: string | null,
+	{ keepStrokes = false } = {},
+): ImageLayer {
+	const strokes = keepStrokes ? layer.maskStrokes : undefined;
+	if ((layer.mask ?? null) === mask && layer.maskStrokes === strokes) {
+		return layer;
+	}
+	const { mask: _, maskStrokes: __, ...rest } = layer;
+	const shown = mask === null ? rest : { ...rest, mask };
+	return strokes ? { ...shown, maskStrokes: strokes } : shown;
+}
+
+/**
+ * `layer` with a stroke painted in document space added to its cut, taken
+ * into the image's own pixels, however the layer has been moved, scaled,
+ * turned, or flipped since. Its width and feather scale with the layer's
+ * average scale: a stretched image stretches the brush too.
+ */
+export function addMaskStroke(
+	layer: ImageLayer,
+	stroke: CutStroke,
+): ImageLayer {
+	const { transform } = layer;
+	const points: number[] = [];
+	for (let i = 0; i < stroke.points.length; i += 2) {
+		const local = toLayerSpace(transform, {
+			x: stroke.points[i],
+			y: stroke.points[i + 1],
+		});
+		points.push(roundPixel(layer.flipped ? -local.x : local.x));
+		points.push(roundPixel(local.y));
+	}
+	const scale = Math.sqrt(Math.abs(transform.scaleX * transform.scaleY));
+	return {
+		...layer,
+		maskStrokes: [
+			...(layer.maskStrokes ?? []),
+			{
+				type: stroke.type,
+				width: roundPixel(stroke.width / scale),
+				...(stroke.feather === undefined
+					? {}
+					: { feather: roundPixel(stroke.feather / scale) }),
+				points,
+			},
+		],
+	};
+}
+
+/**
+ * Where a point in document space falls on `layer`'s image, as fractions of
+ * its width and height from its top left, however the layer is placed or
+ * flipped, or null when it's off the image.
+ */
+export function imagePointAt(
+	layer: ImageLayer,
+	point: Point,
+): { x: number; y: number } | null {
+	const local = toLayerSpace(layer.transform, point);
+	const x = (layer.flipped ? -local.x : local.x) / layer.width + 0.5;
+	const y = local.y / layer.height + 0.5;
+	return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? { x, y } : null;
+}
+
+// Finer than a hundredth of a pixel is invisible, and would only make saved
+// projects bigger. Adding 0 turns a flipped -0 into 0.
+const roundPixel = (value: number) => Math.round(value * 100) / 100 + 0;
 
 /**
  * A layer with a box its handles resize, resized to `width` by `height` with
@@ -749,9 +890,9 @@ function duplicateOffset(layer: Layer): number {
 		case "drawing":
 			return strokesOffset(layer);
 		case "redaction":
-			return layer.shape === "box"
-				? Math.min(layer.width, layer.height) * 0.1
-				: strokesOffset(layer);
+			return layer.shape === "strokes"
+				? strokesOffset(layer)
+				: Math.min(layer.width, layer.height) * 0.1;
 		case "shape":
 			return isLine(layer)
 				? layer.length * 0.1

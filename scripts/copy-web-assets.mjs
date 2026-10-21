@@ -3,7 +3,7 @@
 
 import { copyFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const require = createRequire(import.meta.url);
 const publicFolder = join(process.cwd(), "public");
@@ -58,3 +58,22 @@ for (const file of mediaPipeFiles) {
 for (const model of ["blaze_face_full_range.tflite", "magic_touch.tflite"]) {
 	copy(`modules/image-analysis/models/${model}`, `mediapipe/${model}`);
 }
+
+// Selecting objects: ONNX Runtime's WebGPU build, whose WebAssembly runs
+// MobileSAM where the browser has no WebGPU, in a worker of the module's.
+// The models are an ONNX export of MobileSAM, from Acly/MobileSAM on
+// Hugging Face. The runtime's package exports none of these files.
+const onnxRuntime = dirname(require.resolve("onnxruntime-web"));
+for (const file of [
+	"ort.webgpu.bundle.min.mjs",
+	"ort-wasm-simd-threaded.asyncify.wasm",
+]) {
+	copy(join(onnxRuntime, file), `onnxruntime/${file}`);
+}
+for (const model of [
+	"mobile_sam_image_encoder.onnx",
+	"sam_mask_decoder_multi.onnx",
+]) {
+	copy(`modules/image-analysis/models/${model}`, `mobile-sam/${model}`);
+}
+copy("modules/image-analysis/src/mobileSamWorker.js", "mobile-sam-worker.js");

@@ -3,6 +3,7 @@ import { adjustmentKeys } from "../model/adjustments.ts";
 import {
 	type EditorDocument,
 	isLineShape,
+	layerFiles,
 	penTips,
 	shapeKinds,
 	textFonts,
@@ -24,7 +25,10 @@ import {
 // photo. So did image layers' `adjustments`: builds from before them show
 // the image unadjusted. 5 added image layers' `mask`, a file of its own: a
 // build from before it would show the whole photo, and remove the mask's
-// file as unused when it closed the project.
+// file as unused when it closed the project. Image layers' `maskStrokes`
+// kept it: builds from before them show the cut without its refinements.
+// So did masked redactions: builds from before them list a project with one
+// as unavailable, so never remove its mask's file as unused.
 export const PROJECT_VERSION = 5;
 
 // The file of the photo a project was made from. Saved image layers name a
@@ -84,36 +88,35 @@ export type ProjectSummary =
 	  }
 	| { id: string; status: "unavailable" };
 
-/** `document` with every image layer's `uri` and `mask` passed through `map`. */
+/**
+ * `document` with every image layer's `uri` and `mask`, and every masked
+ * redaction's `mask`, passed through `map`.
+ */
 export function mapImageUris(
 	document: EditorDocument,
 	map: (uri: string) => string,
 ): EditorDocument {
 	return {
 		...document,
-		layers: document.layers.map((layer) =>
-			layer.type === "image"
-				? {
-						...layer,
-						uri: map(layer.uri),
-						...(layer.mask !== undefined && { mask: map(layer.mask) }),
-					}
-				: layer,
-		),
+		layers: document.layers.map((layer) => {
+			if (layer.type === "image") {
+				return {
+					...layer,
+					uri: map(layer.uri),
+					...(layer.mask !== undefined && { mask: map(layer.mask) }),
+				};
+			}
+			if (layer.type === "redaction" && layer.shape === "mask") {
+				return { ...layer, mask: map(layer.mask) };
+			}
+			return layer;
+		}),
 	};
 }
 
-/** The files a document's image layers use: their images, and their masks. */
+/** The files a document's layers use (see `layerFiles`). */
 export function imageFiles(document: EditorDocument): Set<string> {
-	return new Set(
-		document.layers.flatMap((layer) =>
-			layer.type !== "image"
-				? []
-				: layer.mask === undefined
-					? [layer.uri]
-					: [layer.uri, layer.mask],
-		),
-	);
+	return new Set(document.layers.flatMap(layerFiles));
 }
 
 /** A saved project read back from JSON, or null if it isn't one this app can open. */
@@ -334,7 +337,11 @@ function isLayer(value: unknown): boolean {
 				typeof value.opaque === "boolean" &&
 				(value.sticker === undefined || typeof value.sticker === "boolean") &&
 				(value.adjustments === undefined || isAdjustments(value.adjustments)) &&
-				(value.mask === undefined || typeof value.mask === "string")
+				(value.mask === undefined || typeof value.mask === "string") &&
+				(value.maskStrokes === undefined ||
+					(Array.isArray(value.maskStrokes) &&
+						value.maskStrokes.length > 0 &&
+						value.maskStrokes.every(isCutStroke)))
 			);
 		case "text":
 			return (
@@ -395,6 +402,12 @@ function isRedactionShape(value: Fields): boolean {
 			return isPositive(value.width) && isPositive(value.height);
 		case "strokes":
 			return Array.isArray(value.strokes) && value.strokes.every(isMaskStroke);
+		case "mask":
+			return (
+				typeof value.mask === "string" &&
+				isPositive(value.width) &&
+				isPositive(value.height)
+			);
 		default:
 			return false;
 	}
@@ -419,6 +432,14 @@ function isMaskStroke(value: unknown): boolean {
 		value.points.length >= 2 &&
 		value.points.length % 2 === 0 &&
 		value.points.every(Number.isFinite)
+	);
+}
+
+function isCutStroke(value: unknown): boolean {
+	return (
+		isMaskStroke(value) &&
+		isFields(value) &&
+		(value.feather === undefined || isPositive(value.feather))
 	);
 }
 

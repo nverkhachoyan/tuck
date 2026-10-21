@@ -74,6 +74,8 @@ function drags(tool: CanvasTool, layer: Layer | undefined): boolean {
 		case "draw":
 		case "redactBrush":
 		case "pickColor":
+		case "cutBrush":
+		case "pickSubject":
 			return false;
 	}
 }

@@ -1,6 +1,7 @@
 import { NativeModule, registerWebModule } from "expo";
 import type {
 	Feature,
+	ImagePoint,
 	Rect,
 	Size,
 	SubjectMask,
@@ -38,8 +39,8 @@ class ImageAnalysisModule extends NativeModule {
 		return tesseractText(uri);
 	}
 
-	subjectMask(uri: string): Promise<SubjectMask | null> {
-		return mediaPipeSubject(uri);
+	subjectMask(uri: string, at: ImagePoint | null): Promise<SubjectMask | null> {
+		return mediaPipeSubject(uri, at);
 	}
 }
 

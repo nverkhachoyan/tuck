@@ -46,9 +46,9 @@ export function useRedactTool(documentSize: Size) {
 		setChosen((current) => ({
 			...current,
 			tool: selectedRedaction
-				? selectedRedaction.shape === "box"
-					? "box"
-					: "brush"
+				? selectedRedaction.shape === "strokes"
+					? "brush"
+					: "box"
 				: current.tool === "eraser"
 					? "brush"
 					: current.tool,

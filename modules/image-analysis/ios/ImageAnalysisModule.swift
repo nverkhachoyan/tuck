@@ -56,7 +56,8 @@ public class ImageAnalysisModule: Module {
 
 		// Every prominent subject together, at the image's full size. It needs
 		// the Neural Engine or a real GPU, so it fails on the simulator.
-		AsyncFunction("subjectMask") { (uri: URL) -> SubjectMaskRecord? in
+		// With `at`, only the subject there.
+		AsyncFunction("subjectMask") { (uri: URL, at: PointRecord?) -> SubjectMaskRecord? in
 			guard #available(iOS 17.0, *) else {
 				throw FeatureUnavailableException("background")
 			}
@@ -67,11 +68,24 @@ public class ImageAnalysisModule: Module {
 			guard let observation = request.results?.first, !observation.allInstances.isEmpty else {
 				return nil
 			}
+			var instances = observation.allInstances
+			var parts: PartMask?
+			if let at {
+				guard let picked = instance(in: observation.instanceMask, at: at) else { return nil }
+				instances = IndexSet(integer: picked.label)
+				parts = picked.otherParts
+			}
 			let buffer = try observation.generateScaledMaskForImage(
-				forInstances: observation.allInstances,
+				forInstances: instances,
 				from: handler
 			)
-			let mask = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
+			var mask = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: NSNull()])
+			if let parts {
+				mask = mask.applyingFilter(
+					"CIMultiplyCompositing",
+					parameters: [kCIInputBackgroundImageKey: scaled(parts, to: mask.extent)]
+				)
+			}
 			let file = FileManager.default.temporaryDirectory
 				.appendingPathComponent("mask-\(UUID().uuidString).png")
 			// The mask's values are coverage, not colors, so nothing converts them.
@@ -154,6 +168,73 @@ private func pinToCPUOnSimulator(_ request: VNRequest) {
 	#endif
 }
 
+/// How far from a tap a subject can be and still be picked, as a share of
+/// the mask's longer side: a tap just off its edge still means it.
+private let PICK_REACH = 0.02
+
+/// The subject under `point` in an instance mask, whose pixels are each
+/// subject's index and 0 for the background, or the nearest one within
+/// `PICK_REACH`, with a mask of its parts other than the one there, when
+/// it's more than one (see `otherParts`). The mask is the upright image's,
+/// scaled down, with its first row at the top.
+private func instance(
+	in mask: CVPixelBuffer,
+	at point: PointRecord
+) -> (label: Int, otherParts: PartMask?)? {
+	CVPixelBufferLockBaseAddress(mask, .readOnly)
+	defer { CVPixelBufferUnlockBaseAddress(mask, .readOnly) }
+	guard let base = CVPixelBufferGetBaseAddress(mask) else { return nil }
+	let width = CVPixelBufferGetWidth(mask)
+	let height = CVPixelBufferGetHeight(mask)
+	let rowBytes = CVPixelBufferGetBytesPerRow(mask)
+	let pixels = base.assumingMemoryBound(to: UInt8.self)
+	let x = min(max(Int(point.x * Double(width)), 0), width - 1)
+	let y = min(max(Int(point.y * Double(height)), 0), height - 1)
+	let reach = max(1, Int(PICK_REACH * Double(max(width, height))))
+	var nearest: (label: UInt8, column: Int, row: Int, distance: Int)?
+	for row in max(0, y - reach)...min(height - 1, y + reach) {
+		for column in max(0, x - reach)...min(width - 1, x + reach) {
+			let label = pixels[row * rowBytes + column]
+			if label == 0 { continue }
+			let distance = (row - y) * (row - y) + (column - x) * (column - x)
+			if distance <= reach * reach, distance < nearest?.distance ?? .max {
+				nearest = (label, column, row, distance)
+			}
+		}
+	}
+	guard let nearest else { return nil }
+	let parts = otherParts(
+		of: nearest.label,
+		in: pixels,
+		width: width,
+		height: height,
+		rowBytes: rowBytes,
+		column: nearest.column,
+		row: nearest.row
+	)
+	return (Int(nearest.label), parts)
+}
+
+/// A parts mask stretched over `extent`, as the instance mask it came from
+/// is over the image, smoothly so the cut between two parts isn't blocky.
+private func scaled(_ parts: PartMask, to extent: CGRect) -> CIImage {
+	let image = CIImage(
+		bitmapData: Data(parts.bytes),
+		bytesPerRow: parts.width,
+		size: CGSize(width: parts.width, height: parts.height),
+		format: .L8,
+		colorSpace: nil
+	)
+	return image
+		.clampedToExtent()
+		.samplingLinear()
+		.transformed(by: CGAffineTransform(
+			scaleX: extent.width / CGFloat(parts.width),
+			y: extent.height / CGFloat(parts.height)
+		))
+		.cropped(to: extent)
+}
+
 /// The ranges of `text` between whitespace, as ML Kit and Tesseract split words.
 private func wordRanges(_ text: String) -> [Range<String.Index>] {
 	var ranges: [Range<String.Index>] = []
@@ -188,6 +269,11 @@ struct RectRecord: Record {
 		self.width = width
 		self.height = height
 	}
+}
+
+struct PointRecord: Record {
+	@Field var x: Double = 0
+	@Field var y: Double = 0
 }
 
 struct SizeRecord: Record {

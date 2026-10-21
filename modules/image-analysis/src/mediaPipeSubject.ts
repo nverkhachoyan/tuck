@@ -1,5 +1,5 @@
 import type * as Vision from "@mediapipe/tasks-vision";
-import type { SubjectMask } from "./ImageAnalysis.types";
+import type { ImagePoint, SubjectMask } from "./ImageAnalysis.types";
 import { ASSETS, decode, lazyTask } from "./mediaPipe";
 
 // MagicTouch looks at the image at 512 pixels, so a larger input only costs
@@ -21,12 +21,13 @@ const segmenter = lazyTask(
 );
 
 /**
- * A mask of the subject at the image's center, which MagicTouch needs to be
- * told, as a grayscale PNG's blob URL: white where the subject is. Null when
- * it finds nothing there.
+ * A mask of the subject `at` a point, or else at the image's center:
+ * MagicTouch needs to be told where to look. It's a grayscale PNG's blob
+ * URL, white where the subject is. Null when it finds nothing there.
  */
 export async function mediaPipeSubject(
 	uri: string,
+	at: ImagePoint | null,
 ): Promise<SubjectMask | null> {
 	const image = await decode(uri);
 	let canvas: OffscreenCanvas;
@@ -44,7 +45,7 @@ export async function mediaPipeSubject(
 	}
 
 	const result = (await segmenter()).segment(canvas, {
-		keypoint: { x: 0.5, y: 0.5 },
+		keypoint: at ?? { x: 0.5, y: 0.5 },
 	});
 	try {
 		// One mask per category: the background's, then the subject's.

@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import { faceTiles, mergeFaces } from "./src/faceTiles";
 import type {
 	Feature,
+	ImagePoint,
 	Rect,
 	SubjectMask,
 	TextRegion,
@@ -10,10 +11,18 @@ import ImageAnalysisModule from "./src/ImageAnalysisModule";
 
 export type {
 	Feature,
+	ImagePoint,
+	ObjectMasks,
 	Rect,
 	SubjectMask,
 	TextRegion,
 } from "./src/ImageAnalysis.types";
+export {
+	canSelectObjects,
+	objectMasks,
+	prepareObjects,
+	releaseObjects,
+} from "./src/objectSelection";
 
 /**
  * Whether this device can find `feature`. Android needs Google Play services,
@@ -48,11 +57,15 @@ export function detectText(uri: string): Promise<TextRegion[]> {
 }
 
 /**
- * A mask of the image's subject (people, pets, or objects in front), for
- * cutting it out of its background, or null if there's none. It's the same
- * way up as the image once its EXIF orientation is applied. On web, the
- * subject is whatever is at the image's center.
+ * A mask of the image's subjects (people, pets, or objects in front), for
+ * cutting them out of their background, or null if there's none. It's the
+ * same way up as the image once its EXIF orientation is applied. With `at`,
+ * it's only the subject there, or null if there's none; without, it's every
+ * subject on iOS and Android, and on web whatever is at the image's center.
  */
-export function subjectMask(uri: string): Promise<SubjectMask | null> {
-	return ImageAnalysisModule.subjectMask(uri);
+export function subjectMask(
+	uri: string,
+	at?: ImagePoint,
+): Promise<SubjectMask | null> {
+	return ImageAnalysisModule.subjectMask(uri, at ?? null);
 }

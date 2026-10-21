@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { neutralAdjustments } from "./adjustments.ts";
 import {
+	addMaskStroke,
 	createBlankDocument,
 	createDocumentFromImage,
 	createImageLayer,
+	createMaskedRedaction,
 	createRedactionBox,
 	createShapeLayer,
 	createStickerLayer,
@@ -17,7 +19,9 @@ import {
 	hasEdits,
 	hasTransparency,
 	type ImageLayer,
+	imagePointAt,
 	initialFontSize,
+	isCutOut,
 	maxNewImageShortSide,
 	reorderLayer,
 	resizeLayerBox,
@@ -363,6 +367,47 @@ describe("createImageLayer", () => {
 	});
 });
 
+describe("createMaskedRedaction", () => {
+	const image = (rotation: number): ImageLayer => ({
+		...(landscape().layers[0] as ImageLayer),
+		transform: { x: 500, y: 400, scaleX: 0.5, scaleY: 0.5, rotation },
+	});
+
+	test("lands on the part of the image it covers, scaled with it", () => {
+		const redaction = createMaskedRedaction(
+			image(0),
+			"file:///selection.png",
+			{ x: 0, y: 0, width: 1000, height: 600 },
+			{ type: "blur", radius: 24 },
+		);
+		// The image's top left corner is at (500 - 1000, 400 - 750).
+		assert.deepEqual(redaction.transform, {
+			x: -500 + 250,
+			y: -350 + 150,
+			scaleX: 0.5,
+			scaleY: 0.5,
+			rotation: 0,
+		});
+		assert.equal(redaction.width, 1000);
+		assert.equal(redaction.height, 600);
+		assert.equal(redaction.mask, "file:///selection.png");
+	});
+
+	test("turns with the image", () => {
+		const redaction = createMaskedRedaction(
+			image(Math.PI / 2),
+			"m",
+			{ x: 2000, y: 0, width: 2000, height: 1500 },
+			{ type: "blur", radius: 24 },
+		);
+		// Its center is 1000 right and 750 up of the image's, before scaling;
+		// turned a quarter clockwise, that's 375 right and 500 down.
+		assert.equal(redaction.transform.rotation, Math.PI / 2);
+		assert.ok(Math.abs(redaction.transform.x - 875) < 1e-9);
+		assert.ok(Math.abs(redaction.transform.y - 900) < 1e-9);
+	});
+});
+
 describe("maxNewImageShortSide", () => {
 	test("covers the canvas turned either way, with room to enlarge", () => {
 		// A landscape photo filling a Story canvas needs a shorter side of 1920.
@@ -665,6 +710,138 @@ describe("withMask", () => {
 		const restored = withMask(withMask(layer, "file:///mask.png"), null);
 		assert.equal("mask" in restored, false);
 		assert.deepEqual(restored, layer);
+	});
+
+	test("drops strokes that refined the cut before", () => {
+		const refined = addMaskStroke(withMask(photo(), "file:///a.png"), {
+			type: "eraser",
+			width: 10,
+			points: [2000, 1500],
+		});
+		const recut = withMask(refined, "file:///a.png");
+		assert.equal(recut.mask, "file:///a.png");
+		assert.equal("maskStrokes" in recut, false);
+		assert.deepEqual(withMask(refined, null), photo());
+	});
+
+	test("keeps the strokes when asked, for a mask grown from the old one", () => {
+		const refined = addMaskStroke(withMask(photo(), "file:///a.png"), {
+			type: "eraser",
+			width: 10,
+			points: [2000, 1500],
+		});
+		const grown = withMask(refined, "file:///b.png", { keepStrokes: true });
+		assert.equal(grown.mask, "file:///b.png");
+		assert.deepEqual(grown.maskStrokes, refined.maskStrokes);
+		assert.equal(
+			withMask(refined, "file:///a.png", { keepStrokes: true }),
+			refined,
+		);
+		assert.equal(
+			"maskStrokes" in
+				withMask(photo(), "file:///b.png", {
+					keepStrokes: true,
+				}),
+			false,
+		);
+	});
+});
+
+describe("addMaskStroke", () => {
+	const photo = () => landscape().layers[0] as ImageLayer;
+
+	test("paints in the image's own pixels, centered on its middle", () => {
+		const layer = addMaskStroke(photo(), {
+			type: "pen",
+			width: 40,
+			points: [2000, 1500, 2100, 1400],
+		});
+		assert.deepEqual(layer.maskStrokes, [
+			{ type: "pen", width: 40, points: [0, 0, 100, -100] },
+		]);
+		assert.equal(isCutOut(layer), true);
+	});
+
+	test("scales a feather with the width, and leaves a hard edge without", () => {
+		const layer: ImageLayer = {
+			...photo(),
+			transform: { ...photo().transform, scaleX: 2, scaleY: 2 },
+		};
+		const [soft] =
+			addMaskStroke(layer, {
+				type: "pen",
+				width: 40,
+				feather: 6,
+				points: [0, 0],
+			}).maskStrokes ?? [];
+		assert.equal(soft.width, 20);
+		assert.equal(soft.feather, 3);
+		const [hard] =
+			addMaskStroke(layer, { type: "pen", width: 40, points: [0, 0] })
+				.maskStrokes ?? [];
+		assert.equal("feather" in hard, false);
+	});
+
+	test("follows the layer however it's placed, and flipped", () => {
+		const layer: ImageLayer = {
+			...photo(),
+			flipped: true,
+			transform: {
+				x: 100,
+				y: 200,
+				rotation: Math.PI / 2,
+				scaleX: 2,
+				scaleY: 2,
+			},
+		};
+		// Turned a quarter, a step right on the canvas is a step up the image;
+		// flipped, a step left in it.
+		const painted = addMaskStroke(layer, {
+			type: "eraser",
+			width: 40,
+			points: [100, 200, 120, 200],
+		});
+		assert.deepEqual(painted.maskStrokes, [
+			{ type: "eraser", width: 20, points: [0, 0, 0, -10] },
+		]);
+		const more = addMaskStroke(painted, {
+			type: "pen",
+			width: 40,
+			points: [100, 220],
+		});
+		assert.equal(more.maskStrokes?.length, 2);
+		assert.deepEqual(more.maskStrokes?.[1].points, [-10, 0]);
+	});
+});
+
+describe("imagePointAt", () => {
+	test("is a fraction of the image, from its top left, or null off it", () => {
+		const layer = landscape().layers[0] as ImageLayer;
+		assert.deepEqual(imagePointAt(layer, { x: 1000, y: 2250 }), {
+			x: 0.25,
+			y: 0.75,
+		});
+		assert.equal(imagePointAt(layer, { x: -10, y: 100 }), null);
+	});
+
+	test("follows a turned, scaled, flipped layer", () => {
+		const layer: ImageLayer = {
+			...(landscape().layers[0] as ImageLayer),
+			flipped: true,
+			transform: { x: 0, y: 0, rotation: Math.PI, scaleX: 0.5, scaleY: 0.5 },
+		};
+		// Turned half around, its top left is at the bottom right, and flipped,
+		// at the bottom left.
+		const point = imagePointAt(layer, { x: -999, y: 749 });
+		assert.ok(point && point.x < 0.001 && point.y < 0.001, String(point));
+	});
+});
+
+describe("isCutOut", () => {
+	test("is cut by a mask, by strokes, or by both", () => {
+		const layer = landscape().layers[0] as ImageLayer;
+		assert.equal(isCutOut(layer), false);
+		assert.equal(isCutOut(withMask(layer, "file:///a.png")), true);
 	});
 });
 

@@ -1,7 +1,13 @@
+import { ImageFormat, type SkImage } from "@shopify/react-native-skia";
 import { useState } from "react";
 import { importPhoto } from "@/import/photoImport";
 import { errorMessage } from "@/lib/errorMessage";
-import { SAVED_STICKER_MAX_SIDE } from "@/stickers/savedStickers";
+import { writeTemporaryPng } from "@/lib/temporaryFile";
+import { type ImageLayer, isCutOut } from "@/model/document";
+import {
+	SAVED_STICKER_MAX_SIDE,
+	type StickerImage,
+} from "@/stickers/savedStickers";
 import type { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";
 import { selectSelectedLayer } from "@/store/editorSlice";
@@ -9,13 +15,16 @@ import { showAlert } from "@/ui/showAlert";
 
 /**
  * Keeping the selected photo as a sticker, shrunk the way a saved sticker
- * is, so a large photo doesn't make one. `status` is the selection's: being
- * kept, or kept already this session. `save` is left out when the selection
- * can't be kept: a sticker is kept from an image's file, which a cut-out's
- * mask isn't part of.
+ * is, so a large photo doesn't make one. A cut-out keeps only what its cut
+ * shows, trimmed to it, on a transparent background. `status` is the
+ * selection's: being kept, or kept already this session. `save` is left
+ * out when the selection can't be kept: a sticker already is one.
+ * `renderCutOut` draws a cut-out's kept part, its longer side `maxSide`
+ * pixels at most.
  */
 export function useStickerSave(
 	keep: ReturnType<typeof useSavedStickers>["save"],
+	renderCutOut: (layer: ImageLayer, maxSide: number) => Promise<SkImage>,
 ) {
 	const selectedLayer = useStore(selectSelectedLayer);
 	const [saving, setSaving] = useState<{
@@ -23,9 +32,7 @@ export function useStickerSave(
 		status: "saving" | "saved";
 	} | null>(null);
 	const image =
-		selectedLayer?.type === "image" &&
-		!selectedLayer.sticker &&
-		selectedLayer.mask === undefined
+		selectedLayer?.type === "image" && !selectedLayer.sticker
 			? selectedLayer
 			: undefined;
 	const save = async () => {
@@ -34,7 +41,11 @@ export function useStickerSave(
 		setSaving({ layerId, status: "saving" });
 		try {
 			await keep(
-				await importPhoto(image.uri, { maxLongSide: SAVED_STICKER_MAX_SIDE }),
+				isCutOut(image)
+					? await cutOutSticker(image, renderCutOut)
+					: await importPhoto(image.uri, {
+							maxLongSide: SAVED_STICKER_MAX_SIDE,
+						}),
 			);
 			setSaving({ layerId, status: "saved" });
 		} catch (error) {
@@ -50,4 +61,21 @@ export function useStickerSave(
 				: undefined,
 		save: image ? save : undefined,
 	};
+}
+
+async function cutOutSticker(
+	layer: ImageLayer,
+	render: (layer: ImageLayer, maxSide: number) => Promise<SkImage>,
+): Promise<StickerImage> {
+	const image = await render(layer, SAVED_STICKER_MAX_SIDE);
+	try {
+		return {
+			uri: writeTemporaryPng(image.encodeToBytes(ImageFormat.PNG)),
+			width: image.width(),
+			height: image.height(),
+			opaque: false,
+		};
+	} finally {
+		image.dispose();
+	}
 }

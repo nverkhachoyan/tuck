@@ -2,11 +2,15 @@ import {
 	BackdropFilter,
 	BlendMode,
 	ColorChannel,
+	FilterMode,
 	ImageFilter,
+	MipmapMode,
 	PaintStyle,
 	Picture,
 	Rect,
 	rect,
+	type SkCanvas,
+	type SkImage,
 	type SkImageFilter,
 	Skia,
 	type SkPath,
@@ -20,6 +24,7 @@ import type {
 	MaskStroke,
 	RedactionEffect,
 	RedactionLayer,
+	RedactionMask,
 	RedactionStrokes,
 } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
@@ -51,13 +56,25 @@ export type FilterEffect = Exclude<RedactionEffect, { type: "solid" }>;
 
 /**
  * Draws a redaction layer in its own space. It hides what's already drawn
- * under it: a box covers, blurs, or pixelates it; strokes do the same
- * through a picture, which Skia's declarative API can't express (see
- * `recordRedactionStrokes`).
+ * under it: a box covers, blurs, or pixelates it; strokes and a mask do the
+ * same through a picture, which Skia's declarative API can't express (see
+ * `recordRedaction`). A masked one draws nothing until its decoded `mask`
+ * is given.
  */
-export function RedactionLayerView({ layer }: { layer: RedactionLayer }) {
+export function RedactionLayerView({
+	layer,
+	mask,
+}: {
+	layer: RedactionLayer;
+	mask?: SkImage;
+}) {
 	if (layer.shape === "strokes") {
 		return <Picture picture={strokesPicture(layer)} />;
+	}
+	if (layer.shape === "mask") {
+		return mask ? (
+			<Picture picture={maskedRedactionPicture(layer, mask)} />
+		) : null;
 	}
 	const box = rect(
 		-layer.width / 2,
@@ -240,26 +257,30 @@ export function strokesPicture(layer: RedactionStrokes): SkPicture {
 	return picture;
 }
 
+/** `box` grown by `reach` on every side. */
+function withReach(box: SkRect, reach: number): SkRect {
+	"worklet";
+	return rect(
+		box.x - reach,
+		box.y - reach,
+		box.width + reach * 2,
+		box.height + reach * 2,
+	);
+}
+
 /**
- * Records a redaction's strokes over what's under them. Its effect fills a
- * layer of its own, which starts out as what's under it, blurred or
- * pixelated, when it filters, and its strokes then mask that layer: pens
- * keep it, erasers clear it. `live` is a stroke still being painted, drawn
- * after them. It's in document space, so the layer's transform is undone
- * for it, if it has one. `transform` places the layer (the identity for a
- * stroke that will start one), and `bounds` limit the layers to what the
- * strokes reach, or null to leave them to the clip.
- *
- * A worklet, so the editor can record it again on the UI thread as a stroke
- * grows. Skia maps its filter through the canvas's transform when it plays
- * back, as `layerBlur` describes.
+ * Records a redaction over what's under it. Its effect fills a layer of its
+ * own, which starts out as what's under it, blurred or pixelated, when it
+ * filters, and `drawShape` then masks that layer: what it draws keeps the
+ * effect, and what it clears or leaves empty doesn't. `transform` places
+ * the layer, and `bounds` limit the layers to what its shape reaches, or
+ * null to leave them to the clip. A worklet, as are its callers.
  */
-export function recordRedactionStrokes(
+function recordRedaction(
 	effect: RedactionEffect,
 	transform: Transform,
-	strokeMarks: MaskMark[],
-	live: { mark: MaskMark; layerTransform: Transform | null } | null,
 	bounds: SkRect | null,
+	drawShape: (canvas: SkCanvas) => void,
 ): SkPicture {
 	"worklet";
 	const recorder = Skia.PictureRecorder();
@@ -276,34 +297,116 @@ export function recordRedactionStrokes(
 	const mask = Skia.Paint();
 	mask.setBlendMode(BlendMode.DstIn);
 	canvas.saveLayer(mask, bounds);
-	const pen = Skia.Paint();
-	pen.setAntiAlias(true);
-	pen.setStyle(PaintStyle.Stroke);
-	pen.setStrokeCap(StrokeCap.Round);
-	pen.setStrokeJoin(StrokeJoin.Round);
-	const eraser = pen.copy();
-	eraser.setBlendMode(BlendMode.Clear);
-	const draw = (mark: MaskMark) => {
-		const paint = mark.eraser ? eraser : pen;
-		paint.setStrokeWidth(mark.width);
-		canvas.drawPath(mark.path, paint);
-	};
-	for (const mark of strokeMarks) draw(mark);
-	if (live) {
-		const t = live.layerTransform;
-		canvas.save();
-		// `toInverseTransformList`, in the canvas's own calls.
-		if (t) {
-			canvas.scale(1 / t.scaleX, 1 / t.scaleY);
-			canvas.rotate((-t.rotation * 180) / Math.PI, 0, 0);
-			canvas.translate(-t.x, -t.y);
-		}
-		draw(live.mark);
-		canvas.restore();
-	}
+	drawShape(canvas);
 	canvas.restore();
 	canvas.restore();
 	return recorder.finishRecordingAsPicture();
+}
+
+/**
+ * Records a redaction's strokes over what's under them (see
+ * `recordRedaction`): pens keep its effect, erasers clear it. `live` is a
+ * stroke still being painted, drawn after them. It's in document space, so
+ * the layer's transform is undone for it, if it has one. `transform` places
+ * the layer (the identity for a stroke that will start one).
+ *
+ * A worklet, so the editor can record it again on the UI thread as a stroke
+ * grows. Skia maps its filter through the canvas's transform when it plays
+ * back, as `layerBlur` describes.
+ */
+export function recordRedactionStrokes(
+	effect: RedactionEffect,
+	transform: Transform,
+	strokeMarks: MaskMark[],
+	live: { mark: MaskMark; layerTransform: Transform | null } | null,
+	bounds: SkRect | null,
+): SkPicture {
+	"worklet";
+	return recordRedaction(effect, transform, bounds, (canvas) => {
+		const pen = Skia.Paint();
+		pen.setAntiAlias(true);
+		pen.setStyle(PaintStyle.Stroke);
+		pen.setStrokeCap(StrokeCap.Round);
+		pen.setStrokeJoin(StrokeJoin.Round);
+		const eraser = pen.copy();
+		eraser.setBlendMode(BlendMode.Clear);
+		const draw = (mark: MaskMark) => {
+			const paint = mark.eraser ? eraser : pen;
+			paint.setStrokeWidth(mark.width);
+			canvas.drawPath(mark.path, paint);
+		};
+		for (const mark of strokeMarks) draw(mark);
+		if (live) {
+			const t = live.layerTransform;
+			canvas.save();
+			// `toInverseTransformList`, in the canvas's own calls.
+			if (t) {
+				canvas.scale(1 / t.scaleX, 1 / t.scaleY);
+				canvas.rotate((-t.rotation * 180) / Math.PI, 0, 0);
+				canvas.translate(-t.x, -t.y);
+			}
+			draw(live.mark);
+			canvas.restore();
+		}
+	});
+}
+
+/**
+ * A masked redaction (see `RedactionMask`) with its decoded `mask`,
+ * recorded for a layer placed by `transform`. A worklet, so the editor can
+ * record it again as a gesture moves it.
+ */
+export function recordMaskedRedaction(
+	effect: RedactionEffect,
+	mask: SkImage,
+	width: number,
+	height: number,
+	transform: Transform,
+): SkPicture {
+	"worklet";
+	const box = rect(-width / 2, -height / 2, width, height);
+	return recordRedaction(
+		effect,
+		transform,
+		withReach(box, filterReach(effect, transform)),
+		(canvas) => {
+			canvas.drawImageRectOptions(
+				mask,
+				rect(0, 0, mask.width(), mask.height()),
+				box,
+				FilterMode.Linear,
+				MipmapMode.None,
+			);
+		},
+	);
+}
+
+// By decoded mask first: a picture keeps its mask's pixels alive, so it's
+// let go of with the mask, not kept by layer versions in the undo history.
+const maskPictures = new WeakMap<SkImage, WeakMap<RedactionMask, SkPicture>>();
+
+/** A masked redaction, recorded once per version of it and its mask. */
+export function maskedRedactionPicture(
+	layer: RedactionMask,
+	mask: SkImage,
+): SkPicture {
+	let pictures = maskPictures.get(mask);
+	if (!pictures) {
+		pictures = new WeakMap();
+		maskPictures.set(mask, pictures);
+	}
+	let picture = pictures.get(layer);
+	if (!picture) {
+		picture = recordMaskedRedaction(
+			layer.effect,
+			mask,
+			layer.width,
+			layer.height,
+			layer.transform,
+		);
+		pictures.set(layer, picture);
+	}
+	return picture;
 }
 
 /**
@@ -322,17 +425,14 @@ export function recordLayerStrokes(
 	// them would filter differently at their edges than the editor does while
 	// painting, when nothing bounds it.
 	const { halfWidth, halfHeight } = box;
-	const reach = filterReach(effect, transform);
 	return recordRedactionStrokes(
 		effect,
 		transform,
 		strokeMarks,
 		null,
-		rect(
-			-halfWidth - reach,
-			-halfHeight - reach,
-			(halfWidth + reach) * 2,
-			(halfHeight + reach) * 2,
+		withReach(
+			rect(-halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2),
+			filterReach(effect, transform),
 		),
 	);
 }

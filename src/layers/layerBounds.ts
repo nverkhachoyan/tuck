@@ -23,12 +23,12 @@ export function layerBounds(layer: Layer, minPadding = 0): Box {
 		case "drawing":
 			return padded(drawingBox(layer), minPadding);
 		case "redaction":
-			return layer.shape === "box"
-				? padded(
+			return layer.shape === "strokes"
+				? padded(drawingBox(layer), minPadding)
+				: padded(
 						{ halfWidth: layer.width / 2, halfHeight: layer.height / 2 },
 						minPadding,
-					)
-				: padded(drawingBox(layer), minPadding);
+					);
 		case "shape":
 			return padded(shapeBox(layer), minPadding);
 		default:

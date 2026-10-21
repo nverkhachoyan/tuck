@@ -1,41 +1,74 @@
 import type { SkImage } from "@shopify/react-native-skia";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { decodedImages } from "@/layers/decodedImages";
+import type { HeldImage } from "@/layers/imageCache";
+
+type Shown = { uri: string | null; image: SkImage | null };
 
 /**
- * An image file decoded for drawing, or null until it has decoded, if it
- * can't be, or without a `uri`. `onError` must be stable.
+ * An image file decoded for drawing. While a new `uri` decodes, it's still
+ * the image before (or null, if there was none), so changing the file
+ * doesn't blank what's drawn. Null without a `uri`, and undefined until
+ * there's an image to draw: before the first has decoded, or once one
+ * couldn't be. `onError` must be stable.
  */
 export function useDecodedImage(
 	uri: string | null,
 	onError: (error: unknown) => void,
-): SkImage | null {
-	const [loaded, setLoaded] = useState<{ uri: string; image: SkImage } | null>(
-		null,
+): SkImage | null | undefined {
+	const [shown, setShown] = useState<Shown | undefined>(() =>
+		uri === null ? { uri, image: null } : undefined,
 	);
+	// The hold on `shown`'s image, let go of only as `shown` moves on, so
+	// it's never an image the cache may have freed.
+	const held = useRef<HeldImage | null>(null);
 
 	useEffect(() => {
-		if (uri === null) return;
-		let active = true;
-		const held = decodedImages.acquire(uri);
-		held.decoded.then(
+		const show = (next: Shown | undefined, hold: HeldImage | null) => {
+			held.current?.release();
+			held.current = hold;
+			setShown((current) =>
+				current?.uri === next?.uri && current?.image === next?.image
+					? current
+					: next,
+			);
+		};
+		if (uri === null) {
+			show({ uri, image: null }, null);
+			return;
+		}
+		let pending = true;
+		const hold = decodedImages.acquire(uri);
+		hold.decoded.then(
 			(image) => {
-				if (active) setLoaded({ uri, image });
+				if (!pending) return;
+				pending = false;
+				show({ uri, image }, hold);
 			},
 			(error: unknown) => {
-				if (active) onError(error);
+				if (!pending) return;
+				pending = false;
+				hold.release();
+				show(undefined, null);
+				onError(error);
 			},
 		);
 		return () => {
-			active = false;
-			held.release();
-			// Forgotten with its hold: taking the same file back (a mask taken
-			// off, then put back) waits for a new hold rather than drawing
-			// this image, which the cache may have freed by then.
-			setLoaded((current) => (current?.uri === uri ? null : current));
+			// Replaced before it decoded, it was never shown.
+			if (!pending) return;
+			pending = false;
+			hold.release();
 		};
 	}, [uri, onError]);
 
-	// Never an image this component has let go of.
-	return loaded?.uri === uri ? loaded.image : null;
+	useEffect(
+		() => () => {
+			held.current?.release();
+			held.current = null;
+			setShown(undefined);
+		},
+		[],
+	);
+
+	return uri === null ? null : shown?.image;
 }

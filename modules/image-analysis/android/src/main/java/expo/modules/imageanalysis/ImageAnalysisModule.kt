@@ -19,6 +19,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.segmentation.subject.Subject
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmenter
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions
@@ -44,6 +45,7 @@ class ImageAnalysisModule : Module() {
 	private var faceDetector: FaceDetector? = null
 	private var textRecognizer: TextRecognizer? = null
 	private var subjectSegmenter: SubjectSegmenter? = null
+	private var subjectsSegmenter: SubjectSegmenter? = null
 
 	override fun definition() = ModuleDefinition {
 		Name("ImageAnalysis")
@@ -105,17 +107,13 @@ class ImageAnalysisModule : Module() {
 			}
 		}
 
-		// Every subject together. ML Kit looks at the image small and scales its
-		// mask back up, so it's given no more than `MAX_MASK_SIDE`.
-		AsyncFunction("subjectMask") { uri: String ->
+		// Every subject together, or with `at`, only the subject there. ML Kit
+		// looks at the image small and scales its mask back up, so it's given
+		// no more than `MAX_MASK_SIDE`.
+		AsyncFunction("subjectMask") { uri: String, at: PointRecord? ->
 			val bitmap = shrink(loadUpright(Uri.parse(uri)), MAX_MASK_SIDE)
-			val segmenter = subjectSegmenter ?: SubjectSegmentation.getClient(
-				SubjectSegmenterOptions.Builder().enableForegroundConfidenceMask().build()
-			).also { subjectSegmenter = it }
 			try {
-				val result = await(segmenter, segmenter.process(InputImage.fromBitmap(bitmap, 0)), "Background")
-				val confidences = result.foregroundConfidenceMask
-				confidences?.let { writeMask(it, bitmap.width, bitmap.height) }
+				if (at == null) everySubject(bitmap) else subjectAt(bitmap, at)
 			} finally {
 				bitmap.recycle()
 			}
@@ -125,7 +123,40 @@ class ImageAnalysisModule : Module() {
 			faceDetector?.close()
 			textRecognizer?.close()
 			subjectSegmenter?.close()
+			subjectsSegmenter?.close()
 		}
+	}
+
+	private fun everySubject(bitmap: Bitmap): SubjectMaskRecord? {
+		val segmenter = subjectSegmenter ?: SubjectSegmentation.getClient(
+			SubjectSegmenterOptions.Builder().enableForegroundConfidenceMask().build()
+		).also { subjectSegmenter = it }
+		val result = await(segmenter, segmenter.process(InputImage.fromBitmap(bitmap, 0)), "Background")
+		return result.foregroundConfidenceMask?.let { writeMask(it, bitmap.width, bitmap.height) }
+	}
+
+	// Each subject comes with a mask of its own box, which is placed in an
+	// otherwise empty mask the size of the image.
+	private fun subjectAt(bitmap: Bitmap, at: PointRecord): SubjectMaskRecord? {
+		val segmenter = subjectsSegmenter ?: SubjectSegmentation.getClient(
+			SubjectSegmenterOptions.Builder()
+				.enableMultipleSubjects(
+					SubjectSegmenterOptions.SubjectResultOptions.Builder().enableConfidenceMask().build()
+				)
+				.build()
+		).also { subjectsSegmenter = it }
+		val result = await(segmenter, segmenter.process(InputImage.fromBitmap(bitmap, 0)), "Background")
+		val x = (at.x * bitmap.width).toInt().coerceIn(0, bitmap.width - 1)
+		val y = (at.y * bitmap.height).toInt().coerceIn(0, bitmap.height - 1)
+		val subject = nearestSubject(result.subjects, x, y, bitmap.width, bitmap.height) ?: return null
+		val confidences = subject.confidenceMask ?: return null
+		val full = FloatBuffer.allocate(bitmap.width * bitmap.height)
+		confidences.rewind()
+		for (row in 0 until subject.height) {
+			full.position((subject.startY + row) * bitmap.width + subject.startX)
+			for (column in 0 until subject.width) full.put(confidences.get())
+		}
+		return writeMask(full, bitmap.width, bitmap.height)
 	}
 
 	private fun hasPlayServices() =
@@ -189,6 +220,37 @@ class ImageAnalysisModule : Module() {
 
 private const val MAX_MASK_SIDE = 2048
 
+// How far from a tap a subject can be and still be picked, as a share of the
+// image's longer side: a tap just off its edge still means it.
+private const val PICK_REACH = 0.02
+
+// The subject under (`x`, `y`) in an image `width` by `height`, or the nearest
+// one within `PICK_REACH`.
+private fun nearestSubject(subjects: List<Subject>, x: Int, y: Int, width: Int, height: Int): Subject? {
+	val reach = maxOf(1, (PICK_REACH * maxOf(width, height)).toInt())
+	var nearest: Subject? = null
+	var nearestDistance = reach * reach + 1
+	for (subject in subjects) {
+		val mask = subject.confidenceMask ?: continue
+		val left = maxOf(subject.startX, x - reach)
+		val right = minOf(subject.startX + subject.width - 1, x + reach)
+		val top = maxOf(subject.startY, y - reach)
+		val bottom = minOf(subject.startY + subject.height - 1, y + reach)
+		for (row in top..bottom) {
+			for (column in left..right) {
+				val distance = (row - y) * (row - y) + (column - x) * (column - x)
+				if (distance >= nearestDistance) continue
+				val index = (row - subject.startY) * subject.width + (column - subject.startX)
+				if (mask.get(index) >= 0.5f) {
+					nearest = subject
+					nearestDistance = distance
+				}
+			}
+		}
+	}
+	return nearest
+}
+
 // `bitmap` itself if it fits in `maxSide`, or else a smaller copy of it,
 // which recycles the original.
 private fun shrink(bitmap: Bitmap, maxSide: Int): Bitmap {
@@ -238,6 +300,11 @@ class RectRecord(
 	@Field val y: Double = 0.0,
 	@Field val width: Double = 0.0,
 	@Field val height: Double = 0.0,
+) : Record
+
+class PointRecord(
+	@Field val x: Double = 0.0,
+	@Field val y: Double = 0.0,
 ) : Record
 
 class SizeRecord(

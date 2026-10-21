@@ -14,7 +14,7 @@ function fakeDecoder() {
 	return { decode, decodes, disposed };
 }
 
-// Released images are freed on a timer.
+// Released images are freed on a timer, unless the cache is given another.
 const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("createImageCache", () => {
@@ -49,6 +49,21 @@ describe("createImageCache", () => {
 		remounted.release();
 		await nextTask();
 		assert.deepEqual(disposed, ["photo.jpg"]);
+	});
+
+	test("frees a released image only when `later` says so", async () => {
+		const { decode, disposed } = fakeDecoder();
+		const pending: (() => void)[] = [];
+		const cache = createImageCache(decode, (free) => pending.push(free));
+		const held = cache.acquire("mask.png");
+		await held.decoded;
+
+		held.release();
+		await nextTask();
+		assert.deepEqual(disposed, [], "still drawn by an older recording");
+		for (const free of pending.splice(0)) free();
+		await nextTask();
+		assert.deepEqual(disposed, ["mask.png"]);
 	});
 
 	test("decodes again after a failure, and the failed holder's release leaves the retry alone", async () => {

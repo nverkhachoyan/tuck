@@ -1,16 +1,17 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import type { HeldImage, ImageCache } from "../layers/imageCache.ts";
-import type { Layer } from "../model/document.ts";
+import { type Layer, layerFiles } from "../model/document.ts";
 
 export type DecodedImageLayers = {
-	// By file: an image layer's `uri`, or its `mask`.
+	// By file: an image layer's `uri` or `mask`, or a masked redaction's
+	// `mask`.
 	images: Map<string, SkImage>;
 	release: () => void;
 };
 
 /**
- * Holds every visible image layer's decoded image and mask from `cache`,
- * decoding only those nobody else holds. If any decode fails, the images
+ * Holds every file the visible layers draw (see `layerFiles`) decoded from
+ * `cache`, decoding only those nobody else holds. If any decode fails, the images
  * already held are released before the error is returned.
  */
 export async function decodeImageLayers(
@@ -25,9 +26,9 @@ export async function decodeImageLayers(
 
 	try {
 		for (const layer of layers) {
-			if (layer.type !== "image" || layer.hidden) continue;
-			for (const uri of [layer.uri, layer.mask]) {
-				if (uri === undefined || images.has(uri)) continue;
+			if (layer.hidden) continue;
+			for (const uri of layerFiles(layer)) {
+				if (images.has(uri)) continue;
 				const image = cache.acquire(uri);
 				held.push(image);
 				images.set(uri, await image.decoded);

@@ -130,7 +130,8 @@ type EditorCanvasProps = {
 	onDrawBox?: (rect: Rect) => void;
 	// A finished shape, in document space.
 	onDrawShape?: (placement: ShapePlacement) => void;
-	// Where a tap, or a drag's end, picks a color, in document space.
+	// Where a tap, or a drag's end, picks a color, or where a tap picks the
+	// subject to cut out, in document space.
 	onPickPoint?: (point: Point) => void;
 	// A canvas-tool gesture has finished. A tool can use this to put away its
 	// options after the same gesture has drawn, rather than blocking the draw.
@@ -627,17 +628,25 @@ export function EditorCanvas({
 				id: strokeId,
 				landedId: landedStrokeId,
 				targetId:
-					selectedLayer && canAddTo(tool, selectedLayer)
-						? selectedLayer.id
-						: null,
+					tool.type === "cutBrush"
+						? tool.layerId
+						: selectedLayer && canAddTo(tool, selectedLayer)
+							? selectedLayer.id
+							: null,
 			},
 		[tool, strokePoints, strokeId, landedStrokeId, selectedLayer],
 	);
-	// Outlined only where it could be mistaken for another image.
-	const adjustedLayer =
-		adjusting &&
+	// The image a tool cuts out, or that's being adjusted, outlined only where
+	// it could be mistaken for another image.
+	const cuttingOutId =
+		tool?.type === "cutBrush" || tool?.type === "pickSubject"
+			? tool.layerId
+			: null;
+	const targetImageId = cuttingOutId ?? adjusting?.layerId;
+	const targetImage =
+		targetImageId !== undefined &&
 		document.layers.filter((layer) => layer.type === "image").length > 1 &&
-		document.layers.find((layer) => layer.id === adjusting.layerId);
+		document.layers.find((layer) => layer.id === targetImageId);
 	// Empty, text being edited is outlined around its placeholder.
 	const textEditLayer = textEdit?.layer ?? null;
 	const editedLayer = useMemo(
@@ -647,13 +656,15 @@ export function EditorCanvas({
 	// A selection with handles has its outline from them.
 	const outlinedLayer =
 		input.type === "tool"
-			? !dragsSelection && restyles(input.tool, selectedLayer)
-				? selectedLayer
-				: null
+			? cuttingOutId !== null
+				? targetImage || null
+				: !dragsSelection && restyles(input.tool, selectedLayer)
+					? selectedLayer
+					: null
 			: input.type === "editText"
 				? editedLayer
 				: input.type === "adjust"
-					? adjustedLayer || null
+					? targetImage || null
 					: null;
 	const handleIdleTap = useCallback(
 		(screenX: number, screenY: number) => {
@@ -778,6 +789,7 @@ export function EditorCanvas({
 									stroke={liveStroke}
 									outlinedLayer={outlinedLayer}
 									adjusting={adjusting}
+									cuttingOutId={cuttingOutId}
 									detections={detections}
 									onImageError={handleImageError}
 								/>
@@ -931,6 +943,8 @@ function restyles(tool: CanvasTool, layer: Layer | undefined): layer is Layer {
 			return layer?.type === "shape";
 		case "draw":
 		case "pickColor":
+		case "cutBrush":
+		case "pickSubject":
 			return false;
 	}
 }
@@ -946,6 +960,8 @@ function canAddTo(tool: CanvasTool, layer: Layer): boolean {
 		case "redactBox":
 		case "drawShape":
 		case "pickColor":
+		case "cutBrush":
+		case "pickSubject":
 			return false;
 	}
 }

@@ -2,9 +2,12 @@
 // this slice loadable by Node's test runner.
 import type { Adjustments } from "../model/adjustments.ts";
 import {
+	addMaskStroke,
+	type CutStroke,
 	createDrawingLayer,
 	createImageLayer,
 	createLayerGroup,
+	createMaskedRedaction,
 	createPlacedRedactionBox,
 	createRedactionBox,
 	createRedactionStrokes,
@@ -15,6 +18,7 @@ import {
 	type EditorDocument,
 	effectsEqual,
 	groupsForLayers,
+	isCutOut,
 	isLineShape,
 	type Layer,
 	type MaskStroke,
@@ -107,6 +111,12 @@ export type EditorSlice = {
 		effect: RedactionEffect,
 		groupName?: string,
 	) => void;
+	addMaskedRedaction: (
+		imageId: string,
+		mask: string,
+		rect: Rect,
+		effect: RedactionEffect,
+	) => void;
 	setLayerGroupHidden: (id: string, hidden: boolean) => void;
 	setLayerGroupLocked: (id: string, locked: boolean) => void;
 	deleteLayerGroup: (id: string) => void;
@@ -119,7 +129,12 @@ export type EditorSlice = {
 	) => void;
 	setShapeStyle: (id: string, edit: ShapeEdit) => void;
 	setAdjustments: (id: string, adjustments: Adjustments) => void;
-	setMask: (id: string, mask: string | null) => void;
+	setMask: (
+		id: string,
+		mask: string | null,
+		options?: { keepStrokes?: boolean },
+	) => void;
+	paintMask: (id: string, stroke: CutStroke) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
 	transformLayer: (id: string, transform: Transform) => void;
@@ -433,6 +448,18 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
+		// Over the image it was selected on, on top and selected, like a box.
+		addMaskedRedaction: (imageId, mask, rect, effect) => {
+			const image = findLayer(imageId);
+			if (image?.type !== "image" || rect.width <= 0 || rect.height <= 0) {
+				return;
+			}
+			addOnTop(
+				"editor/addMaskedRedaction",
+				createMaskedRedaction(image, mask, rect, effect),
+			);
+		},
+
 		setLayerGroupHidden: (id, hidden) =>
 			setLayerGroupFlag(
 				hidden ? "editor/hideLayerGroup" : "editor/showLayerGroup",
@@ -527,12 +554,22 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// By id: the mask was found for the image it started on, which may no
 		// longer be selected, or may be gone.
-		setMask: (id, mask) => {
+		setMask: (id, mask, options) => {
 			const target = findLayer(id);
 			if (target?.type !== "image") return;
-			const masked = withMask(target, mask);
+			const masked = withMask(target, mask, options);
 			if (masked === target) return;
 			replaceLayer("editor/setMask", target, masked);
+		},
+
+		// By id, like `setMask`: the stroke refines the image the tool is
+		// cutting out, whatever is selected. Keeping what's already whole
+		// changes nothing, so a pen on an uncut image isn't a step.
+		paintMask: (id, stroke) => {
+			const target = findLayer(id);
+			if (target?.type !== "image" || stroke.points.length < 2) return;
+			if (stroke.type === "pen" && !isCutOut(target)) return;
+			replaceLayer("editor/paintMask", target, addMaskStroke(target, stroke));
 		},
 
 		updateSelectedText: (patch) => {

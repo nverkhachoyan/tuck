@@ -7,7 +7,7 @@ import { ShapeLayerView } from "@/layers/ShapeLayerView";
 import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { ColorMatrix } from "@/model/adjustments";
-import type { ImageLayer, Layer } from "@/model/document";
+import type { ImageLayer, Layer, RedactionMask } from "@/model/document";
 import { CHECKER_CELL } from "@/theme";
 import { Checkerboard } from "@/ui/Checkerboard";
 import { useDecodedImage } from "./useDecodedImage";
@@ -33,31 +33,44 @@ export function CanvasBackground({
 
 /**
  * A layer's content in its own space, loading images asynchronously.
- * `stroke` is one still being drawn on a drawing layer, and `matrix` colors
- * an image in place of its adjustments (see `ImageLayerView`).
+ * `stroke` is one still being drawn on a drawing layer, or on an image's
+ * cut, which `showRemoved` shows what it cuts away from; `matrix` colors an
+ * image in place of its adjustments (see `ImageLayerView`).
  */
 export function LayerContent({
 	layer,
 	stroke,
 	matrix,
+	showRemoved,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke?: ReactNode;
 	matrix?: { value: ColorMatrix };
+	showRemoved?: boolean;
 	onImageError: (error: unknown) => void;
 }) {
 	switch (layer.type) {
 		case "image":
 			return (
-				<AsyncImage layer={layer} matrix={matrix} onError={onImageError} />
+				<AsyncImage
+					layer={layer}
+					matrix={matrix}
+					liveMask={stroke}
+					showRemoved={showRemoved}
+					onError={onImageError}
+				/>
 			);
 		case "text":
 			return <TextLayerView layer={layer} />;
 		case "drawing":
 			return <DrawingLayerView layer={layer}>{stroke}</DrawingLayerView>;
 		case "redaction":
-			return <RedactionLayerView layer={layer} />;
+			return layer.shape === "mask" ? (
+				<AsyncMaskedRedaction layer={layer} onError={onImageError} />
+			) : (
+				<RedactionLayerView layer={layer} />
+			);
 		case "shape":
 			return <ShapeLayerView layer={layer} />;
 		default:
@@ -68,25 +81,44 @@ export function LayerContent({
 /**
  * Draws nothing until the image, and its mask if it has one, have decoded,
  * or if either can't be: a cut-out never shows its background meanwhile.
+ * A new mask shows once it has decoded, and the one before it until then.
  */
 function AsyncImage({
 	layer,
 	matrix,
+	liveMask,
+	showRemoved,
 	onError,
 }: {
 	layer: ImageLayer;
 	matrix?: { value: ColorMatrix };
+	liveMask?: ReactNode;
+	showRemoved?: boolean;
 	onError: (error: unknown) => void;
 }) {
 	const image = useDecodedImage(layer.uri, onError);
 	const mask = useDecodedImage(layer.mask ?? null, onError);
-	if (!image || (layer.mask && !mask)) return null;
+	if (!image || mask === undefined) return null;
 	return (
 		<ImageLayerView
 			layer={layer}
 			image={image}
 			mask={mask ?? undefined}
 			matrix={matrix}
+			liveMask={liveMask}
+			showRemoved={showRemoved}
 		/>
 	);
+}
+
+/** Draws nothing until a masked redaction's mask has decoded. */
+function AsyncMaskedRedaction({
+	layer,
+	onError,
+}: {
+	layer: RedactionMask;
+	onError: (error: unknown) => void;
+}) {
+	const mask = useDecodedImage(layer.mask, onError);
+	return mask ? <RedactionLayerView layer={layer} mask={mask} /> : null;
 }

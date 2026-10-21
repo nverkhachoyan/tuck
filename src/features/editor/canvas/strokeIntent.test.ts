@@ -29,6 +29,25 @@ describe("strokeIntent", () => {
 		);
 	});
 
+	test("picks the subject under a tap, and leaves a drag be", () => {
+		const pick: CanvasTool = { type: "pickSubject", layerId: "photo" };
+		assert.deepEqual(strokeIntent(pick, [100, 200, 103, 202], 1, size), {
+			type: "pick",
+			point: { x: 100, y: 200 },
+		});
+		assert.deepEqual(strokeIntent(pick, [100, 200, 300, 400], 1, size), {
+			type: "none",
+		});
+		const cut: CanvasTool = {
+			type: "cutBrush",
+			layerId: "photo",
+			brush: { type: "eraser", width: 30 },
+		};
+		assert.deepEqual(strokeIntent(cut, [100, 200], 1, size), {
+			type: "paint",
+		});
+	});
+
 	test("takes a tap off the document as a tap away, with any tool", () => {
 		for (const tool of [pen, box, rectangle]) {
 			assert.deepEqual(strokeIntent(tool, [-20, 50, -18, 51], 1, size), {
