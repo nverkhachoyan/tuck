@@ -381,26 +381,31 @@ export function recordMaskedRedaction(
 	);
 }
 
-const maskPictures = new WeakMap<
-	RedactionMask,
-	{ mask: SkImage; picture: SkPicture }
->();
+// By decoded mask first: a picture keeps its mask's pixels alive, so it's
+// let go of with the mask, not kept by layer versions in the undo history.
+const maskPictures = new WeakMap<SkImage, WeakMap<RedactionMask, SkPicture>>();
 
 /** A masked redaction, recorded once per version of it and its mask. */
 export function maskedRedactionPicture(
 	layer: RedactionMask,
 	mask: SkImage,
 ): SkPicture {
-	const recorded = maskPictures.get(layer);
-	if (recorded?.mask === mask) return recorded.picture;
-	const picture = recordMaskedRedaction(
-		layer.effect,
-		mask,
-		layer.width,
-		layer.height,
-		layer.transform,
-	);
-	maskPictures.set(layer, { mask, picture });
+	let pictures = maskPictures.get(mask);
+	if (!pictures) {
+		pictures = new WeakMap();
+		maskPictures.set(mask, pictures);
+	}
+	let picture = pictures.get(layer);
+	if (!picture) {
+		picture = recordMaskedRedaction(
+			layer.effect,
+			mask,
+			layer.width,
+			layer.height,
+			layer.transform,
+		);
+		pictures.set(layer, picture);
+	}
 	return picture;
 }
 
