@@ -7,7 +7,7 @@ import { CanvasBackground } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colorScheme, colors } from "@/ui/theme";
 import type { TextEditState } from "../editorMode";
-import { EditedText } from "./EditedTextView";
+import { EditedTextView } from "./EditedTextView";
 import {
 	type LiveStroke,
 	NewLayerStroke,
@@ -117,7 +117,7 @@ export function EditorScene({
 					>
 						<LiveLayer layer={layer} live={live}>
 							{textEdit && layer.id === editedId ? (
-								<EditedText edit={textEdit} viewScale={viewScale} />
+								<EditedTextView edit={textEdit} viewScale={viewScale} />
 							) : (
 								<StrokeTarget
 									layer={layer}
@@ -138,7 +138,7 @@ export function EditorScene({
 			)}
 			{textEdit?.isNew && (
 				<Group transform={toTransformList(textEdit.layer.transform)}>
-					<EditedText edit={textEdit} viewScale={viewScale} />
+					<EditedTextView edit={textEdit} viewScale={viewScale} />
 				</Group>
 			)}
 			{stroke?.targetId === null && (

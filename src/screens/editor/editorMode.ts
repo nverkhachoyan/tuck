@@ -50,14 +50,14 @@ type TrayTool = Extract<EditorMode<never>, { optionsOpen: boolean }>;
  * The mode, and what sits over it. A text color picker belongs to a layer,
  * and closes when that text isn't the one styled. The eyedropper waits for a
  * tap on the canvas over any mode, and either can be open with a tool's
- * tray. The layers or Add sheet, and the list of shortcuts, open over
+ * tray. The layers or Stickers sheet, and the list of shortcuts, open over
  * everything.
  */
 export type EditorModeState<TextEdit> = {
 	mode: EditorMode<TextEdit>;
 	textPicker: { layerId: string; key: TextColorKey } | null;
 	eyedropper: Eyedropper | null;
-	sheet: "layers" | "add" | null;
+	sheet: "layers" | "stickers" | null;
 	shortcutsOpen: boolean;
 };
 
@@ -98,8 +98,8 @@ export type EditorModeAction<TextEdit> =
 	| { type: "stopEyedropper"; eyedropper?: Eyedropper }
 	| { type: "toggleLayers" }
 	| { type: "closeLayers" }
-	| { type: "openAdd" }
-	| { type: "closeAdd" }
+	| { type: "openStickers" }
+	| { type: "closeStickers" }
 	| { type: "openShortcuts" }
 	| { type: "closeShortcuts" }
 	| { type: "settle"; targets: ModeTargets };
@@ -207,10 +207,10 @@ export function editorModeReducer<TextEdit extends EditedText>(
 			return { ...state, sheet: state.sheet === "layers" ? null : "layers" };
 		case "closeLayers":
 			return state.sheet === "layers" ? { ...state, sheet: null } : state;
-		case "openAdd":
-			return { ...state, sheet: "add", eyedropper: null };
-		case "closeAdd":
-			return state.sheet === "add" ? { ...state, sheet: null } : state;
+		case "openStickers":
+			return { ...state, sheet: "stickers", eyedropper: null };
+		case "closeStickers":
+			return state.sheet === "stickers" ? { ...state, sheet: null } : state;
 		case "openShortcuts":
 			return { ...state, shortcutsOpen: true };
 		case "closeShortcuts":
@@ -257,7 +257,7 @@ export type ShortcutCommand =
 	| Exclude<Shortcut, { type: "help" }>
 	| { type: "openShortcuts" }
 	| { type: "closeShortcuts" }
-	| { type: "closeAdd" }
+	| { type: "closeStickers" }
 	| { type: "stopEyedropper" }
 	| { type: "doneWithTool" };
 
@@ -281,12 +281,12 @@ export function shortcutCommand(
 	}
 	if (shortcut.type === "help") return { type: "openShortcuts" };
 	if (shortcut.type === "undo" || shortcut.type === "redo") return shortcut;
-	// The Add sheet's own key, or Escape, closes it; the rest wait.
-	if (state.sheet === "add") {
+	// The Stickers sheet's own key, or Escape, closes it; the rest wait.
+	if (state.sheet === "stickers") {
 		const closes =
 			shortcut.type === "deselect" ||
-			(shortcut.type === "tool" && shortcut.tool === "add");
-		return closes ? { type: "closeAdd" } : null;
+			(shortcut.type === "tool" && shortcut.tool === "sticker");
+		return closes ? { type: "closeStickers" } : null;
 	}
 	// The view zooms whatever's in use, and Export takes it as it is, as the
 	// header's button does.

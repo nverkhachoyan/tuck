@@ -228,7 +228,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const cropping = mode.type === "crop";
 	const keysTaken = takesKeys(mode);
 	const layersOpen = modeState.sheet === "layers";
-	const addOpen = modeState.sheet === "add";
+	const stickersOpen = modeState.sheet === "stickers";
 	const savedStickers = useSavedStickers();
 	const stickerSave = useStickerSave(savedStickers.save);
 	const windowWidth = useWindowDimensions().width;
@@ -581,11 +581,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		() => dispatchMode({ type: "closeLayers" }),
 		[dispatchMode],
 	);
-	const closeAdd = useCallback(
-		() => dispatchMode({ type: "closeAdd" }),
+	const closeStickers = useCallback(
+		() => dispatchMode({ type: "closeStickers" }),
 		[dispatchMode],
 	);
-	const openAdd = () => dispatchMode({ type: "openAdd" });
+	const openStickers = () => dispatchMode({ type: "openStickers" });
 
 	// Which shortcut does what, given what's open, is `shortcutCommand`'s.
 	const handleShortcut = (shortcut: Shortcut): boolean => {
@@ -602,7 +602,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		switch (command.type) {
 			case "openShortcuts":
 			case "closeShortcuts":
-			case "closeAdd":
+			case "closeStickers":
 			case "stopEyedropper":
 				dispatchMode({ type: command.type });
 				break;
@@ -693,7 +693,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		draw: startDrawing,
 		redact: startRedacting,
 		find: startFinding,
-		add: openAdd,
+		sticker: openStickers,
 		photo: pickPhoto,
 		crop: startCrop,
 		adjust: startAdjusting,
@@ -739,7 +739,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onAddText: startNewText,
 		onDraw: startDrawing,
 		onRedact: startRedacting,
-		onSticker: openAdd,
+		onSticker: openStickers,
 		onPhoto: pickPhoto,
 		onCrop: startCrop,
 		onAdjust: targetImage ? startAdjusting : undefined,
@@ -1000,21 +1000,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						/>
 					)}
 					<StickerSheet
-						open={addOpen}
-						onClose={closeAdd}
+						open={stickersOpen}
+						onClose={closeStickers}
 						onAddSticker={(sticker) => {
-							closeAdd();
+							closeStickers();
 							addSticker(() => bundledStickerImage(sticker));
 						}}
 						savedStickers={savedStickers.stickers}
 						savedError={savedStickers.error}
 						onAddSaved={(sticker) => {
-							closeAdd();
+							closeStickers();
 							addSticker(() => savedStickers.place(sticker));
 						}}
 						// Kept, then added at once, as it was picked to use.
 						onSaveNew={() => {
-							closeAdd();
+							closeStickers();
 							pickSticker(async (image) =>
 								savedStickers.place(await savedStickers.save(image)),
 							);

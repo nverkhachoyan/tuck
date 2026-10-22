@@ -90,7 +90,7 @@ export function ToolsPanel({
 			key="sticker"
 			label="Sticker"
 			icon="sticker-emoji"
-			shortcut={TOOL_KEYS.add}
+			shortcut={TOOL_KEYS.sticker}
 			compact={compact}
 			onPress={onSticker}
 		/>,

@@ -63,7 +63,7 @@ const SCOPES = [
  * How the scan is going, then what it found, to choose from and redact, in
  * a tray. It has no backdrop: taps on the canvas toggle the regions found.
  */
-export function DetectionOptions({
+export function FindTray({
 	state,
 	visibleIndices,
 	selectedCount,

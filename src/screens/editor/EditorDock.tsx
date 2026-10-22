@@ -19,7 +19,7 @@ import type {
 	EditorModeState,
 	EditorTool,
 } from "./editorMode";
-import { DetectionOptions, FindPanel } from "./find/FindPanel";
+import { FindPanel, FindTray } from "./find/FindPanel";
 import type { useFindTool } from "./find/useFindTool";
 import { EffectGlyph, RedactOptions, RedactPanel } from "./redact/RedactPanel";
 import type { useRedactTool } from "./redact/useRedactTool";
@@ -325,7 +325,7 @@ export function ToolTrays({
 				/>
 			)}
 			{mode.type === "tool" && mode.tool === "find" && !tray && !eyedropper && (
-				<DetectionOptions
+				<FindTray
 					state={find.state}
 					visibleIndices={find.visibleIndices}
 					selectedCount={find.selectedCount}

@@ -40,7 +40,7 @@ const TEXT_SELECTION = "rgba(88, 166, 255, 0.4)";
  * selection over it, or the caret, blinking while it holds still. Empty, it
  * shows the placeholder, faded, with the caret at its start.
  */
-export function EditedText({
+export function EditedTextView({
 	edit,
 	viewScale,
 }: {
