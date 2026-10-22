@@ -13,19 +13,19 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
 import { usePreference } from "@/lib/usePreference";
+import { colors, radii, typography, webTransition } from "@/theme";
+import { BottomSheet } from "@/ui/BottomSheet";
+import { Highlight } from "@/ui/Highlight";
+import { interaction } from "@/ui/interaction";
+import { showAlert } from "@/ui/showAlert";
 import {
 	STICKER_CATEGORY_LABELS,
 	STICKERS,
 	type Sticker,
 	type StickerCategory,
 	stickerCategories,
-} from "@/screens/editor/stickers/bundledStickers";
-import type { ShownSticker } from "@/screens/editor/stickers/useSavedStickers";
-import { colors, radii, typography, webTransition } from "@/theme";
-import { BottomSheet } from "@/ui/BottomSheet";
-import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
-import { showAlert } from "@/ui/showAlert";
+} from "./bundledStickers";
+import type { ShownSticker } from "./useSavedStickers";
 
 const TILE = 56;
 const GRID_GAP = 4;
@@ -54,7 +54,7 @@ type SavedStickerProps = {
 	onDeleteSaved: (sticker: ShownSticker) => void;
 };
 
-type AddContentProps = SavedStickerProps & {
+type StickerContentProps = SavedStickerProps & {
 	onAddSticker: (sticker: Sticker) => void;
 };
 
@@ -66,11 +66,11 @@ type AddContentProps = SavedStickerProps & {
  * confirmed. A tap outside the sheet, or swiping it down, closes it. Stays
  * mounted while closed, so the sheet can animate out.
  */
-export function AddSheet({
+export function StickerSheet({
 	open,
 	onClose,
 	...content
-}: AddContentProps & {
+}: StickerContentProps & {
 	open: boolean;
 	onClose: () => void;
 }) {
@@ -94,7 +94,7 @@ export function AddSheet({
 			<View style={styles.column}>
 				{open && (
 					<BottomSheet title="Stickers" closeLabel="Close" onClose={onClose}>
-						<AddContent {...content} />
+						<StickerContent {...content} />
 					</BottomSheet>
 				)}
 			</View>
@@ -102,7 +102,7 @@ export function AddSheet({
 	);
 }
 
-function AddContent({ onAddSticker, ...saved }: AddContentProps) {
+function StickerContent({ onAddSticker, ...saved }: StickerContentProps) {
 	const [tab, setTab] = usePreference("stickerCategory", parseTab);
 	// Measured inside the scroll view, clear of a web scrollbar.
 	const [gridWidth, setGridWidth] = useState(0);

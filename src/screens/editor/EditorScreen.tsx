@@ -43,8 +43,6 @@ import {
 	sampleColor,
 } from "@/render/renderDocument";
 import { textIndexAt } from "@/render/textLayerLayout";
-import { AddSheet } from "@/screens/editor/add/AddSheet";
-import { useAddImage } from "@/screens/editor/add/useAddImage";
 import { AdjustPanel } from "@/screens/editor/adjust/AdjustPanel";
 import {
 	ADJUST_DIAL_MAX,
@@ -69,10 +67,16 @@ import {
 	InspectorBackdrop,
 	useDockInset,
 } from "@/screens/editor/controls/Dock";
+import { LayerActionsPanel } from "@/screens/editor/controls/LayerActionsPanel";
+import {
+	type ArrangeMove,
+	SelectionBar,
+} from "@/screens/editor/controls/SelectionBar";
 import {
 	TrayHeight,
 	TrayPlacement,
 } from "@/screens/editor/controls/ToolOptions";
+import { ToolsPanel } from "@/screens/editor/controls/ToolsPanel";
 import { CropTool } from "@/screens/editor/crop/CropTool";
 import {
 	CutOutOptions,
@@ -92,17 +96,11 @@ import { useDrawTool } from "@/screens/editor/draw/useDrawTool";
 import { detectionTarget } from "@/screens/editor/find/detectionTarget";
 import { DetectionOptions, FindPanel } from "@/screens/editor/find/FindPanel";
 import { useFindTool } from "@/screens/editor/find/useFindTool";
-import { LayerActionsPanel } from "@/screens/editor/panels/LayerActionsPanel";
-import { layerKindName } from "@/screens/editor/panels/LayerRow";
+import { layerKindName } from "@/screens/editor/layers/LayerRow";
 import {
 	LAYERS_SIDEBAR_INSET,
 	LayersPanel,
-} from "@/screens/editor/panels/LayersPanel";
-import {
-	type ArrangeMove,
-	SelectionBar,
-} from "@/screens/editor/panels/SelectionBar";
-import { ToolsPanel } from "@/screens/editor/panels/ToolsPanel";
+} from "@/screens/editor/layers/LayersPanel";
 import {
 	EffectGlyph,
 	RedactOptions,
@@ -113,6 +111,7 @@ import {
 	redactionEffect,
 } from "@/screens/editor/redact/redactSettings";
 import { useRedactTool } from "@/screens/editor/redact/useRedactTool";
+import { StickerSheet } from "@/screens/editor/stickers/StickerSheet";
 import { bundledStickerImage } from "@/screens/editor/stickers/stickerFile";
 import { useSavedStickers } from "@/screens/editor/stickers/useSavedStickers";
 import { useStickerSave } from "@/screens/editor/stickers/useStickerSave";
@@ -125,6 +124,7 @@ import {
 	type TextEditing,
 	useTextEditing,
 } from "@/screens/editor/text/useTextEditing";
+import { useAddImage } from "@/screens/editor/useAddImage";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -1065,7 +1065,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							}}
 						/>
 					)}
-					<AddSheet
+					<StickerSheet
 						open={addOpen}
 						onClose={closeAdd}
 						onAddSticker={(sticker) => {
