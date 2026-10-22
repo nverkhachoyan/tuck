@@ -5,6 +5,11 @@ import type { Adjustments } from "../model/adjustments.ts";
 import {
 	addMaskStroke,
 	type CutStroke,
+	isCutOut,
+	withInvertedCut,
+	withMask,
+} from "../model/cutout.ts";
+import {
 	createDrawingLayer,
 	createImageLayer,
 	createLayerGroup,
@@ -19,7 +24,6 @@ import {
 	type EditorDocument,
 	effectsEqual,
 	groupsForLayers,
-	isCutOut,
 	isLineShape,
 	type Layer,
 	type MaskStroke,
@@ -39,8 +43,6 @@ import {
 	type TextLayerEdit,
 	type TextLayerStyle,
 	withAdjustments,
-	withInvertedCut,
-	withMask,
 } from "../model/document.ts";
 import { addStroke } from "../model/drawing.ts";
 import {

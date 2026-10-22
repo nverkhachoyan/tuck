@@ -1,4 +1,4 @@
-import type { CutStroke } from "../../../model/document.ts";
+import type { CutStroke } from "../../../model/cutout.ts";
 import type { Size } from "../../../model/geometry.ts";
 
 // Picks the subject under a tap, or paints the cut by hand: keeping what

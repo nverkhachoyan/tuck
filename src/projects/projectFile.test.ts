@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { withMask } from "../model/cutout.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
@@ -15,7 +16,6 @@ import {
 	type ImageLayer,
 	type MaskStroke,
 	withAdjustments,
-	withMask,
 } from "../model/document.ts";
 import {
 	copyName,

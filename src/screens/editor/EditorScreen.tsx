@@ -12,10 +12,9 @@ import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { usePreference } from "@/lib/usePreference";
 import { neutralAdjustments } from "@/model/adjustments";
+import { imagePointAt, isCutOut } from "@/model/cutout";
 import {
 	type EditorDocument,
-	imagePointAt,
-	isCutOut,
 	maxNewImageShortSide,
 	type ShapePlacement,
 } from "@/model/document";

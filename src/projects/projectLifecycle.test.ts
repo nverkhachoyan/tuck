@@ -1,12 +1,12 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { withMask } from "../model/cutout.ts";
 import {
 	createImageLayer,
 	createTextLayer,
 	type EditorDocument,
 	type ImageLayer,
-	withMask,
 } from "../model/document.ts";
 import {
 	isImageFile,
