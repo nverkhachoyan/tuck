@@ -21,7 +21,6 @@ import {
 	scaleByDrag,
 } from "../handles/handleGeometry";
 import { handleUnder, hasFinePointer } from "../handles/handleMetrics";
-import { type DocumentViewport, viewPointToDocument } from "../viewport";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import {
 	clampScale,
@@ -44,6 +43,7 @@ import {
 	snapSide,
 	snapSpan,
 } from "./snapping";
+import { type DocumentViewport, viewPointToDocument } from "./viewport";
 
 // A dragged layer snaps onto the document's and the other layers' edges and
 // centers from this many screen pixels away.

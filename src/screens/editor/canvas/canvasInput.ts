@@ -1,6 +1,6 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
 import type { Layer } from "../../../model/document.ts";
-import type { DialDrag } from "../Dial.tsx";
+import type { DialDrag } from "../controls/Dial.tsx";
 import type { CanvasTool } from "./EditorScene.tsx";
 
 /**

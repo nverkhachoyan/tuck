@@ -8,16 +8,16 @@ import {
 } from "react";
 import { Platform, type View } from "react-native";
 import {
-	type DocumentViewport,
-	panViewport,
-	type ViewFrame,
-	zoomViewportAbout,
-} from "../viewport";
-import {
 	readShownViewport,
 	type ShownViewport,
 	showViewport,
 } from "./shownViewport";
+import {
+	type DocumentViewport,
+	panViewport,
+	type ViewFrame,
+	zoomViewportAbout,
+} from "./viewport";
 
 // Held for a pinch with Ctrl + mouse wheel, and repeated while held on
 // Windows, so they don't commit one.

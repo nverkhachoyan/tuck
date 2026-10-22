@@ -1,5 +1,5 @@
+import { ToolButton, ToolGrid, ToolRow } from "../controls/ToolButton";
 import { TOOL_KEYS } from "../shortcuts";
-import { ToolButton, ToolGrid, ToolRow } from "../ToolButton";
 
 /** Opens Cut out, to cut an image's subject out or refine its cut. */
 export function CutOutButton({

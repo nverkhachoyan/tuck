@@ -51,10 +51,10 @@ The main tools are a `ToolGrid` (`ToolButton.tsx`), two balanced rows of `compac
 
 ### 5. The default caption (done)
 
-The outline's stroke is a fifth of the font size (`OUTLINE_WIDTH` in `layers/textLayerLayout.ts`), so a tenth shows past the fill. A quarter, twice the old width, merged Anton's close-set letters into one shape. Serif's is 0.14: Playfair's hairlines and serifs clotted at a fifth. Existing projects' outlines grow too.
+The outline's stroke is a fifth of the font size (`OUTLINE_WIDTH` in `render/textLayerLayout.ts`), so a tenth shows past the fill. A quarter, twice the old width, merged Anton's close-set letters into one shape. Serif's is 0.14: Playfair's hairlines and serifs clotted at a fifth. Existing projects' outlines grow too.
 
 
-* A heavier outline, about twice today's (`outlinePaint` in `layers/textLayerLayout.ts`), so the first caption reads on any photo. Existing projects get it too.
+* A heavier outline, about twice today's (`outlinePaint` in `render/textLayerLayout.ts`), so the first caption reads on any photo. Existing projects get it too.
 
 ### 6. Home (done)
 

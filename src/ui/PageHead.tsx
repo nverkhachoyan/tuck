@@ -1,7 +1,7 @@
 import Head from "expo-router/head";
 import { Platform } from "react-native";
+import { SITE_URL } from "@/lib/site";
 
-export const SITE_URL = "https://www.tuck.tools";
 const SITE_TITLE = "Tuck: Photo Markup";
 const SITE_DESCRIPTION =
 	"Blur, redact, caption, and mark up photos and screenshots in your browser. Every edit happens on your device: no account, no uploads, no watermark.";

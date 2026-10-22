@@ -10,8 +10,8 @@ import {
 	ColorMatrix as SkiaColorMatrix,
 	Image as SkiaImage,
 } from "@shopify/react-native-skia";
-import { CutMask, imageBox } from "@/layers/ImageLayerView";
 import type { ImageLayer } from "@/model/document";
+import { CutMask, imageBox } from "@/render/ImageLayerView";
 
 // Turns white into black and black into white. Its last column is in 0–1
 // units.

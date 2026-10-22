@@ -9,7 +9,6 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { TEXT_FONTS } from "@/layers/fonts";
 import {
 	type TextAlign,
 	type TextFont,
@@ -17,14 +16,15 @@ import {
 	type TextLayerEdit,
 	textFonts,
 } from "@/model/document";
+import { TEXT_FONTS } from "@/render/fonts";
 import { colors, radii, typography, webTransition } from "@/theme";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
-import { ColorPicker } from "../ColorPicker";
-import { ColorSwatches, isCustomColor } from "../ColorSwatches";
+import { ColorPicker } from "../controls/ColorPicker";
+import { ColorSwatches, isCustomColor } from "../controls/ColorSwatches";
+import { ToolOption, ToolOptions } from "../controls/ToolOptions";
 import type { TextColorKey } from "../editorMode";
-import { ToolOption, ToolOptions } from "../ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.

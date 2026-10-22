@@ -4,16 +4,16 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii, typography } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { RingChoice } from "@/ui/RingChoice";
-import { ColorOptions } from "../ColorPicker";
-import { TOOL_KEYS } from "../shortcuts";
-import { ToolButton, ToolRow } from "../ToolButton";
+import { ColorOptions } from "../controls/ColorPicker";
+import { ToolButton, ToolRow } from "../controls/ToolButton";
 import {
 	SIZE_DOTS,
 	SizeDot,
 	ToolChoices,
 	ToolOption,
 	ToolOptions,
-} from "../ToolOptions";
+} from "../controls/ToolOptions";
+import { TOOL_KEYS } from "../shortcuts";
 import type { RedactSettings, RedactTool } from "./redactSettings";
 
 const EFFECT_NAMES: Record<RedactSettings["effect"], string> = {

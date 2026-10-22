@@ -28,7 +28,7 @@ import { hapticTick } from "@/lib/haptics";
 import type { Layer, RedactionEffect } from "@/model/document";
 import { colors, radii, typography } from "@/theme";
 import { IconButton } from "@/ui/IconButton";
-import { SHAPE_ICONS, SHAPE_NAMES } from "../shapeIcons";
+import { SHAPE_ICONS, SHAPE_NAMES } from "../controls/shapeIcons";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 export const ROW_HEIGHT = 52;

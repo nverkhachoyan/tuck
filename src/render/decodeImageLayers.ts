@@ -1,6 +1,6 @@
 import type { SkImage } from "@shopify/react-native-skia";
-import type { HeldImage, ImageCache } from "../layers/imageCache.ts";
 import { type Layer, layerFiles } from "../model/document.ts";
+import type { HeldImage, ImageCache } from "./imageCache.ts";
 
 export type DecodedImageLayers = {
 	// By file: an image layer's `uri` or `mask`, or a masked redaction's

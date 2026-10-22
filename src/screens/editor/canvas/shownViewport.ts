@@ -5,7 +5,7 @@ import {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import type { DocumentViewport } from "../viewport";
+import type { DocumentViewport } from "./viewport";
 
 // How the drawing eases to a new viewport.
 const EASE = { duration: 250, easing: Easing.bezier(0.2, 0, 0, 1) };

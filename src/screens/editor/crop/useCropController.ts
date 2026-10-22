@@ -9,7 +9,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import type { EditorDocument } from "@/model/document";
 import { documentFraming, type Framing, framingAnchor } from "@/model/framing";
 import type { Size } from "@/model/geometry";
-import { blendViewports, fitRectToView } from "../viewport";
+import { blendViewports, fitRectToView } from "../canvas/viewport";
 import {
 	boxWithRatio,
 	type CropState,

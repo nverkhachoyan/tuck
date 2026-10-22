@@ -2,16 +2,16 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { type TextSelection, wordRange } from "@/layers/textEditing";
-import { textIndexAt } from "@/layers/textLayerLayout";
 import { hitTestBox, toLayerSpace } from "@/model/geometry";
+import { type TextSelection, wordRange } from "@/render/textEditing";
+import { textIndexAt } from "@/render/textLayerLayout";
 import type { TextEditState } from "../editorMode";
 import { hasFinePointer } from "../handles/handleMetrics";
-import { type DocumentViewport, viewPointToDocument } from "../viewport";
 import { createDoubleTap } from "./doubleTap";
 import { layerBounds } from "./layerBounds";
 import { HIT_PADDING_PX } from "./layerTargets";
 import { TAP_SLOP_PX } from "./strokeIntent";
+import { type DocumentViewport, viewPointToDocument } from "./viewport";
 
 type TextPressPhase = "begin" | "move" | "end" | "cancel";
 

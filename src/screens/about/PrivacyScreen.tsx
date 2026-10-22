@@ -1,11 +1,5 @@
-import {
-	InfoPage,
-	InlineLink,
-	Item,
-	Paragraph,
-	Section,
-	SUPPORT_EMAIL,
-} from "./InfoPage";
+import { SUPPORT_EMAIL } from "@/lib/site";
+import { InfoPage, InlineLink, Item, Paragraph, Section } from "@/ui/InfoPage";
 
 const ML_KIT_DISCLOSURE =
 	"https://developers.google.com/ml-kit/android-data-disclosure";

@@ -1,4 +1,4 @@
-import { ToolButton, ToolRow } from "../ToolButton";
+import { ToolButton, ToolRow } from "../controls/ToolButton";
 import { CutOutButton } from "./ToolsPanel";
 
 /**

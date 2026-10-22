@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { colors, radii, webTransition } from "@/theme";
-import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
+import { Highlight } from "./Highlight";
+import { interaction } from "./interaction";
 
 // The minimum comfortable touch target, and the ring that marks the chosen
 // option inside it.

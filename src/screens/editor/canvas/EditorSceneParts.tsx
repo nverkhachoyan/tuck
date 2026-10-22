@@ -1,13 +1,13 @@
 import { Rect, type SkRect } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
-import { DrawingLayerView } from "@/layers/DrawingLayerView";
-import { ImageLayerView } from "@/layers/ImageLayerView";
-import { RedactionLayerView } from "@/layers/RedactionLayerView";
-import { ShapeLayerView } from "@/layers/ShapeLayerView";
-import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { ColorMatrix } from "@/model/adjustments";
 import type { ImageLayer, Layer, RedactionMask } from "@/model/document";
+import { DrawingLayerView } from "@/render/DrawingLayerView";
+import { ImageLayerView } from "@/render/ImageLayerView";
+import { RedactionLayerView } from "@/render/RedactionLayerView";
+import { ShapeLayerView } from "@/render/ShapeLayerView";
+import { TextLayerView } from "@/render/TextLayerView";
 import { CHECKER_CELL } from "@/theme";
 import { Checkerboard } from "@/ui/Checkerboard";
 import { useDecodedImage } from "./useDecodedImage";

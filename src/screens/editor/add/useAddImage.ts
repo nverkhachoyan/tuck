@@ -5,7 +5,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import {
 	SAVED_STICKER_MAX_SIDE,
 	type StickerImage,
-} from "@/stickers/savedStickers";
+} from "@/screens/editor/stickers/savedStickers";
 import { showAlert } from "@/ui/showAlert";
 
 export type AddedImage = PickedPhoto & { sticker: boolean };

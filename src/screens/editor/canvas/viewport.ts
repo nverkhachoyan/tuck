@@ -1,4 +1,4 @@
-import type { Point, Rect, Size } from "../../model/geometry.ts";
+import type { Point, Rect, Size } from "../../../model/geometry.ts";
 
 export type DocumentViewport = {
 	scale: number;

@@ -4,14 +4,11 @@ import { importPhoto } from "@/import/photoImport";
 import { errorMessage } from "@/lib/errorMessage";
 import { writeTemporaryPng } from "@/lib/temporaryFile";
 import { type ImageLayer, isCutOut } from "@/model/document";
-import {
-	SAVED_STICKER_MAX_SIDE,
-	type StickerImage,
-} from "@/stickers/savedStickers";
-import type { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";
 import { selectSelectedLayer } from "@/store/editorSlice";
 import { showAlert } from "@/ui/showAlert";
+import { SAVED_STICKER_MAX_SIDE, type StickerImage } from "./savedStickers";
+import type { useSavedStickers } from "./useSavedStickers";
 
 /**
  * Keeping the selected photo as a sticker, shrunk the way a saved sticker

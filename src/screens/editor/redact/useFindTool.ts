@@ -1,15 +1,15 @@
 import { useMemo } from "react";
-import { detectionTargetKey } from "@/detection/detectionTarget";
-import { mapDetectionRects } from "@/detection/mapDetectionRects";
-import {
-	type DetectionScope,
-	useImageDetection,
-} from "@/detection/useImageDetection";
 import type {
 	EditorDocument,
 	ImageLayer,
 	RedactionEffect,
 } from "@/model/document";
+import { detectionTargetKey } from "@/screens/editor/detection/detectionTarget";
+import { mapDetectionRects } from "@/screens/editor/detection/mapDetectionRects";
+import {
+	type DetectionScope,
+	useImageDetection,
+} from "@/screens/editor/detection/useImageDetection";
 import { useStore } from "@/store";
 import { chosenBoxes } from "./findResults";
 

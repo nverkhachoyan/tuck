@@ -14,7 +14,7 @@ import {
 import { colors, radii, typography, webTransition } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
-import { Dial } from "../Dial";
+import { Dial } from "../controls/Dial";
 import {
 	ADJUST_DIAL_MAX,
 	ADJUST_DIAL_SCALE,

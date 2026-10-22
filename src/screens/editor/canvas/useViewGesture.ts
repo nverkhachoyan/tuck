@@ -2,12 +2,6 @@ import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import {
-	type DocumentViewport,
-	panViewport,
-	type ViewFrame,
-	zoomViewportAbout,
-} from "../viewport";
 import type { LiveTransform } from "./liveTransform";
 import {
 	continueTravel,
@@ -19,6 +13,12 @@ import {
 	type ShownViewport,
 	showViewport,
 } from "./shownViewport";
+import {
+	type DocumentViewport,
+	panViewport,
+	type ViewFrame,
+	zoomViewportAbout,
+} from "./viewport";
 
 /**
  * Two fingers zoom and pan the view: a pinch scales it about the fingers,

@@ -5,7 +5,7 @@ import type {
 	EditorDocument,
 	ImageLayer,
 	TextLayer,
-} from "../model/document.ts";
+} from "../../../model/document.ts";
 import { detectionTarget, detectionTargetKey } from "./detectionTarget.ts";
 
 function image(id: string, overrides: Partial<ImageLayer> = {}): ImageLayer {

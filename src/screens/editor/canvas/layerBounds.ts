@@ -1,9 +1,9 @@
-import { textLayerBounds } from "@/layers/textLayerLayout";
 import { assertNever } from "@/lib/assertNever";
 import type { Layer } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
 import type { Box } from "@/model/geometry";
 import { shapeBox } from "@/model/shapes";
+import { textLayerBounds } from "@/render/textLayerLayout";
 
 /**
  * The box a layer occupies in its own space, centered on its origin. The

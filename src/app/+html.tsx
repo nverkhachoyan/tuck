@@ -3,8 +3,7 @@ import {
 	useServerDocumentContext,
 } from "expo-router/html";
 import type { ReactNode } from "react";
-import { SUPPORT_EMAIL } from "@/screens/about/InfoPage";
-import { SITE_URL } from "@/ui/PageHead";
+import { SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
 
 // The day and night palettes' `background` and `textPrimary` (`theme.ts`):
 // this page is rendered ahead of time, before the browser says which the app

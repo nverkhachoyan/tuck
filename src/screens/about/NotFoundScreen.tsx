@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { space } from "@/theme";
 import { Button } from "@/ui/Button";
-import { InfoPage, Paragraph, Section } from "./InfoPage";
+import { InfoPage, Paragraph, Section } from "@/ui/InfoPage";
 
 export default function NotFoundScreen() {
 	const router = useRouter();

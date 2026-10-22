@@ -61,258 +61,6 @@
 			}
 		},
 		{
-			"includes": ["src/layers/**", "src/store/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/**",
-											"../**",
-											"!@/model/**",
-											"!../model/**",
-											"!@/lib/**",
-											"!../lib/**",
-											"!@/ui/**",
-											"!../ui/**",
-											"!@/theme",
-											"!../theme",
-											"!../theme.ts"
-										],
-										"message": "layers/ and store/ import only model/, lib/, ui/, and theme.ts (not each other), and their own folder with ./. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": [
-				"src/screens/editor/**",
-				"src/import/**",
-				"src/render/**",
-				"src/projects/**",
-				"src/stickers/**"
-			],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/**",
-											"../**",
-											"!@/layers/**",
-											"!../layers/**",
-											"!../../layers/**",
-											"!../../../layers/**",
-											"!@/store",
-											"!@/store/**",
-											"!../store",
-											"!../store/**",
-											"!../../store/**",
-											"!../../../store/**",
-											"!@/model/**",
-											"!../model/**",
-											"!../../model/**",
-											"!../../../model/**",
-											"!@/lib/**",
-											"!../lib/**",
-											"!@/ui/**",
-											"!../ui/**",
-											"!@/theme",
-											"!../theme",
-											"!../theme.ts"
-										],
-										"message": "Editor helpers and shared capability folders may import only lower-level modules or files in their own folder. Only detection/ imports image-analysis. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/*"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/**",
-											"../**",
-											"./*/**",
-											"!@/layers/**",
-											"!../../layers/**",
-											"!@/store",
-											"!@/store/**",
-											"!../../store",
-											"!../../store/**",
-											"!@/model/**",
-											"!../../model/**",
-											"!@/detection/**",
-											"!@/import/**",
-											"!@/stickers/**",
-											"!@/lib/**",
-											"!../../lib/**",
-											"!@/ui/**",
-											"!../../ui/**",
-											"!@/theme",
-											"!../../theme",
-											"!../../theme.ts"
-										],
-										"message": "Editor root helpers import only each other and shared lower-level modules. EditorScreen composes subfolders. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/*/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/**",
-											"../**",
-											"!../*",
-											"!../handles/*",
-											"!@/detection/**",
-											"!@/stickers/**",
-											"!@/layers/**",
-											"!../../../layers/**",
-											"!@/store",
-											"!@/store/**",
-											"!../../../store",
-											"!../../../store/**",
-											"!@/model/**",
-											"!../../../model/**",
-											"!@/lib/**",
-											"!../../../lib/**",
-											"!@/ui/**",
-											"!../../../ui/**",
-											"!@/theme",
-											"!../../../theme",
-											"!../../../theme.ts"
-										],
-										"message": "Editor subfolders import only themselves, editor root helpers, handles/, stickers/, and shared lower-level modules. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/EditorScreen.tsx"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"../**",
-											"!@/screens/editor/**"
-										],
-										"message": "The editor may compose its own folder and shared capabilities, but may not import routes or another screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/home/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"../**",
-											"!@/screens/home/**"
-										],
-										"message": "Home may not import routes or another screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": [
-				"src/screens/about/**",
-				"src/screens/create/**",
-				"src/screens/export/**"
-			],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"../**",
-											"!../../model/**"
-										],
-										"message": "Screens may not import routes or another screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
 			"includes": ["src/lib/**"],
 			"linter": {
 				"rules": {
@@ -354,7 +102,7 @@
 											"!../theme",
 											"!../theme.ts"
 										],
-										"message": "ui/ and theme.ts never import app code, only each other and lib/. See AGENTS.md."
+										"message": "ui/ and theme.ts import only each other and lib/, never app code. See AGENTS.md."
 									}
 								]
 							}
@@ -364,7 +112,7 @@
 			}
 		},
 		{
-			"includes": ["src/detection/**"],
+			"includes": ["src/store/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -373,8 +121,50 @@
 							"options": {
 								"patterns": [
 									{
-										"group": ["@/**", "../**", "!../model/**", "!../lib/**"],
-										"message": "detection/ imports only its own files, the image-analysis bridge, and lower-level model/ and lib/ modules. See AGENTS.md."
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!@/model/**",
+											"!../model/**",
+											"!@/lib/**",
+											"!../lib/**"
+										],
+										"message": "store/ imports only model/ and lib/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/import/**", "src/projects/**", "src/render/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!@/model/**",
+											"!../model/**",
+											"!@/lib/**",
+											"!../lib/**",
+											"!@/store",
+											"!@/store/**",
+											"!../store",
+											"!../store/**",
+											"!@/ui/**",
+											"!@/theme"
+										],
+										"message": "Shared capabilities (import/, projects/, render/) import only store/, model/, lib/, ui/, and theme.ts: not each other, and no screen. See AGENTS.md."
 									}
 								]
 							}
@@ -394,7 +184,275 @@
 								"patterns": [
 									{
 										"group": ["image-analysis"],
-										"message": "Only detection/ imports the image-analysis bridge. See AGENTS.md."
+										"message": "Only the editor's detection/ imports the image-analysis bridge. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/about/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/about/**",
+											"../**",
+											"!../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/create/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/create/**",
+											"../**",
+											"!../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/export/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/export/**",
+											"../**",
+											"!../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/home/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/home/**",
+											"../**",
+											"!../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/settings/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/settings/**",
+											"../**",
+											"!../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/editor/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/editor/**"
+										],
+										"message": "The editor doesn't import routes or another screen, and only its detection/ imports image-analysis. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/screens/editor/add/**",
+				"src/screens/editor/adjust/**",
+				"src/screens/editor/crop/**",
+				"src/screens/editor/cutout/**",
+				"src/screens/editor/draw/**",
+				"src/screens/editor/panels/**",
+				"src/screens/editor/redact/**",
+				"src/screens/editor/text/**",
+				"src/screens/editor/canvas/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/editor/**",
+											"../add/**",
+											"@/screens/editor/add/**",
+											"../adjust/**",
+											"@/screens/editor/adjust/**",
+											"../crop/**",
+											"@/screens/editor/crop/**",
+											"../cutout/**",
+											"@/screens/editor/cutout/**",
+											"../draw/**",
+											"@/screens/editor/draw/**",
+											"../panels/**",
+											"@/screens/editor/panels/**",
+											"../redact/**",
+											"@/screens/editor/redact/**",
+											"../text/**",
+											"@/screens/editor/text/**"
+										],
+										"message": "The editor's tools (add/, adjust/, crop/, cutout/, draw/, panels/, redact/, text/) don't import each other, and canvas/ imports none of them: what they share is at the editor root or in canvas/, controls/, handles/, detection/, or stickers/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/screens/editor/controls/**",
+				"src/screens/editor/handles/**",
+				"src/screens/editor/stickers/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"../**",
+											"!../../../**"
+										],
+										"message": "The editor's building blocks (controls/, handles/, stickers/) import nothing else from the editor. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/editor/detection/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/**",
+											"../**",
+											"!@/model/**",
+											"!../../../model/**",
+											"!@/lib/**",
+											"!../../../lib/**"
+										],
+										"message": "detection/ imports only its own files, the image-analysis bridge, model/, and lib/. See AGENTS.md."
 									}
 								]
 							}

@@ -16,7 +16,7 @@ import {
 } from "@/model/adjustments";
 import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
 import { framingAnchor } from "@/model/framing";
-import type { DialScale } from "../Dial";
+import type { DialScale } from "../controls/Dial";
 
 // The dial counts in percent: -100 to 100 for -1 to 1.
 export const ADJUST_DIAL_MAX = 100;

@@ -1,5 +1,9 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import { useEffect, useRef, useState } from "react";
+import { errorMessage } from "@/lib/errorMessage";
+import { deleteTemporaryFile, writeTemporaryPng } from "@/lib/temporaryFile";
+import { type ImageLayer, isCutOut } from "@/model/document";
+import { decodedImages, decodeImage } from "@/render/decodedImages";
 import {
 	findObjectMasks,
 	findSubjectMask,
@@ -8,11 +12,7 @@ import {
 	isDetectionModelDownloading,
 	prepareObjectSelection,
 	releaseObjectSelection,
-} from "@/detection/imageDetection";
-import { decodedImages, decodeImage } from "@/layers/decodedImages";
-import { errorMessage } from "@/lib/errorMessage";
-import { deleteTemporaryFile, writeTemporaryPng } from "@/lib/temporaryFile";
-import { type ImageLayer, isCutOut } from "@/model/document";
+} from "@/screens/editor/detection/imageDetection";
 import { showAlert } from "@/ui/showAlert";
 import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
 import { type LastPick, nextMask, picksAgain } from "./pickGrowth";

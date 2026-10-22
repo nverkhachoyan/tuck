@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { colors } from "@/theme";
-import { CheckerFill } from "@/ui/CheckerFill";
-import { RingChoice } from "@/ui/RingChoice";
+import { CheckerFill } from "./CheckerFill";
+import { RingChoice } from "./RingChoice";
 
 const SWATCH_SIZE = 26;
 

@@ -1,5 +1,9 @@
-import type { EditorDocument, ImageLayer, Layer } from "../model/document.ts";
-import { framingAnchor } from "../model/framing.ts";
+import type {
+	EditorDocument,
+	ImageLayer,
+	Layer,
+} from "../../../model/document.ts";
+import { framingAnchor } from "../../../model/framing.ts";
 
 /** The selected visible image, or the document's framing photo, or any image. */
 export function detectionTarget(

@@ -19,8 +19,8 @@ import {
 	type Sticker,
 	type StickerCategory,
 	stickerCategories,
-} from "@/stickers/stickers";
-import type { ShownSticker } from "@/stickers/useSavedStickers";
+} from "@/screens/editor/stickers/stickers";
+import type { ShownSticker } from "@/screens/editor/stickers/useSavedStickers";
 import { colors, radii, typography, webTransition } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Highlight } from "@/ui/Highlight";

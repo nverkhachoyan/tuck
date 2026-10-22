@@ -21,11 +21,6 @@ import { listenForLaunchedPhotos } from "@/import/sharedPhoto";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { useUpdateReady } from "@/lib/serviceWorker";
 import { editorHref } from "@/projects/projectRoute";
-import { HOME_MAX_WIDTH, ProjectList } from "@/screens/home/ProjectList";
-import {
-	type HomeStatus,
-	useHomeProjects,
-} from "@/screens/home/useHomeProjects";
 import { useStore } from "@/store";
 import {
 	colors,
@@ -42,6 +37,8 @@ import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { PageHead } from "@/ui/PageHead";
 import { TextButton } from "@/ui/TextButton";
+import { HOME_MAX_WIDTH, ProjectList } from "./ProjectList";
+import { type HomeStatus, useHomeProjects } from "./useHomeProjects";
 
 // Wide enough to be used with a mouse, where reach doesn't matter: the ways
 // to start head the projects, as a web app's "new" actions usually do.

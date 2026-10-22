@@ -1,8 +1,9 @@
 // What the editor is doing, and what's open over it. Plain TypeScript, so
 // the rules for what can be on together are tested; `useEditorMode` holds
 // the state for the screen.
-import type { TextSelection } from "../../layers/textEditing.ts";
+
 import type { TextLayer } from "../../model/document.ts";
+import type { TextSelection } from "../../render/textEditing.ts";
 import type { Shortcut } from "./shortcuts.ts";
 
 /** A text layer's colors, which its Color, Outline, and Box tabs pick. */

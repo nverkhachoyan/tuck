@@ -9,7 +9,7 @@ import {
 	type ViewStyle,
 } from "react-native";
 import { colors, radii, space, typography } from "@/theme";
-import { Button } from "@/ui/Button";
+import { Button } from "./Button";
 
 /**
  * React Native Web's `Alert.alert` does nothing, so errors would vanish and a

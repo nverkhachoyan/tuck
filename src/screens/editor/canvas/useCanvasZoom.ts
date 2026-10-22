@@ -8,6 +8,9 @@ import {
 } from "react";
 import type { View } from "react-native";
 import type { Point, Size } from "@/model/geometry";
+import { createDoubleTap } from "./doubleTap";
+import { useShownViewport } from "./shownViewport";
+import { useWheelZoom } from "./useWheelZoom";
 import {
 	areaMiddle,
 	type DocumentViewport,
@@ -17,10 +20,7 @@ import {
 	visibleDocumentArea,
 	zoomForViewport,
 	zoomViewportAbout,
-} from "../viewport";
-import { createDoubleTap } from "./doubleTap";
-import { useShownViewport } from "./shownViewport";
-import { useWheelZoom } from "./useWheelZoom";
+} from "./viewport";
 
 // How much each zoom in or out by key scales the view.
 const ZOOM_STEP = 2;

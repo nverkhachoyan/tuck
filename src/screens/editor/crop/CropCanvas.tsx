@@ -14,7 +14,6 @@ import {
 	type SharedValue,
 	useDerivedValue,
 } from "react-native-reanimated";
-import { toTransformList } from "@/layers/layerTransform";
 import type { EditorDocument, Layer } from "@/model/document";
 import {
 	type FramingAnchor,
@@ -23,10 +22,11 @@ import {
 	turnsWithPhoto,
 } from "@/model/framing";
 import type { Size } from "@/model/geometry";
+import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/theme";
-import { CanvasBackground, LayerContent } from "../EditorSceneParts";
+import { CanvasBackground, LayerContent } from "../canvas/EditorSceneParts";
+import type { DocumentViewport } from "../canvas/viewport";
 import { type CanvasCursor, cursorStyle } from "../handles/canvasCursor";
-import type { DocumentViewport } from "../viewport";
 import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
 import { useCropGesture } from "./useCropGesture";

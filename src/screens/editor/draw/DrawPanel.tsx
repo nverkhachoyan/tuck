@@ -3,16 +3,16 @@ import { StyleSheet, View } from "react-native";
 import { shapeKinds } from "@/model/document";
 import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
-import { ColorOptions } from "../ColorPicker";
-import { SHAPE_ICONS, SHAPE_NAMES } from "../shapeIcons";
-import { ToolButton, ToolRow } from "../ToolButton";
+import { ColorOptions } from "../controls/ColorPicker";
+import { SHAPE_ICONS, SHAPE_NAMES } from "../controls/shapeIcons";
+import { ToolButton, ToolRow } from "../controls/ToolButton";
 import {
 	SIZE_DOTS,
 	SizeDot,
 	ToolChoices,
 	ToolOption,
 	ToolOptions,
-} from "../ToolOptions";
+} from "../controls/ToolOptions";
 import {
 	type BrushSettings,
 	type BrushTool,

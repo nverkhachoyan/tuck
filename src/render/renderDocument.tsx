@@ -8,8 +8,6 @@ import {
 	type SkImage,
 } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
-import { decodedImages } from "@/layers/decodedImages";
-import { CutCoverage, ImageLayerView } from "@/layers/ImageLayerView";
 import { averageColor } from "@/lib/color";
 import {
 	type EditorDocument,
@@ -18,7 +16,9 @@ import {
 } from "@/model/document";
 import type { Rect } from "@/model/geometry";
 import { DocumentRenderScene } from "./DocumentRenderScene";
+import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";
+import { CutCoverage, ImageLayerView } from "./ImageLayerView";
 import { keptBounds } from "./keptBounds";
 
 // A thumbnail's shorter side, in pixels: a project card's print on a phone

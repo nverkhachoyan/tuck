@@ -55,7 +55,7 @@ export type ImageLayer = LayerBase & {
 
 export type TextAlign = "left" | "center" | "right";
 
-// Named for how they look; `layers/fonts.ts` maps each to its bundled font.
+// Named for how they look; `render/fonts.ts` maps each to its bundled font.
 export const textFonts = [
 	"classic",
 	"modern",

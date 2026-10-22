@@ -3,13 +3,11 @@ import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, space, typography } from "@/theme";
-import { PageHead } from "@/ui/PageHead";
-import { ScreenHeader } from "@/ui/ScreenHeader";
+import { PageHead } from "./PageHead";
+import { ScreenHeader } from "./ScreenHeader";
 
 // A line of running text this wide reads comfortably.
 const MAX_WIDTH = 640;
-
-export const SUPPORT_EMAIL = "support@tuck.tools";
 
 /**
  * A page of reading, such as the privacy policy: a header with Back and the

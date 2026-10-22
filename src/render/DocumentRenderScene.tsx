@@ -1,12 +1,12 @@
 import { Fill, Group, Rect, type SkImage } from "@shopify/react-native-skia";
-import { DrawingLayerView } from "@/layers/DrawingLayerView";
-import { ImageLayerView } from "@/layers/ImageLayerView";
-import { toTransformList } from "@/layers/layerTransform";
-import { RedactionLayerView } from "@/layers/RedactionLayerView";
-import { ShapeLayerView } from "@/layers/ShapeLayerView";
-import { TextLayerView } from "@/layers/TextLayerView";
 import { assertNever } from "@/lib/assertNever";
 import type { EditorDocument, Layer } from "@/model/document";
+import { DrawingLayerView } from "./DrawingLayerView";
+import { ImageLayerView } from "./ImageLayerView";
+import { toTransformList } from "./layerTransform";
+import { RedactionLayerView } from "./RedactionLayerView";
+import { ShapeLayerView } from "./ShapeLayerView";
+import { TextLayerView } from "./TextLayerView";
 
 /**
  * The document's background and layers in document space, with no selection

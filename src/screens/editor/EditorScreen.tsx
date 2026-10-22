@@ -15,8 +15,6 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
-import { detectionTarget } from "@/detection/detectionTarget";
-import { textIndexAt } from "@/layers/textLayerLayout";
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
@@ -44,7 +42,9 @@ import {
 	renderThumbnail,
 	sampleColor,
 } from "@/render/renderDocument";
+import { textIndexAt } from "@/render/textLayerLayout";
 import { AddSheet } from "@/screens/editor/add/AddSheet";
+import { useAddImage } from "@/screens/editor/add/useAddImage";
 import { AdjustPanel } from "@/screens/editor/adjust/AdjustPanel";
 import {
 	ADJUST_DIAL_MAX,
@@ -52,14 +52,27 @@ import {
 	adjustTarget,
 	useAdjustController,
 } from "@/screens/editor/adjust/useAdjustController";
-import { EyedropperHint } from "@/screens/editor/ColorPicker";
-import { isCustomColor } from "@/screens/editor/ColorSwatches";
 import type { CanvasInput } from "@/screens/editor/canvas/canvasInput";
 import {
 	EditorCanvas,
 	type EditorCanvasHandle,
 } from "@/screens/editor/canvas/EditorCanvas";
 import type { CanvasTool } from "@/screens/editor/canvas/EditorScene";
+import { EyedropperHint } from "@/screens/editor/controls/ColorPicker";
+import { isCustomColor } from "@/screens/editor/controls/ColorSwatches";
+import type { DialDrag } from "@/screens/editor/controls/Dial";
+import {
+	Dock,
+	DockFooter,
+	INSPECTOR_TRAY_TOP,
+	INSPECTOR_WIDTH,
+	InspectorBackdrop,
+	useDockInset,
+} from "@/screens/editor/controls/Dock";
+import {
+	TrayHeight,
+	TrayPlacement,
+} from "@/screens/editor/controls/ToolOptions";
 import { CropTool } from "@/screens/editor/crop/CropTool";
 import {
 	CutOutOptions,
@@ -73,26 +86,10 @@ import {
 } from "@/screens/editor/cutout/cutOutSettings";
 import { useCutOut } from "@/screens/editor/cutout/useCutOut";
 import { useCutRedaction } from "@/screens/editor/cutout/useCutRedaction";
-import type { DialDrag } from "@/screens/editor/Dial";
-import {
-	Dock,
-	DockFooter,
-	INSPECTOR_TRAY_TOP,
-	INSPECTOR_WIDTH,
-	InspectorBackdrop,
-	useDockInset,
-} from "@/screens/editor/Dock";
+import { detectionTarget } from "@/screens/editor/detection/detectionTarget";
 import { brushFor, shapeStyleFor } from "@/screens/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/screens/editor/draw/DrawPanel";
 import { useDrawTool } from "@/screens/editor/draw/useDrawTool";
-import {
-	type EditorModeAction,
-	type EditorModeState,
-	type EditorTool,
-	type ShortcutCommand,
-	shortcutCommand,
-	takesKeys,
-} from "@/screens/editor/editorMode";
 import { LayerActionsPanel } from "@/screens/editor/panels/LayerActionsPanel";
 import { layerKindName } from "@/screens/editor/panels/LayerRow";
 import {
@@ -118,14 +115,9 @@ import {
 } from "@/screens/editor/redact/redactSettings";
 import { useFindTool } from "@/screens/editor/redact/useFindTool";
 import { useRedactTool } from "@/screens/editor/redact/useRedactTool";
-import { SaveErrorBanner } from "@/screens/editor/SaveErrorBanner";
-import { ShortcutsOverlay } from "@/screens/editor/ShortcutsOverlay";
-import {
-	LAYERS_KEY,
-	type Shortcut,
-	type ToolKey,
-} from "@/screens/editor/shortcuts";
-import { TrayHeight, TrayPlacement } from "@/screens/editor/ToolOptions";
+import { bundledStickerImage } from "@/screens/editor/stickers/stickerFile";
+import { useSavedStickers } from "@/screens/editor/stickers/useSavedStickers";
+import { useStickerSave } from "@/screens/editor/stickers/useStickerSave";
 import { TextEditor } from "@/screens/editor/text/TextEditor";
 import {
 	TextColorPicker,
@@ -135,17 +127,6 @@ import {
 	type TextEditing,
 	useTextEditing,
 } from "@/screens/editor/text/useTextEditing";
-import { useAddImage } from "@/screens/editor/useAddImage";
-import { useDeleteNotice } from "@/screens/editor/useDeleteNotice";
-import {
-	type EditorActions,
-	useEditorActions,
-} from "@/screens/editor/useEditorActions";
-import { useEditorMode } from "@/screens/editor/useEditorMode";
-import { useEditorShortcuts } from "@/screens/editor/useEditorShortcuts";
-import { useStickerSave } from "@/screens/editor/useStickerSave";
-import { bundledStickerImage } from "@/stickers/stickerFile";
-import { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";
 import {
 	selectCanRedo,
@@ -164,6 +145,21 @@ import { showAlert } from "@/ui/showAlert";
 import { TextButton } from "@/ui/TextButton";
 import { Toast } from "@/ui/Toast";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
+import {
+	type EditorModeAction,
+	type EditorModeState,
+	type EditorTool,
+	type ShortcutCommand,
+	shortcutCommand,
+	takesKeys,
+} from "./editorMode";
+import { SaveErrorBanner } from "./SaveErrorBanner";
+import { ShortcutsOverlay } from "./ShortcutsOverlay";
+import { LAYERS_KEY, type Shortcut, type ToolKey } from "./shortcuts";
+import { useDeleteNotice } from "./useDeleteNotice";
+import { type EditorActions, useEditorActions } from "./useEditorActions";
+import { useEditorMode } from "./useEditorMode";
+import { useEditorShortcuts } from "./useEditorShortcuts";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;

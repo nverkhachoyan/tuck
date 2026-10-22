@@ -7,7 +7,7 @@ import {
 	type TextStyle,
 	View,
 } from "react-native";
-import type { TextSelection } from "@/layers/textEditing";
+import type { TextSelection } from "@/render/textEditing";
 import { colorScheme, HEADER_HEIGHT } from "@/theme";
 
 export type TextEditorHandle = {

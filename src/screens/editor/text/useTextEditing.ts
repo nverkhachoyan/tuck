@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import { Platform } from "react-native";
-import type { TextSelection } from "@/layers/textEditing";
 import { usePreference } from "@/lib/usePreference";
 import {
 	createTextLayer,
@@ -9,6 +8,7 @@ import {
 	type TextLayerEdit,
 } from "@/model/document";
 import type { Rect } from "@/model/geometry";
+import type { TextSelection } from "@/render/textEditing";
 import { useStore } from "@/store";
 import { selectSelectedTextLayer } from "@/store/editorSlice";
 import type { EditorModeAction, TextEditState } from "../editorMode";

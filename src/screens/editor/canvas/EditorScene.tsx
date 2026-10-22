@@ -25,28 +25,6 @@ import {
 	withSequence,
 	withTiming,
 } from "react-native-reanimated";
-import type { MappedDetectionRect } from "@/detection/mapDetectionRects";
-import { BrushStroke, strokePath } from "@/layers/DrawingLayerView";
-import { MaskStrokePath } from "@/layers/ImageLayerView";
-import {
-	toInverseTransformList,
-	toTransformList,
-} from "@/layers/layerTransform";
-import {
-	type FilterEffect,
-	maskedRedactionPicture,
-	maskMarks,
-	RedactionLayerView,
-	recordLayerStrokes,
-	recordMaskedRedaction,
-	recordRedactionStrokes,
-	redactionFilter,
-	strokesPicture,
-} from "@/layers/RedactionLayerView";
-import { shapePath } from "@/layers/ShapeLayerView";
-import { TextLayerView } from "@/layers/TextLayerView";
-import { clampSelection, withPlaceholder } from "@/layers/textEditing";
-import { textCaretRect, textSelectionRects } from "@/layers/textLayerLayout";
 import type { ColorMatrix } from "@/model/adjustments";
 import {
 	type Brush,
@@ -69,15 +47,37 @@ import {
 import { drawingBox } from "@/model/drawing";
 import { rectFromCorners, transformsEqual } from "@/model/geometry";
 import { lineReach, shapeBox } from "@/model/shapes";
+import { BrushStroke, strokePath } from "@/render/DrawingLayerView";
+import { MaskStrokePath } from "@/render/ImageLayerView";
+import {
+	toInverseTransformList,
+	toTransformList,
+} from "@/render/layerTransform";
+import {
+	type FilterEffect,
+	maskedRedactionPicture,
+	maskMarks,
+	RedactionLayerView,
+	recordLayerStrokes,
+	recordMaskedRedaction,
+	recordRedactionStrokes,
+	redactionFilter,
+	strokesPicture,
+} from "@/render/RedactionLayerView";
+import { shapePath } from "@/render/ShapeLayerView";
+import { TextLayerView } from "@/render/TextLayerView";
+import { clampSelection, withPlaceholder } from "@/render/textEditing";
+import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
+import type { MappedDetectionRect } from "@/screens/editor/detection/mapDetectionRects";
 import { colorScheme, colors } from "@/theme";
-import { CanvasBackground, LayerContent } from "../EditorSceneParts";
 import type { TextEditState } from "../editorMode";
 import { handleSides } from "../handles/handleGeometry";
 import { handleMetrics, shownHandles } from "../handles/handleMetrics";
-import { useDecodedImage } from "../useDecodedImage";
+import { CanvasBackground, LayerContent } from "./EditorSceneParts";
 import { layerBounds } from "./layerBounds";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
 import { shapeFromDrag } from "./shapeDrag";
+import { useDecodedImage } from "./useDecodedImage";
 
 const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.

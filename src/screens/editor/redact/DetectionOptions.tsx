@@ -3,12 +3,12 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import type {
 	DetectionScope,
 	ImageDetectionState,
-} from "@/detection/useImageDetection";
+} from "@/screens/editor/detection/useImageDetection";
 import { colors, typography } from "@/theme";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
-import { ToolButton, ToolRow } from "../ToolButton";
-import { Tray } from "../ToolOptions";
+import { ToolButton, ToolRow } from "../controls/ToolButton";
+import { Tray } from "../controls/ToolOptions";
 import { EffectGlyph } from "./RedactPanel";
 import type { RedactSettings } from "./redactSettings";
 

@@ -1,1 +1,1 @@
-export { default } from "@/screens/about/SettingsScreen";
+export { default } from "@/screens/settings/SettingsScreen";

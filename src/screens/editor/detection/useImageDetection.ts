@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { errorMessage } from "../lib/errorMessage";
+import { errorMessage } from "@/lib/errorMessage";
 import {
 	type DetectionFeature,
 	type DetectionRect,

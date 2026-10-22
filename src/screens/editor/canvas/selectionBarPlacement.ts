@@ -7,7 +7,7 @@ import {
 	type Transform,
 	toDocumentSpace,
 } from "../../../model/geometry.ts";
-import type { DocumentViewport } from "../viewport.ts";
+import type { DocumentViewport } from "./viewport.ts";
 
 // Worklets, so the selection bar follows its layer on the UI thread.
 

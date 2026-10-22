@@ -27,7 +27,6 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { type TextSelection, withPlaceholder } from "@/layers/textEditing";
 import type { EditorDocument, Layer, ShapePlacement } from "@/model/document";
 import {
 	type Box,
@@ -36,6 +35,7 @@ import {
 	type Rect,
 	type Transform,
 } from "@/model/geometry";
+import { type TextSelection, withPlaceholder } from "@/render/textEditing";
 import { colors, radii, space, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
@@ -47,7 +47,6 @@ import {
 	cursorStyle,
 } from "../handles/canvasCursor";
 import { handleMetrics, handleUnder } from "../handles/handleMetrics";
-import { type ViewFrame, viewPointToDocument } from "../viewport";
 import { type CanvasInput, inputRules } from "./canvasInput";
 import {
 	type CanvasTool,
@@ -83,6 +82,7 @@ import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
 import { useTextEditGesture } from "./useTextEditGesture";
 import { useViewGesture } from "./useViewGesture";
+import { type ViewFrame, viewPointToDocument } from "./viewport";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.

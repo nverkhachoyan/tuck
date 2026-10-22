@@ -1,14 +1,14 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
-import { ToolButton, ToolRow } from "../ToolButton";
+import { ToolButton, ToolRow } from "../controls/ToolButton";
 import {
 	SIZE_DOTS,
 	SizeDot,
 	ToolChoices,
 	ToolOption,
 	ToolOptions,
-} from "../ToolOptions";
+} from "../controls/ToolOptions";
 import type { CutOutSettings, CutOutTool } from "./cutOutSettings";
 
 /**
