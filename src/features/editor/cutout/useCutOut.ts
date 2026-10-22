@@ -12,9 +12,9 @@ import {
 import { decodedImages, decodeImage } from "@/layers/decodedImages";
 import { errorMessage } from "@/lib/errorMessage";
 import { deleteTemporaryFile, writeTemporaryPng } from "@/lib/temporaryFile";
-import type { ImageLayer } from "@/model/document";
+import { type ImageLayer, isCutOut } from "@/model/document";
 import { showAlert } from "@/ui/showAlert";
-import { combineMasks, cutShowsAt } from "./cutMask";
+import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
 import { type LastPick, nextMask, picksAgain } from "./pickGrowth";
 
 /**
@@ -45,9 +45,12 @@ type Pick = LastPick & {
  * decides whether the image still wants it. `finding` says which is being
  * found, while one is: a second find meanwhile does nothing. Every subject
  * found once is used again this session, whose project keeps its file until
- * it closes. `news` says what the last find did, for a screen reader.
- * `canFind` is false while this device can't find subjects, when only the
- * brushes cut.
+ * it closes. `invert` turns the cut inside out, keeping what it removed and
+ * removing what it kept, and hands `onInvert` the inverted mask's file,
+ * `inverting` meanwhile; it waits for a find, and a find for it. `news`
+ * says what the last find or inversion did, for a screen reader. `canFind`
+ * is false while this device can't find subjects, when only the brushes
+ * cut.
  */
 export function useCutOut({
 	projectId,
@@ -56,6 +59,7 @@ export function useCutOut({
 	latest,
 	keep,
 	onMask,
+	onInvert,
 }: {
 	projectId: string | null;
 	image: ImageLayer | undefined;
@@ -63,8 +67,10 @@ export function useCutOut({
 	latest: (layerId: string) => ImageLayer | undefined;
 	keep: (uri: string) => Promise<string>;
 	onMask: (layerId: string, mask: string, picked: boolean) => void;
+	onInvert: (layerId: string, mask: string) => void;
 }) {
 	const [finding, setFinding] = useState<"all" | "one" | null>(null);
+	const [inverting, setInverting] = useState(false);
 	const [news, setNews] = useState<string | null>(null);
 	const busy = useRef(false);
 	// The mask of every subject found for each image file in this project.
@@ -202,7 +208,45 @@ export function useCutOut({
 		}
 	};
 
-	return { canFind: isCutOutAvailable(), finding, news, find };
+	const invert = async (layer: ImageLayer) => {
+		const current = latest(layer.id);
+		if (!current || !isCutOut(current) || busy.current) return;
+		busy.current = true;
+		setInverting(true);
+		try {
+			const bytes =
+				current.mask === undefined
+					? await invertedMask(undefined)
+					: await withMask(current.mask, invertedMask);
+			const kept = await keep(writeTemporaryPng(bytes));
+			// Cut another way meanwhile, the inverse no longer fits.
+			const now = latest(layer.id);
+			if (
+				now?.mask !== current.mask ||
+				now?.maskStrokes !== current.maskStrokes
+			) {
+				return;
+			}
+			forgetPick();
+			onInvert(layer.id, kept);
+			setNews("Cut inverted");
+		} catch (error) {
+			setNews(null);
+			showAlert("Couldn't invert the cut", errorMessage(error));
+		} finally {
+			busy.current = false;
+			setInverting(false);
+		}
+	};
+
+	return {
+		canFind: isCutOutAvailable(),
+		finding,
+		inverting,
+		news,
+		find,
+		invert,
+	};
 }
 
 class PickOvertaken extends Error {}

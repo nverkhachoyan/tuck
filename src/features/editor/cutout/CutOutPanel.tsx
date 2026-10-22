@@ -17,9 +17,10 @@ import type { CutOutSettings, CutOutTool } from "./cutOutSettings";
  * and Erase paint the cut by hand, with their size in a tray over the
  * canvas. Tapping the brush in use opens its size too. Subjects and Pick
  * show only where this device can find subjects (`onFindAll`), and spin
- * while they're finding one (`finding`). Redact hides what the cut keeps
- * under a redaction instead, once there's a cut (`onRedact`), spinning
- * while it's made (`redacting`).
+ * while they're finding one (`finding`). Once there's a cut, Invert keeps
+ * what it removes instead and removes what it keeps (`onInvert`), and
+ * Redact hides what it keeps under a redaction (`onRedact`): inverted
+ * first, that blurs only the background. Each spins while it works.
  */
 export function CutOutPanel({
 	settings,
@@ -29,6 +30,8 @@ export function CutOutPanel({
 	onChange,
 	onToggleOptions,
 	onFindAll,
+	inverting,
+	onInvert,
 	redacting,
 	onRedact,
 }: {
@@ -39,6 +42,8 @@ export function CutOutPanel({
 	onChange: (settings: CutOutSettings) => void;
 	onToggleOptions: () => void;
 	onFindAll?: () => void;
+	inverting: boolean;
+	onInvert?: () => void;
 	redacting: boolean;
 	onRedact?: () => void;
 }) {
@@ -94,6 +99,14 @@ export function CutOutPanel({
 					}
 					open={optionsOpen}
 					onPress={onToggleOptions}
+				/>
+			)}
+			{onInvert && (
+				<ToolButton
+					label="Invert"
+					icon="select-inverse"
+					busy={inverting}
+					onPress={onInvert}
 				/>
 			)}
 			{onRedact && (

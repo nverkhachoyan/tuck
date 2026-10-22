@@ -38,6 +38,7 @@ import {
 	type TextLayerEdit,
 	type TextLayerStyle,
 	withAdjustments,
+	withInvertedCut,
 	withMask,
 } from "../model/document.ts";
 import { addStroke } from "../model/drawing.ts";
@@ -134,6 +135,7 @@ export type EditorSlice = {
 		mask: string | null,
 		options?: { keepStrokes?: boolean },
 	) => void;
+	invertMask: (id: string, mask: string) => void;
 	paintMask: (id: string, stroke: CutStroke) => void;
 	updateSelectedText: (patch: TextLayerEdit) => void;
 	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
@@ -560,6 +562,14 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			const masked = withMask(target, mask, options);
 			if (masked === target) return;
 			replaceLayer("editor/setMask", target, masked);
+		},
+
+		// By id, like `setMask`. `mask` is the inverse of the image's mask,
+		// so only an image that's cut has one to invert.
+		invertMask: (id, mask) => {
+			const target = findLayer(id);
+			if (target?.type !== "image" || !isCutOut(target)) return;
+			replaceLayer("editor/invertMask", target, withInvertedCut(target, mask));
 		},
 
 		// By id, like `setMask`: the stroke refines the image the tool is

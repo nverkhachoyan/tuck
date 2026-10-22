@@ -776,6 +776,25 @@ export function withMask(
 }
 
 /**
+ * `layer` with its cut inverted, showing what it hid and hiding what it
+ * showed: `mask` is the inverse of its mask (or a black one, without one),
+ * and every stroke paints the other way, so the strokes stay editable. A
+ * stroke paints white or black over what's under it, and the inverse of
+ * that is the other color over the inverse.
+ */
+export function withInvertedCut(layer: ImageLayer, mask: string): ImageLayer {
+	const inverted = { ...layer, mask };
+	if (!layer.maskStrokes) return inverted;
+	return {
+		...inverted,
+		maskStrokes: layer.maskStrokes.map((stroke) => ({
+			...stroke,
+			type: stroke.type === "pen" ? "eraser" : "pen",
+		})),
+	};
+}
+
+/**
  * `layer` with a stroke painted in document space added to its cut, taken
  * into the image's own pixels, however the layer has been moved, scaled,
  * turned, or flipped since. Its width and feather scale with the layer's

@@ -86,33 +86,67 @@ export async function combineMasks(
 		{ width, height },
 	);
 	if (!combined) throw new Error("Couldn't combine the masks");
-	// CanvasKit can't read a GPU surface back as gray, so read it in color
-	// and keep a channel: the masks are gray already.
+	return encodeGrayPng(combined);
+}
+
+/**
+ * The inverse of `mask`, or without one, of a mask that shows the whole
+ * image: a black pixel, which is stretched over it like any mask. As a
+ * grayscale PNG's bytes.
+ */
+export async function invertedMask(
+	mask: SkImage | undefined,
+): Promise<Uint8Array> {
+	const width = mask?.width() ?? 1;
+	const height = mask?.height() ?? 1;
+	const inverted = await drawAsImage(
+		<Group>
+			<Fill color="black" />
+			{mask && (
+				<SkiaImage image={mask} x={0} y={0} width={width} height={height}>
+					<SkiaColorMatrix matrix={INVERT} />
+				</SkiaImage>
+			)}
+		</Group>,
+		{ width, height },
+	);
+	if (!inverted) throw new Error("Couldn't invert the cut");
+	return encodeGrayPng(inverted);
+}
+
+/**
+ * A gray `image` as a grayscale PNG's bytes, disposing of it. CanvasKit
+ * can't read a GPU surface back as gray, so it's read in color and keeps a
+ * channel.
+ */
+function encodeGrayPng(image: SkImage): Uint8Array {
+	const width = image.width();
+	const height = image.height();
 	let pixels: Float32Array | Uint8Array | null;
 	try {
-		pixels = combined.readPixels(0, 0, {
+		pixels = image.readPixels(0, 0, {
 			width,
 			height,
 			colorType: ColorType.RGBA_8888,
 			alphaType: AlphaType.Unpremul,
 		});
 	} finally {
-		combined.dispose();
+		image.dispose();
 	}
 	if (!(pixels instanceof Uint8Array)) {
-		throw new Error("Couldn't combine the masks");
+		throw new Error("Couldn't read the mask");
 	}
 	const gray = new Uint8Array(width * height);
 	for (let i = 0; i < gray.length; i++) gray[i] = pixels[i * 4];
-	const image = Skia.Image.MakeImage(
+	const grayImage = Skia.Image.MakeImage(
 		{ width, height, colorType: ColorType.Gray_8, alphaType: AlphaType.Opaque },
 		Skia.Data.fromBytes(gray),
 		width,
 	);
-	if (!image) throw new Error("Couldn't combine the masks");
+	if (!grayImage) throw new Error("Couldn't read the mask");
 	try {
-		return image.encodeToBytes(ImageFormat.PNG);
+		return grayImage.encodeToBytes(ImageFormat.PNG);
 	} finally {
-		image.dispose();
+		grayImage.dispose();
 	}
 }

@@ -1261,6 +1261,27 @@ describe("editorSlice", () => {
 		});
 	});
 
+	describe("invertMask", () => {
+		test("inverting a cut is one undo step", () => {
+			const { store } = storeWithText();
+			store.getState().setMask("photo", "file:///mask.png");
+			const steps = store.getState().past.length;
+			store.getState().invertMask("photo", "file:///inverse.png");
+			assert.equal(firstImage(store).mask, "file:///inverse.png");
+			assert.equal(store.getState().past.length, steps + 1);
+			store.getState().undo();
+			assert.equal(firstImage(store).mask, "file:///mask.png");
+		});
+
+		test("an image that isn't cut has nothing to invert", () => {
+			const { store, text } = storeWithText();
+			const before = store.getState().document;
+			store.getState().invertMask("photo", "file:///inverse.png");
+			store.getState().invertMask(text.id, "file:///inverse.png");
+			assert.equal(store.getState().document, before);
+		});
+	});
+
 	describe("paintMask", () => {
 		const eraser: MaskStroke = { type: "eraser", width: 20, points: [10, 10] };
 		const pen: MaskStroke = { type: "pen", width: 20, points: [10, 10] };

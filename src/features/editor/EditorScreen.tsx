@@ -256,6 +256,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		addShape,
 		setAdjustments,
 		setMask,
+		invertMask,
 		paintMask,
 		transformLayer,
 		resizeBox,
@@ -383,6 +384,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			if (cutLayerId.current === layerId) {
 				setMask(layerId, mask, { keepStrokes: picked });
 			}
+		},
+		onInvert: (layerId, mask) => {
+			if (cutLayerId.current === layerId) invertMask(layerId, mask);
 		},
 	});
 	// Redacting the cut's selection puts the image back as it was before
@@ -1024,6 +1028,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 										cutOut.canFind && cutLayer
 											? () => void cutOut.find(cutLayer)
 											: undefined,
+									inverting: cutOut.inverting,
+									onInvert:
+										cutLayer && isCutOut(cutLayer)
+											? () => void cutOut.invert(cutLayer)
+											: undefined,
 									redacting: cutRedaction.busy,
 									onRedact:
 										cutLayer && isCutOut(cutLayer)
@@ -1302,14 +1311,16 @@ function HeaderActions({
 }
 
 // Cut out's settings, the tool they and the device give, and, for the dock,
-// what's being found and a way to find every subject again, and redacting
-// the selection.
+// what's being found and a way to find every subject again, inverting the
+// cut, and redacting the selection.
 type CutProps = {
 	settings: CutOutSettings;
 	tool: ReturnType<typeof cutOutTool>;
 	onChange: (settings: CutOutSettings) => void;
 	finding?: "all" | "one" | null;
 	onFindAll?: () => void;
+	inverting?: boolean;
+	onInvert?: () => void;
 	redacting?: boolean;
 	onRedact?: () => void;
 };
@@ -1515,6 +1526,8 @@ function DockContent({
 					onChange={cut.onChange}
 					onToggleOptions={toggleOptions}
 					onFindAll={cut.onFindAll}
+					inverting={cut.inverting ?? false}
+					onInvert={cut.onInvert}
 					redacting={cut.redacting ?? false}
 					onRedact={cut.onRedact}
 				/>

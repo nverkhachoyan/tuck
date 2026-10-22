@@ -28,6 +28,7 @@ import {
 	restyleShape,
 	type ShapeLayer,
 	withAdjustments,
+	withInvertedCut,
 	withMask,
 } from "./document.ts";
 
@@ -744,6 +745,58 @@ describe("withMask", () => {
 				}),
 			false,
 		);
+	});
+});
+
+describe("withInvertedCut", () => {
+	const photo = () => landscape().layers[0] as ImageLayer;
+
+	test("takes the inverted mask, and paints every stroke the other way", () => {
+		const erased = addMaskStroke(withMask(photo(), "file:///a.png"), {
+			type: "eraser",
+			width: 10,
+			feather: 2,
+			points: [2000, 1500],
+		});
+		const refined = addMaskStroke(erased, {
+			type: "pen",
+			width: 20,
+			points: [2100, 1500],
+		});
+		const inverted = withInvertedCut(refined, "file:///b.png");
+		assert.equal(inverted.mask, "file:///b.png");
+		assert.deepEqual(
+			inverted.maskStrokes,
+			refined.maskStrokes?.map((stroke) => ({
+				...stroke,
+				type: stroke.type === "pen" ? "eraser" : "pen",
+			})),
+		);
+		assert.equal(inverted.maskStrokes?.[0].feather, 2);
+		assert.deepEqual(
+			withInvertedCut(inverted, "file:///a.png").maskStrokes,
+			refined.maskStrokes,
+		);
+	});
+
+	test("gives a cut made only by hand its mask", () => {
+		const erased = addMaskStroke(photo(), {
+			type: "eraser",
+			width: 10,
+			points: [2000, 1500],
+		});
+		const inverted = withInvertedCut(erased, "file:///black.png");
+		assert.equal(inverted.mask, "file:///black.png");
+		assert.equal(inverted.maskStrokes?.[0].type, "pen");
+	});
+
+	test("adds no strokes to a cut without them", () => {
+		const inverted = withInvertedCut(
+			withMask(photo(), "file:///a.png"),
+			"file:///b.png",
+		);
+		assert.equal(inverted.mask, "file:///b.png");
+		assert.equal("maskStrokes" in inverted, false);
 	});
 });
 

@@ -20,6 +20,7 @@ export function useEditorActions() {
 		addShape: useStore((state) => state.addShape),
 		setAdjustments: useStore((state) => state.setAdjustments),
 		setMask: useStore((state) => state.setMask),
+		invertMask: useStore((state) => state.invertMask),
 		paintMask: useStore((state) => state.paintMask),
 		transformLayer: useStore((state) => state.transformLayer),
 		resizeBox: useStore((state) => state.resizeBox),
