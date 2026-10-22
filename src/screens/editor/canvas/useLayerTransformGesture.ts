@@ -19,8 +19,8 @@ import {
 	resizeLockedByDrag,
 	rotateByDrag,
 	scaleByDrag,
-} from "../handles/handleGeometry";
-import { handleUnder, hasFinePointer } from "../handles/handleMetrics";
+} from "./handleGeometry";
+import { handleUnder, hasFinePointer } from "./handleMetrics";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import {
 	clampScale,

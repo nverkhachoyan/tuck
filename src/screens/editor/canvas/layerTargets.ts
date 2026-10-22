@@ -5,7 +5,7 @@ import {
 	type MaskStroke,
 } from "@/model/document";
 import { shapeOutline } from "@/model/shapes";
-import type { ResizeMode } from "../handles/handleGeometry";
+import type { ResizeMode } from "./handleGeometry";
 import type { LayerTarget } from "./hitTest";
 import { layerBounds } from "./layerBounds";
 

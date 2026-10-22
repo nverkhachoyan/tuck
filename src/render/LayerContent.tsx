@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 import { assertNever } from "@/lib/assertNever";
 import type { ColorMatrix } from "@/model/adjustments";
 import type { ImageLayer, Layer, RedactionMask } from "@/model/document";
-import { Checkerboard } from "@/render/Checkerboard";
-import { DrawingLayerView } from "@/render/DrawingLayerView";
-import { ImageLayerView } from "@/render/ImageLayerView";
-import { RedactionLayerView } from "@/render/RedactionLayerView";
-import { ShapeLayerView } from "@/render/ShapeLayerView";
-import { TextLayerView } from "@/render/TextLayerView";
 import { CHECKER_CELL } from "@/theme";
+import { Checkerboard } from "./Checkerboard";
+import { DrawingLayerView } from "./DrawingLayerView";
+import { ImageLayerView } from "./ImageLayerView";
+import { RedactionLayerView } from "./RedactionLayerView";
+import { ShapeLayerView } from "./ShapeLayerView";
+import { TextLayerView } from "./TextLayerView";
 import { useDecodedImage } from "./useDecodedImage";
 
 // What the editor's canvas and the crop tool's both draw.

@@ -45,8 +45,7 @@ import {
 	type CanvasCursor,
 	cursorForHandle,
 	cursorStyle,
-} from "../handles/canvasCursor";
-import { handleMetrics, handleUnder } from "../handles/handleMetrics";
+} from "./canvasCursor";
 import { type CanvasInput, inputRules } from "./canvasInput";
 import {
 	type CanvasTool,
@@ -55,6 +54,7 @@ import {
 	type LiveAdjustment,
 	type LiveStroke,
 } from "./EditorScene";
+import { handleMetrics, handleUnder } from "./handleMetrics";
 import {
 	detectionAt,
 	findLayerAt,

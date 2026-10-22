@@ -51,6 +51,7 @@ import { lineReach, shapeBox } from "@/model/shapes";
 import { clampSelection, withPlaceholder } from "@/model/textEditing";
 import { BrushStroke, strokePath } from "@/render/DrawingLayerView";
 import { MaskStrokePath } from "@/render/ImageLayerView";
+import { CanvasBackground, LayerContent } from "@/render/LayerContent";
 import {
 	toInverseTransformList,
 	toTransformList,
@@ -69,15 +70,14 @@ import {
 import { shapePath } from "@/render/ShapeLayerView";
 import { TextLayerView } from "@/render/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
+import { useDecodedImage } from "@/render/useDecodedImage";
 import { colorScheme, colors } from "@/theme";
 import type { TextEditState } from "../editorMode";
-import { handleSides } from "../handles/handleGeometry";
-import { handleMetrics, shownHandles } from "../handles/handleMetrics";
-import { CanvasBackground, LayerContent } from "./LayerContent";
+import { handleSides } from "./handleGeometry";
+import { handleMetrics, shownHandles } from "./handleMetrics";
 import { layerBounds } from "./layerBounds";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
 import { shapeFromDrag } from "./shapeDrag";
-import { useDecodedImage } from "./useDecodedImage";
 
 const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.

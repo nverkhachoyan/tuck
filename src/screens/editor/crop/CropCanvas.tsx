@@ -22,11 +22,11 @@ import {
 	turnsWithPhoto,
 } from "@/model/framing";
 import type { Size } from "@/model/geometry";
+import { CanvasBackground, LayerContent } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/theme";
-import { CanvasBackground, LayerContent } from "../canvas/LayerContent";
+import { type CanvasCursor, cursorStyle } from "../canvas/canvasCursor";
 import type { DocumentViewport } from "../canvas/viewport";
-import { type CanvasCursor, cursorStyle } from "../handles/canvasCursor";
 import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
 import { useCropGesture } from "./useCropGesture";

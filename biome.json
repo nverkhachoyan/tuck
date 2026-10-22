@@ -398,7 +398,7 @@
 											"../text/**",
 											"@/screens/editor/text/**"
 										],
-										"message": "The editor's tools (adjust/, crop/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other, and canvas/ imports none of them: what they share is at the editor root or in canvas/, controls/, or handles/. See AGENTS.md."
+										"message": "The editor's tools (adjust/, crop/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other, and canvas/ imports none of them: what they share is at the editor root or in canvas/ or controls/. See AGENTS.md."
 									}
 								]
 							}
@@ -410,7 +410,6 @@
 		{
 			"includes": [
 				"src/screens/editor/controls/**",
-				"src/screens/editor/handles/**",
 				"src/screens/editor/stickers/**"
 			],
 			"linter": {
@@ -430,7 +429,7 @@
 											"!@/screens/editor/shortcuts",
 											"!../../../**"
 										],
-										"message": "The editor's building blocks (controls/, handles/, stickers/) import nothing else from the editor. See AGENTS.md."
+										"message": "The editor's building blocks (controls/, stickers/) import nothing else from the editor. See AGENTS.md."
 									}
 								]
 							}

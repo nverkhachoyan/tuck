@@ -8,7 +8,7 @@ import {
 	type Transform,
 	toLayerSpace,
 } from "../../../model/geometry.ts";
-import type { ResizeMode } from "../handles/handleGeometry.ts";
+import type { ResizeMode } from "./handleGeometry.ts";
 
 /**
  * What gestures need to know about a visible layer on the UI thread, where

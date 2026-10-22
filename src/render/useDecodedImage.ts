@@ -1,7 +1,7 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import { useEffect, useRef, useState } from "react";
-import { decodedImages } from "@/render/decodedImages";
-import type { HeldImage } from "@/render/imageCache";
+import { decodedImages } from "./decodedImages";
+import type { HeldImage } from "./imageCache";
 
 type Shown = { uri: string | null; image: SkImage | null };
 
