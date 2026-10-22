@@ -37,6 +37,10 @@ import java.io.FileOutputStream
 import java.nio.FloatBuffer
 import java.util.UUID
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 
 class ImageAnalysisModule : Module() {
 	private val context: Context
@@ -46,6 +50,11 @@ class ImageAnalysisModule : Module() {
 	private var textRecognizer: TextRecognizer? = null
 	private var subjectSegmenter: SubjectSegmenter? = null
 	private var subjectsSegmenter: SubjectSegmenter? = null
+
+	// Selecting objects reads one image at a time, and a tap waits for it,
+	// off the queue the other functions share.
+	private val objectQueue = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher() + SupervisorJob())
+	private val objectSelector by lazy { ObjectSelector(context) }
 
 	override fun definition() = ModuleDefinition {
 		Name("ImageAnalysis")
@@ -118,6 +127,20 @@ class ImageAnalysisModule : Module() {
 				bitmap.recycle()
 			}
 		}
+
+		Function("canSelectObjects") { true }
+
+		AsyncFunction("prepareObjects") { uri: String ->
+			objectSelector.prepare(uri) { loadUpright(Uri.parse(uri)) }
+		}.runOnQueue(objectQueue)
+
+		AsyncFunction("objectMasks") { uri: String, at: PointRecord ->
+			objectSelector.masks(uri, at)
+		}.runOnQueue(objectQueue)
+
+		AsyncFunction("releaseObjects") {
+			objectSelector.release()
+		}.runOnQueue(objectQueue)
 
 		OnDestroy {
 			faceDetector?.close()

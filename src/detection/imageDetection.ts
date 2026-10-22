@@ -46,9 +46,9 @@ export function findSubjectMask(
 
 /**
  * Starts getting ready to select any object in the image at `uri`, not only
- * its subjects, where this device can (on web, with Segment Anything): the
- * model loads, the first time, and reads the image. Until it's done, taps
- * pick subjects as before; if it fails, they go on doing so.
+ * its subjects, with Segment Anything, where this device can: the model
+ * loads, the first time, and reads the image. Until it's done, taps pick
+ * subjects as before; if it fails, they go on doing so.
  */
 export function prepareObjectSelection(uri: string) {
 	if (!canSelectObjects()) return;

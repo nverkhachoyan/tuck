@@ -32,9 +32,10 @@ type Pick = LastPick & {
 
 /**
  * Finds the subjects to cut out of `image`: every one, or with a point, the
- * one there, or on web, once it's ready, any object there. A point on an
- * image without a mask cuts out only what's there; on one with a mask, it
- * adds that to the cut, or takes it out when the cut shows the image there.
+ * one there, or once Segment Anything is ready, any object there. A point
+ * on an image without a mask cuts out only what's there; on one with a
+ * mask, it adds that to the cut, or takes it out when the cut shows the
+ * image there.
  * Another tap on the same spot grows what it took, from a part to the whole
  * and around again, where there's more than one to choose from. While
  * `picking`, the image is read ahead for that. `latest` is the image as it

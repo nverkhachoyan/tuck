@@ -4,8 +4,31 @@ import ImageIO
 import Vision
 
 public class ImageAnalysisModule: Module {
+	// Selecting objects reads one image at a time, and a tap waits for it.
+	private let objectQueue = DispatchQueue(label: "expo.modules.imageanalysis.objects", qos: .userInitiated)
+	private var objectSelector: ObjectSelector?
+
 	public func definition() -> ModuleDefinition {
 		Name("ImageAnalysis")
+
+		Function("canSelectObjects") { () -> Bool in
+			true
+		}
+
+		AsyncFunction("prepareObjects") { (uri: URL) in
+			if self.objectSelector == nil {
+				self.objectSelector = try ObjectSelector()
+			}
+			try self.objectSelector?.prepare(uri)
+		}.runOnQueue(objectQueue)
+
+		AsyncFunction("objectMasks") { (uri: URL, at: PointRecord) -> ObjectMasksRecord? in
+			try self.objectSelector?.masks(uri, at: at)
+		}.runOnQueue(objectQueue)
+
+		AsyncFunction("releaseObjects") {
+			self.objectSelector?.release()
+		}.runOnQueue(objectQueue)
 
 		Function("isAvailable") { (feature: String) -> Bool in
 			if feature == "background" {
@@ -106,7 +129,7 @@ public class ImageAnalysisModule: Module {
 }
 
 /// An image file as Vision reads it, turned upright by its EXIF orientation.
-private struct SourceImage {
+struct SourceImage {
 	let cgImage: CGImage
 	let orientation: CGImagePropertyOrientation
 	// Once upright: Vision's results are relative to this size.

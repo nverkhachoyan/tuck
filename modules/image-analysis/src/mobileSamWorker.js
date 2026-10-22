@@ -45,8 +45,12 @@ function load() {
 	return sessions;
 }
 
-// The encoder takes the image as it is, HWC with values 0–255, and
-// normalizes and pads it itself.
+// The encoder takes a fixed square (so Core ML can run it on iOS), HWC with
+// values 0–255, and normalizes it itself. The image goes at its top left,
+// padded with ImageNet's mean, which normalizes to nothing, as SAM pads.
+const SIDE = 1024;
+const MEAN = [123.675, 116.28, 103.53];
+
 async function encode(image) {
 	const { width, height } = image;
 	const canvas = new OffscreenCanvas(width, height);
@@ -54,17 +58,22 @@ async function encode(image) {
 	context.drawImage(image, 0, 0);
 	image.close();
 	const pixels = context.getImageData(0, 0, width, height).data;
-	const input = new Float32Array(width * height * 3);
-	for (let i = 0, j = 0; i < pixels.length; i += 4) {
-		input[j++] = pixels[i];
-		input[j++] = pixels[i + 1];
-		input[j++] = pixels[i + 2];
+	const input = new Float32Array(SIDE * SIDE * 3);
+	for (let i = 0; i < input.length; i += 3) input.set(MEAN, i);
+	for (let row = 0; row < height; row++) {
+		for (let column = 0; column < width; column++) {
+			const from = (row * width + column) * 4;
+			const to = (row * SIDE + column) * 3;
+			input[to] = pixels[from];
+			input[to + 1] = pixels[from + 1];
+			input[to + 2] = pixels[from + 2];
+		}
 	}
 	const [encoder] = await load();
 	encoded?.embeddings.dispose();
 	encoded = null;
 	const output = await encoder.run({
-		input_image: new ort.Tensor("float32", input, [height, width, 3]),
+		input_image: new ort.Tensor("float32", input, [SIDE, SIDE, 3]),
 	});
 	encoded = { embeddings: output.image_embeddings, width, height };
 	// WebGPU's first run of the decoder takes a second to set up, which

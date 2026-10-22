@@ -2,6 +2,7 @@ import { NativeModule, requireNativeModule } from "expo";
 import type {
 	Feature,
 	ImagePoint,
+	ObjectMasks,
 	Rect,
 	Size,
 	SubjectMask,
@@ -15,6 +16,10 @@ declare class ImageAnalysisModule extends NativeModule {
 	detectFaces(uri: string, tiles: Rect[]): Promise<Rect[][]>;
 	detectText(uri: string): Promise<TextRegion[]>;
 	subjectMask(uri: string, at: ImagePoint | null): Promise<SubjectMask | null>;
+	canSelectObjects(): boolean;
+	prepareObjects(uri: string): Promise<void>;
+	objectMasks(uri: string, at: ImagePoint): Promise<ObjectMasks | null>;
+	releaseObjects(): Promise<void>;
 }
 
 export default requireNativeModule<ImageAnalysisModule>("ImageAnalysis");

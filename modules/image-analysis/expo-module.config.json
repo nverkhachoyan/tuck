@@ -1,7 +1,8 @@
 {
 	"platforms": ["apple", "android", "web"],
 	"apple": {
-		"modules": ["ImageAnalysisModule"]
+		"modules": ["ImageAnalysisModule"],
+		"podspecPath": "ImageAnalysis.podspec"
 	},
 	"android": {
 		"modules": ["expo.modules.imageanalysis.ImageAnalysisModule"]

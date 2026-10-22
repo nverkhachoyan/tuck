@@ -15,7 +15,22 @@ android {
   lintOptions {
     abortOnError false
   }
+  sourceSets {
+    main {
+      assets.srcDirs += layout.buildDirectory.dir("generated/models")
+    }
+  }
 }
+
+// The Segment Anything models web shares, from the module's models folder,
+// without the ones only web uses.
+def copyModels = tasks.register("copyModels", Copy) {
+  from("../models") {
+    include "mobile_sam_image_encoder.onnx", "sam_mask_decoder_multi.onnx"
+  }
+  into(layout.buildDirectory.dir("generated/models/mobile-sam"))
+}
+preBuild.dependsOn(copyModels)
 
 dependencies {
   // The Google Play services versions: Play services downloads and updates
@@ -25,4 +40,5 @@ dependencies {
   implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
   // Still in beta, and the only version there is.
   implementation 'com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1'
+  implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.31.0'
 }
