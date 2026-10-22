@@ -4,14 +4,11 @@ import type {
 	ImageLayer,
 	RedactionEffect,
 } from "@/model/document";
-import { detectionTargetKey } from "@/screens/editor/detection/detectionTarget";
-import { mapDetectionRects } from "@/screens/editor/detection/mapDetectionRects";
-import {
-	type DetectionScope,
-	useImageDetection,
-} from "@/screens/editor/detection/useImageDetection";
 import { useStore } from "@/store";
+import { detectionTargetKey } from "./detectionTarget";
 import { chosenBoxes } from "./findResults";
+import { mapDetectionRects } from "./mapDetectionRects";
+import { type DetectionScope, useImageDetection } from "./useImageDetection";
 
 /**
  * Find: faces and text found in `image`, placed in the document, to choose

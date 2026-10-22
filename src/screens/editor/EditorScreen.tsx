@@ -86,10 +86,12 @@ import {
 } from "@/screens/editor/cutout/cutOutSettings";
 import { useCutOut } from "@/screens/editor/cutout/useCutOut";
 import { useCutRedaction } from "@/screens/editor/cutout/useCutRedaction";
-import { detectionTarget } from "@/screens/editor/detection/detectionTarget";
 import { brushFor, shapeStyleFor } from "@/screens/editor/draw/brushSettings";
 import { BrushOptions, DrawPanel } from "@/screens/editor/draw/DrawPanel";
 import { useDrawTool } from "@/screens/editor/draw/useDrawTool";
+import { detectionTarget } from "@/screens/editor/find/detectionTarget";
+import { DetectionOptions, FindPanel } from "@/screens/editor/find/FindPanel";
+import { useFindTool } from "@/screens/editor/find/useFindTool";
 import { LayerActionsPanel } from "@/screens/editor/panels/LayerActionsPanel";
 import { layerKindName } from "@/screens/editor/panels/LayerRow";
 import {
@@ -102,10 +104,7 @@ import {
 } from "@/screens/editor/panels/SelectionBar";
 import { ToolsPanel } from "@/screens/editor/panels/ToolsPanel";
 import {
-	DetectionOptions,
-	FindPanel,
-} from "@/screens/editor/redact/DetectionOptions";
-import {
+	EffectGlyph,
 	RedactOptions,
 	RedactPanel,
 } from "@/screens/editor/redact/RedactPanel";
@@ -113,7 +112,6 @@ import {
 	maskBrush,
 	redactionEffect,
 } from "@/screens/editor/redact/redactSettings";
-import { useFindTool } from "@/screens/editor/redact/useFindTool";
 import { useRedactTool } from "@/screens/editor/redact/useRedactTool";
 import { bundledStickerImage } from "@/screens/editor/stickers/stickerFile";
 import { useSavedStickers } from "@/screens/editor/stickers/useSavedStickers";
@@ -1502,7 +1500,12 @@ function DockContent({
 			return (
 				<FindPanel
 					state={find.state}
-					settings={redact.chosen}
+					styleGlyph={
+						<EffectGlyph
+							settings={redact.chosen}
+							effect={redact.chosen.effect}
+						/>
+					}
 					optionsOpen={optionsOpen}
 					onFind={find.find}
 					onToggleOptions={toggleOptions}

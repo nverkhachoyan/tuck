@@ -4,18 +4,18 @@ import { errorMessage } from "@/lib/errorMessage";
 import { deleteTemporaryFile, writeTemporaryPng } from "@/lib/temporaryFile";
 import { type ImageLayer, isCutOut } from "@/model/document";
 import { decodedImages, decodeImage } from "@/render/decodedImages";
+import { showAlert } from "@/ui/showAlert";
+import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
+import { type LastPick, nextMask, picksAgain } from "./pickGrowth";
 import {
 	findObjectMasks,
 	findSubjectMask,
 	type ImagePoint,
 	isCutOutAvailable,
-	isDetectionModelDownloading,
+	isSubjectModelDownloading,
 	prepareObjectSelection,
 	releaseObjectSelection,
-} from "@/screens/editor/detection/imageDetection";
-import { showAlert } from "@/ui/showAlert";
-import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
-import { type LastPick, nextMask, picksAgain } from "./pickGrowth";
+} from "./subjectDetection";
 
 /**
  * The last pick, kept to grow it: the masks found where it was tapped, the
@@ -198,7 +198,7 @@ export function useCutOut({
 			setNews(null);
 			showAlert(
 				"Couldn't remove the background",
-				isDetectionModelDownloading(error)
+				isSubjectModelDownloading(error)
 					? "Cut out is still downloading. Try again in a moment."
 					: errorMessage(error),
 			);

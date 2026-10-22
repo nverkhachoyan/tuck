@@ -344,7 +344,7 @@
 											"@/screens/**",
 											"!@/screens/editor/**"
 										],
-										"message": "The editor doesn't import routes or another screen, and only its detection/ imports image-analysis. See AGENTS.md."
+										"message": "The editor doesn't import routes or another screen, and only find/imageDetection.ts and cutout/subjectDetection.ts import image-analysis. See AGENTS.md."
 									}
 								]
 							}
@@ -360,6 +360,7 @@
 				"src/screens/editor/crop/**",
 				"src/screens/editor/cutout/**",
 				"src/screens/editor/draw/**",
+				"src/screens/editor/find/**",
 				"src/screens/editor/panels/**",
 				"src/screens/editor/redact/**",
 				"src/screens/editor/text/**",
@@ -388,6 +389,8 @@
 											"@/screens/editor/cutout/**",
 											"../draw/**",
 											"@/screens/editor/draw/**",
+											"../find/**",
+											"@/screens/editor/find/**",
 											"../panels/**",
 											"@/screens/editor/panels/**",
 											"../redact/**",
@@ -395,7 +398,7 @@
 											"../text/**",
 											"@/screens/editor/text/**"
 										],
-										"message": "The editor's tools (add/, adjust/, crop/, cutout/, draw/, panels/, redact/, text/) don't import each other, and canvas/ imports none of them: what they share is at the editor root or in canvas/, controls/, handles/, detection/, or stickers/. See AGENTS.md."
+										"message": "The editor's tools (add/, adjust/, crop/, cutout/, draw/, find/, panels/, redact/, text/) don't import each other, and canvas/ imports none of them: what they share is at the editor root or in canvas/, controls/, handles/, or stickers/. See AGENTS.md."
 									}
 								]
 							}
@@ -435,28 +438,14 @@
 			}
 		},
 		{
-			"includes": ["src/screens/editor/detection/**"],
+			"includes": [
+				"src/screens/editor/find/imageDetection.ts",
+				"src/screens/editor/cutout/subjectDetection.ts"
+			],
 			"linter": {
 				"rules": {
 					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"@/**",
-											"../**",
-											"!@/model/**",
-											"!../../../model/**",
-											"!@/lib/**",
-											"!../../../lib/**"
-										],
-										"message": "detection/ imports only its own files, the image-analysis bridge, model/, and lib/. See AGENTS.md."
-									}
-								]
-							}
-						}
+						"noRestrictedImports": "off"
 					}
 				}
 			}

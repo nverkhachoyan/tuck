@@ -1,6 +1,6 @@
-import type { DetectionFeature } from "@/screens/editor/detection/imageDetection";
-import type { MappedDetectionRect } from "@/screens/editor/detection/mapDetectionRects";
 import type { RedactionBoxPlacement } from "../../../model/document.ts";
+import type { DetectionFeature } from "./imageDetection.ts";
+import type { MappedDetectionRect } from "./mapDetectionRects.ts";
 
 // A region Find found, placed in the document.
 export type FoundRegion = MappedDetectionRect & { feature: DetectionFeature };

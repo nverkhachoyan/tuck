@@ -1,16 +1,11 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import type {
-	DetectionScope,
-	ImageDetectionState,
-} from "@/screens/editor/detection/useImageDetection";
 import { colors, typography } from "@/theme";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { ToolButton, ToolRow } from "../controls/ToolButton";
 import { Tray } from "../controls/ToolOptions";
-import { EffectGlyph } from "./RedactPanel";
-import type { RedactSettings } from "./redactSettings";
+import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
 
 // Narrower than this, the tray's text goes above its buttons rather than beside
 // them, where the buttons would leave it a few letters' width.
@@ -23,13 +18,13 @@ const STACK_BELOW_WIDTH = 480;
  */
 export function FindPanel({
 	state,
-	settings,
+	styleGlyph,
 	optionsOpen,
 	onFind,
 	onToggleOptions,
 }: {
 	state: ImageDetectionState;
-	settings: RedactSettings;
+	styleGlyph: ReactNode;
 	optionsOpen: boolean;
 	onFind: (scope: DetectionScope) => void;
 	onToggleOptions: () => void;
@@ -50,7 +45,7 @@ export function FindPanel({
 			<ToolButton
 				label="Style"
 				icon="palette-outline"
-				glyph={<EffectGlyph settings={settings} effect={settings.effect} />}
+				glyph={styleGlyph}
 				open={optionsOpen}
 				onPress={onToggleOptions}
 			/>

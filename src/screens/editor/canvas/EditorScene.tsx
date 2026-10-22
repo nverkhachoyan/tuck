@@ -35,6 +35,7 @@ import {
 	type Layer,
 	type MaskStroke,
 	type RedactionBox,
+	type RedactionBoxPlacement,
 	type RedactionEffect,
 	type RedactionLayer,
 	type RedactionMask,
@@ -68,7 +69,6 @@ import {
 import { shapePath } from "@/render/ShapeLayerView";
 import { TextLayerView } from "@/render/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
-import type { MappedDetectionRect } from "@/screens/editor/detection/mapDetectionRects";
 import { colorScheme, colors } from "@/theme";
 import type { TextEditState } from "../editorMode";
 import { handleSides } from "../handles/handleGeometry";
@@ -303,7 +303,8 @@ export function EditorScene({
 	);
 }
 
-export type DetectionOverlayRegion = MappedDetectionRect & {
+export type DetectionOverlayRegion = RedactionBoxPlacement & {
+	sourceIndex: number;
 	selected: boolean;
 };
 
