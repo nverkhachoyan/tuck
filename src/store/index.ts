@@ -1,16 +1,30 @@
 import { Platform } from "react-native";
-import { create, type StateCreator } from "zustand";
+import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { createEditorSlice, type EditorSlice } from "./editorSlice";
+import {
+	createEditorSlice,
+	type EditorSlice,
+	type SliceCreator,
+	selectCanRedo,
+	selectCanUndo,
+	selectSelectedLayer,
+	selectSelectedRedaction,
+	selectSelectedShape,
+	selectSelectedTextLayer,
+} from "./editorSlice";
+
+export {
+	type EditorSlice,
+	type SliceCreator,
+	selectCanRedo,
+	selectCanUndo,
+	selectSelectedLayer,
+	selectSelectedRedaction,
+	selectSelectedShape,
+	selectSelectedTextLayer,
+};
 
 export type StoreState = EditorSlice;
-
-export type SliceCreator<Slice> = StateCreator<
-	StoreState,
-	[["zustand/devtools", never]],
-	[],
-	Slice
->;
 
 export const useStore = create<StoreState>()(
 	devtools(

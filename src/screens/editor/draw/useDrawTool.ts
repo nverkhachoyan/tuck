@@ -2,8 +2,7 @@ import { useMemo } from "react";
 import { usePreference } from "@/lib/usePreference";
 import { isLine, isLineShape } from "@/model/document";
 import type { Size } from "@/model/geometry";
-import { useStore } from "@/store";
-import { selectSelectedLayer, selectSelectedShape } from "@/store/editorSlice";
+import { selectSelectedLayer, selectSelectedShape, useStore } from "@/store";
 import {
 	type BrushSettings,
 	parseBrushSettings,

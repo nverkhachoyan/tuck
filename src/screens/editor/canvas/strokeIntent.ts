@@ -6,7 +6,7 @@ import {
 	rectFromCorners,
 	type Size,
 } from "../../../model/geometry.ts";
-import type { CanvasTool } from "./EditorScene.tsx";
+import type { CanvasTool } from "./canvasInput.ts";
 import { shapeFromDrag } from "./shapeDrag.ts";
 
 // A box or a line dragged no further than this either way, in screen

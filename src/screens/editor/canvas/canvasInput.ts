@@ -1,7 +1,33 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
-import type { Layer } from "../../../model/document.ts";
+import type {
+	Brush,
+	CutStroke,
+	Layer,
+	MaskStroke,
+	RedactionEffect,
+	ShapeKind,
+	ShapeStyle,
+} from "../../../model/document.ts";
 import type { DialDrag } from "../controls/Dial.tsx";
-import type { CanvasTool } from "./EditorScene.tsx";
+
+/**
+ * What dragging on the canvas does in place of moving layers: draws with a
+ * brush, drags out a shape or a redaction's box, paints a redaction's
+ * strokes, picks a color where the finger lifts, paints the cut of the image
+ * `layerId`, or picks the subject to cut out of it with a tap.
+ */
+export type CanvasTool =
+	| { type: "draw"; brush: Brush }
+	| { type: "drawShape"; shape: ShapeKind; style: ShapeStyle }
+	| { type: "pickColor" }
+	| { type: "redactBox"; effect: RedactionEffect }
+	| {
+			type: "redactBrush";
+			brush: Omit<MaskStroke, "points">;
+			effect: RedactionEffect;
+	  }
+	| { type: "cutBrush"; layerId: string; brush: Omit<CutStroke, "points"> }
+	| { type: "pickSubject"; layerId: string };
 
 /**
  * What input on the canvas does, one at a time: select and transform

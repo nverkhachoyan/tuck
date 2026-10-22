@@ -1,5 +1,6 @@
-// Relative `.ts` imports, and only types from zustand and `./index.ts`, keep
-// this slice loadable by Node's test runner.
+// Relative `.ts` imports, and only types from zustand, keep this slice
+// loadable by Node's test runner.
+import type { StateCreator } from "zustand";
 import type { Adjustments } from "../model/adjustments.ts";
 import {
 	addMaskStroke,
@@ -54,7 +55,6 @@ import {
 	transformsEqual,
 } from "../model/geometry.ts";
 import { erasesShape } from "../model/shapes.ts";
-import type { SliceCreator } from "./index.ts";
 
 // Undo steps kept; the oldest are dropped beyond this.
 export const MAX_HISTORY = 100;
@@ -195,6 +195,13 @@ export const selectCanUndo = ({ past, document, session }: EditorSlice) =>
 
 export const selectCanRedo = ({ future, session }: EditorSlice) =>
 	future.length > 0 && future[0] !== session?.redoStop;
+
+export type SliceCreator<Slice> = StateCreator<
+	EditorSlice,
+	[["zustand/devtools", never]],
+	[],
+	Slice
+>;
 
 export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	const setDocument = (

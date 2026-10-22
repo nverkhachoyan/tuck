@@ -33,16 +33,13 @@ import {
 	identityTransform,
 	isLineShape,
 	type Layer,
-	type MaskStroke,
 	type RedactionBox,
 	type RedactionBoxPlacement,
 	type RedactionEffect,
 	type RedactionLayer,
 	type RedactionMask,
 	type RedactionStrokes,
-	type ShapeKind,
 	type ShapeLayer,
-	type ShapeStyle,
 	type TextLayer,
 } from "@/model/document";
 import { drawingBox } from "@/model/drawing";
@@ -73,11 +70,14 @@ import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
 import { useDecodedImage } from "@/render/useDecodedImage";
 import { colorScheme, colors } from "@/theme";
 import type { TextEditState } from "../editorMode";
+import type { CanvasTool } from "./canvasInput";
 import { handleSides } from "./handleGeometry";
 import { handleMetrics, shownHandles } from "./handleMetrics";
 import { layerBounds } from "./layerBounds";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
 import { shapeFromDrag } from "./shapeDrag";
+
+export type { CanvasTool } from "./canvasInput";
 
 const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
@@ -103,25 +103,6 @@ const PLACEHOLDER_OPACITY = 0.45;
 const TEXT_SELECTION = "rgba(88, 166, 255, 0.4)";
 // A detected region's check mark's radius, in screen pixels.
 const MARKER_PX = 8;
-
-/**
- * What dragging on the canvas does in place of moving layers: draws with a
- * brush, drags out a shape or a redaction's box, paints a redaction's
- * strokes, picks a color where the finger lifts, paints the cut of the image
- * `layerId`, or picks the subject to cut out of it with a tap.
- */
-export type CanvasTool =
-	| { type: "draw"; brush: Brush }
-	| { type: "drawShape"; shape: ShapeKind; style: ShapeStyle }
-	| { type: "pickColor" }
-	| { type: "redactBox"; effect: RedactionEffect }
-	| {
-			type: "redactBrush";
-			brush: Omit<MaskStroke, "points">;
-			effect: RedactionEffect;
-	  }
-	| { type: "cutBrush"; layerId: string; brush: Omit<CutStroke, "points"> }
-	| { type: "pickSubject"; layerId: string };
 
 /**
  * A stroke being painted with a tool: its points so far in document space,

@@ -125,13 +125,13 @@ import {
 	useTextEditing,
 } from "@/screens/editor/text/useTextEditing";
 import { useAddImage } from "@/screens/editor/useAddImage";
-import { useStore } from "@/store";
 import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
 	selectSelectedTextLayer,
-} from "@/store/editorSlice";
+	useStore,
+} from "@/store";
 import { colors, space, typography } from "@/theme";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";

@@ -3,7 +3,7 @@ import {
 	adjustmentsEqual,
 	isNeutral,
 } from "./adjustments.ts";
-import { drawingBox, recenterDrawing } from "./drawing.ts";
+import { drawingBox, type MaskStroke, recenterDrawing } from "./drawing.ts";
 import {
 	hitTestBox,
 	type Point,
@@ -14,6 +14,8 @@ import {
 	toLayerSpace,
 	transformsEqual,
 } from "./geometry.ts";
+
+export type { MaskStroke } from "./drawing.ts";
 
 type LayerBase = {
 	id: string;
@@ -115,16 +117,6 @@ export type Stroke = Brush & { points: number[] };
 export type DrawingLayer = LayerBase & {
 	type: "drawing";
 	strokes: Stroke[];
-};
-
-/**
- * A redaction's stroke: a pen covers, and an eraser uncovers what the strokes
- * before it covered. It has no color: the redaction's effect is what shows.
- */
-export type MaskStroke = {
-	type: "pen" | "eraser";
-	width: number;
-	points: number[];
 };
 
 /**

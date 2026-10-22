@@ -1,5 +1,4 @@
 // Relative `.ts` imports keep this loadable by Node's test runner.
-import type { MaskStroke } from "./document.ts";
 import {
 	type Box,
 	type Point,
@@ -7,6 +6,16 @@ import {
 	toDocumentSpace,
 	toLayerSpace,
 } from "./geometry.ts";
+
+/**
+ * A redaction's stroke: a pen covers, and an eraser uncovers what the strokes
+ * before it covered. It has no color: the redaction's effect is what shows.
+ */
+export type MaskStroke = {
+	type: "pen" | "eraser";
+	width: number;
+	points: number[];
+};
 
 /**
  * A layer made of strokes: a drawing, or a redaction painted with a brush.
