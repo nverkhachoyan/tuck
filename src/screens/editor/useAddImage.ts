@@ -2,11 +2,11 @@ import { useRef, useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
 import { usePhotoDrop } from "@/photos/usePhotoDrop";
+import { showAlert } from "@/ui/showAlert";
 import {
 	SAVED_STICKER_MAX_SIDE,
 	type StickerImage,
-} from "@/screens/editor/stickers/savedStickers";
-import { showAlert } from "@/ui/showAlert";
+} from "./stickers/savedStickers";
 
 export type AddedImage = PickedPhoto & { sticker: boolean };
 

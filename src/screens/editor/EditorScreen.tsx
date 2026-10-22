@@ -1,13 +1,5 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import {
-	type ComponentProps,
-	type ReactNode,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	StyleSheet,
@@ -19,13 +11,12 @@ import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { usePreference } from "@/lib/usePreference";
-import { type Adjustments, neutralAdjustments } from "@/model/adjustments";
+import { neutralAdjustments } from "@/model/adjustments";
 import {
 	type EditorDocument,
 	type ImageLayer,
 	imagePointAt,
 	isCutOut,
-	type Layer,
 	maxNewImageShortSide,
 	type ShapePlacement,
 } from "@/model/document";
@@ -43,91 +34,7 @@ import {
 	sampleColor,
 } from "@/render/renderDocument";
 import { textIndexAt } from "@/render/textLayerLayout";
-import { AdjustPanel } from "@/screens/editor/adjust/AdjustPanel";
 import {
-	ADJUST_DIAL_MAX,
-	ADJUST_DIAL_SCALE,
-	adjustTarget,
-	useAdjustController,
-} from "@/screens/editor/adjust/useAdjustController";
-import type { CanvasInput } from "@/screens/editor/canvas/canvasInput";
-import {
-	EditorCanvas,
-	type EditorCanvasHandle,
-} from "@/screens/editor/canvas/EditorCanvas";
-import type { CanvasTool } from "@/screens/editor/canvas/EditorScene";
-import { EyedropperHint } from "@/screens/editor/controls/ColorPicker";
-import { isCustomColor } from "@/screens/editor/controls/ColorSwatches";
-import type { DialDrag } from "@/screens/editor/controls/Dial";
-import {
-	Dock,
-	DockFooter,
-	INSPECTOR_TRAY_TOP,
-	INSPECTOR_WIDTH,
-	InspectorBackdrop,
-	useDockInset,
-} from "@/screens/editor/controls/Dock";
-import { LayerActionsPanel } from "@/screens/editor/controls/LayerActionsPanel";
-import {
-	type ArrangeMove,
-	SelectionBar,
-} from "@/screens/editor/controls/SelectionBar";
-import {
-	TrayHeight,
-	TrayPlacement,
-} from "@/screens/editor/controls/ToolOptions";
-import { ToolsPanel } from "@/screens/editor/controls/ToolsPanel";
-import { CropTool } from "@/screens/editor/crop/CropTool";
-import {
-	CutOutOptions,
-	CutOutPanel,
-} from "@/screens/editor/cutout/CutOutPanel";
-import {
-	type CutOutSettings,
-	cutBrush,
-	cutOutTool,
-	parseCutOutSettings,
-} from "@/screens/editor/cutout/cutOutSettings";
-import { useCutOut } from "@/screens/editor/cutout/useCutOut";
-import { useCutRedaction } from "@/screens/editor/cutout/useCutRedaction";
-import { brushFor, shapeStyleFor } from "@/screens/editor/draw/brushSettings";
-import { BrushOptions, DrawPanel } from "@/screens/editor/draw/DrawPanel";
-import { useDrawTool } from "@/screens/editor/draw/useDrawTool";
-import { detectionTarget } from "@/screens/editor/find/detectionTarget";
-import { DetectionOptions, FindPanel } from "@/screens/editor/find/FindPanel";
-import { useFindTool } from "@/screens/editor/find/useFindTool";
-import { layerKindName } from "@/screens/editor/layers/LayerRow";
-import {
-	LAYERS_SIDEBAR_INSET,
-	LayersPanel,
-} from "@/screens/editor/layers/LayersPanel";
-import {
-	EffectGlyph,
-	RedactOptions,
-	RedactPanel,
-} from "@/screens/editor/redact/RedactPanel";
-import {
-	maskBrush,
-	redactionEffect,
-} from "@/screens/editor/redact/redactSettings";
-import { useRedactTool } from "@/screens/editor/redact/useRedactTool";
-import { StickerSheet } from "@/screens/editor/stickers/StickerSheet";
-import { bundledStickerImage } from "@/screens/editor/stickers/stickerFile";
-import { useSavedStickers } from "@/screens/editor/stickers/useSavedStickers";
-import { useStickerSave } from "@/screens/editor/stickers/useStickerSave";
-import { TextEditor } from "@/screens/editor/text/TextEditor";
-import {
-	TextColorPicker,
-	TextStylePanel,
-} from "@/screens/editor/text/TextStylePanel";
-import {
-	type TextEditing,
-	useTextEditing,
-} from "@/screens/editor/text/useTextEditing";
-import { useAddImage } from "@/screens/editor/useAddImage";
-import {
-	selectCanRedo,
-	selectCanUndo,
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 	useStore,
@@ -136,26 +43,72 @@ import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
-import { IconButton } from "@/ui/IconButton";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
-import { TextButton } from "@/ui/TextButton";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import {
-	type EditorModeAction,
-	type EditorModeState,
-	type EditorTool,
-	type ShortcutCommand,
-	shortcutCommand,
-	takesKeys,
-} from "./editorMode";
+	ADJUST_DIAL_MAX,
+	ADJUST_DIAL_SCALE,
+	adjustTarget,
+	useAdjustController,
+} from "./adjust/useAdjustController";
+import type { CanvasInput } from "./canvas/canvasInput";
+import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
+import type { CanvasTool } from "./canvas/EditorScene";
+import { isCustomColor } from "./controls/ColorSwatches";
+import type { DialDrag } from "./controls/Dial";
+import {
+	Dock,
+	DockFooter,
+	INSPECTOR_TRAY_TOP,
+	INSPECTOR_WIDTH,
+	InspectorBackdrop,
+	useDockInset,
+} from "./controls/Dock";
+import { type ArrangeMove, SelectionBar } from "./controls/SelectionBar";
+import { TrayHeight, TrayPlacement } from "./controls/ToolOptions";
+import { ToolsPanel } from "./controls/ToolsPanel";
+import { CropTool } from "./crop/CropTool";
+import {
+	cutBrush,
+	cutOutTool,
+	parseCutOutSettings,
+} from "./cutout/cutOutSettings";
+import { useCutOut } from "./cutout/useCutOut";
+import { useCutRedaction } from "./cutout/useCutRedaction";
+import { brushFor, shapeStyleFor } from "./draw/brushSettings";
+import { useDrawTool } from "./draw/useDrawTool";
+import {
+	DockContent,
+	type DockPanel,
+	HeaderActions,
+	layerActionsFor,
+	layerListProps,
+	type ToolStarters,
+	ToolTrays,
+	toolButtonsFor,
+} from "./EditorDock";
+import { type ShortcutCommand, shortcutCommand, takesKeys } from "./editorMode";
+import { detectionTarget } from "./find/detectionTarget";
+import { useFindTool } from "./find/useFindTool";
+import { layerKindName } from "./layers/LayerRow";
+import { LAYERS_SIDEBAR_INSET, LayersPanel } from "./layers/LayersPanel";
+import { maskBrush, redactionEffect } from "./redact/redactSettings";
+import { useRedactTool } from "./redact/useRedactTool";
 import { SaveErrorBanner } from "./SaveErrorBanner";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
-import { LAYERS_KEY, type Shortcut, type ToolKey } from "./shortcuts";
+import type { Shortcut, ToolKey } from "./shortcuts";
+import { StickerSheet } from "./stickers/StickerSheet";
+import { bundledStickerImage } from "./stickers/stickerFile";
+import { useSavedStickers } from "./stickers/useSavedStickers";
+import { useStickerSave } from "./stickers/useStickerSave";
+import { TextEditor } from "./text/TextEditor";
+import { type TextEditing, useTextEditing } from "./text/useTextEditing";
+import { useAddImage } from "./useAddImage";
 import { useDeleteNotice } from "./useDeleteNotice";
-import { type EditorActions, useEditorActions } from "./useEditorActions";
+import { useEditorActions } from "./useEditorActions";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
 
@@ -166,10 +119,6 @@ const SIDEBAR_MIN_WIDTH = 900;
 const INSPECTOR_MIN_WIDTH = 1024;
 const RAIL_WIDTH = 76;
 const INSPECTOR_TRAY = { top: INSPECTOR_TRAY_TOP, width: INSPECTOR_WIDTH };
-
-// What the dock shows: a tool's panel, text's style, the selected layer's
-// actions, or, with nothing selected, the tools or the layers.
-type DockPanel = EditorTool | "text" | "layer" | "idle";
 
 // What a tool's footer calls it.
 const TOOL_TITLES = {
@@ -1122,439 +1071,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 }
 
-/** The store actions the layers panel uses. */
-type LayerListActions = Pick<
-	EditorActions,
-	| "selectLayer"
-	| "moveLayer"
-	| "setLayerHidden"
-	| "setLayerLocked"
-	| "deleteLayer"
-	| "setLayerGroupHidden"
-	| "setLayerGroupLocked"
-	| "deleteLayerGroup"
-	| "setBackground"
->;
-
-/**
- * The layers panel's props, from the document, the selection, and the store.
- * Picking a layer ends any text being edited first.
- */
-function layerListProps({
-	document,
-	selectedLayer,
-	actions,
-	onFinishText,
-	onClose,
-	bottomInset,
-}: {
-	document: EditorDocument;
-	selectedLayer: Layer | undefined;
-	actions: LayerListActions;
-	onFinishText: () => void;
-	onClose: () => void;
-	bottomInset: number;
-}) {
-	return {
-		layers: document.layers,
-		groups: document.groups ?? [],
-		background: document.background,
-		selectedLayerId: selectedLayer?.id ?? null,
-		onSelect: (id: string) => {
-			onFinishText();
-			actions.selectLayer(id);
-		},
-		onMove: actions.moveLayer,
-		onSetHidden: actions.setLayerHidden,
-		onSetLocked: actions.setLayerLocked,
-		onDelete: actions.deleteLayer,
-		onSetGroupHidden: actions.setLayerGroupHidden,
-		onSetGroupLocked: actions.setLayerGroupLocked,
-		onDeleteGroup: actions.deleteLayerGroup,
-		onSetBackground: actions.setBackground,
-		onClose,
-		bottomInset,
-	};
-}
-
-/** What picking each tool does, before `wrap` adapts it for its place. */
-type ToolStarters = {
-	addBusy: boolean;
-	onAddText: () => void;
-	onDraw: () => void;
-	onRedact: () => void;
-	onSticker: () => void;
-	onPhoto: () => void;
-	onCrop: () => void;
-	onAdjust: (() => void) | undefined;
-	onCutOut: (() => void) | undefined;
-};
-
-/** The tools' buttons' props: each starter through `wrap` (see `fromRail`). */
-function toolButtonsFor(
-	starters: ToolStarters,
-	wrap: (start: () => void) => () => void = (start) => start,
-) {
-	return {
-		addBusy: starters.addBusy,
-		onAddText: wrap(starters.onAddText),
-		onDraw: wrap(starters.onDraw),
-		onRedact: wrap(starters.onRedact),
-		onSticker: wrap(starters.onSticker),
-		onPhoto: wrap(starters.onPhoto),
-		onCrop: wrap(starters.onCrop),
-		onAdjust:
-			starters.onAdjust === undefined ? undefined : wrap(starters.onAdjust),
-		onCutOut:
-			starters.onCutOut === undefined ? undefined : wrap(starters.onCutOut),
-	};
-}
-
-/** What the dock offers for `layer`, by its kind. */
-function layerActionsFor({
-	layer,
-	onDraw,
-	onRedact,
-	onAdjust,
-	onFind,
-	onCutOut,
-	sticker,
-	onSaveSticker,
-}: {
-	layer: Layer;
-	onDraw: () => void;
-	onRedact: () => void;
-	onAdjust: () => void;
-	onFind: () => void;
-	onCutOut: () => void;
-	sticker: "saving" | "saved" | undefined;
-	onSaveSticker: (() => void) | undefined;
-}) {
-	return {
-		onDraw:
-			layer.type === "drawing" || layer.type === "shape" ? onDraw : undefined,
-		onRedact:
-			layer.type === "redaction" || layer.type === "image"
-				? onRedact
-				: undefined,
-		onAdjust: layer.type === "image" ? onAdjust : undefined,
-		onFind: layer.type === "image" && !layer.hidden ? onFind : undefined,
-		onCutOut: layer.type === "image" && !layer.hidden ? onCutOut : undefined,
-		sticker,
-		onSaveSticker,
-	};
-}
-
-/**
- * The header's actions: Reset while the image being adjusted has changes,
- * the layers where the inspector doesn't show them, undo and redo, and
- * Export. While `typing`, undo and redo wait: the text isn't a step yet.
- */
-function HeaderActions({
-	typing,
-	onReset,
-	layers,
-	onExport,
-}: {
-	typing: boolean;
-	onReset?: () => void;
-	layers?: { open: boolean; onToggle: () => void };
-	onExport: () => void;
-}) {
-	const canUndo = useStore(selectCanUndo) && !typing;
-	const canRedo = useStore(selectCanRedo) && !typing;
-	const { undo, redo } = useEditorActions();
-	return (
-		<View style={styles.headerActions}>
-			{onReset && <TextButton label="Reset" onPress={onReset} />}
-			{layers && (
-				<IconButton
-					icon="layers-outline"
-					label="Layers"
-					shortcut={LAYERS_KEY}
-					selected={layers.open}
-					onPress={layers.onToggle}
-				/>
-			)}
-			<IconButton
-				icon="arrow-undo-outline"
-				label="Undo"
-				shortcut="mod+Z"
-				disabled={!canUndo}
-				onPress={undo}
-			/>
-			<IconButton
-				icon="arrow-redo-outline"
-				label="Redo"
-				shortcut="mod+shift+Z"
-				disabled={!canRedo}
-				onPress={redo}
-			/>
-			<View style={styles.exportAction}>
-				<Button
-					label="Export"
-					icon="share-outline"
-					variant="primary"
-					size="small"
-					shortcut="mod+E"
-					onPress={onExport}
-				/>
-			</View>
-		</View>
-	);
-}
-
-// Cut out's settings, the tool they and the device give, and, for the dock,
-// what's being found and a way to find every subject again, inverting the
-// cut, and redacting the selection.
-type CutProps = {
-	settings: CutOutSettings;
-	tool: ReturnType<typeof cutOutTool>;
-	onChange: (settings: CutOutSettings) => void;
-	finding?: "all" | "one" | null;
-	onFindAll?: () => void;
-	inverting?: boolean;
-	onInvert?: () => void;
-	redacting?: boolean;
-	onRedact?: () => void;
-};
-
-type ModeProps = {
-	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
-	draw: ReturnType<typeof useDrawTool>;
-	redact: ReturnType<typeof useRedactTool>;
-	find: ReturnType<typeof useFindTool>;
-	cut: CutProps;
-	textEditing: ReturnType<typeof useTextEditing>;
-	customColor: string | null;
-};
-
-/**
- * What opens over the canvas, above the dock: the tool's tray, Find's
- * results, a text color picker, and the eyedropper's hint.
- */
-function ToolTrays({
-	modeState,
-	dispatchMode,
-	draw,
-	redact,
-	find,
-	cut,
-	textEditing,
-	customColor,
-	onCustomColor,
-	bottomInset,
-}: ModeProps & {
-	modeState: EditorModeState<TextEditing>;
-	onCustomColor: (color: string) => void;
-	bottomInset: number;
-}) {
-	const { mode, textPicker, eyedropper } = modeState;
-	const { styledText } = textEditing;
-	const tray =
-		mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen
-			? mode.tool
-			: null;
-	const closeTray = () => dispatchMode({ type: "closeToolOptions" });
-	// For a tray whose colors go to `apply`: a color from its picker, which
-	// becomes the custom color too, and the eyedropper, for a color from the
-	// canvas.
-	const colorTarget = (apply: (color: string) => void) => ({
-		onPickCustom: (color: string) => {
-			apply(color);
-			onCustomColor(color);
-		},
-		onEyedropper: () =>
-			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-	});
-	return (
-		<>
-			{tray === "draw" && (
-				<BrushOptions
-					settings={draw.settings}
-					customColor={customColor}
-					bottomInset={bottomInset}
-					onChange={draw.change}
-					{...colorTarget((color) => draw.change({ ...draw.settings, color }))}
-					onClose={closeTray}
-				/>
-			)}
-			{tray === "redact" && (
-				<RedactOptions
-					settings={redact.settings}
-					customColor={customColor}
-					bottomInset={bottomInset}
-					onChange={redact.change}
-					{...colorTarget((color) =>
-						redact.change({ ...redact.settings, color }),
-					)}
-					onClose={closeTray}
-				/>
-			)}
-			{tray === "find" && (
-				<RedactOptions
-					settings={{ ...redact.chosen, tool: "box" }}
-					customColor={customColor}
-					bottomInset={bottomInset}
-					onChange={({ tool: _, ...style }) =>
-						redact.setChosen((settings) => ({ ...settings, ...style }))
-					}
-					{...colorTarget((color) =>
-						redact.setChosen((settings) => ({ ...settings, color })),
-					)}
-					onClose={closeTray}
-				/>
-			)}
-			{tray === "cutOut" && cut.tool !== "pick" && (
-				<CutOutOptions
-					settings={cut.settings}
-					tool={cut.tool}
-					bottomInset={bottomInset}
-					onChange={cut.onChange}
-					onClose={closeTray}
-				/>
-			)}
-			{mode.type === "tool" && mode.tool === "find" && !tray && !eyedropper && (
-				<DetectionOptions
-					state={find.state}
-					visibleIndices={find.visibleIndices}
-					selectedCount={find.selectedCount}
-					bottomInset={bottomInset}
-					onRetry={find.retry}
-					onStop={find.reset}
-					onSelectAll={find.selectAll}
-					onClear={find.clear}
-				/>
-			)}
-			{textPicker && styledText && (
-				<TextColorPicker
-					layer={styledText}
-					colorKey={textPicker.key}
-					bottomInset={bottomInset}
-					{...colorTarget((color) =>
-						textEditing.style({ [textPicker.key]: color }),
-					)}
-					onClose={() => dispatchMode({ type: "closeTextPicker" })}
-				/>
-			)}
-			{eyedropper && (
-				<EyedropperHint
-					onCancel={() => dispatchMode({ type: "stopEyedropper" })}
-				/>
-			)}
-		</>
-	);
-}
-
-/**
- * What the dock holds: the open tool's panel, the style of the text being
- * typed or selected, the selected layer's actions, or else `idle`.
- */
-function DockContent({
-	panel,
-	optionsOpen,
-	dispatchMode,
-	draw,
-	redact,
-	find,
-	cut,
-	adjustController,
-	adjustments,
-	textEditing,
-	customColor,
-	layerActions,
-	idle,
-	onFind,
-}: ModeProps & {
-	panel: DockPanel;
-	optionsOpen: boolean;
-	onFind: (() => void) | undefined;
-	adjustController: ReturnType<typeof useAdjustController>;
-	adjustments: Adjustments | undefined;
-	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
-	idle: ReactNode;
-}) {
-	const toggleOptions = () => dispatchMode({ type: "toggleToolOptions" });
-	const { styledText } = textEditing;
-	switch (panel) {
-		case "draw":
-			return (
-				<DrawPanel
-					settings={draw.settings}
-					optionsOpen={optionsOpen}
-					onChange={draw.change}
-					onToggleOptions={toggleOptions}
-				/>
-			);
-		case "redact":
-			return (
-				<RedactPanel
-					settings={redact.settings}
-					optionsOpen={optionsOpen}
-					onChange={redact.change}
-					onToggleOptions={toggleOptions}
-					onFind={onFind}
-				/>
-			);
-		case "find":
-			return (
-				<FindPanel
-					state={find.state}
-					styleGlyph={
-						<EffectGlyph
-							settings={redact.chosen}
-							effect={redact.chosen.effect}
-						/>
-					}
-					optionsOpen={optionsOpen}
-					onFind={find.find}
-					onToggleOptions={toggleOptions}
-				/>
-			);
-		case "adjust":
-			return (
-				<AdjustPanel controller={adjustController} adjustments={adjustments} />
-			);
-		case "cutOut":
-			return (
-				<CutOutPanel
-					settings={cut.settings}
-					tool={cut.tool}
-					finding={cut.finding ?? null}
-					optionsOpen={optionsOpen}
-					onChange={cut.onChange}
-					onToggleOptions={toggleOptions}
-					onFindAll={cut.onFindAll}
-					inverting={cut.inverting ?? false}
-					onInvert={cut.onInvert}
-					redacting={cut.redacting ?? false}
-					onRedact={cut.onRedact}
-				/>
-			);
-		case "text":
-			return (
-				styledText && (
-					<TextStylePanel
-						layer={styledText}
-						customColor={customColor}
-						onChange={textEditing.style}
-						onOpenPicker={(key) =>
-							dispatchMode({
-								type: "openTextPicker",
-								layerId: styledText.id,
-								key,
-							})
-						}
-					/>
-				)
-			);
-		case "layer":
-			return layerActions && <LayerActionsPanel {...layerActions} />;
-		case "idle":
-			return idle;
-	}
-}
-
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
@@ -1568,14 +1084,6 @@ const styles = StyleSheet.create({
 		borderRightWidth: StyleSheet.hairlineWidth,
 		borderRightColor: colors.border,
 		backgroundColor: colors.background,
-	},
-	headerActions: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 14,
-	},
-	exportAction: {
-		marginLeft: 6,
 	},
 	status: {
 		flex: 1,
