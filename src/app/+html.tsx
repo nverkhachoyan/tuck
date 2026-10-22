@@ -15,7 +15,7 @@ const nightInk = "#F3F3F1";
 
 // The picture a link to any page shows in a chat or a post; each page's
 // title and description come from `PageHead`. The image must be an absolute
-// URL; it's made from `store/source/og.html`.
+// URL; it's made from `docs/store-listing/source/og.html`.
 const PREVIEW_IMAGE = { url: `${SITE_URL}/og.jpg`, width: 1200, height: 630 };
 
 const palette = (background: string, ink: string, scheme: string) =>

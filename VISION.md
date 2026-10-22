@@ -841,8 +841,6 @@ Possible future capabilities:
 Automatic license-plate blur
 Collages
 Image annotations
-Custom canvas sizes
-Share-extension integration
 Batch redaction
 PDF redaction
 HEIC / RAW improvements
@@ -1030,10 +1028,10 @@ Any architecture that makes those two substantially different should be examined
 
 # Current Priority
 
-Stages 1 through 4 are built, and much of Stage 5 was built early alongside them (see Status below). Background removal, the last of Stage 4, still needs trying on a real iPhone. What's next:
+Stages 1 through 5 are built across iOS, Android, and web, and tried on a real iPhone (see Status below). What's next:
 
-1. Try background removal, and sharing a photo to Tuck, on a real iPhone (the simulator can't run the first, and the second needs the App Group registered for a device build).
-2. Then polish and performance.
+1. Ship to the App Store and Google Play (`docs/release-checklist.md`), and try the production build's share extension from TestFlight on a real iPhone.
+2. Any remaining selection or adjustment additions (`docs/plans/smart-selection-plan.md`).
 
 Stage 1's product test still holds, and new work shouldn't slow it down:
 
@@ -1063,7 +1061,7 @@ Built. A Redact tool adds each redaction as its own layer, either a box (dragged
 
 ### Stage 3 — Basic Photo Editing
 
-Geometry is built: a crop tool with aspect presets, quarter turns, flipping, and straightening. It keeps the photo whole and moves it under the canvas instead of re-encoding it, so every crop can be undone or widened again later. Along with it, the canvas became its own thing: it can be expanded past the photo and filled with white, black, or transparency (exported as PNG), and the photo can be unlocked to move like any layer. Export offers smaller sizes. A document can also start as an empty canvas at a preset size, and the photo can be reordered, hidden, or deleted like any layer. Photos can be added to a document as layers too, so a blank canvas can hold photos and a photo project more than one; the crop tool frames the lowest locked photo, and added photos start unlocked, so they move with the canvas.
+Geometry is built: a crop tool with aspect presets, quarter turns, flipping, and straightening. It keeps the photo whole and moves it under the canvas instead of re-encoding it, so every crop can be undone or widened again later. Along with it, the canvas became its own thing: it can be expanded past the photo and filled with white, black, or transparency (exported as PNG), and the photo can be unlocked to move like any layer. Export offers smaller sizes. A document can also start as an empty canvas at a preset or custom size, and the photo can be reordered, hidden, or deleted like any layer. Photos can be added to a document as layers too, so a blank canvas can hold photos and a photo project more than one; the crop tool frames the lowest locked photo, and added photos start unlocked, so they move with the canvas.
 
 Adjustments are built too: an Adjust tool changes brightness, contrast, saturation, and warmth on the photo, or on a selected photo or sticker, with a dial for each that settles on zero. Each image keeps its own, as a color filter over the untouched file, so any of them can be undone or reset later, and the editor, export, and thumbnails draw them alike. A blank canvas with no images doesn't offer the tool. They've been tried on real photos on a phone.
 
@@ -1073,7 +1071,7 @@ Missing: the later additions (highlights, shadows, exposure, vignette, sharpen).
 
 Finding faces and text is built: a native module on iOS and Android (Apple Vision and Google ML Kit) and MediaPipe/Tesseract on web detect faces and text lines in a photo. In the Redact tool, Find detects regions, outlines candidates over the photo, and adds chosen ones as redaction boxes in one undo step, following photo transforms, flips, and crops.
 
-Background removal is built: Cut out, in the tools and in a selected photo's actions (B on web), finds the photo's subject and keeps it as a mask on the image layer, a grayscale file of its own in the project. The photo's file is untouched, so Restore brings the background back, and either is one undo step. The editor, export, and thumbnails draw the image through its mask, and a cut-out makes the canvas export as PNG. Apple Vision finds the subject on iOS 17 and later, ML Kit's subject segmentation on Android, and MediaPipe's MagicTouch on web, which takes the subject at the photo's center. It's been tried on web and the Android emulator; iOS can only run it on a real device, which hasn't been tried yet. Missing: saving a cut-out as a sticker (Sticker is hidden on one for now), and taps on a cut-out's transparent parts still select it.
+Background removal and object selection are built (`docs/plans/smart-selection-plan.md`): Cut out, in the tools and in a selected photo's actions (`B` on web), opens a session on the image. **Subjects** finds every subject (Apple Vision on iOS 17+, ML Kit subject segmentation on Android, and MediaPipe's MagicTouch on web) and keeps it as a grayscale mask file in the project. **Pick** selects or subtracts the single subject or object under a tap: MobileSAM (Segment Anything) runs with ONNX Runtime on iOS (Core ML on the GPU), Android, and web (in a worker, with WebGPU or WebAssembly), while taps before the image is encoded fall back to Vision, ML Kit, or MagicTouch. **Keep** and **Erase** brushes refine the cut by hand (`maskStrokes` on the image layer, soft or hard), **Invert** turns the cut inside out, **Redact** turns what the cut keeps into a mask-shaped redaction layer (`shape: "mask"`), and **Reset** removes the cut. The photo's file is untouched, so every change can be undone. The editor, export, and thumbnails draw the image through its mask and strokes, a cut-out makes the canvas export as PNG, saving a cut-out as a sticker trims to what the cut keeps, and a cut-out's bounds and hit-testing follow what it keeps. Tried on web, the Android emulator, and an iPhone 17 Pro Max.
 
 ### Stage 5 — Polish + Projects
 
@@ -1085,5 +1083,5 @@ Built early, alongside the stages above:
 * Freehand drawing: a Draw tool with a pen, marker, and neon brush, an eraser, colors and sizes it remembers between sessions, and each drawing kept as its own layer of strokes, so it can be moved, resized, drawn on again, or undone a stroke at a time.
 * Shapes, in the Draw tool beside the pens and sharing their colors: rectangles, ellipses, lines, and arrows, each dragged out as its own layer. Rectangles and ellipses resize by their sides, and a line or arrow by dragging either end, which settles on level and upright. A tap inside an outline reaches what's under it, and the eraser removes a shape it passes over whole.
 * Saved projects: each session autosaves as a local project (on web too, in IndexedDB), listed with thumbnails on the welcome screen to reopen, rename, duplicate, or delete. A project without a name is listed by its top text. Each project has its own route, so links and reloads open it.
-* Stickers: an Add button in the dock opens a sheet with a Photo row (the old Photo tool) and 123 emoji stickers from Google's Noto Emoji (Apache 2.0) in five categories. A sticker is copied into the project as an image layer, sized to the canvas, so it moves, resizes, and exports like an added photo, and older builds open it as one. People can keep their own images as stickers too, from the sheet's Yours tab or with Sticker on a selected photo; they're kept on the device, most recently used first.
-* Opening photos shared from other apps: a share extension on iOS and a share activity on Android ("Edit in Tuck") take a single image and open it as a new project, saving whatever was open first. Tried on the iOS simulator (from Photos) and the Android emulator; not yet on a real iPhone. On iOS 26 the share sheet names it "Tuck", after the app.
+* Stickers: a Sticker button in the dock opens a sheet with 123 emoji stickers from Google's Noto Emoji (Apache 2.0) in five categories, while Photo picks a photo directly. A sticker is copied into the project as an image layer, sized to the canvas, so it moves, resizes, and exports like an added photo, and older builds open it as one. People can keep their own images and cut-outs as stickers too, from the sheet's Yours tab or with Sticker on a selected photo; they're kept on the device, most recently used first.
+* Opening photos shared from other apps: a share extension on iOS, a share activity on Android ("Edit in Tuck"), and the installed web app's share target (`share_target` on Android) and file handlers (`file_handlers`, "Open with" on the desktop) take an image and open it as a new project, saving whatever was open first. Tried on the iOS simulator (from Photos), the Android emulator, and headless Chrome; not yet on a real iPhone (which needs the App Group registered for a device build). On iOS 26 the share sheet names it "Tuck", after the app.

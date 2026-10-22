@@ -1,7 +1,7 @@
 #!/bin/bash
 # compose.sh <out dir> <width> <height> <radius> <top> <size> <raw prefix> [width share] [rows to trim]
 # Renders each scene's headline over its raw screenshot (out/raw/<prefix>-<scene>.png)
-# with compose.html. See docs/store-listing.md for the steps around it.
+# with compose.html. See docs/store-listing/listing.md for the steps around it.
 set -e
 here="$(cd "$(dirname "$0")" && pwd)"
 out="$1"; W="$2"; H="$3"; R="$4"; TOP="$5"; SIZE="$6"; P="$7"; SHARE="${8:-0.84}"; TRIM="${9:-0}"

@@ -24,9 +24,7 @@ const files = readdirSync("dist", { recursive: true, withFileTypes: true })
 	.map((entry) => join(entry.parentPath, entry.name).slice("dist/".length))
 	.filter(
 		(file) =>
-			!ON_USE.test(file) &&
-			!SITE_FILES.has(file) &&
-			!/(^|\/)\.|\.jpg$/.test(file),
+			!ON_USE.test(file) && !SITE_FILES.has(file) && !/(^|\/)\./.test(file),
 	)
 	.sort();
 

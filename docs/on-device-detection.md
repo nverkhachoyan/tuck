@@ -23,7 +23,7 @@ This widens the background-removal module that VISION.md's Stage 4 first called 
 1. **A local Expo module**, `modules/image-analysis/`, with three functions:
    * `detectFaces(uri)` returns a rectangle in image pixels for every face.
    * `detectText(uri)` returns a rectangle in image pixels for every line, and for every word in it.
-   * `segmentForeground(uri)` writes a grayscale mask and returns its URI and size.
+   * `subjectMask(uri, point)` writes a grayscale mask and returns its URI and size.
 
    iOS uses the Vision framework, which ships with the OS: no npm packages or CocoaPods. Android adds three Gradle artifacts, each a model Google Play services downloads on its own:
    * `com.google.android.gms:play-services-mlkit-face-detection` (about 800 KB added to the app)
@@ -116,11 +116,11 @@ ML Kit is worse off: its iOS binaries have no arm64 simulator slice, and Xcode 2
 | MODNet | Apache 2.0 and small (7 MB), but it only separates people (portraits) |
 | `@huggingface/transformers` | Runs BiRefNet with a background-removal pipeline, but pins its own development build of ONNX Runtime; if BiRefNet is needed, `onnxruntime-web` alone does it with little code |
 
-## Open questions
+## Platform notes
 
-* **iOS 16.** Expo SDK 57's minimum iOS is 16.4, but subject masks need iOS 17. Hide background removal on 16.x (the module reports whether it's available) rather than raise the whole app's minimum.
+* **iOS 16.** Expo SDK 57's minimum iOS is 16.4, but subject masks need iOS 17. Hide subject detection on 16.x (the module reports whether it's available) rather than raise the whole app's minimum.
 * **Android without Google Play services** (Huawei phones, for example) can't run any of the ML Kit features, and on other phones the models download after install. The module reports what's available, and the UI hides what isn't. Declare the models in the manifest's `com.google.mlkit.vision.DEPENDENCIES` so they download at install rather than on first use.
-* **Leaving Expo Go** changes how the app is run on the simulator. AGENTS.md's notes that assume Expo Go (terminating `host.exp.Exponent` to reload, for one) need updating.
+* **Development build.** The app runs in `expo-dev-client` rather than Expo Go (`AGENTS.md` records how to build and reload it on the simulator and emulator).
 
 ## How it fits the editor
 

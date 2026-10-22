@@ -3,7 +3,7 @@
 The text for the App Store and Google Play, in the voice of `PRODUCT.md`:
 plain, short, and with no hype. Every claim here is something the app does
 today; check this file when a feature changes. Screenshots are in
-`store/screenshots/` (see the end of this file).
+`docs/store-listing/screenshots/` (see the end of this file).
 
 ## App Store
 
@@ -127,7 +127,7 @@ Tuck also runs in your browser at tuck.tools.
 
 ## Screenshots
 
-`store/screenshots/` holds them at the sizes each store takes, as JPEGs
+`docs/store-listing/screenshots/` holds them at the sizes each store takes, as JPEGs
 (both stores accept them). Each pairs a headline with the app in that state,
 captured from Release builds on the simulators and the emulator:
 
@@ -153,11 +153,11 @@ appear.
 
 ### Making them again
 
-`store/source/` holds what makes them; its `out/` folder is ignored.
+`docs/store-listing/source/` holds what makes them; its `out/` folder is ignored.
 
-1. `store/source/compose.sh content` renders the pictures, and
-   `node store/source/seed.mjs` writes the five projects to
-   `store/source/out/projects/`.
+1. `docs/store-listing/source/compose.sh content` renders the pictures, and
+   `node docs/store-listing/source/seed.mjs` writes the five projects to
+   `docs/store-listing/source/out/projects/`.
 2. Install a Release build (`npx expo run:ios --configuration Release`, or
    `npx expo run:android --variant release`): a development build covers the
    app with its Tools button. Copy the projects into the app's
@@ -168,21 +168,21 @@ appear.
    with `adb install -r`: they're signed alike, so the data stays.
 3. Give the devices a clean status bar (`xcrun simctl status_bar <udid>
    override --time 9:41 --batteryState discharging --batteryLevel 100`), open
-   each scene, and save captures as `store/source/out/raw/<iphone|ipad|android>-<n>-<scene>.png`
+   each scene, and save captures as `docs/store-listing/source/out/raw/<iphone|ipad|android>-<n>-<scene>.png`
    (names in `compose.sh`). Find runs on the "Chat" project, which has nothing
    hidden yet; delete it before capturing home.
 4. Compose each set:
 
    ```bash
-   store/source/compose.sh store/screenshots/iphone-6.9 1320 2868 0.11 150 128 iphone
+   docs/store-listing/source/compose.sh docs/store-listing/screenshots/iphone-6.9 1320 2868 0.11 150 128 iphone
    ```
 
    ```bash
-   store/source/compose.sh store/screenshots/ipad-13 2064 2752 0.03 120 96 ipad 0.86
+   docs/store-listing/source/compose.sh docs/store-listing/screenshots/ipad-13 2064 2752 0.03 120 96 ipad 0.86
    ```
 
    ```bash
-   store/source/compose.sh store/screenshots/play-phone 1080 1920 0.06 110 104 android 0.84 63
+   docs/store-listing/source/compose.sh docs/store-listing/screenshots/play-phone 1080 1920 0.06 110 104 android 0.84 63
    ```
 
    The last number trims Android's 63-pixel status bar. The feature graphic

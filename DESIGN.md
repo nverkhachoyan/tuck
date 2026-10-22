@@ -158,7 +158,7 @@ Tuck treats every photo as a print laid on a pale light table, and the app as th
 
 The system is quick and decisive. People use Tuck one-handed, for jobs that take seconds, so the main action is always a solid black bar, the shape of a redaction. Targets are generous, every tool shows at once in two rows, and a press answers immediately. Expression lives in a few precise details: the swipe's slight tilt, the print's two shadows, and the Anton wordmark, which uses the same typeface as the meme captions people make with Tuck.
 
-Night is the same system on a graphite table, not a darkroom. The paper turns charcoal and the ink turns off-white, but the highlighter stays the same yellow with black ink on it, so the mark and every chosen state look identical in both palettes. The palette is picked once at launch from the system setting and kept until the next launch.
+Night is the same system on a graphite table, not a darkroom. The paper turns charcoal and the ink turns off-white, but the highlighter stays the same yellow with black ink on it, so the mark and every chosen state look identical in both palettes. The palette is picked once at launch from Settings or the system setting and kept until the next launch.
 
 **Key Characteristics:**
 - The photo is a print: it sits on a gray table with a contact shadow and a soft lift.
@@ -185,10 +185,10 @@ Neutral paper and ink around a gray table, with one highlighter yellow and two f
 - **Paper** (`paper`): every bar, the dock, sheets, cards, and screens. **Paper Hover** and **Paper Pressed** are the interaction tints of a paper button.
 - **Light Table** (`light-table`): the surface behind the canvas and behind home's project prints. Neutral gray, so it never tints the photo.
 - **Hairline** and **Hairline Strong**: the edges between bars and the table, the edges of sheets and secondary buttons, and the grabber.
-- **Text Secondary** and **Text Tertiary**: dates, the tagline, and hints. Never for a control's label, since gray labels look disabled.
+- **Text Secondary**: dates, the tagline, and hints. Never for a control's label, since gray labels look disabled. **Text Tertiary** is for disabled controls and decoration only.
 - **Checker Dark / Checker Light**: the 8px checkerboard that stands for transparency.
 - **Shadow** (`shadow`): every shadow in the system, at 16% black by day and 50% at night.
-- **Graphite** (`graphite-*`): the night palette. The paper is `graphite-paper`, floating surfaces are `graphite-surface`, the table is `graphite-table`, and ink is `graphite-ink`. The highlighter and its black ink don't change. Selection blue and danger red lighten for contrast. The full night set is in `theme.ts`.
+- **Graphite** (`graphite-*`): the night palette. The paper is `graphite-paper`, floating surfaces are `graphite-surface`, the table is `graphite-table`, and ink is `graphite-ink`. The highlighter and its black ink don't change. Selection blue and danger red lighten for contrast. The full night set is in `ui/theme.ts`.
 
 Interaction tints on borderless controls are overlays rather than colors: black at 5% on hover and 10% when pressed by day, and white at 7% and 13% at night. One pair of values works over any background.
 
@@ -290,7 +290,7 @@ A 2px ink outline, 2px out from the control (`graphite-ink` at night), set in `s
 ## Do's and Don'ts
 
 ### Do:
-- **Do** take every color from `colors` in `theme.ts`, which is the day or the night palette. Never write a literal that assumes one of them.
+- **Do** take every color from `colors` in `ui/theme.ts`, which is the day or the night palette. Never write a literal that assumes one of them.
 - **Do** mark a chosen option with `<Highlight />` as the control's first child, and draw what's over it in `on-highlighter`.
 - **Do** keep one ink-bar primary action per screen, and make it the thing the user came to do.
 - **Do** draw anything over the photo in selection blue, with the dark halo under its lines.

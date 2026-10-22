@@ -1,6 +1,6 @@
 # Smart selection spike: Segment Anything on web and phones
 
-Measured October 2026, for stage 2 of `docs/smart-selection-plan.md`: can a promptable model select any object from a tap in Tuck's web app, fast enough and well enough to be worth its download?
+Measured October 2026, for stage 2 of `docs/plans/smart-selection-plan.md`: can a promptable model select any object from a tap in Tuck's web app, fast enough and well enough to be worth its download?
 
 ## What was tried
 
@@ -8,7 +8,7 @@ Measured October 2026, for stage 2 of `docs/smart-selection-plan.md`: can a prom
 * **SlimSAM-77, int8** (Apache 2.0; `Xenova/slimsam-77-uniform`, transformers.js's export).
 * **MagicTouch version 1**, as Cut out runs it on web today, given the same tap.
 
-All three ran in the browser with `onnxruntime-web` 1.30.0 (MediaPipe for MagicTouch), single-threaded: the site isn't cross-origin isolated, so WebAssembly gets no threads. Eight taps on four photos: Segment Anything's own samples (a dog with a person holding a bowl, groceries in a car's boot, a truck) and the G20 group photo in `public/`. Timings come from headless Chrome over CDP on an Apple M1 MacBook (the Browser pane throttles a hidden page, and WebGPU stalled there).
+All three ran in the browser with `onnxruntime-web` 1.30.0 (MediaPipe for MagicTouch), single-threaded: the site isn't cross-origin isolated, so WebAssembly gets no threads. Eight taps on four photos: Segment Anything's own samples (a dog with a person holding a bowl, groceries in a car's boot, a truck) and a G20 group photo. Timings come from headless Chrome over CDP on an Apple M1 MacBook (the Browser pane throttles a hidden page, and WebGPU stalled there).
 
 ## Timings
 
@@ -54,10 +54,10 @@ About 45 MB of models, on top of the 31 MB of MediaPipe the site already serves.
 
 ## What shipping it on web needs
 
-* **Loading.** `onnxruntime-web`'s module imports its WebAssembly glue with a computed path, which Metro rejects (the same problem MediaPipe has). Load its script build (`ort.min.js` or `ort.webgpu.min.js`, which define a global `ort`) from `public/` with a `<script>` tag, as `mediaPipe.ts` does, and import only its types.
+* **Loading.** `onnxruntime-web`'s module imports its WebAssembly glue with a computed path, which Metro rejects (the same problem MediaPipe has). Run it in a module worker (`modules/image-analysis/src/mobileSamWorker.js`, copied to `public/mobile-sam-worker.js` by `copy-web-assets.mjs`) that imports `ort.webgpu.bundle.min.mjs` from `public/onnxruntime/` directly, outside Metro.
 * **CSP.** Nothing new: the models and WebAssembly come from the site itself (`connect-src 'self'`), `'wasm-unsafe-eval'` is there already, and WebGPU needs no directive.
 * **Threads.** Cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` in `vercel.json`) would let WebAssembly use threads, likely cutting the 3-second encode to about one second where WebGPU isn't available. Everything the site loads is its own, so it may cost nothing, but check the share target and file handlers first.
-* **The service worker** precaches `public/` by version; the models should be cached on first use instead, like the detection engines.
+* **The service worker** precaches the worker with the app and caches `/onnxruntime/` and `/mobile-sam/` on first use, like the other detection engines.
 
 ## Not measured
 

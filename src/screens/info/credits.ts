@@ -88,6 +88,17 @@ export const creditGroups: { title: string; credits: Credit[] }[] = [
 				notice: "Copyright The Tesseract and Tesseract.js authors",
 				license: "Apache-2.0",
 			},
+			{
+				name: "MobileSAM and Segment Anything",
+				notice:
+					"Copyright (c) 2023 Chaoning Zhang, Meta Platforms, Inc. and affiliates.",
+				license: "Apache-2.0",
+			},
+			{
+				name: "ONNX Runtime",
+				notice: "Copyright (c) Microsoft Corporation",
+				license: "MIT",
+			},
 		],
 	},
 	{

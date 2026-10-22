@@ -1,11 +1,11 @@
 // Writes the store screenshots' projects as the app saves them:
 // out/projects/<id>/project.json beside each project's image files. Copy
-// them into the app's documents folder (see docs/store-listing.md).
+// them into the app's documents folder (see docs/store-listing/listing.md).
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const here = new URL(".", import.meta.url).pathname;
-const repo = join(here, "../..");
+const repo = join(here, "../../..");
 const out = join(here, "out/projects");
 rmSync(out, { recursive: true, force: true });
 

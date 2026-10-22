@@ -1,6 +1,6 @@
 # Web plan
 
-An audit of the web app at www.tuck.tools on 2026-10-16, while the iOS build waits for App Review. It covers the live site (headers, HTML, assets, behavior in Chrome in light and dark), the hosting config (`vercel.json`), the HTML shell (`src/app/+html.tsx`), the web entry (`index.web.ts`), and the theme (`src/theme.ts`).
+An audit of the web app at www.tuck.tools on 2026-10-16, while the iOS build waits for App Review. It covers the live site (headers, HTML, assets, behavior in Chrome in light and dark), the hosting config (`vercel.json`), the HTML shell (`src/app/+html.tsx`), the web entry (`index.web.ts`), and the theme (`src/ui/theme.ts`).
 
 The foundation is good. Pages are prerendered with real content (the privacy, support, and licenses pages read fine without JavaScript), every asset is served from the site itself with Brotli, HSTS is on, the apex redirects to `www`, the theme script runs before the first paint, keyboard focus has a visible ring in the palette's ink, and link previews have a proper Open Graph card. What's missing is mostly the layer around the app: two live bugs, caching and security headers, the files browsers look for (a manifest, icons, robots, a 404 page), and keeping projects safe in browser storage.
 
@@ -162,7 +162,6 @@ As of 2026-10-16, everything above is built except:
 
 * **2.6, retiring tuck.nverk.me.** It needs a decision on the projects people saved there, and a change in Vercel's dashboard.
 * **3.3, the store links.** They wait for the App Store and Google Play listings to go live.
-* **Two photos in `public/`.** `tuck-g20.jpg` and `tuck-solvay.jpg` came with the detection work and are served at tuck.tools, but nothing in the app loads them. If they were only for testing, move them out of `public/`; the service worker already leaves them out.
 * **Checks that need a deploy:** the headers and CSP on Vercel itself (`curl -sI`), Chrome's install prompt, the iOS home screen icon, an update arriving through the service worker in production, and sharing a photo to the installed app on Android and opening one with it on the desktop.
 
 ## Checked and fine

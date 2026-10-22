@@ -56,10 +56,11 @@ export default function PrivacyScreen() {
 
 			<Section title="Finding faces and text">
 				<Paragraph>
-					Redact can find faces and text for you, and Cut out finds the subject
-					of a photo. This runs on your device too: Apple's Vision on iPhone,
-					Google's ML Kit on Android, and MediaPipe and Tesseract in the
-					browser. Your photos aren't sent anywhere to be analyzed.
+					Redact can find faces and text for you, and Cut out finds the subjects
+					and objects in a photo. This runs on your device too: Apple's Vision
+					on iPhone, Google's ML Kit on Android, MediaPipe and Tesseract in the
+					browser, and Segment Anything on all three. Your photos aren't sent
+					anywhere to be analyzed.
 				</Paragraph>
 				<Paragraph>
 					On Android, ML Kit is part of Google Play services, which sends Google
