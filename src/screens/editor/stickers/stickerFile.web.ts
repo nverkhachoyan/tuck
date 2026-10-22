@@ -1,6 +1,6 @@
 import { Asset } from "expo-asset";
+import { STICKER_SIZE, type Sticker } from "./bundledStickers";
 import type { StickerImage } from "./savedStickers";
-import { STICKER_SIZE, type Sticker } from "./stickers";
 
 /**
  * A bundled sticker's image by its URL, which a project fetches its own

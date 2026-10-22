@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 // group's folder, which the app can read too, and opens the app with the
 // copy's name: <scheme>://share?file=<name>.
 class ShareViewController: UIViewController {
-  // Also named in src/import/sharedPhoto.ts and the Android share activity.
+  // Also named in src/photos/sharedPhoto.ts and the Android share activity.
   private static let folderName = "shared-photos"
 
   override func viewDidLoad() {

@@ -1,5 +1,5 @@
 import { type NativeIntent, router } from "expo-router";
-import { sharedPhotoName } from "@/import/sharedPhoto";
+import { sharedPhotoName } from "@/photos/sharedPhoto";
 
 /**
  * Sends a photo shared from another app to the home screen, which opens it

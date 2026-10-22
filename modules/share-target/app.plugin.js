@@ -11,7 +11,7 @@ const {
 // Lists Tuck in other apps' share sheets for a single image, as "Edit in
 // Tuck". iOS takes it in a share extension, a target of its own, and Android
 // in `ShareActivity`. Both copy the photo where the app can read it and open
-// <scheme>://share?file=<name>, which src/import/sharedPhoto.ts reads.
+// <scheme>://share?file=<name>, which src/photos/sharedPhoto.ts reads.
 
 const TARGET = "ShareExtension";
 const SWIFT_FILE = "ShareViewController.swift";

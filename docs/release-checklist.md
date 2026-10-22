@@ -10,7 +10,7 @@ Store name: **Tuck: Photo Markup**. Home screen name: **Tuck**.
 
 ## 1. Pages the stores ask for
 
-These are routes in the app (`src/screens/about/`), so they're on the web
+These are routes in the app (`src/screens/info/`), so they're on the web
 and inside the app, linked from the bottom of the home screen. Each store
 listing points to the web copies once they're deployed:
 
@@ -21,7 +21,7 @@ listing points to the web copies once they're deployed:
 Keep the privacy policy true when the app changes: a new SDK, analytics, or
 anything that sends data off the device needs a new paragraph and date, and
 new answers in App Privacy and Data safety. Add a new font, sticker set, or
-library to `src/screens/about/credits.ts`. Terms of use are optional:
+library to `src/screens/info/credits.ts`. Terms of use are optional:
 Apple's standard license agreement applies by default, and Google Play
 doesn't require terms.
 

@@ -35,7 +35,7 @@ import {
 	type Rect,
 	type Transform,
 } from "@/model/geometry";
-import { type TextSelection, withPlaceholder } from "@/render/textEditing";
+import { type TextSelection, withPlaceholder } from "@/model/textEditing";
 import { colors, radii, space, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";

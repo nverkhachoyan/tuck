@@ -47,6 +47,7 @@ import {
 import { drawingBox } from "@/model/drawing";
 import { rectFromCorners, transformsEqual } from "@/model/geometry";
 import { lineReach, shapeBox } from "@/model/shapes";
+import { clampSelection, withPlaceholder } from "@/model/textEditing";
 import { BrushStroke, strokePath } from "@/render/DrawingLayerView";
 import { MaskStrokePath } from "@/render/ImageLayerView";
 import {
@@ -66,14 +67,13 @@ import {
 } from "@/render/RedactionLayerView";
 import { shapePath } from "@/render/ShapeLayerView";
 import { TextLayerView } from "@/render/TextLayerView";
-import { clampSelection, withPlaceholder } from "@/render/textEditing";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
 import type { MappedDetectionRect } from "@/screens/editor/detection/mapDetectionRects";
 import { colorScheme, colors } from "@/theme";
 import type { TextEditState } from "../editorMode";
 import { handleSides } from "../handles/handleGeometry";
 import { handleMetrics, shownHandles } from "../handles/handleMetrics";
-import { CanvasBackground, LayerContent } from "./EditorSceneParts";
+import { CanvasBackground, LayerContent } from "./LayerContent";
 import { layerBounds } from "./layerBounds";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
 import { shapeFromDrag } from "./shapeDrag";

@@ -140,7 +140,7 @@
 			}
 		},
 		{
-			"includes": ["src/import/**", "src/projects/**", "src/render/**"],
+			"includes": ["src/photos/**", "src/projects/**", "src/render/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -164,7 +164,7 @@
 											"!@/ui/**",
 											"!@/theme"
 										],
-										"message": "Shared capabilities (import/, projects/, render/) import only store/, model/, lib/, ui/, and theme.ts: not each other, and no screen. See AGENTS.md."
+										"message": "Shared capabilities (photos/, projects/, render/) import only store/, model/, lib/, ui/, and theme.ts: not each other, and no screen. See AGENTS.md."
 									}
 								]
 							}
@@ -194,7 +194,7 @@
 			}
 		},
 		{
-			"includes": ["src/screens/about/**"],
+			"includes": ["src/screens/info/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -207,7 +207,7 @@
 											"image-analysis",
 											"@/app/**",
 											"@/screens/**",
-											"!@/screens/about/**",
+											"!@/screens/info/**",
 											"../**",
 											"!../../model/**"
 										],

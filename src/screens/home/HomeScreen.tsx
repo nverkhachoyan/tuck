@@ -17,9 +17,9 @@ import {
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { listenForLaunchedPhotos } from "@/import/sharedPhoto";
-import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { useUpdateReady } from "@/lib/serviceWorker";
+import { listenForLaunchedPhotos } from "@/photos/sharedPhoto";
+import { usePhotoDrop } from "@/photos/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
 import {

@@ -8,7 +8,7 @@ import {
 	type TextLayerEdit,
 } from "@/model/document";
 import type { Rect } from "@/model/geometry";
-import type { TextSelection } from "@/render/textEditing";
+import type { TextSelection } from "@/model/textEditing";
 import { useStore } from "@/store";
 import { selectSelectedTextLayer } from "@/store/editorSlice";
 import type { EditorModeAction, TextEditState } from "../editorMode";

@@ -88,7 +88,7 @@ class ShareActivity : Activity() {
   companion object {
     private const val TAG = "ShareActivity"
 
-    // Also named in src/import/sharedPhoto.ts and the iOS share extension.
+    // Also named in src/photos/sharedPhoto.ts and the iOS share extension.
     private const val FOLDER = "shared-photos"
 
     // Set by the config plugin, from app.json's scheme.

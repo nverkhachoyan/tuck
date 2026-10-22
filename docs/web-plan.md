@@ -92,7 +92,7 @@ Fix:
 
 ### 2.5 A real 404 page (done)
 
-Built as described: `NotFoundScreen` in `screens/about/` is an info page with Open Tuck, and `build:web` copies `+not-found.html` to `404.html`, which Vercel's error route (`/404`) serves with a 404 status. Checked on the local build in dark, including Open Tuck going home. `/projects/<id>` is rewritten before Vercel looks for a 404, so a missing project still gets the editor's own message.
+Built as described: `NotFoundScreen` in `screens/info/` is an info page with Open Tuck, and `build:web` copies `+not-found.html` to `404.html`, which Vercel's error route (`/404`) serves with a 404 status. Checked on the local build in dark, including Open Tuck going home. `/projects/<id>` is rewritten before Vercel looks for a 404, so a missing project still gets the editor's own message.
 
 An unknown address gets Vercel's plain-text "The page could not be found / NOT_FOUND". Add `src/app/+not-found.tsx` (the wordmark, a sentence, and a link home, in the app's palette), and make sure the export leaves a `404.html` in `dist/` for Vercel to serve; copy `+not-found.html` to it in `build:web` if Expo doesn't. Check that `/projects/<id>` for a project that doesn't exist still opens the editor's own message rather than the 404.
 

@@ -19,7 +19,7 @@ import {
 	type Sticker,
 	type StickerCategory,
 	stickerCategories,
-} from "@/screens/editor/stickers/stickers";
+} from "@/screens/editor/stickers/bundledStickers";
 import type { ShownSticker } from "@/screens/editor/stickers/useSavedStickers";
 import { colors, radii, typography, webTransition } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";

@@ -1,10 +1,10 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { pasteClipboardImage } from "@/import/clipboardImage";
-import { importPhoto, type PickedPhoto, pickPhoto } from "@/import/photoImport";
-import { importSharedPhoto } from "@/import/sharedPhoto";
 import { errorMessage } from "@/lib/errorMessage";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
+import { pasteClipboardImage } from "@/photos/clipboardImage";
+import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
+import { importSharedPhoto } from "@/photos/sharedPhoto";
 import { copyName, type ProjectSummary } from "@/projects/projectFile";
 import { editorHref } from "@/projects/projectRoute";
 import {

@@ -3,7 +3,7 @@
 // the state for the screen.
 
 import type { TextLayer } from "../../model/document.ts";
-import type { TextSelection } from "../../render/textEditing.ts";
+import type { TextSelection } from "../../model/textEditing.ts";
 import type { Shortcut } from "./shortcuts.ts";
 
 /** A text layer's colors, which its Color, Outline, and Box tabs pick. */

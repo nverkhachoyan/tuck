@@ -234,6 +234,6 @@ Looked at and not worth changing:
 
 * **`EditorScene.tsx`** is long (about 1,000 lines) but already made of small named parts, one per piece of chrome.
 * **`useLayerTransformGesture.ts`** is dense because worklets need their state in shared values declared up front. It's one cohesive gesture, and splitting it would scatter that state across files.
-* **`EditorSceneParts.tsx` and `DocumentRenderScene.tsx`** each switch over layer types. They differ on purpose: the editor loads images as they decode, while export needs them all decoded before its single frame.
-* **`stickers.ts`** is a catalog of data.
+* **`LayerContent.tsx` and `DocumentRenderScene.tsx`** each switch over layer types. They differ on purpose: the editor loads images as they decode, while export needs them all decoded before its single frame.
+* **`bundledStickers.ts`** is a catalog of data.
 * **The draw and redact option trays** already share `ToolOptions`, `RingChoice`, and `ColorOptions`. What they have left in common is layout.

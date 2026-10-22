@@ -9,8 +9,12 @@ import {
 } from "@shopify/react-native-skia";
 import type { TextAlign, TextFont, TextLayer } from "@/model/document";
 import type { Box, Point, Rect } from "@/model/geometry";
+import {
+	type CaretText,
+	caretText,
+	type TextSelection,
+} from "@/model/textEditing";
 import { getFontProvider, TEXT_FONTS } from "./fonts";
-import { type CaretText, caretText, type TextSelection } from "./textEditing";
 
 export type TextLayerLayout = {
 	// Drawn first, behind the text: a box around each line; null when disabled.

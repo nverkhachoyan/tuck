@@ -3,7 +3,7 @@ import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hitTestBox, toLayerSpace } from "@/model/geometry";
-import { type TextSelection, wordRange } from "@/render/textEditing";
+import { type TextSelection, wordRange } from "@/model/textEditing";
 import { textIndexAt } from "@/render/textLayerLayout";
 import type { TextEditState } from "../editorMode";
 import { hasFinePointer } from "../handles/handleMetrics";

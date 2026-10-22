@@ -15,7 +15,7 @@ const ENGINES = /^\/(mediapipe|tesseract|onnxruntime|mobile-sam)\//;
 const STICKERS_CACHE = "tuck-stickers";
 const STICKERS = /^\/assets\/assets\/stickers\//;
 // A photo shared to the installed app (the manifest's `share_target`),
-// kept until home opens it: `src/import/sharedPhoto.web.ts` reads it there.
+// kept until home opens it: `src/photos/sharedPhoto.web.ts` reads it there.
 const SHARED_CACHE = "tuck-shared";
 
 const fetchFresh = (path) =>

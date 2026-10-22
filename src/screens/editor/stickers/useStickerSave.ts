@@ -1,9 +1,9 @@
 import { ImageFormat, type SkImage } from "@shopify/react-native-skia";
 import { useState } from "react";
-import { importPhoto } from "@/import/photoImport";
 import { errorMessage } from "@/lib/errorMessage";
 import { writeTemporaryPng } from "@/lib/temporaryFile";
 import { type ImageLayer, isCutOut } from "@/model/document";
+import { importPhoto } from "@/photos/photoImport";
 import { useStore } from "@/store";
 import { selectSelectedLayer } from "@/store/editorSlice";
 import { showAlert } from "@/ui/showAlert";
