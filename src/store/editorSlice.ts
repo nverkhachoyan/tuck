@@ -1,4 +1,6 @@
 import type { StateCreator } from "zustand";
+// Registers the "zustand/devtools" mutator that `SliceCreator` names.
+import type {} from "zustand/middleware";
 import type { Adjustments } from "../model/adjustments.ts";
 import {
 	addMaskStroke,
