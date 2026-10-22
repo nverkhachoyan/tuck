@@ -9,9 +9,8 @@ export type RenderState =
 	| { status: "failed"; error: unknown };
 
 /**
- * Renders the document at `scale` times its size as soon as it's available,
- * and frees the result when either changes or the caller unmounts. A render
- * that finishes after it's been superseded is disposed instead of shown.
+ * A render that finishes after it's been superseded is disposed instead of
+ * shown.
  */
 export function useRenderedDocument(document: EditorDocument, scale: number) {
 	const [state, setState] = useState<RenderState>({ status: "rendering" });

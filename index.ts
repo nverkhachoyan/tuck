@@ -1,2 +1,2 @@
-// The app entry. `index.web.ts` replaces this file on web.
+// `index.web.ts` replaces this file on web.
 import "expo-router/entry";

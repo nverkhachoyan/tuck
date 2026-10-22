@@ -97,17 +97,14 @@ export function parseBrushSettings(saved: unknown): BrushSettings {
 	};
 }
 
-/** The index into `BRUSH_SIZES` of the tool in use. */
 export function brushSizeIndex(settings: BrushSettings): number {
 	return settings.sizes[settings.tool];
 }
 
-/** The tip a tool's pen has, if it's a pen with one. */
 export function penTip(tool: DrawTool): PenTip | undefined {
 	return tool === "marker" || tool === "neon" ? tool : undefined;
 }
 
-/** The brush the settings paint with on a canvas of `size`. */
 export function brushFor(settings: BrushSettings, size: Size): Brush {
 	const { tool, color } = settings;
 	const width = BRUSH_SIZES[tool][settings.sizes[tool]] * shortSide(size);
@@ -118,7 +115,6 @@ export function brushFor(settings: BrushSettings, size: Size): Brush {
 		: { type: "pen", color, width };
 }
 
-/** How the shape tool outlines what it drags out on a canvas of `size`. */
 export function shapeStyleFor(settings: BrushSettings, size: Size): ShapeStyle {
 	return {
 		color: settings.color,
@@ -151,11 +147,7 @@ export function withShape(
 	};
 }
 
-/**
- * What changing the settings from `before` to `after` changes on a shape
- * scaled by `layerScale`, on a canvas of `size`: its kind, its color, or its
- * outline's thickness, in its own units.
- */
+/** Its outline's thickness, in its own units. */
 export function shapeEdit(
 	before: BrushSettings,
 	after: BrushSettings,

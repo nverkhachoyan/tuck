@@ -33,7 +33,6 @@ export function newStickerId(now: number): string {
 	return `sticker-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** The name of a sticker's image file: a JPEG's if opaque, else a PNG's. */
 export function stickerFileName({
 	id,
 	opaque,
@@ -62,7 +61,6 @@ function isPositive(value: unknown): boolean {
 	return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
-/** Most recently used first. */
 export function recentFirst<T extends SavedSticker>(stickers: T[]): T[] {
 	return stickers.slice().sort((a, b) => b.usedAt - a.usedAt);
 }

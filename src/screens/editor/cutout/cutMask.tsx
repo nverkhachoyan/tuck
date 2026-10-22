@@ -56,11 +56,8 @@ export async function cutShowsAt(
 }
 
 /**
- * `mask` with `subject` added to it (the lighter of the two everywhere) or
- * taken out of it (the darker of it and the subject's inverse), or without
- * one, `subject` alone, as a grayscale PNG's bytes. Both cover the whole
- * image, so the result has the larger one's pixels, and the other is
- * stretched to fit.
+ * As a grayscale PNG's bytes. Both cover the whole image, so the result has
+ * the larger one's pixels, and the other is stretched to fit.
  */
 export async function combineMasks(
 	mask: SkImage | null,
@@ -90,9 +87,8 @@ export async function combineMasks(
 }
 
 /**
- * The inverse of `mask`, or without one, of a mask that shows the whole
- * image: a black pixel, which is stretched over it like any mask. As a
- * grayscale PNG's bytes.
+ * Without one, a mask that shows the whole image: a black pixel, which is
+ * stretched over it like any mask. As a grayscale PNG's bytes.
  */
 export async function invertedMask(
 	mask: SkImage | undefined,

@@ -74,7 +74,6 @@ export function parseRedactSettings(saved: unknown): RedactSettings {
 	};
 }
 
-/** The effect the settings redact with on a canvas of `size`. */
 export function redactionEffect(
 	settings: RedactSettings,
 	size: Size,

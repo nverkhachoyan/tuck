@@ -81,7 +81,7 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	const hasOtherLayers = choosable.some((layer) => !layer.hidden);
 	const onlyText = choosable.every((layer) => layer.type === "text");
 
-	// Android's back button cancels, as it would a dialog.
+	// Android's back button applies the crop, as Done does.
 	useEffect(() => {
 		const subscription = BackHandler.addEventListener(
 			"hardwareBackPress",

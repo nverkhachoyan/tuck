@@ -10,7 +10,6 @@ export type SaveImageResult =
 	| { status: "saved" }
 	| { status: "permission-denied" };
 
-/** The save button's label before, during, and after `saveImage`. */
 export const saveLabels = {
 	idle: "Save to Photos",
 	busy: "Saving…",
@@ -18,9 +17,9 @@ export const saveLabels = {
 };
 
 /**
- * Adds a rendered image to the user's photo library. Asks only for add-only
- * access: saving never needs to read the library. `Asset.create` checks the
- * permission but won't prompt for it, so the request has to come first.
+ * Asks only for add-only access: saving never needs to read the library.
+ * `Asset.create` checks the permission but won't prompt for it, so the
+ * request has to come first.
  */
 export async function saveImage(
 	image: SkImage,
@@ -42,10 +41,7 @@ export function canShareImages(): boolean {
 	return true;
 }
 
-/**
- * Encodes a rendered image and opens the system share sheet. Returns false
- * when sharing isn't available on this platform.
- */
+/** Returns false when sharing isn't available on this platform. */
 export async function shareImage(
 	image: SkImage,
 	format: ExportFormat,

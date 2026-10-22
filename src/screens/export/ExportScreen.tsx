@@ -38,10 +38,7 @@ import { useRenderedDocument } from "./useRenderedDocument";
 
 type Busy = "saving" | "sharing" | "copying";
 
-/**
- * Export, as a sheet over the editor, which shows what will be saved: its
- * size and format, then Save, Share, and Copy.
- */
+/** Export, as a sheet over the editor. */
 export default function ExportScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const document = useStore((state) =>

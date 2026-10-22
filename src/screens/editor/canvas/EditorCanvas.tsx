@@ -839,7 +839,6 @@ export function EditorCanvas({
 	);
 }
 
-/** Returns a zoomed view to the fit. */
 function FitButton({ onPress }: { onPress: () => void }) {
 	const { anchor, tooltip } = useTooltip("Zoom to fit", "mod+0");
 	return (

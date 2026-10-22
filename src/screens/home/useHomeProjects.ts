@@ -32,8 +32,6 @@ export type HomeStatus =
 	| "idle";
 
 /**
- * The saved projects, and the home screen's work on them: ending the editor's
- * session on coming back here, and opening a photo or project in the editor.
  * One piece of work runs at a time, and `status` names it. Between them,
  * thumbnails that a session ending without Back left missing or outdated
  * are rendered again.

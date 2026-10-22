@@ -30,11 +30,9 @@ type TextEditorProps = {
 };
 
 /**
- * Typing into text on the canvas, which draws it in place, caret and all
- * (see `TextEditState`). This is the input the keyboard types into, hidden
- * behind the screen's header, which stays in use: the canvas shows what it
- * holds exactly as the text will look, at its size, angle, and wrapping,
- * which no input could. Done is beside the dock, which rides the keyboard.
+ * This is the input the keyboard types into, hidden behind the screen's
+ * header, which stays in use: the canvas shows what it holds exactly as the
+ * text will look, at its size, angle, and wrapping, which no input could.
  */
 export function TextEditor({
 	ref,

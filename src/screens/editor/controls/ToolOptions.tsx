@@ -79,7 +79,6 @@ export function Tray({
 	);
 }
 
-/** A tool's options, in a tray. */
 export function ToolOptions({
 	closeLabel,
 	bottomInset,

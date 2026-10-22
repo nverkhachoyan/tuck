@@ -284,9 +284,8 @@ function CardButton({
 }
 
 /**
- * A project's name, to type a new one over. Leaving the field, or Return,
- * renames it, and Escape puts the name back. A blank name lists the project
- * by its text again.
+ * Leaving the field, or Return, renames it, and Escape puts the name back.
+ * A blank name lists the project by its text again.
  */
 function NameField({
 	label,

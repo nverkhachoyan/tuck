@@ -289,8 +289,7 @@ export default function HomeScreen() {
 }
 
 /**
- * Quiet links to Support, Privacy, and Licenses, under everything else, and
- * to Settings `withSettings`: without projects, there's no header to hold
+ * To Settings `withSettings`: without projects, there's no header to hold
  * its gear.
  */
 function AboutLinks({ withSettings = false }: { withSettings?: boolean }) {

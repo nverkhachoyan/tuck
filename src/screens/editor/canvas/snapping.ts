@@ -12,7 +12,6 @@ import {
 /** How near a quarter turn a layer's or a line's angle settles on it. */
 export const ROTATION_SNAP = (4 * Math.PI) / 180;
 
-/** `target` when `value` is within `tolerance` of it, otherwise null. */
 export function snapTo(
 	value: number,
 	target: number,

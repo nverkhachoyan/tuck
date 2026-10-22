@@ -10,9 +10,8 @@ import { colors, space, typography } from "@/ui/theme";
 const MAX_WIDTH = 640;
 
 /**
- * A page of reading, such as the privacy policy: a header with Back and the
- * page's name, then text in one column. Opened from a link or the address
- * bar, with nothing behind it, Back goes home.
+ * Opened from a link or the address bar, with nothing behind it, Back goes
+ * home.
  */
 export function InfoPage({
 	title,
@@ -84,7 +83,6 @@ export function Paragraph({
 	);
 }
 
-/** A point in a list, after a bullet. */
 export function Item({ children }: { children: ReactNode }) {
 	return (
 		<View style={styles.item}>
@@ -96,10 +94,6 @@ export function Item({ children }: { children: ReactNode }) {
 	);
 }
 
-/**
- * A link inside a paragraph: to another page of the app, or out to a web
- * address or an email (`mailto:`).
- */
 export function InlineLink({
 	to,
 	children,
@@ -114,7 +108,6 @@ export function InlineLink({
 		<Link
 			href={to}
 			style={styles.link}
-			// On web, the browser opens it, in a new tab.
 			{...(external && { target: "_blank", rel: "noopener" })}
 		>
 			{children}
