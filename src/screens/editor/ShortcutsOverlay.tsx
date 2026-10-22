@@ -1,9 +1,9 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { colors, radii, space, typography } from "@/theme";
 import { PanelHeader } from "@/ui/BottomSheet";
 import { Surface } from "@/ui/Surface";
 import { formatShortcut } from "@/ui/Tooltip";
+import { colors, radii, space, typography } from "@/ui/theme";
 import { SHORTCUT_GROUPS } from "./shortcuts";
 
 /**

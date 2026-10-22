@@ -7,7 +7,7 @@ import {
 	type SkRect,
 } from "@shopify/react-native-skia";
 import { useMemo } from "react";
-import { colors } from "@/theme";
+import { colors } from "@/ui/theme";
 
 // Past this many squares, they're drawn bigger instead.
 const MAX_CELLS = 20_000;

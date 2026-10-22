@@ -1,15 +1,15 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { interaction } from "./interaction";
+import { useTooltip } from "./Tooltip";
 import {
 	colors,
 	HEADER_HEIGHT,
 	space,
 	typography,
 	webTransition,
-} from "@/theme";
-import { interaction } from "./interaction";
-import { useTooltip } from "./Tooltip";
+} from "./theme";
 
 const BACK_SIZE = 44;
 

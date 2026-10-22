@@ -17,7 +17,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import { hapticTick } from "@/lib/haptics";
-import { colors, typography } from "@/theme";
+import { colors, typography } from "@/ui/theme";
 
 const TRACK = 28;
 const INDICATOR = 3;

@@ -9,8 +9,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
-import { colors, floatingShadow, radii, space, typography } from "@/theme";
 import type { TooltipAnchorProps, TooltipSide } from "./Tooltip";
+import { colors, floatingShadow, radii, space, typography } from "./theme";
 
 const SHOW_DELAY_MS = 500;
 // After one tooltip hides, the next shows at once for this long, so running

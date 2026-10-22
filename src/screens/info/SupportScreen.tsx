@@ -1,9 +1,9 @@
 import Constants from "expo-constants";
 import { Linking, StyleSheet, View } from "react-native";
 import { SUPPORT_EMAIL } from "@/lib/site";
-import { space } from "@/theme";
 import { Button } from "@/ui/Button";
-import { InfoPage, InlineLink, Paragraph, Section } from "@/ui/InfoPage";
+import { space } from "@/ui/theme";
+import { InfoPage, InlineLink, Paragraph, Section } from "./InfoPage";
 
 const version = Constants.expoConfig?.version;
 

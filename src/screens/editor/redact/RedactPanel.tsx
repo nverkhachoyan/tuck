@@ -1,9 +1,9 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii, typography } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { RingChoice } from "@/ui/RingChoice";
+import { colors, radii, typography } from "@/ui/theme";
 import { ColorOptions } from "../controls/ColorPicker";
 import { ToolButton, ToolRow } from "../controls/ToolButton";
 import {

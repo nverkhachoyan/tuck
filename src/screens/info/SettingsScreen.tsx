@@ -2,9 +2,9 @@ import { reloadAppAsync } from "expo";
 import { useState } from "react";
 import { writePreference } from "@/lib/preferenceStore";
 import { useStore } from "@/store";
-import { THEME_PREFERENCE, type ThemeSetting, themeSetting } from "@/theme";
-import { InfoPage, Paragraph, Section } from "@/ui/InfoPage";
 import { Segmented } from "@/ui/Segmented";
+import { THEME_PREFERENCE, type ThemeSetting, themeSetting } from "@/ui/theme";
+import { InfoPage, Paragraph, Section } from "./InfoPage";
 
 const THEMES: { value: ThemeSetting; title: string }[] = [
 	{ value: "system", title: "System" },

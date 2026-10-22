@@ -11,11 +11,11 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
-import { colors, radii, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
 import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
+import { colors, radii, typography } from "@/ui/theme";
 import { ColorSwatches, isCustomColor } from "./ColorSwatches";
 
 // As wide as a row of seven swatches, so a picker on its own in a card is

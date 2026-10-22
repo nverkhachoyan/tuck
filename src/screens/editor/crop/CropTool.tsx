@@ -12,13 +12,13 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import { colors, radii, typography, webTransition } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { Dial, type DialScale } from "../controls/Dial";
 import { Dock, DockFooter, useDockInset } from "../controls/Dock";
 import { ToolButton, ToolRow } from "../controls/ToolButton";

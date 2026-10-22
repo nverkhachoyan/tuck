@@ -1,8 +1,8 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { shapeKinds } from "@/model/document";
-import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
+import { colors } from "@/ui/theme";
 import { ColorOptions } from "../controls/ColorPicker";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../controls/shapeIcons";
 import { ToolButton, ToolRow } from "../controls/ToolButton";

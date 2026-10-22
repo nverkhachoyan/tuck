@@ -1,10 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii, space, typography, webTransition } from "@/theme";
-import { InfoPage, Paragraph, Section } from "@/ui/InfoPage";
 import { interaction } from "@/ui/interaction";
+import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { creditGroups, type LicenseId, licenses } from "./credits";
+import { InfoPage, Paragraph, Section } from "./InfoPage";
 
 export default function LicensesScreen() {
 	return (

@@ -8,9 +8,9 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { errorMessage } from "@/lib/errorMessage";
 import { SUPPORT_EMAIL } from "@/lib/site";
 import { LoadFonts, resetFailedFonts } from "@/render/fonts";
-import { colorScheme, colors, space, typography } from "@/theme";
 import { Button } from "@/ui/Button";
 import { PageHead } from "@/ui/PageHead";
+import { colorScheme, colors, space, typography } from "@/ui/theme";
 
 const barStyle = colorScheme === "dark" ? "light-content" : "dark-content";
 

@@ -36,10 +36,10 @@ import {
 	type Transform,
 } from "@/model/geometry";
 import { type TextSelection, withPlaceholder } from "@/model/textEditing";
-import { colors, radii, space, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
+import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import type { TextEditState } from "../editorMode";
 import {
 	type CanvasCursor,

@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import { colors } from "@/theme";
+import { colors } from "./theme";
 
 type CheckerFillProps = {
 	// The parent's size, which this fills.

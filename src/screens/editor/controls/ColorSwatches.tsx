@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
-import { colors } from "@/theme";
 import { gradientBackground } from "@/ui/gradient";
 import { RING_TARGET, RingChoice } from "@/ui/RingChoice";
+import { colors } from "@/ui/theme";
 
 const SWATCH_SIZE = 26;
 // The custom color's dot, inside the custom swatch's rainbow.

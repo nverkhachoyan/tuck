@@ -24,7 +24,7 @@ import {
 import type { Size } from "@/model/geometry";
 import { CanvasBackground, LayerContent } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
-import { colors } from "@/theme";
+import { colors } from "@/ui/theme";
 import { type CanvasCursor, cursorStyle } from "../canvas/canvasCursor";
 import type { DocumentViewport } from "../canvas/viewport";
 import type { CropHandle } from "./cropDrag";

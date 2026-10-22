@@ -8,7 +8,7 @@ import {
 	View,
 } from "react-native";
 import type { TextSelection } from "@/model/textEditing";
-import { colorScheme, HEADER_HEIGHT } from "@/theme";
+import { colorScheme, HEADER_HEIGHT } from "@/ui/theme";
 
 export type TextEditorHandle = {
 	// Takes the keyboard back, keeping the caret where it was.

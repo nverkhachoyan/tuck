@@ -19,10 +19,10 @@ import {
 	type ProjectSummary,
 	projectName,
 } from "@/projects/projectFile";
-import { colors, radii, space, typography, webTransition } from "@/theme";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
+import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 
 // The home screen's content column, so a wide browser window doesn't
 // stretch it, and its side padding.

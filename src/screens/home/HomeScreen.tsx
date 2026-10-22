@@ -22,14 +22,6 @@ import { listenForLaunchedPhotos } from "@/photos/sharedPhoto";
 import { usePhotoDrop } from "@/photos/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import {
-	colors,
-	fonts,
-	radii,
-	space,
-	typography,
-	webTransition,
-} from "@/theme";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Highlight } from "@/ui/Highlight";
@@ -37,6 +29,14 @@ import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { PageHead } from "@/ui/PageHead";
 import { TextButton } from "@/ui/TextButton";
+import {
+	colors,
+	fonts,
+	radii,
+	space,
+	typography,
+	webTransition,
+} from "@/ui/theme";
 import { HOME_MAX_WIDTH, ProjectList } from "./ProjectList";
 import { type HomeStatus, useHomeProjects } from "./useHomeProjects";
 

@@ -3,9 +3,9 @@ import type { ComponentProps, ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, typography, webTransition } from "@/theme";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
+import { colors, typography, webTransition } from "@/ui/theme";
 
 // The dock's one fixed height, shared by every panel, so the canvas, fitted
 // above the dock, never moves when the selection or tool changes. A mode's

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
-import { colors, floatingShadow } from "@/theme";
+import { colors, floatingShadow } from "./theme";
 
 /**
  * An opaque panel over the canvas, like the selection bar or a sheet. It

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { assertNever } from "@/lib/assertNever";
 import type { ColorMatrix } from "@/model/adjustments";
 import type { ImageLayer, Layer, RedactionMask } from "@/model/document";
-import { CHECKER_CELL } from "@/theme";
+import { CHECKER_CELL } from "@/ui/theme";
 import { Checkerboard } from "./Checkerboard";
 import { DrawingLayerView } from "./DrawingLayerView";
 import { ImageLayerView } from "./ImageLayerView";

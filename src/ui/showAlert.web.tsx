@@ -8,8 +8,8 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { colors, radii, space, typography } from "@/theme";
 import { Button } from "./Button";
+import { colors, radii, space, typography } from "./theme";
 
 /**
  * React Native Web's `Alert.alert` does nothing, so errors would vanish and a

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, radii, typography, webTransition } from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
+import { colors, radii, typography, webTransition } from "./theme";
 
 type TextButtonTone = "default" | "strong" | "danger";
 

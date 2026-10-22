@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii, space, typography, webTransition } from "@/theme";
 import { Highlight } from "./Highlight";
 import { interaction } from "./interaction";
+import { colors, radii, space, typography, webTransition } from "./theme";
 
 /**
  * A row of two or three choices, each a name over an optional detail, with

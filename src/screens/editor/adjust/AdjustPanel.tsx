@@ -11,9 +11,9 @@ import {
 	type Adjustments,
 	adjustmentKeys,
 } from "@/model/adjustments";
-import { colors, radii, typography, webTransition } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { Dial } from "../controls/Dial";
 import {
 	ADJUST_DIAL_MAX,

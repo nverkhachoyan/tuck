@@ -2,7 +2,7 @@ import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { PenTip } from "@/model/document";
-import { colors, radii, typography } from "@/theme";
+import { colors, radii, typography } from "@/ui/theme";
 
 // The dock's widest, so a tray lines up with the dock it rises out of.
 const TRAY_MAX_WIDTH = 520;

@@ -21,11 +21,11 @@ import { errorMessage } from "@/lib/errorMessage";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
-import { colors, radii, space, typography } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
 import { Segmented } from "@/ui/Segmented";
 import { showAlert } from "@/ui/showAlert";
+import { colors, radii, space, typography } from "@/ui/theme";
 import { copyImage } from "./copyImage";
 import {
 	type ExportFormat,

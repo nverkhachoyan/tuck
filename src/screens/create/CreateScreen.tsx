@@ -15,14 +15,6 @@ import type { Size } from "@/model/geometry";
 import { editorHref } from "@/projects/projectRoute";
 import { createBlankProject } from "@/projects/projectService";
 import { useStore } from "@/store";
-import {
-	CHECKER_CELL,
-	colors,
-	radii,
-	space,
-	typography,
-	webTransition,
-} from "@/theme";
 import { Announcement } from "@/ui/Announcement";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { Button } from "@/ui/Button";
@@ -30,6 +22,14 @@ import { CheckerFill } from "@/ui/CheckerFill";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
+import {
+	CHECKER_CELL,
+	colors,
+	radii,
+	space,
+	typography,
+	webTransition,
+} from "@/ui/theme";
 import {
 	checkCanvasSize,
 	MAX_CANVAS_SIDE,

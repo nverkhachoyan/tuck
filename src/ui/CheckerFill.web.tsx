@@ -1,5 +1,5 @@
 import { StyleSheet, View, type ViewStyle } from "react-native";
-import { colors } from "@/theme";
+import { colors } from "./theme";
 
 /**
  * The checkerboard that stands for transparency, filling its parent: one

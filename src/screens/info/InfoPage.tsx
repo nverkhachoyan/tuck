@@ -2,9 +2,9 @@ import { type Href, Link, useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, space, typography } from "@/theme";
-import { PageHead } from "./PageHead";
-import { ScreenHeader } from "./ScreenHeader";
+import { PageHead } from "@/ui/PageHead";
+import { ScreenHeader } from "@/ui/ScreenHeader";
+import { colors, space, typography } from "@/ui/theme";
 
 // A line of running text this wide reads comfortably.
 const MAX_WIDTH = 640;

@@ -15,9 +15,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { colors, radii, typography } from "@/theme";
 import { IconButton } from "./IconButton";
 import { Surface } from "./Surface";
+import { colors, radii, typography } from "./theme";
 
 // `webTransition`'s curve, for arriving, and its mirror for leaving.
 const DECELERATE = Easing.bezier(0.2, 0, 0, 1);

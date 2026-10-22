@@ -81,7 +81,7 @@
 			}
 		},
 		{
-			"includes": ["src/ui/**", "src/theme.ts"],
+			"includes": ["src/ui/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -97,12 +97,9 @@
 											"!@/lib/**",
 											"!../lib/**",
 											"!@/ui/**",
-											"!../ui/**",
-											"!@/theme",
-											"!../theme",
-											"!../theme.ts"
+											"!../ui/**"
 										],
-										"message": "ui/ and theme.ts import only each other and lib/, never app code. See AGENTS.md."
+										"message": "ui/ imports only itself and lib/, never app code. See AGENTS.md."
 									}
 								]
 							}
@@ -161,10 +158,9 @@
 											"!@/store/**",
 											"!../store",
 											"!../store/**",
-											"!@/ui/**",
-											"!@/theme"
+											"!@/ui/**"
 										],
-										"message": "Shared capabilities (photos/, projects/, render/) import only store/, model/, lib/, ui/, and theme.ts: not each other, and no screen. See AGENTS.md."
+										"message": "Shared capabilities (photos/, projects/, render/) import only store/, model/, lib/, and ui/: not each other, and no screen. See AGENTS.md."
 									}
 								]
 							}
@@ -289,33 +285,6 @@
 											"@/app/**",
 											"@/screens/**",
 											"!@/screens/home/**",
-											"../**",
-											"!../../model/**"
-										],
-										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/settings/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"!@/screens/settings/**",
 											"../**",
 											"!../../model/**"
 										],

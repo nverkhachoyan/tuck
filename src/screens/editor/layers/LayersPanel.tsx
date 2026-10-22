@@ -8,11 +8,11 @@ import Animated, {
 	useSharedValue,
 } from "react-native-reanimated";
 import type { Layer, LayerGroup } from "@/model/document";
-import { colors, radii, typography } from "@/theme";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
 import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
+import { colors, radii, typography } from "@/ui/theme";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 
 const SIDEBAR_WIDTH = 340;

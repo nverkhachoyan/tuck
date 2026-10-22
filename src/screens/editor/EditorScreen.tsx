@@ -132,7 +132,6 @@ import {
 	selectSelectedTextLayer,
 	useStore,
 } from "@/store";
-import { colors, space, typography } from "@/theme";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
@@ -142,6 +141,7 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
 import { TextButton } from "@/ui/TextButton";
 import { Toast } from "@/ui/Toast";
+import { colors, space, typography } from "@/ui/theme";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import {
 	type EditorModeAction,

@@ -16,10 +16,10 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { colors, radii, typography, webTransition } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 
 // A tool's narrowest width, and the space a row of them leaves between them
 // and at its ends while they fit.

@@ -1,9 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radii, typography } from "@/theme";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { Surface } from "@/ui/Surface";
+import { colors, radii, typography } from "@/ui/theme";
 
 /**
  * Says why edits aren't being saved, across the top of the canvas, with a

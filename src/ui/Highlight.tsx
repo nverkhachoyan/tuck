@@ -7,7 +7,7 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import { colors } from "@/theme";
+import { colors } from "./theme";
 
 // A little off square, as a marker stroke is.
 const TILT = "-2deg";

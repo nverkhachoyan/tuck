@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
-import { colors } from "@/theme";
+import { colors } from "./theme";
 
 // Wide enough to spare a margin around the stage.
 const FRAMED_MIN_WIDTH = 600;

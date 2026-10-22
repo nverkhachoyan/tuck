@@ -7,9 +7,9 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { colors, radii, space, typography, webTransition } from "@/theme";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
+import { colors, radii, space, typography, webTransition } from "./theme";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type ButtonVariant = "primary" | "secondary" | "danger";

@@ -68,7 +68,7 @@ import { shapePath } from "@/render/ShapeLayerView";
 import { TextLayerView } from "@/render/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
 import { useDecodedImage } from "@/render/useDecodedImage";
-import { colorScheme, colors } from "@/theme";
+import { colorScheme, colors } from "@/ui/theme";
 import type { TextEditState } from "../editorMode";
 import type { CanvasTool } from "./canvasInput";
 import { handleSides } from "./handleGeometry";

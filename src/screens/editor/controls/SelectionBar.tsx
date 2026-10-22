@@ -1,11 +1,11 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ComponentProps, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii, typography, webTransition } from "@/theme";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 

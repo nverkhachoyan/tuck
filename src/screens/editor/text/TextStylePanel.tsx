@@ -17,10 +17,10 @@ import {
 	textFonts,
 } from "@/model/document";
 import { TEXT_FONTS } from "@/render/fonts";
-import { colors, radii, typography, webTransition } from "@/theme";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { ColorPicker } from "../controls/ColorPicker";
 import { ColorSwatches, isCustomColor } from "../controls/ColorSwatches";
 import { ToolOption, ToolOptions } from "../controls/ToolOptions";

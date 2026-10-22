@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { colors } from "@/theme";
 import { RingChoice } from "@/ui/RingChoice";
+import { colors } from "@/ui/theme";
 import { ToolButton, ToolRow } from "../controls/ToolButton";
 import {
 	SIZE_DOTS,

@@ -7,9 +7,9 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import { colors, floatingShadow, radii, space, typography } from "@/theme";
 import { Announcement } from "./Announcement";
 import { TextButton } from "./TextButton";
+import { colors, floatingShadow, radii, space, typography } from "./theme";
 
 const RISE = { duration: 160, easing: Easing.out(Easing.cubic) };
 

@@ -13,11 +13,11 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
 import { usePreference } from "@/lib/usePreference";
-import { colors, radii, typography, webTransition } from "@/theme";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 import {
 	STICKER_CATEGORY_LABELS,
 	STICKERS,

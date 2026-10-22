@@ -1,10 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
 import { Pressable, StyleSheet } from "react-native";
-import { colors, webTransition } from "@/theme";
 import { Highlight } from "./Highlight";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
+import { colors, webTransition } from "./theme";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type IconButtonTone = "default" | "danger";
