@@ -46,14 +46,8 @@ import {
 	cursorForHandle,
 	cursorStyle,
 } from "./canvasCursor";
-import { type CanvasInput, inputRules } from "./canvasInput";
-import {
-	type CanvasTool,
-	type DetectionOverlayRegion,
-	EditorScene,
-	type LiveAdjustment,
-	type LiveStroke,
-} from "./EditorScene";
+import { type CanvasInput, type CanvasTool, inputRules } from "./canvasInput";
+import { EditorScene, type LiveAdjustment } from "./EditorScene";
 import { handleMetrics, handleUnder } from "./handleMetrics";
 import {
 	detectionAt,
@@ -61,6 +55,7 @@ import {
 	hitsLayer,
 	type LayerTarget,
 } from "./hitTest";
+import type { LiveStroke } from "./LiveStrokeOverlay";
 import { layerBounds } from "./layerBounds";
 import { layerTargets, resizeMode } from "./layerTargets";
 import {
@@ -70,6 +65,7 @@ import {
 	syncLiveTransform,
 	useLiveTransform,
 } from "./liveTransform";
+import type { DetectionOverlayRegion } from "./SelectionOverlay";
 import {
 	placeSelectionBar,
 	selectionScreenBounds,

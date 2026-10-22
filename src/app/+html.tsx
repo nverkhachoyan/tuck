@@ -5,7 +5,7 @@ import {
 import type { ReactNode } from "react";
 import { SITE_URL, SUPPORT_EMAIL } from "@/lib/site";
 
-// The day and night palettes' `background` and `textPrimary` (`theme.ts`):
+// The day and night palettes' `background` and `textPrimary` (`ui/theme.ts`):
 // this page is rendered ahead of time, before the browser says which the app
 // will use.
 const dayBackground = "#FFFFFF";
@@ -51,7 +51,7 @@ function Fallback({ title, children }: { title: string; children: ReactNode }) {
 	);
 }
 
-// Before anything paints, applies a palette chosen in Settings (`theme.ts`
+// Before anything paints, applies a palette chosen in Settings (`ui/theme.ts`
 // reads the same preference) to the page and the browser's chrome.
 const applySavedTheme = `try {
 	var theme = JSON.parse(localStorage.getItem("tuck:theme"));

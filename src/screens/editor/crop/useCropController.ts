@@ -42,7 +42,7 @@ export const ASPECTS = [
 	{ id: "9:16", label: "9:16", ratio: 9 / 16 },
 	{ id: "16:9", label: "16:9", ratio: 16 / 9 },
 ] as const;
-export type AspectId = (typeof ASPECTS)[number]["id"];
+type AspectId = (typeof ASPECTS)[number]["id"];
 
 const TURNED: Partial<Record<AspectId, AspectId>> = {
 	"4:5": "5:4",

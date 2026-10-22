@@ -137,7 +137,35 @@
 			}
 		},
 		{
-			"includes": ["src/photos/**", "src/projects/**", "src/render/**"],
+			"includes": ["src/photos/**", "src/projects/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!@/model/**",
+											"!../model/**",
+											"!@/lib/**",
+											"!../lib/**"
+										],
+										"message": "photos/ and projects/ import only model/ and lib/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/render/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -154,13 +182,9 @@
 											"!../model/**",
 											"!@/lib/**",
 											"!../lib/**",
-											"!@/store",
-											"!@/store/**",
-											"!../store",
-											"!../store/**",
 											"!@/ui/**"
 										],
-										"message": "Shared capabilities (photos/, projects/, render/) import only store/, model/, lib/, and ui/: not each other, and no screen. See AGENTS.md."
+										"message": "render/ imports only model/, lib/, and ui/: no store, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -180,7 +204,7 @@
 								"patterns": [
 									{
 										"group": ["image-analysis"],
-										"message": "Only the editor's detection/ imports the image-analysis bridge. See AGENTS.md."
+										"message": "Only the editor's find/ and cutout/ import the image-analysis bridge. See AGENTS.md."
 									}
 								]
 							}
@@ -311,7 +335,15 @@
 											"image-analysis",
 											"@/app/**",
 											"@/screens/**",
-											"!@/screens/editor/**"
+											"!@/screens/editor/**",
+											"../create/**",
+											"../export/**",
+											"../home/**",
+											"../info/**",
+											"../../create/**",
+											"../../export/**",
+											"../../home/**",
+											"../../info/**"
 										],
 										"message": "The editor doesn't import routes or another screen, and only find/imageDetection.ts and cutout/subjectDetection.ts import image-analysis. See AGENTS.md."
 									}
@@ -324,15 +356,7 @@
 		},
 		{
 			"includes": [
-				"src/screens/editor/adjust/**",
 				"src/screens/editor/crop/**",
-				"src/screens/editor/cutout/**",
-				"src/screens/editor/draw/**",
-				"src/screens/editor/find/**",
-				"src/screens/editor/layers/**",
-				"src/screens/editor/redact/**",
-				"src/screens/editor/stickers/**",
-				"src/screens/editor/text/**",
 				"src/screens/editor/canvas/**"
 			],
 			"linter": {
@@ -367,7 +391,61 @@
 											"../text/**",
 											"@/screens/editor/text/**"
 										],
-										"message": "The editor's tools (adjust/, crop/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other, and canvas/ imports none of them: what they share is at the editor root or in canvas/ or controls/. See AGENTS.md."
+										"message": "canvas/ and crop/ don't import the editor's other tools. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/screens/editor/adjust/**",
+				"src/screens/editor/cutout/**",
+				"src/screens/editor/draw/**",
+				"src/screens/editor/find/**",
+				"src/screens/editor/layers/**",
+				"src/screens/editor/redact/**",
+				"src/screens/editor/stickers/**",
+				"src/screens/editor/text/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/editor/**",
+											"../adjust/**",
+											"@/screens/editor/adjust/**",
+											"../canvas/**",
+											"@/screens/editor/canvas/**",
+											"../crop/**",
+											"@/screens/editor/crop/**",
+											"../cutout/**",
+											"@/screens/editor/cutout/**",
+											"../draw/**",
+											"@/screens/editor/draw/**",
+											"../find/**",
+											"@/screens/editor/find/**",
+											"../layers/**",
+											"@/screens/editor/layers/**",
+											"../redact/**",
+											"@/screens/editor/redact/**",
+											"../stickers/**",
+											"@/screens/editor/stickers/**",
+											"../text/**",
+											"@/screens/editor/text/**"
+										],
+										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root or in controls/. See AGENTS.md."
 									}
 								]
 							}

@@ -4,7 +4,6 @@ import { devtools } from "zustand/middleware";
 import {
 	createEditorSlice,
 	type EditorSlice,
-	type SliceCreator,
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
@@ -15,7 +14,6 @@ import {
 
 export {
 	type EditorSlice,
-	type SliceCreator,
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,

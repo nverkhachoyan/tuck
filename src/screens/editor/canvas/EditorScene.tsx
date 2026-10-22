@@ -23,10 +23,6 @@ import {
 	useScreenPixels,
 } from "./SelectionOverlay";
 
-export type { CanvasTool } from "./canvasInput";
-export type { LiveStroke } from "./LiveStrokeOverlay";
-export type { DetectionOverlayRegion } from "./SelectionOverlay";
-
 // The canvas's shadows on the table around it, as a print's: a tight one
 // where it touches and a soft one that lifts it, in screen pixels. At night,
 // where a shadow barely shows, a hairline edge keeps a black canvas visible.

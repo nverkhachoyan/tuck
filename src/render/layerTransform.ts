@@ -1,7 +1,5 @@
 import type { Transform } from "@/model/geometry";
 
-export type TransformList = ReturnType<typeof toTransformList>;
-
 /**
  * Skia's transform list for a layer's document-space transform. A worklet,
  * so a `useDerivedValue` can build it from live gesture values on the UI

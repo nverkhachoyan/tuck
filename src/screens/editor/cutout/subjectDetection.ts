@@ -10,7 +10,7 @@ import {
 	subjectMask,
 } from "image-analysis";
 
-export type { ImagePoint, SubjectMask };
+export type { ImagePoint };
 
 /** Whether this device can find a photo's subject to cut out. */
 export function isCutOutAvailable(): boolean {

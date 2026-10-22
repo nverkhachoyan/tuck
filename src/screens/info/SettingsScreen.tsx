@@ -25,7 +25,7 @@ export default function SettingsScreen() {
 		if (value === chosen) return;
 		setChosen(value);
 		writePreference(THEME_PREFERENCE, value);
-		// Every style reads the palette as it's created (`theme.ts`).
+		// Every style reads the palette as it's created (`ui/theme.ts`).
 		setTimeout(() => void reloadAppAsync("Theme changed"), RELOAD_DELAY);
 	};
 

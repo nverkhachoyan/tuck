@@ -33,7 +33,7 @@ let fontsPromise: Promise<void> | null = null;
 let fontsFailed = false;
 
 /** Registers the text fonts with Skia and React Native. Safe to call repeatedly. */
-export function loadFonts(): Promise<void> {
+function loadFonts(): Promise<void> {
 	const fonts = Object.values(TEXT_FONTS);
 	fontsPromise ??= Promise.all([
 		loadSkiaFonts(),

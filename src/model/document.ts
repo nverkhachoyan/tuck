@@ -291,7 +291,7 @@ export const identityTransform: Transform = {
 
 let nextLayerId = 0;
 
-export function createLayerId(prefix: string): string {
+function createLayerId(prefix: string): string {
 	nextLayerId += 1;
 	return `${prefix}-${Date.now().toString(36)}-${nextLayerId}`;
 }
@@ -366,7 +366,7 @@ export function centeredTransform(width: number, height: number): Transform {
  * The whole of a document, where a new layer goes unless it's given the
  * part the editor shows.
  */
-export function documentArea(document: EditorDocument): Rect {
+function documentArea(document: EditorDocument): Rect {
 	return { x: 0, y: 0, width: document.width, height: document.height };
 }
 

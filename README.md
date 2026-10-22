@@ -73,11 +73,11 @@ Key areas:
 - `src/lib/` holds platform shims, small language helpers, and the site's address (`site.ts`).
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.
 
-Imports flow one way: `app` → `screens` → `photos` / `render` / `projects` →
+Imports flow one way: `app` → `screens` → `photos` / `render` / `projects` /
 `store` → `model`. `ui` and `lib` import nothing from the screens.
 Lint rules in `biome.json` enforce these boundaries. Adding a layer
 type means a type in `model/document.ts`, a view in `render/`, and a case in
-both `EditorScene` and `DocumentRenderScene` (`assertNever` flags any you miss).
+`LayerContent` and `DocumentRenderScene` (`assertNever` flags any you miss).
 
 Platform differences live in `.web.ts` files next to their native versions
 (`saveImage.web.ts` downloads instead of saving to Photos; `projectStorage.web.ts`

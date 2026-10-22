@@ -49,9 +49,8 @@ import {
 	ADJUST_DIAL_SCALE,
 	useAdjustController,
 } from "./adjust/useAdjustController";
-import type { CanvasInput } from "./canvas/canvasInput";
+import type { CanvasInput, CanvasTool } from "./canvas/canvasInput";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import type { CanvasTool } from "./canvas/EditorScene";
 import { isCustomColor } from "./controls/ColorSwatches";
 import type { DialDrag } from "./controls/Dial";
 import {

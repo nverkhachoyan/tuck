@@ -196,7 +196,7 @@ export const selectCanUndo = ({ past, document, session }: EditorSlice) =>
 export const selectCanRedo = ({ future, session }: EditorSlice) =>
 	future.length > 0 && future[0] !== session?.redoStop;
 
-export type SliceCreator<Slice> = StateCreator<
+type SliceCreator<Slice> = StateCreator<
 	EditorSlice,
 	[["zustand/devtools", never]],
 	[],

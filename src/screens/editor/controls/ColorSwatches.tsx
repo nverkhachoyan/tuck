@@ -7,7 +7,7 @@ const SWATCH_SIZE = 26;
 // The custom color's dot, inside the custom swatch's rainbow.
 const CUSTOM_DOT = 14;
 
-export const SWATCHES = [
+const SWATCHES = [
 	{ color: "#FFFFFF", name: "White" },
 	{ color: "#000000", name: "Black" },
 	{ color: "#FF3B30", name: "Red" },
