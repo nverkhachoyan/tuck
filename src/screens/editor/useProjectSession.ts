@@ -2,15 +2,13 @@ import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
 import type { EditorDocument } from "@/model/document";
+import { NEWER_VERSION_MESSAGE } from "@/projects/projectLifecycle";
+import { projectRouteId, UNSAVED_PROJECT } from "@/projects/projectRoute";
+import { closeProject, openProject } from "@/projects/projectService";
+import { renderThumbnail } from "@/render/renderDocument";
 import { useStore } from "@/store";
-import {
-	NEWER_VERSION_MESSAGE,
-	type RenderThumbnail,
-} from "./projectLifecycle";
-import { projectRouteId, UNSAVED_PROJECT } from "./projectRoute";
-import { closeProject, openProject } from "./projectService";
 
-export type ProjectSession =
+type ProjectSession =
 	| { status: "open"; document: EditorDocument }
 	| { status: "opening" }
 	| { status: "failed"; message: string; retry: () => void };
@@ -22,10 +20,7 @@ export type ProjectSession =
  * holds. Only while the route is in front: one left behind in the stack for
  * another project waits until the user comes back to it.
  */
-export function useProjectSession(
-	routeId: string,
-	renderThumbnail: RenderThumbnail,
-): ProjectSession {
+export function useProjectSession(routeId: string): ProjectSession {
 	const document = useStore((state) =>
 		state.document !== null && projectRouteId(state.projectId) === routeId
 			? state.document
@@ -52,14 +47,14 @@ export function useProjectSession(
 	useEffect(() => {
 		if (document || !focused || failed || opening.current) return;
 		opening.current = true;
-		void switchToProject(routeId, renderThumbnail, () => wanted.current)
+		void switchToProject(routeId, () => wanted.current)
 			.catch((error: unknown) => {
 				setFailure({ routeId, message: errorMessage(error) });
 			})
 			.finally(() => {
 				opening.current = false;
 			});
-	}, [document, focused, failed, routeId, renderThumbnail]);
+	}, [document, focused, failed, routeId]);
 
 	const retry = useCallback(() => setFailure(null), []);
 
@@ -68,11 +63,7 @@ export function useProjectSession(
 	return { status: "opening" };
 }
 
-async function switchToProject(
-	routeId: string,
-	renderThumbnail: RenderThumbnail,
-	stillWanted: () => boolean,
-) {
+async function switchToProject(routeId: string, stillWanted: () => boolean) {
 	if (routeId === UNSAVED_PROJECT) {
 		throw new Error("This photo couldn't be saved, so it can't be reopened.");
 	}

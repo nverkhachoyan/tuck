@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import { AppState, Platform } from "react-native";
 import { type EditorDocument, hasEdits } from "@/model/document";
-import { projects } from "./projectService";
+import { projects } from "@/projects/projectService";
 
 /**
  * Saves the open project once edits pause, and right away when the app

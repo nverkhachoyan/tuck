@@ -28,9 +28,7 @@ import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage, openProjectName } from "@/projects/projectService";
-import { useAutosave } from "@/projects/useAutosave";
-import { useProjectSession } from "@/projects/useProjectSession";
-import { renderThumbnail, sampleColor } from "@/render/renderDocument";
+import { sampleColor } from "@/render/renderDocument";
 import { textIndexAt } from "@/render/textLayerLayout";
 import {
 	selectSelectedLayer,
@@ -103,10 +101,12 @@ import { useStickerSave } from "./stickers/useStickerSave";
 import { TextEditor } from "./text/TextEditor";
 import { type TextEditing, useTextEditing } from "./text/useTextEditing";
 import { useAddImage } from "./useAddImage";
+import { useAutosave } from "./useAutosave";
 import { useDeleteNotice } from "./useDeleteNotice";
 import { useEditorActions } from "./useEditorActions";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
+import { useProjectSession } from "./useProjectSession";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
@@ -130,7 +130,7 @@ const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 export default function EditorScreen() {
 	const router = useRouter();
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const session = useProjectSession(id, renderThumbnail);
+	const session = useProjectSession(id);
 
 	if (session.status === "open") {
 		return <ScreenContent document={session.document} />;
