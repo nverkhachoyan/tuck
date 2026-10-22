@@ -16,106 +16,6 @@ import {
 	View,
 } from "react-native";
 import { detectionTarget } from "@/detection/detectionTarget";
-import { AddSheet } from "@/features/editor/add/AddSheet";
-import { AdjustPanel } from "@/features/editor/adjust/AdjustPanel";
-import {
-	ADJUST_DIAL_MAX,
-	ADJUST_DIAL_SCALE,
-	adjustTarget,
-	useAdjustController,
-} from "@/features/editor/adjust/useAdjustController";
-import { EyedropperHint } from "@/features/editor/ColorPicker";
-import { isCustomColor } from "@/features/editor/ColorSwatches";
-import type { CanvasInput } from "@/features/editor/canvas/canvasInput";
-import {
-	EditorCanvas,
-	type EditorCanvasHandle,
-} from "@/features/editor/canvas/EditorCanvas";
-import type { CanvasTool } from "@/features/editor/canvas/EditorScene";
-import { CropTool } from "@/features/editor/crop/CropTool";
-import {
-	CutOutOptions,
-	CutOutPanel,
-} from "@/features/editor/cutout/CutOutPanel";
-import {
-	type CutOutSettings,
-	cutBrush,
-	cutOutTool,
-	parseCutOutSettings,
-} from "@/features/editor/cutout/cutOutSettings";
-import { useCutOut } from "@/features/editor/cutout/useCutOut";
-import { useCutRedaction } from "@/features/editor/cutout/useCutRedaction";
-import type { DialDrag } from "@/features/editor/Dial";
-import {
-	Dock,
-	DockFooter,
-	INSPECTOR_TRAY_TOP,
-	INSPECTOR_WIDTH,
-	InspectorBackdrop,
-	useDockInset,
-} from "@/features/editor/Dock";
-import { brushFor, shapeStyleFor } from "@/features/editor/draw/brushSettings";
-import { BrushOptions, DrawPanel } from "@/features/editor/draw/DrawPanel";
-import { useDrawTool } from "@/features/editor/draw/useDrawTool";
-import {
-	type EditorModeAction,
-	type EditorModeState,
-	type EditorTool,
-	type ShortcutCommand,
-	shortcutCommand,
-	takesKeys,
-} from "@/features/editor/editorMode";
-import { LayerActionsPanel } from "@/features/editor/panels/LayerActionsPanel";
-import { layerKindName } from "@/features/editor/panels/LayerRow";
-import {
-	LAYERS_SIDEBAR_INSET,
-	LayersPanel,
-} from "@/features/editor/panels/LayersPanel";
-import {
-	type ArrangeMove,
-	SelectionBar,
-} from "@/features/editor/panels/SelectionBar";
-import { ToolsPanel } from "@/features/editor/panels/ToolsPanel";
-import {
-	DetectionOptions,
-	FindPanel,
-} from "@/features/editor/redact/DetectionOptions";
-import {
-	RedactOptions,
-	RedactPanel,
-} from "@/features/editor/redact/RedactPanel";
-import {
-	maskBrush,
-	redactionEffect,
-} from "@/features/editor/redact/redactSettings";
-import { useFindTool } from "@/features/editor/redact/useFindTool";
-import { useRedactTool } from "@/features/editor/redact/useRedactTool";
-import { SaveErrorBanner } from "@/features/editor/SaveErrorBanner";
-import { ShortcutsOverlay } from "@/features/editor/ShortcutsOverlay";
-import {
-	LAYERS_KEY,
-	type Shortcut,
-	type ToolKey,
-} from "@/features/editor/shortcuts";
-import { TrayHeight, TrayPlacement } from "@/features/editor/ToolOptions";
-import { TextEditor } from "@/features/editor/text/TextEditor";
-import {
-	TextColorPicker,
-	TextStylePanel,
-} from "@/features/editor/text/TextStylePanel";
-import {
-	type TextEditing,
-	useTextEditing,
-} from "@/features/editor/text/useTextEditing";
-import { useAddImage } from "@/features/editor/useAddImage";
-import { useDeleteNotice } from "@/features/editor/useDeleteNotice";
-import {
-	type EditorActions,
-	useEditorActions,
-} from "@/features/editor/useEditorActions";
-import { useEditorMode } from "@/features/editor/useEditorMode";
-import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
-import { useStickerSave } from "@/features/editor/useStickerSave";
 import { textIndexAt } from "@/layers/textLayerLayout";
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
@@ -144,6 +44,106 @@ import {
 	renderThumbnail,
 	sampleColor,
 } from "@/render/renderDocument";
+import { AddSheet } from "@/screens/editor/add/AddSheet";
+import { AdjustPanel } from "@/screens/editor/adjust/AdjustPanel";
+import {
+	ADJUST_DIAL_MAX,
+	ADJUST_DIAL_SCALE,
+	adjustTarget,
+	useAdjustController,
+} from "@/screens/editor/adjust/useAdjustController";
+import { EyedropperHint } from "@/screens/editor/ColorPicker";
+import { isCustomColor } from "@/screens/editor/ColorSwatches";
+import type { CanvasInput } from "@/screens/editor/canvas/canvasInput";
+import {
+	EditorCanvas,
+	type EditorCanvasHandle,
+} from "@/screens/editor/canvas/EditorCanvas";
+import type { CanvasTool } from "@/screens/editor/canvas/EditorScene";
+import { CropTool } from "@/screens/editor/crop/CropTool";
+import {
+	CutOutOptions,
+	CutOutPanel,
+} from "@/screens/editor/cutout/CutOutPanel";
+import {
+	type CutOutSettings,
+	cutBrush,
+	cutOutTool,
+	parseCutOutSettings,
+} from "@/screens/editor/cutout/cutOutSettings";
+import { useCutOut } from "@/screens/editor/cutout/useCutOut";
+import { useCutRedaction } from "@/screens/editor/cutout/useCutRedaction";
+import type { DialDrag } from "@/screens/editor/Dial";
+import {
+	Dock,
+	DockFooter,
+	INSPECTOR_TRAY_TOP,
+	INSPECTOR_WIDTH,
+	InspectorBackdrop,
+	useDockInset,
+} from "@/screens/editor/Dock";
+import { brushFor, shapeStyleFor } from "@/screens/editor/draw/brushSettings";
+import { BrushOptions, DrawPanel } from "@/screens/editor/draw/DrawPanel";
+import { useDrawTool } from "@/screens/editor/draw/useDrawTool";
+import {
+	type EditorModeAction,
+	type EditorModeState,
+	type EditorTool,
+	type ShortcutCommand,
+	shortcutCommand,
+	takesKeys,
+} from "@/screens/editor/editorMode";
+import { LayerActionsPanel } from "@/screens/editor/panels/LayerActionsPanel";
+import { layerKindName } from "@/screens/editor/panels/LayerRow";
+import {
+	LAYERS_SIDEBAR_INSET,
+	LayersPanel,
+} from "@/screens/editor/panels/LayersPanel";
+import {
+	type ArrangeMove,
+	SelectionBar,
+} from "@/screens/editor/panels/SelectionBar";
+import { ToolsPanel } from "@/screens/editor/panels/ToolsPanel";
+import {
+	DetectionOptions,
+	FindPanel,
+} from "@/screens/editor/redact/DetectionOptions";
+import {
+	RedactOptions,
+	RedactPanel,
+} from "@/screens/editor/redact/RedactPanel";
+import {
+	maskBrush,
+	redactionEffect,
+} from "@/screens/editor/redact/redactSettings";
+import { useFindTool } from "@/screens/editor/redact/useFindTool";
+import { useRedactTool } from "@/screens/editor/redact/useRedactTool";
+import { SaveErrorBanner } from "@/screens/editor/SaveErrorBanner";
+import { ShortcutsOverlay } from "@/screens/editor/ShortcutsOverlay";
+import {
+	LAYERS_KEY,
+	type Shortcut,
+	type ToolKey,
+} from "@/screens/editor/shortcuts";
+import { TrayHeight, TrayPlacement } from "@/screens/editor/ToolOptions";
+import { TextEditor } from "@/screens/editor/text/TextEditor";
+import {
+	TextColorPicker,
+	TextStylePanel,
+} from "@/screens/editor/text/TextStylePanel";
+import {
+	type TextEditing,
+	useTextEditing,
+} from "@/screens/editor/text/useTextEditing";
+import { useAddImage } from "@/screens/editor/useAddImage";
+import { useDeleteNotice } from "@/screens/editor/useDeleteNotice";
+import {
+	type EditorActions,
+	useEditorActions,
+} from "@/screens/editor/useEditorActions";
+import { useEditorMode } from "@/screens/editor/useEditorMode";
+import { useEditorShortcuts } from "@/screens/editor/useEditorShortcuts";
+import { useStickerSave } from "@/screens/editor/useStickerSave";
 import { bundledStickerImage } from "@/stickers/stickerFile";
 import { useSavedStickers } from "@/stickers/useSavedStickers";
 import { useStore } from "@/store";

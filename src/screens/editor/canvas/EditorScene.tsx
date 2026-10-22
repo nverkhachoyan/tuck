@@ -28,7 +28,6 @@ import {
 import type { MappedDetectionRect } from "@/detection/mapDetectionRects";
 import { BrushStroke, strokePath } from "@/layers/DrawingLayerView";
 import { MaskStrokePath } from "@/layers/ImageLayerView";
-import { layerBounds } from "@/layers/layerBounds";
 import {
 	toInverseTransformList,
 	toTransformList,
@@ -76,6 +75,7 @@ import type { TextEditState } from "../editorMode";
 import { handleSides } from "../handles/handleGeometry";
 import { handleMetrics, shownHandles } from "../handles/handleMetrics";
 import { useDecodedImage } from "../useDecodedImage";
+import { layerBounds } from "./layerBounds";
 import { type LiveTransform, readLiveTransform } from "./liveTransform";
 import { shapeFromDrag } from "./shapeDrag";
 

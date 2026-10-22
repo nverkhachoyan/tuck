@@ -56,7 +56,7 @@ The goal is a `ScreenContent` that reads as composition: hooks that each own one
 
 Built as approved. `editorMode.ts` holds the mode union, its reducer, `settle`, `shortcutCommand`, and `takesKeys`, with 26 tests: the transitions, each correction, and each key rule. `useEditorMode.ts` holds it for the screen and settles it as it renders. In `ScreenContent`, nine `useState`s and three render-time corrections became one hook, and `handleShortcut` became a lookup plus a `switch` that runs the result. `TextColorKey` moved to `editorMode.ts`. Checked on web with headless Chrome: each tool from the rail, its key, and the dock; Escape at each level (eyedropper, tool, Add, the shortcuts list, crop, typing); the eyedropper from Draw, Redact, Find, and a text color picker while typing; the layers sheet closing for a tool and staying open under crop at 390pt; Find and Adjust put down by a redo, with Draw then opening with its tray closed; and a picker closed by undo selecting other text, which redo doesn't reopen. Bug 1 still reproduces, as intended until 2.1b.
 
-Put findings 1 and 4's precedence in one pure module, `features/editor/editorMode.ts`, with tests. Roughly: a base mode (`idle`, `tool` with its options' open state, `text` with its edit, `crop`), overlays that sit on a mode (the eyedropper, a text color picker), and sheets (layers, Add, shortcuts). Its transitions carry the rules that are scattered today: starting anything closes the layers sheet, starting a tool from the rail finishes the one in use, and a tool whose target is gone reads as no tool. It's derived from the document, not corrected by a `setState` during render.
+Put findings 1 and 4's precedence in one pure module, `screens/editor/editorMode.ts`, with tests. Roughly: a base mode (`idle`, `tool` with its options' open state, `text` with its edit, `crop`), overlays that sit on a mode (the eyedropper, a text color picker), and sheets (layers, Add, shortcuts). Its transitions carry the rules that are scattered today: starting anything closes the layers sheet, starting a tool from the rail finishes the one in use, and a tool whose target is gone reads as no tool. It's derived from the document, not corrected by a `setState` during render.
 
 * Move `handleShortcut`'s precedence into a pure function of the mode, the selection, and the shortcut, returning what to do, and test it against today's behavior shortcut by shortcut.
 * Before building, write down today's precedence from `handleShortcut`, `fromRail`, and the render-time corrections, and show the proposed state type beside it.
@@ -86,7 +86,7 @@ Approved on 2026-09-30, with the tray's open state inside the tool mode. That fi
 * Three render-time corrections: Adjust puts itself down when its image is gone or hidden, and Find does when no photo is left. Neither closes the tray or stops the eyedropper. A text color picker closes when a tool is open, or when the text being styled is another layer.
 * Some can be on together: a tray and the eyedropper (Style reopens the tray while the eyedropper waits), a text color picker and the eyedropper (the dock opens a picker for another color), and the shortcuts list over the Add sheet. The layers and Add sheets can't: the Add sheet's scrim covers the Layers button, and L is held while it's open.
 
-**Proposed.** `features/editor/editorMode.ts`, pure, with tests:
+**Proposed.** `screens/editor/editorMode.ts`, pure, with tests:
 
 ```ts
 export type EditorMode<TextEdit> =

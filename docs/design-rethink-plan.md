@@ -36,7 +36,7 @@ Taken from the review's recommendations. The user can overturn any of them befor
 Built as described. The dock's end columns are now as wide as their button (48pt), which fits Redact's five tools at 390pt; the text tabs size to their labels. The adjusted image is outlined only when the document has other images, where it could be mistaken for one of them. MediaPipe's info lines are demoted to `console.info` in `modules/image-analysis/src/mediaPipeFaces.ts`, since `LogBox.ignoreLogs` is a no-op on web.
 
 * **Redact's fifth tool is clipped at 390pt**, and **the text style tabs collide while typing.** The dock's end columns (`end` in `Dock.tsx`, `BUTTON_SIZE + 12` each) leave 270pt, and five 56pt tools don't fit. Phase 2's footer is the real fix; until then, narrow the end columns so the rows fit at 390pt.
-* **Share and Copy don't fill their row on a phone** (`features/export/ExportScreen.tsx`): `actionWide` (`flex: 1`) only applies when the layout is wide. Apply it in the narrow row too.
+* **Share and Copy don't fill their row on a phone** (`screens/export/ExportScreen.tsx`): `actionWide` (`flex: 1`) only applies when the layout is wide. Apply it in the narrow row too.
 * **A black swatch disappears on the dock**: Redact's Style tile draws its color with no ring. Give it the hairline ring every swatch gets (rule 3).
 * **Find takes two taps**: the dock's Find opens a card whose only action is a second Find (`redact/DetectionOptions.tsx`, the "choosing" state). Start detection from the dock's Find.
 * **Adjust**: the photo keeps its blue selection outline while it's being adjusted, as if it were being moved. Hide it in Adjust. Make the value under the icons readable (primary text).
@@ -125,7 +125,7 @@ Each adjustment is an icon over its name. While the dial moves, the value shows 
 
 ### 4.1 Export as a sheet (done, except quick copy)
 
-The export route stays and is presented as a `transparentModal`, so the editor shows behind the sheet and features still don't import each other. Sizes are named Full size (or Largest), Medium, and Small; picking JPEG for a transparent canvas says it fills transparency black. A saved export offers Back to Projects. Opened from a link or a reload, the route still sends the user to the editor, without the sheet. Long-press to copy is deferred (see Later): it needs export's sizing and clipboard code in a shared module and a toast to confirm.
+The export route stays and is presented as a `transparentModal`, so the editor shows behind the sheet and screens still don't import each other. Sizes are named Full size (or Largest), Medium, and Small; picking JPEG for a transparent canvas says it fills transparency black. A saved export offers Back to Projects. Opened from a link or a reload, the route still sends the user to the editor, without the sheet. Long-press to copy is deferred (see Later): it needs export's sizing and clipboard code in a shared module and a toast to confirm.
 
 * Export opens a sheet over the editor instead of navigating. It holds size as a two-way choice with names ("Full size", "Smaller") and pixels as the detail, format (JPEG or PNG, defaulting as `exportFormatFor` does, with "keeps transparency" under PNG), then Save (Download on web) as the primary action and Share and Copy side by side.
 * The `/projects/[id]/export` route still has to work from a link or a reload: send it to the editor with the sheet open, and keep `vercel.json`'s rewrite. Update AGENTS.md's routing learning.
@@ -154,7 +154,7 @@ Built with the review's mockup as the proposal. From 1024pt, `EditorScreen` puts
 
 `?` (with or without Shift) opens `ShortcutsOverlay`, listing `SHORTCUT_GROUPS` from `shortcuts.ts` in each platform's notation (`formatShortcut`, now exported by `ui/Tooltip`). Escape or `?` closes it, and other shortcuts wait while it's open.
 
-* `?` opens an overlay listing the keyboard shortcuts from `features/editor/shortcuts.ts`.
+* `?` opens an overlay listing the keyboard shortcuts from `screens/editor/shortcuts.ts`.
 
 ## Later, not in this plan
 

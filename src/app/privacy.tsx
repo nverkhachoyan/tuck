@@ -1,1 +1,1 @@
-export { default } from "@/features/about/PrivacyScreen";
+export { default } from "@/screens/about/PrivacyScreen";

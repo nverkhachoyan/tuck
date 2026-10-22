@@ -26,7 +26,7 @@ The audit ran the web build at iPhone width (390 × 844) and at desktop width. T
 
 ### 1a. The Find card crushes its text on a phone
 
-`src/features/editor/redact/DetectionOptions.tsx`. The card's content is a row: the text column (`styles.copy`, `flexShrink: 1`) beside the buttons, which can't shrink. At 390 points the Faces, Text, and Close buttons take nearly the whole width, and with no `minWidth` the text column shrinks to about one letter. "Find to redact" wraps as "Find / to / redac / t", and the description runs one word per line.
+`src/screens/editor/redact/DetectionOptions.tsx`. The card's content is a row: the text column (`styles.copy`, `flexShrink: 1`) beside the buttons, which can't shrink. At 390 points the Faces, Text, and Close buttons take nearly the whole width, and with no `minWidth` the text column shrinks to about one letter. "Find to redact" wraps as "Find / to / redac / t", and the description runs one word per line.
 
 Fix it for every state the card shows (choosing, working, found, empty, failed), not just the first: when the card is narrow, stack the text above the buttons, with the text at full width and the buttons in a row under it. Measure the card itself (`onLayout`) rather than the window, because the layers sidebar can narrow the canvas on web. Step 5 reworks this card's content, so keep the fix in the card's container, where it will survive.
 
@@ -109,7 +109,7 @@ Built Copy on Export (PNG clipboard images on web and native) and native Home Pa
 These are small features that complete the quick screenshot loop: copy a screenshot, paste it into Tuck, redact it, copy it out, and paste it into a chat.
 
 * Add `expo-clipboard` with `npx expo install expo-clipboard`, then run `npm run format` (AGENTS.md explains why). It's a native module, so rebuild the development build: `npx expo prebuild --clean`, then `npx expo run:ios` and `npx expo run:android`. Use `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` for iOS.
-* **Copy on export** (`features/export/ExportScreen.tsx`, next to Save and Share): copies the rendered image, then confirms with "Copied", as Save does with its saved state.
+* **Copy on export** (`screens/export/ExportScreen.tsx`, next to Save and Share): copies the rendered image, then confirms with "Copied", as Save does with its saved state.
   * On web, use `navigator.clipboard.write([new ClipboardItem({ "image/png": blobPromise })])`. Create the `ClipboardItem` synchronously inside the click handler and give it a promise: Safari refuses otherwise. Browsers only take `image/png` reliably, so copy PNG even when the export is JPEG.
   * On native, call `Clipboard.setImageAsync` with base64 PNG.
   * On a phone the buttons are stacked full-width, so lay them out as Save (primary) over Share and Copy side by side.

@@ -3,7 +3,7 @@ import {
 	useServerDocumentContext,
 } from "expo-router/html";
 import type { ReactNode } from "react";
-import { SUPPORT_EMAIL } from "@/features/about/InfoPage";
+import { SUPPORT_EMAIL } from "@/screens/about/InfoPage";
 import { SITE_URL } from "@/ui/PageHead";
 
 // The day and night palettes' `background` and `textPrimary` (`theme.ts`):

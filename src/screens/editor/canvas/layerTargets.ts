@@ -1,4 +1,3 @@
-import { layerBounds } from "@/layers/layerBounds";
 import {
 	type EditorDocument,
 	isLine,
@@ -8,6 +7,7 @@ import {
 import { shapeOutline } from "@/model/shapes";
 import type { ResizeMode } from "../handles/handleGeometry";
 import type { LayerTarget } from "./hitTest";
+import { layerBounds } from "./layerBounds";
 
 // Minimum comfortable touch padding around a layer, in screen pixels.
 export const HIT_PADDING_PX = 14;

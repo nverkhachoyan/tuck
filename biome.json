@@ -95,7 +95,7 @@
 		},
 		{
 			"includes": [
-				"src/features/editor/**",
+				"src/screens/editor/**",
 				"src/import/**",
 				"src/render/**",
 				"src/projects/**",
@@ -145,7 +145,7 @@
 			}
 		},
 		{
-			"includes": ["src/features/editor/*"],
+			"includes": ["src/screens/editor/*"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -188,7 +188,7 @@
 			}
 		},
 		{
-			"includes": ["src/features/editor/*/**"],
+			"includes": ["src/screens/editor/*/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -231,7 +231,7 @@
 			}
 		},
 		{
-			"includes": ["src/features/editor/EditorScreen.tsx"],
+			"includes": ["src/screens/editor/EditorScreen.tsx"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -243,11 +243,11 @@
 										"group": [
 											"image-analysis",
 											"@/app/**",
-											"@/features/**",
+											"@/screens/**",
 											"../**",
-											"!@/features/editor/**"
+											"!@/screens/editor/**"
 										],
-										"message": "An editor screen may compose its own feature and shared capabilities, but may not import routes or another feature. See AGENTS.md."
+										"message": "The editor may compose its own folder and shared capabilities, but may not import routes or another screen. See AGENTS.md."
 									}
 								]
 							}
@@ -257,7 +257,7 @@
 			}
 		},
 		{
-			"includes": ["src/features/home/**"],
+			"includes": ["src/screens/home/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -269,11 +269,11 @@
 										"group": [
 											"image-analysis",
 											"@/app/**",
-											"@/features/**",
+											"@/screens/**",
 											"../**",
-											"!@/features/home/**"
+											"!@/screens/home/**"
 										],
-										"message": "Home may not import routes or another feature. See AGENTS.md."
+										"message": "Home may not import routes or another screen. See AGENTS.md."
 									}
 								]
 							}
@@ -284,9 +284,9 @@
 		},
 		{
 			"includes": [
-				"src/features/about/**",
-				"src/features/create/**",
-				"src/features/export/**"
+				"src/screens/about/**",
+				"src/screens/create/**",
+				"src/screens/export/**"
 			],
 			"linter": {
 				"rules": {
@@ -299,11 +299,11 @@
 										"group": [
 											"image-analysis",
 											"@/app/**",
-											"@/features/**",
+											"@/screens/**",
 											"../**",
 											"!../../model/**"
 										],
-										"message": "Feature screens may not import routes or another feature. See AGENTS.md."
+										"message": "Screens may not import routes or another screen. See AGENTS.md."
 									}
 								]
 							}

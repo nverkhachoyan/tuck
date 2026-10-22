@@ -17,15 +17,15 @@ import {
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { HOME_MAX_WIDTH, ProjectList } from "@/features/home/ProjectList";
-import {
-	type HomeStatus,
-	useHomeProjects,
-} from "@/features/home/useHomeProjects";
 import { listenForLaunchedPhotos } from "@/import/sharedPhoto";
 import { usePhotoDrop } from "@/import/usePhotoDrop";
 import { useUpdateReady } from "@/lib/serviceWorker";
 import { editorHref } from "@/projects/projectRoute";
+import { HOME_MAX_WIDTH, ProjectList } from "@/screens/home/ProjectList";
+import {
+	type HomeStatus,
+	useHomeProjects,
+} from "@/screens/home/useHomeProjects";
 import { useStore } from "@/store";
 import {
 	colors,

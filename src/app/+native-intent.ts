@@ -1,1 +1,1 @@
-export { redirectSystemPath } from "@/features/home/sharedPhotoLink";
+export { redirectSystemPath } from "@/screens/home/sharedPhotoLink";

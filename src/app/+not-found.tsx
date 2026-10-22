@@ -1,1 +1,1 @@
-export { default } from "@/features/about/NotFoundScreen";
+export { default } from "@/screens/about/NotFoundScreen";

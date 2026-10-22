@@ -1,1 +1,1 @@
-export { default } from "@/features/editor/EditorScreen";
+export { default } from "@/screens/editor/EditorScreen";

@@ -27,7 +27,6 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { layerBounds } from "@/layers/layerBounds";
 import { type TextSelection, withPlaceholder } from "@/layers/textEditing";
 import type { EditorDocument, Layer, ShapePlacement } from "@/model/document";
 import {
@@ -63,6 +62,7 @@ import {
 	hitsLayer,
 	type LayerTarget,
 } from "./hitTest";
+import { layerBounds } from "./layerBounds";
 import { layerTargets, resizeMode } from "./layerTargets";
 import {
 	type LiveTransform,
