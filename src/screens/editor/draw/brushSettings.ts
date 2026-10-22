@@ -10,7 +10,6 @@ import {
 } from "../../../model/document.ts";
 import type { Size } from "../../../model/geometry.ts";
 
-// A plain pen, a pen with a tip, the shapes, or the eraser.
 export type DrawTool = "pen" | PenTip | "shape" | "eraser";
 export type BrushTool = "pen" | PenTip;
 
@@ -147,7 +146,7 @@ export function withShape(
 	};
 }
 
-/** Its outline's thickness, in its own units. */
+/** The outline's thickness comes out in the shape's own units. */
 export function shapeEdit(
 	before: BrushSettings,
 	after: BrushSettings,

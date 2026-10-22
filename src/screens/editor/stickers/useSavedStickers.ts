@@ -16,7 +16,6 @@ import {
 	stickerUrl,
 } from "./stickerStorage";
 
-/** A saved sticker with a URL its image shows by. */
 export type ShownSticker = SavedSticker & { url: string };
 
 /**

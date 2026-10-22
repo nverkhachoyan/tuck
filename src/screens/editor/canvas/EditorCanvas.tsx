@@ -83,10 +83,10 @@ import { type ViewFrame, viewPointToDocument } from "./viewport";
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 12;
-// The selection bar's distance from the selection, above it past the rotate
-// knob or below it past the handles, and from the view's edges.
 const SELECT: CanvasInput = { type: "select" };
 const NO_DETECTIONS: readonly DetectionOverlayRegion[] = [];
+// The selection bar's distance from the selection, above it past the rotate
+// knob or below it past the handles, and from the view's edges.
 const SELECTION_BAR_GAPS = {
 	above: handleMetrics.knobOffset + handleMetrics.size / 2 + 10,
 	below: handleMetrics.size / 2 + 12,

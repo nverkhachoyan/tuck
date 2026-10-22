@@ -1,5 +1,3 @@
-// Relative `.ts` imports, and only types from zustand, keep this slice
-// loadable by Node's test runner.
 import type { StateCreator } from "zustand";
 import type { Adjustments } from "../model/adjustments.ts";
 import {

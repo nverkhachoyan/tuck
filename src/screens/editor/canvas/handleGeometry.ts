@@ -1,4 +1,3 @@
-// Relative `.ts` import keeps this loadable by Node's test runner.
 import {
 	type Box,
 	type Point,
@@ -200,7 +199,6 @@ export function resizeLockedByDrag(
 	return { transform: { ...transform, x: center.x, y: center.y }, box: next };
 }
 
-/** The rotation after dragging from `from` to `to` around `center`. */
 export function rotateByDrag(
 	center: Point,
 	from: Point,

@@ -31,7 +31,6 @@ import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
 import { useCropGesture } from "./useCropGesture";
 
-// In screen pixels.
 const FRAME_STROKE_PX = 1;
 const HANDLE_STROKE_PX = 3;
 const HANDLE_LENGTH_PX = 18;

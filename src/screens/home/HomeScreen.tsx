@@ -289,8 +289,8 @@ export default function HomeScreen() {
 }
 
 /**
- * To Settings `withSettings`: without projects, there's no header to hold
- * its gear.
+ * With `withSettings`, links to Settings too: without projects, there's no
+ * header to hold its gear.
  */
 function AboutLinks({ withSettings = false }: { withSettings?: boolean }) {
 	const pages = withSettings

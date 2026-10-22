@@ -23,11 +23,10 @@ export type PickPhotoOptions = {
 };
 
 /**
- * Lets the user pick a photo, re-encoded so the editor can always read it.
- * The system picker runs outside the app and returns only what the user
- * chooses, so no library permission is needed. Pure IO — no UI feedback here,
- * so callers decide how to react to each outcome. Throws if the photo can't
- * be read or re-encoded.
+ * Lets the user pick a photo, re-encoded so the editor can always read it. The
+ * system picker runs outside the app and returns only what the user chooses, so
+ * no library permission is needed. Throws if the photo can't be read or
+ * re-encoded.
  */
 export async function pickPhoto(
 	options: PickPhotoOptions = {},
@@ -60,10 +59,9 @@ export async function importPhoto(
 const JPEG_QUALITY = 0.92;
 
 /**
- * iOS photos are HEIC by default, which Skia's image codec cannot decode —
- * re-encoding here guarantees the editor can always load what the picker
- * returns, regardless of source format. Oversized photos shrink on the way.
- * JPEG can't hold transparency, so an image with any becomes a PNG.
+ * Skia can't decode HEIC, the default on iPhone, so every photo is re-encoded
+ * for the editor, and oversized ones shrink on the way. JPEG can't hold
+ * transparency, so an image with any becomes a PNG.
  */
 async function reencode(
 	uri: string,

@@ -9,7 +9,6 @@ export function projectRouteId(projectId: string | null): string {
 	return projectId ?? UNSAVED_PROJECT;
 }
 
-/** The editor, for a project or an editing session that couldn't be saved. */
 export function editorHref(projectId: string | null) {
 	return {
 		pathname: "/projects/[id]",
@@ -17,7 +16,6 @@ export function editorHref(projectId: string | null) {
 	} as const;
 }
 
-/** The export screen, for the same session as `editorHref`. */
 export function exportHref(projectId: string | null) {
 	return {
 		pathname: "/projects/[id]/export",

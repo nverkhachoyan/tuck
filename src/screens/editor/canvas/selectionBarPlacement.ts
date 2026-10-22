@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import {
 	type Box,
 	type Point,

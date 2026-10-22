@@ -2,7 +2,6 @@ import { isHexColor } from "../../../lib/color.ts";
 import type { MaskStroke, RedactionEffect } from "../../../model/document.ts";
 import type { Size } from "../../../model/geometry.ts";
 
-// Drags a box, paints strokes, or erases them.
 export type RedactTool = "box" | "brush" | "eraser";
 
 export type RedactSettings = {

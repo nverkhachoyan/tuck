@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import type { ImageLayer } from "./document.ts";
 import type { MaskStroke } from "./drawing.ts";
 import { type Point, toLayerSpace } from "./geometry.ts";

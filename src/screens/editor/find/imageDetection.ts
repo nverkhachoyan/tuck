@@ -11,7 +11,6 @@ export type DetectionRect = Rect;
 
 const cachedDetections = new Map<string, Promise<DetectionRect[]>>();
 
-/** Whether this device can run a detector. */
 export function isDetectionAvailable(feature: DetectionFeature): boolean {
 	return isAvailable(feature);
 }

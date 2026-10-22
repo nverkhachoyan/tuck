@@ -75,7 +75,6 @@ export type TextLayer = LayerBase & {
 	font: TextFont;
 	fontSize: number;
 	color: string;
-	// null draws the text without an outline.
 	outlineColor: string | null;
 	// A filled box behind each line; null draws none.
 	backgroundColor: string | null;
@@ -184,7 +183,6 @@ export type RedactionMask = RedactionBase & {
 	height: number;
 };
 
-/** Hides what's drawn under it, inside its box, strokes, or mask. */
 export type RedactionLayer = RedactionBox | RedactionStrokes | RedactionMask;
 
 // Outlines the draw tool drags out. Named for how they look; `ShapeLayerView`
@@ -218,7 +216,6 @@ export type LineShape = ShapeBase & { shape: LineShapeKind; length: number };
 
 export type ShapeLayer = BoxShape | LineShape;
 
-/** How a shape is drawn, apart from where and how big. */
 export type ShapeStyle = Pick<ShapeLayer, "color" | "strokeWidth">;
 
 /**
@@ -270,7 +267,6 @@ export type EditorDocument = {
 	// Bottom to top, and possibly none: a blank canvas starts empty, and any
 	// layer can be deleted.
 	layers: Layer[];
-	// Groups only organize layers; they never add a canvas compositing layer.
 	groups?: LayerGroup[];
 };
 
@@ -329,7 +325,6 @@ export function createDocumentFromImage(
 	};
 }
 
-/** An empty canvas, filled with `background` (null for transparent). */
 export function createBlankDocument(
 	width: number,
 	height: number,
@@ -442,13 +437,11 @@ export function initialFontSize(area: Size): number {
 	return Math.max(1, Math.round(Math.min(area.width, area.height) * 0.08));
 }
 
-/** How a text layer's text looks, apart from its size. */
 export type TextLayerStyle = Pick<
 	TextLayer,
 	"font" | "color" | "outlineColor" | "backgroundColor" | "align"
 >;
 
-/** Classic meme text: white fill, black outline, no box, centered. */
 export const defaultTextStyle = {
 	font: "classic",
 	color: "#FFFFFF",
@@ -654,7 +647,6 @@ export function createMaskedRedaction(
 	};
 }
 
-/** Whether a shape of this kind is a line, rather than a box. */
 export function isLineShape(shape: ShapeKind): shape is LineShapeKind {
 	"worklet";
 	return shape === "line" || shape === "arrow";

@@ -1,5 +1,5 @@
-// Relative `.ts` imports, and storage passed in, keep this loadable by Node's
-// test runner. `projects.ts` creates the app's instance.
+// Storage is passed in so Node's test runner can load this. `projects.ts`
+// creates the app's instance.
 import {
 	createBlankDocument,
 	createDocumentFromImage,
@@ -188,7 +188,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		});
 	}
 
-	/** Starts a project from an empty canvas. */
 	function createBlankProject(canvas: {
 		width: number;
 		height: number;
@@ -232,7 +231,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		}
 	}
 
-	/** A URL for each of a project's image files, by file name. */
 	async function imageUrls(
 		id: string,
 		files: Set<string>,
@@ -470,7 +468,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		return saved;
 	}
 
-	/** Removes a saved project for good. */
 	function deleteProject(id: string): Promise<void> {
 		return withClosedProject(id, () => storage.removeProject(id));
 	}

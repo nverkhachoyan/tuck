@@ -257,7 +257,6 @@ export function strokesPicture(layer: RedactionStrokes): SkPicture {
 	return picture;
 }
 
-/** `box` grown by `reach` on every side. */
 function withReach(box: SkRect, reach: number): SkRect {
 	"worklet";
 	return rect(

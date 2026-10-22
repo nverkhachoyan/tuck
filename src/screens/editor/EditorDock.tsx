@@ -32,7 +32,6 @@ import { type EditorActions, useEditorActions } from "./useEditorActions";
 // actions, or, with nothing selected, the tools or the layers.
 export type DockPanel = EditorTool | "text" | "layer" | "idle";
 
-/** The store actions the layers panel uses. */
 type LayerListActions = Pick<
 	EditorActions,
 	| "selectLayer"

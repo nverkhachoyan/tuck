@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import type { EditorDocument } from "../../../model/document.ts";
 import { type Framing, framingAnchor } from "../../../model/framing.ts";
 import {

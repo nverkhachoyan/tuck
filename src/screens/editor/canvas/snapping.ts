@@ -1,4 +1,3 @@
-// Relative `.ts` import keeps this loadable by Node's test runner.
 import {
 	type Box,
 	boundingBox,
@@ -70,10 +69,8 @@ export function snapAngle(
 	return snapTo(angle, Math.round(angle / step) * step, tolerance);
 }
 
-/** The lines along one axis that a layer's edges, or its center, snap onto. */
 export type AxisLines = { edges: number[]; centers: number[] };
 
-// The line in `lines` nearest to `value` within `tolerance`, or null.
 function nearestLine(
 	value: number,
 	lines: AxisLines,

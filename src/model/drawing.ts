@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import {
 	type Box,
 	type Point,
@@ -143,7 +142,6 @@ function segmentDistanceSquared(from: Point, to: Point, point: Point): number {
 	return x * x + y * y;
 }
 
-/** Whether `point` is within `reach` of the line through `points`. */
 function nearLine(points: number[], point: Point, reach: number): boolean {
 	"worklet";
 	const reachSquared = reach * reach;

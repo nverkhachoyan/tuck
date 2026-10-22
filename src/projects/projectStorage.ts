@@ -32,7 +32,6 @@ export async function storeImage(
 	return image.uri;
 }
 
-/** Copies one of a project's image files into another project. */
 export async function copyImage(fromId: string, file: string, toId: string) {
 	const directory = projectDirectory(toId);
 	directory.create({ intermediates: true, idempotent: true });

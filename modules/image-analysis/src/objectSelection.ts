@@ -4,7 +4,6 @@ import ImageAnalysisModule from "./ImageAnalysisModule";
 // Segment Anything runs in the native module, as `objectSelection.web.ts`
 // runs it in a worker.
 
-// The image being prepared or prepared, and whether it's ready for taps.
 let prepared: { uri: string; ready: boolean; done: Promise<void> } | null =
 	null;
 
@@ -47,7 +46,6 @@ export async function objectMasks(
 	return ImageAnalysisModule.objectMasks(uri, at);
 }
 
-/** Lets go of the model and the image, until they're needed again. */
 export function releaseObjects() {
 	prepared = null;
 	ImageAnalysisModule.releaseObjects().catch(() => {});

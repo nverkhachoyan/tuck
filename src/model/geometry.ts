@@ -85,7 +85,6 @@ export function toLayerSpace(transform: Transform, point: Point): Point {
 	};
 }
 
-/** The upright rectangle with `a` and `b` at opposite corners. */
 export function rectFromCorners(a: Point, b: Point): Rect {
 	"worklet";
 	return {

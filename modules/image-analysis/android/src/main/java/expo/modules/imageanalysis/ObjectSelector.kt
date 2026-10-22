@@ -116,7 +116,6 @@ internal class ObjectSelector(private val context: Context) {
 		return ObjectMasksRecord(distinct.map { writePng(it.first, width, height) }, likeliest)
 	}
 
-	// Lets go of the models and the image, until they're needed again.
 	fun release() {
 		forgetImage()
 		sessions?.let {

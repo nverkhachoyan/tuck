@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import type { Point, Rect, Size } from "../../../model/geometry.ts";
 import { photoCorners } from "./cropGeometry.ts";
 
@@ -187,7 +186,6 @@ function resizeLocked(
 	const middleX = start.x + width / 2;
 	const middleY = start.y + height / 2;
 
-	// The box's scale, and the box it gives.
 	const boxAt = (scale: number): Rect => {
 		const w = width * scale;
 		const h = height * scale;

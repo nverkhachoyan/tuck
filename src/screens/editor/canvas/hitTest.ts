@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import type { MaskStroke } from "../../../model/document.ts";
 import { hitTestDrawing } from "../../../model/drawing.ts";
 import {
@@ -29,7 +28,6 @@ export type LayerTarget = {
 	strokes: MaskStroke[] | null;
 	// A locked photo is cut off at the canvas's edge.
 	clipped: boolean;
-	// Its box's resize behavior, including whether it has side handles.
 	resizeMode: ResizeMode;
 	// Moved only by a drag that starts on it, not one from empty space: a
 	// redaction, so a stray drag can't uncover what it hides.

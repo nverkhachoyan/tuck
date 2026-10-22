@@ -56,8 +56,8 @@ export async function cutShowsAt(
 }
 
 /**
- * As a grayscale PNG's bytes. Both cover the whole image, so the result has
- * the larger one's pixels, and the other is stretched to fit.
+ * Returns a grayscale PNG's bytes. Both masks cover the whole image, so the
+ * result has the larger one's pixels, and the other is stretched to fit.
  */
 export async function combineMasks(
 	mask: SkImage | null,
@@ -87,8 +87,9 @@ export async function combineMasks(
 }
 
 /**
- * Without one, a mask that shows the whole image: a black pixel, which is
- * stretched over it like any mask. As a grayscale PNG's bytes.
+ * Without a `mask`, inverts one that shows the whole image, which gives a black
+ * pixel, stretched over the image like any mask. Returns a grayscale PNG's
+ * bytes.
  */
 export async function invertedMask(
 	mask: SkImage | undefined,

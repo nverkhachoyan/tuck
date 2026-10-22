@@ -12,7 +12,6 @@ import {
 
 export type { ImagePoint };
 
-/** Whether this device can find a photo's subject to cut out. */
 export function isCutOutAvailable(): boolean {
 	return isAvailable("background");
 }
@@ -42,7 +41,6 @@ export function prepareObjectSelection(uri: string) {
 	});
 }
 
-/** Lets go of what selecting objects holds, until it's needed again. */
 export function releaseObjectSelection() {
 	releaseObjects();
 }

@@ -242,7 +242,6 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	);
 }
 
-/** An aspect ratio to hold the box to. */
 function AspectChip({
 	label,
 	selected,

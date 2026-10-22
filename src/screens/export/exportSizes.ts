@@ -1,4 +1,3 @@
-// Relative `.ts` import keeps this loadable by Node's test runner.
 import type { Size } from "../../model/geometry.ts";
 
 // The largest image export renders. A canvas expanded past a big photo can

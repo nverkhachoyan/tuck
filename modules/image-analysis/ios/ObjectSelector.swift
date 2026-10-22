@@ -113,7 +113,6 @@ final class ObjectSelector {
 		return (values, area)
 	}
 
-	/// Lets go of the models and the image, until they're needed again.
 	func release() {
 		encoded = nil
 		sessions = nil

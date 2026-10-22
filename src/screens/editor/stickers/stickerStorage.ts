@@ -68,7 +68,6 @@ export function removeSticker(sticker: SavedSticker): Promise<void> {
 	});
 }
 
-/** A URL to show the sticker's image by. */
 export async function stickerUrl(sticker: SavedSticker): Promise<string> {
 	return new File(stickersDirectory(), stickerFileName(sticker)).uri;
 }

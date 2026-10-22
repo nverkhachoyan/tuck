@@ -9,7 +9,6 @@ type Reply = { id: number; error?: string; masks?: Blob[]; likeliest?: number };
 let worker: Worker | null = null;
 let nextId = 0;
 const waiting = new Map<number, (reply: Reply) => void>();
-// The image being prepared or prepared, and whether it's ready for taps.
 let prepared: {
 	uri: string;
 	width: number;
@@ -110,7 +109,6 @@ export async function objectMasks(
 	};
 }
 
-/** Lets go of the model and the image, until they're needed again. */
 export function releaseObjects() {
 	worker?.terminate();
 	worker = null;

@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import { isLineShape, type ShapePlacement } from "../../../model/document.ts";
 import {
 	type Point,
@@ -19,7 +18,6 @@ export type StrokeIntent =
 	| { type: "pick"; point: Point }
 	// A tap off the document, which puts the tool down.
 	| { type: "tapAway"; point: Point }
-	// Paint along the stroke, with a brush.
 	| { type: "paint" }
 	| { type: "box"; rect: Rect }
 	| { type: "shape"; placement: ShapePlacement }

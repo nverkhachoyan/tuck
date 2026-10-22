@@ -1,4 +1,3 @@
-// Relative `.ts` import keeps this loadable by Node's test runner.
 import type { Size } from "../model/geometry.ts";
 
 // Larger photos are scaled down to this many pixels. The editor and export

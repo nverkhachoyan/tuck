@@ -1,5 +1,3 @@
-// Plain TypeScript, so Node's test runner can load it.
-
 /** A range of a text layer's text, in UTF-16 code units, `start <= end`. */
 export type TextSelection = { start: number; end: number };
 

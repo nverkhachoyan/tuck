@@ -1,4 +1,3 @@
-// Relative `.ts` import keeps this loadable by Node's test runner.
 import type { Size } from "../../model/geometry.ts";
 
 export const MIN_CANVAS_SIDE = 16;

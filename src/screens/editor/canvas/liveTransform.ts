@@ -148,7 +148,6 @@ export function holdLayer(
 	live.heldId.value = id;
 }
 
-/** The live values as a document transform. */
 export function readLiveTransform(live: LiveTransform): Transform {
 	"worklet";
 	return {

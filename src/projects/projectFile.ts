@@ -1,4 +1,3 @@
-// Relative `.ts` imports keep this loadable by Node's test runner.
 import { adjustmentKeys } from "../model/adjustments.ts";
 import {
 	type EditorDocument,
@@ -114,7 +113,6 @@ export function mapImageUris(
 	};
 }
 
-/** The files a document's layers use (see `layerFiles`). */
 export function imageFiles(document: EditorDocument): Set<string> {
 	return new Set(document.layers.flatMap(layerFiles));
 }
