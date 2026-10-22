@@ -1,9 +1,10 @@
-import { ImageFormat, type SkImage } from "@shopify/react-native-skia";
+import { ImageFormat } from "@shopify/react-native-skia";
 import { useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
 import { writeTemporaryPng } from "@/lib/temporaryFile";
 import { type ImageLayer, isCutOut } from "@/model/document";
 import { importPhoto } from "@/photos/photoImport";
+import { renderCutOut } from "@/render/renderDocument";
 import { selectSelectedLayer, useStore } from "@/store";
 import { showAlert } from "@/ui/showAlert";
 import { SAVED_STICKER_MAX_SIDE, type StickerImage } from "./savedStickers";
@@ -15,12 +16,9 @@ import type { useSavedStickers } from "./useSavedStickers";
  * shows, trimmed to it, on a transparent background. `status` is the
  * selection's: being kept, or kept already this session. `save` is left
  * out when the selection can't be kept: a sticker already is one.
- * `renderCutOut` draws a cut-out's kept part, its longer side `maxSide`
- * pixels at most.
  */
 export function useStickerSave(
 	keep: ReturnType<typeof useSavedStickers>["save"],
-	renderCutOut: (layer: ImageLayer, maxSide: number) => Promise<SkImage>,
 ) {
 	const selectedLayer = useStore(selectSelectedLayer);
 	const [saving, setSaving] = useState<{
@@ -38,7 +36,7 @@ export function useStickerSave(
 		try {
 			await keep(
 				isCutOut(image)
-					? await cutOutSticker(image, renderCutOut)
+					? await cutOutSticker(image)
 					: await importPhoto(image.uri, {
 							maxLongSide: SAVED_STICKER_MAX_SIDE,
 						}),
@@ -59,11 +57,8 @@ export function useStickerSave(
 	};
 }
 
-async function cutOutSticker(
-	layer: ImageLayer,
-	render: (layer: ImageLayer, maxSide: number) => Promise<SkImage>,
-): Promise<StickerImage> {
-	const image = await render(layer, SAVED_STICKER_MAX_SIDE);
+async function cutOutSticker(layer: ImageLayer): Promise<StickerImage> {
+	const image = await renderCutOut(layer, SAVED_STICKER_MAX_SIDE);
 	try {
 		return {
 			uri: writeTemporaryPng(image.encodeToBytes(ImageFormat.PNG)),

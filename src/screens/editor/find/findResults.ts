@@ -1,9 +1,36 @@
-import type { RedactionBoxPlacement } from "../../../model/document.ts";
+import type {
+	EditorDocument,
+	ImageLayer,
+	RedactionBoxPlacement,
+} from "../../../model/document.ts";
 import type { DetectionFeature } from "./imageDetection.ts";
 import type { MappedDetectionRect } from "./mapDetectionRects.ts";
 
 // A region Find found, placed in the document.
 export type FoundRegion = MappedDetectionRect & { feature: DetectionFeature };
+
+/** Everything that makes a displayed detection box stale. */
+export function detectionTargetKey(
+	document: EditorDocument,
+	layer: ImageLayer | null,
+): string {
+	if (!layer) return `none:${document.width}:${document.height}`;
+	const { transform } = layer;
+	return [
+		layer.id,
+		layer.uri,
+		layer.width,
+		layer.height,
+		layer.flipped,
+		transform.x,
+		transform.y,
+		transform.scaleX,
+		transform.scaleY,
+		transform.rotation,
+		document.width,
+		document.height,
+	].join(":");
+}
 
 // What Find names the group of boxes it adds, when they're all one kind.
 const GROUP_NAMES: Record<DetectionFeature, string> = {

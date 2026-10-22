@@ -14,8 +14,7 @@ import {
 	type ColorMatrix,
 	neutralAdjustments,
 } from "@/model/adjustments";
-import type { EditorDocument, ImageLayer, Layer } from "@/model/document";
-import { framingAnchor } from "@/model/framing";
+import type { ImageLayer } from "@/model/document";
 import type { DialScale } from "../controls/Dial";
 
 // The dial counts in percent: -100 to 100 for -1 to 1.
@@ -31,25 +30,6 @@ export const ADJUST_DIAL_SCALE: DialScale = {
 	snap: 2,
 	wholeSteps: true,
 };
-
-/**
- * The image the Adjust tool changes: the selected image, or else the photo
- * the canvas is framed around (see `framingAnchor`), or else the lowest
- * visible image. Null with none, when the tool has nothing to do.
- */
-export function adjustTarget(
-	document: EditorDocument,
-	selected: Layer | undefined,
-): ImageLayer | null {
-	if (selected?.type === "image") return selected;
-	return (
-		framingAnchor(document).layer ??
-		document.layers.find(
-			(layer): layer is ImageLayer => layer.type === "image" && !layer.hidden,
-		) ??
-		null
-	);
-}
 
 export type AdjustController = {
 	matrix: DerivedValue<ColorMatrix>;

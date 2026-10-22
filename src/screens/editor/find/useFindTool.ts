@@ -5,8 +5,7 @@ import type {
 	RedactionEffect,
 } from "@/model/document";
 import { useStore } from "@/store";
-import { detectionTargetKey } from "./detectionTarget";
-import { chosenBoxes } from "./findResults";
+import { chosenBoxes, detectionTargetKey } from "./findResults";
 import { mapDetectionRects } from "./mapDetectionRects";
 import { type DetectionScope, useImageDetection } from "./useImageDetection";
 

@@ -18,6 +18,8 @@ import {
 	framingsEqual,
 	rebaseTransform,
 	reframeDocument,
+	targetImageLayer,
+	visibleImageLayer,
 } from "./framing.ts";
 import { normalizeAngle, type Transform } from "./geometry.ts";
 
@@ -317,5 +319,65 @@ describe("framingsEqual", () => {
 				transform: { ...framing.transform, rotation: 1 },
 			}),
 		);
+	});
+});
+
+describe("targetImageLayer", () => {
+	test("prefers a selected visible image layer", () => {
+		const document = documentWithText();
+		const sticker = createImageLayer(
+			document,
+			"file:///sticker.png",
+			200,
+			200,
+			false,
+		);
+		document.layers.push(sticker);
+		assert.equal(targetImageLayer(document, sticker), sticker);
+	});
+
+	test("ignores a selected hidden image layer", () => {
+		const document = documentWithText();
+		const sticker = {
+			...createImageLayer(document, "file:///sticker.png", 200, 200, false),
+			hidden: true,
+		};
+		document.layers.push(sticker);
+		assert.equal(targetImageLayer(document, sticker), photoLayer(document));
+	});
+
+	test("falls back to the locked framing photo when text is selected", () => {
+		const document = documentWithText();
+		assert.equal(
+			targetImageLayer(document, text(document)),
+			photoLayer(document),
+		);
+	});
+
+	test("falls back to the first visible image when none is locked", () => {
+		const blank = createBlankDocument(800, 600, "#FFFFFF");
+		const first = createImageLayer(blank, "file:///1.jpg", 400, 300, true);
+		const second = createImageLayer(blank, "file:///2.jpg", 400, 300, true);
+		blank.layers.push(first, second);
+		assert.equal(targetImageLayer(blank, undefined), first);
+	});
+
+	test("returns null when the document has no visible images", () => {
+		const blank = createBlankDocument(800, 600, "#FFFFFF");
+		const heading = createTextLayer(blank, "Hello");
+		blank.layers.push(heading);
+		assert.equal(targetImageLayer(blank, heading), null);
+		assert.equal(targetImageLayer(blank, undefined), null);
+	});
+});
+
+describe("visibleImageLayer", () => {
+	test("finds a visible image by id and ignores hidden or non-image layers", () => {
+		const document = documentWithText();
+		const photo = photoLayer(document);
+		assert.equal(visibleImageLayer(document, photo.id), photo);
+		assert.equal(visibleImageLayer(document, text(document).id), undefined);
+		photo.hidden = true;
+		assert.equal(visibleImageLayer(document, photo.id), undefined);
 	});
 });

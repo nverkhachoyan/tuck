@@ -58,6 +58,36 @@ export function framingAnchor(document: EditorDocument): FramingAnchor {
 }
 
 /**
+ * The image a photo tool (Adjust, Cut out, or Find) works on: the selected
+ * visible image, or else the photo the canvas is framed around, or else the
+ * lowest visible image. Null with none.
+ */
+export function targetImageLayer(
+	document: EditorDocument,
+	selected: Layer | undefined,
+): ImageLayer | null {
+	if (selected?.type === "image" && !selected.hidden) return selected;
+	return (
+		framingAnchor(document).layer ??
+		document.layers.find(
+			(layer): layer is ImageLayer => layer.type === "image" && !layer.hidden,
+		) ??
+		null
+	);
+}
+
+/** The visible image layer with `id`, or undefined if it's gone or hidden. */
+export function visibleImageLayer(
+	document: EditorDocument,
+	id: string,
+): ImageLayer | undefined {
+	return document.layers.find(
+		(layer): layer is ImageLayer =>
+			layer.type === "image" && !layer.hidden && layer.id === id,
+	);
+}
+
+/**
  * The canvas's size and fill, and the anchor's place on it: everything the
  * crop tool changes.
  */

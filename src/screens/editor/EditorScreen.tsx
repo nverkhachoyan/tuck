@@ -14,25 +14,23 @@ import { usePreference } from "@/lib/usePreference";
 import { neutralAdjustments } from "@/model/adjustments";
 import {
 	type EditorDocument,
-	type ImageLayer,
 	imagePointAt,
 	isCutOut,
 	maxNewImageShortSide,
 	type ShapePlacement,
 } from "@/model/document";
-import type { Framing } from "@/model/framing";
+import {
+	type Framing,
+	targetImageLayer,
+	visibleImageLayer,
+} from "@/model/framing";
 import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage, openProjectName } from "@/projects/projectService";
 import { useAutosave } from "@/projects/useAutosave";
 import { useProjectSession } from "@/projects/useProjectSession";
-import {
-	renderCutOut,
-	renderCutShape,
-	renderThumbnail,
-	sampleColor,
-} from "@/render/renderDocument";
+import { renderThumbnail, sampleColor } from "@/render/renderDocument";
 import { textIndexAt } from "@/render/textLayerLayout";
 import {
 	selectSelectedLayer,
@@ -51,7 +49,6 @@ import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import {
 	ADJUST_DIAL_MAX,
 	ADJUST_DIAL_SCALE,
-	adjustTarget,
 	useAdjustController,
 } from "./adjust/useAdjustController";
 import type { CanvasInput } from "./canvas/canvasInput";
@@ -91,7 +88,6 @@ import {
 	toolButtonsFor,
 } from "./EditorDock";
 import { type ShortcutCommand, shortcutCommand, takesKeys } from "./editorMode";
-import { detectionTarget } from "./find/detectionTarget";
 import { useFindTool } from "./find/useFindTool";
 import { layerKindName } from "./layers/LayerRow";
 import { LAYERS_SIDEBAR_INSET, LayersPanel } from "./layers/LayersPanel";
@@ -130,14 +126,6 @@ const TOOL_TITLES = {
 };
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
-
-// An image Adjust or Cut out can work on: there, and shown.
-function adjustableImage(document: EditorDocument, id: string) {
-	return document.layers.find(
-		(layer): layer is ImageLayer =>
-			layer.type === "image" && !layer.hidden && layer.id === id,
-	);
-}
 
 export default function EditorScreen() {
 	const router = useRouter();
@@ -224,10 +212,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// What the editor is doing, and what's open over it. Adjust puts itself
 	// down if its image goes away, Find if its photo does, and a text color
 	// picker closes if other text is styled.
-	const detectedImage = detectionTarget(document, selectedLayer);
+	const targetImage = targetImageLayer(document, selectedLayer);
 	const [modeState, dispatchMode] = useEditorMode<TextEditing>({
-		isAdjustable: (id) => adjustableImage(document, id) !== undefined,
-		canFind: detectedImage !== null,
+		isAdjustable: (id) => visibleImageLayer(document, id) !== undefined,
+		canFind: targetImage !== null,
 		selectedTextId: selectedTextLayer?.id ?? null,
 	});
 	const { mode, eyedropper } = modeState;
@@ -242,7 +230,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const layersOpen = modeState.sheet === "layers";
 	const addOpen = modeState.sheet === "add";
 	const savedStickers = useSavedStickers();
-	const stickerSave = useStickerSave(savedStickers.save, renderCutOut);
+	const stickerSave = useStickerSave(savedStickers.save);
 	const windowWidth = useWindowDimensions().width;
 	const layersBeside = windowWidth >= SIDEBAR_MIN_WIDTH;
 	const wide = windowWidth >= INSPECTOR_MIN_WIDTH;
@@ -269,11 +257,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen;
 	const adjustedLayer =
 		mode.type === "tool" && mode.tool === "adjust"
-			? adjustableImage(document, mode.layerId)
+			? visibleImageLayer(document, mode.layerId)
 			: undefined;
 	const cutLayer =
 		mode.type === "tool" && mode.tool === "cutOut"
-			? adjustableImage(document, mode.layerId)
+			? visibleImageLayer(document, mode.layerId)
 			: undefined;
 	// A tool's changes are one session: one undo step, or none if canceled.
 	// Closing the tool any way, leaving the editor included, keeps them.
@@ -303,7 +291,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 	const draw = useDrawTool(tool === "draw", documentSize);
 	const redact = useRedactTool(documentSize);
-	const find = useFindTool(document, detectedImage);
+	const find = useFindTool(document, targetImage);
 	// A mask found after Cut out was put down, or moved to another image,
 	// isn't wanted any more.
 	const cutLayerId = useRef<string | null>(null);
@@ -318,7 +306,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		picking: cutSettings.tool === "pick",
 		latest: (layerId) => {
 			const current = latestDocument();
-			return current ? adjustableImage(current, layerId) : undefined;
+			return current ? visibleImageLayer(current, layerId) : undefined;
 		},
 		// The mask moves into the project, so autosave knows its file.
 		keep: async (uri) =>
@@ -336,7 +324,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// Cut out, with a redaction over what was selected, and goes on to
 	// Redact to choose how it hides it.
 	const cutRedaction = useCutRedaction({
-		renderShape: renderCutShape,
 		keep: async (uri) =>
 			projectId === null ? uri : addImage(projectId, uri, false),
 		onRedact: (layerId, mask, rect) => {
@@ -407,17 +394,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const editingText = textEditing.edit !== null;
 	const canvasInput = useMemo((): CanvasInput => {
 		if (canvasTool) return { type: "tool", tool: canvasTool };
-		if (tool === "find" && detectedImage) {
+		if (tool === "find" && targetImage) {
 			return {
 				type: "find",
-				imageId: detectedImage.id,
+				imageId: targetImage.id,
 				onToggle: find.toggle,
 			};
 		}
 		if (tool === "adjust") return { type: "adjust", drag: adjustDrag };
 		if (editingText) return { type: "editText" };
 		return { type: "select" };
-	}, [canvasTool, tool, detectedImage, find.toggle, editingText, adjustDrag]);
+	}, [canvasTool, tool, targetImage, find.toggle, editingText, adjustDrag]);
 	const handlePaintStroke = (points: number[]) => {
 		if (canvasTool?.type === "draw") {
 			drawStroke({ ...canvasTool.brush, points });
@@ -517,11 +504,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		redact.chooseTool();
 		dispatchMode({ type: "startTool", tool: "redact" });
 	};
-	// The selected image, or else the photo, if there's an image at all.
-	const adjustable = adjustTarget(document, selectedLayer);
 	const startAdjusting = () => {
-		if (!adjustable) return;
-		dispatchMode({ type: "startAdjust", layerId: adjustable.id });
+		if (!targetImage) return;
+		dispatchMode({ type: "startAdjust", layerId: targetImage.id });
 	};
 	const closeTool = () => {
 		dispatchMode({ type: "endTool" });
@@ -541,16 +526,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// isn't cut yet has its subjects cut out at once, so one tap still does
 	// it; one that is opens to refine its cut.
 	const startCutOut = () => {
-		if (!detectedImage) return;
-		dispatchMode({ type: "startCutOut", layerId: detectedImage.id });
-		if (cutOut.canFind && !isCutOut(detectedImage)) {
-			cutLayerId.current = detectedImage.id;
-			void cutOut.find(detectedImage);
+		if (!targetImage) return;
+		dispatchMode({ type: "startCutOut", layerId: targetImage.id });
+		if (cutOut.canFind && !isCutOut(targetImage)) {
+			cutLayerId.current = targetImage.id;
+			void cutOut.find(targetImage);
 		}
 	};
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
-		if (!detectedImage) return;
+		if (!targetImage) return;
 		dispatchMode({ type: "startTool", tool: "find" });
 	};
 	// Find is one of Redact's tools, so Cancel goes back to Redact. Done
@@ -757,8 +742,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onSticker: openAdd,
 		onPhoto: pickPhoto,
 		onCrop: startCrop,
-		onAdjust: adjustable ? startAdjusting : undefined,
-		onCutOut: detectedImage ? startCutOut : undefined,
+		onAdjust: targetImage ? startAdjusting : undefined,
+		onCutOut: targetImage ? startCutOut : undefined,
 	};
 	// What the dock offers for the selected layer, by its kind.
 	const layerActions =
@@ -957,7 +942,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							<DockContent
 								panel={panelKind}
 								optionsOpen={toolOptionsOpen}
-								onFind={detectedImage ? startFinding : undefined}
+								onFind={targetImage ? startFinding : undefined}
 								dispatchMode={dispatchMode}
 								draw={draw}
 								redact={redact}
