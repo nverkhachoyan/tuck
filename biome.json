@@ -50,7 +50,27 @@
 							"options": {
 								"patterns": [
 									{
-										"group": ["**", "!./*", "!node:*", "!node:*/**"],
+										"group": ["**", "!./*"],
+										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/model/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["**", "!./*", "!../*", "!node:*", "!node:*/**"],
 										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
 									}
 								]
@@ -81,6 +101,32 @@
 			}
 		},
 		{
+			"includes": ["src/lib/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/lib/**"
+										],
+										"message": "lib/ holds plain helpers: it imports only other lib/ files. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/ui/**"],
 			"linter": {
 				"rules": {
@@ -98,6 +144,35 @@
 											"!../lib/**",
 											"!@/ui/**",
 											"!../ui/**"
+										],
+										"message": "ui/ imports only itself and lib/, never app code. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/ui/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/lib/**",
+											"!../../lib/**",
+											"!@/ui/**",
+											"!../../ui/**"
 										],
 										"message": "ui/ imports only itself and lib/, never app code. See AGENTS.md."
 									}
@@ -137,6 +212,35 @@
 			}
 		},
 		{
+			"includes": ["src/store/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/model/**",
+											"!../../model/**",
+											"!@/lib/**",
+											"!../../lib/**"
+										],
+										"message": "store/ imports only model/ and lib/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/photos/**", "src/projects/**"],
 			"linter": {
 				"rules": {
@@ -154,6 +258,35 @@
 											"!../model/**",
 											"!@/lib/**",
 											"!../lib/**"
+										],
+										"message": "photos/ and projects/ import only model/ and lib/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/photos/__tests__/**", "src/projects/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/model/**",
+											"!../../model/**",
+											"!@/lib/**",
+											"!../../lib/**"
 										],
 										"message": "photos/ and projects/ import only model/ and lib/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
 									}
@@ -183,6 +316,37 @@
 											"!@/lib/**",
 											"!../lib/**",
 											"!@/ui/**"
+										],
+										"message": "render/ imports only model/, lib/, and ui/: no store, projects, photos, or screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/render/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/model/**",
+											"!../../model/**",
+											"!@/lib/**",
+											"!../../lib/**",
+											"!@/ui/**",
+											"!../../ui/**"
 										],
 										"message": "render/ imports only model/, lib/, and ui/: no store, projects, photos, or screen. See AGENTS.md."
 									}
@@ -241,6 +405,34 @@
 			}
 		},
 		{
+			"includes": ["src/screens/info/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/info/**",
+											"../**",
+											"!../*",
+											"!../../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/screens/create/**"],
 			"linter": {
 				"rules": {
@@ -257,6 +449,34 @@
 											"!@/screens/create/**",
 											"../**",
 											"!../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/create/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/create/**",
+											"../**",
+											"!../*",
+											"!../../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
 									}
@@ -295,6 +515,34 @@
 			}
 		},
 		{
+			"includes": ["src/screens/export/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/export/**",
+											"../**",
+											"!../*",
+											"!../../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/screens/home/**"],
 			"linter": {
 				"rules": {
@@ -311,6 +559,34 @@
 											"!@/screens/home/**",
 											"../**",
 											"!../../model/**"
+										],
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/home/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/home/**",
+											"../**",
+											"!../*",
+											"!../../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
 									}
@@ -343,7 +619,11 @@
 											"../../create/**",
 											"../../export/**",
 											"../../home/**",
-											"../../info/**"
+											"../../info/**",
+											"../../../create/**",
+											"../../../export/**",
+											"../../../home/**",
+											"../../../info/**"
 										],
 										"message": "The editor doesn't import routes or another screen, and only find/imageDetection.ts and cutout/subjectDetection.ts import image-analysis. See AGENTS.md."
 									}
@@ -373,22 +653,31 @@
 											"@/screens/**",
 											"!@/screens/editor/**",
 											"../adjust/**",
+											"../../adjust/**",
 											"@/screens/editor/adjust/**",
 											"../crop/**",
+											"../../crop/**",
 											"@/screens/editor/crop/**",
 											"../cutout/**",
+											"../../cutout/**",
 											"@/screens/editor/cutout/**",
 											"../draw/**",
+											"../../draw/**",
 											"@/screens/editor/draw/**",
 											"../find/**",
+											"../../find/**",
 											"@/screens/editor/find/**",
 											"../layers/**",
+											"../../layers/**",
 											"@/screens/editor/layers/**",
 											"../redact/**",
+											"../../redact/**",
 											"@/screens/editor/redact/**",
 											"../stickers/**",
+											"../../stickers/**",
 											"@/screens/editor/stickers/**",
 											"../text/**",
+											"../../text/**",
 											"@/screens/editor/text/**"
 										],
 										"message": "canvas/ and crop/ don't import the editor's other tools. See AGENTS.md."
@@ -425,24 +714,34 @@
 											"@/screens/**",
 											"!@/screens/editor/**",
 											"../adjust/**",
+											"../../adjust/**",
 											"@/screens/editor/adjust/**",
 											"../canvas/**",
+											"../../canvas/**",
 											"@/screens/editor/canvas/**",
 											"../crop/**",
+											"../../crop/**",
 											"@/screens/editor/crop/**",
 											"../cutout/**",
+											"../../cutout/**",
 											"@/screens/editor/cutout/**",
 											"../draw/**",
+											"../../draw/**",
 											"@/screens/editor/draw/**",
 											"../find/**",
+											"../../find/**",
 											"@/screens/editor/find/**",
 											"../layers/**",
+											"../../layers/**",
 											"@/screens/editor/layers/**",
 											"../redact/**",
+											"../../redact/**",
 											"@/screens/editor/redact/**",
 											"../stickers/**",
+											"../../stickers/**",
 											"@/screens/editor/stickers/**",
 											"../text/**",
+											"../../text/**",
 											"@/screens/editor/text/**"
 										],
 										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root or in controls/. See AGENTS.md."
@@ -475,6 +774,38 @@
 											"!../shortcuts",
 											"!@/screens/editor/shortcuts",
 											"!../../../**"
+										],
+										"message": "The editor's building blocks (controls/, stickers/) import nothing else from the editor. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/screens/editor/controls/__tests__/**",
+				"src/screens/editor/stickers/__tests__/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"../**",
+											"!../*",
+											"!../../shortcuts",
+											"!@/screens/editor/shortcuts",
+											"!../../../../**"
 										],
 										"message": "The editor's building blocks (controls/, stickers/) import nothing else from the editor. See AGENTS.md."
 									}
