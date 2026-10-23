@@ -24,8 +24,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { assertNever } from "@/lib/assertNever";
-import { hapticTick } from "@/lib/haptics";
 import type { Layer, RedactionEffect } from "@/model/document";
+import { hapticTick } from "@/platform/haptics";
 import { IconButton } from "@/ui/IconButton";
 import { colors, radii, typography } from "@/ui/theme";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";

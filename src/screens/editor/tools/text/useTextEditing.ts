@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import { Platform } from "react-native";
-import { usePreference } from "@/lib/usePreference";
 import {
 	createTextLayer,
 	type EditorDocument,
@@ -9,6 +8,7 @@ import {
 } from "@/model/document";
 import type { Rect } from "@/model/geometry";
 import type { TextSelection } from "@/model/textEditing";
+import { usePreference } from "@/platform/usePreference";
 import { selectSelectedTextLayer, useStore } from "@/store";
 import type { EditorModeAction, TextEditState } from "../../editorMode";
 import type { TextEditorHandle } from "./TextEditor";

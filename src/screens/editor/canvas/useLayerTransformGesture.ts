@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { hapticTick } from "@/lib/haptics";
 import {
 	type Box,
 	boundingBox,
@@ -11,6 +10,7 @@ import {
 	type Transform,
 	toLayerSpace,
 } from "@/model/geometry";
+import { hapticTick } from "@/platform/haptics";
 import {
 	type Handle,
 	handleSides,

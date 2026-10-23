@@ -16,7 +16,7 @@ import Animated, {
 	useSharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
-import { hapticTick } from "@/lib/haptics";
+import { hapticTick } from "@/platform/haptics";
 import { colors, typography } from "@/ui/theme";
 
 const TRACK = 28;

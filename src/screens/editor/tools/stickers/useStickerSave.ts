@@ -1,10 +1,10 @@
 import { ImageFormat } from "@shopify/react-native-skia";
 import { useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
-import { writeTemporaryPng } from "@/lib/temporaryFile";
 import { isCutOut } from "@/model/cutout";
 import type { ImageLayer } from "@/model/document";
 import { importPhoto } from "@/photos/photoImport";
+import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { renderCutOut } from "@/render/renderDocument";
 import { selectSelectedLayer, useStore } from "@/store";
 import { showAlert } from "@/ui/showAlert";

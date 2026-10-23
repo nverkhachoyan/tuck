@@ -32,7 +32,8 @@ render the same document offscreen with Skia.
 - `src/projects/` keeps every editing session as a local project: its photos move into it, each as a file of its own, edits autosave, and the home screen lists projects to reopen, rename, duplicate, or delete, each with a thumbnail rendered when its editor closes. `projectFile.ts` is the saved format (versioned, with image layers naming their file in the project); `projectLifecycle.ts` opens, saves, and closes projects, removing files no layer uses once one closes, with storage passed in so Node can test it.
 - `src/render/` is how a document draws: a view for each layer type in document space (in `layers/`), `LayerContent` and `useDecodedImage` (which the editor's canvas and crop use too), the decoded-image cache, `fonts.ts` (which bundles the text fonts so text renders identically on iOS, Android, and web), and `DocumentRenderScene`, which renders offscreen for export and project thumbnails. `src/screens/export/` chooses output sizes and format, then saves the image to Photos, copies it, or shares it: as JPEG, or as PNG when some of the canvas is transparent.
 - `src/ui/` holds reusable controls and `theme.ts` shared across screens.
-- `src/lib/` holds platform shims, preferences, small language helpers, and the site's address (`site.ts`).
+- `src/platform/` holds the OS ports any caller can use: haptics, preferences (`preferenceStore`, `usePreference`), temporary files, and the service worker, each with a `.web.ts` version where the web differs.
+- `src/lib/` holds small language helpers and the site's address (`site.ts`).
 - `modules/image-analysis/` is a local Expo module for on-device face, text, subject, and object detection (Apple Vision, Google ML Kit, MediaPipe, Tesseract, and MobileSAM with ONNX Runtime; see [on-device-detection.md](./on-device-detection.md)).
 - `modules/share-target/` is the native share extension on iOS and share activity on Android.
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.
@@ -40,8 +41,8 @@ render the same document offscreen with Skia.
 ## Boundaries and Platform Files
 
 Imports flow one way: `app` → `screens` → `photos` / `projects` / `render` /
-`store` → `model`, with `ui` and `lib` beneath. Lint rules in `biome.json`
-enforce these boundaries. Adding a layer type means a type in
+`store` → `model`, with `ui`, `platform`, and `lib` beneath. Lint rules in
+`biome.json` enforce these boundaries. Adding a layer type means a type in
 `model/document.ts`, a view in `render/layers/`, and a case in `LayerContent`
 and `DocumentRenderScene` (`assertNever` flags any you miss).
 

@@ -9,9 +9,9 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { usePreference } from "@/lib/usePreference";
 import { createBlankDocument } from "@/model/document";
 import type { Size } from "@/model/geometry";
+import { usePreference } from "@/platform/usePreference";
 import { editorHref } from "@/projects/projectRoute";
 import { createBlankProject } from "@/projects/projectService";
 import { useStore } from "@/store";

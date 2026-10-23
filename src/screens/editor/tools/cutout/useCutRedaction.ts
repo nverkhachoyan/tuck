@@ -1,9 +1,9 @@
 import { ImageFormat } from "@shopify/react-native-skia";
 import { useRef, useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
-import { writeTemporaryPng } from "@/lib/temporaryFile";
 import type { ImageLayer } from "@/model/document";
 import type { Rect } from "@/model/geometry";
+import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { renderCutShape } from "@/render/renderDocument";
 import { showAlert } from "@/ui/showAlert";
 

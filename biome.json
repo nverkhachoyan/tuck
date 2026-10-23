@@ -127,6 +127,31 @@
 			}
 		},
 		{
+			"includes": ["src/platform/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!@/platform/**"
+										],
+										"message": "platform/ holds the OS ports any caller can use: it imports only other platform/ files. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/ui/**"],
 			"linter": {
 				"rules": {
@@ -142,10 +167,11 @@
 											"../**",
 											"!@/lib/**",
 											"!../lib/**",
+											"!@/platform/preferenceStore",
 											"!@/ui/**",
 											"!../ui/**"
 										],
-										"message": "ui/ imports only itself and lib/, never app code. See AGENTS.md."
+										"message": "ui/ imports only itself, lib/, and platform/preferenceStore, never app code. See AGENTS.md."
 									}
 								]
 							}

@@ -12,7 +12,7 @@ import {
 	View,
 } from "react-native";
 import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
-import { usePreference } from "@/lib/usePreference";
+import { usePreference } from "@/platform/usePreference";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";

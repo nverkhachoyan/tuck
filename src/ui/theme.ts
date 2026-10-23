@@ -4,7 +4,7 @@ import {
 	type TextStyle,
 	type ViewStyle,
 } from "react-native";
-import { readPreference } from "@/lib/preferenceStore";
+import { readPreference } from "@/platform/preferenceStore";
 
 /** The palette chosen in Settings: the system's, or always one of them. */
 export type ThemeSetting = "system" | "light" | "dark";

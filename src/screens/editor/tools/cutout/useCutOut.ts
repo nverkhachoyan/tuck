@@ -1,9 +1,12 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
-import { deleteTemporaryFile, writeTemporaryPng } from "@/lib/temporaryFile";
 import { isCutOut } from "@/model/cutout";
 import type { ImageLayer } from "@/model/document";
+import {
+	deleteTemporaryFile,
+	writeTemporaryPng,
+} from "@/platform/temporaryFile";
 import { decodedImages, decodeImage } from "@/render/decodedImages";
 import { showAlert } from "@/ui/showAlert";
 import {

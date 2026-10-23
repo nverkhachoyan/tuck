@@ -1,6 +1,6 @@
 import { reloadAppAsync } from "expo";
 import { useState } from "react";
-import { writePreference } from "@/lib/preferenceStore";
+import { writePreference } from "@/platform/preferenceStore";
 import { useStore } from "@/store";
 import { Segmented } from "@/ui/Segmented";
 import { THEME_PREFERENCE, type ThemeSetting, themeSetting } from "@/ui/theme";

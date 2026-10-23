@@ -6,8 +6,8 @@ import {
 	useSharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { hapticTick } from "@/lib/haptics";
 import type { Rect, Size } from "@/model/geometry";
+import { hapticTick } from "@/platform/haptics";
 import { handleMetrics, hasFinePointer } from "../../canvas/handleMetrics";
 import {
 	type DocumentViewport,

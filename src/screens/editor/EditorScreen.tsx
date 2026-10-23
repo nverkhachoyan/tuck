@@ -10,7 +10,6 @@ import {
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
-import { usePreference } from "@/lib/usePreference";
 import { neutralAdjustments } from "@/model/adjustments";
 import { imagePointAt, isCutOut } from "@/model/cutout";
 import {
@@ -24,6 +23,7 @@ import {
 	visibleImageLayer,
 } from "@/model/framing";
 import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
+import { usePreference } from "@/platform/usePreference";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage, openProjectName } from "@/projects/projectService";
