@@ -479,7 +479,7 @@ export function TransformsLesson() {
 					))}
 				</div>
 				<SourceView
-					file="geometry.ts"
+					file="src/model/geometry.ts"
 					name={shownSource}
 					focus={focus?.name === shownSource ? focus.line : null}
 				/>

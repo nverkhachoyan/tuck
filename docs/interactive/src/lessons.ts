@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { AnatomyLesson } from "./lessons/model/AnatomyLesson.tsx";
 import { TransformsLesson } from "./lessons/model/TransformsLesson.tsx";
 
 export type Lesson = {
@@ -37,6 +38,7 @@ export const chapters: Chapter[] = [
 				title: "Anatomy of a layer",
 				summary:
 					"Every layer is content centered on its own origin, placed by a transform.",
+				component: AnatomyLesson,
 			},
 			{
 				id: "identity",

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { extractDeclaration } from "./extract.ts";
-import { type ModelFile, modelSources } from "./modelSources.ts";
+import { type SourceFile, sources } from "./sources.ts";
 
 const TOKEN =
 	/(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`)|\b(export|function|const|let|return|if|else|type|import|from|for|of|switch|case|default|new|typeof|as|in|true|false|null|undefined)\b|(\b\d+(?:\.\d+)?(?:e-?\d+)?\b)/gm;
@@ -31,7 +31,7 @@ function highlight(line: string): ReactNode[] {
 }
 
 /**
- * A declaration from the app's model, read from the file as it is now.
+ * A declaration from the app, read from the file as it is now.
  * Lines containing `focus` are marked, so a lesson can point at a step.
  */
 export function SourceView({
@@ -39,16 +39,16 @@ export function SourceView({
 	name,
 	focus,
 }: {
-	file: ModelFile;
+	file: SourceFile;
 	name: string;
 	focus?: string | null;
 }) {
-	const excerpt = extractDeclaration(modelSources[file], name);
+	const excerpt = extractDeclaration(sources[file], name);
 	if (!excerpt) {
 		return (
 			<div className="source source-missing">
-				<code>{name}</code> is no longer in <code>src/model/{file}</code>. The
-				code this lesson explains has moved: update the lesson.
+				<code>{name}</code> is no longer in <code>{file}</code>. The code this
+				lesson explains has moved: update the lesson.
 			</div>
 		);
 	}
@@ -59,7 +59,7 @@ export function SourceView({
 	return (
 		<figure className="source">
 			<figcaption>
-				src/model/{file}:{excerpt.firstLine}
+				{file}:{excerpt.firstLine}
 			</figcaption>
 			<pre>
 				{lines.map((line, index) => {

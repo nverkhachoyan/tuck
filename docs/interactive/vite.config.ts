@@ -9,7 +9,10 @@ export default defineConfig({
 	resolve: {
 		// Lessons import the app's real modules, so the docs break when they
 		// change instead of quietly going stale.
-		alias: { "@model": `${repoRoot}src/model` },
+		alias: {
+			"@model": `${repoRoot}src/model`,
+			"@src": `${repoRoot}src`,
+		},
 	},
 	server: {
 		port: 5180,

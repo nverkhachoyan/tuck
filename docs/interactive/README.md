@@ -18,8 +18,9 @@ It opens at http://localhost:5180 (the `docs` launch configuration in
 1. Write a component in `src/lessons/<chapter>/` and give it to its entry in
    `src/lessons.ts` (an entry without a component shows as "soon").
 2. Import what it explains from `@model/…` rather than copying it, and quote
-   code with `<SourceView file="geometry.ts" name="toLayerSpace" />`, which
-   reads the declaration by name from the file.
+   code with `<SourceView file="src/model/geometry.ts" name="toLayerSpace" />`,
+   which reads the declaration by name from the file. A file a lesson quotes
+   needs an entry in `src/source/sources.ts`.
 3. Steps the reader works through go in a `<Flow>`: each step says what to try
    and checks the lesson's live state for when it's done.
 

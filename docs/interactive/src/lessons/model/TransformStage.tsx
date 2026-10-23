@@ -6,6 +6,7 @@ import {
 	transformMatrix,
 } from "@model/geometry.ts";
 import { type PointerEvent, useRef } from "react";
+import { Photo } from "../../ui/Photo.tsx";
 
 export const DOCUMENT = { width: 1200, height: 900 };
 export const IMAGE = { width: 400, height: 300 };
@@ -27,41 +28,9 @@ function svgMatrix(transform: Transform): string {
 	return `matrix(${a} ${b} ${c} ${d} ${tx} ${ty})`;
 }
 
-/** A stand-in photo, lopsided so its turns and stretches are easy to read. */
-function Photo() {
-	const { width, height } = IMAGE;
-	return (
-		<g>
-			<rect
-				x={-width / 2}
-				y={-height / 2}
-				width={width}
-				height={height}
-				fill="url(#sky)"
-			/>
-			<polygon
-				points={`${-width / 2},60 ${-60},-40 ${30},40 ${100},-10 ${width / 2},50 ${width / 2},${height / 2} ${-width / 2},${height / 2}`}
-				fill="#6F8F7A"
-			/>
-			<rect
-				x={-width / 2}
-				y={80}
-				width={width}
-				height={height / 2 - 80}
-				fill="#E2C38E"
-			/>
-			<circle cx={-120} cy={-75} r={34} fill="#FF9F43" />
-		</g>
-	);
-}
-
 function Defs() {
 	return (
 		<defs>
-			<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-				<stop offset="0" stopColor="#7DB4F5" />
-				<stop offset="1" stopColor="#F6D9B8" />
-			</linearGradient>
 			<clipPath id="canvas-clip">
 				<rect width={DOCUMENT.width} height={DOCUMENT.height} />
 			</clipPath>
@@ -250,11 +219,11 @@ export function DocumentStage({
 
 			{/* Outside the canvas a layer is cropped: show it faintly there. */}
 			<g opacity={0.28} transform={matrix}>
-				<Photo />
+				<Photo {...IMAGE} />
 			</g>
 			<g clipPath="url(#canvas-clip)">
 				<g transform={matrix}>
-					<Photo />
+					<Photo {...IMAGE} />
 				</g>
 			</g>
 			<g transform={matrix}>
@@ -341,7 +310,7 @@ export function LayerSpaceView({ local, hit }: { local: Point; hit: boolean }) {
 			aria-label={`The probe in layer space, at ${local.x.toFixed(1)}, ${local.y.toFixed(1)}`}
 		>
 			<Defs />
-			<Photo />
+			<Photo {...IMAGE} />
 			<rect
 				className="layer-outline"
 				x={-boxW}

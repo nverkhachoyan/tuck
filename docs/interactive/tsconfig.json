@@ -14,7 +14,8 @@
 		"allowImportingTsExtensions": true,
 		"types": ["vite/client", "node"],
 		"paths": {
-			"@model/*": ["../../src/model/*"]
+			"@model/*": ["../../src/model/*"],
+			"@src/*": ["../../src/*"]
 		}
 	},
 	"include": ["src", "vite.config.ts"]

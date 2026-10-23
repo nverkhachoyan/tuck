@@ -420,6 +420,32 @@ figcaption strong {
 	stroke: #fff;
 }
 
+.anatomy-stage {
+	cursor: default;
+}
+
+.stage .selection-outline {
+	fill: none;
+	stroke: var(--selection);
+	stroke-width: 3;
+}
+
+.stage .selection.locked .selection-outline {
+	stroke-dasharray: 12 9;
+}
+
+.stage .selection-handle {
+	fill: #fff;
+	stroke: var(--selection);
+	stroke-width: 3;
+}
+
+.stage .selection-origin {
+	fill: var(--selection);
+	stroke: #fff;
+	stroke-width: 3;
+}
+
 /* The live computation. */
 
 .computation .rows {
@@ -682,6 +708,213 @@ figcaption strong {
 	font-weight: 600;
 	text-decoration: none;
 	margin-top: 28px;
+}
+
+/* The anatomy lesson's layers, inspector, and document. */
+
+.adders {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.list-note {
+	margin: 14px 0 6px;
+	font-size: 12px;
+	color: var(--text-secondary);
+}
+
+.layer-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 2px;
+}
+
+.layer-list li {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) repeat(4, auto);
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	border-radius: var(--radius-small);
+}
+
+.layer-list li:hover {
+	background: var(--paper-hover);
+}
+
+.layer-list li.chosen {
+	background: var(--highlighter);
+	color: var(--on-highlighter);
+}
+
+.layer-list li.empty {
+	display: block;
+	padding: 8px;
+	font-size: 13px;
+	color: var(--text-secondary);
+}
+
+.layer-name {
+	all: unset;
+	display: grid;
+	padding: 4px 8px;
+	cursor: pointer;
+	min-width: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.layer-name span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.layer-name small {
+	font-size: 11.5px;
+	font-weight: 400;
+	opacity: 0.7;
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.layer-name:focus-visible {
+	outline: 2px solid var(--selection);
+	border-radius: 6px;
+}
+
+.faded {
+	opacity: 0.45;
+}
+
+.icon-button {
+	border: none;
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	padding: 6px 7px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+	background: rgba(0, 0, 0, 0.07);
+}
+
+.icon-button:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+
+.inspector {
+	display: grid;
+	gap: 8px;
+	align-content: start;
+}
+
+.inspector h2 {
+	margin-bottom: 0;
+}
+
+.layer-json {
+	margin: 0;
+	padding: 10px 12px;
+	background: var(--code-bg);
+	border-radius: var(--radius-small);
+	font-size: 12px;
+	line-height: 1.6;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.json-base {
+	color: var(--text-secondary);
+}
+
+.json-tag {
+	font-weight: 700;
+}
+
+.json-tag .json-key {
+	background: var(--highlighter-soft);
+	border-radius: 3px;
+}
+
+.json-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+	margin: 0;
+	font-size: 12px;
+}
+
+.json-legend span::before {
+	content: "";
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 4px;
+	margin-right: 5px;
+	background: currentColor;
+}
+
+.json-legend .json-tag::before {
+	background: var(--highlighter);
+}
+
+.box-readout {
+	margin: 0;
+	font-size: 13.5px;
+}
+
+.text-input {
+	display: grid;
+	grid-template-columns: 72px minmax(0, 1fr);
+	align-items: center;
+	gap: 10px;
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	font-size: 13px;
+}
+
+.text-input input {
+	padding: 6px 8px;
+	border: 1px solid var(--hairline-strong);
+	border-radius: var(--radius-small);
+	background: var(--paper);
+	color: var(--ink);
+	font: inherit;
+}
+
+.inspector .slider {
+	grid-template-columns: 72px minmax(0, 1fr) 56px;
+}
+
+.document-panel dl {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 6px 14px;
+	margin: 0;
+	font-size: 13.5px;
+}
+
+.document-panel dt {
+	color: var(--text-secondary);
+}
+
+.document-panel dd {
+	margin: 0;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.document-panel dd small {
+	display: block;
+	font-size: 12px;
+	color: var(--text-secondary);
 }
 
 /* Source. */
