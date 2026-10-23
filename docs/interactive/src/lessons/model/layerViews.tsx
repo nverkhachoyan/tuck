@@ -383,8 +383,10 @@ function RedactionBoxView({
 	layer: Extract<Layer, { type: "redaction"; shape: "box" }>;
 	below: ReactNode;
 }) {
-	const clip = `clip-${layer.id}`;
-	const blur = `blur-${layer.id}`;
+	// Unique per drawing: one page can show several copies of a document.
+	const id = useId();
+	const clip = `${id}-clip`;
+	const blur = `${id}-blur`;
 	const box = (
 		<rect
 			x={-layer.width / 2}
@@ -430,11 +432,12 @@ function RedactionBoxView({
  */
 export function DocumentScene({ document }: { document: EditorDocument }) {
 	const { width, height } = document;
+	const id = useId();
 	let scene: ReactNode = (
 		<rect
 			width={width}
 			height={height}
-			fill={document.background ?? "url(#checker)"}
+			fill={document.background ?? `url(#${id}-checker)`}
 		/>
 	);
 	for (const layer of document.layers) {
@@ -449,7 +452,7 @@ export function DocumentScene({ document }: { document: EditorDocument }) {
 		<>
 			<defs>
 				<pattern
-					id="checker"
+					id={`${id}-checker`}
 					width={48}
 					height={48}
 					patternUnits="userSpaceOnUse"
@@ -458,12 +461,12 @@ export function DocumentScene({ document }: { document: EditorDocument }) {
 					<rect width={24} height={24} fill="#D3D5D9" />
 					<rect x={24} y={24} width={24} height={24} fill="#D3D5D9" />
 				</pattern>
-				<clipPath id="document-canvas">
+				<clipPath id={`${id}-canvas`}>
 					<rect width={width} height={height} />
 				</clipPath>
 			</defs>
 			<rect className="canvas" width={width} height={height} />
-			<g clipPath="url(#document-canvas)">{scene}</g>
+			<g clipPath={`url(#${id}-canvas)`}>{scene}</g>
 		</>
 	);
 }

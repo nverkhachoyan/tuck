@@ -10,6 +10,7 @@ import hitTest from "@src/screens/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/screens/editor/canvas/layerBounds.ts?raw";
 import cropGeometry from "@src/screens/editor/crop/cropGeometry.ts?raw";
 import editorSlice from "@src/store/editorSlice.ts?raw";
+import storeIndex from "@src/store/index.ts?raw";
 
 // The app's files as text, so lessons quote the code as it is today.
 export const sources = {
@@ -25,6 +26,7 @@ export const sources = {
 	"src/screens/editor/canvas/layerBounds.ts": layerBounds,
 	"src/screens/editor/crop/cropGeometry.ts": cropGeometry,
 	"src/store/editorSlice.ts": editorSlice,
+	"src/store/index.ts": storeIndex,
 };
 
 export type SourceFile = keyof typeof sources;

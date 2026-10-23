@@ -4,6 +4,7 @@ import { FramingLesson } from "./lessons/model/FramingLesson.tsx";
 import { IdentityLesson } from "./lessons/model/IdentityLesson.tsx";
 import { StrokesLesson } from "./lessons/model/StrokesLesson.tsx";
 import { TransformsLesson } from "./lessons/model/TransformsLesson.tsx";
+import { HistoryLesson } from "./lessons/store/HistoryLesson.tsx";
 
 export type Lesson = {
 	id: string;
@@ -71,9 +72,15 @@ export const chapters: Chapter[] = [
 		folder: "src/store",
 		lessons: [
 			{
-				id: "slice",
-				title: "The editor slice",
-				summary: "Every edit, undo history, and tool sessions.",
+				id: "history",
+				title: "Every edit is a snapshot",
+				summary: "Actions, the undo history, and what isn't an edit.",
+				component: HistoryLesson,
+			},
+			{
+				id: "sessions",
+				title: "A tool is one undo step",
+				summary: "Sessions: where a tool starts, Done, and Cancel.",
 			},
 		],
 	},
