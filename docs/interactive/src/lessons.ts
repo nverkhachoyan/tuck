@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { AnatomyLesson } from "./lessons/model/AnatomyLesson.tsx";
+import { FramingLesson } from "./lessons/model/FramingLesson.tsx";
 import { IdentityLesson } from "./lessons/model/IdentityLesson.tsx";
 import { StrokesLesson } from "./lessons/model/StrokesLesson.tsx";
 import { TransformsLesson } from "./lessons/model/TransformsLesson.tsx";
@@ -60,6 +61,7 @@ export const chapters: Chapter[] = [
 				title: "Cropping moves an anchor",
 				summary:
 					"How the crop tool reframes one photo and every layer follows it.",
+				component: FramingLesson,
 			},
 		],
 	},

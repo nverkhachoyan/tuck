@@ -8,6 +8,7 @@ import shapes from "@src/model/shapes.ts?raw";
 import textEditing from "@src/model/textEditing.ts?raw";
 import hitTest from "@src/screens/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/screens/editor/canvas/layerBounds.ts?raw";
+import cropGeometry from "@src/screens/editor/crop/cropGeometry.ts?raw";
 import editorSlice from "@src/store/editorSlice.ts?raw";
 
 // The app's files as text, so lessons quote the code as it is today.
@@ -22,6 +23,7 @@ export const sources = {
 	"src/model/textEditing.ts": textEditing,
 	"src/screens/editor/canvas/hitTest.ts": hitTest,
 	"src/screens/editor/canvas/layerBounds.ts": layerBounds,
+	"src/screens/editor/crop/cropGeometry.ts": cropGeometry,
 	"src/store/editorSlice.ts": editorSlice,
 };
 
