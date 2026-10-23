@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { AnatomyLesson } from "./lessons/model/AnatomyLesson.tsx";
 import { IdentityLesson } from "./lessons/model/IdentityLesson.tsx";
+import { StrokesLesson } from "./lessons/model/StrokesLesson.tsx";
 import { TransformsLesson } from "./lessons/model/TransformsLesson.tsx";
 
 export type Lesson = {
@@ -52,6 +53,7 @@ export const chapters: Chapter[] = [
 				title: "Strokes into layer space",
 				summary:
 					"Drawn in document space, stored in the layer's own, and kept centered.",
+				component: StrokesLesson,
 			},
 			{
 				id: "framing",

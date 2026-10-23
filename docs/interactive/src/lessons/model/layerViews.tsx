@@ -116,7 +116,7 @@ export function boxSource(layer: Layer): string {
 	}
 }
 
-function strokePath(points: number[]): string {
+export function strokePath(points: number[]): string {
 	if (points.length < 2) return "";
 	const [x, y, ...rest] = points;
 	let path = `M${x},${y}`;
@@ -138,6 +138,51 @@ function StrokeView({ stroke }: { stroke: Stroke }) {
 			strokeLinejoin="round"
 		/>
 	);
+}
+
+/**
+ * A drawing's strokes in its own space. An eraser clears what the strokes
+ * before it drew, not the ones after, so each one masks everything so far.
+ */
+export function StrokesView({ strokes }: { strokes: Stroke[] }) {
+	const prefix = useId();
+	let content: ReactNode = null;
+	strokes.forEach((stroke, index) => {
+		const key = `${prefix}-${index}`;
+		if (stroke.type === "pen") {
+			content = (
+				<>
+					{content}
+					<StrokeView key={key} stroke={stroke} />
+				</>
+			);
+			return;
+		}
+		content = (
+			<g key={key} mask={`url(#${key})`}>
+				<mask
+					id={key}
+					maskUnits="userSpaceOnUse"
+					x={-1e5}
+					y={-1e5}
+					width={2e5}
+					height={2e5}
+				>
+					<rect x={-1e5} y={-1e5} width={2e5} height={2e5} fill="#fff" />
+					<path
+						d={strokePath(stroke.points)}
+						fill="none"
+						stroke="#000"
+						strokeWidth={stroke.width}
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+				</mask>
+				{content}
+			</g>
+		);
+	});
+	return <g>{content}</g>;
 }
 
 function TextView({ layer }: { layer: TextLayer }) {
@@ -301,14 +346,7 @@ export function LayerContent({ layer }: { layer: Layer }) {
 		case "text":
 			return <TextView layer={layer} />;
 		case "drawing":
-			return (
-				<g>
-					{layer.strokes.map((stroke, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: strokes only append.
-						<StrokeView key={index} stroke={stroke} />
-					))}
-				</g>
-			);
+			return <StrokesView strokes={layer.strokes} />;
 		case "shape":
 			return <ShapeView layer={layer} />;
 		case "redaction":

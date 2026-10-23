@@ -6,6 +6,7 @@ import framing from "@src/model/framing.ts?raw";
 import geometry from "@src/model/geometry.ts?raw";
 import shapes from "@src/model/shapes.ts?raw";
 import textEditing from "@src/model/textEditing.ts?raw";
+import hitTest from "@src/screens/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/screens/editor/canvas/layerBounds.ts?raw";
 import editorSlice from "@src/store/editorSlice.ts?raw";
 
@@ -19,6 +20,7 @@ export const sources = {
 	"src/model/geometry.ts": geometry,
 	"src/model/shapes.ts": shapes,
 	"src/model/textEditing.ts": textEditing,
+	"src/screens/editor/canvas/hitTest.ts": hitTest,
 	"src/screens/editor/canvas/layerBounds.ts": layerBounds,
 	"src/store/editorSlice.ts": editorSlice,
 };
