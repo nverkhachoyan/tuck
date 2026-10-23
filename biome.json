@@ -197,10 +197,11 @@
 											"!../*",
 											"!@/lib/**",
 											"!../../lib/**",
+											"!@/platform/preferenceStore",
 											"!@/ui/**",
 											"!../../ui/**"
 										],
-										"message": "ui/ imports only itself and lib/, never app code. See AGENTS.md."
+										"message": "ui/ imports only itself, lib/, and platform/preferenceStore, never app code. See AGENTS.md."
 									}
 								]
 							}
@@ -731,9 +732,15 @@
 											"@/screens/editor/tools/stickers/**",
 											"../tools/text/**",
 											"../../tools/text/**",
-											"@/screens/editor/tools/text/**"
+											"@/screens/editor/tools/text/**",
+											"../session/**",
+											"../../session/**",
+											"@/screens/editor/session/**",
+											"../detection/**",
+											"../../detection/**",
+											"@/screens/editor/detection/**"
 										],
-										"message": "canvas/ doesn't import the editor's tools. See AGENTS.md."
+										"message": "canvas/ imports only the editor root and shell/: no tool, session/, or detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -783,9 +790,12 @@
 											"@/screens/editor/tools/stickers/**",
 											"../text/**",
 											"../../text/**",
-											"@/screens/editor/tools/text/**"
+											"@/screens/editor/tools/text/**",
+											"../../session/**",
+											"../../../session/**",
+											"@/screens/editor/session/**"
 										],
-										"message": "crop/ doesn't import the editor's other tools. See AGENTS.md."
+										"message": "crop/ doesn't import the editor's other tools or session/. See AGENTS.md."
 									}
 								]
 							}
@@ -847,9 +857,12 @@
 											"@/screens/editor/tools/stickers/**",
 											"../text/**",
 											"../../text/**",
-											"@/screens/editor/tools/text/**"
+											"@/screens/editor/tools/text/**",
+											"../../session/**",
+											"../../../session/**",
+											"@/screens/editor/session/**"
 										],
-										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other, canvas/, or session/: what they share is at the editor root, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -973,6 +986,32 @@
 			}
 		},
 		{
+			"includes": ["src/screens/editor/session/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"../**",
+											"!../../../model/**"
+										],
+										"message": "session/ imports nothing else from the editor, and no route or other screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/screens/editor/detection/**"],
 			"linter": {
 				"rules": {
@@ -985,21 +1024,10 @@
 										"group": [
 											"@/app/**",
 											"@/screens/**",
-											"!@/screens/editor/**",
-											"../create/**",
-											"../export/**",
-											"../home/**",
-											"../info/**",
-											"../../create/**",
-											"../../export/**",
-											"../../home/**",
-											"../../info/**",
-											"../../../create/**",
-											"../../../export/**",
-											"../../../home/**",
-											"../../../info/**"
+											"../**",
+											"!../../../model/**"
 										],
-										"message": "detection/ is the editor's bridge to image-analysis: it doesn't import routes or another screen. See AGENTS.md."
+										"message": "detection/ is the editor's bridge to image-analysis: it imports nothing else from the editor, and no route or other screen. See AGENTS.md."
 									}
 								]
 							}
