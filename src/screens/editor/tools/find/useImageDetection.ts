@@ -6,7 +6,7 @@ import {
 	detectImageRegions,
 	isDetectionAvailable,
 	isDetectionModelDownloading,
-} from "./imageDetection";
+} from "../../detection/imageDetection";
 
 export type DetectedRegion = DetectionRect & { feature: DetectionFeature };
 export type DetectionScope = DetectionFeature | "both";

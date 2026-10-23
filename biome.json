@@ -368,7 +368,7 @@
 								"patterns": [
 									{
 										"group": ["image-analysis"],
-										"message": "Only the editor's find/ and cutout/ import the image-analysis bridge. See AGENTS.md."
+										"message": "Only the editor's detection/ imports the image-analysis bridge. See AGENTS.md."
 									}
 								]
 							}
@@ -625,7 +625,7 @@
 											"../../../home/**",
 											"../../../info/**"
 										],
-										"message": "The editor doesn't import routes or another screen, and only find/imageDetection.ts and cutout/subjectDetection.ts import image-analysis. See AGENTS.md."
+										"message": "The editor doesn't import routes or another screen, and only detection/ imports image-analysis. See AGENTS.md."
 									}
 								]
 							}
@@ -793,7 +793,7 @@
 											"../../text/**",
 											"@/screens/editor/tools/text/**"
 										],
-										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root or in shell/. See AGENTS.md."
+										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -917,14 +917,37 @@
 			}
 		},
 		{
-			"includes": [
-				"src/screens/editor/tools/find/imageDetection.ts",
-				"src/screens/editor/tools/cutout/subjectDetection.ts"
-			],
+			"includes": ["src/screens/editor/detection/**"],
 			"linter": {
 				"rules": {
 					"style": {
-						"noRestrictedImports": "off"
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/editor/**",
+											"../create/**",
+											"../export/**",
+											"../home/**",
+											"../info/**",
+											"../../create/**",
+											"../../export/**",
+											"../../home/**",
+											"../../info/**",
+											"../../../create/**",
+											"../../../export/**",
+											"../../../home/**",
+											"../../../info/**"
+										],
+										"message": "detection/ is the editor's bridge to image-analysis: it doesn't import routes or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
 					}
 				}
 			}

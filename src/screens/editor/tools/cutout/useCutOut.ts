@@ -6,8 +6,6 @@ import { isCutOut } from "@/model/cutout";
 import type { ImageLayer } from "@/model/document";
 import { decodedImages, decodeImage } from "@/render/decodedImages";
 import { showAlert } from "@/ui/showAlert";
-import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
-import { type LastPick, nextMask, picksAgain } from "./pickGrowth";
 import {
 	findObjectMasks,
 	findSubjectMask,
@@ -16,7 +14,9 @@ import {
 	isSubjectModelDownloading,
 	prepareObjectSelection,
 	releaseObjectSelection,
-} from "./subjectDetection";
+} from "../../detection/subjectDetection";
+import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
+import { type LastPick, nextMask, picksAgain } from "./pickGrowth";
 
 /**
  * The last pick, kept to grow it: the masks found where it was tapped, the

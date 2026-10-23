@@ -3,7 +3,7 @@ import type {
 	ImageLayer,
 	RedactionBoxPlacement,
 } from "../../../../model/document.ts";
-import type { DetectionFeature } from "./imageDetection.ts";
+import type { DetectionFeature } from "../../detection/imageDetection.ts";
 import type { MappedDetectionRect } from "./mapDetectionRects.ts";
 
 // A region Find found, placed in the document.

@@ -8,7 +8,10 @@ import {
 	type Size,
 	toDocumentSpace,
 } from "../../../../model/geometry.ts";
-import type { DetectionFeature, DetectionRect } from "./imageDetection.ts";
+import type {
+	DetectionFeature,
+	DetectionRect,
+} from "../../detection/imageDetection.ts";
 
 export type MappedDetectionRect = RedactionBoxPlacement & {
 	sourceIndex: number;
