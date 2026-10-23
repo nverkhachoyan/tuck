@@ -1384,6 +1384,33 @@ figcaption strong {
 	}
 }
 
+.panel h2.tool-heading {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+.tool-state {
+	padding: 1px 8px;
+	border-radius: 4px;
+	background: var(--paper-hover);
+	color: var(--text-secondary);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.tool-state.open {
+	background: var(--highlighter);
+	color: var(--on-highlighter);
+}
+
+.button-small.primary {
+	background: var(--ink);
+	border-color: var(--ink);
+	color: var(--on-ink);
+}
+
 /* Source. */
 
 .tabs {

@@ -5,6 +5,7 @@ import { IdentityLesson } from "./lessons/model/IdentityLesson.tsx";
 import { StrokesLesson } from "./lessons/model/StrokesLesson.tsx";
 import { TransformsLesson } from "./lessons/model/TransformsLesson.tsx";
 import { HistoryLesson } from "./lessons/store/HistoryLesson.tsx";
+import { SessionsLesson } from "./lessons/store/SessionsLesson.tsx";
 
 export type Lesson = {
 	id: string;
@@ -81,6 +82,7 @@ export const chapters: Chapter[] = [
 				id: "sessions",
 				title: "A tool is one undo step",
 				summary: "Sessions: where a tool starts, Done, and Cancel.",
+				component: SessionsLesson,
 			},
 		],
 	},
