@@ -56,7 +56,7 @@ import {
 	toolButtonsFor,
 } from "./EditorDock";
 import { type ShortcutCommand, shortcutCommand, takesKeys } from "./editorMode";
-import { SaveErrorBanner } from "./SaveErrorBanner";
+import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { isCustomColor } from "./shell/ColorSwatches";
 import type { DialDrag } from "./shell/Dial";
@@ -99,12 +99,12 @@ import { useStickerSave } from "./tools/stickers/useStickerSave";
 import { TextEditor } from "./tools/text/TextEditor";
 import { type TextEditing, useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
-import { useAutosave } from "./useAutosave";
+import { useAutosave } from "./session/useAutosave";
 import { useDeleteNotice } from "./useDeleteNotice";
 import { useEditorActions } from "./useEditorActions";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
-import { useProjectSession } from "./useProjectSession";
+import { useProjectSession } from "./session/useProjectSession";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
