@@ -36,16 +36,18 @@ export function extractDeclaration(
 ): Excerpt | null {
 	const lines = source.split("\n");
 	const topLevel = new RegExp(
-		`^(export )?(function|const|type|let) ${name}\\b`,
+		`^(export )?(async )?(function|const|type|let) ${name}\\b`,
 	);
-	const nested = new RegExp(`^\\s+((function|const|let) ${name}\\b|${name}: )`);
+	const nested = new RegExp(
+		`^\\s+((async )?(function|const|let) ${name}\\b|${name}: )`,
+	);
 	let index = lines.findIndex((line) => topLevel.test(line));
 	// The last nested match: a slice's type lists its actions before the
 	// slice defines them.
 	if (index < 0) index = lines.findLastIndex((line) => nested.test(line));
 	if (index < 0) return null;
 	// A method ends at its comma, as one of an object's entries.
-	const isMethod = !/^\s*(export |function |const |let |type )/.test(
+	const isMethod = !/^\s*(export |async |function |const |let |type )/.test(
 		lines[index],
 	);
 

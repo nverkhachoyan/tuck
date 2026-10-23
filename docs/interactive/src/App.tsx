@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Welcome } from "./lessons/Welcome.tsx";
 import { chapters, findLesson } from "./lessons.ts";
 
@@ -65,7 +65,10 @@ export function App() {
 			</nav>
 			<main className="content">
 				{found?.lesson.component ? (
-					<found.lesson.component key={`${chapterId}/${lessonId}`} />
+					// Rendering lessons load Skia first.
+					<Suspense fallback={<p className="loading">Loading Skia…</p>}>
+						<found.lesson.component key={`${chapterId}/${lessonId}`} />
+					</Suspense>
 				) : (
 					<Welcome />
 				)}

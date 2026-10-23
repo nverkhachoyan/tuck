@@ -15,7 +15,12 @@
 		"types": ["vite/client", "node"],
 		"paths": {
 			"@model/*": ["../../src/model/*"],
-			"@src/*": ["../../src/*"]
+			"@src/*": ["../../src/*"],
+			// The app's own alias, which its `render/` code imports through.
+			"@/*": ["../../src/*"],
+			// One React's types for the docs and the app's code alike.
+			"react": ["./node_modules/@types/react"],
+			"react/*": ["./node_modules/@types/react/*"]
 		}
 	},
 	"include": ["src", "vite.config.ts"]

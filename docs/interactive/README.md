@@ -26,3 +26,15 @@ It opens at http://localhost:5180 (the `docs` launch configuration in
 
 `npm run build` type-checks the lessons against `src/` and bundles them. CI runs
 it, so a change to something a lesson covers fails until the lesson is updated.
+
+## The rendering lessons
+
+The rendering chapter draws with the app's real `src/render/` code, on
+React Native Skia's web build (CanvasKit) and React Native Web, taken from the
+repo root's `node_modules` at the versions the app runs: run `npm install` at
+the root first. `vite.config.ts` makes that work outside Metro: it maps
+`react-native` to `react-native-web`, prefers Metro's `.web` files, and stands
+in for what only Metro or a phone has (`src/platform/`: Reanimated, React
+Native's asset registry, `expo-asset`, `expo-font`, and the font packages'
+`require` of a `.ttf`). A lesson that imports Skia must load through
+`withSkia` (`src/lessons/render/loadSkia.ts`), so CanvasKit is ready first.

@@ -1411,6 +1411,34 @@ figcaption strong {
 	color: var(--on-ink);
 }
 
+/* The rendering lessons. */
+
+.skia-stage {
+	width: 100%;
+	border-radius: var(--radius-small);
+	background: var(--table);
+	overflow: hidden;
+}
+
+.transform-list {
+	display: grid;
+	gap: 2px;
+	margin: 0;
+	padding: 10px 12px;
+	border-radius: var(--radius-small);
+	background: var(--code-bg);
+	font-size: 12.5px;
+}
+
+.transform-list .transform-values {
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	color: var(--text-secondary);
+}
+
+.loading {
+	color: var(--text-secondary);
+}
+
 /* Source. */
 
 .tabs {

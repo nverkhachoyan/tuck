@@ -4,6 +4,7 @@ import { FramingLesson } from "./lessons/model/FramingLesson.tsx";
 import { IdentityLesson } from "./lessons/model/IdentityLesson.tsx";
 import { StrokesLesson } from "./lessons/model/StrokesLesson.tsx";
 import { TransformsLesson } from "./lessons/model/TransformsLesson.tsx";
+import { withSkia } from "./lessons/render/loadSkia.ts";
 import { HistoryLesson } from "./lessons/store/HistoryLesson.tsx";
 import { SessionsLesson } from "./lessons/store/SessionsLesson.tsx";
 
@@ -95,6 +96,7 @@ export const chapters: Chapter[] = [
 				id: "layer-content",
 				title: "From layer to pixels",
 				summary: "How each layer type draws, on screen and in export.",
+				component: withSkia(() => import("./lessons/render/LayersLesson.tsx")),
 			},
 		],
 	},
