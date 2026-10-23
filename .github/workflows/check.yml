@@ -20,6 +20,10 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run typecheck
+      # The interactive docs import the app's model, so a change there that a
+      # lesson depends on fails here.
+      - run: npm ci --prefix docs/interactive
+      - run: npm run build --prefix docs/interactive
       - run: npm test
       # Bundles the web app with Metro, which the checks above never run, so an
       # import only Metro resolves (a `.web.ts` file's, an asset, the entry's

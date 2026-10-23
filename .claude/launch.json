@@ -20,6 +20,16 @@
       ],
       "port": 8083,
       "autoPort": true
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd docs/interactive && exec npx vite --port \"${PORT:-5180}\" --strictPort"
+      ],
+      "port": 5180,
+      "autoPort": true
     }
   ]
 }
