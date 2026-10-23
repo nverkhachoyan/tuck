@@ -18,8 +18,8 @@ import type { Rect } from "@/model/geometry";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";
-import { CutCoverage, ImageLayerView } from "./ImageLayerView";
 import { keptBounds } from "./keptBounds";
+import { CutCoverage, ImageLayerView } from "./layers/ImageLayerView";
 
 // A thumbnail's shorter side, in pixels: a project card's print on a phone
 // at 3x.

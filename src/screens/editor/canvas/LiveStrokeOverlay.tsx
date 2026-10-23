@@ -32,13 +32,9 @@ import {
 import { drawingBox } from "@/model/drawing";
 import { rectFromCorners, transformsEqual } from "@/model/geometry";
 import { lineReach, shapeBox } from "@/model/shapes";
-import { BrushStroke, strokePath } from "@/render/DrawingLayerView";
-import { MaskStrokePath } from "@/render/ImageLayerView";
 import { LayerContent } from "@/render/LayerContent";
-import {
-	toInverseTransformList,
-	toTransformList,
-} from "@/render/layerTransform";
+import { BrushStroke, strokePath } from "@/render/layers/DrawingLayerView";
+import { MaskStrokePath } from "@/render/layers/ImageLayerView";
 import {
 	type FilterEffect,
 	maskedRedactionPicture,
@@ -49,8 +45,12 @@ import {
 	recordRedactionStrokes,
 	redactionFilter,
 	strokesPicture,
-} from "@/render/RedactionLayerView";
-import { shapePath } from "@/render/ShapeLayerView";
+} from "@/render/layers/RedactionLayerView";
+import { shapePath } from "@/render/layers/ShapeLayerView";
+import {
+	toInverseTransformList,
+	toTransformList,
+} from "@/render/layerTransform";
 import { useDecodedImage } from "@/render/useDecodedImage";
 import { colors } from "@/ui/theme";
 import type { CanvasTool } from "./canvasInput";

@@ -5,11 +5,11 @@ import type { ColorMatrix } from "@/model/adjustments";
 import type { ImageLayer, Layer, RedactionMask } from "@/model/document";
 import { CHECKER_CELL } from "@/ui/theme";
 import { Checkerboard } from "./Checkerboard";
-import { DrawingLayerView } from "./DrawingLayerView";
-import { ImageLayerView } from "./ImageLayerView";
-import { RedactionLayerView } from "./RedactionLayerView";
-import { ShapeLayerView } from "./ShapeLayerView";
-import { TextLayerView } from "./TextLayerView";
+import { DrawingLayerView } from "./layers/DrawingLayerView";
+import { ImageLayerView } from "./layers/ImageLayerView";
+import { RedactionLayerView } from "./layers/RedactionLayerView";
+import { ShapeLayerView } from "./layers/ShapeLayerView";
+import { TextLayerView } from "./layers/TextLayerView";
 import { useDecodedImage } from "./useDecodedImage";
 
 // What the editor's canvas and the crop tool's both draw.

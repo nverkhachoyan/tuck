@@ -9,12 +9,12 @@ import {
 } from "@model/document.ts";
 import { Fill, Group, Paint, type SkImage } from "@shopify/react-native-skia";
 import { DocumentRenderScene } from "@src/render/DocumentRenderScene.tsx";
-import { DrawingLayerView } from "@src/render/DrawingLayerView.tsx";
-import { ImageLayerView } from "@src/render/ImageLayerView.tsx";
+import { DrawingLayerView } from "@src/render/layers/DrawingLayerView.tsx";
+import { ImageLayerView } from "@src/render/layers/ImageLayerView.tsx";
+import { RedactionLayerView } from "@src/render/layers/RedactionLayerView.tsx";
+import { ShapeLayerView } from "@src/render/layers/ShapeLayerView.tsx";
+import { TextLayerView } from "@src/render/layers/TextLayerView.tsx";
 import { toTransformList } from "@src/render/layerTransform.ts";
-import { RedactionLayerView } from "@src/render/RedactionLayerView.tsx";
-import { ShapeLayerView } from "@src/render/ShapeLayerView.tsx";
-import { TextLayerView } from "@src/render/TextLayerView.tsx";
 import { useEffect, useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -218,22 +218,22 @@ export default function LayersLesson() {
 		},
 		{
 			label: "RedactionLayerView",
-			file: "src/render/RedactionLayerView.tsx",
+			file: "src/render/layers/RedactionLayerView.tsx",
 			name: "RedactionLayerView",
 		},
 		{
 			label: "pixelateFilter",
-			file: "src/render/RedactionLayerView.tsx",
+			file: "src/render/layers/RedactionLayerView.tsx",
 			name: "pixelateFilter",
 		},
 		{
 			label: "ImageLayerView",
-			file: "src/render/ImageLayerView.tsx",
+			file: "src/render/layers/ImageLayerView.tsx",
 			name: "ImageLayerView",
 		},
 		{
 			label: "TextLayerView",
-			file: "src/render/TextLayerView.tsx",
+			file: "src/render/layers/TextLayerView.tsx",
 			name: "TextLayerView",
 		},
 		{

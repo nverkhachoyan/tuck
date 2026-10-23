@@ -10,11 +10,11 @@ import documentRenderScene from "@src/render/DocumentRenderScene.tsx?raw";
 import decodedImages from "@src/render/decodedImages.ts?raw";
 import decodeImageLayers from "@src/render/decodeImageLayers.ts?raw";
 import fonts from "@src/render/fonts.ts?raw";
-import imageLayerView from "@src/render/ImageLayerView.tsx?raw";
+import imageLayerView from "@src/render/layers/ImageLayerView.tsx?raw";
+import redactionLayerView from "@src/render/layers/RedactionLayerView.tsx?raw";
+import textLayerView from "@src/render/layers/TextLayerView.tsx?raw";
 import layerTransform from "@src/render/layerTransform.ts?raw";
-import redactionLayerView from "@src/render/RedactionLayerView.tsx?raw";
 import renderDocument from "@src/render/renderDocument.tsx?raw";
-import textLayerView from "@src/render/TextLayerView.tsx?raw";
 import hitTest from "@src/screens/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/screens/editor/canvas/layerBounds.ts?raw";
 import cropGeometry from "@src/screens/editor/tools/crop/cropGeometry.ts?raw";
@@ -37,11 +37,11 @@ export const sources = {
 	"src/render/decodedImages.ts": decodedImages,
 	"src/render/DocumentRenderScene.tsx": documentRenderScene,
 	"src/render/fonts.ts": fonts,
-	"src/render/ImageLayerView.tsx": imageLayerView,
+	"src/render/layers/ImageLayerView.tsx": imageLayerView,
 	"src/render/layerTransform.ts": layerTransform,
-	"src/render/RedactionLayerView.tsx": redactionLayerView,
+	"src/render/layers/RedactionLayerView.tsx": redactionLayerView,
 	"src/render/renderDocument.tsx": renderDocument,
-	"src/render/TextLayerView.tsx": textLayerView,
+	"src/render/layers/TextLayerView.tsx": textLayerView,
 	"src/screens/editor/canvas/hitTest.ts": hitTest,
 	"src/screens/editor/canvas/layerBounds.ts": layerBounds,
 	"src/screens/editor/tools/crop/cropGeometry.ts": cropGeometry,

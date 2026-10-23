@@ -1,6 +1,6 @@
 import { Paragraph, Path } from "@shopify/react-native-skia";
 import type { TextLayer } from "@/model/document";
-import { layoutTextLayer } from "./textLayerLayout";
+import { layoutTextLayer } from "../textLayerLayout";
 
 /**
  * Draws a text layer in its own space, centered on the origin. Callers

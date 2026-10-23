@@ -19,7 +19,7 @@ import {
 } from "react-native-reanimated";
 import type { TextLayer } from "@/model/document";
 import { clampSelection, withPlaceholder } from "@/model/textEditing";
-import { TextLayerView } from "@/render/TextLayerView";
+import { TextLayerView } from "@/render/layers/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
 import { colors } from "@/ui/theme";
 import type { TextEditState } from "../editorMode";

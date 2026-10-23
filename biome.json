@@ -327,6 +327,36 @@
 			}
 		},
 		{
+			"includes": ["src/render/layers/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/model/**",
+											"!../../model/**",
+											"!@/lib/**",
+											"!../../lib/**",
+											"!@/ui/**"
+										],
+										"message": "render/ imports only model/, lib/, and ui/: no store, projects, photos, or screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/render/__tests__/**"],
 			"linter": {
 				"rules": {
