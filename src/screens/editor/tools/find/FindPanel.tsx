@@ -3,8 +3,8 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { colors, typography } from "@/ui/theme";
-import { ToolButton, ToolRow } from "../../controls/ToolButton";
-import { Tray } from "../../controls/ToolOptions";
+import { ToolButton, ToolRow } from "../../shell/ToolButton";
+import { Tray } from "../../shell/ToolOptions";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
 
 // Narrower than this, the tray's text goes above its buttons rather than beside

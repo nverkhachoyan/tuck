@@ -7,7 +7,7 @@ import type {
 	ShapeKind,
 	ShapeStyle,
 } from "../../../model/document.ts";
-import type { DialDrag } from "../controls/Dial.tsx";
+import type { DialDrag } from "../shell/Dial.tsx";
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a

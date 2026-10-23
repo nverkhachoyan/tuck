@@ -793,7 +793,7 @@
 											"../../text/**",
 											"@/screens/editor/tools/text/**"
 										],
-										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root or in controls/. See AGENTS.md."
+										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root or in shell/. See AGENTS.md."
 									}
 								]
 							}
@@ -803,7 +803,7 @@
 			}
 		},
 		{
-			"includes": ["src/screens/editor/controls/**"],
+			"includes": ["src/screens/editor/shell/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -821,7 +821,7 @@
 											"!@/screens/editor/shortcuts",
 											"!../../../**"
 										],
-										"message": "The editor's controls/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
+										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
 								]
 							}
@@ -831,7 +831,7 @@
 			}
 		},
 		{
-			"includes": ["src/screens/editor/controls/__tests__/**"],
+			"includes": ["src/screens/editor/shell/__tests__/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -850,7 +850,7 @@
 											"!@/screens/editor/shortcuts",
 											"!../../../../**"
 										],
-										"message": "The editor's controls/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
+										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
 								]
 							}

@@ -6,7 +6,7 @@ import {
 	createRedactionBox,
 	createShapeLayer,
 } from "../../../../model/document.ts";
-import type { DialDrag } from "../../controls/Dial.tsx";
+import type { DialDrag } from "../../shell/Dial.tsx";
 import { type CanvasInput, inputRules } from "../canvasInput.ts";
 
 const pen: CanvasInput = {

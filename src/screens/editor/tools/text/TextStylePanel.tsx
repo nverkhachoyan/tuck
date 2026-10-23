@@ -21,10 +21,10 @@ import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
-import { ColorPicker } from "../../controls/ColorPicker";
-import { ColorSwatches, isCustomColor } from "../../controls/ColorSwatches";
-import { ToolOption, ToolOptions } from "../../controls/ToolOptions";
 import type { TextColorKey } from "../../editorMode";
+import { ColorPicker } from "../../shell/ColorPicker";
+import { ColorSwatches, isCustomColor } from "../../shell/ColorSwatches";
+import { ToolOption, ToolOptions } from "../../shell/ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.

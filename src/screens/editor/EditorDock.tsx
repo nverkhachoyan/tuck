@@ -6,13 +6,13 @@ import { selectCanRedo, selectCanUndo, useStore } from "@/store";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { TextButton } from "@/ui/TextButton";
-import { EyedropperHint } from "./controls/ColorPicker";
-import { LayerActionsPanel } from "./controls/LayerActionsPanel";
 import type {
 	EditorModeAction,
 	EditorModeState,
 	EditorTool,
 } from "./editorMode";
+import { EyedropperHint } from "./shell/ColorPicker";
+import { LayerActionsPanel } from "./shell/LayerActionsPanel";
 import { LAYERS_KEY } from "./shortcuts";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustController } from "./tools/adjust/useAdjustController";

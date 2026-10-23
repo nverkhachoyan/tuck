@@ -22,7 +22,7 @@ render the same document offscreen with Skia.
   - `tools/adjust/` holds color adjustments.
   - `tools/layers/` holds the layers panel, where any layer is hidden, locked, deleted, or reordered.
   - `tools/stickers/` holds the sticker sheet, bundled stickers, and the ones people save.
-  - `controls/` holds the dock, the toolbar, layer actions, the selection bar, and the controls every tool's panel is built from.
+  - `shell/` holds the dock, the toolbar, layer actions, the selection bar, and the controls every tool's panel is built from.
   - The editor root holds `EditorScreen` and `EditorDock`, which compose the parts, and what spans the whole editor: the project session (`useProjectSession`, `useAutosave`, `SaveErrorBanner`), adding images (`useAddImage`), its mode, its actions, keyboard shortcuts, and the delete notice. The background picker is in `src/ui/` because Create also uses it.
 - `src/model/` defines the document, layers, cutout masks, and geometry as plain data: no React. The document is the canvas (its size, and a background fill or transparency) and its layers, which may be none. A photo is an image layer like any other: a document's own photo starts locked, and can be unlocked, reordered, hidden, or deleted; photos added later start unlocked. `framing.ts` moves the framing's anchor (the lowest visible locked image, or with none, the canvas itself) to a new place on a new canvas and keeps every other layer over the same spot, which is all cropping, turning, and flipping are.
 - `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, undo history, tool sessions, and every edit that mutates them.

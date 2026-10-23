@@ -45,19 +45,6 @@ import { colors, space, typography } from "@/ui/theme";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import type { CanvasInput, CanvasTool } from "./canvas/canvasInput";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import { isCustomColor } from "./controls/ColorSwatches";
-import type { DialDrag } from "./controls/Dial";
-import {
-	Dock,
-	DockFooter,
-	INSPECTOR_TRAY_TOP,
-	INSPECTOR_WIDTH,
-	InspectorBackdrop,
-	useDockInset,
-} from "./controls/Dock";
-import { type ArrangeMove, SelectionBar } from "./controls/SelectionBar";
-import { TrayHeight, TrayPlacement } from "./controls/ToolOptions";
-import { ToolsPanel } from "./controls/ToolsPanel";
 import {
 	DockContent,
 	type DockPanel,
@@ -71,6 +58,19 @@ import {
 import { type ShortcutCommand, shortcutCommand, takesKeys } from "./editorMode";
 import { SaveErrorBanner } from "./SaveErrorBanner";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
+import { isCustomColor } from "./shell/ColorSwatches";
+import type { DialDrag } from "./shell/Dial";
+import {
+	Dock,
+	DockFooter,
+	INSPECTOR_TRAY_TOP,
+	INSPECTOR_WIDTH,
+	InspectorBackdrop,
+	useDockInset,
+} from "./shell/Dock";
+import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
+import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
+import { ToolsPanel } from "./shell/ToolsPanel";
 import type { Shortcut, ToolKey } from "./shortcuts";
 import {
 	ADJUST_DIAL_MAX,
