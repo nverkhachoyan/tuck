@@ -1,4 +1,12 @@
-import type { Layer, ShapeLayer, Stroke, TextLayer } from "@model/document.ts";
+import { adjustmentMatrix } from "@model/adjustments.ts";
+import type {
+	EditorDocument,
+	ImageLayer,
+	Layer,
+	ShapeLayer,
+	Stroke,
+	TextLayer,
+} from "@model/document.ts";
 import { isLine } from "@model/document.ts";
 import { drawingBox } from "@model/drawing.ts";
 import {
@@ -8,7 +16,7 @@ import {
 	transformMatrix,
 } from "@model/geometry.ts";
 import { arrowHead, outlineThickness, shapeBox } from "@model/shapes.ts";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { antonLoaded } from "../../ui/fonts.ts";
 import { Photo } from "../../ui/Photo.tsx";
 
@@ -249,23 +257,47 @@ function Sticker({ width, height }: { width: number; height: number }) {
 	);
 }
 
+/**
+ * An image, colored by its adjustments through the model's own color matrix.
+ * SVG's `feColorMatrix` takes Skia's layout: rows of R, G, B, A, with offsets
+ * from 0 to 1 in the last column.
+ */
+function ImageView({ layer }: { layer: ImageLayer }) {
+	const filter = useId();
+	const { adjustments } = layer;
+	return (
+		<g
+			transform={layer.flipped ? "scale(-1 1)" : undefined}
+			filter={adjustments ? `url(#${filter})` : undefined}
+		>
+			{adjustments && (
+				<defs>
+					<filter id={filter} colorInterpolationFilters="sRGB">
+						<feColorMatrix
+							type="matrix"
+							values={adjustmentMatrix(adjustments).join(" ")}
+						/>
+					</filter>
+				</defs>
+			)}
+			{layer.sticker ? (
+				<Sticker width={layer.width} height={layer.height} />
+			) : (
+				<Photo
+					width={layer.width}
+					height={layer.height}
+					palette={layer.id === "photo" ? "day" : "dusk"}
+				/>
+			)}
+		</g>
+	);
+}
+
 /** A layer's content in its own space. Redactions draw in `PlacedLayer`. */
 export function LayerContent({ layer }: { layer: Layer }) {
 	switch (layer.type) {
 		case "image":
-			return (
-				<g transform={layer.flipped ? "scale(-1 1)" : undefined}>
-					{layer.sticker ? (
-						<Sticker width={layer.width} height={layer.height} />
-					) : (
-						<Photo
-							width={layer.width}
-							height={layer.height}
-							palette={layer.id === "photo" ? "day" : "dusk"}
-						/>
-					)}
-				</g>
-			);
+			return <ImageView layer={layer} />;
 		case "text":
 			return <TextView layer={layer} />;
 		case "drawing":
@@ -351,6 +383,50 @@ function RedactionBoxView({
 				</g>
 			</g>
 		</g>
+	);
+}
+
+/**
+ * A document's canvas and layers, bottom to top. Each layer is drawn over
+ * everything below it, which a blur redaction needs to blur.
+ */
+export function DocumentScene({ document }: { document: EditorDocument }) {
+	const { width, height } = document;
+	let scene: ReactNode = (
+		<rect
+			width={width}
+			height={height}
+			fill={document.background ?? "url(#checker)"}
+		/>
+	);
+	for (const layer of document.layers) {
+		scene = (
+			<>
+				{scene}
+				<PlacedLayer layer={layer} below={scene} />
+			</>
+		);
+	}
+	return (
+		<>
+			<defs>
+				<pattern
+					id="checker"
+					width={48}
+					height={48}
+					patternUnits="userSpaceOnUse"
+				>
+					<rect width={48} height={48} fill="#EDEEF0" />
+					<rect width={24} height={24} fill="#D3D5D9" />
+					<rect x={24} y={24} width={24} height={24} fill="#D3D5D9" />
+				</pattern>
+				<clipPath id="document-canvas">
+					<rect width={width} height={height} />
+				</clipPath>
+			</defs>
+			<rect className="canvas" width={width} height={height} />
+			<g clipPath="url(#document-canvas)">{scene}</g>
+		</>
 	);
 }
 

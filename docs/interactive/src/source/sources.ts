@@ -7,6 +7,7 @@ import geometry from "@src/model/geometry.ts?raw";
 import shapes from "@src/model/shapes.ts?raw";
 import textEditing from "@src/model/textEditing.ts?raw";
 import layerBounds from "@src/screens/editor/canvas/layerBounds.ts?raw";
+import editorSlice from "@src/store/editorSlice.ts?raw";
 
 // The app's files as text, so lessons quote the code as it is today.
 export const sources = {
@@ -19,6 +20,7 @@ export const sources = {
 	"src/model/shapes.ts": shapes,
 	"src/model/textEditing.ts": textEditing,
 	"src/screens/editor/canvas/layerBounds.ts": layerBounds,
+	"src/store/editorSlice.ts": editorSlice,
 };
 
 export type SourceFile = keyof typeof sources;

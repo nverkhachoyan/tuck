@@ -917,6 +917,164 @@ figcaption strong {
 	color: var(--text-secondary);
 }
 
+/* The identity lesson's edits, verdict, and history. */
+
+.edits h3 {
+	margin: 14px 0 6px;
+	font-size: 13px;
+	color: var(--text-secondary);
+	font-weight: 600;
+}
+
+.edits h3:first-of-type {
+	margin-top: 0;
+}
+
+.edits .slider {
+	grid-template-columns: 92px minmax(0, 1fr) 44px;
+}
+
+.choice-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 6px;
+}
+
+.swatch {
+	width: 30px;
+	height: 30px;
+	border-radius: 15px;
+	border: 2px solid var(--paper);
+	box-shadow: 0 0 0 1px var(--hairline-strong);
+	cursor: pointer;
+}
+
+.swatch.chosen {
+	box-shadow: 0 0 0 2px var(--ink);
+}
+
+.chip {
+	height: 30px;
+	padding: 0 11px;
+	border-radius: 15px;
+	border: 1px solid var(--hairline-strong);
+	background: var(--paper);
+	color: var(--ink);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.chip:hover {
+	background: var(--paper-hover);
+}
+
+.chip.chosen {
+	background: var(--highlighter);
+	border-color: var(--highlighter);
+	color: var(--on-highlighter);
+}
+
+.verdict-panel {
+	display: grid;
+	gap: 10px;
+	align-content: start;
+}
+
+.verdict-panel h2 {
+	margin-bottom: 0;
+}
+
+.identity {
+	display: grid;
+	gap: 4px;
+	margin: 0;
+	padding: 12px 14px;
+	border-radius: var(--radius-small);
+	background: var(--paper-hover);
+}
+
+.identity .identity-code {
+	background: none;
+	padding: 0;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.identity.new {
+	box-shadow: inset 3px 0 0 var(--ink);
+}
+
+.identity span {
+	font-size: 13.5px;
+}
+
+.verdict-action {
+	margin: 0;
+	font-size: 13.5px;
+}
+
+.change-list {
+	margin: 0;
+	padding-left: 18px;
+	font-size: 13.5px;
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.history-counts {
+	font-size: 13px;
+	color: var(--text-secondary);
+	margin: 12px 0 6px;
+}
+
+.log {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 2px;
+}
+
+.log li {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 0 8px;
+	padding: 6px 8px;
+	border-radius: 6px;
+	font-size: 12.5px;
+}
+
+.log li code {
+	font-size: 12px;
+}
+
+.log li span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.log li small {
+	grid-column: 1 / -1;
+	font-size: 11.5px;
+	color: var(--text-secondary);
+}
+
+.log li.recorded {
+	background: var(--paper-hover);
+}
+
+.log li.skipped {
+	color: var(--text-secondary);
+}
+
+.button-small:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
 /* Source. */
 
 .tabs {

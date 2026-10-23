@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { AnatomyLesson } from "./lessons/model/AnatomyLesson.tsx";
+import { IdentityLesson } from "./lessons/model/IdentityLesson.tsx";
 import { TransformsLesson } from "./lessons/model/TransformsLesson.tsx";
 
 export type Lesson = {
@@ -44,6 +45,7 @@ export const chapters: Chapter[] = [
 				id: "identity",
 				title: "Same object, or a new one",
 				summary: "Why edits return the layer itself when nothing changed.",
+				component: IdentityLesson,
 			},
 			{
 				id: "strokes",

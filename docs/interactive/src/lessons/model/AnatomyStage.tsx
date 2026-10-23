@@ -1,7 +1,7 @@
 import type { EditorDocument, Layer } from "@model/document.ts";
 import { hitTestBox, type Point } from "@model/geometry.ts";
-import { type PointerEvent, type ReactNode, useRef } from "react";
-import { layerBox, PlacedLayer, Selection } from "./layerViews.tsx";
+import { type PointerEvent, useRef } from "react";
+import { DocumentScene, layerBox, Selection } from "./layerViews.tsx";
 
 const MARGIN = 40;
 
@@ -74,24 +74,6 @@ export function AnatomyStage({
 		});
 	};
 
-	// Each layer is drawn over everything below it, which a blur redaction
-	// needs to blur.
-	let scene: ReactNode = (
-		<rect
-			width={width}
-			height={height}
-			fill={document.background ?? "url(#checker)"}
-		/>
-	);
-	for (const layer of document.layers) {
-		scene = (
-			<>
-				{scene}
-				<PlacedLayer layer={layer} below={scene} />
-			</>
-		);
-	}
-
 	return (
 		<svg
 			ref={svg}
@@ -105,23 +87,7 @@ export function AnatomyStage({
 			role="img"
 			aria-label="The document, its layers drawn bottom to top"
 		>
-			<defs>
-				<pattern
-					id="checker"
-					width={48}
-					height={48}
-					patternUnits="userSpaceOnUse"
-				>
-					<rect width={48} height={48} fill="#EDEEF0" />
-					<rect width={24} height={24} fill="#D3D5D9" />
-					<rect x={24} y={24} width={24} height={24} fill="#D3D5D9" />
-				</pattern>
-				<clipPath id="anatomy-canvas">
-					<rect width={width} height={height} />
-				</clipPath>
-			</defs>
-			<rect className="canvas" width={width} height={height} />
-			<g clipPath="url(#anatomy-canvas)">{scene}</g>
+			<DocumentScene document={document} />
 			{selected && !selected.hidden && <Selection layer={selected} />}
 		</svg>
 	);
