@@ -98,6 +98,12 @@ export const chapters: Chapter[] = [
 				summary: "How each layer type draws, on screen and in export.",
 				component: withSkia(() => import("./lessons/render/LayersLesson.tsx")),
 			},
+			{
+				id: "export",
+				title: "Export is the same scene",
+				summary: "Drawing the document again, offscreen, and encoding it.",
+				component: withSkia(() => import("./lessons/render/ExportLesson.tsx")),
+			},
 		],
 	},
 ];
