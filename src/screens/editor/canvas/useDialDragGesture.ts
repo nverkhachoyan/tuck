@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Gesture, type TapGesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
-import { type DialDrag, draggedDialValue } from "../shell/Dial";
+import { type DialDrag, draggedDialValue } from "../shell/dialDrag";
 
 // How far a finger moves sideways before it turns the dial, and up or down
 // before the drag is left alone.

@@ -61,7 +61,6 @@ import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
 import { isCustomColor } from "./shell/ColorSwatches";
-import type { DialDrag } from "./shell/Dial";
 import {
 	Dock,
 	DockFooter,
@@ -70,6 +69,7 @@ import {
 	InspectorBackdrop,
 	useDockInset,
 } from "./shell/Dock";
+import type { DialDrag } from "./shell/dialDrag";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
