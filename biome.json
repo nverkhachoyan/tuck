@@ -635,10 +635,59 @@
 			}
 		},
 		{
-			"includes": [
-				"src/screens/editor/crop/**",
-				"src/screens/editor/canvas/**"
-			],
+			"includes": ["src/screens/editor/canvas/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/editor/**",
+											"../tools/adjust/**",
+											"../../tools/adjust/**",
+											"@/screens/editor/tools/adjust/**",
+											"../tools/crop/**",
+											"../../tools/crop/**",
+											"@/screens/editor/tools/crop/**",
+											"../tools/cutout/**",
+											"../../tools/cutout/**",
+											"@/screens/editor/tools/cutout/**",
+											"../tools/draw/**",
+											"../../tools/draw/**",
+											"@/screens/editor/tools/draw/**",
+											"../tools/find/**",
+											"../../tools/find/**",
+											"@/screens/editor/tools/find/**",
+											"../tools/layers/**",
+											"../../tools/layers/**",
+											"@/screens/editor/tools/layers/**",
+											"../tools/redact/**",
+											"../../tools/redact/**",
+											"@/screens/editor/tools/redact/**",
+											"../tools/stickers/**",
+											"../../tools/stickers/**",
+											"@/screens/editor/tools/stickers/**",
+											"../tools/text/**",
+											"../../tools/text/**",
+											"@/screens/editor/tools/text/**"
+										],
+										"message": "canvas/ doesn't import the editor's tools. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/editor/tools/crop/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -654,33 +703,33 @@
 											"!@/screens/editor/**",
 											"../adjust/**",
 											"../../adjust/**",
-											"@/screens/editor/adjust/**",
+											"@/screens/editor/tools/adjust/**",
 											"../crop/**",
 											"../../crop/**",
-											"@/screens/editor/crop/**",
+											"@/screens/editor/tools/crop/**",
 											"../cutout/**",
 											"../../cutout/**",
-											"@/screens/editor/cutout/**",
+											"@/screens/editor/tools/cutout/**",
 											"../draw/**",
 											"../../draw/**",
-											"@/screens/editor/draw/**",
+											"@/screens/editor/tools/draw/**",
 											"../find/**",
 											"../../find/**",
-											"@/screens/editor/find/**",
+											"@/screens/editor/tools/find/**",
 											"../layers/**",
 											"../../layers/**",
-											"@/screens/editor/layers/**",
+											"@/screens/editor/tools/layers/**",
 											"../redact/**",
 											"../../redact/**",
-											"@/screens/editor/redact/**",
+											"@/screens/editor/tools/redact/**",
 											"../stickers/**",
 											"../../stickers/**",
-											"@/screens/editor/stickers/**",
+											"@/screens/editor/tools/stickers/**",
 											"../text/**",
 											"../../text/**",
-											"@/screens/editor/text/**"
+											"@/screens/editor/tools/text/**"
 										],
-										"message": "canvas/ and crop/ don't import the editor's other tools. See AGENTS.md."
+										"message": "crop/ doesn't import the editor's other tools. See AGENTS.md."
 									}
 								]
 							}
@@ -691,14 +740,14 @@
 		},
 		{
 			"includes": [
-				"src/screens/editor/adjust/**",
-				"src/screens/editor/cutout/**",
-				"src/screens/editor/draw/**",
-				"src/screens/editor/find/**",
-				"src/screens/editor/layers/**",
-				"src/screens/editor/redact/**",
-				"src/screens/editor/stickers/**",
-				"src/screens/editor/text/**"
+				"src/screens/editor/tools/adjust/**",
+				"src/screens/editor/tools/cutout/**",
+				"src/screens/editor/tools/draw/**",
+				"src/screens/editor/tools/find/**",
+				"src/screens/editor/tools/layers/**",
+				"src/screens/editor/tools/redact/**",
+				"src/screens/editor/tools/stickers/**",
+				"src/screens/editor/tools/text/**"
 			],
 			"linter": {
 				"rules": {
@@ -715,34 +764,34 @@
 											"!@/screens/editor/**",
 											"../adjust/**",
 											"../../adjust/**",
-											"@/screens/editor/adjust/**",
-											"../canvas/**",
+											"@/screens/editor/tools/adjust/**",
 											"../../canvas/**",
+											"../../../canvas/**",
 											"@/screens/editor/canvas/**",
 											"../crop/**",
 											"../../crop/**",
-											"@/screens/editor/crop/**",
+											"@/screens/editor/tools/crop/**",
 											"../cutout/**",
 											"../../cutout/**",
-											"@/screens/editor/cutout/**",
+											"@/screens/editor/tools/cutout/**",
 											"../draw/**",
 											"../../draw/**",
-											"@/screens/editor/draw/**",
+											"@/screens/editor/tools/draw/**",
 											"../find/**",
 											"../../find/**",
-											"@/screens/editor/find/**",
+											"@/screens/editor/tools/find/**",
 											"../layers/**",
 											"../../layers/**",
-											"@/screens/editor/layers/**",
+											"@/screens/editor/tools/layers/**",
 											"../redact/**",
 											"../../redact/**",
-											"@/screens/editor/redact/**",
+											"@/screens/editor/tools/redact/**",
 											"../stickers/**",
 											"../../stickers/**",
-											"@/screens/editor/stickers/**",
+											"@/screens/editor/tools/stickers/**",
 											"../text/**",
 											"../../text/**",
-											"@/screens/editor/text/**"
+											"@/screens/editor/tools/text/**"
 										],
 										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other or canvas/: what they share is at the editor root or in controls/. See AGENTS.md."
 									}
@@ -754,10 +803,7 @@
 			}
 		},
 		{
-			"includes": [
-				"src/screens/editor/controls/**",
-				"src/screens/editor/stickers/**"
-			],
+			"includes": ["src/screens/editor/controls/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -775,7 +821,7 @@
 											"!@/screens/editor/shortcuts",
 											"!../../../**"
 										],
-										"message": "The editor's building blocks (controls/, stickers/) import nothing else from the editor. See AGENTS.md."
+										"message": "The editor's controls/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
 								]
 							}
@@ -785,10 +831,7 @@
 			}
 		},
 		{
-			"includes": [
-				"src/screens/editor/controls/__tests__/**",
-				"src/screens/editor/stickers/__tests__/**"
-			],
+			"includes": ["src/screens/editor/controls/__tests__/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -807,7 +850,64 @@
 											"!@/screens/editor/shortcuts",
 											"!../../../../**"
 										],
-										"message": "The editor's building blocks (controls/, stickers/) import nothing else from the editor. See AGENTS.md."
+										"message": "The editor's controls/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/editor/tools/stickers/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"../**",
+											"!../../shortcuts",
+											"!@/screens/editor/shortcuts",
+											"!../../../../**"
+										],
+										"message": "The stickers tool imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/editor/tools/stickers/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"../**",
+											"!../*",
+											"!../../../shortcuts",
+											"!@/screens/editor/shortcuts",
+											"!../../../../../**"
+										],
+										"message": "The stickers tool imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
 								]
 							}
@@ -818,8 +918,8 @@
 		},
 		{
 			"includes": [
-				"src/screens/editor/find/imageDetection.ts",
-				"src/screens/editor/cutout/subjectDetection.ts"
+				"src/screens/editor/tools/find/imageDetection.ts",
+				"src/screens/editor/tools/cutout/subjectDetection.ts"
 			],
 			"linter": {
 				"rules": {

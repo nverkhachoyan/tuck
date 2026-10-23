@@ -43,11 +43,6 @@ import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
-import {
-	ADJUST_DIAL_MAX,
-	ADJUST_DIAL_SCALE,
-	useAdjustController,
-} from "./adjust/useAdjustController";
 import type { CanvasInput, CanvasTool } from "./canvas/canvasInput";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import { isCustomColor } from "./controls/ColorSwatches";
@@ -63,16 +58,6 @@ import {
 import { type ArrangeMove, SelectionBar } from "./controls/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./controls/ToolOptions";
 import { ToolsPanel } from "./controls/ToolsPanel";
-import { CropTool } from "./crop/CropTool";
-import {
-	cutBrush,
-	cutOutTool,
-	parseCutOutSettings,
-} from "./cutout/cutOutSettings";
-import { useCutOut } from "./cutout/useCutOut";
-import { useCutRedaction } from "./cutout/useCutRedaction";
-import { brushFor, shapeStyleFor } from "./draw/brushSettings";
-import { useDrawTool } from "./draw/useDrawTool";
 import {
 	DockContent,
 	type DockPanel,
@@ -84,20 +69,35 @@ import {
 	toolButtonsFor,
 } from "./EditorDock";
 import { type ShortcutCommand, shortcutCommand, takesKeys } from "./editorMode";
-import { useFindTool } from "./find/useFindTool";
-import { layerKindName } from "./layers/LayerRow";
-import { LAYERS_SIDEBAR_INSET, LayersPanel } from "./layers/LayersPanel";
-import { maskBrush, redactionEffect } from "./redact/redactSettings";
-import { useRedactTool } from "./redact/useRedactTool";
 import { SaveErrorBanner } from "./SaveErrorBanner";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import type { Shortcut, ToolKey } from "./shortcuts";
-import { StickerSheet } from "./stickers/StickerSheet";
-import { bundledStickerImage } from "./stickers/stickerFile";
-import { useSavedStickers } from "./stickers/useSavedStickers";
-import { useStickerSave } from "./stickers/useStickerSave";
-import { TextEditor } from "./text/TextEditor";
-import { type TextEditing, useTextEditing } from "./text/useTextEditing";
+import {
+	ADJUST_DIAL_MAX,
+	ADJUST_DIAL_SCALE,
+	useAdjustController,
+} from "./tools/adjust/useAdjustController";
+import { CropTool } from "./tools/crop/CropTool";
+import {
+	cutBrush,
+	cutOutTool,
+	parseCutOutSettings,
+} from "./tools/cutout/cutOutSettings";
+import { useCutOut } from "./tools/cutout/useCutOut";
+import { useCutRedaction } from "./tools/cutout/useCutRedaction";
+import { brushFor, shapeStyleFor } from "./tools/draw/brushSettings";
+import { useDrawTool } from "./tools/draw/useDrawTool";
+import { useFindTool } from "./tools/find/useFindTool";
+import { layerKindName } from "./tools/layers/LayerRow";
+import { LAYERS_SIDEBAR_INSET, LayersPanel } from "./tools/layers/LayersPanel";
+import { maskBrush, redactionEffect } from "./tools/redact/redactSettings";
+import { useRedactTool } from "./tools/redact/useRedactTool";
+import { StickerSheet } from "./tools/stickers/StickerSheet";
+import { bundledStickerImage } from "./tools/stickers/stickerFile";
+import { useSavedStickers } from "./tools/stickers/useSavedStickers";
+import { useStickerSave } from "./tools/stickers/useStickerSave";
+import { TextEditor } from "./tools/text/TextEditor";
+import { type TextEditing, useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
 import { useAutosave } from "./useAutosave";
 import { useDeleteNotice } from "./useDeleteNotice";

@@ -6,7 +6,7 @@ import { showAlert } from "@/ui/showAlert";
 import {
 	SAVED_STICKER_MAX_SIDE,
 	type StickerImage,
-} from "./stickers/savedStickers";
+} from "./tools/stickers/savedStickers";
 
 export type AddedImage = PickedPhoto & { sticker: boolean };
 

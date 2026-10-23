@@ -17,7 +17,7 @@ import renderDocument from "@src/render/renderDocument.tsx?raw";
 import textLayerView from "@src/render/TextLayerView.tsx?raw";
 import hitTest from "@src/screens/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/screens/editor/canvas/layerBounds.ts?raw";
-import cropGeometry from "@src/screens/editor/crop/cropGeometry.ts?raw";
+import cropGeometry from "@src/screens/editor/tools/crop/cropGeometry.ts?raw";
 import exportFormat from "@src/screens/export/exportFormat.ts?raw";
 import exportSizes from "@src/screens/export/exportSizes.ts?raw";
 import editorSlice from "@src/store/editorSlice.ts?raw";
@@ -44,7 +44,7 @@ export const sources = {
 	"src/render/TextLayerView.tsx": textLayerView,
 	"src/screens/editor/canvas/hitTest.ts": hitTest,
 	"src/screens/editor/canvas/layerBounds.ts": layerBounds,
-	"src/screens/editor/crop/cropGeometry.ts": cropGeometry,
+	"src/screens/editor/tools/crop/cropGeometry.ts": cropGeometry,
 	"src/screens/export/exportFormat.ts": exportFormat,
 	"src/screens/export/exportSizes.ts": exportSizes,
 	"src/store/editorSlice.ts": editorSlice,

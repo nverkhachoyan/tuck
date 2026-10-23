@@ -23,7 +23,7 @@ import {
 	rotateLeft,
 	startCrop,
 	straightenTo,
-} from "@src/screens/editor/crop/cropGeometry.ts";
+} from "@src/screens/editor/tools/crop/cropGeometry.ts";
 import { useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -268,22 +268,22 @@ export function FramingLesson() {
 		},
 		{
 			label: "startCrop",
-			file: "src/screens/editor/crop/cropGeometry.ts",
+			file: "src/screens/editor/tools/crop/cropGeometry.ts",
 			name: "startCrop",
 		},
 		{
 			label: "rotateLeft",
-			file: "src/screens/editor/crop/cropGeometry.ts",
+			file: "src/screens/editor/tools/crop/cropGeometry.ts",
 			name: "rotateLeft",
 		},
 		{
 			label: "flipCrop",
-			file: "src/screens/editor/crop/cropGeometry.ts",
+			file: "src/screens/editor/tools/crop/cropGeometry.ts",
 			name: "flipCrop",
 		},
 		{
 			label: "cropFraming",
-			file: "src/screens/editor/crop/cropGeometry.ts",
+			file: "src/screens/editor/tools/crop/cropGeometry.ts",
 			name: "cropFraming",
 		},
 		{

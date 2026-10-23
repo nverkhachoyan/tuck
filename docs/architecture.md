@@ -13,15 +13,15 @@ render the same document offscreen with Skia.
 - `src/screens/` owns the home, create, editor, export, and info screens (Settings, support, privacy, licenses, and the 404 page). The home screen starts from a photo, a pasted or dropped image, a photo shared from another app, or, through Create, an empty canvas at a preset or custom size.
 - `src/screens/editor/` is the interactive editor, in a folder per part:
   - `canvas/` draws the document (`EditorScene`, `EditedTextView`, `LiveStrokeOverlay`, `SelectionOverlay`) and handles gestures, selection handles and cursors, hit-testing, and snapping.
-  - `crop/` holds `CropTool`, which crops, turns, flips, and straightens the photo (the lowest locked one, or just the canvas without one) and expands the canvas around it; its geometry is in `cropGeometry.ts` and its box dragging in `cropDrag.ts`.
-  - `text/` holds the text panel and the full-screen `TextEditor`.
-  - `draw/` holds the drawing panel and brush settings.
-  - `redact/` holds the redaction panel and settings.
-  - `find/` holds face and text detection (`useImageDetection`, `FindPanel`).
-  - `cutout/` holds subject and object selection, mask refinement brushes, invert, and mask-shaped redactions.
-  - `adjust/` holds color adjustments.
-  - `layers/` holds the layers panel, where any layer is hidden, locked, deleted, or reordered.
-  - `stickers/` holds the sticker sheet, bundled stickers, and the ones people save.
+  - `tools/crop/` holds `CropTool`, which crops, turns, flips, and straightens the photo (the lowest locked one, or just the canvas without one) and expands the canvas around it; its geometry is in `cropGeometry.ts` and its box dragging in `cropDrag.ts`.
+  - `tools/text/` holds the text panel and the full-screen `TextEditor`.
+  - `tools/draw/` holds the drawing panel and brush settings.
+  - `tools/redact/` holds the redaction panel and settings.
+  - `tools/find/` holds face and text detection (`useImageDetection`, `FindPanel`).
+  - `tools/cutout/` holds subject and object selection, mask refinement brushes, invert, and mask-shaped redactions.
+  - `tools/adjust/` holds color adjustments.
+  - `tools/layers/` holds the layers panel, where any layer is hidden, locked, deleted, or reordered.
+  - `tools/stickers/` holds the sticker sheet, bundled stickers, and the ones people save.
   - `controls/` holds the dock, the toolbar, layer actions, the selection bar, and the controls every tool's panel is built from.
   - The editor root holds `EditorScreen` and `EditorDock`, which compose the parts, and what spans the whole editor: the project session (`useProjectSession`, `useAutosave`, `SaveErrorBanner`), adding images (`useAddImage`), its mode, its actions, keyboard shortcuts, and the delete notice. The background picker is in `src/ui/` because Create also uses it.
 - `src/model/` defines the document, layers, cutout masks, and geometry as plain data: no React. The document is the canvas (its size, and a background fill or transparency) and its layers, which may be none. A photo is an image layer like any other: a document's own photo starts locked, and can be unlocked, reordered, hidden, or deleted; photos added later start unlocked. `framing.ts` moves the framing's anchor (the lowest visible locked image, or with none, the canvas itself) to a new place on a new canvas and keeps every other layer over the same spot, which is all cropping, turning, and flipping are.

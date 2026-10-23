@@ -1,4 +1,4 @@
-// Downloads the Noto Emoji images `src/screens/editor/stickers/bundledStickers.ts` names that
+// Downloads the Noto Emoji images `src/screens/editor/tools/stickers/bundledStickers.ts` names that
 // aren't in `assets/stickers/` yet, and makes each one's thumbnail. Run it
 // after adding a sticker there: `node scripts/fetch-stickers.mjs`. Thumbnails
 // are WebP, a quarter of a PNG's size, made with `cwebp` (`brew install webp`).
@@ -17,7 +17,7 @@ const thumbnails = join(assets, "thumbnails");
 mkdirSync(thumbnails, { recursive: true });
 
 const catalog = readFileSync(
-	join(root, "src/screens/editor/stickers/bundledStickers.ts"),
+	join(root, "src/screens/editor/tools/stickers/bundledStickers.ts"),
 	"utf8",
 );
 const names = new Set(catalog.match(/emoji_u[0-9a-f_]+\.png/g));

@@ -6,26 +6,30 @@ import { selectCanRedo, selectCanUndo, useStore } from "@/store";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { TextButton } from "@/ui/TextButton";
-import { AdjustPanel } from "./adjust/AdjustPanel";
-import type { useAdjustController } from "./adjust/useAdjustController";
 import { EyedropperHint } from "./controls/ColorPicker";
 import { LayerActionsPanel } from "./controls/LayerActionsPanel";
-import { CutOutOptions, CutOutPanel } from "./cutout/CutOutPanel";
-import type { CutOutSettings, cutOutTool } from "./cutout/cutOutSettings";
-import { BrushOptions, DrawPanel } from "./draw/DrawPanel";
-import type { useDrawTool } from "./draw/useDrawTool";
 import type {
 	EditorModeAction,
 	EditorModeState,
 	EditorTool,
 } from "./editorMode";
-import { FindPanel, FindTray } from "./find/FindPanel";
-import type { useFindTool } from "./find/useFindTool";
-import { EffectGlyph, RedactOptions, RedactPanel } from "./redact/RedactPanel";
-import type { useRedactTool } from "./redact/useRedactTool";
 import { LAYERS_KEY } from "./shortcuts";
-import { TextColorPicker, TextStylePanel } from "./text/TextStylePanel";
-import type { TextEditing, useTextEditing } from "./text/useTextEditing";
+import { AdjustPanel } from "./tools/adjust/AdjustPanel";
+import type { useAdjustController } from "./tools/adjust/useAdjustController";
+import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
+import type { CutOutSettings, cutOutTool } from "./tools/cutout/cutOutSettings";
+import { BrushOptions, DrawPanel } from "./tools/draw/DrawPanel";
+import type { useDrawTool } from "./tools/draw/useDrawTool";
+import { FindPanel, FindTray } from "./tools/find/FindPanel";
+import type { useFindTool } from "./tools/find/useFindTool";
+import {
+	EffectGlyph,
+	RedactOptions,
+	RedactPanel,
+} from "./tools/redact/RedactPanel";
+import type { useRedactTool } from "./tools/redact/useRedactTool";
+import { TextColorPicker, TextStylePanel } from "./tools/text/TextStylePanel";
+import type { TextEditing, useTextEditing } from "./tools/text/useTextEditing";
 import { type EditorActions, useEditorActions } from "./useEditorActions";
 
 // What the dock shows: a tool's panel, text's style, the selected layer's
