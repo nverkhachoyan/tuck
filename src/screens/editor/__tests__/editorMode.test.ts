@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { createTextLayer } from "../../../model/layers/text.ts";
 import {
 	type EditorModeAction,
 	type EditorModeState,
@@ -10,20 +11,26 @@ import {
 	type ModeTargets,
 	settle,
 	shortcutCommand,
+	type TextEditState,
 	takesKeys,
 } from "../editorMode.ts";
 import type { Shortcut } from "../shortcuts.ts";
 
-type Edit = { layer: { id: string }; text: string };
-type State = EditorModeState<Edit>;
+type State = EditorModeState;
 
-const run = (state: State, ...actions: EditorModeAction<Edit>[]) =>
+const run = (state: State, ...actions: EditorModeAction[]) =>
 	actions.reduce(
 		(current: State, action) => editorModeReducer(current, action),
 		state,
 	);
 
-const edit = (id: string): Edit => ({ layer: { id }, text: "" });
+const edit = (id: string): TextEditState => ({
+	layer: { ...createTextLayer({ width: 100, height: 100 }, ""), id },
+	isNew: false,
+	selection: { start: 0, end: 0 },
+	initialSelection: { start: 0, end: 0 },
+	focused: false,
+});
 const eyedropper = (): Eyedropper => ({ apply: () => {} });
 const targets = (overrides: Partial<ModeTargets> = {}): ModeTargets => ({
 	isAdjustable: () => true,
@@ -196,26 +203,30 @@ describe("editorModeReducer", () => {
 			{ type: "startText", edit: edit("text") },
 			{ type: "startCrop" },
 			{ type: "openStickers" },
-		] satisfies EditorModeAction<Edit>[]) {
+		] satisfies EditorModeAction[]) {
 			assert.equal(run(waiting, action).eyedropper, null, action.type);
 		}
 	});
 
 	test("text changes only while typing, and ends with it", () => {
-		const change = (text: string): EditorModeAction<Edit> => ({
+		const change = (text: string): EditorModeAction => ({
 			type: "changeText",
-			change: (current) => ({ ...current, text }),
+			change: (current) => ({
+				...current,
+				layer: { ...current.layer, text },
+			}),
 		});
 		assert.equal(run(initialEditorMode, change("x")), initialEditorMode);
 
+		const started = edit("text");
 		const typing = run(
 			initialEditorMode,
-			{ type: "startText", edit: edit("text") },
+			{ type: "startText", edit: started },
 			change("HELLO"),
 		);
 		assert.deepEqual(typing.mode, {
 			type: "text",
-			edit: { layer: { id: "text" }, text: "HELLO" },
+			edit: { ...started, layer: { ...started.layer, text: "HELLO" } },
 		});
 		assert.deepEqual(run(typing, { type: "endText" }).mode, { type: "idle" });
 	});

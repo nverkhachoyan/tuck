@@ -1,6 +1,5 @@
 import { useReducer } from "react";
 import {
-	type EditedText,
 	editorModeReducer,
 	initialEditorMode,
 	type ModeTargets,
@@ -12,13 +11,8 @@ import {
  * it renders. What's settled is kept, not only shown: a tool or picker whose
  * target went away stays closed if the target comes back.
  */
-export function useEditorMode<TextEdit extends EditedText>(
-	targets: ModeTargets,
-) {
-	const [state, dispatch] = useReducer(
-		editorModeReducer<TextEdit>,
-		initialEditorMode,
-	);
+export function useEditorMode(targets: ModeTargets) {
+	const [state, dispatch] = useReducer(editorModeReducer, initialEditorMode);
 	const settled = settle(state, targets);
 	if (settled !== state) dispatch({ type: "settle", targets });
 	return [settled, dispatch] as const;

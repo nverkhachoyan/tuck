@@ -14,19 +14,11 @@ import type { EditorModeAction, TextEditState } from "../../editorMode";
 import type { TextEditorHandle } from "./TextEditor";
 import { parseTextStyle, withTextEdit } from "./textSettings";
 
-// Text being typed on the canvas: a new layer, added once editing ends, or
-// the selected one, changed then. What's typed and restyled meanwhile stays
-// here, so the whole edit is one undo step. New text is placed in `area`,
-// the part of the photo in view when it began.
-export type TextEditing = TextEditState & {
-	initialSelection: TextSelection;
-	area?: Rect;
-};
-
 /**
  * Typing on the canvas. The edit is the editor mode's (`edit`, changed
  * through `dispatchMode`); this starts it, for new text or the selected
- * text, restyles it, and finishes it into the document.
+ * text, restyles it, and finishes it into the document. What's typed and
+ * restyled meanwhile stays on the edit, so the whole edit is one undo step.
  */
 export function useTextEditing({
 	document,
@@ -34,8 +26,8 @@ export function useTextEditing({
 	dispatchMode,
 }: {
 	document: EditorDocument;
-	edit: TextEditing | null;
-	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
+	edit: TextEditState | null;
+	dispatchMode: (action: EditorModeAction) => void;
 }) {
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const addTextLayer = useStore((state) => state.addTextLayer);

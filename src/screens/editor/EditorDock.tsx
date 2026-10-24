@@ -22,14 +22,14 @@ import {
 } from "./tools/redact/RedactPanel";
 import type { useRedactTool } from "./tools/redact/useRedactTool";
 import { TextColorPicker, TextStylePanel } from "./tools/text/TextStylePanel";
-import type { TextEditing, useTextEditing } from "./tools/text/useTextEditing";
+import type { useTextEditing } from "./tools/text/useTextEditing";
 
 // What the dock shows: a tool's panel, text's style, the selected layer's
 // actions, or, with nothing selected, the tools or the layers.
 export type DockPanel = EditorTool | "text" | "layer" | "idle";
 
 type ModeProps = {
-	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
+	dispatchMode: (action: EditorModeAction) => void;
 	draw: ReturnType<typeof useDrawTool>;
 	redact: ReturnType<typeof useRedactTool>;
 	find: ReturnType<typeof useFindTool>;
@@ -54,7 +54,7 @@ export function ToolTrays({
 	onCustomColor,
 	bottomInset,
 }: ModeProps & {
-	modeState: EditorModeState<TextEditing>;
+	modeState: EditorModeState;
 	onCustomColor: (color: string) => void;
 	bottomInset: number;
 }) {

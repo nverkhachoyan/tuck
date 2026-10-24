@@ -66,7 +66,7 @@ import { bundledStickerImage } from "./tools/stickers/stickerFile";
 import { useSavedStickers } from "./tools/stickers/useSavedStickers";
 import { useStickerSave } from "./tools/stickers/useStickerSave";
 import { TextEditor } from "./tools/text/TextEditor";
-import { type TextEditing, useTextEditing } from "./tools/text/useTextEditing";
+import { useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useDeleteNotice } from "./useDeleteNotice";
@@ -161,7 +161,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// down if its image goes away, Find if its photo does, and a text color
 	// picker closes if other text is styled.
 	const targetImage = targetImageLayer(document, selectedLayer);
-	const [modeState, dispatchMode] = useEditorMode<TextEditing>({
+	const [modeState, dispatchMode] = useEditorMode({
 		isAdjustable: (id) => visibleImageLayer(document, id) !== undefined,
 		canFind: targetImage !== null,
 		selectedTextId: selectedTextLayer?.id ?? null,

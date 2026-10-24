@@ -16,7 +16,6 @@ import {
 import type { CutOutSettings, CutOutTool } from "./tools/cutout/cutOutSettings";
 import type { BrushSettings } from "./tools/draw/brushSettings";
 import type { RedactSettings } from "./tools/redact/redactSettings";
-import type { TextEditing } from "./tools/text/useTextEditing";
 import type { EditorActions } from "./useEditorActions";
 
 /**
@@ -65,7 +64,7 @@ export function useCanvasInput({
 		| "addRedactionBox"
 		| "addShape"
 	>;
-	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
+	dispatchMode: (action: EditorModeAction) => void;
 	onCustomColor: (color: string) => void;
 }) {
 	const picking = eyedropper !== null;

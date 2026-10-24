@@ -2,6 +2,7 @@
 // the rules for what can be on together are tested; `useEditorMode` holds
 // the state for the screen.
 
+import type { Rect } from "../../model/geometry.ts";
 import type { TextLayer } from "../../model/layers/text.ts";
 import type { TextSelection } from "../../model/textEditing.ts";
 import type { Shortcut } from "./shortcuts.ts";
@@ -17,16 +18,19 @@ export type Eyedropper = { apply: (color: string) => void };
  * Text being edited in place: its layer as typed so far, which is drawn in
  * place of the document's (or on top when `isNew`: it's added once editing
  * ends), and its caret or selection. The caret shows while `focused`.
+ * What's typed and restyled meanwhile stays here, so the whole edit is one
+ * undo step.
  */
 export type TextEditState = {
 	layer: TextLayer;
 	isNew: boolean;
 	selection: TextSelection;
 	focused: boolean;
+	// Where the caret starts, once the input first has focus.
+	initialSelection: TextSelection;
+	// New text is placed in `area`, the part of the photo in view when it began.
+	area?: Rect;
 };
-
-// All the mode needs to know of text being typed: which layer it is.
-export type EditedText = { layer: { id: string } };
 
 /**
  * What the canvas and the dock are given over to, one at a time: nothing, a
@@ -34,17 +38,17 @@ export type EditedText = { layer: { id: string } };
  * image it started on, and Cut out with both), text being typed on the
  * canvas, or the crop screen.
  */
-export type EditorMode<TextEdit> =
+export type EditorMode =
 	| { type: "idle" }
 	| { type: "tool"; tool: "draw" | "redact" | "find"; optionsOpen: boolean }
 	| { type: "tool"; tool: "adjust"; layerId: string }
 	| { type: "tool"; tool: "cutOut"; layerId: string; optionsOpen: boolean }
-	| { type: "text"; edit: TextEdit }
+	| { type: "text"; edit: TextEditState }
 	| { type: "crop" };
 
-export type EditorTool = Extract<EditorMode<never>, { type: "tool" }>["tool"];
+export type EditorTool = Extract<EditorMode, { type: "tool" }>["tool"];
 
-type TrayTool = Extract<EditorMode<never>, { optionsOpen: boolean }>;
+type TrayTool = Extract<EditorMode, { optionsOpen: boolean }>;
 
 /**
  * The mode, and what sits over it. A text color picker belongs to a layer,
@@ -53,15 +57,15 @@ type TrayTool = Extract<EditorMode<never>, { optionsOpen: boolean }>;
  * tray. The layers or Stickers sheet, and the list of shortcuts, open over
  * everything.
  */
-export type EditorModeState<TextEdit> = {
-	mode: EditorMode<TextEdit>;
+export type EditorModeState = {
+	mode: EditorMode;
 	textPicker: { layerId: string; key: TextColorKey } | null;
 	eyedropper: Eyedropper | null;
 	sheet: "layers" | "stickers" | null;
 	shortcutsOpen: boolean;
 };
 
-export const initialEditorMode: EditorModeState<never> = {
+export const initialEditorMode: EditorModeState = {
 	mode: { type: "idle" },
 	textPicker: null,
 	eyedropper: null,
@@ -80,15 +84,15 @@ export type ModeTargets = {
 	selectedTextId: string | null;
 };
 
-export type EditorModeAction<TextEdit> =
+export type EditorModeAction =
 	| { type: "startTool"; tool: "draw" | "redact" | "find" }
 	| { type: "startAdjust"; layerId: string }
 	| { type: "startCutOut"; layerId: string }
 	| { type: "endTool" }
 	| { type: "toggleToolOptions" }
 	| { type: "closeToolOptions" }
-	| { type: "startText"; edit: TextEdit }
-	| { type: "changeText"; change: (edit: TextEdit) => TextEdit }
+	| { type: "startText"; edit: TextEditState }
+	| { type: "changeText"; change: (edit: TextEditState) => TextEditState }
 	| { type: "endText" }
 	| { type: "startCrop" }
 	| { type: "endCrop" }
@@ -112,10 +116,10 @@ const idle = { type: "idle" } as const;
  * tray closed, and closes a text color picker. Starting anything, and
  * ending a tool, stops the eyedropper: what it was picking for has moved on.
  */
-export function editorModeReducer<TextEdit extends EditedText>(
-	state: EditorModeState<TextEdit>,
-	action: EditorModeAction<TextEdit>,
-): EditorModeState<TextEdit> {
+export function editorModeReducer(
+	state: EditorModeState,
+	action: EditorModeAction,
+): EditorModeState {
 	const { mode } = state;
 	switch (action.type) {
 		case "startTool":
@@ -226,10 +230,10 @@ export function editorModeReducer<TextEdit extends EditedText>(
  * whose text isn't the one styled any more. The same `state` when nothing
  * is.
  */
-export function settle<TextEdit extends EditedText>(
-	state: EditorModeState<TextEdit>,
+export function settle(
+	state: EditorModeState,
 	targets: ModeTargets,
-): EditorModeState<TextEdit> {
+): EditorModeState {
 	const { mode, textPicker } = state;
 	const toolGone =
 		mode.type === "tool" &&
@@ -248,7 +252,7 @@ export function settle<TextEdit extends EditedText>(
 }
 
 // Typing and cropping take the keyboard, and pasted photos, for themselves.
-export function takesKeys(mode: EditorMode<unknown>): boolean {
+export function takesKeys(mode: EditorMode): boolean {
 	return mode.type === "text" || mode.type === "crop";
 }
 
@@ -268,7 +272,7 @@ export type ShortcutCommand =
  * cropping, which take their own keys (see `takesKeys`).
  */
 export function shortcutCommand(
-	state: EditorModeState<unknown>,
+	state: EditorModeState,
 	selection: "text" | "layer" | null,
 	shortcut: Shortcut,
 ): ShortcutCommand | "held" | null {
@@ -306,12 +310,12 @@ export function shortcutCommand(
 	return shortcut;
 }
 
-function hasTray<TextEdit>(mode: EditorMode<TextEdit>): mode is TrayTool {
+function hasTray(mode: EditorMode): mode is TrayTool {
 	return mode.type === "tool" && mode.tool !== "adjust";
 }
 
 function withoutLayers(
-	sheet: EditorModeState<unknown>["sheet"],
-): EditorModeState<unknown>["sheet"] {
+	sheet: EditorModeState["sheet"],
+): EditorModeState["sheet"] {
 	return sheet === "layers" ? null : sheet;
 }
