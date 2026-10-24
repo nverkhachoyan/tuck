@@ -1,13 +1,11 @@
-import type {
-	ImageLayer,
-	RedactionBoxPlacement,
-} from "../../../../model/document.ts";
 import {
 	cosSin,
 	type Point,
 	type Size,
 	toDocumentSpace,
 } from "../../../../model/geometry.ts";
+import type { ImageLayer } from "../../../../model/layers/image.ts";
+import type { RedactionBoxPlacement } from "../../../../model/layers/redaction.ts";
 import type {
 	DetectionFeature,
 	DetectionRect,

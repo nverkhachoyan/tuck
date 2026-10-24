@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { isLine, isLineShape } from "@/model/document";
 import type { Size } from "@/model/geometry";
+import { isLine, isLineShape } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
 import { selectSelectedLayer, selectSelectedShape, useStore } from "@/store";
 import {

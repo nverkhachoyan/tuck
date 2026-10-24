@@ -1,10 +1,8 @@
-import {
-	type EditorDocument,
-	isLine,
-	type Layer,
-	type MaskStroke,
-} from "@/model/document";
+import type { EditorDocument } from "@/model/document";
+import type { Layer } from "@/model/layers/layer";
+import { isLine } from "@/model/layers/shape";
 import { shapeOutline } from "@/model/shapes";
+import type { MaskStroke } from "@/model/strokes";
 import type { ResizeMode } from "./handleGeometry";
 import type { LayerTarget } from "./hitTest";
 import { layerBounds } from "./layerBounds";

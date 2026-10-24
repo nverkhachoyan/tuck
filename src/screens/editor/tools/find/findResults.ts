@@ -1,8 +1,6 @@
-import type {
-	EditorDocument,
-	ImageLayer,
-	RedactionBoxPlacement,
-} from "../../../../model/document.ts";
+import type { EditorDocument } from "../../../../model/document.ts";
+import type { ImageLayer } from "../../../../model/layers/image.ts";
+import type { RedactionBoxPlacement } from "../../../../model/layers/redaction.ts";
 import type { DetectionFeature } from "../../detection/imageDetection.ts";
 import type { MappedDetectionRect } from "./mapDetectionRects.ts";
 

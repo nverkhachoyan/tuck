@@ -1,10 +1,13 @@
-import { isLineShape, type ShapePlacement } from "../../../model/document.ts";
 import {
 	type Point,
 	type Rect,
 	rectFromCorners,
 	type Size,
 } from "../../../model/geometry.ts";
+import {
+	isLineShape,
+	type ShapePlacement,
+} from "../../../model/layers/shape.ts";
 import type { CanvasTool } from "./canvasInput.ts";
 import { shapeFromDrag } from "./shapeDrag.ts";
 

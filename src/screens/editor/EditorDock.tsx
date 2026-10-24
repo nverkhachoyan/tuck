@@ -1,7 +1,8 @@
 import type { ComponentProps, ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import type { Adjustments } from "@/model/adjustments";
-import type { EditorDocument, Layer } from "@/model/document";
+import type { EditorDocument } from "@/model/document";
+import type { Layer } from "@/model/layers/layer";
 import { selectCanRedo, selectCanUndo, useStore } from "@/store";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";

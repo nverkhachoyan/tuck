@@ -11,7 +11,7 @@ import {
 } from "@shopify/react-native-skia";
 import { type ComponentProps, type ReactNode, useMemo } from "react";
 import { adjustmentMatrix, type ColorMatrix } from "@/model/adjustments";
-import type { CutStroke, ImageLayer } from "@/model/document";
+import type { CutStroke, ImageLayer } from "@/model/layers/image";
 import { pathFor } from "./DrawingLayerView";
 
 const MIRRORED = [{ scaleX: -1 }];

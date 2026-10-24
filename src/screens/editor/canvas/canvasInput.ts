@@ -1,12 +1,9 @@
-import type {
-	Brush,
-	CutStroke,
-	Layer,
-	MaskStroke,
-	RedactionEffect,
-	ShapeKind,
-	ShapeStyle,
-} from "../../../model/document.ts";
+import type { Brush } from "../../../model/layers/drawing.ts";
+import type { CutStroke } from "../../../model/layers/image.ts";
+import type { Layer } from "../../../model/layers/layer.ts";
+import type { RedactionEffect } from "../../../model/layers/redaction.ts";
+import type { ShapeKind, ShapeStyle } from "../../../model/layers/shape.ts";
+import type { MaskStroke } from "../../../model/strokes.ts";
 import type { DialDrag } from "../shell/dialDrag.ts";
 
 /**

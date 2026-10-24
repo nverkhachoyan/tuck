@@ -1,17 +1,19 @@
 import {
 	createDocumentFromImage,
-	createDrawingLayer,
-	type DrawingLayer,
 	type EditorDocument,
-	type Stroke,
 } from "@model/document.ts";
-import { addStroke, drawingBox, hitTestDrawing } from "@model/drawing.ts";
 import {
 	hitTestBox,
 	type Point,
 	type Transform,
 	toLayerSpace,
 } from "@model/geometry.ts";
+import {
+	createDrawingLayer,
+	type DrawingLayer,
+	type Stroke,
+} from "@model/layers/drawing.ts";
+import { addStroke, drawingBox, hitTestDrawing } from "@model/strokes.ts";
 import { useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -212,21 +214,21 @@ export function StrokesLesson() {
 	];
 
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
-		{ label: "addStroke", file: "src/model/drawing.ts", name: "addStroke" },
+		{ label: "addStroke", file: "src/model/strokes.ts", name: "addStroke" },
 		{
 			label: "recenterDrawing",
-			file: "src/model/drawing.ts",
+			file: "src/model/strokes.ts",
 			name: "recenterDrawing",
 		},
 		{
 			label: "createDrawingLayer",
-			file: "src/model/document.ts",
+			file: "src/model/layers/drawing.ts",
 			name: "createDrawingLayer",
 		},
-		{ label: "drawingBox", file: "src/model/drawing.ts", name: "drawingBox" },
+		{ label: "drawingBox", file: "src/model/strokes.ts", name: "drawingBox" },
 		{
 			label: "hitTestDrawing",
-			file: "src/model/drawing.ts",
+			file: "src/model/strokes.ts",
 			name: "hitTestDrawing",
 		},
 		{

@@ -1,8 +1,8 @@
 import { assertNever } from "@/lib/assertNever";
-import type { Layer } from "@/model/document";
-import { drawingBox } from "@/model/drawing";
 import type { Box } from "@/model/geometry";
+import type { Layer } from "@/model/layers/layer";
 import { shapeBox } from "@/model/shapes";
+import { drawingBox } from "@/model/strokes";
 import { textLayerBounds } from "@/render/textLayerLayout";
 
 /**

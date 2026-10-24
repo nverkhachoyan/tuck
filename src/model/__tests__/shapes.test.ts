@@ -1,8 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createShapeLayer, type ShapeKind } from "../document.ts";
-import { hitTestDrawing } from "../drawing.ts";
+import { createShapeLayer, type ShapeKind } from "../layers/shape.ts";
 import {
 	arrowHead,
 	erasesShape,
@@ -10,6 +9,7 @@ import {
 	shapeBox,
 	shapeOutline,
 } from "../shapes.ts";
+import { hitTestDrawing } from "../strokes.ts";
 
 const shape = (kind: ShapeKind, width: number, height: number) =>
 	createShapeLayer(

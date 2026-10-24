@@ -1,13 +1,9 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import {
-	createBlankDocument,
-	type DrawingLayer,
-	type EditorDocument,
-	type ShapeLayer,
-	type Stroke,
-} from "../../document.ts";
+import { createBlankDocument, type EditorDocument } from "../../document.ts";
+import type { DrawingLayer, Stroke } from "../../layers/drawing.ts";
+import type { ShapeLayer } from "../../layers/shape.ts";
 import { addShape, drawStroke, setShapeStyle } from "../draw.ts";
 
 const blank = () => createBlankDocument(400, 300, "#ffffff");

@@ -14,7 +14,7 @@ import {
 	type ColorMatrix,
 	neutralAdjustments,
 } from "@/model/adjustments";
-import type { ImageLayer } from "@/model/document";
+import type { ImageLayer } from "@/model/layers/image";
 import type { DialScale } from "../../shell/dialDrag";
 
 // The dial counts in percent: -100 to 100 for -1 to 1.

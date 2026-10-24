@@ -1,12 +1,12 @@
 import { useRef } from "react";
 import { Platform } from "react-native";
+import type { EditorDocument } from "@/model/document";
+import type { Rect } from "@/model/geometry";
 import {
 	createTextLayer,
-	type EditorDocument,
 	type TextLayer,
 	type TextLayerEdit,
-} from "@/model/document";
-import type { Rect } from "@/model/geometry";
+} from "@/model/layers/text";
 import type { TextSelection } from "@/model/textEditing";
 import { usePreference } from "@/platform/usePreference";
 import { selectSelectedTextLayer, useStore } from "@/store";

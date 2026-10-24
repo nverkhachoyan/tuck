@@ -42,9 +42,10 @@ render the same document offscreen with Skia.
 
 Imports flow one way: `app` → `screens` → `photos` / `projects` / `render` /
 `store` → `model`, with `ui`, `platform`, and `lib` beneath. Lint rules in
-`biome.json` enforce these boundaries. Adding a layer type means a type in
-`model/document.ts`, a view in `render/layers/`, and a case in `LayerContent`
-and `DocumentRenderScene` (`assertNever` flags any you miss).
+`biome.json` enforce these boundaries. Adding a layer type means a file in
+`model/layers/` for its type and factory, a case in the `Layer` union
+(`model/layers/layer.ts`), a view in `render/layers/`, and a case in
+`LayerContent` and `DocumentRenderScene` (`assertNever` flags any you miss).
 
 Platform differences live in `.web.ts` files next to their native versions
 (`saveImage.web.ts` downloads instead of saving to Photos;

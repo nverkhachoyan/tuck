@@ -7,7 +7,7 @@ import { Skia, type SkTypefaceFontProvider } from "@shopify/react-native-skia";
 import { Asset } from "expo-asset";
 import * as Font from "expo-font";
 import { use } from "react";
-import type { TextFont } from "@/model/document";
+import type { TextFont } from "@/model/layers/text";
 
 /**
  * The typefaces text layers use, each in the one weight it's drawn in. They

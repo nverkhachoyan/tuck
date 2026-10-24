@@ -1,6 +1,6 @@
 import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
-import type { ShapeKind } from "@/model/document";
+import type { ShapeKind } from "@/model/layers/shape";
 
 // Each shape's name and icon, as the draw tool and the layers panel show it.
 

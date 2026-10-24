@@ -8,7 +8,8 @@ import {
 	withInvertedCut,
 	withMask,
 } from "../cutout.ts";
-import { createDocumentFromImage, type ImageLayer } from "../document.ts";
+import { createDocumentFromImage } from "../document.ts";
+import type { ImageLayer } from "../layers/image.ts";
 
 const photo = () =>
 	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true)

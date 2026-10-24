@@ -1,13 +1,15 @@
 import {
 	addLayerOnTop,
-	createTextLayer,
 	type EditorDocument,
 	findLayer,
 	replaceLayer,
-	type TextLayerEdit,
-	type TextLayerStyle,
 } from "../document.ts";
 import type { Rect } from "../geometry.ts";
+import {
+	createTextLayer,
+	type TextLayerEdit,
+	type TextLayerStyle,
+} from "../layers/text.ts";
 
 /** On top, placed by `createTextLayer`. */
 export function addTextLayer(

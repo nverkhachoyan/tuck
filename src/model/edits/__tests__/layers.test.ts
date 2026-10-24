@@ -4,10 +4,10 @@ import { describe, test } from "node:test";
 import {
 	createDocumentFromImage,
 	type EditorDocument,
-	type ImageLayer,
-	identityTransform,
-	type TextLayer,
 } from "../../document.ts";
+import { identityTransform } from "../../layers/base.ts";
+import type { ImageLayer } from "../../layers/image.ts";
+import type { TextLayer } from "../../layers/text.ts";
 import {
 	deleteLayer,
 	deleteLayerGroup,

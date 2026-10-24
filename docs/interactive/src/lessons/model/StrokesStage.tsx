@@ -1,6 +1,7 @@
-import type { DrawingLayer, EditorDocument } from "@model/document.ts";
-import { drawingBox } from "@model/drawing.ts";
+import type { EditorDocument } from "@model/document.ts";
 import type { Point } from "@model/geometry.ts";
+import type { DrawingLayer } from "@model/layers/drawing.ts";
+import { drawingBox } from "@model/strokes.ts";
 import { type PointerEvent, useRef, useState } from "react";
 import {
 	DocumentScene,

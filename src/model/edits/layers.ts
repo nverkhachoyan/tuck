@@ -1,13 +1,11 @@
 import {
 	type EditorDocument,
 	findLayer,
-	type Layer,
-	reorderLayer,
 	replaceLayer,
-	resizeLayerBox,
 	withLayers,
 } from "../document.ts";
 import { type Transform, transformsEqual } from "../geometry.ts";
+import { type Layer, reorderLayer, resizeLayerBox } from "../layers/layer.ts";
 
 type LayerFlag = "hidden" | "locked";
 

@@ -1,11 +1,8 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import {
-	createBlankDocument,
-	type EditorDocument,
-	type TextLayer,
-} from "../../document.ts";
+import { createBlankDocument, type EditorDocument } from "../../document.ts";
+import type { TextLayer } from "../../layers/text.ts";
 import { addTextLayer, updateTextLayer } from "../text.ts";
 
 const blank = () => createBlankDocument(400, 300, "#ffffff");

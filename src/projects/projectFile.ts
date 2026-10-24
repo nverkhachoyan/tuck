@@ -1,12 +1,9 @@
 import { adjustmentKeys } from "../model/adjustments.ts";
-import {
-	type EditorDocument,
-	isLineShape,
-	layerFiles,
-	penTips,
-	shapeKinds,
-	textFonts,
-} from "../model/document.ts";
+import type { EditorDocument } from "../model/document.ts";
+import { penTips } from "../model/layers/drawing.ts";
+import { layerFiles } from "../model/layers/layer.ts";
+import { isLineShape, shapeKinds } from "../model/layers/shape.ts";
+import { textFonts } from "../model/layers/text.ts";
 
 // Bump when the saved format changes, and teach `parseSavedProject` to read
 // the older one. 2 added the canvas's background, layers' `locked`, and

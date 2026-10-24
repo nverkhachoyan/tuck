@@ -1,4 +1,4 @@
-import type { Layer } from "@model/document.ts";
+import type { Layer } from "@model/layers/layer.ts";
 import {
 	type EditorSlice,
 	MAX_HISTORY,

@@ -1,14 +1,20 @@
 import adjustments from "@src/model/adjustments.ts?raw";
 import cutout from "@src/model/cutout.ts?raw";
 import documentFile from "@src/model/document.ts?raw";
-import drawing from "@src/model/drawing.ts?raw";
 import adjust from "@src/model/edits/adjust.ts?raw";
 import crop from "@src/model/edits/crop.ts?raw";
 import draw from "@src/model/edits/draw.ts?raw";
 import layers from "@src/model/edits/layers.ts?raw";
 import framing from "@src/model/framing.ts?raw";
 import geometry from "@src/model/geometry.ts?raw";
+import layerDrawing from "@src/model/layers/drawing.ts?raw";
+import layerImage from "@src/model/layers/image.ts?raw";
+import layerFile from "@src/model/layers/layer.ts?raw";
+import layerRedaction from "@src/model/layers/redaction.ts?raw";
+import layerShape from "@src/model/layers/shape.ts?raw";
+import layerText from "@src/model/layers/text.ts?raw";
 import shapes from "@src/model/shapes.ts?raw";
+import strokes from "@src/model/strokes.ts?raw";
 import textEditing from "@src/model/textEditing.ts?raw";
 import documentRenderScene from "@src/render/DocumentRenderScene.tsx?raw";
 import decodedImages from "@src/render/decodedImages.ts?raw";
@@ -32,14 +38,20 @@ export const sources = {
 	"src/model/adjustments.ts": adjustments,
 	"src/model/cutout.ts": cutout,
 	"src/model/document.ts": documentFile,
-	"src/model/drawing.ts": drawing,
 	"src/model/edits/adjust.ts": adjust,
 	"src/model/edits/crop.ts": crop,
 	"src/model/edits/draw.ts": draw,
 	"src/model/edits/layers.ts": layers,
 	"src/model/framing.ts": framing,
 	"src/model/geometry.ts": geometry,
+	"src/model/layers/drawing.ts": layerDrawing,
+	"src/model/layers/image.ts": layerImage,
+	"src/model/layers/layer.ts": layerFile,
+	"src/model/layers/redaction.ts": layerRedaction,
+	"src/model/layers/shape.ts": layerShape,
+	"src/model/layers/text.ts": layerText,
 	"src/model/shapes.ts": shapes,
+	"src/model/strokes.ts": strokes,
 	"src/model/textEditing.ts": textEditing,
 	"src/render/decodeImageLayers.ts": decodeImageLayers,
 	"src/render/decodedImages.ts": decodedImages,

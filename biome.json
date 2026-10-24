@@ -50,7 +50,27 @@
 							"options": {
 								"patterns": [
 									{
-										"group": ["**", "!./*"],
+										"group": ["**", "!./*", "!./layers/*"],
+										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/model/layers/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["**", "!./*", "!../*"],
 										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
 									}
 								]
@@ -70,7 +90,14 @@
 							"options": {
 								"patterns": [
 									{
-										"group": ["**", "!./*", "!../*", "!node:*", "!node:*/**"],
+										"group": [
+											"**",
+											"!./*",
+											"!../*",
+											"!../layers/*",
+											"!node:*",
+											"!node:*/**"
+										],
 										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
 									}
 								]
@@ -90,7 +117,7 @@
 							"options": {
 								"patterns": [
 									{
-										"group": ["**", "!./*", "!../*"],
+										"group": ["**", "!./*", "!../*", "!../layers/*"],
 										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
 									}
 								]
@@ -114,6 +141,7 @@
 											"**",
 											"!../*",
 											"!../../*",
+											"!../../layers/*",
 											"!node:*",
 											"!node:*/**"
 										],

@@ -15,7 +15,7 @@ import {
 	type TextLayer,
 	type TextLayerEdit,
 	textFonts,
-} from "@/model/document";
+} from "@/model/layers/text";
 import { TEXT_FONTS } from "@/render/fonts";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";

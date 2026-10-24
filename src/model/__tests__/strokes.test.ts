@@ -1,19 +1,19 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { type Point, toDocumentSpace } from "../geometry.ts";
 import {
 	createDrawingLayer,
 	type DrawingLayer,
-	duplicateLayer,
 	type Stroke,
-} from "../document.ts";
+} from "../layers/drawing.ts";
+import { duplicateLayer } from "../layers/layer.ts";
 import {
 	addStroke,
 	drawingBox,
 	hitTestDrawing,
 	recenterDrawing,
-} from "../drawing.ts";
-import { type Point, toDocumentSpace } from "../geometry.ts";
+} from "../strokes.ts";
 
 const pen = (points: number[], width = 10): Stroke & { type: "pen" } => ({
 	type: "pen",

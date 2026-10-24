@@ -12,17 +12,15 @@ import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { neutralAdjustments } from "@/model/adjustments";
 import { imagePointAt, isCutOut } from "@/model/cutout";
-import {
-	type EditorDocument,
-	maxNewImageShortSide,
-	type ShapePlacement,
-} from "@/model/document";
+import type { EditorDocument } from "@/model/document";
 import {
 	type Framing,
 	targetImageLayer,
 	visibleImageLayer,
 } from "@/model/framing";
 import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
+import { maxNewImageShortSide } from "@/model/layers/image";
+import type { ShapePlacement } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";

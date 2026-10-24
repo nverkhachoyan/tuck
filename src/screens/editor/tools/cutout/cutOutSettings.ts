@@ -1,5 +1,5 @@
-import type { CutStroke } from "../../../../model/cutout.ts";
 import type { Size } from "../../../../model/geometry.ts";
+import type { CutStroke } from "../../../../model/layers/image.ts";
 
 // Picks the subject under a tap, or paints the cut by hand: keeping what
 // it removed, or erasing what it kept.

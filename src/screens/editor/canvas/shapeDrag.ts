@@ -1,14 +1,14 @@
 import {
-	isLineShape,
-	type ShapeKind,
-	type ShapePlacement,
-} from "../../../model/document.ts";
-import {
 	type Point,
 	rectFromCorners,
 	type Transform,
 	toDocumentSpace,
 } from "../../../model/geometry.ts";
+import {
+	isLineShape,
+	type ShapeKind,
+	type ShapePlacement,
+} from "../../../model/layers/shape.ts";
 import { ROTATION_SNAP, snapAngle } from "./snapping.ts";
 
 // Worklets, so a shape being dragged out, or a line's end being dragged,

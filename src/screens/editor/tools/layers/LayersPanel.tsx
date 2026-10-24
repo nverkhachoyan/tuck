@@ -7,7 +7,8 @@ import Animated, {
 	FadeOutRight,
 	useSharedValue,
 } from "react-native-reanimated";
-import type { Layer, LayerGroup } from "@/model/document";
+import type { LayerGroup } from "@/model/document";
+import type { Layer } from "@/model/layers/layer";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
 import { IconButton } from "@/ui/IconButton";

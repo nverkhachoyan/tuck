@@ -1,20 +1,21 @@
 import {
 	addLayerOnTop,
 	createLayerGroup,
+	type EditorDocument,
+	findLayer,
+	replaceLayer,
+} from "../document.ts";
+import type { Rect } from "../geometry.ts";
+import {
 	createMaskedRedaction,
 	createPlacedRedactionBox,
 	createRedactionBox,
 	createRedactionStrokes,
-	type EditorDocument,
 	effectsEqual,
-	findLayer,
-	type MaskStroke,
 	type RedactionBoxPlacement,
 	type RedactionEffect,
-	replaceLayer,
-} from "../document.ts";
-import { addStroke } from "../drawing.ts";
-import type { Rect } from "../geometry.ts";
+} from "../layers/redaction.ts";
+import { addStroke, type MaskStroke } from "../strokes.ts";
 
 /** A box in document space, on top. */
 export function addRedactionBox(

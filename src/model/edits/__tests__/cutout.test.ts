@@ -1,14 +1,13 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { CutStroke } from "../../cutout.ts";
 import {
 	addLayerOnTop,
 	createDocumentFromImage,
-	createTextLayer,
 	type EditorDocument,
-	type ImageLayer,
 } from "../../document.ts";
+import type { CutStroke, ImageLayer } from "../../layers/image.ts";
+import { createTextLayer } from "../../layers/text.ts";
 import { invertMask, paintMask, setMask } from "../cutout.ts";
 
 const photo = () =>

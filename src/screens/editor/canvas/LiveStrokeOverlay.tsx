@@ -16,22 +16,21 @@ import {
 	useDerivedValue,
 } from "react-native-reanimated";
 import type { ColorMatrix } from "@/model/adjustments";
-import {
-	type Brush,
-	type CutStroke,
-	identityTransform,
-	isLineShape,
-	type Layer,
-	type RedactionBox,
-	type RedactionEffect,
-	type RedactionLayer,
-	type RedactionMask,
-	type RedactionStrokes,
-	type ShapeLayer,
-} from "@/model/document";
-import { drawingBox } from "@/model/drawing";
 import { rectFromCorners, transformsEqual } from "@/model/geometry";
+import { identityTransform } from "@/model/layers/base";
+import type { Brush } from "@/model/layers/drawing";
+import type { CutStroke } from "@/model/layers/image";
+import type { Layer } from "@/model/layers/layer";
+import type {
+	RedactionBox,
+	RedactionEffect,
+	RedactionLayer,
+	RedactionMask,
+	RedactionStrokes,
+} from "@/model/layers/redaction";
+import { isLineShape, type ShapeLayer } from "@/model/layers/shape";
 import { lineReach, shapeBox } from "@/model/shapes";
+import { drawingBox } from "@/model/strokes";
 import { LayerContent } from "@/render/LayerContent";
 import { BrushStroke, strokePath } from "@/render/layers/DrawingLayerView";
 import { MaskStrokePath } from "@/render/layers/ImageLayerView";

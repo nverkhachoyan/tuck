@@ -1,13 +1,5 @@
-import type { ImageLayer } from "./document.ts";
-import type { MaskStroke } from "./drawing.ts";
 import { type Point, toLayerSpace } from "./geometry.ts";
-
-/**
- * A stroke on an image's cut: a mask stroke whose edge fades over
- * `feather`, a blur's sigma in the same units as its width, to match a
- * found mask's soft edges. It's hard without one.
- */
-export type CutStroke = MaskStroke & { feather?: number };
+import type { CutStroke, ImageLayer } from "./layers/image.ts";
 
 // Finer than a hundredth of a pixel is invisible, and would only make saved
 // projects bigger. Adding 0 turns a flipped -0 into 0.

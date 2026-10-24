@@ -1,9 +1,7 @@
 import { useMemo } from "react";
-import type {
-	EditorDocument,
-	ImageLayer,
-	RedactionEffect,
-} from "@/model/document";
+import type { EditorDocument } from "@/model/document";
+import type { ImageLayer } from "@/model/layers/image";
+import type { RedactionEffect } from "@/model/layers/redaction";
 import { useStore } from "@/store";
 import { chosenBoxes, detectionTargetKey } from "./findResults";
 import { mapDetectionRects } from "./mapDetectionRects";

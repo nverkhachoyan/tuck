@@ -1,5 +1,5 @@
 import type { SkImage } from "@shopify/react-native-skia";
-import { type Layer, layerFiles } from "../model/document.ts";
+import { type Layer, layerFiles } from "../model/layers/layer.ts";
 import type { HeldImage, ImageCache } from "./imageCache.ts";
 
 export type DecodedImageLayers = {

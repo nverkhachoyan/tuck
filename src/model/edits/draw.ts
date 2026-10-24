@@ -1,21 +1,22 @@
 import {
 	addLayerOnTop,
-	createDrawingLayer,
-	createShapeLayer,
 	type EditorDocument,
 	findLayer,
-	isLineShape,
 	replaceLayer,
+	withLayers,
+} from "../document.ts";
+import { createDrawingLayer, type Stroke } from "../layers/drawing.ts";
+import {
+	createShapeLayer,
+	isLineShape,
 	restyleShape,
 	type ShapeEdit,
 	type ShapeKind,
 	type ShapePlacement,
 	type ShapeStyle,
-	type Stroke,
-	withLayers,
-} from "../document.ts";
-import { addStroke } from "../drawing.ts";
+} from "../layers/shape.ts";
 import { erasesShape } from "../shapes.ts";
+import { addStroke } from "../strokes.ts";
 
 /**
  * A stroke in document space joins the selected drawing, or starts a new one

@@ -1,5 +1,3 @@
-import type { MaskStroke } from "../../../model/document.ts";
-import { hitTestDrawing } from "../../../model/drawing.ts";
 import {
 	type Box,
 	hitTestBox,
@@ -7,6 +5,7 @@ import {
 	type Transform,
 	toLayerSpace,
 } from "../../../model/geometry.ts";
+import { hitTestDrawing, type MaskStroke } from "../../../model/strokes.ts";
 import type { ResizeMode } from "./handleGeometry.ts";
 
 /**

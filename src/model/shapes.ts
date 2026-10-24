@@ -1,11 +1,6 @@
-import {
-	isLine,
-	type LineShapeKind,
-	type MaskStroke,
-	type ShapeLayer,
-} from "./document.ts";
-import { hitTestDrawing } from "./drawing.ts";
 import { type Box, toLayerSpace } from "./geometry.ts";
+import { isLine, type LineShapeKind, type ShapeLayer } from "./layers/shape.ts";
+import { hitTestDrawing, type MaskStroke } from "./strokes.ts";
 
 // An arrow's head, in its line's thickness: how far back from the tip it
 // runs, and how far it spreads to each side at its base.

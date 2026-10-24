@@ -1,9 +1,7 @@
 import { isHexColor } from "../../../../lib/color.ts";
-import type {
-	MaskStroke,
-	RedactionEffect,
-} from "../../../../model/document.ts";
 import type { Size } from "../../../../model/geometry.ts";
+import type { RedactionEffect } from "../../../../model/layers/redaction.ts";
+import type { MaskStroke } from "../../../../model/strokes.ts";
 
 export type RedactTool = "box" | "brush" | "eraser";
 

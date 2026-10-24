@@ -1,10 +1,8 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type {
-	EditorDocument,
-	ImageLayer,
-} from "../../../../../model/document.ts";
+import type { EditorDocument } from "../../../../../model/document.ts";
+import type { ImageLayer } from "../../../../../model/layers/image.ts";
 import {
 	chosenBoxes,
 	detectionTargetKey,

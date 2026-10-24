@@ -2,12 +2,9 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { withMask } from "../../model/cutout.ts";
-import {
-	createImageLayer,
-	createTextLayer,
-	type EditorDocument,
-	type ImageLayer,
-} from "../../model/document.ts";
+import type { EditorDocument } from "../../model/document.ts";
+import { createImageLayer, type ImageLayer } from "../../model/layers/image.ts";
+import { createTextLayer } from "../../model/layers/text.ts";
 import {
 	isImageFile,
 	PHOTO_FILE,

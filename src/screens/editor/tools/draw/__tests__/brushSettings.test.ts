@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createShapeLayer } from "../../../../../model/document.ts";
+import { createShapeLayer } from "../../../../../model/layers/shape.ts";
 import {
 	BRUSH_SIZES,
 	brushFor,

@@ -4,7 +4,6 @@ import { describe, test } from "node:test";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-	createTextLayer,
 	type EditorDocument,
 	hasEdits,
 } from "../../../../../model/document.ts";
@@ -13,6 +12,7 @@ import {
 	framingsEqual,
 	reframeDocument,
 } from "../../../../../model/framing.ts";
+import { createTextLayer } from "../../../../../model/layers/text.ts";
 import {
 	boxWithRatio,
 	type CropState,

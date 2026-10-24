@@ -7,7 +7,8 @@ import {
 } from "@shopify/react-native-skia";
 import type { ComponentProps, ReactNode } from "react";
 import { mixColors } from "@/lib/color";
-import type { Brush, DrawingLayer, MaskStroke } from "@/model/document";
+import type { Brush, DrawingLayer } from "@/model/layers/drawing";
+import type { MaskStroke } from "@/model/strokes";
 
 // A marker's ink is see-through, so what it highlights shows through it.
 const MARKER_OPACITY = 0.45;

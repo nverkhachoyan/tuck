@@ -1,5 +1,9 @@
 import { FillType, Path, Skia, type SkPath } from "@shopify/react-native-skia";
-import { isLineShape, type ShapeKind, type ShapeLayer } from "@/model/document";
+import {
+	isLineShape,
+	type ShapeKind,
+	type ShapeLayer,
+} from "@/model/layers/shape";
 import { arrowHead, outlineThickness, shapeBox } from "@/model/shapes";
 
 // Captured by the worklet below as a plain number.

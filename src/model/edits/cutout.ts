@@ -1,11 +1,11 @@
 import {
 	addMaskStroke,
-	type CutStroke,
 	isCutOut,
 	withInvertedCut,
 	withMask,
 } from "../cutout.ts";
 import { type EditorDocument, findLayer, replaceLayer } from "../document.ts";
+import type { CutStroke } from "../layers/image.ts";
 
 export function setMask(
 	document: EditorDocument,

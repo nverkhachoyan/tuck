@@ -1,12 +1,9 @@
 import { type AdjustmentKey, adjustmentKeys } from "@model/adjustments.ts";
-import {
-	type EditorDocument,
-	type Layer,
-	type RedactionEffect,
-	type TextFont,
-	textFonts,
-	withAdjustments,
-} from "@model/document.ts";
+import type { EditorDocument } from "@model/document.ts";
+import { withAdjustments } from "@model/layers/image.ts";
+import type { Layer } from "@model/layers/layer.ts";
+import type { RedactionEffect } from "@model/layers/redaction.ts";
+import { type TextFont, textFonts } from "@model/layers/text.ts";
 import { Fill, Group, Paint, type SkImage } from "@shopify/react-native-skia";
 import { DocumentRenderScene } from "@src/render/DocumentRenderScene.tsx";
 import { DrawingLayerView } from "@src/render/layers/DrawingLayerView.tsx";

@@ -5,7 +5,7 @@ import {
 	type TextLayerEdit,
 	type TextLayerStyle,
 	textFonts,
-} from "../../../../model/document.ts";
+} from "../../../../model/layers/text.ts";
 
 const ALIGNS: TextAlign[] = ["left", "center", "right"];
 

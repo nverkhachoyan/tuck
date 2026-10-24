@@ -14,7 +14,7 @@ import {
 	type SharedValue,
 	useDerivedValue,
 } from "react-native-reanimated";
-import type { EditorDocument, Layer } from "@/model/document";
+import type { EditorDocument } from "@/model/document";
 import {
 	type FramingAnchor,
 	type PhotoPlacement,
@@ -22,6 +22,7 @@ import {
 	turnsWithPhoto,
 } from "@/model/framing";
 import type { Size } from "@/model/geometry";
+import type { Layer } from "@/model/layers/layer";
 import { CanvasBackground, LayerContent } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";

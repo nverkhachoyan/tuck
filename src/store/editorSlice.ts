@@ -2,28 +2,10 @@ import type { StateCreator } from "zustand";
 // Registers the "zustand/devtools" mutator that `SliceCreator` names.
 import type {} from "zustand/middleware";
 import type { Adjustments } from "../model/adjustments.ts";
-import type { CutStroke } from "../model/cutout.ts";
 import {
 	addLayerOnTop,
-	createImageLayer,
-	createStickerLayer,
-	duplicateLayer,
 	type EditorDocument,
 	findLayer,
-	type Layer,
-	type MaskStroke,
-	type RedactionBoxPlacement,
-	type RedactionEffect,
-	type RedactionLayer,
-	type ShapeEdit,
-	type ShapeKind,
-	type ShapeLayer,
-	type ShapePlacement,
-	type ShapeStyle,
-	type Stroke,
-	type TextLayer,
-	type TextLayerEdit,
-	type TextLayerStyle,
 } from "../model/document.ts";
 import { setAdjustments } from "../model/edits/adjust.ts";
 import { reframe, setBackground } from "../model/edits/crop.ts";
@@ -50,6 +32,31 @@ import {
 import { addTextLayer, updateTextLayer } from "../model/edits/text.ts";
 import type { Framing } from "../model/framing.ts";
 import type { Rect, Transform } from "../model/geometry.ts";
+import type { Stroke } from "../model/layers/drawing.ts";
+import {
+	type CutStroke,
+	createImageLayer,
+	createStickerLayer,
+} from "../model/layers/image.ts";
+import { duplicateLayer, type Layer } from "../model/layers/layer.ts";
+import type {
+	RedactionBoxPlacement,
+	RedactionEffect,
+	RedactionLayer,
+} from "../model/layers/redaction.ts";
+import type {
+	ShapeEdit,
+	ShapeKind,
+	ShapeLayer,
+	ShapePlacement,
+	ShapeStyle,
+} from "../model/layers/shape.ts";
+import type {
+	TextLayer,
+	TextLayerEdit,
+	TextLayerStyle,
+} from "../model/layers/text.ts";
+import type { MaskStroke } from "../model/strokes.ts";
 
 // Undo steps kept; the oldest are dropped beyond this.
 export const MAX_HISTORY = 100;

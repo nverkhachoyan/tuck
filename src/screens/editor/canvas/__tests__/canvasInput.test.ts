@@ -1,11 +1,9 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import {
-	createDrawingLayer,
-	createRedactionBox,
-	createShapeLayer,
-} from "../../../../model/document.ts";
+import { createDrawingLayer } from "../../../../model/layers/drawing.ts";
+import { createRedactionBox } from "../../../../model/layers/redaction.ts";
+import { createShapeLayer } from "../../../../model/layers/shape.ts";
 import type { DialDrag } from "../../shell/dialDrag.ts";
 import { type CanvasInput, inputRules } from "../canvasInput.ts";
 

@@ -7,8 +7,8 @@ import {
 	TextAlign as SkTextAlign,
 	StrokeJoin,
 } from "@shopify/react-native-skia";
-import type { TextAlign, TextFont, TextLayer } from "@/model/document";
 import type { Box, Point, Rect } from "@/model/geometry";
+import type { TextAlign, TextFont, TextLayer } from "@/model/layers/text";
 import {
 	type CaretText,
 	caretText,

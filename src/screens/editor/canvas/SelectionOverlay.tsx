@@ -7,11 +7,9 @@ import {
 	Skia,
 } from "@shopify/react-native-skia";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
-import type {
-	EditorDocument,
-	Layer,
-	RedactionBoxPlacement,
-} from "@/model/document";
+import type { EditorDocument } from "@/model/document";
+import type { Layer } from "@/model/layers/layer";
+import type { RedactionBoxPlacement } from "@/model/layers/redaction";
 import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";
 import { handleSides } from "./handleGeometry";

@@ -1,22 +1,25 @@
 import {
 	createDocumentFromImage,
-	createDrawingLayer,
-	createImageLayer,
-	createRedactionBox,
-	createShapeLayer,
-	createStickerLayer,
-	createTextLayer,
-	duplicateLayer,
 	type EditorDocument,
 	hasEdits,
 	hasTransparency,
-	isLine,
-	isLineShape,
-	type Layer,
-	reorderLayer,
-	type ShapeKind,
 } from "@model/document.ts";
 import type { Transform } from "@model/geometry.ts";
+import { createDrawingLayer } from "@model/layers/drawing.ts";
+import { createImageLayer, createStickerLayer } from "@model/layers/image.ts";
+import {
+	duplicateLayer,
+	type Layer,
+	reorderLayer,
+} from "@model/layers/layer.ts";
+import { createRedactionBox } from "@model/layers/redaction.ts";
+import {
+	createShapeLayer,
+	isLine,
+	isLineShape,
+	type ShapeKind,
+} from "@model/layers/shape.ts";
+import { createTextLayer } from "@model/layers/text.ts";
 import { useEffect, useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -71,33 +74,49 @@ function layerLabel(layer: Layer): string {
 	}
 }
 
+type Declaration = { file: SourceFile; name: string };
+
 // The declaration that defines a layer, and the factory that made it.
-function declarations(layer: Layer): { type: string; factory: string } {
+function declarations(layer: Layer): {
+	type: Declaration;
+	factory: Declaration;
+} {
+	const file = `src/model/layers/${layer.type}.ts` as const;
 	switch (layer.type) {
 		case "image":
 			return {
-				type: "ImageLayer",
+				type: { file, name: "ImageLayer" },
 				factory:
 					layer.id === "photo"
-						? "createDocumentFromImage"
-						: layer.sticker
-							? "createStickerLayer"
-							: "createImageLayer",
+						? { file: "src/model/document.ts", name: "createDocumentFromImage" }
+						: {
+								file,
+								name: layer.sticker ? "createStickerLayer" : "createImageLayer",
+							},
 			};
 		case "text":
-			return { type: "TextLayer", factory: "createTextLayer" };
+			return {
+				type: { file, name: "TextLayer" },
+				factory: { file, name: "createTextLayer" },
+			};
 		case "drawing":
-			return { type: "DrawingLayer", factory: "createDrawingLayer" };
-		case "redaction":
-			return layer.shape === "box"
-				? { type: "RedactionBox", factory: "createRedactionBox" }
-				: layer.shape === "strokes"
-					? { type: "RedactionStrokes", factory: "createRedactionStrokes" }
-					: { type: "RedactionMask", factory: "createMaskedRedaction" };
+			return {
+				type: { file, name: "DrawingLayer" },
+				factory: { file, name: "createDrawingLayer" },
+			};
+		case "redaction": {
+			const [type, factory] =
+				layer.shape === "box"
+					? ["RedactionBox", "createRedactionBox"]
+					: layer.shape === "strokes"
+						? ["RedactionStrokes", "createRedactionStrokes"]
+						: ["RedactionMask", "createMaskedRedaction"];
+			return { type: { file, name: type }, factory: { file, name: factory } };
+		}
 		case "shape":
 			return {
-				type: isLine(layer) ? "LineShape" : "BoxShape",
-				factory: "createShapeLayer",
+				type: { file, name: isLine(layer) ? "LineShape" : "BoxShape" },
+				factory: { file, name: "createShapeLayer" },
 			};
 	}
 }
@@ -389,20 +408,12 @@ export function AnatomyLesson() {
 
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		...(selected
-			? [
-					{
-						label: declarations(selected).type,
-						file: "src/model/document.ts" as const,
-						name: declarations(selected).type,
-					},
-					{
-						label: declarations(selected).factory,
-						file: "src/model/document.ts" as const,
-						name: declarations(selected).factory,
-					},
-				]
+			? Object.values(declarations(selected)).map((declaration) => ({
+					label: declaration.name,
+					...declaration,
+				}))
 			: []),
-		{ label: "Layer", file: "src/model/document.ts", name: "Layer" },
+		{ label: "Layer", file: "src/model/layers/layer.ts", name: "Layer" },
 		{
 			label: "EditorDocument",
 			file: "src/model/document.ts",
@@ -415,7 +426,7 @@ export function AnatomyLesson() {
 		},
 		{
 			label: "duplicateOffset",
-			file: "src/model/document.ts",
+			file: "src/model/layers/layer.ts",
 			name: "duplicateOffset",
 		},
 		{

@@ -1,10 +1,6 @@
 import type { Adjustments } from "../adjustments.ts";
-import {
-	type EditorDocument,
-	findLayer,
-	replaceLayer,
-	withAdjustments,
-} from "../document.ts";
+import { type EditorDocument, findLayer, replaceLayer } from "../document.ts";
+import { withAdjustments } from "../layers/image.ts";
 
 export function setAdjustments(
 	document: EditorDocument,

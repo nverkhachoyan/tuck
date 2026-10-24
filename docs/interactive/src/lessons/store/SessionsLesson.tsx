@@ -1,4 +1,4 @@
-import type { RedactionEffect } from "@model/document.ts";
+import type { RedactionEffect } from "@model/layers/redaction.ts";
 import {
 	type EditorSlice,
 	selectCanRedo,

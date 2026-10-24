@@ -7,15 +7,14 @@ import { neutralAdjustments } from "../../model/adjustments.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-	type DrawingLayer,
-	type ImageLayer,
-	type MaskStroke,
-	type RedactionLayer,
-	type ShapeLayer,
-	type Stroke,
-	type TextLayer,
 } from "../../model/document.ts";
 import { documentFraming } from "../../model/framing.ts";
+import type { DrawingLayer, Stroke } from "../../model/layers/drawing.ts";
+import type { ImageLayer } from "../../model/layers/image.ts";
+import type { RedactionLayer } from "../../model/layers/redaction.ts";
+import type { ShapeLayer } from "../../model/layers/shape.ts";
+import type { TextLayer } from "../../model/layers/text.ts";
+import type { MaskStroke } from "../../model/strokes.ts";
 import {
 	createEditorSlice,
 	MAX_HISTORY,

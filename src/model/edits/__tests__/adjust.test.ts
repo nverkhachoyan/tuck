@@ -2,12 +2,9 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { neutralAdjustments } from "../../adjustments.ts";
-import {
-	addLayerOnTop,
-	createDocumentFromImage,
-	createTextLayer,
-	type ImageLayer,
-} from "../../document.ts";
+import { addLayerOnTop, createDocumentFromImage } from "../../document.ts";
+import type { ImageLayer } from "../../layers/image.ts";
+import { createTextLayer } from "../../layers/text.ts";
 import { setAdjustments } from "../adjust.ts";
 
 const photo = () =>

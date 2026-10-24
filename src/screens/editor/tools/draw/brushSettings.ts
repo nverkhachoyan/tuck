@@ -1,14 +1,13 @@
 import { isHexColor } from "../../../../lib/color.ts";
+import type { Size } from "../../../../model/geometry.ts";
+import type { Brush, PenTip } from "../../../../model/layers/drawing.ts";
 import {
-	type Brush,
-	type PenTip,
 	type ShapeEdit,
 	type ShapeKind,
 	type ShapeLayer,
 	type ShapeStyle,
 	shapeKinds,
-} from "../../../../model/document.ts";
-import type { Size } from "../../../../model/geometry.ts";
+} from "../../../../model/layers/shape.ts";
 
 export type DrawTool = "pen" | PenTip | "shape" | "eraser";
 export type BrushTool = "pen" | PenTip;

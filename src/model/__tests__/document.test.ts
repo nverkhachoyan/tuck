@@ -6,27 +6,37 @@ import { withMask } from "../cutout.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-	createImageLayer,
-	createMaskedRedaction,
-	createRedactionBox,
-	createShapeLayer,
-	createStickerLayer,
-	createTextLayer,
-	defaultTextStyle,
-	duplicateLayer,
 	type EditorDocument,
-	effectsEqual,
 	hasEdits,
 	hasTransparency,
+} from "../document.ts";
+import {
+	createImageLayer,
+	createStickerLayer,
 	type ImageLayer,
-	initialFontSize,
 	maxNewImageShortSide,
+	withAdjustments,
+} from "../layers/image.ts";
+import {
+	duplicateLayer,
 	reorderLayer,
 	resizeLayerBox,
+} from "../layers/layer.ts";
+import {
+	createMaskedRedaction,
+	createRedactionBox,
+	effectsEqual,
+} from "../layers/redaction.ts";
+import {
+	createShapeLayer,
 	restyleShape,
 	type ShapeLayer,
-	withAdjustments,
-} from "../document.ts";
+} from "../layers/shape.ts";
+import {
+	createTextLayer,
+	defaultTextStyle,
+	initialFontSize,
+} from "../layers/text.ts";
 
 const landscape = () =>
 	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true);

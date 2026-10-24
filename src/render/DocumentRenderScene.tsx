@@ -1,6 +1,7 @@
 import { Fill, Group, Rect, type SkImage } from "@shopify/react-native-skia";
 import { assertNever } from "@/lib/assertNever";
-import type { EditorDocument, Layer } from "@/model/document";
+import type { EditorDocument } from "@/model/document";
+import type { Layer } from "@/model/layers/layer";
 import { DrawingLayerView } from "./layers/DrawingLayerView";
 import { ImageLayerView } from "./layers/ImageLayerView";
 import { RedactionLayerView } from "./layers/RedactionLayerView";

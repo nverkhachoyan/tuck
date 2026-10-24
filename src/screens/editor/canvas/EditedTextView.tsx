@@ -17,7 +17,7 @@ import {
 	withSequence,
 	withTiming,
 } from "react-native-reanimated";
-import type { TextLayer } from "@/model/document";
+import type { TextLayer } from "@/model/layers/text";
 import { clampSelection, withPlaceholder } from "@/model/textEditing";
 import { TextLayerView } from "@/render/layers/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";

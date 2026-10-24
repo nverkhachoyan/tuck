@@ -6,19 +6,22 @@ import {
 } from "@model/adjustments.ts";
 import {
 	createDocumentFromImage,
-	createShapeLayer,
 	type EditorDocument,
-	type ImageLayer,
-	isLine,
+} from "@model/document.ts";
+import { type ImageLayer, withAdjustments } from "@model/layers/image.ts";
+import {
 	type Layer,
 	reorderLayer,
 	resizeLayerBox,
+} from "@model/layers/layer.ts";
+import {
+	createShapeLayer,
+	isLine,
 	restyleShape,
 	type ShapeEdit,
 	type ShapeKind,
 	type ShapeLayer,
-	withAdjustments,
-} from "@model/document.ts";
+} from "@model/layers/shape.ts";
 import { useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -354,22 +357,22 @@ export function IdentityLesson() {
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
 			label: "withAdjustments",
-			file: "src/model/document.ts",
+			file: "src/model/layers/image.ts",
 			name: "withAdjustments",
 		},
 		{
 			label: "restyleShape",
-			file: "src/model/document.ts",
+			file: "src/model/layers/shape.ts",
 			name: "restyleShape",
 		},
 		{
 			label: "reorderLayer",
-			file: "src/model/document.ts",
+			file: "src/model/layers/layer.ts",
 			name: "reorderLayer",
 		},
 		{
 			label: "resizeLayerBox",
-			file: "src/model/document.ts",
+			file: "src/model/layers/layer.ts",
 			name: "resizeLayerBox",
 		},
 		{

@@ -1,10 +1,6 @@
 import {
 	createDocumentFromImage,
-	createRedactionBox,
-	createShapeLayer,
-	createTextLayer,
 	type EditorDocument,
-	type Layer,
 } from "@model/document.ts";
 import {
 	documentFraming,
@@ -13,6 +9,10 @@ import {
 	reframeDocument,
 } from "@model/framing.ts";
 import { type Size, toDocumentSpace, toLayerSpace } from "@model/geometry.ts";
+import type { Layer } from "@model/layers/layer.ts";
+import { createRedactionBox } from "@model/layers/redaction.ts";
+import { createShapeLayer } from "@model/layers/shape.ts";
+import { createTextLayer } from "@model/layers/text.ts";
 import {
 	boxWithRatio,
 	type CropState,

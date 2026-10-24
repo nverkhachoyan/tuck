@@ -9,12 +9,9 @@ import {
 } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import { averageColor } from "@/lib/color";
-import {
-	type EditorDocument,
-	hasTransparency,
-	type ImageLayer,
-} from "@/model/document";
+import { type EditorDocument, hasTransparency } from "@/model/document";
 import type { Rect } from "@/model/geometry";
+import type { ImageLayer } from "@/model/layers/image";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";

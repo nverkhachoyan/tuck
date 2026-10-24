@@ -4,11 +4,13 @@ import { describe, test } from "node:test";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-	identityTransform,
-	type MaskStroke,
-	type RedactionEffect,
-	type RedactionLayer,
 } from "../../document.ts";
+import { identityTransform } from "../../layers/base.ts";
+import type {
+	RedactionEffect,
+	RedactionLayer,
+} from "../../layers/redaction.ts";
+import type { MaskStroke } from "../../strokes.ts";
 import {
 	addMaskedRedaction,
 	addRedactionBox,

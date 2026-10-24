@@ -1,21 +1,18 @@
 import { adjustmentMatrix } from "@model/adjustments.ts";
-import type {
-	EditorDocument,
-	ImageLayer,
-	Layer,
-	ShapeLayer,
-	Stroke,
-	TextLayer,
-} from "@model/document.ts";
-import { isLine } from "@model/document.ts";
-import { drawingBox } from "@model/drawing.ts";
+import type { EditorDocument } from "@model/document.ts";
 import {
 	type Box,
 	type Transform,
 	toDocumentSpace,
 	transformMatrix,
 } from "@model/geometry.ts";
+import type { Stroke } from "@model/layers/drawing.ts";
+import type { ImageLayer } from "@model/layers/image.ts";
+import type { Layer } from "@model/layers/layer.ts";
+import { isLine, type ShapeLayer } from "@model/layers/shape.ts";
+import type { TextLayer } from "@model/layers/text.ts";
 import { arrowHead, outlineThickness, shapeBox } from "@model/shapes.ts";
+import { drawingBox } from "@model/strokes.ts";
 import { type ReactNode, useId } from "react";
 import { antonLoaded } from "../../ui/fonts.ts";
 import { Photo } from "../../ui/Photo.tsx";

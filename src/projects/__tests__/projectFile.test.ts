@@ -5,18 +5,22 @@ import { withMask } from "../../model/cutout.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-	createDrawingLayer,
+	type EditorDocument,
+} from "../../model/document.ts";
+import { createDrawingLayer } from "../../model/layers/drawing.ts";
+import {
+	createStickerLayer,
+	type ImageLayer,
+	withAdjustments,
+} from "../../model/layers/image.ts";
+import {
 	createMaskedRedaction,
 	createRedactionBox,
 	createRedactionStrokes,
-	createShapeLayer,
-	createStickerLayer,
-	createTextLayer,
-	type EditorDocument,
-	type ImageLayer,
-	type MaskStroke,
-	withAdjustments,
-} from "../../model/document.ts";
+} from "../../model/layers/redaction.ts";
+import { createShapeLayer } from "../../model/layers/shape.ts";
+import { createTextLayer } from "../../model/layers/text.ts";
+import type { MaskStroke } from "../../model/strokes.ts";
 import {
 	copyName,
 	imageFiles,

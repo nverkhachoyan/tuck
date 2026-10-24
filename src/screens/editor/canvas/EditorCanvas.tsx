@@ -27,7 +27,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import type { EditorDocument, Layer, ShapePlacement } from "@/model/document";
+import type { EditorDocument } from "@/model/document";
 import {
 	type Box,
 	hitTestBox,
@@ -35,6 +35,8 @@ import {
 	type Rect,
 	type Transform,
 } from "@/model/geometry";
+import type { Layer } from "@/model/layers/layer";
+import type { ShapePlacement } from "@/model/layers/shape";
 import { type TextSelection, withPlaceholder } from "@/model/textEditing";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";

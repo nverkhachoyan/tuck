@@ -1,9 +1,4 @@
-import {
-	centeredTransform,
-	type EditorDocument,
-	type ImageLayer,
-	type Layer,
-} from "./document.ts";
+import type { EditorDocument } from "./document.ts";
 import {
 	applyMatrix,
 	invertMatrix,
@@ -14,6 +9,9 @@ import {
 	transformMatrix,
 	transformsEqual,
 } from "./geometry.ts";
+import { centeredTransform } from "./layers/base.ts";
+import type { ImageLayer } from "./layers/image.ts";
+import type { Layer } from "./layers/layer.ts";
 
 /**
  * Where the photo, or the anchor standing in for one, sits on the canvas, and

@@ -20,20 +20,19 @@ import {
 	StrokeJoin,
 	TileMode,
 } from "@shopify/react-native-skia";
-import type {
-	MaskStroke,
-	RedactionEffect,
-	RedactionLayer,
-	RedactionMask,
-	RedactionStrokes,
-} from "@/model/document";
-import { drawingBox } from "@/model/drawing";
 import {
 	type Box,
 	type Point,
 	type Transform,
 	toLayerSpace,
 } from "@/model/geometry";
+import type {
+	RedactionEffect,
+	RedactionLayer,
+	RedactionMask,
+	RedactionStrokes,
+} from "@/model/layers/redaction";
+import { drawingBox, type MaskStroke } from "@/model/strokes";
 import { pathFor } from "./DrawingLayerView";
 
 // How far past its sigma a blur reads what's around it: beyond three sigmas,

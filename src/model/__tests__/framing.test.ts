@@ -4,12 +4,7 @@ import { describe, test } from "node:test";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-	createImageLayer,
-	createRedactionBox,
-	createTextLayer,
 	type EditorDocument,
-	type ImageLayer,
-	type Layer,
 } from "../document.ts";
 import {
 	documentFraming,
@@ -22,6 +17,10 @@ import {
 	visibleImageLayer,
 } from "../framing.ts";
 import { normalizeAngle, type Transform } from "../geometry.ts";
+import { createImageLayer, type ImageLayer } from "../layers/image.ts";
+import type { Layer } from "../layers/layer.ts";
+import { createRedactionBox } from "../layers/redaction.ts";
+import { createTextLayer } from "../layers/text.ts";
 
 const near = (actual: number, expected: number) =>
 	assert.ok(
