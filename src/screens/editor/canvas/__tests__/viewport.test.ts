@@ -13,6 +13,7 @@ import {
 	viewportForZoom,
 	viewRectToDocument,
 	visibleDocumentArea,
+	zoomForArea,
 	zoomForViewport,
 	zoomViewportAbout,
 } from "../viewport.ts";
@@ -277,6 +278,35 @@ describe("viewportForZoom and zoomForViewport", () => {
 			y: 500,
 		});
 		assert.equal(zoomForViewport(frame, nearly), null);
+	});
+});
+
+describe("zoomForArea", () => {
+	test("shows the area centered, with its own size clear around it", () => {
+		const face = { x: 1000, y: 1500, width: 200, height: 200 };
+		const zoom = zoomForArea(frame, face);
+		assert.ok(zoom);
+		assert.deepEqual(zoom.center, { x: 1100, y: 1600 });
+		// The area is 400 points wide inside its inset: 600 units across fill it.
+		const shown = viewportForZoom(frame, zoom);
+		assertClose(shown.scale, 400 / 600);
+		const middle = viewPointToDocument(shown, { x: 216, y: 500 });
+		assertClose(middle.x, 1100);
+		assertClose(middle.y, 1600);
+	});
+
+	test("shows a small area at two screen pixels a document pixel", () => {
+		const zoom = zoomForArea(frame, { x: 10, y: 10, width: 2, height: 2 });
+		assert.ok(zoom);
+		assertClose(zoom.zoom * fitToFrame(frame).scale, 2);
+	});
+
+	test("is null for an area the fit shows as large", () => {
+		assert.equal(
+			zoomForArea(frame, { x: 0, y: 0, width: 4000, height: 3000 }),
+			null,
+		);
+		assert.equal(zoomForArea(frame, { x: 0, y: 0, width: 0, height: 0 }), null);
 	});
 });
 

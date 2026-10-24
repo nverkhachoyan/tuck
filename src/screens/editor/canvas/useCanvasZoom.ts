@@ -7,7 +7,7 @@ import {
 	useState,
 } from "react";
 import type { View } from "react-native";
-import type { Point, Size } from "@/model/geometry";
+import type { Point, Rect, Size } from "@/model/geometry";
 import { createDoubleTap } from "./doubleTap";
 import { useShownViewport } from "./shownViewport";
 import { useWheelZoom } from "./useWheelZoom";
@@ -18,6 +18,7 @@ import {
 	type ViewZoom,
 	viewportForZoom,
 	visibleDocumentArea,
+	zoomForArea,
 	zoomForViewport,
 	zoomViewportAbout,
 } from "./viewport";
@@ -31,7 +32,8 @@ const DOUBLE_TAP_ZOOM = 3;
  * The canvas's zoom into the fit (see `ViewZoom`), and the viewport it
  * gives `frame`. A trackpad pinch or the wheel on web zooms `target` (see
  * `useWheelZoom`), `commitViewport` keeps where a gesture left the view,
- * `zoomView` zooms by key, and `tapOnNothing` zooms on a double tap. A crop,
+ * `zoomView` zooms by key, `zoomToArea` to a part of the document, and
+ * `tapOnNothing` zooms on a double tap. A crop,
  * which changes the document's size, starts afresh at the fit.
  */
 export function useCanvasZoom(
@@ -111,6 +113,15 @@ export function useCanvasZoom(
 		},
 		[zoomTo, frame],
 	);
+	// Shows a document rectangle, with some of the document around it,
+	// easing there.
+	const zoomToArea = useCallback(
+		(rect: Rect) => {
+			flushWheel();
+			setZoom(zoomForArea(frame, rect));
+		},
+		[flushWheel, frame, setZoom],
+	);
 	// The part of the document in view, in document space, even mid-zoom.
 	const visibleArea = useCallback(() => {
 		flushWheel();
@@ -124,6 +135,7 @@ export function useCanvasZoom(
 		commitViewport,
 		tapOnNothing,
 		zoomView,
+		zoomToArea,
 		visibleArea,
 	};
 }

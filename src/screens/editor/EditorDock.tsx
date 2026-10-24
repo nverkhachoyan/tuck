@@ -141,6 +141,7 @@ export function ToolTrays({
 					state={find.state}
 					visibleIndices={find.visibleIndices}
 					selectedCount={find.selectedCount}
+					review={find.review}
 					bottomInset={bottomInset}
 					onRetry={find.retry}
 					onBack={onBackToRedact}

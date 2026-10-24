@@ -76,6 +76,8 @@ Commit: `fix: size Find's check marks to the regions they mark`
 
 Check with the keyboard alone on web: Tab to Review, step through, leave one out, ✓; then the same with VoiceOver on the iOS simulator. Check that a tap on the canvas while reviewing still toggles, and moves Review to that region.
 
+As built: the row reads "Review" between its arrows until the first step, and gains an ✕ ("Stop reviewing") beside Include once it's stepping, which zooms back to the fit. A zoom to an area stops at two screen points a photo pixel (`zoomForArea`), since the editor's full 8× left a small face a blur with nothing around it. For a screen reader the row is one adjustable control (`aria-valuetext` on web, increment, decrement, and activate on native). The iOS Simulator has no VoiceOver, so that check waits for a device.
+
 Commit: `feat: review Find's results one at a time`
 
 ### 6. Fewer handles on small layers with a mouse

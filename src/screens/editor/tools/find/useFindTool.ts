@@ -1,16 +1,43 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { EditorDocument } from "@/model/document";
+import { boundingBox, type Rect } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
-import type { RedactionEffect } from "@/model/layers/redaction";
+import type {
+	RedactionBoxPlacement,
+	RedactionEffect,
+} from "@/model/layers/redaction";
 import { useStore } from "@/store";
-import { chosenBoxes, detectionTargetKey } from "./findResults";
+import type { DetectionFeature } from "../../detection/imageDetection";
+import { chosenBoxes, detectionTargetKey, readingOrder } from "./findResults";
 import { mapDetectionRects } from "./mapDetectionRects";
 import { type DetectionScope, useImageDetection } from "./useImageDetection";
 
 /**
+ * Reviewing what Find found, one region at a time, in reading order:
+ * `current` is the region shown, or null before stepping; `step` moves on
+ * or back (starting at either end), `toggle` includes or leaves out the
+ * region shown, and `stop` ends the review.
+ */
+export type FindReview = {
+	current: {
+		sourceIndex: number;
+		position: number;
+		count: number;
+		feature: DetectionFeature;
+		included: boolean;
+		// Where it is in the document, to zoom to.
+		bounds: Rect;
+	} | null;
+	count: number;
+	step: (delta: 1 | -1) => void;
+	toggle: () => void;
+	stop: () => void;
+};
+
+/**
  * Find: faces and text found in `image`, placed in the document, to choose
- * from and redact. What's found goes stale when the image or the document
- * changes shape.
+ * from and redact, and to review one at a time. What's found goes stale when
+ * the image or the document changes shape.
  */
 export function useFindTool(
 	document: EditorDocument,
@@ -54,7 +81,42 @@ export function useFindTool(
 	const find = (scope: DetectionScope) => {
 		const { state } = detection;
 		if (state.status === "found" && state.scope === scope) return;
+		setReviewed(null);
 		if (image) detection.start(image.uri, scope);
+	};
+
+	// The region under review, by its source index.
+	const [reviewed, setReviewed] = useState<number | null>(null);
+	const order = useMemo(() => readingOrder(regions), [regions]);
+	const position =
+		reviewed === null
+			? -1
+			: order.findIndex((index) => regions[index].sourceIndex === reviewed);
+	const shown = position < 0 ? null : regions[order[position]];
+	const review: FindReview = {
+		current: shown && {
+			sourceIndex: shown.sourceIndex,
+			position,
+			count: order.length,
+			feature: shown.feature,
+			included: found?.selected.has(shown.sourceIndex) ?? false,
+			bounds: regionBounds(shown),
+		},
+		count: order.length,
+		step: (delta) => {
+			if (order.length === 0) return;
+			const next =
+				position < 0
+					? delta > 0
+						? 0
+						: order.length - 1
+					: Math.min(order.length - 1, Math.max(0, position + delta));
+			setReviewed(regions[order[next]].sourceIndex);
+		},
+		toggle: () => {
+			if (shown) detection.toggle(shown.sourceIndex);
+		},
+		stop: () => setReviewed(null),
 	};
 
 	return {
@@ -67,10 +129,18 @@ export function useFindTool(
 			const { state } = detection;
 			if (state.status !== "idle") find(state.scope);
 		},
-		toggle: detection.toggle,
+		review,
+		// A tap on a region toggles it, and moves a review there.
+		toggle: (index: number) => {
+			detection.toggle(index);
+			if (reviewed !== null) setReviewed(index);
+		},
 		selectAll: () => detection.select(visibleIndices),
 		clear: () => detection.select([]),
-		reset: detection.reset,
+		reset: () => {
+			setReviewed(null);
+			detection.reset();
+		},
 		// The regions chosen, redacted with `effect` together in one group.
 		// Gives how many, and what they are (null for both kinds), if any.
 		redactChosen: (effect: RedactionEffect) => {
@@ -79,5 +149,23 @@ export function useFindTool(
 			addRedactionBoxes(result.boxes, effect, result.groupName);
 			return { count: result.boxes.length, feature: result.feature };
 		},
+	};
+}
+
+// A found region's upright bounds in the document.
+function regionBounds({
+	width,
+	height,
+	transform,
+}: RedactionBoxPlacement): Rect {
+	const { halfWidth, halfHeight } = boundingBox(transform, {
+		halfWidth: width / 2,
+		halfHeight: height / 2,
+	});
+	return {
+		x: transform.x - halfWidth,
+		y: transform.y - halfHeight,
+		width: halfWidth * 2,
+		height: halfHeight * 2,
 	};
 }

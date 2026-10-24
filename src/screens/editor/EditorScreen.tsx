@@ -1,12 +1,12 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { neutralAdjustments } from "@/model/adjustments";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
-import { type Point, toLayerSpace } from "@/model/geometry";
+import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import { projectLabel } from "@/projects/projectFile";
@@ -232,6 +232,23 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const draw = useDrawTool(tool === "draw", documentSize);
 	const redact = useRedactTool(documentSize);
 	const find = useFindTool(document, targetImage);
+	// Reviewing what Find found zooms to each region it steps to, and back to
+	// the fit once it stops (finishing or leaving Find included). Keyed on
+	// the region, so other renders don't undo a pan.
+	const reviewedRegion = find.review.current?.sourceIndex ?? null;
+	const reviewBounds = useRef<Rect | null>(null);
+	reviewBounds.current = find.review.current?.bounds ?? null;
+	const zoomedToReview = useRef(false);
+	useEffect(() => {
+		const canvas = canvasRef.current;
+		if (reviewedRegion !== null && reviewBounds.current) {
+			canvas?.zoomToArea(reviewBounds.current);
+			zoomedToReview.current = true;
+		} else if (zoomedToReview.current) {
+			canvas?.zoom("fit");
+			zoomedToReview.current = false;
+		}
+	}, [reviewedRegion]);
 	// Redacting the cut's selection puts the image back as it was before
 	// Cut out, with a redaction over what was selected, and goes on to
 	// Redact to choose how it hides it.
@@ -686,6 +703,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									state={find.state}
 									visibleIndices={find.visibleIndices}
 									selectedCount={find.selectedCount}
+									review={find.review}
 									onFind={find.find}
 									onRetry={find.retry}
 									onBack={cancel}

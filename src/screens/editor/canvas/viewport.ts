@@ -283,6 +283,35 @@ export function panViewport(
 	};
 }
 
+// A zoom to an area shows it with this much of its own size clear on each
+// side, so what's around it stays in view, and a document pixel at most this
+// many screen pixels wide, so a small area isn't blown up into a blur.
+const AREA_MARGIN = 1;
+const AREA_MAX_PIXEL_SCALE = 2;
+
+/**
+ * The zoom that shows the document rectangle `rect` whole in the frame's
+ * area, centered, with `AREA_MARGIN` of its size around it, up to
+ * `AREA_MAX_PIXEL_SCALE`. Null where the fit shows it as large already.
+ */
+export function zoomForArea(frame: ViewFrame, rect: Rect): ViewZoom | null {
+	const fit = fitToFrame(frame);
+	if (fit.scale <= 0 || rect.width <= 0 || rect.height <= 0) return null;
+	const { area, inset } = frame;
+	const grow = 1 + AREA_MARGIN * 2;
+	const scale = limitScale(
+		fit,
+		Math.min(
+			(area.width - inset * 2) / (rect.width * grow),
+			(area.height - inset * 2) / (rect.height * grow),
+			AREA_MAX_PIXEL_SCALE,
+		),
+	);
+	const zoom = scale / fit.scale;
+	if (zoom < 1.01) return null;
+	return { zoom, center: areaMiddle(rect) };
+}
+
 /** The viewport a zoom shows in the frame, or the fit without one. */
 export function viewportForZoom(
 	frame: ViewFrame,

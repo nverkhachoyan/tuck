@@ -7,6 +7,7 @@ import {
 	chosenBoxes,
 	detectionTargetKey,
 	type FoundRegion,
+	readingOrder,
 } from "../findResults.ts";
 
 const region = (
@@ -111,5 +112,34 @@ describe("detectionTargetKey", () => {
 			layers: [],
 		};
 		assert.equal(detectionTargetKey(doc, null), "none:800:600");
+	});
+});
+
+describe("readingOrder", () => {
+	const at = (x: number, y: number, height = 20) => ({
+		width: 20,
+		height,
+		transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
+	});
+
+	test("steps across each row, then down to the next", () => {
+		// Two rows of faces at slightly different heights, listed out of order.
+		const regions = [
+			at(50, 104),
+			at(10, 160),
+			at(90, 98),
+			at(10, 100),
+			at(50, 158),
+		];
+		assert.deepEqual(readingOrder(regions), [3, 0, 2, 1, 4]);
+	});
+
+	test("starts a row below half the height of the row's first", () => {
+		assert.deepEqual(readingOrder([at(50, 100), at(10, 111)]), [0, 1]);
+		assert.deepEqual(readingOrder([at(50, 100), at(10, 110)]), [1, 0]);
+	});
+
+	test("is empty for no regions", () => {
+		assert.deepEqual(readingOrder([]), []);
 	});
 });

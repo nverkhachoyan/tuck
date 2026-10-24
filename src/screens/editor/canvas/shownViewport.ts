@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo } from "react";
 import {
 	Easing,
 	type SharedValue,
+	useReducedMotion,
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
@@ -13,8 +14,9 @@ const EASE = { duration: 250, easing: Easing.bezier(0.2, 0, 0, 1) };
 /**
  * The viewport the canvas draws with, on the UI thread. It eases to each new
  * target, as when a tray opens, the keyboard rises, or a key zooms, while
- * gestures use the target at once. Zooming with fingers or the wheel moves
- * it directly (`showViewport`) as it goes, and commits once it stops.
+ * gestures use the target at once. With Reduce Motion on, it jumps there.
+ * Zooming with fingers or the wheel moves it directly (`showViewport`) as it
+ * goes, and commits once it stops.
  */
 export type ShownViewport = {
 	scale: SharedValue<number>;
@@ -27,14 +29,15 @@ export function useShownViewport(target: DocumentViewport): ShownViewport {
 	const offsetX = useSharedValue(target.offsetX);
 	const offsetY = useSharedValue(target.offsetY);
 	const { scale: toScale, offsetX: toX, offsetY: toY } = target;
+	const reduceMotion = useReducedMotion();
 	useLayoutEffect(() => {
 		// Not from the unmeasured view's zero scale.
-		const ease = scale.value > 0 && toScale > 0;
+		const ease = !reduceMotion && scale.value > 0 && toScale > 0;
 		const to = (value: number) => (ease ? withTiming(value, EASE) : value);
 		scale.value = to(toScale);
 		offsetX.value = to(toX);
 		offsetY.value = to(toY);
-	}, [toScale, toX, toY, scale, offsetX, offsetY]);
+	}, [toScale, toX, toY, reduceMotion, scale, offsetX, offsetY]);
 	return useMemo(
 		() => ({ scale, offsetX, offsetY }),
 		[scale, offsetX, offsetY],

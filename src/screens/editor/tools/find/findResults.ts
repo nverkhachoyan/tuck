@@ -63,3 +63,35 @@ export function chosenBoxes(
 		groupName: feature ? GROUP_NAMES[feature] : "Find results",
 	};
 }
+
+/**
+ * The order to step through `regions` in, as positions in it: rows from top
+ * to bottom, then left to right along each, by each region's center. A
+ * region starts a new row once its center is below the row's first by more
+ * than half that one's height, so a row of faces at slightly different
+ * heights still steps across.
+ */
+export function readingOrder(
+	regions: readonly RedactionBoxPlacement[],
+): number[] {
+	const byTop = regions
+		.map((_, index) => index)
+		.sort((a, b) => regions[a].transform.y - regions[b].transform.y);
+	const rows: number[][] = [];
+	let rowTop = 0;
+	let rowReach = 0;
+	for (const index of byTop) {
+		const { transform, height } = regions[index];
+		const row = rows.at(-1);
+		if (row && transform.y - rowTop <= rowReach) {
+			row.push(index);
+		} else {
+			rows.push([index]);
+			rowTop = transform.y;
+			rowReach = (height * Math.abs(transform.scaleY)) / 2;
+		}
+	}
+	return rows.flatMap((row) =>
+		row.sort((a, b) => regions[a].transform.x - regions[b].transform.x),
+	);
+}

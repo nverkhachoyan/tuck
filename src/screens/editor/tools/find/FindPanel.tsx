@@ -1,12 +1,24 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ComponentProps, type ReactNode, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+	type AccessibilityActionEvent,
+	ActivityIndicator,
+	Platform,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
-import { colors, space, typography } from "@/ui/theme";
+import { IconButton } from "@/ui/IconButton";
+import { interaction } from "@/ui/interaction";
+import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { BarGroup, BarSections } from "../../shell/ContextBar";
 import { type RedactLook, redactLookItems } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { Tray } from "../../shell/ToolOptions";
+import type { FindReview } from "./useFindTool";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
 
 // Narrower than this, the tray's text goes above its buttons rather than beside
@@ -82,6 +94,7 @@ export function FindTray({
 	state,
 	visibleIndices,
 	selectedCount,
+	review,
 	bottomInset,
 	onRetry,
 	onBack,
@@ -92,6 +105,7 @@ export function FindTray({
 	state: ImageDetectionState;
 	visibleIndices: readonly number[];
 	selectedCount: number;
+	review: FindReview;
 	bottomInset: number;
 	onRetry: () => void;
 	onBack: () => void;
@@ -108,6 +122,7 @@ export function FindTray({
 				state={state}
 				visibleIndices={visibleIndices}
 				selectedCount={selectedCount}
+				review={review}
 				stacked={stacked}
 				onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
 				onRetry={onRetry}
@@ -128,6 +143,7 @@ export function FindInspector({
 	state,
 	visibleIndices,
 	selectedCount,
+	review,
 	onFind,
 	onRetry,
 	onBack,
@@ -139,6 +155,7 @@ export function FindInspector({
 	state: ImageDetectionState;
 	visibleIndices: readonly number[];
 	selectedCount: number;
+	review: FindReview;
 	onFind: (scope: DetectionScope) => void;
 	onRetry: () => void;
 	onBack: () => void;
@@ -167,6 +184,7 @@ export function FindInspector({
 					state={state}
 					visibleIndices={visibleIndices}
 					selectedCount={selectedCount}
+					review={review}
 					stacked
 					onRetry={onRetry}
 					onBack={onBack}
@@ -184,6 +202,7 @@ function FindBody({
 	state,
 	visibleIndices,
 	selectedCount,
+	review,
 	stacked,
 	onMeasure,
 	onRetry,
@@ -195,6 +214,7 @@ function FindBody({
 	state: ImageDetectionState;
 	visibleIndices: readonly number[];
 	selectedCount: number;
+	review: FindReview;
 	stacked: boolean;
 	onMeasure?: (width: number) => void;
 	onRetry: () => void;
@@ -206,7 +226,11 @@ function FindBody({
 	return (
 		<>
 			<Announcement
-				message={announcement(state, visibleIndices.length, selectedCount)}
+				message={
+					review.current
+						? reviewValue(review)
+						: announcement(state, visibleIndices.length, selectedCount)
+				}
 			/>
 			<View
 				style={[styles.content, stacked && styles.stacked]}
@@ -235,6 +259,7 @@ function FindBody({
 					<Found
 						count={visibleIndices.length}
 						selected={selectedCount}
+						review={review}
 						onSelectAll={onSelectAll}
 						onClear={onClear}
 						issue={state.issues[0]?.message}
@@ -297,12 +322,14 @@ function scopeName(scope: DetectionScope): string {
 function Found({
 	count,
 	selected,
+	review,
 	onSelectAll,
 	onClear,
 	issue,
 }: {
 	count: number;
 	selected: number;
+	review: FindReview;
 	onSelectAll: () => void;
 	onClear: () => void;
 	issue?: string;
@@ -326,9 +353,152 @@ function Found({
 				<View style={styles.actions}>
 					<Button label="All" size="small" onPress={onSelectAll} />
 					<Button label="None" size="small" onPress={onClear} />
+					<ReviewRow review={review} />
 				</View>
 			)}
 		</>
+	);
+}
+
+// What a screen reader hears for the region under review.
+function reviewValue({ current }: FindReview): string {
+	if (!current) return "";
+	const kind = current.feature === "faces" ? "Face" : "Text";
+	const state = current.included ? "included" : "left out";
+	return `${kind} ${current.position + 1} of ${current.count}, ${state}`;
+}
+
+/**
+ * What was found, one region at a time: back, where the review is, on, and
+ * whether the region shown is included. Each step zooms the canvas to it.
+ * For a screen reader it's one adjustable control (swipe up or down to step,
+ * double tap to include or leave out); on web, while it has focus, the arrow
+ * keys step and Space toggles, without reaching the editor's shortcuts.
+ */
+function ReviewRow({ review }: { review: FindReview }) {
+	const { current, count, step, toggle, stop } = review;
+	const onAccessibilityAction = ({ nativeEvent }: AccessibilityActionEvent) => {
+		if (nativeEvent.actionName === "increment") step(1);
+		else if (nativeEvent.actionName === "decrement") step(-1);
+		else if (nativeEvent.actionName === "activate") {
+			if (current) toggle();
+			else step(1);
+		}
+	};
+	const keys =
+		Platform.OS === "web"
+			? {
+					onKeyDown: (event: WebKeyEvent) => {
+						const delta = REVIEW_KEYS[event.key];
+						// Space on one of the row's buttons presses that button.
+						const toggles =
+							event.key === " " && event.target === event.currentTarget;
+						if (!delta && !toggles) return;
+						event.preventDefault();
+						event.stopPropagation();
+						if (delta) step(delta);
+						else if (current) toggle();
+					},
+				}
+			: {};
+	return (
+		<View
+			{...keys}
+			accessible
+			focusable
+			accessibilityRole="adjustable"
+			accessibilityLabel="Review"
+			aria-valuemin={1}
+			aria-valuemax={count}
+			aria-valuenow={current ? current.position + 1 : undefined}
+			aria-valuetext={current ? reviewValue(review) : `${count} to review`}
+			accessibilityActions={REVIEW_ACTIONS}
+			onAccessibilityAction={onAccessibilityAction}
+			style={styles.review}
+		>
+			<IconButton
+				icon="chevron-back"
+				label="Previous"
+				disabled={current?.position === 0}
+				onPress={() => step(-1)}
+			/>
+			<Text style={styles.reviewPlace}>
+				{current ? `${current.position + 1} of ${count}` : "Review"}
+			</Text>
+			<IconButton
+				icon="chevron-forward"
+				label="Next"
+				disabled={current?.position === count - 1}
+				onPress={() => step(1)}
+			/>
+			{current && (
+				<>
+					<IncludeSwitch included={current.included} onPress={toggle} />
+					<IconButton icon="close" label="Stop reviewing" onPress={stop} />
+				</>
+			)}
+		</View>
+	);
+}
+
+type WebKeyEvent = {
+	key: string;
+	target: unknown;
+	currentTarget: unknown;
+	preventDefault: () => void;
+	stopPropagation: () => void;
+};
+
+const REVIEW_KEYS: Record<string, 1 | -1 | undefined> = {
+	ArrowRight: 1,
+	ArrowDown: 1,
+	ArrowLeft: -1,
+	ArrowUp: -1,
+};
+
+const REVIEW_ACTIONS = [
+	{ name: "increment" },
+	{ name: "decrement" },
+	{ name: "activate" },
+];
+
+// Whether the region under review is included: a box that's checked or not.
+function IncludeSwitch({
+	included,
+	onPress,
+}: {
+	included: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			hitSlop={6}
+			onPress={onPress}
+			accessibilityRole="switch"
+			accessibilityLabel="Include"
+			accessibilityState={{ checked: included }}
+		>
+			{(state) => {
+				const { hovered, pressed } = interaction(state);
+				return (
+					<View
+						style={[
+							styles.include,
+							webTransition,
+							hovered && styles.includeHovered,
+							pressed && styles.includePressed,
+						]}
+					>
+						<MaterialCommunityIcons
+							name={included ? "checkbox-marked" : "checkbox-blank-outline"}
+							size={20}
+							color={included ? colors.selection : colors.textPrimary}
+						/>
+						<Text style={styles.includeLabel}>Include</Text>
+					</View>
+				);
+			}}
+		</Pressable>
 	);
 }
 
@@ -407,6 +577,38 @@ const styles = StyleSheet.create({
 		flexWrap: "wrap",
 		alignItems: "center",
 		gap: 8,
+	},
+	review: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: space.sm,
+		paddingHorizontal: space.xs,
+		borderRadius: radii.medium,
+	},
+	reviewPlace: {
+		...typography.bodyStrong,
+		color: colors.textPrimary,
+		fontVariant: ["tabular-nums"],
+		minWidth: 64,
+		textAlign: "center",
+	},
+	include: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: space.xxs,
+		paddingVertical: space.xxs,
+		paddingHorizontal: 6,
+		borderRadius: radii.small,
+	},
+	includeHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	includePressed: {
+		backgroundColor: colors.pressedOverlay,
+	},
+	includeLabel: {
+		...typography.label,
+		color: colors.textPrimary,
 	},
 	inspectorStack: {
 		flex: 1,

@@ -148,6 +148,8 @@ export type EditorCanvasHandle = {
 	nudgeSelection: (dx: number, dy: number) => void;
 	// Zooms about the middle of the view, or back to the fit, easing there.
 	zoom: (to: "in" | "out" | "fit") => void;
+	// Zooms to show a document rectangle, with some room around it.
+	zoomToArea: (rect: Rect) => void;
 	// The part of the document in view, in document space, where a new layer
 	// goes.
 	visibleArea: () => Rect;
@@ -259,6 +261,7 @@ export function EditorCanvas({
 		commitViewport,
 		tapOnNothing,
 		zoomView,
+		zoomToArea,
 		visibleArea,
 	} = useCanvasZoom(frame, containerRef);
 	const { scale } = viewport;
@@ -551,8 +554,8 @@ export function EditorCanvas({
 
 	useImperativeHandle(
 		ref,
-		() => ({ nudgeSelection, zoom: zoomView, visibleArea }),
-		[nudgeSelection, zoomView, visibleArea],
+		() => ({ nudgeSelection, zoom: zoomView, zoomToArea, visibleArea }),
+		[nudgeSelection, zoomView, zoomToArea, visibleArea],
 	);
 
 	return (
