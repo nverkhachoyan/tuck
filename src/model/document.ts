@@ -345,6 +345,45 @@ export function groupsForLayers(
 	});
 }
 
+/** `document` with `layers`, its groups following them. */
+export function withLayers(
+	document: EditorDocument,
+	layers: Layer[],
+): EditorDocument {
+	return {
+		...document,
+		layers,
+		groups: groupsForLayers(document.groups, layers),
+	};
+}
+
+export function findLayer(
+	document: EditorDocument,
+	id: string | null,
+): Layer | undefined {
+	return document.layers.find((layer) => layer.id === id);
+}
+
+export function addLayerOnTop(
+	document: EditorDocument,
+	layer: Layer,
+): EditorDocument {
+	return withLayers(document, [...document.layers, layer]);
+}
+
+/** Returns `document` itself when `next` is `target`, unchanged. */
+export function replaceLayer(
+	document: EditorDocument,
+	target: Layer,
+	next: Layer,
+): EditorDocument {
+	if (next === target) return document;
+	return withLayers(
+		document,
+		document.layers.map((layer) => (layer === target ? next : layer)),
+	);
+}
+
 /** Places something of this size centered on a canvas of the same size. */
 export function centeredTransform(width: number, height: number): Transform {
 	return { ...identityTransform, x: width / 2, y: height / 2 };

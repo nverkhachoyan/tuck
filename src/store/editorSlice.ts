@@ -12,17 +12,11 @@ import {
 import {
 	createDrawingLayer,
 	createImageLayer,
-	createLayerGroup,
-	createMaskedRedaction,
-	createPlacedRedactionBox,
-	createRedactionBox,
-	createRedactionStrokes,
 	createShapeLayer,
 	createStickerLayer,
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
-	effectsEqual,
 	groupsForLayers,
 	isLineShape,
 	type Layer,
@@ -45,6 +39,13 @@ import {
 	withAdjustments,
 } from "../model/document.ts";
 import { addStroke } from "../model/drawing.ts";
+import {
+	addMaskedRedaction,
+	addRedactionBox,
+	addRedactionBoxes,
+	paintRedaction,
+	setRedactionEffect,
+} from "../model/edits/redact.ts";
 import {
 	documentFraming,
 	type Framing,
@@ -206,17 +207,38 @@ type SliceCreator<Slice> = StateCreator<
 >;
 
 export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
+	// The selection after `document` became `next`: a layer the edit added on
+	// top, so a stroke or restyle right after changes it, or else the selected
+	// layer while it's still there.
+	const selectionAfter = (document: EditorDocument, next: EditorDocument) => {
+		const top = next.layers.at(-1);
+		if (top && !document.layers.some((layer) => layer.id === top.id)) {
+			return top.id;
+		}
+		const { selectedLayerId } = get();
+		return next.layers.some((layer) => layer.id === selectedLayerId)
+			? selectedLayerId
+			: null;
+	};
+
+	// An edit that returns the document it was given changed nothing, so
+	// there's no step to record.
 	const setDocument = (
 		action: string,
 		update: (document: EditorDocument) => EditorDocument,
-		nextSelectedLayerId = get().selectedLayerId,
+		nextSelectedLayerId?: string | null,
 	) => {
 		const { document, selectedLayerId, past } = get();
 		if (!document) return;
+		const next = update(document);
+		if (next === document) return;
 		set(
 			{
-				document: update(document),
-				selectedLayerId: nextSelectedLayerId,
+				document: next,
+				selectedLayerId:
+					nextSelectedLayerId === undefined
+						? selectionAfter(document, next)
+						: nextSelectedLayerId,
 				past: [...past, { document, selectedLayerId }].slice(-MAX_HISTORY),
 				future: [],
 			},
@@ -426,50 +448,28 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			}
 		},
 
-		// A box in document space, on top and selected, so restyling it right
-		// after (see `setRedactionEffect`) changes it.
-		addRedactionBox: (rect, effect) => {
-			if (rect.width <= 0 || rect.height <= 0) return;
-			addOnTop("editor/addRedactionBox", createRedactionBox(rect, effect));
-		},
+		// On top and selected, so restyling it right after (see
+		// `setRedactionEffect`) changes it.
+		addRedactionBox: (rect, effect) =>
+			setDocument("editor/addRedactionBox", (document) =>
+				addRedactionBox(document, rect, effect),
+			),
 
-		// Detector proposals land together, on top, as one undo step. Their
-		// group is metadata over the flat paint order, so a large result stays
-		// one compact row without adding a canvas compositing layer. None of
-		// them is selected: the group, not any one box, is what was added.
-		addRedactionBoxes: (placements, effect, groupName = "Find results") => {
-			const boxes = placements
-				.filter(({ width, height }) => width > 0 && height > 0)
-				.map((placement) => createPlacedRedactionBox(placement, effect));
-			if (boxes.length === 0) return;
+		// Detector proposals land as one undo step. None of them is selected:
+		// the group, not any one box, is what was added.
+		addRedactionBoxes: (placements, effect, groupName) =>
 			setDocument(
 				"editor/addRedactionBoxes",
-				(document) => ({
-					...document,
-					layers: [...document.layers, ...boxes],
-					groups: [
-						...(document.groups ?? []),
-						createLayerGroup(
-							groupName,
-							boxes.map((box) => box.id),
-						),
-					],
-				}),
+				(document) =>
+					addRedactionBoxes(document, placements, effect, groupName),
 				null,
-			);
-		},
+			),
 
-		// Over the image it was selected on, on top and selected, like a box.
-		addMaskedRedaction: (imageId, mask, rect, effect) => {
-			const image = findLayer(imageId);
-			if (image?.type !== "image" || rect.width <= 0 || rect.height <= 0) {
-				return;
-			}
-			addOnTop(
-				"editor/addMaskedRedaction",
-				createMaskedRedaction(image, mask, rect, effect),
-			);
-		},
+		// Selected, like a box.
+		addMaskedRedaction: (imageId, mask, rect, effect) =>
+			setDocument("editor/addMaskedRedaction", (document) =>
+				addMaskedRedaction(document, imageId, mask, rect, effect),
+			),
 
 		setLayerGroupHidden: (id, hidden) =>
 			setLayerGroupFlag(
@@ -506,36 +506,17 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
-		// Like `drawStroke`: a stroke joins the selected brushed redaction, or a
-		// pen starts a new one with `effect` on top.
-		paintRedaction: (stroke, effect) => {
-			if (stroke.points.length < 2) return;
-			const selected = selectSelectedLayer(get());
-			if (
-				selected?.type === "redaction" &&
-				selected.shape === "strokes" &&
-				!selected.locked
-			) {
-				replaceLayer(
-					"editor/paintRedaction",
-					selected,
-					addStroke(selected, stroke),
-				);
-			} else if (stroke.type === "pen") {
-				addOnTop(
-					"editor/paintRedaction",
-					createRedactionStrokes({ ...stroke, type: "pen" }, effect),
-				);
-			}
-		},
+		// Like `drawStroke`, a new redaction is selected, so the next stroke
+		// joins it.
+		paintRedaction: (stroke, effect) =>
+			setDocument("editor/paintRedaction", (document) =>
+				paintRedaction(document, get().selectedLayerId, stroke, effect),
+			),
 
-		setRedactionEffect: (id, effect) => {
-			const target = findLayer(id);
-			if (target?.type !== "redaction" || effectsEqual(target.effect, effect)) {
-				return;
-			}
-			replaceLayer("editor/setRedactionEffect", target, { ...target, effect });
-		},
+		setRedactionEffect: (id, effect) =>
+			setDocument("editor/setRedactionEffect", (document) =>
+				setRedactionEffect(document, id, effect),
+			),
 
 		// On top and selected, like a redaction's box, so restyling it right
 		// after (see `setShapeStyle`) changes it. A box needs both sides.

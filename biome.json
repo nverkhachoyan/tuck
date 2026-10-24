@@ -81,6 +81,52 @@
 			}
 		},
 		{
+			"includes": ["src/model/edits/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["**", "!./*", "!../*"],
+										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/model/edits/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"**",
+											"!../*",
+											"!../../*",
+											"!node:*",
+											"!node:*/**"
+										],
+										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/lib/**"],
 			"linter": {
 				"rules": {
