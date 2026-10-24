@@ -5,7 +5,6 @@ import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { neutralAdjustments } from "@/model/adjustments";
-import { imagePointAt, isCutOut } from "@/model/cutout";
 import type { EditorDocument } from "@/model/document";
 import {
 	type Framing,
@@ -55,9 +54,7 @@ import { ToolsPanel } from "./shell/ToolsPanel";
 import type { Shortcut, ToolKey } from "./shortcuts";
 import { useAdjustController } from "./tools/adjust/useAdjustController";
 import { CropTool } from "./tools/crop/CropTool";
-import { cutOutTool, parseCutOutSettings } from "./tools/cutout/cutOutSettings";
-import { useCutOut } from "./tools/cutout/useCutOut";
-import { useCutRedaction } from "./tools/cutout/useCutRedaction";
+import { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
@@ -144,8 +141,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		addMaskedRedaction,
 		deleteLayerGroup,
 		setAdjustments,
-		setMask,
-		invertMask,
 		transformLayer,
 		resizeBox,
 		nudgeLayer,
@@ -234,42 +229,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const draw = useDrawTool(tool === "draw", documentSize);
 	const redact = useRedactTool(documentSize);
 	const find = useFindTool(document, targetImage);
-	// A mask found after Cut out was put down, or moved to another image,
-	// isn't wanted any more.
-	const cutLayerId = useRef<string | null>(null);
-	cutLayerId.current = cutLayer?.id ?? null;
-	const [cutSettings, setCutSettings] = usePreference(
-		"cutOut",
-		parseCutOutSettings,
-	);
-	const cutOut = useCutOut({
-		projectId,
-		image: cutLayer,
-		picking: cutSettings.tool === "pick",
-		latest: (layerId) => {
-			const current = latestDocument();
-			return current ? visibleImageLayer(current, layerId) : undefined;
-		},
-		// The mask moves into the project, so autosave knows its file.
-		keep: async (uri) =>
-			projectId === null ? uri : addImage(projectId, uri, false),
-		onMask: (layerId, mask, picked) => {
-			if (cutLayerId.current === layerId) {
-				setMask(layerId, mask, { keepStrokes: picked });
-			}
-		},
-		onInvert: (layerId, mask) => {
-			if (cutLayerId.current === layerId) invertMask(layerId, mask);
-		},
-	});
 	// Redacting the cut's selection puts the image back as it was before
 	// Cut out, with a redaction over what was selected, and goes on to
 	// Redact to choose how it hides it.
-	const cutRedaction = useCutRedaction({
-		keep: async (uri) =>
-			projectId === null ? uri : addImage(projectId, uri, false),
+	const cut = useCutOutTool({
+		layer: cutLayer,
 		onRedact: (layerId, mask, rect) => {
-			if (cutLayerId.current !== layerId) return;
 			cancelSession();
 			addMaskedRedaction(
 				layerId,
@@ -283,12 +248,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			dispatchMode({ type: "startTool", tool: "redact" });
 		},
 	});
-	const cutTool = cutOutTool(cutSettings, cutOut.canFind);
-	// A tap on the image being cut out cuts out only the subject there.
-	const pickSubject = (point: Point) => {
-		const at = cutLayer && imagePointAt(cutLayer, point);
-		if (cutLayer && at) void cutOut.find(cutLayer, at);
-	};
 	const canvasInput = useCanvasInput({
 		document,
 		size: documentSize,
@@ -297,7 +256,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		editingText,
 		draw: draw.settings,
 		redact: redact.settings,
-		cut: { layer: cutLayer, settings: cutSettings, tool: cutTool, pickSubject },
+		cut,
 		findImageId: targetImage?.id ?? null,
 		onFindToggle: find.toggle,
 		adjustController,
@@ -383,16 +342,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		cancelSession();
 		closeTool();
 	};
-	// The selected photo, or else the main one, like Find. An image that
-	// isn't cut yet has its subjects cut out at once, so one tap still does
-	// it; one that is opens to refine its cut.
+	// The selected photo, or else the main one, like Find.
 	const startCutOut = () => {
 		if (!targetImage) return;
 		dispatchMode({ type: "startCutOut", layerId: targetImage.id });
-		if (cutOut.canFind && !isCutOut(targetImage)) {
-			cutLayerId.current = targetImage.id;
-			void cutOut.find(targetImage);
-		}
+		cut.start(targetImage);
 	};
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
@@ -618,9 +572,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// or Cut out's cut.
 	const resetEdit = adjustedLayer?.adjustments
 		? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
-		: cutLayer && isCutOut(cutLayer)
-			? () => setMask(cutLayer.id, null)
-			: undefined;
+		: cut.reset;
 
 	// A tap on selected text edits it, with the caret where it landed.
 	const editSelectedTextAt =
@@ -748,17 +700,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							draw={draw}
 							redact={redact}
 							find={find}
-							cut={{
-								settings: cutSettings,
-								tool: cutTool,
-								onChange: setCutSettings,
-							}}
+							cut={cut}
 							textEditing={textEditing}
 							customColor={customColor}
 							onCustomColor={setCustomColor}
 							bottomInset={dockInset}
 						/>
-						<Announcement message={cutOut.news} />
+						<Announcement message={cut.news} />
 						{saveProblem && (
 							<SaveErrorBanner
 								message={saveProblem}
@@ -793,26 +741,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								draw={draw}
 								redact={redact}
 								find={find}
-								cut={{
-									settings: cutSettings,
-									tool: cutTool,
-									onChange: setCutSettings,
-									finding: cutOut.finding,
-									onFindAll:
-										cutOut.canFind && cutLayer
-											? () => void cutOut.find(cutLayer)
-											: undefined,
-									inverting: cutOut.inverting,
-									onInvert:
-										cutLayer && isCutOut(cutLayer)
-											? () => void cutOut.invert(cutLayer)
-											: undefined,
-									redacting: cutRedaction.busy,
-									onRedact:
-										cutLayer && isCutOut(cutLayer)
-											? () => void cutRedaction.redact(cutLayer)
-											: undefined,
-								}}
+								cut={cut}
 								adjustController={adjustController}
 								adjustments={adjustedLayer?.adjustments}
 								textEditing={textEditing}

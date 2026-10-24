@@ -18,7 +18,7 @@ import { LAYERS_KEY } from "./shortcuts";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustController } from "./tools/adjust/useAdjustController";
 import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
-import type { CutOutSettings, cutOutTool } from "./tools/cutout/cutOutSettings";
+import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { BrushOptions, DrawPanel } from "./tools/draw/DrawPanel";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindPanel, FindTray } from "./tools/find/FindPanel";
@@ -218,27 +218,12 @@ export function HeaderActions({
 	);
 }
 
-// Cut out's settings, the tool they and the device give, and, for the dock,
-// what's being found and a way to find every subject again, inverting the
-// cut, and redacting the selection.
-type CutProps = {
-	settings: CutOutSettings;
-	tool: ReturnType<typeof cutOutTool>;
-	onChange: (settings: CutOutSettings) => void;
-	finding?: "all" | "one" | null;
-	onFindAll?: () => void;
-	inverting?: boolean;
-	onInvert?: () => void;
-	redacting?: boolean;
-	onRedact?: () => void;
-};
-
 type ModeProps = {
 	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
 	draw: ReturnType<typeof useDrawTool>;
 	redact: ReturnType<typeof useRedactTool>;
 	find: ReturnType<typeof useFindTool>;
-	cut: CutProps;
+	cut: ReturnType<typeof useCutOutTool>;
 	textEditing: ReturnType<typeof useTextEditing>;
 	customColor: string | null;
 };
@@ -324,7 +309,7 @@ export function ToolTrays({
 					settings={cut.settings}
 					tool={cut.tool}
 					bottomInset={bottomInset}
-					onChange={cut.onChange}
+					onChange={cut.change}
 					onClose={closeTray}
 				/>
 			)}
@@ -434,15 +419,15 @@ export function DockContent({
 				<CutOutPanel
 					settings={cut.settings}
 					tool={cut.tool}
-					finding={cut.finding ?? null}
+					finding={cut.finding}
 					optionsOpen={optionsOpen}
-					onChange={cut.onChange}
+					onChange={cut.change}
 					onToggleOptions={toggleOptions}
-					onFindAll={cut.onFindAll}
-					inverting={cut.inverting ?? false}
-					onInvert={cut.onInvert}
-					redacting={cut.redacting ?? false}
-					onRedact={cut.onRedact}
+					onFindAll={cut.findAll}
+					inverting={cut.inverting}
+					onInvert={cut.invert}
+					redacting={cut.redacting}
+					onRedact={cut.redact}
 				/>
 			);
 		case "text":
