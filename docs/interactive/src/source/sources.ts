@@ -5,6 +5,7 @@ import drawing from "@src/model/drawing.ts?raw";
 import adjust from "@src/model/edits/adjust.ts?raw";
 import crop from "@src/model/edits/crop.ts?raw";
 import draw from "@src/model/edits/draw.ts?raw";
+import layers from "@src/model/edits/layers.ts?raw";
 import framing from "@src/model/framing.ts?raw";
 import geometry from "@src/model/geometry.ts?raw";
 import shapes from "@src/model/shapes.ts?raw";
@@ -35,6 +36,7 @@ export const sources = {
 	"src/model/edits/adjust.ts": adjust,
 	"src/model/edits/crop.ts": crop,
 	"src/model/edits/draw.ts": draw,
+	"src/model/edits/layers.ts": layers,
 	"src/model/framing.ts": framing,
 	"src/model/geometry.ts": geometry,
 	"src/model/shapes.ts": shapes,

@@ -378,8 +378,8 @@ export function IdentityLesson() {
 			name: "setAdjustments",
 		},
 		{
-			label: "store: resizeBox",
-			file: "src/store/editorSlice.ts",
+			label: "resizeBox",
+			file: "src/model/edits/layers.ts",
 			name: "resizeBox",
 		},
 		{

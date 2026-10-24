@@ -177,9 +177,9 @@ export function HistoryLesson() {
 		{ label: "undo", file: "src/store/editorSlice.ts", name: "undo" },
 		{ label: "redo", file: "src/store/editorSlice.ts", name: "redo" },
 		{
-			label: "setLayerFlag",
+			label: "selectionAfter",
 			file: "src/store/editorSlice.ts",
-			name: "setLayerFlag",
+			name: "selectionAfter",
 		},
 		{
 			label: "EditorSnapshot",
