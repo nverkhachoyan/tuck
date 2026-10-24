@@ -11,7 +11,11 @@ import { ContextBar } from "./shell/ContextBar";
 import { LayerActionsPanel } from "./shell/LayerActionsPanel";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustTool } from "./tools/adjust/useAdjustTool";
-import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
+import {
+	CutOutBar,
+	CutOutOptions,
+	CutOutPanel,
+} from "./tools/cutout/CutOutPanel";
 import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
@@ -62,8 +66,8 @@ export function ToolTrays({
 	modeState: EditorModeState;
 	onCustomColor: (color: string) => void;
 	bottomInset: number;
-	// A wide screen shows Draw, Redact, and Find in the header, so their trays
-	// stay shut. Find's results are an inspector section instead of a tray.
+	// A wide screen shows Draw, Redact, Find, and Cut out in the header, so
+	// their trays stay shut. Find's results are an inspector section.
 	wide?: boolean;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
@@ -119,7 +123,7 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{tray === "cutOut" && cut.tool !== "pick" && (
+			{tray === "cutOut" && !wide && cut.tool !== "pick" && (
 				<CutOutOptions
 					settings={cut.settings}
 					tool={cut.tool}
@@ -165,12 +169,12 @@ export function ToolTrays({
 /**
  * What the wide editor's header holds instead of the project's title: the
  * open tool's options. Phones have no bar; the dock shows the same tool.
- * Draw, Redact, and Find so far. The others still use the inspector.
+ * Draw, Redact, Find, and Cut out so far. The others still use the inspector.
  */
 export function ContextBarContent({
 	panel,
 	dispatchMode,
-	tools: { draw, redact },
+	tools: { draw, redact, cut },
 	customColor,
 	onCustomColor,
 	onFind,
@@ -253,6 +257,29 @@ export function ContextBarContent({
 					{...colorTarget((color) =>
 						redact.setChosen((current) => ({ ...current, color })),
 					)}
+				/>
+			</ContextBar>
+		);
+	}
+	if (panel === "cutOut") {
+		return (
+			<ContextBar
+				title="Cut out"
+				onCancel={onCancel}
+				onDone={onDone}
+				doneLabel={doneLabel}
+				doneShortcut="Escape"
+			>
+				<CutOutBar
+					settings={cut.settings}
+					tool={cut.tool}
+					finding={cut.finding}
+					onChange={cut.change}
+					onFindAll={cut.findAll}
+					inverting={cut.inverting}
+					onInvert={cut.invert}
+					redacting={cut.redacting}
+					onRedact={cut.redact}
 				/>
 			</ContextBar>
 		);

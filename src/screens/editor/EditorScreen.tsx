@@ -315,12 +315,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			: selectedLayer
 				? "layer"
 				: "idle";
-	// Draw, Redact, and Find live in the header on a wide screen, and the
-	// inspector keeps the layers. Find's results sit above them. The other
+	// Draw, Redact, Find, and Cut out live in the header on a wide screen, and
+	// the inspector keeps the layers. Find's results sit above them. The other
 	// tools still take the inspector.
 	const inBar =
 		wide &&
-		(panelKind === "draw" || panelKind === "redact" || panelKind === "find");
+		(panelKind === "draw" ||
+			panelKind === "redact" ||
+			panelKind === "find" ||
+			panelKind === "cutOut");
 
 	const focused = useIsFocused();
 	const {

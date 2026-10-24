@@ -1,8 +1,18 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import type { ComponentProps } from "react";
 import { type ReactNode, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+	ActivityIndicator,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { ModeActions } from "./Dock";
 
@@ -66,7 +76,7 @@ export function OptionSegments({
 	onSelect,
 }: {
 	label: string;
-	options: { title: string }[];
+	options: { title: string; busy?: boolean }[];
 	selected: number;
 	onSelect: (index: number) => void;
 }) {
@@ -78,33 +88,97 @@ export function OptionSegments({
 		>
 			{options.map((option, index) => {
 				const chosen = index === selected;
+				const busy = option.busy === true;
 				return (
 					<Pressable
 						key={option.title}
 						accessibilityRole="radio"
 						accessibilityLabel={option.title}
-						accessibilityState={{ checked: chosen }}
+						accessibilityState={{ checked: chosen, busy, disabled: busy }}
+						disabled={busy}
 						onPress={() => onSelect(index)}
 						style={(state) => {
 							const { pressed, hovered } = interaction(state);
 							return [
 								styles.segment,
 								webTransition,
-								hovered && styles.segmentHovered,
-								pressed && styles.segmentPressed,
+								hovered && !busy && styles.segmentHovered,
+								pressed && !busy && styles.segmentPressed,
 							];
 						}}
 					>
 						{chosen && <Highlight />}
-						<Text
-							style={[styles.segmentLabel, chosen && styles.segmentLabelChosen]}
-						>
-							{option.title}
-						</Text>
+						{busy ? (
+							<ActivityIndicator color={colors.textPrimary} />
+						) : (
+							<Text
+								style={[
+									styles.segmentLabel,
+									chosen && styles.segmentLabelChosen,
+								]}
+							>
+								{option.title}
+							</Text>
+						)}
 					</Pressable>
 				);
 			})}
 		</View>
+	);
+}
+
+type BarIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+/**
+ * A labeled action in the bar, 44 points tall, beside the segmented sub-tools.
+ * `busy` swaps its icon for a spinner and ignores presses, as a tool button does.
+ */
+export function BarButton({
+	label,
+	icon,
+	shortcut,
+	busy = false,
+	onPress,
+}: {
+	label: string;
+	icon: BarIcon;
+	shortcut?: string;
+	busy?: boolean;
+	onPress: () => void;
+}) {
+	const { anchor, tooltip } = useTooltip(label, shortcut);
+	return (
+		<>
+			<Pressable
+				{...anchor}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				accessibilityState={{ disabled: busy, busy }}
+				disabled={busy}
+				onPress={onPress}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.action,
+						webTransition,
+						hovered && !busy && styles.segmentHovered,
+						pressed && !busy && styles.segmentPressed,
+					];
+				}}
+			>
+				{busy ? (
+					<ActivityIndicator color={colors.textPrimary} />
+				) : (
+					<MaterialCommunityIcons
+						name={icon}
+						size={20}
+						color={colors.textPrimary}
+					/>
+				)}
+				<Text style={styles.actionLabel}>{label}</Text>
+			</Pressable>
+			{tooltip}
+		</>
 	);
 }
 
@@ -194,5 +268,18 @@ const styles = StyleSheet.create({
 	},
 	segmentLabelChosen: {
 		color: colors.onHighlight,
+	},
+	action: {
+		height: 44,
+		flexDirection: "row",
+		flexShrink: 0,
+		alignItems: "center",
+		gap: 6,
+		paddingHorizontal: 12,
+		borderRadius: radii.small,
+	},
+	actionLabel: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
 	},
 });

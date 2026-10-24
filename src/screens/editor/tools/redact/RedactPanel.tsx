@@ -2,12 +2,10 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
 import { RingChoice } from "@/ui/RingChoice";
-import { useTooltip } from "@/ui/Tooltip";
-import { colors, radii, typography, webTransition } from "@/ui/theme";
+import { colors, radii, typography } from "@/ui/theme";
 import { ColorOptions } from "../../shell/ColorPicker";
-import { OptionSegments } from "../../shell/ContextBar";
+import { BarButton, OptionSegments } from "../../shell/ContextBar";
 import {
 	PixelSquare,
 	RedactLook,
@@ -139,7 +137,14 @@ export function RedactBar({
 					onChange({ ...settings, tool: next });
 				}}
 			/>
-			{onFind && <FindButton onPress={onFind} />}
+			{onFind && (
+				<BarButton
+					label="Find"
+					icon="image-search-outline"
+					shortcut={TOOL_KEYS.find}
+					onPress={onFind}
+				/>
+			)}
 			{tool !== "eraser" && (
 				<RedactLook
 					settings={settings}
@@ -157,38 +162,6 @@ export function RedactBar({
 					onPick={pickSize}
 				/>
 			)}
-		</>
-	);
-}
-
-/** Find, beside Redact's sub-tools: it leaves Redact for the scan. */
-function FindButton({ onPress }: { onPress: () => void }) {
-	const { anchor, tooltip } = useTooltip("Find", TOOL_KEYS.find);
-	return (
-		<>
-			<Pressable
-				{...anchor}
-				accessibilityRole="button"
-				accessibilityLabel="Find"
-				onPress={onPress}
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.find,
-						webTransition,
-						hovered && styles.findHovered,
-						pressed && styles.findPressed,
-					];
-				}}
-			>
-				<MaterialCommunityIcons
-					name="image-search-outline"
-					size={20}
-					color={colors.textPrimary}
-				/>
-				<Text style={styles.findLabel}>Find</Text>
-			</Pressable>
-			{tooltip}
 		</>
 	);
 }
@@ -355,25 +328,6 @@ export function EffectGlyph({
 }
 
 const styles = StyleSheet.create({
-	find: {
-		height: 44,
-		flexDirection: "row",
-		flexShrink: 0,
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 12,
-		borderRadius: radii.small,
-	},
-	findHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	findPressed: {
-		backgroundColor: colors.pressedOverlay,
-	},
-	findLabel: {
-		...typography.labelStrong,
-		color: colors.textPrimary,
-	},
 	solidTile: {
 		width: 22,
 		height: 22,
