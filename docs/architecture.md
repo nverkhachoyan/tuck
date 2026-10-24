@@ -22,7 +22,7 @@ render the same document offscreen with Skia.
   - `tools/adjust/` holds color adjustments.
   - `tools/layers/` holds the layers panel, where any layer is hidden, locked, deleted, or reordered.
   - `tools/stickers/` holds the sticker sheet, bundled stickers, and the ones people save.
-  - `shell/` holds the dock, the toolbar, the header's actions, layer actions, the selection bar, and the controls every tool's panel is built from.
+  - `shell/` holds the dock, the wide editor's context bar and inspector, the toolbar, the header's actions, layer actions, the selection bar, and the controls every tool's panel is built from. On a wide screen the rail picks a tool, the header shows that tool's options, and the inspector keeps the layers (Find's results and Adjust's dial sit above them). Phones keep the dock and its trays.
   - `detection/` is the editor's only bridge to `image-analysis`: `imageDetection.ts` finds faces and text for Find, and `subjectDetection.ts` selects subjects and objects for Cut out.
   - `session/` holds the project session: `useProjectSession` opens the project, `useAutosave` saves it, and `SaveErrorBanner` shows a failed save.
   - The editor root holds `EditorScreen` and `EditorDock`, which compose the parts, and what spans the whole editor: adding images (`useAddImage`), its mode, how its tools open and close (`useToolLifecycle`), keyboard shortcuts, and the delete notice. The background picker is in `src/ui/` because Create also uses it.
@@ -31,7 +31,7 @@ render the same document offscreen with Skia.
 - `src/photos/` picks, pastes, drops, or receives a shared photo and re-encodes it as JPEG (iPhone photos are commonly HEIC, which Skia cannot decode).
 - `src/projects/` keeps every editing session as a local project: its photos move into it, each as a file of its own, edits autosave, and the home screen lists projects to reopen, rename, duplicate, or delete, each with a thumbnail rendered when its editor closes. `projectFile.ts` is the saved format (versioned, with image layers naming their file in the project); `projectLifecycle.ts` opens, saves, and closes projects, removing files no layer uses once one closes, with storage passed in so Node can test it.
 - `src/render/` is how a document draws: a view for each layer type in document space (in `layers/`), `LayerContent` and `useDecodedImage` (which the editor's canvas and crop use too), the decoded-image cache, `fonts.ts` (which bundles the text fonts so text renders identically on iOS, Android, and web), and `DocumentRenderScene`, which renders offscreen for export and project thumbnails. `src/screens/export/` chooses output sizes and format, then saves the image to Photos, copies it, or shares it: as JPEG, or as PNG when some of the canvas is transparent.
-- `src/ui/` holds reusable controls and `theme.ts` shared across screens.
+- `src/ui/` holds reusable controls, including `Popover`, and `theme.ts` shared across screens.
 - `src/platform/` holds the OS ports any caller can use: haptics, preferences (`preferenceStore`, `usePreference`), temporary files, and the service worker, each with a `.web.ts` version where the web differs.
 - `src/lib/` holds small language helpers and the site's address (`site.ts`).
 - `modules/image-analysis/` is a local Expo module for on-device face, text, subject, and object detection (Apple Vision, Google ML Kit, MediaPipe, Tesseract, and MobileSAM with ONNX Runtime; see [on-device-detection.md](./on-device-detection.md)).

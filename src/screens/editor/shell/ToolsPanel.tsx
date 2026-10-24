@@ -48,10 +48,11 @@ export const TOOLS: readonly ToolEntry[] = [
  * The editing tools, in the dock while no layer is selected: two rows on a
  * phone (see `ToolGrid`), or with `vertical`, a column for a wide screen's
  * rail, where they stay while a tool is in use, marking it (Find is
- * Redact's). On web, each shows the letter that picks it up (see
- * `TOOL_KEYS`) on hover. Sticker opens the sheet of stickers; Add photo picks a
- * photo to add, and spins while one is on its way. Adjust and Cut out show
- * only with an image to adjust or cut out.
+ * Redact's). The tool's options are in the header's context bar, not here.
+ * On web, each shows the letter that picks it up (see `TOOL_KEYS`) on hover.
+ * Sticker opens the sheet of stickers; Add photo picks a photo to add, and
+ * spins while one is on its way. Adjust and Cut out show only with an image
+ * to adjust or cut out.
  */
 export function ToolsPanel({
 	vertical = false,

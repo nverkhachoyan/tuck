@@ -6,8 +6,8 @@ import { LAYERS_KEY } from "../shortcuts";
 
 /**
  * The header's actions: Reset while the open tool has changes to take back,
- * the layers where the inspector doesn't show them, undo and redo, and
- * Export.
+ * the layers button on a phone (a wide screen's inspector always shows
+ * them), undo and redo, and Export.
  */
 export function HeaderActions({
 	onReset,

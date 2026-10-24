@@ -66,15 +66,10 @@ export function ToolTrays({
 	customColor,
 	onCustomColor,
 	bottomInset,
-	wide = false,
 }: ModeProps & {
 	modeState: EditorModeState;
 	onCustomColor: (color: string) => void;
 	bottomInset: number;
-	// A wide screen shows a tool's options in the header, so its tray stays
-	// shut. Find's results are an inspector section. Text's colors open from
-	// chips in the bar.
-	wide?: boolean;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = text;
@@ -93,7 +88,7 @@ export function ToolTrays({
 	});
 	return (
 		<>
-			{tray === "draw" && !wide && (
+			{tray === "draw" && (
 				<BrushOptions
 					settings={draw.settings}
 					customColor={customColor}
@@ -103,7 +98,7 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{tray === "redact" && !wide && (
+			{tray === "redact" && (
 				<RedactOptions
 					settings={redact.settings}
 					customColor={customColor}
@@ -115,7 +110,7 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{tray === "find" && !wide && (
+			{tray === "find" && (
 				<RedactOptions
 					settings={{ ...redact.chosen, tool: "box" }}
 					customColor={customColor}
@@ -129,7 +124,7 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{tray === "cutOut" && !wide && cut.tool !== "pick" && (
+			{tray === "cutOut" && cut.tool !== "pick" && (
 				<CutOutOptions
 					settings={cut.settings}
 					tool={cut.tool}
@@ -138,23 +133,19 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{mode.type === "tool" &&
-				mode.tool === "find" &&
-				!tray &&
-				!eyedropper &&
-				!wide && (
-					<FindTray
-						state={find.state}
-						visibleIndices={find.visibleIndices}
-						selectedCount={find.selectedCount}
-						bottomInset={bottomInset}
-						onRetry={find.retry}
-						onStop={find.reset}
-						onSelectAll={find.selectAll}
-						onClear={find.clear}
-					/>
-				)}
-			{textPicker && styledText && !wide && (
+			{mode.type === "tool" && mode.tool === "find" && !tray && !eyedropper && (
+				<FindTray
+					state={find.state}
+					visibleIndices={find.visibleIndices}
+					selectedCount={find.selectedCount}
+					bottomInset={bottomInset}
+					onRetry={find.retry}
+					onStop={find.reset}
+					onSelectAll={find.selectAll}
+					onClear={find.clear}
+				/>
+			)}
+			{textPicker && styledText && (
 				<TextColorPicker
 					layer={styledText}
 					colorKey={textPicker.key}
@@ -174,9 +165,9 @@ export function ToolTrays({
 
 /**
  * What the wide editor's header holds instead of the project's title: the
- * open tool's options. Phones have no bar; the dock shows the same tool.
- * Draw, Redact, Find, Cut out, and text so far. The others still use the
- * inspector.
+ * open tool's options, or a selected layer's actions. Phones have no bar;
+ * the dock shows the same tools. With nothing in context, the header keeps
+ * the title.
  */
 export function ContextBarContent({
 	panel,

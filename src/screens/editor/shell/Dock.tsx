@@ -29,20 +29,6 @@ export const INSPECTOR_WIDTH = 352;
 // Between a wide screen's panels, the rail and the inspector, and the edges
 // of the canvas they rest beside.
 export const PANEL_GAP = space.sm;
-// The inspector's inside, within its card's edge, which its panel and trays
-// fill.
-const INSPECTOR_INSIDE = {
-	top: PANEL_GAP + StyleSheet.hairlineWidth,
-	right: PANEL_GAP + StyleSheet.hairlineWidth,
-	bottom: PANEL_GAP + StyleSheet.hairlineWidth,
-	width: INSPECTOR_WIDTH - 2 * StyleSheet.hairlineWidth,
-};
-// Where a tray goes in the inspector: under its footer and panel.
-export const INSPECTOR_TRAY = {
-	top: INSPECTOR_INSIDE.top + FOOTER_HEIGHT + CONTENT_HEIGHT,
-	right: INSPECTOR_INSIDE.right,
-	width: INSPECTOR_INSIDE.width,
-};
 const PANEL_IN = FadeIn.duration(220).easing(Easing.bezier(0.2, 0, 0, 1));
 const PANEL_OUT = FadeOut.duration(120);
 
@@ -70,45 +56,21 @@ function dockBottom(safeAreaBottom: number, keyboardOverlap: number) {
  * thing that stands out. Changing `panel` cross-fades to the new one; the
  * same panel for another layer stays put. Every mode, a tool or a selected
  * layer, puts a `DockFooter` in `footer`, under its panel. It rises above
- * the keyboard by `keyboardOverlap`, taking the footer along.
- *
- * As an `inspector`, on a wide screen, it's a card down the right instead,
- * resting beside the canvas: the footer heads it, then the panel, then any
- * tray (see `Tray`). With no mode, the panel fills the card. It draws only
- * its own part of the card, so a tray under it shows; `InspectorBackdrop`
- * draws the card itself, under the trays.
+ * the keyboard by `keyboardOverlap`, taking the footer along. A wide screen
+ * has no dock: its tools live in the header, and `Inspector` holds the layers.
  */
 export function Dock({
 	panel,
 	footer,
-	layout = "bar",
 	keyboardOverlap = 0,
 	children,
 }: {
 	panel: string;
 	footer?: ReactNode;
-	layout?: "bar" | "inspector";
 	keyboardOverlap?: number;
 	children: ReactNode;
 }) {
 	const { bottom } = useSafeAreaInsets();
-	if (layout === "inspector") {
-		return (
-			<View style={[styles.inspector, footer ? styles.inspectorTop : null]}>
-				{footer && <View style={styles.inspectorFooter}>{footer}</View>}
-				<View style={footer ? styles.content : styles.inspectorRest}>
-					<Animated.View
-						key={panel}
-						entering={PANEL_IN}
-						exiting={PANEL_OUT}
-						style={[StyleSheet.absoluteFill, footer ? styles.panel : null]}
-					>
-						{children}
-					</Animated.View>
-				</View>
-			</View>
-		);
-	}
 	return (
 		<View
 			style={[
@@ -136,9 +98,21 @@ export function Dock({
 	);
 }
 
-/** The inspector's card, under the panel and trays that go into it. */
-export function InspectorBackdrop() {
-	return <Surface resting style={styles.inspectorCard} />;
+/**
+ * The wide editor's column, a card down the right beside the canvas. It
+ * holds the layers, and, above them, Find's results or Adjust's dial. A
+ * tool's options live in the header's context bar, not in this card.
+ */
+export function Inspector({ children }: { children: ReactNode }) {
+	return (
+		<Surface
+			resting
+			style={styles.inspectorCard}
+			contentStyle={styles.inspectorFill}
+		>
+			{children}
+		</Surface>
+	);
 }
 
 type ModeActionProps = {
@@ -285,29 +259,8 @@ const styles = StyleSheet.create({
 		bottom: PANEL_GAP,
 		width: INSPECTOR_WIDTH,
 		borderRadius: radii.large,
-		pointerEvents: "none",
 	},
-	// Within the card's edge, so the card draws it.
-	inspector: {
-		position: "absolute",
-		...INSPECTOR_INSIDE,
-		borderRadius: radii.large - StyleSheet.hairlineWidth,
-		borderCurve: "continuous",
-		overflow: "hidden",
-		backgroundColor: colors.background,
-	},
-	// Only the footer and panel, so the tray below shows.
-	inspectorTop: {
-		bottom: undefined,
-		height: FOOTER_HEIGHT + CONTENT_HEIGHT,
-		borderBottomLeftRadius: 0,
-		borderBottomRightRadius: 0,
-	},
-	inspectorFooter: {
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	inspectorRest: {
+	inspectorFill: {
 		flex: 1,
 	},
 	panel: {

@@ -15,16 +15,6 @@ const TRAY_MAX_WIDTH = 520;
 export const TrayHeight = createContext<(height: number) => void>(() => {});
 
 /**
- * Where trays go on a wide screen: into the inspector, `top` down and
- * `right` in from the canvas's edge, `width` wide, rather than on the dock.
- */
-export const TrayPlacement = createContext<{
-	top: number;
-	right: number;
-	width: number;
-} | null>(null);
-
-/**
  * A panel rising out of the dock, which sits `bottomInset` up from the
  * canvas's bottom. It's opaque, so it reads the same over any photo, and
  * the canvas refits above it (see `TrayHeight`). By default, a tap anywhere
@@ -45,7 +35,6 @@ export function Tray({
 	children: ReactNode;
 }) {
 	const setHeight = useContext(TrayHeight);
-	const placement = useContext(TrayPlacement);
 	useEffect(() => () => setHeight(0), [setHeight]);
 	return (
 		<View style={styles.layer}>
@@ -58,24 +47,11 @@ export function Tray({
 					accessibilityLabel={dismissLabel}
 				/>
 			)}
-			<View
-				style={
-					placement
-						? [
-								styles.inspectorArea,
-								{
-									top: placement.top,
-									right: placement.right,
-									width: placement.width,
-								},
-							]
-						: [styles.trayArea, { bottom: bottomInset }]
-				}
-			>
+			<View style={[styles.trayArea, { bottom: bottomInset }]}>
 				<Animated.View
 					entering={FadeIn.duration(160)}
 					exiting={FadeOut.duration(100)}
-					style={placement ? styles.inspectorTray : styles.tray}
+					style={styles.tray}
 					onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
 				>
 					{children}
@@ -227,15 +203,6 @@ const styles = StyleSheet.create({
 		right: 0,
 		alignItems: "center",
 		pointerEvents: "box-none",
-	},
-	inspectorArea: {
-		position: "absolute",
-		pointerEvents: "box-none",
-	},
-	// Part of the inspector's column, under its panel.
-	inspectorTray: {
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
 	},
 	tray: {
 		width: "100%",

@@ -1,18 +1,14 @@
 import { useRef, useState } from "react";
 import { useWindowDimensions, type View } from "react-native";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
-import {
-	INSPECTOR_TRAY,
-	INSPECTOR_WIDTH,
-	PANEL_GAP,
-	useDockInset,
-} from "./shell/Dock";
+import { INSPECTOR_WIDTH, PANEL_GAP, useDockInset } from "./shell/Dock";
 import { LAYERS_SIDEBAR_INSET } from "./tools/layers/LayersPanel";
 
 // Wide enough to show layers in a sidebar rather than a bottom sheet.
 const SIDEBAR_MIN_WIDTH = 900;
-// Wide enough for a tool rail at the left and an inspector at the right,
-// which the dock, its trays, and the layers move into.
+// Wide enough for a tool rail at the left and an inspector at the right.
+// The rail picks a tool; its options go in the header, and the inspector
+// keeps the layers. Phones keep the dock and its trays.
 const INSPECTOR_MIN_WIDTH = 1024;
 // Room for the chosen tool's highlight inside the rail's card.
 export const RAIL_WIDTH = 84;
@@ -51,7 +47,6 @@ export function useEditorLayout({
 		keyboardOverlap,
 		dockInset,
 		setTrayHeight,
-		trayPlacement: wide ? INSPECTOR_TRAY : null,
 		canvasInset: {
 			left: wide ? RAIL_INSET : 0,
 			right: wide ? INSPECTOR_INSET : 0,
