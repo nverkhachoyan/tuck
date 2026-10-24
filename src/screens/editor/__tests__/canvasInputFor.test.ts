@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { canvasInputFor, canvasToolFor } from "../editorCanvasInput.ts";
+import { canvasInputFor, canvasToolFor } from "../canvasInputFor.ts";
 import type { DialDrag } from "../shell/dialDrag.ts";
 import { defaultCutOutSettings } from "../tools/cutout/cutOutSettings.ts";
 import {

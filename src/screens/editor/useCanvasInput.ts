@@ -5,7 +5,7 @@ import type { ImageLayer } from "@/model/layers/image";
 import type { ShapePlacement } from "@/model/layers/shape";
 import { sampleColor } from "@/render/renderDocument";
 import type { EditorStoreActions } from "@/store/editorSlice";
-import { canvasInputFor, canvasToolFor } from "./editorCanvasInput";
+import { canvasInputFor, canvasToolFor } from "./canvasInputFor";
 import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
 import { isCustomColor } from "./shell/ColorSwatches";
 import type { DialDrag } from "./shell/dialDrag";
