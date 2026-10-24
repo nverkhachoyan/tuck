@@ -197,6 +197,15 @@ export function useLayerTransformGesture({
 			live.guideY.value = snapY?.line ?? null;
 		};
 
+		// Scales the layer to `scale` across, from the scale it had when the
+		// gesture began, keeping its aspect ratio.
+		const scaleTo = (scale: number, fromScaleX: number, fromScaleY: number) => {
+			"worklet";
+			const scaleX = clampScale(scale);
+			live.scaleX.value = scaleX;
+			live.scaleY.value = fromScaleY * (scaleX / fromScaleX);
+		};
+
 		const rotateTo = (angle: number) => {
 			"worklet";
 			settle(
@@ -401,11 +410,11 @@ export function useLayerTransformGesture({
 					} else if (live.resizeMode.value !== "none") {
 						resizeTo(handle, from, to);
 					} else {
-						const scale = clampScale(
+						scaleTo(
 							scaleByDrag(center, from, to, start.scaleX),
+							start.scaleX,
+							start.scaleY,
 						);
-						live.scaleX.value = scale;
-						live.scaleY.value = start.scaleY * (scale / start.scaleX);
 					}
 					moved.value = true;
 					return;
@@ -434,9 +443,11 @@ export function useLayerTransformGesture({
 			})
 			.onUpdate((event) => {
 				if (!holding() || dragHandle.value !== null) return;
-				const scale = clampScale(startScaleX.value * event.scale);
-				live.scaleX.value = scale;
-				live.scaleY.value = startScaleY.value * (scale / startScaleX.value);
+				scaleTo(
+					startScaleX.value * event.scale,
+					startScaleX.value,
+					startScaleY.value,
+				);
 				moved.value = true;
 			})
 			.onEnd(gestureEnded);
