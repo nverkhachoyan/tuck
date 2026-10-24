@@ -123,26 +123,36 @@ export function LayersPanel({
  * slide aside without React rendering, and the document is only reordered
  * once, when the drag ends.
  */
-function LayerList(props: LayerListProps & { compact: boolean }) {
-	return props.groups.length > 0 ? (
-		<GroupedLayerList {...props} />
-	) : (
-		<FlatLayerList {...props} />
-	);
-}
-
-function FlatLayerList({
-	layers,
-	background,
-	selectedLayerId,
+function LayerList({
 	onSelect,
 	onMove,
 	onSetHidden,
 	onSetLocked,
 	onDelete,
+	...props
+}: LayerListProps & { compact: boolean }) {
+	const rowActions = { onSelect, onMove, onSetHidden, onSetLocked, onDelete };
+	return props.groups.length > 0 ? (
+		<GroupedLayerList {...props} rowActions={rowActions} />
+	) : (
+		<FlatLayerList {...props} rowActions={rowActions} />
+	);
+}
+
+// A list's props, with the rows' actions gathered for each row to take.
+type ListBodyProps = Omit<LayerListProps, keyof LayerRowActions> & {
+	compact: boolean;
+	rowActions: LayerRowActions;
+};
+
+function FlatLayerList({
+	layers,
+	background,
+	selectedLayerId,
 	onSetBackground,
 	compact,
-}: LayerListProps & { compact: boolean }) {
+	rowActions,
+}: ListBodyProps) {
 	const rows = useMemo(() => layers.slice().reverse(), [layers]);
 	const order = useSharedValue(rows.map((layer) => layer.id));
 	const dragId = useSharedValue<string | null>(null);
@@ -169,11 +179,7 @@ function FlatLayerList({
 						scrollRef={scrollRef}
 						selected={layer.id === selectedLayerId}
 						compact={compact}
-						onSelect={onSelect}
-						onMove={onMove}
-						onSetHidden={onSetHidden}
-						onSetLocked={onSetLocked}
-						onDelete={onDelete}
+						{...rowActions}
 					/>
 				))}
 			</View>
@@ -182,10 +188,7 @@ function FlatLayerList({
 					Text, drawings, photos, and stickers you add appear here.
 				</Text>
 			)}
-			<View style={styles.row}>
-				<Text style={styles.label}>Background</Text>
-				<BackgroundPicker value={background} onPick={onSetBackground} />
-			</View>
+			<BackgroundRow value={background} onPick={onSetBackground} />
 		</ScrollView>
 	);
 }
@@ -195,17 +198,13 @@ function GroupedLayerList({
 	groups,
 	background,
 	selectedLayerId,
-	onSelect,
-	onMove,
-	onSetHidden,
-	onSetLocked,
-	onDelete,
 	onSetBackground,
 	compact,
+	rowActions,
 	onSetGroupHidden,
 	onSetGroupLocked,
 	onDeleteGroup,
-}: LayerListProps & { compact: boolean }) {
+}: ListBodyProps) {
 	const [expanded, setExpanded] = useState<ReadonlySet<string>>(
 		() => new Set(),
 	);
@@ -224,11 +223,7 @@ function GroupedLayerList({
 							layer={layer}
 							selected={layer.id === selectedLayerId}
 							compact={compact}
-							onSelect={onSelect}
-							onMove={onMove}
-							onSetHidden={onSetHidden}
-							onSetLocked={onSetLocked}
-							onDelete={onDelete}
+							{...rowActions}
 						/>
 					);
 				}
@@ -260,22 +255,31 @@ function GroupedLayerList({
 										layer={child}
 										selected={child.id === selectedLayerId}
 										compact={compact}
-										onSelect={onSelect}
-										onMove={onMove}
-										onSetHidden={onSetHidden}
-										onSetLocked={onSetLocked}
-										onDelete={onDelete}
+										{...rowActions}
 									/>
 								</View>
 							))}
 					</View>
 				);
 			})}
-			<View style={styles.row}>
-				<Text style={styles.label}>Background</Text>
-				<BackgroundPicker value={background} onPick={onSetBackground} />
-			</View>
+			<BackgroundRow value={background} onPick={onSetBackground} />
 		</ScrollView>
+	);
+}
+
+// The canvas's background, under the layers.
+function BackgroundRow({
+	value,
+	onPick,
+}: {
+	value: string | null;
+	onPick: (background: string | null) => void;
+}) {
+	return (
+		<View style={styles.row}>
+			<Text style={styles.label}>Background</Text>
+			<BackgroundPicker value={value} onPick={onPick} />
+		</View>
 	);
 }
 
