@@ -75,7 +75,7 @@ import { TextEditor } from "./tools/text/TextEditor";
 import { useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
-import { useDeleteNotice } from "./useDeleteNotice";
+import { useEditNotice } from "./useEditNotice";
 import { RAIL_INSET, RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
@@ -286,7 +286,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		[projectId, document],
 	);
 
-	const deleteNotice = useDeleteNotice(document);
+	const editNotice = useEditNotice(document);
 
 	const selectedIndex = selectedLayer
 		? document.layers.indexOf(selectedLayer)
@@ -380,6 +380,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			openStickers,
 			dispatchMode,
 			visibleArea: () => canvasRef.current?.visibleArea(),
+			onRedacted: editNotice.redacted,
 		});
 
 	useEditorShortcuts({
@@ -395,7 +396,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		startTool,
 		editSelected: () => textEditing.editSelected(),
 		deleteSelected: () => {
-			if (selectedLayer) deleteNotice.deleteLayer(selectedLayer.id);
+			if (selectedLayer) editNotice.deleteLayer(selectedLayer.id);
 		},
 		deselect: () => selectLayer(null),
 		duplicate: duplicateSelectedLayer,
@@ -420,8 +421,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		selectedLayer,
 		actions: {
 			...actions,
-			deleteLayer: deleteNotice.deleteLayer,
-			deleteLayerGroup: deleteNotice.deleteGroup,
+			deleteLayer: editNotice.deleteLayer,
+			deleteLayerGroup: editNotice.deleteGroup,
 		},
 		onFinishText: textEditing.finish,
 		onClose: closeLayers,
@@ -489,7 +490,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			}
 			onArrange={arrangeSelected}
 			onDuplicate={duplicateSelectedLayer}
-			onDelete={() => deleteNotice.deleteLayer(selectedLayer.id)}
+			onDelete={() => editNotice.deleteLayer(selectedLayer.id)}
 		/>
 	);
 
@@ -732,11 +733,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					) : null}
 				</CanvasStage>
 				{!layersBeside && layersPanel}
-				{deleteNotice.message && (
+				{editNotice.message && (
 					<Toast
-						message={deleteNotice.message}
+						message={editNotice.message}
 						action="Undo"
-						onAction={deleteNotice.undo}
+						onAction={editNotice.undo}
 						inset={{
 							left: layout.canvasInset.left,
 							right: layout.coveredRight ?? 0,

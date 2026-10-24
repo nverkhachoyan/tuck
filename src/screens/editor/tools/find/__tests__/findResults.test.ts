@@ -36,6 +36,12 @@ describe("chosenBoxes", () => {
 		]);
 	});
 
+	test("says what was found, or null for both kinds", () => {
+		assert.equal(chosenBoxes(regions, new Set([0, 1]))?.feature, "faces");
+		assert.equal(chosenBoxes(regions, new Set([2]))?.feature, "text");
+		assert.equal(chosenBoxes(regions, new Set([1, 2]))?.feature, null);
+	});
+
 	test("names the group for what was found", () => {
 		assert.equal(
 			chosenBoxes(regions, new Set([0, 1]))?.groupName,

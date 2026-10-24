@@ -37,24 +37,29 @@ const GROUP_NAMES: Record<DetectionFeature, string> = {
 };
 
 /**
- * The boxes for the regions whose `sourceIndex` is `chosen`, in order, and
- * what to call their group: by what was found, or "Find results" for both
- * kinds. Null when none is chosen.
+ * The boxes for the regions whose `sourceIndex` is `chosen`, in order, what
+ * they are (null for both kinds), and what to call their group: by what was
+ * found, or "Find results" for both kinds. Null when none is chosen.
  */
 export function chosenBoxes(
 	regions: readonly FoundRegion[],
 	chosen: ReadonlySet<number>,
-): { boxes: RedactionBoxPlacement[]; groupName: string } | null {
+): {
+	boxes: RedactionBoxPlacement[];
+	feature: DetectionFeature | null;
+	groupName: string;
+} | null {
 	const picked = regions.filter(({ sourceIndex }) => chosen.has(sourceIndex));
 	if (picked.length === 0) return null;
 	const features = new Set(picked.map(({ feature }) => feature));
+	const feature = features.size > 1 ? null : picked[0].feature;
 	return {
 		boxes: picked.map(({ width, height, transform }) => ({
 			width,
 			height,
 			transform,
 		})),
-		groupName:
-			features.size > 1 ? "Find results" : GROUP_NAMES[picked[0].feature],
+		feature,
+		groupName: feature ? GROUP_NAMES[feature] : "Find results",
 	};
 }

@@ -3,6 +3,7 @@ import type { Framing } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { useStore } from "@/store";
+import type { DetectionFeature } from "./detection/imageDetection";
 import type { EditorMode, EditorModeAction, EditorTool } from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
@@ -48,6 +49,7 @@ export function useToolLifecycle({
 	openStickers,
 	dispatchMode,
 	visibleArea,
+	onRedacted,
 }: {
 	mode: EditorMode;
 	targetImage: ImageLayer | null;
@@ -61,6 +63,7 @@ export function useToolLifecycle({
 	openStickers: () => void;
 	dispatchMode: (action: EditorModeAction) => void;
 	visibleArea: () => Rect | undefined;
+	onRedacted: (count: number, feature: DetectionFeature | null) => void;
 }) {
 	const { cancelSession, selectLayer, reframe } = useStore(
 		(state) => state.actions,
@@ -120,17 +123,21 @@ export function useToolLifecycle({
 		if (!targetImage) return;
 		dispatchMode({ type: "startTool", tool: "find" });
 	};
-	// Find is one of Redact's tools, so Cancel goes back to Redact. Done
-	// redacts the regions chosen, in the style last picked rather than a
-	// selected redaction's, and goes back to the tools, as Redact's Done does.
+	// Find is one of Redact's tools, so Cancel and Done both go back to
+	// Redact, with the tool it last used, to draw over anything Find missed.
+	// Done first redacts the regions chosen, in the style last picked rather
+	// than a selected redaction's, and says how many, with Undo.
 	const backToRedacting = () => {
 		find.reset();
 		startRedacting();
 	};
 	const finishFinding = () => {
-		find.redactChosen(redactionEffect(redact.chosen, documentSize));
-		closeTool();
+		const result = find.redactChosen(
+			redactionEffect(redact.chosen, documentSize),
+		);
+		backToRedacting();
 		selectLayer(null);
+		if (result) onRedacted(result.count, result.feature);
 	};
 	const done = tool === "find" ? finishFinding : finishTool;
 	const cancel = tool === "find" ? backToRedacting : cancelTool;

@@ -72,9 +72,12 @@ export function useFindTool(
 		clear: () => detection.select([]),
 		reset: detection.reset,
 		// The regions chosen, redacted with `effect` together in one group.
+		// Gives how many, and what they are (null for both kinds), if any.
 		redactChosen: (effect: RedactionEffect) => {
 			const result = found && chosenBoxes(regions, found.selected);
-			if (result) addRedactionBoxes(result.boxes, effect, result.groupName);
+			if (!result) return null;
+			addRedactionBoxes(result.boxes, effect, result.groupName);
+			return { count: result.boxes.length, feature: result.feature };
 		},
 	};
 }
