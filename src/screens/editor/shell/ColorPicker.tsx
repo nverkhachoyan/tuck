@@ -98,7 +98,9 @@ const CHIP_SWATCH = 20;
 /**
  * The current color, as a swatch that opens `ColorOptions` in a popover: the
  * swatches, the custom color, and the eyedropper. Starting the eyedropper
- * closes the popover, as a tray does, so the canvas is in view.
+ * closes the popover, as a tray does, so the canvas is in view. `title` is
+ * the word beside the swatch when several chips sit together. `label` is
+ * what a screen reader hears.
  */
 export function ColorChip({
 	label,

@@ -87,9 +87,12 @@ function MeasuredItem({ children }: { children: ReactNode }) {
 
 /**
  * The wide editor's header, between Back and the header's actions: the
- * context's name, its options in a row that scrolls when they don't fit,
- * then Cancel and Done. A divider sets those off from Reset, undo, and
- * Export. It's a toolbar for screen readers.
+ * context's name, its options, then Cancel and Done. A divider sets those
+ * off from Reset, undo, and Export. It's a toolbar for screen readers.
+ * - Options arrive as `BarSections`: groups 2 points apart, a rule between
+ *   groups. The highlighter marks the mode. A value is a `BarChip`.
+ * - The row scrolls when it doesn't fit. The fade ends between options,
+ *   rather than across a label, and settles once scrolling stops.
  */
 export function ContextBar({
 	title,
@@ -157,8 +160,8 @@ type SegmentOption = {
 /**
  * One choice among a tool's modes, as a single control: an icon and its
  * name in each segment, the chosen one marked with the highlighter. The
- * icon is the same glyph the dock uses for that mode. `label` names the
- * group for screen readers.
+ * icon is the same glyph the dock uses for that mode. `iconsOnly` drops the
+ * name, for alignment. `label` names the group for screen readers.
  */
 export function OptionSegments({
 	label,
