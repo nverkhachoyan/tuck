@@ -489,28 +489,18 @@ export function EditorCanvas({
 		onSelectLayer,
 		onToolInteractionEnd,
 	});
-	// The image a tool cuts out, or that's being adjusted, outlined only where
-	// it could be mistaken for another image.
 	const cuttingOutId = cutImageId(tool);
-	const outlinedImageId = cuttingOutId ?? adjusting?.layerId;
-	const outlinedImage =
-		outlinedImageId !== undefined &&
-		document.layers.filter((layer) => layer.type === "image").length > 1 &&
-		document.layers.find((layer) => layer.id === outlinedImageId);
 	// Empty, text being edited is outlined around its placeholder.
 	const textEditLayer = textEdit?.layer ?? null;
 	const editedLayer = useMemo(
 		() => textEditLayer && withPlaceholder(textEditLayer),
 		[textEditLayer],
 	);
-	// A selection with handles has its outline from them.
-	const outlinedLayer = outlinedLayerFor({
-		input,
-		cuttingOutId,
-		outlinedImage,
-		dragsSelection,
+	const outlinedLayer = outlinedLayerFor(input, {
+		layers: document.layers,
 		selectedLayer,
 		editedLayer,
+		adjustedId: adjusting?.layerId,
 	});
 	const handleIdleTap = useCallback(
 		(screenX: number, screenY: number) => {

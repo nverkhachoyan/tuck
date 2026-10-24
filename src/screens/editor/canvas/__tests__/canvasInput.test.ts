@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createDrawingLayer } from "../../../../model/layers/drawing.ts";
+import { createImageLayer } from "../../../../model/layers/image.ts";
 import {
 	createRedactionBox,
 	createRedactionStrokes,
@@ -183,70 +184,68 @@ describe("cutImageId", () => {
 });
 
 describe("outlinedLayerFor", () => {
+	const canvas = { width: 100, height: 100 };
+	const photo = {
+		...createImageLayer(canvas, "photo.jpg", 100, 100, true),
+		id: "photo",
+	};
+	const other = {
+		...createImageLayer(canvas, "other.jpg", 100, 100, true),
+		id: "other",
+	};
 	const none = {
-		cuttingOutId: null,
-		outlinedImage: false as const,
-		dragsSelection: false,
+		layers: [photo, other],
 		selectedLayer: undefined,
 		editedLayer: null,
+		adjustedId: undefined,
 	};
 
-	test("cutting out or adjusting outlines the image, when there is one", () => {
+	test("cutting out or adjusting outlines the image, when there's another", () => {
+		const cut: CanvasInput = { type: "tool", tool: cutBrush };
+		assert.equal(outlinedLayerFor(cut, none), photo);
+		assert.equal(outlinedLayerFor(cut, { ...none, layers: [photo] }), null);
 		assert.equal(
-			outlinedLayerFor({
-				...none,
-				input: { type: "tool", tool: cutBrush },
-				cuttingOutId: "photo",
-				outlinedImage: drawing,
-			}),
-			drawing,
+			outlinedLayerFor(adjust, { ...none, adjustedId: "other" }),
+			other,
 		);
 		assert.equal(
-			outlinedLayerFor({
+			outlinedLayerFor(adjust, {
 				...none,
-				input: { type: "tool", tool: cutBrush },
-				cuttingOutId: "photo",
+				layers: [photo, drawing],
+				adjustedId: "photo",
 			}),
 			null,
 		);
-		assert.equal(
-			outlinedLayerFor({ ...none, input: adjust, outlinedImage: drawing }),
-			drawing,
-		);
+		assert.equal(outlinedLayerFor(adjust, none), null);
 	});
 
 	test("a tool outlines the layer whose style it changes, unless that layer drags", () => {
 		assert.equal(
-			outlinedLayerFor({
-				...none,
-				input: redactBox,
-				selectedLayer: redaction,
-			}),
+			outlinedLayerFor(redactBrush, { ...none, selectedLayer: redaction }),
 			redaction,
 		);
 		assert.equal(
-			outlinedLayerFor({
-				...none,
-				input: redactBox,
-				dragsSelection: true,
-				selectedLayer: redaction,
-			}),
+			outlinedLayerFor(redactBox, { ...none, selectedLayer: redaction }),
+			null,
+		);
+		// Locked, it doesn't drag, so it has no handles to show it.
+		const locked = { ...redaction, locked: true };
+		assert.equal(
+			outlinedLayerFor(redactBox, { ...none, selectedLayer: locked }),
+			locked,
+		);
+		assert.equal(
+			outlinedLayerFor(pen, { ...none, selectedLayer: drawing }),
 			null,
 		);
 	});
 
 	test("editing text outlines the text, and selecting outlines nothing", () => {
 		assert.equal(
-			outlinedLayerFor({
-				...none,
-				input: { type: "editText" },
-				editedLayer: drawing,
-			}),
+			outlinedLayerFor({ type: "editText" }, { ...none, editedLayer: drawing }),
 			drawing,
 		);
-		assert.equal(
-			outlinedLayerFor({ ...none, input: { type: "select" } }),
-			null,
-		);
+		assert.equal(outlinedLayerFor({ type: "select" }, none), null);
+		assert.equal(outlinedLayerFor(find, none), null);
 	});
 });

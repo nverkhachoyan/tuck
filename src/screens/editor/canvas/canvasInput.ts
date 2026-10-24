@@ -158,34 +158,50 @@ export function cutImageId(tool: CanvasTool | null): string | null {
 }
 
 /**
- * The layer outlined for `input`: the image being cut out or adjusted, when
- * it could be mistaken for another, the text being edited, or a redaction or
- * shape whose style the tool changes.
+ * The layer outlined for `input`: the image being cut out or adjusted
+ * (`adjustedId`) where it could be mistaken for another, the text being
+ * edited, or a redaction or shape whose style the tool changes, unless its
+ * handles already show it.
  */
-export function outlinedLayerFor({
-	input,
-	cuttingOutId,
-	outlinedImage,
-	dragsSelection,
-	selectedLayer,
-	editedLayer,
-}: {
-	input: CanvasInput;
-	cuttingOutId: string | null;
-	outlinedImage: Layer | false | undefined;
-	dragsSelection: boolean;
-	selectedLayer: Layer | undefined;
-	editedLayer: Layer | null;
-}): Layer | null {
-	return input.type === "tool"
-		? cuttingOutId !== null
-			? outlinedImage || null
-			: !dragsSelection && restyles(input.tool, selectedLayer)
+export function outlinedLayerFor(
+	input: CanvasInput,
+	{
+		layers,
+		selectedLayer,
+		editedLayer,
+		adjustedId,
+	}: {
+		layers: readonly Layer[];
+		selectedLayer: Layer | undefined;
+		editedLayer: Layer | null;
+		adjustedId: string | undefined;
+	},
+): Layer | null {
+	switch (input.type) {
+		case "tool": {
+			const cutId = cutImageId(input.tool);
+			if (cutId !== null) return outlinedImage(layers, cutId);
+			return restyles(input.tool, selectedLayer) &&
+				!drags(input.tool, selectedLayer)
 				? selectedLayer
-				: null
-		: input.type === "editText"
-			? editedLayer
-			: input.type === "adjust"
-				? outlinedImage || null
 				: null;
+		}
+		case "editText":
+			return editedLayer;
+		case "adjust":
+			return adjustedId === undefined
+				? null
+				: outlinedImage(layers, adjustedId);
+		case "select":
+		case "find":
+			return null;
+	}
+}
+
+/** The image `id`, only when there's another image it could be taken for. */
+function outlinedImage(layers: readonly Layer[], id: string): Layer | null {
+	const images = layers.filter((layer) => layer.type === "image");
+	return images.length > 1
+		? (images.find((layer) => layer.id === id) ?? null)
+		: null;
 }
