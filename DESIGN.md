@@ -280,7 +280,7 @@ Opaque paper with a hairline edge in `hairline-strong` and the floating shadow, 
 Home lays saved projects on the light table as prints: a 3px-cornered thumbnail with both print shadows, with its name (Label Strong) and last-changed date (Caption, secondary) underneath. Long-pressing a print offers Duplicate, Rename, and Delete. With a mouse, hovering shows them as 30px round paper buttons in the print's corner, and Delete fills red on hover.
 
 ### Selection Over the Photo
-A selected layer gets a 1.5px selection-blue outline over its 3.5px dark halo, with handles sized for touch on phones and for a fine pointer on web. Snap guides and detection candidates use the same blue, and a detected region's check mark is 8px across.
+A selected layer gets a 1.5px selection-blue outline over its 3.5px dark halo, with handles sized for touch on phones and for a fine pointer on web. Snap guides and detection candidates use the same blue. A detected region's check mark is sized to the region: its radius is a fifth of the region's shorter side on screen, from 4px up to 8px, and a region under 12px across has no mark, leaving its fill and outline (thicker and blue when chosen) to show whether it's chosen.
 
 ### Wordmark
 "Tuck" in Anton, in black on a full highlighter swipe, identical in both palettes. The app icon and favicon are a black T on the same swipe, on white.

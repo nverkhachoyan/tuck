@@ -21,8 +21,14 @@ export const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
 const SELECTION_HALO_PX = 3.5;
 export const SELECTION_HALO = "rgba(0, 0, 0, 0.22)";
-// A detected region's check mark's radius, in screen pixels.
-const MARKER_PX = 8;
+// A detected region's check mark's radius, in screen pixels: a share of the
+// region's shorter side on screen, within these bounds, so marks on small
+// faces don't cover them or each other. A region narrower than
+// `MARKER_HIDDEN_BELOW_PX` gets none: its fill and outline show its state.
+const MARKER_MIN_PX = 4;
+const MARKER_MAX_PX = 8;
+const MARKER_SHARE = 0.2;
+const MARKER_HIDDEN_BELOW_PX = 12;
 
 export type DetectionOverlayRegion = RedactionBoxPlacement & {
 	sourceIndex: number;
@@ -51,12 +57,20 @@ export function DetectionOutline({
 	const { width, height, transform, selected } = region;
 	const box = rect(-width / 2, -height / 2, width, height);
 	const marker = useDerivedValue(() => {
-		const radius = MARKER_PX / viewScale.value;
+		const disc = Skia.PathBuilder.Make();
+		const check = Skia.PathBuilder.Make();
+		const shortSide = Math.min(width, height) * viewScale.value;
+		if (shortSide < MARKER_HIDDEN_BELOW_PX) {
+			return { disc: disc.build(), check: check.build() };
+		}
+		const px = Math.min(
+			MARKER_MAX_PX,
+			Math.max(MARKER_MIN_PX, shortSide * MARKER_SHARE),
+		);
+		const radius = px / viewScale.value;
 		const x = width / 2 - radius * 0.2;
 		const y = -height / 2 + radius * 0.2;
-		const disc = Skia.PathBuilder.Make();
 		disc.addCircle(x, y, radius);
-		const check = Skia.PathBuilder.Make();
 		check.moveTo(x - radius * 0.42, y);
 		check.lineTo(x - radius * 0.1, y + radius * 0.34);
 		check.lineTo(x + radius * 0.48, y - radius * 0.34);
