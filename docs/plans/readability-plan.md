@@ -169,7 +169,7 @@ Check both the phone grid and the wide rail, and a blank canvas with no image, w
 
 ## Stage 6: Each layer's validation with its layer
 
-- [ ] `refactor: move each layer type's validation into its model file`
+- [x] `refactor: move each layer type's validation into its model file`
 
 `isLayer` in `projects/projectFile.ts` holds every layer type's shape check. Now that each type has its own file in `model/layers/`, adding a field to a layer touches that file and `projectFile.ts`. After this, it touches one.
 

@@ -1,5 +1,6 @@
 import { type Rect, toDocumentSpace } from "../geometry.ts";
-import { type MaskStroke, recenterDrawing } from "../strokes.ts";
+import { isMaskStroke, type MaskStroke, recenterDrawing } from "../strokes.ts";
+import { type Fields, isFields, isPositive } from "../values.ts";
 import { createLayerId, identityTransform, type LayerBase } from "./base.ts";
 import type { ImageLayer } from "./image.ts";
 
@@ -149,4 +150,39 @@ export function createMaskedRedaction(
 		hidden: false,
 		locked: false,
 	};
+}
+
+function isRedactionEffect(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		((value.type === "solid" && typeof value.color === "string") ||
+			(value.type === "blur" && isPositive(value.radius)) ||
+			(value.type === "pixelate" && isPositive(value.size)))
+	);
+}
+
+function isRedactionShape(value: Fields): boolean {
+	switch (value.shape) {
+		case "box":
+			return isPositive(value.width) && isPositive(value.height);
+		case "strokes":
+			return Array.isArray(value.strokes) && value.strokes.every(isMaskStroke);
+		case "mask":
+			return (
+				typeof value.mask === "string" &&
+				isPositive(value.width) &&
+				isPositive(value.height)
+			);
+		default:
+			return false;
+	}
+}
+
+export function isRedactionLayer(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		value.type === "redaction" &&
+		isRedactionEffect(value.effect) &&
+		isRedactionShape(value)
+	);
 }

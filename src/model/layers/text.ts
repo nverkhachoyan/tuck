@@ -1,4 +1,5 @@
 import type { Rect, Size } from "../geometry.ts";
+import { isColorOrNull, isFields, isPositive } from "../values.ts";
 import {
 	areaTransform,
 	canvasArea,
@@ -86,4 +87,19 @@ export function createTextLayer(
 		hidden: false,
 		locked: false,
 	};
+}
+
+export function isTextLayer(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		value.type === "text" &&
+		typeof value.text === "string" &&
+		textFonts.some((font) => font === value.font) &&
+		isPositive(value.fontSize) &&
+		isPositive(value.maxWidth) &&
+		typeof value.color === "string" &&
+		isColorOrNull(value.outlineColor) &&
+		isColorOrNull(value.backgroundColor) &&
+		["left", "center", "right"].includes(value.align as string)
+	);
 }

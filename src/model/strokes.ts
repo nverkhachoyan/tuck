@@ -5,6 +5,7 @@ import {
 	toDocumentSpace,
 	toLayerSpace,
 } from "./geometry.ts";
+import { isFields, isPositive } from "./values.ts";
 
 /**
  * A redaction's stroke: a pen covers, and an eraser uncovers what the strokes
@@ -15,6 +16,18 @@ export type MaskStroke = {
 	width: number;
 	points: number[];
 };
+
+export function isMaskStroke(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		(value.type === "pen" || value.type === "eraser") &&
+		isPositive(value.width) &&
+		Array.isArray(value.points) &&
+		value.points.length >= 2 &&
+		value.points.length % 2 === 0 &&
+		value.points.every(Number.isFinite)
+	);
+}
 
 /**
  * A layer made of strokes: a drawing, or a redaction painted with a brush.

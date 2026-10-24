@@ -1,4 +1,5 @@
-import { recenterDrawing } from "../strokes.ts";
+import { isMaskStroke, recenterDrawing } from "../strokes.ts";
+import { isFields } from "../values.ts";
 import { createLayerId, identityTransform, type LayerBase } from "./base.ts";
 
 // A pen's tip, when it isn't a plain round one: a marker's flat, see-through
@@ -18,6 +19,16 @@ export type Brush =
 
 // `points` is flattened x, y pairs, which keeps saved projects small.
 export type Stroke = Brush & { points: number[] };
+
+export function isStroke(value: unknown): boolean {
+	return (
+		isMaskStroke(value) &&
+		isFields(value) &&
+		(value.type === "eraser" ||
+			(typeof value.color === "string" &&
+				(value.tip === undefined || penTips.some((tip) => tip === value.tip))))
+	);
+}
 
 // Strokes are in the layer's own space, centered on what its pens drew (see
 // `recenterDrawing`), so its transform places it like any other layer.
@@ -41,4 +52,13 @@ export function createDrawingLayer(
 		hidden: false,
 		locked: false,
 	});
+}
+
+export function isDrawingLayer(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		value.type === "drawing" &&
+		Array.isArray(value.strokes) &&
+		value.strokes.every(isStroke)
+	);
 }

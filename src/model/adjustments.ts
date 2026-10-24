@@ -1,3 +1,5 @@
+import { isFields } from "./values.ts";
+
 /**
  * An image layer's color adjustments, each from -1 to 1, where 0 leaves the
  * image unchanged. Temperature warms it (more red, less blue) above 0 and
@@ -25,6 +27,16 @@ export const neutralAdjustments: Adjustments = {
 	saturation: 0,
 	temperature: 0,
 };
+
+export function isAdjustments(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		adjustmentKeys.every((key) => {
+			const amount = value[key];
+			return typeof amount === "number" && Math.abs(amount) <= 1;
+		})
+	);
+}
 
 /**
  * A 4×5 color matrix, row-major: each output channel (R, G, B, A) is a

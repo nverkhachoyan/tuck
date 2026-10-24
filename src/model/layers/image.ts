@@ -1,10 +1,12 @@
 import {
 	type Adjustments,
 	adjustmentsEqual,
+	isAdjustments,
 	isNeutral,
 } from "../adjustments.ts";
 import type { Rect, Size } from "../geometry.ts";
-import type { MaskStroke } from "../strokes.ts";
+import { isMaskStroke, type MaskStroke } from "../strokes.ts";
+import { isFields, isPositive } from "../values.ts";
 import {
 	areaTransform,
 	canvasArea,
@@ -18,6 +20,14 @@ import {
  * found mask's soft edges. It's hard without one.
  */
 export type CutStroke = MaskStroke & { feather?: number };
+
+export function isCutStroke(value: unknown): boolean {
+	return (
+		isMaskStroke(value) &&
+		isFields(value) &&
+		(value.feather === undefined || isPositive(value.feather))
+	);
+}
 
 // transform.x/y is the image's center in document space. `flipped` mirrors
 // it within its own space, which keeps its transform's scale positive.
@@ -138,4 +148,23 @@ export function withAdjustments(
 	return current && adjustmentsEqual(current, adjustments)
 		? layer
 		: { ...layer, adjustments };
+}
+
+export function isImageLayer(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		value.type === "image" &&
+		typeof value.uri === "string" &&
+		isPositive(value.width) &&
+		isPositive(value.height) &&
+		typeof value.flipped === "boolean" &&
+		typeof value.opaque === "boolean" &&
+		(value.sticker === undefined || typeof value.sticker === "boolean") &&
+		(value.adjustments === undefined || isAdjustments(value.adjustments)) &&
+		(value.mask === undefined || typeof value.mask === "string") &&
+		(value.maskStrokes === undefined ||
+			(Array.isArray(value.maskStrokes) &&
+				value.maskStrokes.length > 0 &&
+				value.maskStrokes.every(isCutStroke)))
+	);
 }

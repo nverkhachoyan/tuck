@@ -1,11 +1,12 @@
-import { type Transform, transformsEqual } from "../geometry.ts";
+import { isTransform, type Transform, transformsEqual } from "../geometry.ts";
 import { drawingBox, type MaskStroke } from "../strokes.ts";
+import { isFields } from "../values.ts";
 import { createLayerId } from "./base.ts";
-import type { DrawingLayer } from "./drawing.ts";
-import type { ImageLayer } from "./image.ts";
-import type { RedactionLayer } from "./redaction.ts";
-import { isLine, type ShapeLayer } from "./shape.ts";
-import type { TextLayer } from "./text.ts";
+import { type DrawingLayer, isDrawingLayer } from "./drawing.ts";
+import { type ImageLayer, isImageLayer } from "./image.ts";
+import { isRedactionLayer, type RedactionLayer } from "./redaction.ts";
+import { isLine, isShapeLayer, type ShapeLayer } from "./shape.ts";
+import { isTextLayer, type TextLayer } from "./text.ts";
 
 export type Layer =
 	| ImageLayer
@@ -13,6 +14,34 @@ export type Layer =
 	| DrawingLayer
 	| RedactionLayer
 	| ShapeLayer;
+
+/** A saved layer this version can open. Each type checks its own fields. */
+export function isLayer(value: unknown): value is Layer {
+	if (
+		!isFields(value) ||
+		typeof value.id !== "string" ||
+		typeof value.hidden !== "boolean" ||
+		typeof value.locked !== "boolean" ||
+		(value.resizable !== undefined && typeof value.resizable !== "boolean") ||
+		!isTransform(value.transform)
+	) {
+		return false;
+	}
+	switch (value.type) {
+		case "image":
+			return isImageLayer(value);
+		case "text":
+			return isTextLayer(value);
+		case "drawing":
+			return isDrawingLayer(value);
+		case "redaction":
+			return isRedactionLayer(value);
+		case "shape":
+			return isShapeLayer(value);
+		default:
+			return false;
+	}
+}
 
 /**
  * The image files a layer draws: an image layer's image and mask, or a

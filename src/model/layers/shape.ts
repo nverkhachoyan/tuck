@@ -1,3 +1,4 @@
+import { isFields, isPositive } from "../values.ts";
 import { createLayerId, identityTransform, type LayerBase } from "./base.ts";
 
 // Outlines the draw tool drags out. Named for how they look; `ShapeLayerView`
@@ -98,4 +99,17 @@ export function restyleShape(layer: ShapeLayer, edit: ShapeEdit): ShapeLayer {
 		return layer;
 	}
 	return { ...layer, shape: kind, color, strokeWidth } as ShapeLayer;
+}
+
+export function isShapeLayer(value: unknown): boolean {
+	if (!isFields(value) || value.type !== "shape") return false;
+	const shape = shapeKinds.find((kind) => kind === value.shape);
+	return (
+		shape !== undefined &&
+		typeof value.color === "string" &&
+		isPositive(value.strokeWidth) &&
+		(isLineShape(shape)
+			? isPositive(value.length)
+			: isPositive(value.width) && isPositive(value.height))
+	);
 }

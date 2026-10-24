@@ -1,9 +1,6 @@
-import { adjustmentKeys } from "../model/adjustments.ts";
 import type { EditorDocument } from "../model/document.ts";
-import { penTips } from "../model/layers/drawing.ts";
-import { layerFiles } from "../model/layers/layer.ts";
-import { isLineShape, shapeKinds } from "../model/layers/shape.ts";
-import { textFonts } from "../model/layers/text.ts";
+import { isLayer, layerFiles } from "../model/layers/layer.ts";
+import { isColorOrNull, isFields, isPositive } from "../model/values.ts";
 
 // Bump when the saved format changes, and teach `parseSavedProject` to read
 // the older one. 2 added the canvas's background, layers' `locked`, and
@@ -179,12 +176,6 @@ export function projectLabel(document: EditorDocument): string {
 	return "Untitled";
 }
 
-type Fields = Record<string, unknown>;
-
-function isFields(value: unknown): value is Fields {
-	return typeof value === "object" && value !== null;
-}
-
 /** An older project as this version would have saved it. */
 function upgradeProject(value: unknown): unknown {
 	const upgraded = upgradeFromVersion1(value);
@@ -309,148 +300,4 @@ function isLayerGroup(value: unknown, layers: unknown[]): boolean {
 				layers.some((layer) => isFields(layer) && layer.id === id),
 		)
 	);
-}
-
-function isLayer(value: unknown): boolean {
-	if (
-		!isFields(value) ||
-		typeof value.id !== "string" ||
-		typeof value.hidden !== "boolean" ||
-		typeof value.locked !== "boolean" ||
-		(value.resizable !== undefined && typeof value.resizable !== "boolean") ||
-		!isTransform(value.transform)
-	) {
-		return false;
-	}
-	switch (value.type) {
-		case "image":
-			return (
-				typeof value.uri === "string" &&
-				isPositive(value.width) &&
-				isPositive(value.height) &&
-				typeof value.flipped === "boolean" &&
-				typeof value.opaque === "boolean" &&
-				(value.sticker === undefined || typeof value.sticker === "boolean") &&
-				(value.adjustments === undefined || isAdjustments(value.adjustments)) &&
-				(value.mask === undefined || typeof value.mask === "string") &&
-				(value.maskStrokes === undefined ||
-					(Array.isArray(value.maskStrokes) &&
-						value.maskStrokes.length > 0 &&
-						value.maskStrokes.every(isCutStroke)))
-			);
-		case "text":
-			return (
-				typeof value.text === "string" &&
-				textFonts.some((font) => font === value.font) &&
-				isPositive(value.fontSize) &&
-				isPositive(value.maxWidth) &&
-				typeof value.color === "string" &&
-				isColorOrNull(value.outlineColor) &&
-				isColorOrNull(value.backgroundColor) &&
-				["left", "center", "right"].includes(value.align as string)
-			);
-		case "drawing":
-			return Array.isArray(value.strokes) && value.strokes.every(isStroke);
-		case "redaction":
-			return isRedactionEffect(value.effect) && isRedactionShape(value);
-		case "shape":
-			return isShape(value);
-		default:
-			return false;
-	}
-}
-
-function isAdjustments(value: unknown): boolean {
-	return (
-		isFields(value) &&
-		adjustmentKeys.every((key) => {
-			const amount = value[key];
-			return typeof amount === "number" && Math.abs(amount) <= 1;
-		})
-	);
-}
-
-function isShape(value: Fields): boolean {
-	const shape = shapeKinds.find((kind) => kind === value.shape);
-	return (
-		shape !== undefined &&
-		typeof value.color === "string" &&
-		isPositive(value.strokeWidth) &&
-		(isLineShape(shape)
-			? isPositive(value.length)
-			: isPositive(value.width) && isPositive(value.height))
-	);
-}
-
-function isRedactionEffect(value: unknown): boolean {
-	return (
-		isFields(value) &&
-		((value.type === "solid" && typeof value.color === "string") ||
-			(value.type === "blur" && isPositive(value.radius)) ||
-			(value.type === "pixelate" && isPositive(value.size)))
-	);
-}
-
-function isRedactionShape(value: Fields): boolean {
-	switch (value.shape) {
-		case "box":
-			return isPositive(value.width) && isPositive(value.height);
-		case "strokes":
-			return Array.isArray(value.strokes) && value.strokes.every(isMaskStroke);
-		case "mask":
-			return (
-				typeof value.mask === "string" &&
-				isPositive(value.width) &&
-				isPositive(value.height)
-			);
-		default:
-			return false;
-	}
-}
-
-function isStroke(value: unknown): boolean {
-	return (
-		isMaskStroke(value) &&
-		isFields(value) &&
-		(value.type === "eraser" ||
-			(typeof value.color === "string" &&
-				(value.tip === undefined || penTips.some((tip) => tip === value.tip))))
-	);
-}
-
-function isMaskStroke(value: unknown): boolean {
-	return (
-		isFields(value) &&
-		(value.type === "pen" || value.type === "eraser") &&
-		isPositive(value.width) &&
-		Array.isArray(value.points) &&
-		value.points.length >= 2 &&
-		value.points.length % 2 === 0 &&
-		value.points.every(Number.isFinite)
-	);
-}
-
-function isCutStroke(value: unknown): boolean {
-	return (
-		isMaskStroke(value) &&
-		isFields(value) &&
-		(value.feather === undefined || isPositive(value.feather))
-	);
-}
-
-function isTransform(value: unknown): boolean {
-	return (
-		isFields(value) &&
-		["x", "y", "scaleX", "scaleY", "rotation"].every((key) =>
-			Number.isFinite(value[key]),
-		)
-	);
-}
-
-function isPositive(value: unknown): boolean {
-	return typeof value === "number" && value > 0;
-}
-
-function isColorOrNull(value: unknown): boolean {
-	return value === null || typeof value === "string";
 }

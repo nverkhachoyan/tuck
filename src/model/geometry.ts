@@ -1,3 +1,5 @@
+import { isFields } from "./values.ts";
+
 export type Point = {
 	x: number;
 	y: number;
@@ -21,6 +23,15 @@ export type Transform = {
 	scaleY: number;
 	rotation: number;
 };
+
+export function isTransform(value: unknown): boolean {
+	return (
+		isFields(value) &&
+		["x", "y", "scaleX", "scaleY", "rotation"].every((key) =>
+			Number.isFinite(value[key]),
+		)
+	);
+}
 
 /** An axis-aligned rectangle from its top-left corner. */
 export type Rect = {
