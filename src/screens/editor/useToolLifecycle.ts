@@ -1,9 +1,9 @@
-import { type RefObject, useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import type { Framing } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { useStore } from "@/store";
-import type { EditorMode, EditorModeAction } from "./editorMode";
+import type { EditorMode, EditorModeAction, EditorTool } from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
@@ -12,71 +12,70 @@ import { redactionEffect } from "./tools/redact/redactSettings";
 import type { useRedactTool } from "./tools/redact/useRedactTool";
 import type { useTextEditing } from "./tools/text/useTextEditing";
 
-// Filled later in the same render, after the tool hooks and the photo
-// picker. The session effect above them reads none of it, and a starter
-// runs only from an event, once this is set.
-export type ToolWiring = {
+/**
+ * A tool's changes as one session: one undo step, or none if canceled.
+ * Closing the tool any way, leaving the editor included, keeps them. Called
+ * ahead of the tool hooks, so its effect runs before theirs: none of those
+ * write the store from an effect, and moving this one later would still
+ * change the order effects run in.
+ */
+export function useToolSession(tool: EditorTool | null) {
+	const { beginSession, commitSession } = useStore((state) => state.actions);
+	useEffect(() => {
+		if (!tool) return;
+		beginSession();
+		return commitSession;
+	}, [tool, beginSession, commitSession]);
+}
+
+/** How the editor's tools open and close: their starters, Done, and Cancel. */
+export function useToolLifecycle({
+	mode,
+	targetImage,
+	documentSize,
+	draw,
+	redact,
+	find,
+	cut,
+	textEditing,
+	pickPhoto,
+	openStickers,
+	dispatchMode,
+	visibleArea,
+}: {
+	mode: EditorMode;
 	targetImage: ImageLayer | null;
 	documentSize: Size;
 	draw: ReturnType<typeof useDrawTool>;
 	redact: ReturnType<typeof useRedactTool>;
 	find: ReturnType<typeof useFindTool>;
 	cut: ReturnType<typeof useCutOutTool>;
+	textEditing: ReturnType<typeof useTextEditing>;
 	pickPhoto: () => void;
 	openStickers: () => void;
-};
-
-/**
- * How the editor's tools open and close. A tool's changes are one session:
- * one undo step, or none if canceled. Closing the tool any way, leaving the
- * editor included, keeps them. The session effect stays first, ahead of the
- * tool hooks' effects: none of those write the store from an effect, and
- * moving this one later would still change the order effects run in.
- */
-export function useToolLifecycle({
-	mode,
-	textEditing,
-	dispatchMode,
-	visibleArea,
-	wiring,
-}: {
-	mode: EditorMode;
-	textEditing: ReturnType<typeof useTextEditing>;
 	dispatchMode: (action: EditorModeAction) => void;
 	visibleArea: () => Rect | undefined;
-	wiring: RefObject<ToolWiring | null>;
 }) {
-	const { beginSession, commitSession, cancelSession, selectLayer, reframe } =
-		useStore((state) => state.actions);
+	const { cancelSession, selectLayer, reframe } = useStore(
+		(state) => state.actions,
+	);
 	const tool = mode.type === "tool" ? mode.tool : null;
 
-	useEffect(() => {
-		if (!tool) return;
-		beginSession();
-		return commitSession;
-	}, [tool, beginSession, commitSession]);
-
-	const tools = () => {
-		if (!wiring.current) throw new Error("Tool wiring is not ready");
-		return wiring.current;
-	};
-
 	const startDrawing = () => {
-		tools().draw.chooseTool();
+		draw.chooseTool();
 		dispatchMode({ type: "startTool", tool: "draw" });
 	};
 	const startRedacting = () => {
-		tools().redact.chooseTool();
+		redact.chooseTool();
 		dispatchMode({ type: "startTool", tool: "redact" });
 	};
 	const startAdjusting = () => {
-		const { targetImage } = tools();
 		if (!targetImage) return;
 		dispatchMode({ type: "startAdjust", layerId: targetImage.id });
 	};
 	const closeTool = () => {
 		dispatchMode({ type: "endTool" });
-		tools().find.reset();
+		find.reset();
 	};
 	// Done with Draw or Redact goes back to the tools, not to the last stroke
 	// or box, still selected, where a stray drag would move it.
@@ -90,14 +89,12 @@ export function useToolLifecycle({
 	};
 	// The selected photo, or else the main one, like Find.
 	const startCutOut = () => {
-		const { targetImage, cut } = tools();
 		if (!targetImage) return;
 		dispatchMode({ type: "startCutOut", layerId: targetImage.id });
 		cut.start(targetImage);
 	};
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
-		const { targetImage } = tools();
 		if (!targetImage) return;
 		dispatchMode({ type: "startTool", tool: "find" });
 	};
@@ -105,11 +102,10 @@ export function useToolLifecycle({
 	// redacts the regions chosen, in the style last picked rather than a
 	// selected redaction's, and goes back to the tools, as Redact's Done does.
 	const backToRedacting = () => {
-		tools().find.reset();
+		find.reset();
 		startRedacting();
 	};
 	const finishFinding = () => {
-		const { find, redact, documentSize } = tools();
 		find.redactChosen(redactionEffect(redact.chosen, documentSize));
 		closeTool();
 		selectLayer(null);
@@ -135,8 +131,8 @@ export function useToolLifecycle({
 		draw: startDrawing,
 		redact: startRedacting,
 		find: startFinding,
-		sticker: () => tools().openStickers(),
-		photo: () => tools().pickPhoto(),
+		sticker: openStickers,
+		photo: pickPhoto,
 		crop: startCrop,
 		adjust: startAdjusting,
 		cutOut: startCutOut,

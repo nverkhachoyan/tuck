@@ -62,7 +62,7 @@ import { useDeleteNotice } from "./useDeleteNotice";
 import { RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
-import { type ToolWiring, useToolLifecycle } from "./useToolLifecycle";
+import { useToolLifecycle, useToolSession } from "./useToolLifecycle";
 
 // What a tool's footer calls it.
 const TOOL_TITLES = {
@@ -142,7 +142,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	} = actions;
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
-	const toolWiring = useRef<ToolWiring | null>(null);
 
 	// What the editor is doing, and what's open over it. Adjust puts itself
 	// down if its image goes away, Find if its photo does, and a text color
@@ -154,6 +153,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		selectedTextId: selectedTextLayer?.id ?? null,
 	});
 	const { mode, eyedropper } = modeState;
+	// The tool in the dock. While drawing, strokes on the canvas go into the
+	// selected drawing, or a new one; while redacting, into the selected
+	// brushed redaction, or a new one. While finding, taps on the canvas pick
+	// what's found. While adjusting, the canvas holds still. While cutting
+	// out, taps pick a subject, or strokes paint the cut. A tap away from what
+	// the tool works on puts it down, as Done does.
+	const tool = mode.type === "tool" ? mode.tool : null;
+	useToolSession(tool);
 	const textEditing = useTextEditing({
 		document,
 		edit: mode.type === "text" ? mode.edit : null,
@@ -169,13 +176,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const stickerSave = useStickerSave(savedStickers.save);
 	const layout = useEditorLayout({ typing: editingText, layersOpen });
 	const { wide, layersBeside, dockInset } = layout;
-	// The tool in the dock. While drawing, strokes on the canvas go into the
-	// selected drawing, or a new one; while redacting, into the selected
-	// brushed redaction, or a new one. While finding, taps on the canvas pick
-	// what's found. While adjusting, the canvas holds still. While cutting
-	// out, taps pick a subject, or strokes paint the cut. A tap away from what
-	// the tool works on puts it down, as Done does.
-	const tool = mode.type === "tool" ? mode.tool : null;
 	const toolOptionsOpen = openTray(mode) !== null;
 	const adjustImageId = toolImageId(mode, "adjust");
 	const adjustedLayer = adjustImageId
@@ -185,14 +185,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const cutLayer = cutImageId
 		? visibleImageLayer(document, cutImageId)
 		: undefined;
-	const { startTool, done, cancel, finishTool, closeCrop, finishCrop } =
-		useToolLifecycle({
-			mode,
-			textEditing,
-			dispatchMode,
-			visibleArea: () => canvasRef.current?.visibleArea(),
-			wiring: toolWiring,
-		});
 	const adjustController = useAdjustTool(adjustedLayer, setAdjustments);
 	const adjusting = useMemo(
 		() =>
@@ -307,27 +299,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 	const openStickers = () => dispatchMode({ type: "openStickers" });
 
-	useEditorShortcuts({
-		enabled: !keysTaken,
-		modeState,
-		selection: selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
-		dispatchMode,
-		undo,
-		redo,
-		openExport,
-		zoom: (to) => canvasRef.current?.zoom(to),
-		done,
-		startTool,
-		editSelected: () => textEditing.editSelected(),
-		deleteSelected: () => {
-			if (selectedLayer) deleteNotice.deleteLayer(selectedLayer.id);
-		},
-		deselect: () => selectLayer(null),
-		duplicate: duplicateSelectedLayer,
-		arrange: arrangeSelected,
-		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
-	});
-
 	const panelKind: DockPanel = tool
 		? tool
 		: styledText
@@ -359,16 +330,42 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 
-	toolWiring.current = {
-		targetImage,
-		documentSize,
-		draw,
-		redact,
-		find,
-		cut,
-		pickPhoto,
-		openStickers,
-	};
+	const { startTool, done, cancel, finishTool, closeCrop, finishCrop } =
+		useToolLifecycle({
+			mode,
+			targetImage,
+			documentSize,
+			draw,
+			redact,
+			find,
+			cut,
+			textEditing,
+			pickPhoto,
+			openStickers,
+			dispatchMode,
+			visibleArea: () => canvasRef.current?.visibleArea(),
+		});
+
+	useEditorShortcuts({
+		enabled: !keysTaken,
+		modeState,
+		selection: selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
+		dispatchMode,
+		undo,
+		redo,
+		openExport,
+		zoom: (to) => canvasRef.current?.zoom(to),
+		done,
+		startTool,
+		editSelected: () => textEditing.editSelected(),
+		deleteSelected: () => {
+			if (selectedLayer) deleteNotice.deleteLayer(selectedLayer.id);
+		},
+		deselect: () => selectLayer(null),
+		duplicate: duplicateSelectedLayer,
+		arrange: arrangeSelected,
+		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
+	});
 
 	const layerList = layerListProps({
 		document,
