@@ -84,6 +84,7 @@ export function FindTray({
 	selectedCount,
 	bottomInset,
 	onRetry,
+	onBack,
 	onStop,
 	onSelectAll,
 	onClear,
@@ -93,6 +94,7 @@ export function FindTray({
 	selectedCount: number;
 	bottomInset: number;
 	onRetry: () => void;
+	onBack: () => void;
 	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
@@ -109,6 +111,7 @@ export function FindTray({
 				stacked={stacked}
 				onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
 				onRetry={onRetry}
+				onBack={onBack}
 				onStop={onStop}
 				onSelectAll={onSelectAll}
 				onClear={onClear}
@@ -127,6 +130,7 @@ export function FindInspector({
 	selectedCount,
 	onFind,
 	onRetry,
+	onBack,
 	onStop,
 	onSelectAll,
 	onClear,
@@ -137,6 +141,7 @@ export function FindInspector({
 	selectedCount: number;
 	onFind: (scope: DetectionScope) => void;
 	onRetry: () => void;
+	onBack: () => void;
 	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
@@ -164,6 +169,7 @@ export function FindInspector({
 					selectedCount={selectedCount}
 					stacked
 					onRetry={onRetry}
+					onBack={onBack}
 					onStop={onStop}
 					onSelectAll={onSelectAll}
 					onClear={onClear}
@@ -181,6 +187,7 @@ function FindBody({
 	stacked,
 	onMeasure,
 	onRetry,
+	onBack,
 	onStop,
 	onSelectAll,
 	onClear,
@@ -191,6 +198,7 @@ function FindBody({
 	stacked: boolean;
 	onMeasure?: (width: number) => void;
 	onRetry: () => void;
+	onBack: () => void;
 	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
@@ -232,16 +240,24 @@ function FindBody({
 						issue={state.issues[0]?.message}
 					/>
 				)}
-				{state.status === "empty" && (
-					<Status
-						title={`No ${scopeName(state.scope)} found`}
-						message={
-							state.issues[0]?.message ?? "Try another photo or scan again."
-						}
-						action="Try Again"
-						onAction={onRetry}
-					/>
-				)}
+				{/* A scan that failed can be tried again; one that found nothing
+				    leaves drawing a box by hand, back in Redact. */}
+				{state.status === "empty" &&
+					(state.issues[0] ? (
+						<Status
+							title={`No ${scopeName(state.scope)} found`}
+							message={state.issues[0].message}
+							action="Try Again"
+							onAction={onRetry}
+						/>
+					) : (
+						<Status
+							title={`No ${scopeName(state.scope)} found`}
+							message="Draw a box over anything you want hidden."
+							action="Back to Redact"
+							onAction={onBack}
+						/>
+					))}
 			</View>
 		</>
 	);
@@ -261,10 +277,17 @@ function announcement(
 		case "found":
 			return count === 0
 				? "Nothing found in the visible crop"
-				: `${selected} of ${count} selected`;
+				: foundTitle(count, selected);
 		case "empty":
 			return `No ${scopeName(state.scope)} found`;
 	}
+}
+
+// What was found and what's chosen of it, once some are left out.
+function foundTitle(count: number, selected: number): string {
+	return selected === count
+		? `${count} found`
+		: `${selected} of ${count} chosen`;
 }
 
 function scopeName(scope: DetectionScope): string {
@@ -290,13 +313,13 @@ function Found({
 				<Text style={styles.title}>
 					{count === 0
 						? "Nothing in the visible crop"
-						: `${selected} of ${count} selected`}
+						: foundTitle(count, selected)}
 				</Text>
 				{issue && <Text style={styles.note}>{issue}</Text>}
 				<Text style={styles.message}>
 					{count === 0
 						? "The detector found regions, but none are inside the canvas."
-						: "Tap a region to include or leave it out, then ✓ to redact."}
+						: "Detection can miss some. Check the photo, then ✓ to redact."}
 				</Text>
 			</View>
 			{count > 0 && (

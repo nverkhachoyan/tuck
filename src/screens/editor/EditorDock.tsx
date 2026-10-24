@@ -65,10 +65,13 @@ export function ToolTrays({
 	tools: { draw, redact, find, cut, text },
 	customColor,
 	onCustomColor,
+	onBackToRedact,
 	bottomInset,
 }: ModeProps & {
 	modeState: EditorModeState;
 	onCustomColor: (color: string) => void;
+	// Find's way out when it found nothing: what its ✕ does.
+	onBackToRedact: () => void;
 	bottomInset: number;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
@@ -140,6 +143,7 @@ export function ToolTrays({
 					selectedCount={find.selectedCount}
 					bottomInset={bottomInset}
 					onRetry={find.retry}
+					onBack={onBackToRedact}
 					onStop={find.reset}
 					onSelectAll={find.selectAll}
 					onClear={find.clear}

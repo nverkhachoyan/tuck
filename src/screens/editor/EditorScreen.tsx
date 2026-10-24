@@ -495,7 +495,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	const findDoneLabel =
 		tool === "find" && find.selectedCount > 0
-			? `Redact ${find.selectedCount} selected`
+			? `Redact ${find.selectedCount} chosen`
 			: undefined;
 	// The dock's Cancel and Done, for the open tool, the text being typed, or
 	// the selected layer.
@@ -638,6 +638,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							tools={tools}
 							customColor={customColor}
 							onCustomColor={setCustomColor}
+							onBackToRedact={cancel}
 							bottomInset={dockInset}
 						/>
 					)}
@@ -686,6 +687,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									selectedCount={find.selectedCount}
 									onFind={find.find}
 									onRetry={find.retry}
+									onBack={cancel}
 									onStop={find.reset}
 									onSelectAll={find.selectAll}
 									onClear={find.clear}
