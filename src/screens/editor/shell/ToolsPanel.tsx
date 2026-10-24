@@ -15,6 +15,8 @@ type ToolEntry = {
 	icon: ToolIcon;
 	// Hidden until the document has an image to work on.
 	needsImage?: boolean;
+	// Find is a layer action, not a button in the dock or the rail.
+	dock?: false;
 	// Which open tools mark this button. Redact stays marked while Find is open.
 	markedWhile?: readonly OpenTool[];
 };
@@ -29,6 +31,7 @@ export const TOOLS: readonly ToolEntry[] = [
 		icon: "blur",
 		markedWhile: ["redact", "find"],
 	},
+	{ key: "find", label: "Find", icon: "image-search-outline", dock: false },
 	{ key: "sticker", label: "Sticker", icon: "sticker-emoji" },
 	{ key: "crop", label: "Crop", icon: "crop-rotate" },
 	{ key: "adjust", label: "Adjust", icon: "tune-variant", needsImage: true },
@@ -64,23 +67,23 @@ export function ToolsPanel({
 	startTool: ToolStarters;
 }) {
 	const compact = !vertical;
-	const tools = TOOLS.filter((entry) => !entry.needsImage || hasImage).map(
-		(entry) => (
-			<ToolButton
-				key={entry.key}
-				label={entry.label}
-				icon={entry.icon}
-				shortcut={TOOL_KEYS[entry.key]}
-				compact={compact}
-				selected={
-					tool != null &&
-					(entry.markedWhile ?? [entry.key]).some((mark) => mark === tool)
-				}
-				busy={entry.key === "photo" && addBusy}
-				onPress={startTool[entry.key]}
-			/>
-		),
-	);
+	const tools = TOOLS.filter(
+		(entry) => entry.dock !== false && (!entry.needsImage || hasImage),
+	).map((entry) => (
+		<ToolButton
+			key={entry.key}
+			label={entry.label}
+			icon={entry.icon}
+			shortcut={TOOL_KEYS[entry.key]}
+			compact={compact}
+			selected={
+				tool != null &&
+				(entry.markedWhile ?? [entry.key]).some((mark) => mark === tool)
+			}
+			busy={entry.key === "photo" && addBusy}
+			onPress={startTool[entry.key]}
+		/>
+	));
 	return vertical ? (
 		<ToolRow vertical>{tools}</ToolRow>
 	) : (

@@ -156,7 +156,7 @@ Each hook goes in `canvas/` beside the gesture hooks it resembles, and each gest
 ## Stage 5: The tools panel from a table
 
 - [x] `refactor: build the tools panel from a table of tools`
-- [ ] `refactor: let LayerActionsPanel read its rows from that table`
+- [x] `refactor: let LayerActionsPanel read its rows from that table`
 
 `ToolsPanel.tsx` has eight near-identical `<ToolButton>` blocks, and `toolButtonsFor` exists only to turn `ToolStarters` into `onAddText`, `onDraw`, and the rest. `layerActionsFor` chooses which of those a layer offers. Both were pulled out of `EditorDock` in `9fbb66b`. `toolButtonsFor` goes. `layerActionsFor` stays: which actions a layer offers is pure logic, and it gains a test.
 

@@ -37,7 +37,6 @@ import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
 import { Dock, DockFooter, InspectorBackdrop } from "./shell/Dock";
 import { HeaderActions } from "./shell/HeaderActions";
-import { layerActionsFor } from "./shell/LayerActionsPanel";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
 import { mapStarters, ToolsPanel } from "./shell/ToolsPanel";
@@ -408,14 +407,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	};
 	const hasImage = targetImage !== null;
 	// What the dock offers for the selected layer, by its kind.
-	const layerActions =
-		selectedLayer &&
-		layerActionsFor({
-			layer: selectedLayer,
-			startTool,
-			sticker: stickerSave.status,
-			onSaveSticker: stickerSave.save,
-		});
+	const layerActions = selectedLayer && {
+		layer: selectedLayer,
+		startTool,
+		sticker: stickerSave.status,
+		onSaveSticker: stickerSave.save,
+	};
 
 	// Takes back the open tool's changes to its image: Adjust's adjustments,
 	// or Cut out's cut.

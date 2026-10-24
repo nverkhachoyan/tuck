@@ -1,53 +1,56 @@
 import type { Layer } from "@/model/layers/layer";
+import { layerActionsFor } from "./layerActions";
 import { ToolButton, ToolRow } from "./ToolButton";
-import type { ToolStarters } from "./ToolsPanel";
+import { TOOLS, type ToolStarters } from "./ToolsPanel";
 
 /**
  * What only the selected photo, drawing, shape, or redaction can do, in
  * place of the tools, as the text panel is for text; the actions every
  * layer shares float by it (see `SelectionBar`). It's moved and sized on
- * the canvas, and tapping the canvas off it deselects it. `onDraw` goes on
- * drawing on a drawing or restyles a shape, `onRedact` restyles a
- * redaction or paints on, `onAdjust` changes an image's colors, and
- * `onFind` looks in an image for faces or text to redact, and `onCutOut`
- * cuts its subject out or refines its cut.
- * `onSaveSticker` keeps a photo as a sticker; once it has, `sticker` is
- * "saved", and the button says so.
+ * the canvas, and tapping the canvas off it deselects it. Which rows a
+ * layer offers is `layerActionsFor`, and their labels and icons are `TOOLS`.
+ * Keeping a photo as a sticker stays its own row: Saved, or Sticker.
  */
 export function LayerActionsPanel({
-	onDraw,
-	onRedact,
-	onAdjust,
-	onFind,
-	onCutOut,
+	layer,
+	startTool,
 	sticker,
 	onSaveSticker,
 }: {
-	onDraw?: () => void;
-	onRedact?: () => void;
-	onAdjust?: () => void;
-	onFind?: () => void;
-	onCutOut?: () => void;
-	sticker?: "saving" | "saved";
-	onSaveSticker?: () => void;
+	layer: Layer;
+	startTool: ToolStarters;
+	sticker: "saving" | "saved" | undefined;
+	onSaveSticker: (() => void) | undefined;
 }) {
+	const actions = layerActionsFor({
+		layer,
+		startTool,
+		sticker,
+		onSaveSticker,
+	});
+	const button = (key: "draw" | "redact" | "adjust" | "find" | "cutOut") => {
+		const onPress = {
+			draw: actions.onDraw,
+			redact: actions.onRedact,
+			adjust: actions.onAdjust,
+			find: actions.onFind,
+			cutOut: actions.onCutOut,
+		}[key];
+		const entry = TOOLS.find((tool) => tool.key === key);
+		return (
+			onPress &&
+			entry && (
+				<ToolButton label={entry.label} icon={entry.icon} onPress={onPress} />
+			)
+		);
+	};
 	return (
 		<ToolRow>
-			{onDraw && <ToolButton label="Draw" icon="draw" onPress={onDraw} />}
-			{onRedact && <ToolButton label="Redact" icon="blur" onPress={onRedact} />}
-			{onAdjust && (
-				<ToolButton label="Adjust" icon="tune-variant" onPress={onAdjust} />
-			)}
-			{onFind && (
-				<ToolButton label="Find" icon="image-search-outline" onPress={onFind} />
-			)}
-			{onCutOut && (
-				<ToolButton
-					label="Cut out"
-					icon="scissors-cutting"
-					onPress={onCutOut}
-				/>
-			)}
+			{button("draw")}
+			{button("redact")}
+			{button("adjust")}
+			{button("find")}
+			{button("cutOut")}
 			{onSaveSticker && (
 				<ToolButton
 					label={sticker === "saved" ? "Saved" : "Sticker"}
@@ -63,32 +66,4 @@ export function LayerActionsPanel({
 			)}
 		</ToolRow>
 	);
-}
-
-/** What the dock offers for `layer`, by its kind. */
-export function layerActionsFor({
-	layer,
-	startTool,
-	sticker,
-	onSaveSticker,
-}: {
-	layer: Layer;
-	startTool: ToolStarters;
-	sticker: "saving" | "saved" | undefined;
-	onSaveSticker: (() => void) | undefined;
-}) {
-	const image = layer.type === "image";
-	return {
-		onDraw:
-			layer.type === "drawing" || layer.type === "shape"
-				? startTool.draw
-				: undefined,
-		onRedact:
-			layer.type === "redaction" || image ? startTool.redact : undefined,
-		onAdjust: image ? startTool.adjust : undefined,
-		onFind: image && !layer.hidden ? startTool.find : undefined,
-		onCutOut: image && !layer.hidden ? startTool.cutOut : undefined,
-		sticker,
-		onSaveSticker,
-	};
 }
