@@ -287,8 +287,8 @@ export function FramingLesson() {
 			name: "cropFraming",
 		},
 		{
-			label: "store: reframe",
-			file: "src/store/editorSlice.ts",
+			label: "reframe",
+			file: "src/model/edits/crop.ts",
 			name: "reframe",
 		},
 	];
@@ -569,7 +569,7 @@ export function FramingLesson() {
 				<h2>Read the code</h2>
 				<p>
 					The model's side of a crop, the crop tool's geometry that feeds it,
-					and the store action that ties them together.
+					and the edit the store makes with them.
 				</p>
 				<div className="tabs" role="tablist">
 					{tabs.map((candidate) => (

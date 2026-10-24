@@ -33,6 +33,7 @@ import {
 	type TextLayerStyle,
 	withAdjustments,
 } from "../model/document.ts";
+import { reframe, setBackground } from "../model/edits/crop.ts";
 import { addShape, drawStroke, setShapeStyle } from "../model/edits/draw.ts";
 import {
 	addMaskedRedaction,
@@ -42,12 +43,7 @@ import {
 	setRedactionEffect,
 } from "../model/edits/redact.ts";
 import { addTextLayer, updateTextLayer } from "../model/edits/text.ts";
-import {
-	documentFraming,
-	type Framing,
-	framingsEqual,
-	reframeDocument,
-} from "../model/framing.ts";
+import type { Framing } from "../model/framing.ts";
 import {
 	type Rect,
 	type Transform,
@@ -598,23 +594,15 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			lastNudge = nudged && { document: nudged, id };
 		},
 
-		reframe: (framing, turnLayers) => {
-			const { document } = get();
-			if (!document || framingsEqual(documentFraming(document), framing)) {
-				return;
-			}
+		reframe: (framing, turnLayers) =>
 			setDocument("editor/reframe", (document) =>
-				reframeDocument(document, framing, turnLayers),
-			);
-		},
+				reframe(document, framing, turnLayers),
+			),
 
-		setBackground: (background) => {
-			if (get().document?.background === background) return;
-			setDocument("editor/setBackground", (document) => ({
-				...document,
-				background,
-			}));
-		},
+		setBackground: (background) =>
+			setDocument("editor/setBackground", (document) =>
+				setBackground(document, background),
+			),
 
 		moveLayer: (id, toIndex) => {
 			const layers = get().document?.layers;
