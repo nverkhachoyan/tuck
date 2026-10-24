@@ -35,26 +35,30 @@ type Pick = LastPick & {
 };
 
 /**
- * Finds the subjects to cut out of `image`: every one, or with a point, the
- * one there, or once Segment Anything is ready, any object there. A point
- * on an image without a mask cuts out only what's there; on one with a
- * mask, it adds that to the cut, or takes it out when the cut shows the
- * image there.
- * Another tap on the same spot grows what it took, from a part to the whole
- * and around again, where there's more than one to choose from. While
- * `picking`, the image is read ahead for that. `latest` is the image as it
- * is by then, which a pick changes. `find` hands the mask to `onMask`, once
- * `keep` has put its file where the document can use it, saying whether it
- * was picked, which keeps the strokes that refined the cut; `onMask`
- * decides whether the image still wants it. `finding` says which is being
- * found, while one is: a second find meanwhile does nothing. Every subject
- * found once is used again this session, whose project keeps its file until
- * it closes. `invert` turns the cut inside out, keeping what it removed and
- * removing what it kept, and hands `onInvert` the inverted mask's file,
- * `inverting` meanwhile; it waits for a find, and a find for it. `news`
- * says what the last find or inversion did, for a screen reader. `canFind`
- * is false while this device can't find subjects, when only the brushes
- * cut.
+ * Finds the subjects to cut out of `image`, and turns a cut inside out.
+ * - Finds every subject, or with a point the one there, or once Segment
+ *   Anything is ready, any object there.
+ * - A point on an image without a mask cuts out only what's there. On one
+ *   with a mask, it adds that to the cut, or takes it out when the cut
+ *   shows the image there.
+ * - Another tap on the same spot grows what it took, from a part to the
+ *   whole and around again, where there's more than one to choose from.
+ * - While `picking`, the image is read ahead for that.
+ * - `latest` is the image as it is by then, which a pick changes.
+ * - `find` hands the mask to `onMask`, once `keep` has put its file where
+ *   the document can use it, saying whether it was picked, which keeps the
+ *   strokes that refined the cut.
+ * - `onMask` decides whether the image still wants it.
+ * - `finding` says which is being found, while one is. A second find
+ *   meanwhile does nothing.
+ * - Every subject found once is used again this session, whose project
+ *   keeps its file until it closes.
+ * - `invert` turns the cut inside out, keeping what it removed and removing
+ *   what it kept, and hands `onInvert` the inverted mask's file,
+ *   `inverting` meanwhile. It waits for a find, and a find for it.
+ * - `news` says what the last find or inversion did, for a screen reader.
+ * - `canFind` is false while this device can't find subjects, when only the
+ *   brushes cut.
  */
 export function useCutOut({
 	projectId,

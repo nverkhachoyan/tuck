@@ -54,41 +54,41 @@ const MIN_BOX_PX = 12;
 const NO_LINES: AxisLines = { edges: [], centers: [] };
 
 /**
- * Tap selects, and while a layer is selected pan / pinch / rotate transform
- * it about its center.
- *
- * A pan that starts on one of the selected layer's handles scales (corners)
- * or rotates (knob) it instead of moving it, about its center like a pinch.
- * A layer with a resize mode has side handles too, and
- * its corners and sides resize it instead, keeping the opposite sides put;
- * that commits through `onResize`. A line has handles only at its ends,
- * which drag that end anywhere, turning the line about the other; that
- * commits through `onResize` too. Which handle is decided at touch-down,
- * on the UI thread, from the live values.
- *
- * A one-finger drag that starts on another layer picks that layer up at
- * once: it's hit-tested here, on the UI thread, against `layers`, and
- * `onSelect` tells React. Two fingers never pick one up: with nothing
- * selected, they zoom the view (see `useViewGesture`). Dragging empty space
- * keeps moving the selection, which helps with small text, unless it's
- * `anchored` (a redaction, which moves only from on itself). A one-finger drag
- * from where `standsAside` says another gesture takes it (the view's, or a
- * tool's) is left alone, from touch-down to lift.
- *
- * With `dragOnly`, only one finger's drag moves the selection or its
- * handles: there's no tap, pinch, or rotate, and no other layer is picked up.
- *
- * Moving snaps the layer's edges onto the edges of the document and the
- * other layers, or its center onto their centers; a side being resized
- * snaps onto any of those lines; and rotating settles on quarter turns,
- * with a haptic tick as each snap lands.
- *
- * While any of pan / pinch / rotate runs, the layer it transforms is held
- * (`live.heldId`): a sync from the document leaves it be, and the gestures
- * stand still if the selection moves off it. The result is committed once,
- * when the last of them ends, and only if the layer actually moved. With a
- * mouse, hovering reports the pointer (`onHover`) so the canvas can show
- * cursors.
+ * Selects a layer and transforms the selection about its center.
+ * - A tap selects. Pan, pinch, and rotate transform the selected layer.
+ * - A pan that starts on a handle scales it (corners) or rotates it (the
+ *   knob) instead of moving it, about its center like a pinch.
+ * - A layer with a resize mode has side handles too, and its corners and
+ *   sides resize it instead, keeping the opposite sides put. That commits
+ *   through `onResize`.
+ * - A line has handles only at its ends, which drag that end anywhere,
+ *   turning the line about the other. That commits through `onResize` too.
+ * - Which handle is decided at touch-down, on the UI thread, from the live
+ *   values.
+ * - A one-finger drag that starts on another layer picks that layer up at
+ *   once: it's hit-tested here, on the UI thread, against `layers`, and
+ *   `onSelect` tells React.
+ * - Two fingers never pick one up. With nothing selected, they zoom the
+ *   view (see `useViewGesture`).
+ * - Dragging empty space keeps moving the selection, which helps with small
+ *   text, unless it's `anchored` (a redaction, which moves only from on
+ *   itself).
+ * - A one-finger drag from where `standsAside` says another gesture takes
+ *   it (the view's, or a tool's) is left alone, from touch-down to lift.
+ * - With `dragOnly`, only one finger's drag moves the selection or its
+ *   handles: there's no tap, pinch, or rotate, and no other layer is picked
+ *   up.
+ * - Moving snaps the layer's edges onto the edges of the document and the
+ *   other layers, or its center onto their centers.
+ * - A side being resized snaps onto any of those lines, and rotating
+ *   settles on quarter turns, with a haptic tick as each snap lands.
+ * - While any of pan, pinch, or rotate runs, the layer it transforms is
+ *   held (`live.heldId`): a sync from the document leaves it be, and the
+ *   gestures stand still if the selection moves off it.
+ * - The result is committed once, when the last of them ends, and only if
+ *   the layer actually moved.
+ * - With a mouse, hovering reports the pointer (`onHover`) so the canvas
+ *   can show cursors.
  */
 export function useLayerTransformGesture({
 	live,

@@ -190,7 +190,7 @@ Check both the phone grid and the wide rail, and a blank canvas with no image, w
 
 ## Stage 8: Long doc comments
 
-- [ ] `refactor: break the longest doc comments into lists`
+- [x] `refactor: break the longest doc comments into lists`
 
 Three doc comments run 15 lines or more as one paragraph: `useLayerTransformGesture` (37), `useCutOut` (22), and `liveTransform` (15). `EditorCanvas`'s comment is split in stage 4, with the hooks it describes. Rewrite each of these three as a sentence on what it is, then a short list, one line per behavior or parameter. Keep what they say and drop nothing true. A comment that only restated code was already trimmed in `3d2dde0` and `cf15dfb`. This changes the house style for long comments, so AGENTS.md gains a line for it.
 

@@ -9,19 +9,20 @@ const MIN_LAYER_SCALE = 0.2;
 const MAX_LAYER_SCALE = 8;
 
 /**
- * High-frequency transform state for the selected layer. Gestures write here
- * every frame (no React rerenders); the document only receives the final
- * value when the gesture ends. While `activeId` matches a layer, that layer's
- * node renders from these values instead of its document transform.
- * `halfWidth`/`halfHeight` are its selection box, so the UI thread can find
- * and draw its handles without laying out text, and `resizeMode` says how
- * the box resizes, with side handles. `guideX`/`guideY` are the
- * document's lines a drag has snapped it onto, if any: a vertical line at
- * x = `guideX`, a horizontal one at y = `guideY`.
- *
- * `heldId` is the layer a gesture is transforming, if any. The gesture owns
- * its transform and box until it ends, so a sync from the document leaves
- * them be.
+ * High-frequency transform state for the selected layer.
+ * - Gestures write here every frame (no React rerenders). The document only
+ *   receives the final value when the gesture ends.
+ * - While `activeId` matches a layer, that layer's node renders from these
+ *   values instead of its document transform.
+ * - `halfWidth` and `halfHeight` are its selection box, so the UI thread
+ *   can find and draw its handles without laying out text.
+ * - `resizeMode` says how the box resizes, with side handles.
+ * - `guideX` and `guideY` are the document's lines a drag has snapped it
+ *   onto, if any: a vertical line at x = `guideX`, a horizontal one at
+ *   y = `guideY`.
+ * - `heldId` is the layer a gesture is transforming, if any. The gesture
+ *   owns its transform and box until it ends, so a sync from the document
+ *   leaves them be.
  */
 export type LiveTransform = {
 	activeId: SharedValue<string | null>;
