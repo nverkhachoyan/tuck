@@ -92,6 +92,20 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	// a project reopened right away is read as it was just saved.
 	let closing: Promise<unknown> = Promise.resolve();
 
+	function afterClosing<T>(work: () => Promise<T>): Promise<T> {
+		const done = closing.then(work);
+		closing = done.catch(() => {});
+		return done;
+	}
+
+	// Keeps the queue usable after a failed write, and returns the error to
+	// the caller.
+	function queueWrite(project: OpenProject, work: () => Promise<void>) {
+		const written = project.writing.then(work);
+		project.writing = written.catch(() => {});
+		return written;
+	}
+
 	let latestSaveRevision = 0;
 	let pendingSave: {
 		id: string;
@@ -303,7 +317,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		const saved = savedDocument(id, document);
 		if (!saved) return;
 		const savedJson = JSON.stringify(saved);
-		const written = project.writing.then(async () => {
+		return queueWrite(project, async () => {
 			if (savedJson === project.savedJson) return;
 			// A newly picked photo is not a project until an edit has existed.
 			if (!hasEdits(document) && project.savedJson === null) return;
@@ -319,9 +333,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			project.savedJson = savedJson;
 			project.updatedAt = file.updatedAt;
 		});
-		// Keep the queue usable after an autosave error; return the error to callers.
-		project.writing = written.catch(() => {});
-		return written;
 	}
 
 	/**
@@ -339,7 +350,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		if (project.thumbnail?.updatedAt === updatedAt) return;
 		try {
 			const thumbnail = { url: await render(document), updatedAt };
-			const written = project.writing.then(async () => {
+			await queueWrite(project, async () => {
 				if (project.savedJson === null || project.updatedAt !== updatedAt) {
 					return;
 				}
@@ -354,8 +365,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				await storage.writeProjectFile(id, JSON.stringify(file));
 				project.thumbnail = thumbnail;
 			});
-			project.writing = written.catch(() => {});
-			await written;
 		} catch (error) {
 			console.warn("Couldn't update the project's thumbnail", error);
 		}
@@ -419,7 +428,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			clearTimeout(saveTimer);
 			pendingSave = null;
 		}
-		const closed = closing.then(async () => {
+		return afterClosing(async () => {
 			const project = openProjects.get(id);
 			if (!project) return;
 			await project.writing;
@@ -439,8 +448,6 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			for (const url of project.images.keys()) storage.releaseImage(url);
 			await storage.releaseProject(id);
 		});
-		closing = closed.catch(() => {});
-		return closed;
 	}
 
 	/**
@@ -599,7 +606,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			}
 			// With the other writes to closed projects, so one opening meanwhile
 			// waits for this rather than finding it claimed.
-			const written = closing.then(async () => {
+			const written = await afterClosing(async () => {
 				if (openProjects.has(id) || !(await storage.claimProject(id))) {
 					return false;
 				}
@@ -617,8 +624,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 					await storage.releaseProject(id);
 				}
 			});
-			closing = written.catch(() => {});
-			return (await written) ? url : null;
+			return written ? url : null;
 		} catch (error) {
 			console.warn("Couldn't update the project's thumbnail", error);
 			return null;
