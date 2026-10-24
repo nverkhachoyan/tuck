@@ -4,7 +4,6 @@ import {
 	type ReactNode,
 	type Ref,
 	useCallback,
-	useEffect,
 	useImperativeHandle,
 	useLayoutEffect,
 	useMemo,
@@ -13,7 +12,6 @@ import {
 } from "react";
 import {
 	type LayoutChangeEvent,
-	Platform,
 	Pressable,
 	StyleSheet,
 	Text,
@@ -66,7 +64,9 @@ import { useCanvasTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useDialDragGesture } from "./useDialDragGesture";
 import { useFindTap } from "./useFindTap";
+import { useKeepTextFocus } from "./useKeepTextFocus";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
+import { useShiftHeld } from "./useShiftHeld";
 import { useTextEditGesture } from "./useTextEditGesture";
 import { useToolStroke } from "./useToolStroke";
 import { useViewGesture } from "./useViewGesture";
@@ -243,40 +243,9 @@ export function EditorCanvas({
 	const [imageFailed, setImageFailed] = useState(false);
 	const containerRef = useRef<View>(null);
 	const live = useLiveTransform();
-	const aspectLocked = useSharedValue(false);
-
-	// React Native Gesture Handler does not expose keyboard modifiers on a Pan.
-	// Keep Shift in a shared value so the UI-thread resize gesture can read it.
-	useEffect(() => {
-		// Native has a `window`, but no events on it.
-		if (Platform.OS !== "web") return;
-		const setLock = (event: KeyboardEvent) => {
-			aspectLocked.value = event.shiftKey;
-		};
-		window.addEventListener("keydown", setLock);
-		window.addEventListener("keyup", setLock);
-		const clearLock = () => {
-			aspectLocked.value = false;
-		};
-		window.addEventListener("blur", clearLock);
-		return () => {
-			window.removeEventListener("keydown", setLock);
-			window.removeEventListener("keyup", setLock);
-			window.removeEventListener("blur", clearLock);
-		};
-	}, [aspectLocked]);
-
-	// On web, a press on the canvas would take the focus, and with it the
-	// keyboard, from the input typing into the edited text. The press places
-	// its caret instead.
+	const aspectLocked = useShiftHeld();
 	const editingText = textEdit !== null;
-	useEffect(() => {
-		if (Platform.OS !== "web" || !editingText) return;
-		const node = containerRef.current as unknown as HTMLElement | null;
-		const keepFocus = (event: MouseEvent) => event.preventDefault();
-		node?.addEventListener("mousedown", keepFocus);
-		return () => node?.removeEventListener("mousedown", keepFocus);
-	}, [editingText]);
+	useKeepTextFocus(containerRef, editingText);
 
 	const handleImageError = useCallback((error: unknown) => {
 		console.warn("Couldn't load an image layer", error);

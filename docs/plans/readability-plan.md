@@ -138,7 +138,7 @@ Rename the canvas's `targetImage` (line 644) to `outlinedImage`. It is the image
 - [x] `refactor: move the canvas's tool strokes into useToolStroke`
 - [x] `refactor: move Find's taps on the canvas into useFindTap`
 - [x] `refactor: move the canvas's hover cursor into useCanvasCursor`
-- [ ] `refactor: move Shift and the text-focus press into their own hooks`
+- [x] `refactor: move Shift and the text-focus press into their own hooks`
 
 * `useToolStroke`: `strokePoints`, `strokeId`, `landedStrokeId`, `handleStroke`, the paint gesture, and `liveStroke`. It takes the lookups from 4.3.
 * `useFindTap`: `handleDetectionTap` and its tap, built with `useCanvasTap`.
