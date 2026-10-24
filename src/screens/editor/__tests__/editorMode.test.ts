@@ -9,10 +9,12 @@ import {
 	editorModeReducer,
 	initialEditorMode,
 	type ModeTargets,
+	openTray,
 	settle,
 	shortcutCommand,
 	type TextEditState,
 	takesKeys,
+	toolImageId,
 } from "../editorMode.ts";
 import type { Shortcut } from "../shortcuts.ts";
 
@@ -343,6 +345,61 @@ describe("settle", () => {
 			{ type: "settle", targets: targets({ selectedTextId: "a" }) },
 		);
 		assert.equal(settled.textPicker, null);
+	});
+});
+
+describe("openTray", () => {
+	test("is the tool whose tray is open", () => {
+		assert.equal(openTray({ type: "idle" }), null);
+		assert.equal(openTray({ type: "crop" }), null);
+		assert.equal(openTray({ type: "text", edit: edit("text") }), null);
+		assert.equal(
+			openTray({ type: "tool", tool: "draw", optionsOpen: false }),
+			null,
+		);
+		assert.equal(
+			openTray({ type: "tool", tool: "draw", optionsOpen: true }),
+			"draw",
+		);
+		assert.equal(
+			openTray({ type: "tool", tool: "adjust", layerId: "photo" }),
+			null,
+		);
+		assert.equal(
+			openTray({
+				type: "tool",
+				tool: "cutOut",
+				layerId: "photo",
+				optionsOpen: true,
+			}),
+			"cutOut",
+		);
+	});
+});
+
+describe("toolImageId", () => {
+	const adjusting = {
+		type: "tool",
+		tool: "adjust",
+		layerId: "photo",
+	} as const;
+	const cutting = {
+		type: "tool",
+		tool: "cutOut",
+		layerId: "photo",
+		optionsOpen: false,
+	} as const;
+
+	test("is the image Adjust or Cut out works on", () => {
+		assert.equal(toolImageId(adjusting, "adjust"), "photo");
+		assert.equal(toolImageId(adjusting, "cutOut"), null);
+		assert.equal(toolImageId(cutting, "cutOut"), "photo");
+		assert.equal(toolImageId(cutting, "adjust"), null);
+		assert.equal(
+			toolImageId({ type: "tool", tool: "draw", optionsOpen: false }, "adjust"),
+			null,
+		);
+		assert.equal(toolImageId({ type: "idle" }, "cutOut"), null);
 	});
 });
 

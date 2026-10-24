@@ -314,6 +314,19 @@ function hasTray(mode: EditorMode): mode is TrayTool {
 	return mode.type === "tool" && mode.tool !== "adjust";
 }
 
+/** The tool whose tray is open, or null when none is. */
+export function openTray(mode: EditorMode) {
+	return hasTray(mode) && mode.optionsOpen ? mode.tool : null;
+}
+
+/** The image Adjust or Cut out works on, or null when that tool isn't open. */
+export function toolImageId(
+	mode: EditorMode,
+	tool: "adjust" | "cutOut",
+): string | null {
+	return mode.type === "tool" && mode.tool === tool ? mode.layerId : null;
+}
+
 function withoutLayers(
 	sheet: EditorModeState["sheet"],
 ): EditorModeState["sheet"] {

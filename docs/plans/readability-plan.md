@@ -70,7 +70,7 @@ Adjust's hook is the only tool hook called a controller (`useDrawTool`, `useReda
 
 ### 3.2 Questions about the mode
 
-- [ ] `refactor: ask editorMode which tray is open and which image a tool works on`
+- [x] `refactor: ask editorMode which tray is open and which image a tool works on`
 
 `mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen` is written in `EditorScreen` (`toolOptionsOpen`) and again in `ToolTrays` (`tray`). `hasTray` in `editorMode.ts` is already the first two checks. `EditorScreen` also works out `adjustedLayer` and `cutLayer` with the same `mode.type === "tool" && mode.tool === …` test. Add to `editorMode.ts`, with tests:
 

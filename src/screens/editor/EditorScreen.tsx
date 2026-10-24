@@ -35,7 +35,13 @@ import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import { DockContent, type DockPanel, ToolTrays } from "./EditorDock";
-import { type ShortcutCommand, shortcutCommand, takesKeys } from "./editorMode";
+import {
+	openTray,
+	type ShortcutCommand,
+	shortcutCommand,
+	takesKeys,
+	toolImageId,
+} from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
@@ -188,16 +194,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// out, taps pick a subject, or strokes paint the cut. A tap away from what
 	// the tool works on puts it down, as Done does.
 	const tool = mode.type === "tool" ? mode.tool : null;
-	const toolOptionsOpen =
-		mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen;
-	const adjustedLayer =
-		mode.type === "tool" && mode.tool === "adjust"
-			? visibleImageLayer(document, mode.layerId)
-			: undefined;
-	const cutLayer =
-		mode.type === "tool" && mode.tool === "cutOut"
-			? visibleImageLayer(document, mode.layerId)
-			: undefined;
+	const toolOptionsOpen = openTray(mode) !== null;
+	const adjustImageId = toolImageId(mode, "adjust");
+	const adjustedLayer = adjustImageId
+		? visibleImageLayer(document, adjustImageId)
+		: undefined;
+	const cutImageId = toolImageId(mode, "cutOut");
+	const cutLayer = cutImageId
+		? visibleImageLayer(document, cutImageId)
+		: undefined;
 	// A tool's changes are one session: one undo step, or none if canceled.
 	// Closing the tool any way, leaving the editor included, keeps them.
 	useEffect(() => {

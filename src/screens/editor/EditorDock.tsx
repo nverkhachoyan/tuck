@@ -1,9 +1,10 @@
 import type { ComponentProps, ReactNode } from "react";
 import type { Adjustments } from "@/model/adjustments";
-import type {
-	EditorModeAction,
-	EditorModeState,
-	EditorTool,
+import {
+	type EditorModeAction,
+	type EditorModeState,
+	type EditorTool,
+	openTray,
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
 import { LayerActionsPanel } from "./shell/LayerActionsPanel";
@@ -60,10 +61,7 @@ export function ToolTrays({
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = textEditing;
-	const tray =
-		mode.type === "tool" && mode.tool !== "adjust" && mode.optionsOpen
-			? mode.tool
-			: null;
+	const tray = openTray(mode);
 	const closeTray = () => dispatchMode({ type: "closeToolOptions" });
 	// For a tray whose colors go to `apply`: a color from its picker, which
 	// becomes the custom color too, and the eyedropper, for a color from the
