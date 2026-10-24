@@ -12,14 +12,12 @@ import {
 	targetImageLayer,
 	visibleImageLayer,
 } from "@/model/framing";
-import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
+import { type Point, toLayerSpace } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
-import type { ShapePlacement } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage, openProjectName } from "@/projects/projectService";
-import { sampleColor } from "@/render/renderDocument";
 import { textIndexAt } from "@/render/textLayerLayout";
 import {
 	selectSelectedLayer,
@@ -34,7 +32,6 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
-import type { CanvasInput, CanvasTool } from "./canvas/canvasInput";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import {
 	DockContent,
@@ -51,32 +48,21 @@ import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
-import { isCustomColor } from "./shell/ColorSwatches";
 import { Dock, DockFooter, InspectorBackdrop } from "./shell/Dock";
-import type { DialDrag } from "./shell/dialDrag";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
 import type { Shortcut, ToolKey } from "./shortcuts";
-import {
-	ADJUST_DIAL_MAX,
-	ADJUST_DIAL_SCALE,
-	useAdjustController,
-} from "./tools/adjust/useAdjustController";
+import { useAdjustController } from "./tools/adjust/useAdjustController";
 import { CropTool } from "./tools/crop/CropTool";
-import {
-	cutBrush,
-	cutOutTool,
-	parseCutOutSettings,
-} from "./tools/cutout/cutOutSettings";
+import { cutOutTool, parseCutOutSettings } from "./tools/cutout/cutOutSettings";
 import { useCutOut } from "./tools/cutout/useCutOut";
 import { useCutRedaction } from "./tools/cutout/useCutRedaction";
-import { brushFor, shapeStyleFor } from "./tools/draw/brushSettings";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel } from "./tools/layers/LayersPanel";
-import { maskBrush, redactionEffect } from "./tools/redact/redactSettings";
+import { redactionEffect } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
 import { StickerSheet } from "./tools/stickers/StickerSheet";
 import type { StickerImage } from "./tools/stickers/savedStickers";
@@ -86,6 +72,7 @@ import { useStickerSave } from "./tools/stickers/useStickerSave";
 import { TextEditor } from "./tools/text/TextEditor";
 import { type TextEditing, useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
+import { useCanvasInput } from "./useCanvasInput";
 import { useDeleteNotice } from "./useDeleteNotice";
 import { useEditorActions } from "./useEditorActions";
 import { RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
@@ -154,16 +141,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		addImageLayer,
 		addStickerLayer,
 		duplicateSelectedLayer,
-		drawStroke,
-		addRedactionBox,
 		addMaskedRedaction,
 		deleteLayerGroup,
-		paintRedaction,
-		addShape,
 		setAdjustments,
 		setMask,
 		invertMask,
-		paintMask,
 		transformLayer,
 		resizeBox,
 		nudgeLayer,
@@ -302,107 +284,27 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 	const cutTool = cutOutTool(cutSettings, cutOut.canFind);
-	const canvasTool = useMemo((): CanvasTool | null => {
-		if (eyedropper) return { type: "pickColor" };
-		if (cutLayer) {
-			const brush = cutBrush(cutSettings, cutTool, documentSize);
-			return brush
-				? { type: "cutBrush", layerId: cutLayer.id, brush }
-				: { type: "pickSubject", layerId: cutLayer.id };
-		}
-		if (tool === "draw" && draw.settings.tool === "shape") {
-			return {
-				type: "drawShape",
-				shape: draw.settings.shape,
-				style: shapeStyleFor(draw.settings, documentSize),
-			};
-		}
-		if (tool === "draw") {
-			return { type: "draw", brush: brushFor(draw.settings, documentSize) };
-		}
-		if (tool !== "redact") return null;
-		const effect = redactionEffect(redact.settings, documentSize);
-		const brush = maskBrush(redact.settings, documentSize);
-		return brush
-			? { type: "redactBrush", brush, effect }
-			: { type: "redactBox", effect };
-	}, [
-		eyedropper,
-		cutLayer,
-		cutSettings,
-		cutTool,
-		tool,
-		draw.settings,
-		redact.settings,
-		documentSize,
-	]);
-	// A sideways drag over the photo turns Adjust's dial, as the dial does.
-	const { dialValue, begin, change, end } = adjustController;
-	const adjustDrag = useMemo(
-		(): DialDrag => ({
-			value: dialValue,
-			scale: ADJUST_DIAL_SCALE,
-			max: ADJUST_DIAL_MAX,
-			onBegin: begin,
-			onChange: change,
-			onEnd: end,
-		}),
-		[dialValue, begin, change, end],
-	);
-	// What input on the canvas does: the eyedropper's or a painting tool's,
-	// then Find's taps, Adjust's stillness, typing, or else selecting.
-	const canvasInput = useMemo((): CanvasInput => {
-		if (canvasTool) return { type: "tool", tool: canvasTool };
-		if (tool === "find" && targetImage) {
-			return {
-				type: "find",
-				imageId: targetImage.id,
-				onToggle: find.toggle,
-			};
-		}
-		if (tool === "adjust") return { type: "adjust", drag: adjustDrag };
-		if (editingText) return { type: "editText" };
-		return { type: "select" };
-	}, [canvasTool, tool, targetImage, find.toggle, editingText, adjustDrag]);
-	const handlePaintStroke = (points: number[]) => {
-		if (canvasTool?.type === "draw") {
-			drawStroke({ ...canvasTool.brush, points });
-		} else if (canvasTool?.type === "redactBrush") {
-			paintRedaction({ ...canvasTool.brush, points }, canvasTool.effect);
-		} else if (canvasTool?.type === "cutBrush") {
-			paintMask(canvasTool.layerId, { ...canvasTool.brush, points });
-		}
-	};
 	// A tap on the image being cut out cuts out only the subject there.
 	const pickSubject = (point: Point) => {
 		const at = cutLayer && imagePointAt(cutLayer, point);
 		if (cutLayer && at) void cutOut.find(cutLayer, at);
 	};
-	// A picked color becomes the custom color too, unless a swatch already
-	// has it. Where the canvas shows nothing, it keeps waiting for a tap.
-	const handlePickPoint = async (point: Point) => {
-		if (canvasTool?.type === "pickSubject") {
-			pickSubject(point);
-			return;
-		}
-		const target = eyedropper;
-		if (!target) return;
-		const color = await sampleColor(document, point).catch(() => null);
-		if (!color) return;
-		target.apply(color);
-		if (isCustomColor(color)) setCustomColor(color);
-		dispatchMode({ type: "stopEyedropper", eyedropper: target });
-	};
-	const handleDrawBox = (rect: Rect) => {
-		if (canvasTool?.type === "redactBox") {
-			addRedactionBox(rect, canvasTool.effect);
-		}
-	};
-	const handleDrawShape = (placement: ShapePlacement) => {
-		if (canvasTool?.type === "drawShape") {
-			addShape(canvasTool.shape, placement, canvasTool.style);
-		}
-	};
+	const canvasInput = useCanvasInput({
+		document,
+		size: documentSize,
+		tool,
+		eyedropper,
+		editingText,
+		draw: draw.settings,
+		redact: redact.settings,
+		cut: { layer: cutLayer, settings: cutSettings, tool: cutTool, pickSubject },
+		findImageId: targetImage?.id ?? null,
+		onFindToggle: find.toggle,
+		adjustController,
+		actions,
+		dispatchMode,
+		onCustomColor: setCustomColor,
+	});
 
 	const { error: autosaveError, retry: retryAutosave } = useAutosave(
 		projectId,
@@ -825,14 +727,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onCommitTransform={transformLayer}
 							onResizeBox={resizeBox}
 							onNudgeLayer={nudgeLayer}
-							input={canvasInput}
+							{...canvasInput}
 							detections={
 								tool === "find" && !eyedropper ? find.overlay : undefined
 							}
-							onPaintStroke={handlePaintStroke}
-							onDrawBox={handleDrawBox}
-							onDrawShape={handleDrawShape}
-							onPickPoint={handlePickPoint}
 							onToolInteractionEnd={() =>
 								dispatchMode({ type: "closeToolOptions" })
 							}
