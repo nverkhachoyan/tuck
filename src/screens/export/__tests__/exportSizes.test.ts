@@ -20,7 +20,17 @@ describe("exportSizes", () => {
 		]);
 	});
 
-	test("leaves out presets that aren't smaller", () => {
+	test("leaves out presets that aren't much smaller", () => {
+		assert.deepEqual(sizes(1280, 926), [[1280, 926]]);
+		assert.deepEqual(sizes(4000, 3000), [
+			[4000, 3000],
+			[2048, 1536],
+			[1080, 810],
+		]);
+		assert.deepEqual(sizes(2400, 1600), [
+			[2400, 1600],
+			[1080, 720],
+		]);
 		assert.deepEqual(sizes(1500, 1000), [
 			[1500, 1000],
 			[1080, 720],

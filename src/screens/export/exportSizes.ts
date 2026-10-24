@@ -7,7 +7,10 @@ const MAX_PIXELS = 25_000_000;
 const MAX_SIDE = 8192;
 
 // Smaller sizes offered, by their longer side: common for sharing online.
+// Each is offered only at `SMALLER_AT_MOST` of the full size or less, so a
+// smaller size is worth choosing: a 1280-wide photo isn't offered 1080.
 const PRESETS = [2048, 1080];
+const SMALLER_AT_MOST = 0.75;
 
 export type ExportSize = Size & {
 	// Of the document's own size.
@@ -16,7 +19,8 @@ export type ExportSize = Size & {
 
 /**
  * The sizes a document can be exported at, largest first: the full size
- * (shrunk only past what export can hold), then each smaller preset.
+ * (shrunk only past what export can hold), then each preset that's much
+ * smaller.
  */
 export function exportSizes(document: Size): ExportSize[] {
 	const longSide = Math.max(document.width, document.height);
@@ -27,7 +31,9 @@ export function exportSizes(document: Size): ExportSize[] {
 	);
 	const scales = [
 		full,
-		...PRESETS.map((side) => side / longSide).filter((scale) => scale < full),
+		...PRESETS.map((side) => side / longSide).filter(
+			(scale) => scale <= full * SMALLER_AT_MOST,
+		),
 	];
 	return scales.map((scale) => ({
 		scale,
