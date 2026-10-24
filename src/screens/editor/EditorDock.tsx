@@ -28,7 +28,11 @@ import {
 	RedactPanel,
 } from "./tools/redact/RedactPanel";
 import type { useRedactTool } from "./tools/redact/useRedactTool";
-import { TextColorPicker, TextStylePanel } from "./tools/text/TextStylePanel";
+import {
+	TextBar,
+	TextColorPicker,
+	TextStylePanel,
+} from "./tools/text/TextStylePanel";
 import type { useTextEditing } from "./tools/text/useTextEditing";
 
 // What the dock shows: a tool's panel, text's style, the selected layer's
@@ -66,8 +70,9 @@ export function ToolTrays({
 	modeState: EditorModeState;
 	onCustomColor: (color: string) => void;
 	bottomInset: number;
-	// A wide screen shows Draw, Redact, Find, and Cut out in the header, so
-	// their trays stay shut. Find's results are an inspector section.
+	// A wide screen shows a tool's options in the header, so its tray stays
+	// shut. Find's results are an inspector section. Text's colors open from
+	// chips in the bar.
 	wide?: boolean;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
@@ -148,7 +153,7 @@ export function ToolTrays({
 						onClear={find.clear}
 					/>
 				)}
-			{textPicker && styledText && (
+			{textPicker && styledText && !wide && (
 				<TextColorPicker
 					layer={styledText}
 					colorKey={textPicker.key}
@@ -169,25 +174,30 @@ export function ToolTrays({
 /**
  * What the wide editor's header holds instead of the project's title: the
  * open tool's options. Phones have no bar; the dock shows the same tool.
- * Draw, Redact, Find, and Cut out so far. The others still use the inspector.
+ * Draw, Redact, Find, Cut out, and text so far. The others still use the
+ * inspector.
  */
 export function ContextBarContent({
 	panel,
 	dispatchMode,
-	tools: { draw, redact, cut },
+	tools: { draw, redact, cut, text },
 	customColor,
 	onCustomColor,
 	onFind,
 	onCancel,
 	onDone,
 	doneLabel,
+	editingText = false,
+	restoreTextFocus,
 }: ModeProps & {
 	panel: DockPanel;
 	onCustomColor: (color: string) => void;
 	onFind?: () => void;
-	onCancel: () => void;
+	onCancel?: () => void;
 	onDone: () => void;
 	doneLabel?: string;
+	editingText?: boolean;
+	restoreTextFocus?: () => void;
 }) {
 	// For a bar whose colors go to `apply`: a color from its picker, which
 	// becomes the custom color too, and the eyedropper, for a color from the
@@ -280,6 +290,39 @@ export function ContextBarContent({
 					onInvert={cut.invert}
 					redacting={cut.redacting}
 					onRedact={cut.redact}
+				/>
+			</ContextBar>
+		);
+	}
+	if (panel === "text") {
+		const { styledText } = text;
+		if (!styledText) return null;
+		return (
+			<ContextBar
+				title="Text"
+				keepFocus={editingText}
+				onCancel={onCancel}
+				onDone={onDone}
+				doneLabel={doneLabel}
+				doneShortcut="Escape"
+			>
+				<TextBar
+					layer={styledText}
+					customColor={customColor}
+					onChange={text.style}
+					onPickCustom={onCustomColor}
+					onEyedropper={(key) =>
+						dispatchMode({
+							type: "startEyedropper",
+							eyedropper: {
+								apply: (color) => {
+									text.style({ [key]: color });
+									onCustomColor(color);
+								},
+							},
+						})
+					}
+					restoreFocus={editingText ? restoreTextFocus : undefined}
 				/>
 			</ContextBar>
 		);

@@ -1,8 +1,9 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
+	Platform,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -33,6 +34,7 @@ export function ContextBar({
 	onDone,
 	doneLabel,
 	doneShortcut,
+	keepFocus = false,
 	children,
 }: {
 	title: string;
@@ -41,10 +43,25 @@ export function ContextBar({
 	onDone: () => void;
 	doneLabel?: string;
 	doneShortcut?: string;
+	// While text is being typed, a press in the bar must not take the caret
+	// from the hidden input. Canceling the press's default leaves it there.
+	keepFocus?: boolean;
 	children: ReactNode;
 }) {
+	const barRef = useRef<View>(null);
+	useEffect(() => {
+		if (!keepFocus || Platform.OS !== "web") return;
+		const node = barRef.current as unknown as HTMLElement | null;
+		// Capture, before the control itself: the browser moves focus on
+		// pointer-down unless that default is canceled. The canvas does the
+		// same so a tap there places the caret instead of dismissing the key.
+		const keep = (event: MouseEvent) => event.preventDefault();
+		node?.addEventListener("mousedown", keep, true);
+		return () => node?.removeEventListener("mousedown", keep, true);
+	}, [keepFocus]);
 	return (
 		<View
+			ref={barRef}
 			accessibilityRole="toolbar"
 			accessibilityLabel={title}
 			style={styles.bar}

@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import {
 	Pressable,
 	ScrollView,
@@ -21,9 +21,10 @@ import { Chip } from "@/ui/Chip";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { Popover } from "@/ui/Popover";
 import { colors, typography, webTransition } from "@/ui/theme";
 import type { TextColorKey } from "../../editorMode";
-import { ColorPicker } from "../../shell/ColorPicker";
+import { ColorChip, ColorPicker } from "../../shell/ColorPicker";
 import { ColorSwatches, isCustomColor } from "../../shell/ColorSwatches";
 import { ToolOption, ToolOptions } from "../../shell/ToolOptions";
 
@@ -164,6 +165,113 @@ export function TextStylePanel({
 				/>
 			</View>
 		</View>
+	);
+}
+
+/**
+ * A text layer's style in the wide editor's header: alignment, then a chip
+ * for the font and one each for the text, its outline, and its box. The
+ * phone keeps the tabs. `restoreFocus` puts the caret back in the hidden
+ * input when a chip's palette closes, and only while text is being typed.
+ */
+export function TextBar({
+	layer,
+	customColor,
+	onChange,
+	onPickCustom,
+	onEyedropper,
+	restoreFocus,
+}: {
+	layer: TextLayer;
+	customColor: string | null;
+	onChange: (patch: TextLayerEdit) => void;
+	onPickCustom: (color: string) => void;
+	onEyedropper: (key: TextColorKey) => void;
+	restoreFocus?: () => void;
+}) {
+	const chip = (key: TextColorKey, noneLabel?: string) => (
+		<ColorChip
+			key={key}
+			label={COLOR_NAMES[key]}
+			value={layer[key]}
+			customColor={customColor}
+			noneLabel={noneLabel}
+			onPick={(color) => {
+				if (key === "color" && !color) return;
+				onChange({ [key]: color });
+			}}
+			onPickCustom={(color) => {
+				onChange({ [key]: color });
+				onPickCustom(color);
+			}}
+			onEyedropper={() => onEyedropper(key)}
+			restoreFocus={restoreFocus}
+		/>
+	);
+	return (
+		<>
+			<AlignPicker
+				value={layer.align}
+				onPick={(align) => onChange({ align })}
+			/>
+			<FontChip
+				font={layer.font}
+				onPick={(font) => onChange({ font })}
+				restoreFocus={restoreFocus}
+			/>
+			{chip("color")}
+			{chip("outlineColor", "No outline")}
+			{chip("backgroundColor", "No background")}
+		</>
+	);
+}
+
+/** The font in use, opening the previews. */
+function FontChip({
+	font,
+	onPick,
+	restoreFocus,
+}: {
+	font: TextFont;
+	onPick: (font: TextFont) => void;
+	restoreFocus?: () => void;
+}) {
+	const anchor = useRef<View>(null);
+	const [open, setOpen] = useState(false);
+	return (
+		<>
+			<Pressable
+				ref={anchor}
+				accessibilityRole="button"
+				accessibilityLabel={FONT_LABELS[font]}
+				accessibilityState={{ expanded: open }}
+				onPress={() => setOpen((shown) => !shown)}
+				style={(state) => [
+					styles.fontButton,
+					webTransition,
+					interaction(state).hovered && styles.fontButtonHovered,
+					interaction(state).pressed && styles.fontButtonPressed,
+				]}
+			>
+				<Text
+					style={[
+						styles.fontButtonLabel,
+						{ fontFamily: TEXT_FONTS[font].family },
+					]}
+				>
+					{FONT_LABELS[font]}
+				</Text>
+			</Pressable>
+			<Popover
+				anchor={anchor}
+				open={open}
+				onClose={() => setOpen(false)}
+				label="Font"
+				restoreFocus={restoreFocus}
+			>
+				<FontPicker value={font} onPick={onPick} />
+			</Popover>
+		</>
 	);
 }
 
@@ -451,6 +559,7 @@ const styles = StyleSheet.create({
 	},
 	aligns: {
 		flexDirection: "row",
+		flexShrink: 0,
 		justifyContent: "center",
 		gap: 12,
 	},
@@ -467,5 +576,22 @@ const styles = StyleSheet.create({
 	},
 	fontLabelSelected: {
 		color: colors.onHighlight,
+	},
+	fontButton: {
+		height: 44,
+		flexShrink: 0,
+		justifyContent: "center",
+		paddingHorizontal: 12,
+		borderRadius: 22,
+	},
+	fontButtonHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	fontButtonPressed: {
+		backgroundColor: colors.pressedOverlay,
+	},
+	fontButtonLabel: {
+		fontSize: 16,
+		color: colors.textPrimary,
 	},
 });

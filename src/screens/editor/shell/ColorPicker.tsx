@@ -108,6 +108,7 @@ export function ColorChip({
 	onPick,
 	onPickCustom,
 	onEyedropper,
+	restoreFocus,
 }: {
 	label: string;
 	value: string | null;
@@ -116,6 +117,8 @@ export function ColorChip({
 	onPick: (color: string | null) => void;
 	onPickCustom: (color: string) => void;
 	onEyedropper?: () => void;
+	// Where focus goes when the palette closes, instead of back here.
+	restoreFocus?: () => void;
 }) {
 	const anchor = useRef<View>(null);
 	const [open, setOpen] = useState(false);
@@ -147,7 +150,13 @@ export function ColorChip({
 					{value === null && <View style={styles.chipSlash} />}
 				</View>
 			</Pressable>
-			<Popover anchor={anchor} open={open} onClose={close} label={label}>
+			<Popover
+				anchor={anchor}
+				open={open}
+				onClose={close}
+				label={label}
+				restoreFocus={restoreFocus}
+			>
 				<ColorOptions
 					value={value}
 					customColor={customColor}

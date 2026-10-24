@@ -35,18 +35,24 @@ const FOCUSABLE = [
  * - Escape closes it in the capture phase, before the editor's shortcuts,
  *   which listen as the key bubbles, so Escape doesn't also finish a tool.
  * - It's a dialog: focus moves into it, Tab stays inside, and focus returns
- *   to `anchor` when it closes.
+ *   to `anchor` when it closes, or to `restoreFocus` when that's given.
  */
 export function Popover({
 	anchor,
 	open,
 	onClose,
 	label,
+	restoreFocus,
 	children,
 }: PopoverProps) {
 	if (!open) return null;
 	return (
-		<PopoverFrame anchor={anchor} label={label} onClose={onClose}>
+		<PopoverFrame
+			anchor={anchor}
+			label={label}
+			onClose={onClose}
+			restoreFocus={restoreFocus}
+		>
 			{children}
 		</PopoverFrame>
 	);
@@ -56,17 +62,21 @@ function PopoverFrame({
 	anchor,
 	label,
 	onClose,
+	restoreFocus,
 	children,
 }: {
 	anchor: RefObject<View | null>;
 	label: string;
 	onClose: () => void;
+	restoreFocus?: () => void;
 	children: ReactNode;
 }) {
 	const layerRef = useRef<View>(null);
 	const cardRef = useRef<View>(null);
 	const onCloseRef = useRef(onClose);
 	onCloseRef.current = onClose;
+	const restoreRef = useRef(restoreFocus);
+	restoreRef.current = restoreFocus;
 	const [position, setPosition] = useState<{ left: number; top: number }>();
 	const placeRef = useRef<() => void>(() => {});
 
@@ -130,7 +140,9 @@ function PopoverFrame({
 		window.addEventListener("keydown", handleKeyDown, true);
 		return () => {
 			window.removeEventListener("keydown", handleKeyDown, true);
-			returnTo?.focus();
+			const restore = restoreRef.current;
+			if (restore) restore();
+			else returnTo?.focus();
 		};
 	}, [anchor]);
 

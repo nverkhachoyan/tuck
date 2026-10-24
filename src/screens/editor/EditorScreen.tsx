@@ -315,15 +315,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			: selectedLayer
 				? "layer"
 				: "idle";
-	// Draw, Redact, Find, and Cut out live in the header on a wide screen, and
-	// the inspector keeps the layers. Find's results sit above them. The other
-	// tools still take the inspector.
+	// Draw, Redact, Find, Cut out, and text live in the header on a wide
+	// screen, and the inspector keeps the layers. Find's results sit above
+	// them. The other tools still take the inspector.
 	const inBar =
 		wide &&
 		(panelKind === "draw" ||
 			panelKind === "redact" ||
 			panelKind === "find" ||
-			panelKind === "cutOut");
+			panelKind === "cutOut" ||
+			panelKind === "text");
 
 	const focused = useIsFocused();
 	const {
@@ -539,9 +540,25 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									customColor={customColor}
 									onCustomColor={setCustomColor}
 									onFind={targetImage ? startTool.find : undefined}
-									onCancel={cancel}
-									onDone={done}
+									onCancel={
+										panelKind === "text"
+											? editingText
+												? textEditing.cancel
+												: undefined
+											: cancel
+									}
+									onDone={
+										panelKind === "text"
+											? editingText
+												? textEditing.finish
+												: () => selectLayer(null)
+											: done
+									}
 									doneLabel={findDoneLabel}
+									editingText={editingText}
+									restoreTextFocus={() =>
+										textEditing.editorRef.current?.focus()
+									}
 								/>
 							) : undefined
 						}

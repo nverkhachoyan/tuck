@@ -1,7 +1,9 @@
 import {
 	type ReactNode,
 	type RefObject,
+	useEffect,
 	useLayoutEffect,
+	useRef,
 	useState,
 } from "react";
 import {
@@ -21,6 +23,11 @@ export type PopoverProps = {
 	onClose: () => void;
 	/** Names the dialog for screen readers. */
 	label: string;
+	/**
+	 * Where focus goes when the card closes, instead of back to `anchor`.
+	 * Text editing uses it so the caret returns to the hidden input.
+	 */
+	restoreFocus?: () => void;
 	children: ReactNode;
 };
 
@@ -28,14 +35,15 @@ export type PopoverProps = {
  * A card anchored below a control, or above it near the window's bottom,
  * kept inside the window's edges. An outside press closes it. It's a dialog
  * for screen readers. On web, Escape closes it before the page's shortcuts
- * see the key, and focus moves into it and back to `anchor` (see
- * `Popover.web.tsx`).
+ * see the key, and focus moves into it and back to `anchor` when it closes,
+ * or to `restoreFocus` when that's given (see `Popover.web.tsx`).
  */
 export function Popover({
 	anchor,
 	open,
 	onClose,
 	label,
+	restoreFocus,
 	children,
 }: PopoverProps) {
 	if (!open) return null;
@@ -47,7 +55,12 @@ export function Popover({
 			onRequestClose={onClose}
 			statusBarTranslucent
 		>
-			<PopoverFrame anchor={anchor} label={label} onClose={onClose}>
+			<PopoverFrame
+				anchor={anchor}
+				label={label}
+				onClose={onClose}
+				restoreFocus={restoreFocus}
+			>
 				{children}
 			</PopoverFrame>
 		</Modal>
@@ -58,11 +71,13 @@ function PopoverFrame({
 	anchor,
 	label,
 	onClose,
+	restoreFocus,
 	children,
 }: {
 	anchor: RefObject<View | null>;
 	label: string;
 	onClose: () => void;
+	restoreFocus?: () => void;
 	children: ReactNode;
 }) {
 	const viewport = useWindowDimensions();
@@ -73,6 +88,14 @@ function PopoverFrame({
 			setAnchorRect({ x, y, width, height });
 		});
 	}, [anchor]);
+	const restoreRef = useRef(restoreFocus);
+	restoreRef.current = restoreFocus;
+	// The modal took the keyboard. Hand it back when the card goes, the same
+	// moment the web card returns focus. The callback's identity changes with
+	// every render, so it's read from a ref and the effect runs once.
+	useEffect(() => {
+		return () => restoreRef.current?.();
+	}, []);
 	const position =
 		anchorRect && cardSize
 			? placePopover(anchorRect, cardSize, viewport)
