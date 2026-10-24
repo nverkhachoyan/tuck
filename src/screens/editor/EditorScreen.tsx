@@ -175,7 +175,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
 	// what's found. While adjusting, the canvas holds still. While cutting
 	// out, taps pick a subject, or strokes paint the cut. A tap away from what
-	// the tool works on puts it down, as Done does.
+	// the tool works on puts it down, as Done does. The session must begin
+	// before `useToolLifecycle`'s effect starts Cut out's cut, so this call
+	// stays ahead of it.
 	const tool = mode.type === "tool" ? mode.tool : null;
 	useToolSession(tool);
 	const textEditing = useTextEditing({

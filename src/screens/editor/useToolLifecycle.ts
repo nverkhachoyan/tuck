@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { Framing } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
@@ -15,9 +15,11 @@ import type { useTextEditing } from "./tools/text/useTextEditing";
 /**
  * A tool's changes as one session: one undo step, or none if canceled.
  * Closing the tool any way, leaving the editor included, keeps them. Called
- * ahead of the tool hooks, so its effect runs before theirs: none of those
- * write the store from an effect, and moving this one later would still
- * change the order effects run in.
+ * ahead of the tool hooks and `useToolLifecycle`, so its effect runs before
+ * theirs. Only `useToolLifecycle` writes the store from an effect, starting
+ * Cut out's cut once this session has begun: moving this call later would
+ * put a remembered cut in the session's starting document, where Cancel
+ * can't take it back.
  */
 export function useToolSession(tool: EditorTool | null) {
 	const { beginSession, commitSession } = useStore((state) => state.actions);
@@ -28,7 +30,11 @@ export function useToolSession(tool: EditorTool | null) {
 	}, [tool, beginSession, commitSession]);
 }
 
-/** How the editor's tools open and close: their starters, Done, and Cancel. */
+/**
+ * How the editor's tools open and close: their starters, Done, and Cancel.
+ * Called after `useToolSession`, whose effect must run before the one here
+ * that starts Cut out's cut.
+ */
 export function useToolLifecycle({
 	mode,
 	targetImage,
@@ -87,12 +93,28 @@ export function useToolLifecycle({
 		cancelSession();
 		closeTool();
 	};
-	// The selected photo, or else the main one, like Find.
+	// The selected photo, or else the main one, like Find. The cut starts
+	// from the effect below, once Cut out's session has begun: a remembered
+	// mask lands at once, and would otherwise be part of the document the
+	// session started with.
+	const pendingCut = useRef<ImageLayer | null>(null);
+	const cutOutLayerId =
+		mode.type === "tool" && mode.tool === "cutOut" ? mode.layerId : null;
 	const startCutOut = () => {
 		if (!targetImage) return;
+		if (cutOutLayerId === targetImage.id) {
+			cut.start(targetImage);
+			return;
+		}
+		pendingCut.current = targetImage;
 		dispatchMode({ type: "startCutOut", layerId: targetImage.id });
-		cut.start(targetImage);
 	};
+	useEffect(() => {
+		const image = pendingCut.current;
+		if (!image || image.id !== cutOutLayerId) return;
+		pendingCut.current = null;
+		cut.start(image);
+	}, [cutOutLayerId, cut.start]);
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
 		if (!targetImage) return;
