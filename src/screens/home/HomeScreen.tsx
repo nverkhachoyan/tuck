@@ -6,7 +6,13 @@ import {
 	useLocalSearchParams,
 	useRouter,
 } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {
+	type ComponentProps,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useState,
+} from "react";
 import {
 	Platform,
 	Pressable,
@@ -98,22 +104,7 @@ export default function HomeScreen() {
 		},
 	});
 
-	// A photo shared from another app opens once the editor's session has
-	// ended: coming back from the editor, this screen is idle for a render
-	// before it starts saving. The param goes at once, so it opens only once.
-	const { shared } = useLocalSearchParams<{ shared?: string }>();
-	const sessionOpen = useStore((state) => state.document !== null);
-	useEffect(() => {
-		if (!shared || !focused || status !== "idle" || sessionOpen) return;
-		router.setParams({ shared: undefined });
-		void openSharedPhoto(shared);
-	}, [shared, focused, status, sessionOpen, router, openSharedPhoto]);
-	// On web, a photo the installed app is opened with ("Open with" on the
-	// desktop) comes the same way. Each opens its own window, at home.
-	useEffect(
-		() => listenForLaunchedPhotos((name) => router.setParams({ shared: name })),
-		[router],
-	);
+	useSharedPhotos({ focused, status, openSharedPhoto });
 
 	const hasProjects = projects.length > 0;
 	const blocked = status !== "idle";
@@ -223,45 +214,29 @@ export default function HomeScreen() {
 			)}
 
 			{status === "saveFailed" && (
-				<View style={[styles.column, styles.noticeArea]}>
-					<View style={styles.notice}>
-						<Ionicons name="warning-outline" size={20} color={colors.danger} />
-						<View style={styles.noticeBody}>
-							<Text style={styles.noticeText}>
-								Your edits are still open. Retry saving or return to the editor.
-							</Text>
-							<View style={styles.noticeActions}>
-								<Button label="Retry Save" onPress={finishSession} />
-								<Button
-									label="Return to Editor"
-									onPress={() =>
-										router.push(editorHref(useStore.getState().projectId))
-									}
-								/>
-							</View>
-						</View>
-					</View>
-				</View>
+				<Notice
+					icon="warning-outline"
+					color={colors.danger}
+					message="Your edits are still open. Retry saving or return to the editor."
+				>
+					<Button label="Retry Save" onPress={finishSession} />
+					<Button
+						label="Return to Editor"
+						onPress={() =>
+							router.push(editorHref(useStore.getState().projectId))
+						}
+					/>
+				</Notice>
 			)}
 
 			{applyUpdate && (
-				<View style={[styles.column, styles.noticeArea]}>
-					<View style={styles.notice}>
-						<Ionicons
-							name="arrow-up-circle-outline"
-							size={20}
-							color={colors.textPrimary}
-						/>
-						<View style={styles.noticeBody}>
-							<Text style={styles.noticeText}>
-								A new version of Tuck is ready.
-							</Text>
-							<View style={styles.noticeActions}>
-								<Button label="Reload" onPress={applyUpdate} />
-							</View>
-						</View>
-					</View>
-				</View>
+				<Notice
+					icon="arrow-up-circle-outline"
+					color={colors.textPrimary}
+					message="A new version of Tuck is ready."
+				>
+					<Button label="Reload" onPress={applyUpdate} />
+				</Notice>
 			)}
 
 			{!(hasProjects && startOnTop) && (
@@ -284,6 +259,62 @@ export default function HomeScreen() {
 				</View>
 			)}
 			{dragging && <DropOverlay label="Drop to open" />}
+		</View>
+	);
+}
+
+/**
+ * Opens a photo shared from another app, which arrives as home's `shared`
+ * param, once the editor's session has ended: coming back from the editor,
+ * this screen is idle for a render before it starts saving. The param goes
+ * at once, so it opens only once. On web, a photo the installed app is
+ * opened with ("Open with" on the desktop) comes the same way; each opens
+ * its own window, at home.
+ */
+function useSharedPhotos({
+	focused,
+	status,
+	openSharedPhoto,
+}: {
+	focused: boolean;
+	status: HomeStatus;
+	openSharedPhoto: (name: string) => void;
+}) {
+	const router = useRouter();
+	const { shared } = useLocalSearchParams<{ shared?: string }>();
+	const sessionOpen = useStore((state) => state.document !== null);
+	useEffect(() => {
+		if (!shared || !focused || status !== "idle" || sessionOpen) return;
+		router.setParams({ shared: undefined });
+		void openSharedPhoto(shared);
+	}, [shared, focused, status, sessionOpen, router, openSharedPhoto]);
+	useEffect(
+		() => listenForLaunchedPhotos((name) => router.setParams({ shared: name })),
+		[router],
+	);
+}
+
+/** A notice across the column: an icon, a message, and its buttons. */
+function Notice({
+	icon,
+	color,
+	message,
+	children,
+}: {
+	icon: ComponentProps<typeof Ionicons>["name"];
+	color: string;
+	message: string;
+	children: ReactNode;
+}) {
+	return (
+		<View style={[styles.column, styles.noticeArea]}>
+			<View style={styles.notice}>
+				<Ionicons name={icon} size={20} color={color} />
+				<View style={styles.noticeBody}>
+					<Text style={styles.noticeText}>{message}</Text>
+					<View style={styles.noticeActions}>{children}</View>
+				</View>
+			</View>
 		</View>
 	);
 }
