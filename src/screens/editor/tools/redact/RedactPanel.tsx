@@ -5,7 +5,12 @@ import { Highlight } from "@/ui/Highlight";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, typography } from "@/ui/theme";
 import { ColorOptions } from "../../shell/ColorPicker";
-import { BarButton, BarRule, OptionSegments } from "../../shell/ContextBar";
+import {
+	BarButton,
+	BarGroup,
+	BarSections,
+	OptionSegments,
+} from "../../shell/ContextBar";
 import {
 	PixelSquare,
 	RedactLook,
@@ -126,44 +131,47 @@ export function RedactBar({
 				: { ...settings, eraserSize: size },
 		);
 	return (
-		<>
-			<OptionSegments
-				label="Redact tool"
-				options={REDACT_TOOLS}
-				selected={selected}
-				onSelect={(index) => {
-					const next = (["box", "brush", "eraser"] as const)[index];
-					if (!next || next === tool) return;
-					onChange({ ...settings, tool: next });
-				}}
-			/>
-			{onFind && (
-				<BarButton
-					label="Find"
-					icon="image-search-outline"
-					shortcut={TOOL_KEYS.find}
-					onPress={onFind}
+		<BarSections>
+			<BarGroup>
+				<OptionSegments
+					label="Redact tool"
+					options={REDACT_TOOLS}
+					selected={selected}
+					onSelect={(index) => {
+						const next = (["box", "brush", "eraser"] as const)[index];
+						if (!next || next === tool) return;
+						onChange({ ...settings, tool: next });
+					}}
 				/>
-			)}
-			<BarRule />
-			{tool !== "eraser" && (
-				<RedactLook
-					settings={settings}
-					customColor={customColor}
-					onChange={onChange}
-					onPickCustom={onPickCustom}
-					onEyedropper={onEyedropper}
-				/>
-			)}
-			{tool !== "box" && (
-				<SizeChoices
-					nowrap
-					index={brush ? settings.brushSize : settings.eraserSize}
-					color={brush ? colors.textPrimary : null}
-					onPick={pickSize}
-				/>
-			)}
-		</>
+				{onFind && (
+					<BarButton
+						label="Find"
+						icon="image-search-outline"
+						shortcut={TOOL_KEYS.find}
+						onPress={onFind}
+					/>
+				)}
+			</BarGroup>
+			<BarGroup>
+				{tool !== "eraser" && (
+					<RedactLook
+						settings={settings}
+						customColor={customColor}
+						onChange={onChange}
+						onPickCustom={onPickCustom}
+						onEyedropper={onEyedropper}
+					/>
+				)}
+				{tool !== "box" && (
+					<SizeChoices
+						nowrap
+						index={brush ? settings.brushSize : settings.eraserSize}
+						color={brush ? colors.textPrimary : null}
+						onPick={pickSize}
+					/>
+				)}
+			</BarGroup>
+		</BarSections>
 	);
 }
 

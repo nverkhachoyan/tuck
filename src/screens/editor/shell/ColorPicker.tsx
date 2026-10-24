@@ -150,7 +150,7 @@ export function ColorChip({
 				{icon && (
 					<MaterialCommunityIcons
 						name={icon}
-						size={16}
+						size={18}
 						color={colors.textPrimary}
 					/>
 				)}

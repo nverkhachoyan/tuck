@@ -1,7 +1,12 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
-import { BarButton, BarRule, OptionSegments } from "../../shell/ContextBar";
+import {
+	BarButton,
+	BarGroup,
+	BarSections,
+	OptionSegments,
+} from "../../shell/ContextBar";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
 	SIZE_DOTS,
@@ -185,71 +190,78 @@ export function CutOutBar({
 	);
 	const brush = tool === "keep" || tool === "erase";
 	return (
-		<>
-			<OptionSegments
-				label="Cut out tool"
-				options={options}
-				selected={selected}
-				onSelect={(index) => {
-					const next = options[index]?.tool;
-					if (!next || next === tool) return;
-					onChange({ ...settings, tool: next });
-				}}
-			/>
-			<BarRule />
-			{onFindAll && (
-				<BarButton
-					label="Subjects"
-					icon="auto-fix"
-					busy={finding === "all"}
-					onPress={onFindAll}
+		<BarSections>
+			<BarGroup>
+				<OptionSegments
+					label="Cut out tool"
+					options={options}
+					selected={selected}
+					onSelect={(index) => {
+						const next = options[index]?.tool;
+						if (!next || next === tool) return;
+						onChange({ ...settings, tool: next });
+					}}
 				/>
-			)}
-			{brush && (
-				<SizeChoices
-					nowrap
-					index={tool === "keep" ? settings.keepSize : settings.eraseSize}
-					color={tool === "keep" ? colors.textPrimary : null}
-					onPick={(index) =>
-						onChange(
-							tool === "keep"
-								? { ...settings, keepSize: index }
-								: { ...settings, eraseSize: index },
-						)
-					}
-				/>
-			)}
-			{brush &&
-				BRUSH_EDGES.map((edge) => (
-					<RingChoice
-						key={edge.label}
-						variant="highlight"
-						label={edge.label}
-						selected={settings.soft === edge.soft}
-						onPress={() => onChange({ ...settings, soft: edge.soft })}
-					>
-						{(ink) => (
-							<MaterialCommunityIcons name={edge.icon} size={22} color={ink} />
-						)}
-					</RingChoice>
-				))}
-			{onInvert && (
-				<BarButton
-					label="Invert"
-					icon="select-inverse"
-					busy={inverting}
-					onPress={onInvert}
-				/>
-			)}
-			{onRedact && (
-				<BarButton
-					label="Redact"
-					icon="blur"
-					busy={redacting}
-					onPress={onRedact}
-				/>
-			)}
-		</>
+			</BarGroup>
+			<BarGroup>
+				{onFindAll && (
+					<BarButton
+						label="Subjects"
+						icon="auto-fix"
+						busy={finding === "all"}
+						onPress={onFindAll}
+					/>
+				)}
+				{brush && (
+					<SizeChoices
+						nowrap
+						index={tool === "keep" ? settings.keepSize : settings.eraseSize}
+						color={tool === "keep" ? colors.textPrimary : null}
+						onPick={(index) =>
+							onChange(
+								tool === "keep"
+									? { ...settings, keepSize: index }
+									: { ...settings, eraseSize: index },
+							)
+						}
+					/>
+				)}
+				{brush &&
+					BRUSH_EDGES.map((edge) => (
+						<RingChoice
+							key={edge.label}
+							variant="highlight"
+							label={edge.label}
+							selected={settings.soft === edge.soft}
+							onPress={() => onChange({ ...settings, soft: edge.soft })}
+						>
+							{(ink) => (
+								<MaterialCommunityIcons
+									name={edge.icon}
+									size={22}
+									color={ink}
+								/>
+							)}
+						</RingChoice>
+					))}
+				{onInvert && (
+					<BarButton
+						label="Invert"
+						icon="select-inverse"
+						busy={inverting}
+						onPress={onInvert}
+					/>
+				)}
+				{onRedact && (
+					<BarButton
+						label="Redact"
+						icon="blur"
+						busy={redacting}
+						onPress={onRedact}
+					/>
+				)}
+			</BarGroup>
+		</BarSections>
 	);
 }
 

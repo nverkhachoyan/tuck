@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { colors, space, typography } from "@/ui/theme";
+import { BarGroup, BarSections } from "../../shell/ContextBar";
 import { RedactLook } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { Tray } from "../../shell/ToolOptions";
@@ -66,7 +67,13 @@ const SCOPES = [
  * inspector, above the layers they'll join.
  */
 export function FindBar(props: ComponentProps<typeof RedactLook>) {
-	return <RedactLook {...props} />;
+	return (
+		<BarSections>
+			<BarGroup>
+				<RedactLook {...props} />
+			</BarGroup>
+		</BarSections>
+	);
 }
 
 /**

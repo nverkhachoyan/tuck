@@ -1,4 +1,6 @@
+import { StyleSheet, View } from "react-native";
 import type { Layer } from "@/model/layers/layer";
+import { space } from "@/ui/theme";
 import { TOOL_KEYS } from "../shortcuts";
 import { BarButton } from "./ContextBar";
 import { layerActionsFor } from "./layerActions";
@@ -73,7 +75,7 @@ export function LayerBar({
 	onSaveSticker: (() => void) | undefined;
 }) {
 	return (
-		<>
+		<View style={styles.actions}>
 			{layerActionsFor(layer).map((key) => {
 				const entry = TOOLS.find((tool) => tool.key === key);
 				return (
@@ -102,6 +104,17 @@ export function LayerBar({
 					onPress={onSaveSticker}
 				/>
 			)}
-		</>
+		</View>
 	);
 }
+
+const styles = StyleSheet.create({
+	// The gap the scrolling row used to leave between every child. These
+	// actions stay as they were; the tools' groups use their own spacing.
+	actions: {
+		flexDirection: "row",
+		alignItems: "center",
+		flexShrink: 0,
+		gap: space.xs,
+	},
+});

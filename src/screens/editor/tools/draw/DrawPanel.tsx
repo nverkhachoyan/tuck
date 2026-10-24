@@ -7,7 +7,7 @@ import { Popover } from "@/ui/Popover";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, webTransition } from "@/ui/theme";
 import { ColorChip, ColorOptions } from "../../shell/ColorPicker";
-import { BarRule, OptionSegments } from "../../shell/ContextBar";
+import { BarGroup, BarSections, OptionSegments } from "../../shell/ContextBar";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
@@ -133,54 +133,57 @@ export function DrawBar({
 			sizes: { ...settings.sizes, [settings.tool]: size },
 		});
 	return (
-		<>
-			<OptionSegments
-				label="Draw tool"
-				options={[
-					{ title: "Brush", icon: TOOL_ICONS[settings.lastBrush] },
-					{ title: "Shape", icon: SHAPE_ICONS[settings.shape] },
-					{ title: "Eraser", icon: "eraser" },
-				]}
-				selected={selected}
-				onSelect={pickTool}
-			/>
-			<BarRule />
-			<SizeChoices
-				nowrap
-				index={brushSizeIndex(settings)}
-				color={eraser ? null : settings.color}
-				tip={penTip(settings.tool)}
-				onPick={pickSize}
-			/>
-			{brush && (
+		<BarSections>
+			<BarGroup>
 				<OptionSegments
-					label="Pen tip"
-					options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
-					selected={PEN_TIPS.findIndex((tip) => tip.tool === settings.tool)}
-					onSelect={(index) => {
-						const tool = PEN_TIPS[index]?.tool;
-						if (!tool || tool === settings.tool) return;
-						onChange({ ...settings, tool, lastBrush: tool });
-					}}
+					label="Draw tool"
+					options={[
+						{ title: "Brush", icon: TOOL_ICONS[settings.lastBrush] },
+						{ title: "Shape", icon: SHAPE_ICONS[settings.shape] },
+						{ title: "Eraser", icon: "eraser" },
+					]}
+					selected={selected}
+					onSelect={pickTool}
 				/>
-			)}
-			{!eraser && (
-				<ColorChip
-					label="Color"
-					value={settings.color}
-					customColor={customColor}
-					onPick={(color) => color && onChange({ ...settings, color })}
-					onPickCustom={onPickCustom}
-					onEyedropper={onEyedropper}
+			</BarGroup>
+			<BarGroup>
+				<SizeChoices
+					nowrap
+					index={brushSizeIndex(settings)}
+					color={eraser ? null : settings.color}
+					tip={penTip(settings.tool)}
+					onPick={pickSize}
 				/>
-			)}
-			{settings.tool === "shape" && (
-				<ShapeKindChip
-					shape={settings.shape}
-					onPick={(shape) => onChange({ ...settings, shape })}
-				/>
-			)}
-		</>
+				{brush && (
+					<OptionSegments
+						label="Pen tip"
+						options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
+						selected={PEN_TIPS.findIndex((tip) => tip.tool === settings.tool)}
+						onSelect={(index) => {
+							const tool = PEN_TIPS[index]?.tool;
+							if (!tool || tool === settings.tool) return;
+							onChange({ ...settings, tool, lastBrush: tool });
+						}}
+					/>
+				)}
+				{!eraser && (
+					<ColorChip
+						label="Color"
+						value={settings.color}
+						customColor={customColor}
+						onPick={(color) => color && onChange({ ...settings, color })}
+						onPickCustom={onPickCustom}
+						onEyedropper={onEyedropper}
+					/>
+				)}
+				{settings.tool === "shape" && (
+					<ShapeKindChip
+						shape={settings.shape}
+						onPick={(shape) => onChange({ ...settings, shape })}
+					/>
+				)}
+			</BarGroup>
+		</BarSections>
 	);
 }
 
@@ -214,7 +217,7 @@ function ShapeKindChip({
 			>
 				<MaterialCommunityIcons
 					name={SHAPE_ICONS[shape]}
-					size={22}
+					size={18}
 					color={colors.textPrimary}
 				/>
 			</Pressable>

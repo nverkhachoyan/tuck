@@ -1,6 +1,14 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { ComponentProps } from "react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+	Children,
+	type ComponentProps,
+	Fragment,
+	isValidElement,
+	type ReactNode,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import {
 	ActivityIndicator,
 	Platform,
@@ -164,9 +172,31 @@ export function OptionSegments({
 	);
 }
 
-/** A short rule between a bar's mode and the options that follow it. */
-export function BarRule() {
-	return <View style={styles.rule} />;
+/**
+ * A row of the bar's options, 2 points apart. `BarSections` draws the rule
+ * between one group and the next, so a tool never places a divider itself.
+ */
+export function BarGroup({ children }: { children: ReactNode }) {
+	if (Children.toArray(children).length === 0) return null;
+	return <View style={styles.group}>{children}</View>;
+}
+
+/**
+ * The bar's groups in a row. A rule separates each one from the next: 1 point
+ * of `colors.borderStrong`, 24 tall, with 10 points on either side.
+ */
+export function BarSections({ children }: { children: ReactNode }) {
+	const groups = Children.toArray(children);
+	return (
+		<>
+			{groups.map((group, index) => (
+				<Fragment key={isValidElement(group) ? group.key : "group"}>
+					{index > 0 && <View style={styles.rule} />}
+					{group}
+				</Fragment>
+			))}
+		</>
+	);
 }
 
 /**
@@ -215,7 +245,7 @@ export function BarButton({
 				) : (
 					<MaterialCommunityIcons
 						name={icon}
-						size={20}
+						size={18}
 						color={colors.textPrimary}
 					/>
 				)}
@@ -269,7 +299,6 @@ const styles = StyleSheet.create({
 	scrollContent: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: space.xs,
 	},
 	fade: {
 		position: "absolute",
@@ -288,11 +317,18 @@ const styles = StyleSheet.create({
 		marginLeft: space.xs,
 		backgroundColor: colors.border,
 	},
-	rule: {
-		width: StyleSheet.hairlineWidth,
-		height: 22,
+	group: {
+		flexDirection: "row",
+		alignItems: "center",
 		flexShrink: 0,
-		backgroundColor: colors.border,
+		gap: 2,
+	},
+	rule: {
+		width: 1,
+		height: 24,
+		flexShrink: 0,
+		marginHorizontal: 10,
+		backgroundColor: colors.borderStrong,
 	},
 	segments: {
 		flexDirection: "row",

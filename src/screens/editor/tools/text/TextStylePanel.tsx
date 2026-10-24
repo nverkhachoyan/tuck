@@ -26,6 +26,7 @@ import { colors, typography, webTransition } from "@/ui/theme";
 import type { TextColorKey } from "../../editorMode";
 import { ColorChip, ColorPicker } from "../../shell/ColorPicker";
 import { ColorSwatches, isCustomColor } from "../../shell/ColorSwatches";
+import { BarGroup, BarSections } from "../../shell/ContextBar";
 import { ToolOption, ToolOptions } from "../../shell/ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
@@ -212,20 +213,26 @@ export function TextBar({
 		/>
 	);
 	return (
-		<>
-			<AlignPicker
-				value={layer.align}
-				onPick={(align) => onChange({ align })}
-			/>
-			<FontChip
-				font={layer.font}
-				onPick={(font) => onChange({ font })}
-				restoreFocus={restoreFocus}
-			/>
-			{chip("color", "format-color-text")}
-			{chip("outlineColor", "format-textbox", "No outline")}
-			{chip("backgroundColor", "rectangle-outline", "No background")}
-		</>
+		<BarSections>
+			<BarGroup>
+				<AlignPicker
+					value={layer.align}
+					onPick={(align) => onChange({ align })}
+				/>
+			</BarGroup>
+			<BarGroup>
+				<FontChip
+					font={layer.font}
+					onPick={(font) => onChange({ font })}
+					restoreFocus={restoreFocus}
+				/>
+			</BarGroup>
+			<BarGroup>
+				{chip("color", "format-color-text")}
+				{chip("outlineColor", "format-textbox", "No outline")}
+				{chip("backgroundColor", "rectangle-outline", "No background")}
+			</BarGroup>
+		</BarSections>
 	);
 }
 
