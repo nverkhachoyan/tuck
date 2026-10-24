@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
 	},
 	aboutLinkLabel: {
 		...typography.caption,
-		color: colors.textSecondary,
+		color: colors.textPrimary,
 	},
 	noticeArea: {
 		paddingVertical: space.sm,

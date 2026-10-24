@@ -44,6 +44,7 @@ export function Button({
 			<Pressable
 				hitSlop={size === "small" ? 10 : 4}
 				accessibilityRole="button"
+				accessibilityLabel={label}
 				{...(shortcut ? anchor : {})}
 				{...props}
 				style={(state) => {

@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
 	},
 	title: {
 		...typography.labelStrong,
-		color: colors.textSecondary,
+		color: colors.textPrimary,
 	},
 	titleChosen: {
 		color: colors.onHighlight,
