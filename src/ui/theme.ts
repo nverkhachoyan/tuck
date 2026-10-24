@@ -199,15 +199,16 @@ export const CHECKER_CELL = 8;
 
 /**
  * Eases hover and press changes on web. Native has no hover, and a press
- * there should answer at once. React Native's style types lack transitions,
- * which only web understands.
+ * there should answer at once. It's short and starts at full speed, so a
+ * hover or press shows on its first frame. React Native's style types lack
+ * transitions, which only web understands.
  */
 export const webTransition =
 	Platform.OS === "web"
 		? ({
 				transitionProperty:
 					"background-color, border-color, color, opacity, transform, box-shadow",
-				transitionDuration: "160ms",
-				transitionTimingFunction: "cubic-bezier(0.2, 0, 0, 1)",
+				transitionDuration: "100ms",
+				transitionTimingFunction: "cubic-bezier(0, 0, 0.2, 1)",
 			} as unknown as ViewStyle)
 		: null;

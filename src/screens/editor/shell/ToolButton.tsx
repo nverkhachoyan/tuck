@@ -17,7 +17,7 @@ import {
 	View,
 } from "react-native";
 import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
+import { interaction, pressAtOnce } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
 
@@ -82,6 +82,7 @@ export function ToolButton({
 		<>
 			<Pressable
 				{...(shortcut ? anchor : undefined)}
+				{...pressAtOnce}
 				hitSlop={8}
 				disabled={inactive}
 				onPress={onPress}
