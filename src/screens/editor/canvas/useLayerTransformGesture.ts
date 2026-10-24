@@ -124,8 +124,7 @@ export function useLayerTransformGesture({
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
 	// variables captured by worklets are copied, so writes wouldn't persist.
-	const startX = useSharedValue(0);
-	const startY = useSharedValue(0);
+	// The pinch's and the rotation's run alongside the pan's.
 	const startScaleX = useSharedValue(1);
 	const startScaleY = useSharedValue(1);
 	const startRotation = useSharedValue(0);
@@ -137,13 +136,13 @@ export function useLayerTransformGesture({
 	const travel = useSharedValue<PointerTravel>(
 		startTravel({ x: 0, y: 0, numberOfPointers: 0 }),
 	);
-	// The handle this pan grabbed, if any, and the layer's state when it did.
-	// Separate from the pinch/rotate snapshots, which run alongside.
+	// The handle this pan grabbed, if any, and the layer when the pan started.
+	// Assign `panStart` whole: Reanimated doesn't track a write to a field.
 	const dragHandle = useSharedValue<Handle | null>(null);
-	const handleStartScaleX = useSharedValue(1);
-	const handleStartScaleY = useSharedValue(1);
-	const handleStartRotation = useSharedValue(0);
-	const handleStartBox = useSharedValue<Box>({ halfWidth: 0, halfHeight: 0 });
+	const panStart = useSharedValue<{ transform: Transform; box: Box }>({
+		transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+		box: { halfWidth: 0, halfHeight: 0 },
+	});
 	// How many of pan / pinch / rotate are running, whether any moved, and
 	// whether a handle resized the box.
 	const activeCount = useSharedValue(0);
@@ -211,14 +210,7 @@ export function useLayerTransformGesture({
 		// frame it had when the drag began, snapping each side it moves.
 		const resizeTo = (handle: ResizeHandle, from: Point, to: Point) => {
 			"worklet";
-			const start = {
-				x: startX.value,
-				y: startY.value,
-				scaleX: handleStartScaleX.value,
-				scaleY: handleStartScaleY.value,
-				rotation: handleStartRotation.value,
-			};
-			const box = handleStartBox.value;
+			const { transform: start, box } = panStart.value;
 			const minSize =
 				MIN_BOX_PX / (viewport.scale * Math.min(start.scaleX, start.scaleY));
 			const a = toLayerSpace(start, from);
@@ -276,16 +268,10 @@ export function useLayerTransformGesture({
 		// settles on quarter turns as a rotation does.
 		const dragEndTo = (handle: ResizeHandle, from: Point, to: Point) => {
 			"worklet";
-			const start = {
-				x: startX.value,
-				y: startY.value,
-				scaleX: handleStartScaleX.value,
-				scaleY: handleStartScaleY.value,
-				rotation: handleStartRotation.value,
-			};
+			const { transform: start, box } = panStart.value;
 			const line = dragLineEnd(
 				start,
-				handleStartBox.value.halfWidth,
+				box.halfWidth,
 				handleSides(handle).x < 0 ? -1 : 1,
 				{ x: to.x - from.x, y: to.y - from.y },
 				MIN_BOX_PX / viewport.scale,
@@ -388,12 +374,10 @@ export function useLayerTransformGesture({
 							false;
 					}
 				}
-				startX.value = live.x.value;
-				startY.value = live.y.value;
-				handleStartScaleX.value = live.scaleX.value;
-				handleStartScaleY.value = live.scaleY.value;
-				handleStartRotation.value = live.rotation.value;
-				handleStartBox.value = readLiveBox(live);
+				panStart.value = {
+					transform: readLiveTransform(live),
+					box: readLiveBox(live),
+				};
 				snapLines.value = snapLinesFor(
 					documentSize,
 					layers.value.filter((target) => target.id !== live.heldId.value),
@@ -404,34 +388,31 @@ export function useLayerTransformGesture({
 				const { dx, dy } = travel.value;
 				if (aside.value || !holding()) return;
 
+				const start = panStart.value.transform;
 				const handle = dragHandle.value;
 				if (handle !== null) {
-					const center = { x: startX.value, y: startY.value };
+					const center = { x: start.x, y: start.y };
 					const from = toDocument(downX.value, downY.value);
 					const to = toDocument(downX.value + dx, downY.value + dy);
 					if (handle === "rotate") {
-						rotateTo(rotateByDrag(center, from, to, handleStartRotation.value));
+						rotateTo(rotateByDrag(center, from, to, start.rotation));
 					} else if (live.resizeMode.value === "endpoints") {
 						dragEndTo(handle, from, to);
 					} else if (live.resizeMode.value !== "none") {
 						resizeTo(handle, from, to);
 					} else {
 						const scale = clampScale(
-							scaleByDrag(center, from, to, handleStartScaleX.value),
+							scaleByDrag(center, from, to, start.scaleX),
 						);
 						live.scaleX.value = scale;
-						live.scaleY.value =
-							handleStartScaleY.value * (scale / handleStartScaleX.value);
+						live.scaleY.value = start.scaleY * (scale / start.scaleX);
 					}
 					moved.value = true;
 					return;
 				}
 
 				if (pinned.value) return;
-				moveTo(
-					startX.value + dx / viewport.scale,
-					startY.value + dy / viewport.scale,
-				);
+				moveTo(start.x + dx / viewport.scale, start.y + dy / viewport.scale);
 				moved.value = true;
 			})
 			.onEnd(() => {
@@ -511,16 +492,11 @@ export function useLayerTransformGesture({
 		downY,
 		travel,
 		dragHandle,
-		handleStartScaleX,
-		handleStartScaleY,
-		handleStartRotation,
-		handleStartBox,
+		panStart,
 		activeCount,
 		moved,
 		resizedBox,
 		snapLines,
-		startX,
-		startY,
 		startScaleX,
 		startScaleY,
 		startRotation,
