@@ -726,7 +726,13 @@
 											"../../../create/**",
 											"../../../export/**",
 											"../../../home/**",
-											"../../../info/**"
+											"../../../info/**",
+											"../../screens/**",
+											"../../app/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../../screens/**",
+											"../../../../app/**"
 										],
 										"message": "The editor doesn't import routes or another screen, and only detection/ imports image-analysis. See AGENTS.md."
 									}
@@ -784,9 +790,21 @@
 											"@/screens/editor/session/**",
 											"../detection/**",
 											"../../detection/**",
-											"@/screens/editor/detection/**"
+											"@/screens/editor/detection/**",
+											"../../create/**",
+											"../../export/**",
+											"../../home/**",
+											"../../info/**",
+											"../../../create/**",
+											"../../../export/**",
+											"../../../home/**",
+											"../../../info/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../../screens/**",
+											"../../../../app/**"
 										],
-										"message": "canvas/ imports only the editor root and shell/: no tool, session/, or detection/. See AGENTS.md."
+										"message": "canvas/ imports only the editor root and shell/: no tool, session/, detection/, route, or other screen. See AGENTS.md."
 									}
 								]
 							}
@@ -839,9 +857,21 @@
 											"@/screens/editor/tools/text/**",
 											"../../session/**",
 											"../../../session/**",
-											"@/screens/editor/session/**"
+											"@/screens/editor/session/**",
+											"../../../create/**",
+											"../../../export/**",
+											"../../../home/**",
+											"../../../info/**",
+											"../../../../create/**",
+											"../../../../export/**",
+											"../../../../home/**",
+											"../../../../info/**",
+											"../../../../screens/**",
+											"../../../../app/**",
+											"../../../../../screens/**",
+											"../../../../../app/**"
 										],
-										"message": "crop/ doesn't import the editor's other tools or session/. See AGENTS.md."
+										"message": "crop/ doesn't import the editor's other tools, session/, a route, or another screen. See AGENTS.md."
 									}
 								]
 							}
@@ -906,9 +936,21 @@
 											"@/screens/editor/tools/text/**",
 											"../../session/**",
 											"../../../session/**",
-											"@/screens/editor/session/**"
+											"@/screens/editor/session/**",
+											"../../../create/**",
+											"../../../export/**",
+											"../../../home/**",
+											"../../../info/**",
+											"../../../../create/**",
+											"../../../../export/**",
+											"../../../../home/**",
+											"../../../../info/**",
+											"../../../../screens/**",
+											"../../../../app/**",
+											"../../../../../screens/**",
+											"../../../../../app/**"
 										],
-										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other, canvas/, or session/: what they share is at the editor root, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other, canvas/, session/, a route, or another screen: what they share is at the editor root, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -934,7 +976,9 @@
 											"../**",
 											"!../shortcuts",
 											"!@/screens/editor/shortcuts",
-											"!../../../**"
+											"!../../../**",
+											"../../../screens/**",
+											"../../../app/**"
 										],
 										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
@@ -963,7 +1007,9 @@
 											"!../*",
 											"!../../shortcuts",
 											"!@/screens/editor/shortcuts",
-											"!../../../../**"
+											"!../../../../**",
+											"../../../../screens/**",
+											"../../../../app/**"
 										],
 										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
@@ -991,7 +1037,9 @@
 											"../**",
 											"!../../shortcuts",
 											"!@/screens/editor/shortcuts",
-											"!../../../../**"
+											"!../../../../**",
+											"../../../../screens/**",
+											"../../../../app/**"
 										],
 										"message": "The stickers tool imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
@@ -1020,7 +1068,9 @@
 											"!../*",
 											"!../../../shortcuts",
 											"!@/screens/editor/shortcuts",
-											"!../../../../../**"
+											"!../../../../../**",
+											"../../../../../screens/**",
+											"../../../../../app/**"
 										],
 										"message": "The stickers tool imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
 									}
