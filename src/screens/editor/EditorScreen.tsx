@@ -51,7 +51,7 @@ import { Dock, DockFooter, InspectorBackdrop } from "./shell/Dock";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
-import type { Shortcut, ToolKey } from "./shortcuts";
+import type { Shortcut } from "./shortcuts";
 import { useAdjustController } from "./tools/adjust/useAdjustController";
 import { CropTool } from "./tools/crop/CropTool";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
@@ -500,10 +500,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 
-	// What each tool's key picks up, as its button in the dock would. A
-	// selected drawing or redaction takes the strokes, as its own Draw or
-	// Redact does.
-	const startTool: Record<ToolKey, () => void> = {
+	// What each tool's key, button, and layer action picks up. A selected
+	// drawing or redaction takes the strokes, as its own Draw or Redact does.
+	const startTool: ToolStarters = {
 		text: startNewText,
 		draw: startDrawing,
 		redact: startRedacting,
@@ -543,27 +542,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		start();
 	};
 	// The tools' buttons, for the dock and, through `fromRail`, the rail.
-	const toolStarters: ToolStarters = {
+	const toolButtons = {
+		startTool,
 		addBusy,
-		onAddText: startNewText,
-		onDraw: startDrawing,
-		onRedact: startRedacting,
-		onSticker: openStickers,
-		onPhoto: pickPhoto,
-		onCrop: startCrop,
-		onAdjust: targetImage ? startAdjusting : undefined,
-		onCutOut: targetImage ? startCutOut : undefined,
+		hasImage: targetImage !== null,
 	};
 	// What the dock offers for the selected layer, by its kind.
 	const layerActions =
 		selectedLayer &&
 		layerActionsFor({
 			layer: selectedLayer,
-			onDraw: startDrawing,
-			onRedact: startRedacting,
-			onAdjust: startAdjusting,
-			onFind: startFinding,
-			onCutOut: startCutOut,
+			startTool,
 			sticker: stickerSave.status,
 			onSaveSticker: stickerSave.save,
 		});
@@ -720,7 +709,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<ToolsPanel
 									vertical
 									tool={editingText ? "text" : tool}
-									{...toolButtonsFor(toolStarters, fromRail)}
+									{...toolButtonsFor(toolButtons, fromRail)}
 								/>
 							</View>
 						)}
@@ -751,7 +740,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									wide ? (
 										<LayersPanel {...layerList} layout="inspector" open />
 									) : (
-										<ToolsPanel {...toolButtonsFor(toolStarters)} />
+										<ToolsPanel {...toolButtonsFor(toolButtons)} />
 									)
 								}
 							/>

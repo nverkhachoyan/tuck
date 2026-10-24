@@ -14,7 +14,7 @@ import type {
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
 import { LayerActionsPanel } from "./shell/LayerActionsPanel";
-import { LAYERS_KEY } from "./shortcuts";
+import { LAYERS_KEY, type ToolKey } from "./shortcuts";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustController } from "./tools/adjust/useAdjustController";
 import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
@@ -91,69 +91,57 @@ export function layerListProps({
 	};
 }
 
-/** What picking each tool does, before `wrap` adapts it for its place. */
-export type ToolStarters = {
-	addBusy: boolean;
-	onAddText: () => void;
-	onDraw: () => void;
-	onRedact: () => void;
-	onSticker: () => void;
-	onPhoto: () => void;
-	onCrop: () => void;
-	onAdjust: (() => void) | undefined;
-	onCutOut: (() => void) | undefined;
-};
+/** What picking up each tool does, as its key would (see `TOOL_KEYS`). */
+export type ToolStarters = Record<ToolKey, () => void>;
 
-/** The tools' buttons' props: each starter through `wrap` (see `fromRail`). */
+/**
+ * The tools' buttons' props: each tool's starter through `wrap` (see
+ * `fromRail`), with Adjust and Cut out only when there's an image for them.
+ */
 export function toolButtonsFor(
-	starters: ToolStarters,
+	{
+		startTool,
+		addBusy,
+		hasImage,
+	}: { startTool: ToolStarters; addBusy: boolean; hasImage: boolean },
 	wrap: (start: () => void) => () => void = (start) => start,
 ) {
 	return {
-		addBusy: starters.addBusy,
-		onAddText: wrap(starters.onAddText),
-		onDraw: wrap(starters.onDraw),
-		onRedact: wrap(starters.onRedact),
-		onSticker: wrap(starters.onSticker),
-		onPhoto: wrap(starters.onPhoto),
-		onCrop: wrap(starters.onCrop),
-		onAdjust:
-			starters.onAdjust === undefined ? undefined : wrap(starters.onAdjust),
-		onCutOut:
-			starters.onCutOut === undefined ? undefined : wrap(starters.onCutOut),
+		addBusy,
+		onAddText: wrap(startTool.text),
+		onDraw: wrap(startTool.draw),
+		onRedact: wrap(startTool.redact),
+		onSticker: wrap(startTool.sticker),
+		onPhoto: wrap(startTool.photo),
+		onCrop: wrap(startTool.crop),
+		onAdjust: hasImage ? wrap(startTool.adjust) : undefined,
+		onCutOut: hasImage ? wrap(startTool.cutOut) : undefined,
 	};
 }
 
 /** What the dock offers for `layer`, by its kind. */
 export function layerActionsFor({
 	layer,
-	onDraw,
-	onRedact,
-	onAdjust,
-	onFind,
-	onCutOut,
+	startTool,
 	sticker,
 	onSaveSticker,
 }: {
 	layer: Layer;
-	onDraw: () => void;
-	onRedact: () => void;
-	onAdjust: () => void;
-	onFind: () => void;
-	onCutOut: () => void;
+	startTool: ToolStarters;
 	sticker: "saving" | "saved" | undefined;
 	onSaveSticker: (() => void) | undefined;
 }) {
+	const image = layer.type === "image";
 	return {
 		onDraw:
-			layer.type === "drawing" || layer.type === "shape" ? onDraw : undefined,
-		onRedact:
-			layer.type === "redaction" || layer.type === "image"
-				? onRedact
+			layer.type === "drawing" || layer.type === "shape"
+				? startTool.draw
 				: undefined,
-		onAdjust: layer.type === "image" ? onAdjust : undefined,
-		onFind: layer.type === "image" && !layer.hidden ? onFind : undefined,
-		onCutOut: layer.type === "image" && !layer.hidden ? onCutOut : undefined,
+		onRedact:
+			layer.type === "redaction" || image ? startTool.redact : undefined,
+		onAdjust: image ? startTool.adjust : undefined,
+		onFind: image && !layer.hidden ? startTool.find : undefined,
+		onCutOut: image && !layer.hidden ? startTool.cutOut : undefined,
 		sticker,
 		onSaveSticker,
 	};
