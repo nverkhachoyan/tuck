@@ -2,6 +2,8 @@
 
 A refactor plan for the code inside the folders, written October 2026, after the directory plan landed. The tree holds up now: `model/edits/`, `render/layers/`, a folder per tool, `session/`, and `detection/` each tell a reader where to look. What doesn't hold up is inside a few files. `EditorScreen` and `EditorCanvas` each have a function body of 500 lines or more, where the wiring the folders used to hide has piled up. A type parameter, two props mappers, and the store's list of action signatures exist only to reshape something from one form to another. This plan takes those apart. The app's behavior, the project file format, and the native modules stay as they are.
 
+A fourth pass (stages 9–14) was added on 23 October 2026, once the third had landed. It started from the largest source files that pass didn't touch. `EditorScreen` and `EditorCanvas` are left as stage 3 and stage 4 left them. What it found is smaller: repetition inside `projectLifecycle`'s closure, two jobs in `LiveStrokeOverlay`, a pan snapshot spread over six shared values, one chip written four times, and grouping logic inside `LayersPanel`'s JSX. Line numbers in stages 9–14 are as of `eef84af`.
+
 Each stage leaves the app building. A stage that turns out to need a behavior change stops and splits that change out.
 
 ## Rules for the work
@@ -24,6 +26,8 @@ Each stage leaves the app building. A stage that turns out to need a behavior ch
 * After every step: `npm run check`, `npm run typecheck`, `npm test`. When a quoted file changed: `npm run build --prefix docs/interactive`.
 * Stages 3–5 change the editor's composition. After each of those steps, open the editor in the browser pane and try what the step touched: start a tool, Done, Cancel, a shortcut. Drags do not count there. The pane runs about two frames a second while hidden, and one drag move is not a pan, so a stroke or a layer drag is checked in headless Chrome over CDP, as AGENTS.md describes. On a device, the same stroke and a layer drag while autosave runs: a gesture rebuilt every render re-attaches underneath them.
 * Stage 4 moves gesture code. Run the iOS simulator after the shared worklet step and after each gesture hook, not only at the end of the stage.
+* Stages 9–14 don't depend on each other or on anything left in stages 1–8. No lesson quotes the files they touch (checked against `docs/interactive/src` on 23 October 2026), so they don't need a lesson build unless a step reaches past those files. `docs/architecture.md` names `LiveStrokeOverlay`, so stage 10 updates it.
+* Stage 9 is covered by `projectLifecycle.test.ts`. Stages 10 and 11 move drawing and gesture code: after each step, run the iOS simulator, and check drags on web in headless Chrome over CDP. Stage 12 changes how controls are built, so compare screenshots of Crop, Text, and Adjust before and after on web and iOS.
 * Tick the step here when it lands, with the commit subject.
 
 ## Stage 1: Drop the text edit type parameter
@@ -194,6 +198,80 @@ Check both the phone grid and the wide rail, and a blank canvas with no image, w
 
 Three doc comments run 15 lines or more as one paragraph: `useLayerTransformGesture` (37), `useCutOut` (22), and `liveTransform` (15). `EditorCanvas`'s comment is split in stage 4, with the hooks it describes. Rewrite each of these three as a sentence on what it is, then a short list, one line per behavior or parameter. Keep what they say and drop nothing true. A comment that only restated code was already trimmed in `3d2dde0` and `cf15dfb`. This changes the house style for long comments, so AGENTS.md gains a line for it.
 
+## Stage 9: Repetition inside `projectLifecycle`
+
+- [x] `refactor: check a saved project's file in one place in projectLifecycle`
+- [x] `refactor: queue projectLifecycle's writes through two helpers`
+- [x] `refactor: build an open project's saved file in one place`
+
+`createProjectLifecycle` is one closure of about 560 lines (83–645). Splitting it is left out (see below), but inside it the same few lines are written again and again.
+
+* **Parsing.** "Parse the file, then check its image URIs" is written four times: `openProject` (263–264), `readSaved` (464–465), `listProjects` (548–549), and `updateThumbnail` (586–587). `parseOpenableProject(json)` returns the `SavedProject`, or null if this version can't open it, and `hasKnownImageUris` goes into it. Each caller still decides what null means: `openProject` returns null, `readSaved` throws `NEWER_VERSION_MESSAGE`, `listProjects` lists the project as unavailable, and `updateThumbnail` gives up. `updateThumbnail`'s second read (607) checks only `updatedAt`, and stays a plain `parseSavedProject`: an extra check there would change when it writes.
+* **The two queues.** `saveProject` (301–319) and `refreshThumbnail` (337–353) both chain work onto `project.writing` and then reset it to the work's result with errors swallowed. `queueWrite(project, work)` does that and returns the work's own promise. The comment at 317 moves onto it. `closeProject` (417–438) and `updateThumbnail` (601–620) do the same with `closing`. `afterClosing(work)` does it for them, inside the closure, since it reassigns `closing`. The comment on `closing` (86–88) stays where the variable is declared.
+* **An open project's file.** `saveProject` (305–312) and `refreshThumbnail` (341–348) build the same `SavedProject`: the version, the project's `createdAt` and `name`, plus an `updatedAt`, a document, and a thumbnail. `fileFor(project, { updatedAt, document, thumbnail })` builds it. `duplicateProject` (507–517) and `updateThumbnail` (609–612) don't use it: one gives the copy a new `createdAt`, and the other spreads the file it just read.
+
+Run `npm test` after each step.
+
+Landed with the file at 660 lines, 15 more than before: the three helpers and their comments take more lines than the copies they replaced. What it gains is one place each for what makes a file openable, how a queue survives a failed write, and what an open project's file holds.
+
+## Stage 10: Two jobs in `LiveStrokeOverlay`
+
+- [ ] `refactor: move the layers that follow the live transform out of LiveStrokeOverlay`
+- [ ] `refactor: share LiveStrokeOverlay's live lookups`
+
+About half of `LiveStrokeOverlay.tsx` (160–334) draws layers that follow the live transform while selected. None of that is about strokes: `LiveRedaction`, `LiveRedactionBox`, `LiveFilteredBox`, `LiveShape`, `LiveFilteredStrokes`, `LiveMaskedRedaction`, and `LiveMaskedPicture`. The rest is the stroke being painted (`LiveStroke`, `NewLayerStroke`, and the views under them).
+
+* Step 1: those seven components move to `canvas/LiveLayerContent.tsx`, which exports `LiveRedaction` and `LiveShape`. `StrokeTarget` stays in `LiveStrokeOverlay.tsx`, since it decides between a stroke and those. After the move, the file's name describes all of what's in it. Their comments still say "as `LiveLayer` places it", which is still true: `LiveLayer` is in `EditorScene.tsx`. Add the new file to `docs/architecture.md`'s list of the canvas's drawing files.
+* Step 2: `live.activeId.value === id ? readLiveTransform(live) : transform` is written three times (233, 284–285, 327–328). A `liveTransformOf(live, id, transform)` worklet goes in `liveTransform.ts` beside `readLiveTransform`. `LiveRedactionBox` (205–207) and `LiveShape` (255–259) do the same for the box's half size, so `liveBoxOf(live, id, box)` goes beside it.
+* Step 2 also covers the first and last points of a drag, read the same way in `LiveNewShape` (456–457) and `LiveBox` (501–502). A `dragEnds(points)` worklet takes that over, declared above both, next to `unlanded`.
+
+Check on web and the iOS simulator: a blurred box and a blurred brushed redaction moved and scaled, a shape's side dragged, a new shape and a new redaction box dragged out.
+
+## Stage 11: The transform gesture's pan snapshot
+
+- [ ] `refactor: keep the pan's starting transform in one shared value`
+- [ ] `refactor: share the transform gesture's uniform scaling`
+
+When the pan starts (391–396), `useLayerTransformGesture` records the layer in six shared values: `startX` and `startY` (127–128), and `handleStartScaleX`, `handleStartScaleY`, `handleStartRotation`, and `handleStartBox` (143–146). `resizeTo` (214–220) and `dragEndTo` (279–285) then put a `start` transform back together from five of them. The names hide which gesture owns what: `startX` belongs to the pan, while `startScaleX` belongs to the pinch.
+
+* Step 1: one `panStart = useSharedValue<{ transform: Transform; box: Box }>`, set at the pan's start to `{ transform: readLiveTransform(live), box: readLiveBox(live) }`. `resizeTo`, `dragEndTo`, `moveTo`'s callers, and `onUpdate` read `panStart.value.transform` and `.box`. Assign it whole, never a field: Reanimated doesn't notice a write to a field of a shared value's object. The pinch's and the rotation's `startScaleX`, `startScaleY`, and `startRotation` stay apart, because they run alongside the pan (the comment at 140–141). After this, every `start…` value belongs to them. The memo's dependency list goes from 32 entries to 27.
+* Step 2: the corner handle (419–424) and the pinch (456–458) both clamp a scale, write it to `scaleX`, and scale `scaleY` by the same ratio from their own starting values. A `scaleTo(scale, fromScaleX, fromScaleY)` worklet does it, beside `rotateTo`, which already does the same for rotation, and declared above both callers.
+
+Run the iOS simulator after each step, checking: a move that snaps, a corner scale, a side resize of a text box in box mode and of one stretched, a line's end, the rotation knob, and a two-finger pinch and rotate. Run the same drags on web over CDP.
+
+## Stage 12: One chip for the tool panels
+
+- [ ] `refactor: share the tool panels' chip as ui/Chip`
+
+Four controls are the same selectable chip: `AspectChip` (`CropTool.tsx`, 246–286), the font chip in `FontPicker` and the alignment chip in `AlignPicker` (`TextStylePanel.tsx`, 367–418 and 287–335), and `AdjustmentChoice` (`AdjustPanel.tsx`, from 115). Each is a `Pressable` whose children callback draws a frame with `webTransition`, `colors.hoverOverlay` on hover, a 0.96 scale when pressed, and `<Highlight />` when selected. `ui/Chip.tsx` holds that frame. It imports only `theme`, `interaction`, and `Highlight`.
+
+Check what differs first, and keep it:
+
+* Size: 32 high with 12 padding (Crop), 34 with 12 (Text), and 30 with 10 (Adjust). Adjust's frame is also a row with a gap, for its "changed" dot, and has `borderCurve: "continuous"`. These come in through a `frameStyle` prop. Don't move `borderCurve` into the shared style: Crop's and Text's corners would change on iOS.
+* Target: Crop and Text pad to 44 with a `target` style and `hitSlop={4}`, and Adjust uses a wider `hitSlop` alone. `Chip` takes `hitSlop` and `style` for the target.
+* Content: the labels stay with the callers. One is `typography.label` with tabular numbers, one is a 16px preview in the font's own family (a literal size AGENTS.md allows), and one is an icon. Each still switches to `colors.onHighlight` when selected. Adjust's accessibility label adds ", changed".
+
+`RedactPanel`'s `EffectChoice` and `StickerSheet`'s `CategoryChip` look alike but aren't the same: the first has no hover or press frame, and the second is a tab with the highlighter under it. They stay.
+
+## Stage 13: The layers list's groups
+
+- [ ] `refactor: work out the layers list's rows in layerListEntries`
+- [ ] `refactor: share the layers list's background row and row actions`
+
+* Step 1: `GroupedLayerList` (192–288) works out the grouping inside its JSX: `groupsByLayer` (211–217), the `shown` set (219), and each group's layers (241–243). A pure `layerListEntries(layers, groups)` in `tools/layers/layerListEntries.ts` returns the rows, top first: a layer on its own, or a group in its topmost layer's place, holding its layers top first. Test it in `__tests__/`: no groups, a group whose layers aren't next to each other (it appears once, where its top layer is), and a group that lists a layer the document no longer has. `GroupedLayerList` maps the entries and keeps `expanded`.
+* Step 2: the Background row is written twice (182–186 and 281–284) and becomes a `BackgroundRow`. The five row callbacks are named one by one in `FlatLayerList`'s `LayerRow`, in both `StaticLayerRow` calls, and in both lists' parameters. Gather them into one `LayerRowActions` object (the type is in `LayerRow.tsx`, 38–44) and spread it.
+
+Check the panel on web and iOS with Find's grouped boxes: expand, collapse, hide, lock, and delete a group, and drag a row in a list with no groups.
+
+## Stage 14: Home's notices and shared photos
+
+- [ ] `refactor: share home's notice and gather its shared photo effects`
+
+* The save-failed notice (225–245) and the new-version notice (247–265) are the same markup: an icon, a message, and buttons. A local `Notice({ icon, color, message, children })` in `HomeScreen.tsx` renders both.
+* The two effects that open a shared photo (101–116), with the `shared` param and the `sessionOpen` selector, become a local `useSharedPhotos({ focused, status, openSharedPhoto })` in the same file. Their comments go with them. `openSharedPhoto` isn't memoized (`useHomeProjects.ts`, 172), so the effect runs on every render and its guard stops it. Keep the dependencies as they are: memoizing it is a separate change.
+
+Check on web: a shared photo through `/share-target` as AGENTS.md describes, and the new-version notice by forcing `useUpdateReady`.
+
 ## Considered and left out
 
 * **Splitting the image cache** (`imageCache.ts`, `decodedImages.ts`, `decodeImageLayers.ts`) differently. It's split so the cache can be tested without Skia.
@@ -204,4 +282,9 @@ Three doc comments run 15 lines or more as one paragraph: `useLayerTransformGest
 * **Pulling the sticker sheet's handlers or the dock footer out of `EditorScreen`.** Once stage 3 lands, the screen is mostly JSX, and these read fine inline.
 * **Rewriting `pixelateFilter`'s comment as a list.** It is the 16-line comment on `RedactionLayerView`, and it explains why the filter is built from a blur and two displacement passes. A list would drop that reasoning. `LayersLesson` shows the comment.
 * **Chasing a line count for `EditorCanvas`.** Stage 4 says what remains, and why it stays.
+* **Splitting `editorSlice`'s actions.** It's about 30 one-line wrappers around `model/edits`, each with a comment on why it takes an id or what it selects. Moving the history and session actions to their own file would only move lines, and lessons show 16 SourceView tabs from it.
+* **`projectLifecycle`'s two image URL mappings.** `openProject` and `updateThumbnail` both map a saved document's files to URLs, but one keeps the URLs as the open project's images, and the other releases them once the thumbnail is drawn.
+* **`StaticLayerRow`'s spare shared values.** Each row in a grouped list makes an `order`, a `dragId`, and a scroll ref it never uses, because `LayerRow`'s drag reads them. Taking them out means a second row component.
+* **Breaking up `ProjectList`, `CropTool`'s tabs, or `StickerSheet`.** Each component in them does one thing, and their bodies are short.
+* **Splitting `RedactionLayerView` into filters, pictures, and the view.** It's one layer type's drawing, and `LayersLesson` quotes it by path.
 * Changing the project file format, the document schema, undo behavior, the native modules, or what any tool, gesture, or Skia drawing does.
