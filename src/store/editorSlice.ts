@@ -2,13 +2,7 @@ import type { StateCreator } from "zustand";
 // Registers the "zustand/devtools" mutator that `SliceCreator` names.
 import type {} from "zustand/middleware";
 import type { Adjustments } from "../model/adjustments.ts";
-import {
-	addMaskStroke,
-	type CutStroke,
-	isCutOut,
-	withInvertedCut,
-	withMask,
-} from "../model/cutout.ts";
+import type { CutStroke } from "../model/cutout.ts";
 import {
 	createImageLayer,
 	createStickerLayer,
@@ -34,6 +28,7 @@ import {
 } from "../model/document.ts";
 import { setAdjustments } from "../model/edits/adjust.ts";
 import { reframe, setBackground } from "../model/edits/crop.ts";
+import { invertMask, paintMask, setMask } from "../model/edits/cutout.ts";
 import { addShape, drawStroke, setShapeStyle } from "../model/edits/draw.ts";
 import {
 	addMaskedRedaction,
@@ -493,31 +488,23 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// By id: the mask was found for the image it started on, which may no
 		// longer be selected, or may be gone.
-		setMask: (id, mask, options) => {
-			const target = findLayer(id);
-			if (target?.type !== "image") return;
-			const masked = withMask(target, mask, options);
-			if (masked === target) return;
-			replaceLayer("editor/setMask", target, masked);
-		},
+		setMask: (id, mask, options) =>
+			setDocument("editor/setMask", (document) =>
+				setMask(document, id, mask, options),
+			),
 
-		// By id, like `setMask`. `mask` is the inverse of the image's mask,
-		// so only an image that's cut has one to invert.
-		invertMask: (id, mask) => {
-			const target = findLayer(id);
-			if (target?.type !== "image" || !isCutOut(target)) return;
-			replaceLayer("editor/invertMask", target, withInvertedCut(target, mask));
-		},
+		// By id, like `setMask`.
+		invertMask: (id, mask) =>
+			setDocument("editor/invertMask", (document) =>
+				invertMask(document, id, mask),
+			),
 
 		// By id, like `setMask`: the stroke refines the image the tool is
-		// cutting out, whatever is selected. Keeping what's already whole
-		// changes nothing, so a pen on an uncut image isn't a step.
-		paintMask: (id, stroke) => {
-			const target = findLayer(id);
-			if (target?.type !== "image" || stroke.points.length < 2) return;
-			if (stroke.type === "pen" && !isCutOut(target)) return;
-			replaceLayer("editor/paintMask", target, addMaskStroke(target, stroke));
-		},
+		// cutting out, whatever is selected.
+		paintMask: (id, stroke) =>
+			setDocument("editor/paintMask", (document) =>
+				paintMask(document, id, stroke),
+			),
 
 		updateSelectedText: (patch) => {
 			const selected = selectSelectedTextLayer(get());
