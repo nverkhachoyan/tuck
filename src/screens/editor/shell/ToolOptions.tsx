@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { PenTip } from "@/model/layers/drawing";
 import { RingChoice } from "@/ui/RingChoice";
-import { colors, radii, typography } from "@/ui/theme";
+import { colors, radii, space, typography } from "@/ui/theme";
 import { BarChip } from "./ContextBar";
 
 // The dock's widest, so a tray lines up with the dock it rises out of.
@@ -189,14 +189,16 @@ export function SizeChip({
 				/>
 			}
 		>
-			<SizeChoices
-				nowrap
-				index={index}
-				color={color}
-				tip={tip}
-				onPick={onPick}
-			/>
-			{children}
+			<View style={styles.chipChoices}>
+				<SizeChoices
+					nowrap
+					index={index}
+					color={color}
+					tip={tip}
+					onPick={onPick}
+				/>
+				{children}
+			</View>
 		</BarChip>
 	);
 }
@@ -280,6 +282,9 @@ const styles = StyleSheet.create({
 	choicesNowrap: {
 		flexWrap: "nowrap",
 		marginHorizontal: 0,
+	},
+	chipChoices: {
+		gap: space.sm,
 	},
 	dot: {
 		borderWidth: StyleSheet.hairlineWidth,

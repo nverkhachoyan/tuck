@@ -10,6 +10,7 @@ import {
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
 	SIZE_DOTS,
+	SizeChip,
 	SizeChoices,
 	SizeDot,
 	ToolChoices,
@@ -129,15 +130,15 @@ export function CutOutPanel({
 }
 
 const BRUSH_EDGES = [
-	{ soft: true, label: "Soft edge", icon: "blur-radial" },
-	{ soft: false, label: "Hard edge", icon: "circle" },
+	{ soft: true, title: "Soft", icon: "blur-radial" },
+	{ soft: false, title: "Hard", icon: "circle" },
 ] as const;
 
 /**
- * Cut out's options in the wide editor's header: Pick, Keep, and Erase,
- * Subjects when this device can find them, the brushes' size and edge, then
- * Invert and Redact once there's a cut. Choosing the sub-tool already in use
- * leaves it, since the options stay in view. The canvas wash is unchanged.
+ * Cut out's options in the wide editor's header: Pick, Keep, and Erase, then
+ * the brushes' size, then Subjects, Invert, and Redact. Soft and Hard sit in
+ * the size chip. Choosing the sub-tool already in use leaves it, since the
+ * options stay in view. The canvas wash is unchanged.
  */
 export function CutOutBar({
 	settings,
@@ -203,18 +204,9 @@ export function CutOutBar({
 					}}
 				/>
 			</BarGroup>
-			<BarGroup>
-				{onFindAll && (
-					<BarButton
-						label="Subjects"
-						icon="auto-fix"
-						busy={finding === "all"}
-						onPress={onFindAll}
-					/>
-				)}
-				{brush && (
-					<SizeChoices
-						nowrap
+			{brush && (
+				<BarGroup>
+					<SizeChip
 						index={tool === "keep" ? settings.keepSize : settings.eraseSize}
 						color={tool === "keep" ? colors.textPrimary : null}
 						onPick={(index) =>
@@ -224,43 +216,50 @@ export function CutOutBar({
 									: { ...settings, eraseSize: index },
 							)
 						}
-					/>
-				)}
-				{brush &&
-					BRUSH_EDGES.map((edge) => (
-						<RingChoice
-							key={edge.label}
-							variant="highlight"
-							label={edge.label}
-							selected={settings.soft === edge.soft}
-							onPress={() => onChange({ ...settings, soft: edge.soft })}
-						>
-							{(ink) => (
-								<MaterialCommunityIcons
-									name={edge.icon}
-									size={22}
-									color={ink}
-								/>
+					>
+						<OptionSegments
+							label="Edge"
+							options={BRUSH_EDGES.map(({ title, icon }) => ({ title, icon }))}
+							selected={BRUSH_EDGES.findIndex(
+								(edge) => edge.soft === settings.soft,
 							)}
-						</RingChoice>
-					))}
-				{onInvert && (
-					<BarButton
-						label="Invert"
-						icon="select-inverse"
-						busy={inverting}
-						onPress={onInvert}
-					/>
-				)}
-				{onRedact && (
-					<BarButton
-						label="Redact"
-						icon="blur"
-						busy={redacting}
-						onPress={onRedact}
-					/>
-				)}
-			</BarGroup>
+							onSelect={(index) => {
+								const edge = BRUSH_EDGES[index];
+								if (!edge || edge.soft === settings.soft) return;
+								onChange({ ...settings, soft: edge.soft });
+							}}
+						/>
+					</SizeChip>
+				</BarGroup>
+			)}
+			{(onFindAll || onInvert || onRedact) && (
+				<BarGroup>
+					{onFindAll && (
+						<BarButton
+							label="Subjects"
+							icon="auto-fix"
+							busy={finding === "all"}
+							onPress={onFindAll}
+						/>
+					)}
+					{onInvert && (
+						<BarButton
+							label="Invert"
+							icon="select-inverse"
+							busy={inverting}
+							onPress={onInvert}
+						/>
+					)}
+					{onRedact && (
+						<BarButton
+							label="Redact"
+							icon="blur"
+							busy={redacting}
+							onPress={onRedact}
+						/>
+					)}
+				</BarGroup>
+			)}
 		</BarSections>
 	);
 }
