@@ -32,8 +32,8 @@ import {
 import { shapePath } from "@/render/layers/ShapeLayerView";
 import { useDecodedImage } from "@/render/useDecodedImage";
 import {
-	liveBoxOf,
 	type LiveTransform,
+	liveBoxOf,
 	liveTransformOf,
 } from "./liveTransform";
 
