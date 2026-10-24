@@ -27,13 +27,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
-import {
-	type Box,
-	hitTestBox,
-	type Point,
-	type Rect,
-	type Transform,
-} from "@/model/geometry";
+import type { Box, Point, Rect, Transform } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
 import type { ShapePlacement } from "@/model/layers/shape";
 import { type TextSelection, withPlaceholder } from "@/model/textEditing";
@@ -55,12 +49,7 @@ import {
 } from "./canvasInput";
 import { EditorScene, type LiveAdjustment } from "./EditorScene";
 import { handleMetrics, handleUnder } from "./handleMetrics";
-import {
-	detectionAt,
-	findLayerAt,
-	hitsLayer,
-	type LayerTarget,
-} from "./hitTest";
+import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
 import { layerBounds } from "./layerBounds";
 import { layerTargets, resizeMode } from "./layerTargets";
 import {
@@ -76,10 +65,10 @@ import {
 	selectionScreenBounds,
 } from "./selectionBarPlacement";
 import { readShownViewport, type ShownViewport } from "./shownViewport";
-import { insideDocument } from "./strokeIntent";
 import { useCanvasTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useDialDragGesture } from "./useDialDragGesture";
+import { useFindTap } from "./useFindTap";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { useTextEditGesture } from "./useTextEditGesture";
 import { useToolStroke } from "./useToolStroke";
@@ -628,42 +617,16 @@ export function EditorCanvas({
 		input.type === "adjust" ? input.drag : null,
 		idleGesture,
 	);
-	const handleDetectionTap = useCallback(
-		(screenX: number, screenY: number) => {
-			if (input.type !== "find" || scale === 0) return;
-			const point = lookups.toDocument(screenX, screenY);
-			const hit = detectionAt(detections, point, 10 / scale);
-			if (hit) {
-				tapOnNothing(null);
-				input.onToggle(hit.sourceIndex);
-				return;
-			}
-			// A miss on the image, as by a face, keeps finding, and a second one
-			// zooms (see `tapOnNothing`). Where the image is locked, it has no
-			// hit box, and shows only inside the document.
-			const under = findLayerAt(targets, point)?.id ?? null;
-			const image = document.layers.find((layer) => layer.id === input.imageId);
-			const onImage =
-				under === null
-					? image !== undefined &&
-						insideDocument(documentSize, point) &&
-						hitTestBox(image.transform, layerBounds(image), point)
-					: under === input.imageId;
-			if (onImage) tapOnNothing({ x: screenX, y: screenY });
-			else lookups.tapAway(point);
-		},
-		[
-			input,
-			detections,
-			scale,
-			lookups,
-			targets,
-			document,
-			documentSize,
-			tapOnNothing,
-		],
-	);
-	const detectionGesture = useCanvasTap(handleDetectionTap);
+	const detectionGesture = useFindTap({
+		input,
+		scale,
+		lookups,
+		detections,
+		targets,
+		document,
+		documentSize,
+		tapOnNothing,
+	});
 
 	const modeGesture = {
 		select: gesture,
