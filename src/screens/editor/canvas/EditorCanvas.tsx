@@ -86,12 +86,33 @@ import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { usePaintGesture } from "./usePaintGesture";
 import { useTextEditGesture } from "./useTextEditGesture";
 import { useViewGesture } from "./useViewGesture";
-import { type ViewFrame, viewPointToDocument } from "./viewport";
+import {
+	type DocumentViewport,
+	type ViewFrame,
+	viewPointToDocument,
+} from "./viewport";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
 const PHOTO_INSET = 12;
 const SELECT: CanvasInput = { type: "select" };
+
+// The selection's live handle under a document point. The drags below share
+// it, and each still decides for itself whether the layer is hit.
+function liveHandleAt(
+	live: LiveTransform,
+	viewport: DocumentViewport,
+	point: Point,
+) {
+	"worklet";
+	return handleUnder(
+		readLiveTransform(live),
+		readLiveBox(live),
+		live.resizeMode.value,
+		point,
+		viewport.scale,
+	);
+}
 const NO_DETECTIONS: readonly DetectionOverlayRegion[] = [];
 // The selection bar's distance from the selection, above it past the rotate
 // knob or below it past the handles, and from the view's edges.
@@ -434,13 +455,8 @@ export function EditorCanvas({
 			if (id === null) return true;
 			const point = viewPointToDocument(viewport, { x, y });
 			return (
-				handleUnder(
-					readLiveTransform(live),
-					readLiveBox(live),
-					live.resizeMode.value,
-					point,
-					viewport.scale,
-				) === null && !hitsLayer(sharedTargets.value, id, point)
+				liveHandleAt(live, viewport, point) === null &&
+				!hitsLayer(sharedTargets.value, id, point)
 			);
 		};
 	}, [oneFingerMode, live, sharedTargets, viewport]);
@@ -455,13 +471,8 @@ export function EditorCanvas({
 			if (id === null) return false;
 			const point = viewPointToDocument(viewport, { x, y });
 			return (
-				handleUnder(
-					readLiveTransform(live),
-					readLiveBox(live),
-					live.resizeMode.value,
-					point,
-					viewport.scale,
-				) !== null || findLayerAt(sharedTargets.value, point)?.id === id
+				liveHandleAt(live, viewport, point) !== null ||
+				findLayerAt(sharedTargets.value, point)?.id === id
 			);
 		};
 		const offSelection = (x: number, y: number) => {

@@ -121,7 +121,7 @@ Rename the canvas's `targetImage` (line 644) to `outlinedImage`. It is the image
 
 ### 4.2 One worklet for "the handle under this point"
 
-- [ ] `refactor: share the live selection's handle check between the canvas's worklets`
+- [x] `refactor: share the live selection's handle check between the canvas's worklets`
 
 `dragAlone` and `selectionDrag` both call `handleUnder(readLiveTransform(live), readLiveBox(live), live.resizeMode.value, point, viewport.scale)`. Pull that into one worklet, declared above both. **Don't merge the layer checks that follow it.** They differ on purpose: `dragAlone` asks whether the point hits the selection anywhere (`hitsLayer`, even under another layer), while `selectionDrag` asks whether the selection is the topmost layer there (`findLayerAt(…)?.id === id`). Run the iOS simulator after this step.
 
