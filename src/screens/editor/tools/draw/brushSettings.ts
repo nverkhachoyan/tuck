@@ -120,6 +120,23 @@ export function shapeStyleFor(settings: BrushSettings, size: Size): ShapeStyle {
 	};
 }
 
+/** The tool in use, one size dot up or down, staying put at either end. */
+export function stepBrushSize(
+	settings: BrushSettings,
+	step: 1 | -1,
+): BrushSettings {
+	const count = BRUSH_SIZES[settings.tool].length;
+	const next = Math.min(
+		count - 1,
+		Math.max(0, brushSizeIndex(settings) + step),
+	);
+	if (next === brushSizeIndex(settings)) return settings;
+	return {
+		...settings,
+		sizes: { ...settings.sizes, [settings.tool]: next },
+	};
+}
+
 /**
  * The settings showing an existing shape: its kind, its color, and the size
  * closest to its outline's thickness as it's scaled, on a canvas of `size`.

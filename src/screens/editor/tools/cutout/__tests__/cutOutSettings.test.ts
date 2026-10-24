@@ -7,6 +7,7 @@ import {
 	cutOutTool,
 	defaultCutOutSettings,
 	parseCutOutSettings,
+	stepCutSize,
 } from "../cutOutSettings.ts";
 
 describe("parseCutOutSettings", () => {
@@ -75,5 +76,13 @@ describe("cutBrush", () => {
 
 	test("has no brush for picking", () => {
 		assert.equal(cutBrush(defaultCutOutSettings, "pick", size), null);
+	});
+});
+
+describe("stepCutSize", () => {
+	test("steps the brush in use, and leaves Pick alone", () => {
+		const keep = { ...defaultCutOutSettings, tool: "keep" as const };
+		assert.equal(stepCutSize(keep, 1).keepSize, keep.keepSize + 1);
+		assert.equal(stepCutSize(defaultCutOutSettings, -1), defaultCutOutSettings);
 	});
 });

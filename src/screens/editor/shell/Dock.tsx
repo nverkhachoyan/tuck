@@ -141,6 +141,57 @@ export function InspectorBackdrop() {
 	return <Surface resting style={styles.inspectorCard} />;
 }
 
+type ModeActionProps = {
+	onCancel?: () => void;
+	cancelShortcut?: string;
+	onDone: () => void;
+	// What Done does, for its tooltip and screen readers, when it's more.
+	doneLabel?: string;
+	doneShortcut?: string;
+};
+
+/**
+ * Cancel, when the mode has one, and Done. The dock's footer puts them at
+ * its ends; the wide editor's context bar groups them. The labels, shortcuts,
+ * and which of the two show live here, so the two layouts can't disagree.
+ */
+export function ModeActions(props: ModeActionProps) {
+	const { cancel, done } = modeActionButtons(props);
+	return (
+		<View style={styles.modeActions}>
+			{cancel}
+			{done}
+		</View>
+	);
+}
+
+function modeActionButtons({
+	onCancel,
+	cancelShortcut,
+	onDone,
+	doneLabel = "Done",
+	doneShortcut,
+}: ModeActionProps) {
+	return {
+		cancel: onCancel ? (
+			<DockButton
+				icon="close-outline"
+				label="Cancel"
+				shortcut={cancelShortcut}
+				onPress={onCancel}
+			/>
+		) : null,
+		done: (
+			<DockButton
+				icon="checkmark-outline"
+				label={doneLabel}
+				shortcut={doneShortcut}
+				onPress={onDone}
+			/>
+		),
+	};
+}
+
 /**
  * A mode's last row: Cancel at the left, the mode's name in the middle, and
  * Done at the right, all within reach of the thumb that's using it. Without
@@ -148,43 +199,16 @@ export function InspectorBackdrop() {
  */
 export function DockFooter({
 	title,
-	onCancel,
-	cancelShortcut,
-	onDone,
-	doneLabel = "Done",
-	doneShortcut,
-}: {
-	title: string;
-	onCancel?: () => void;
-	cancelShortcut?: string;
-	onDone: () => void;
-	// What Done does, for its tooltip and screen readers, when it's more.
-	doneLabel?: string;
-	doneShortcut?: string;
-}) {
+	...actions
+}: { title: string } & ModeActionProps) {
+	const { cancel, done } = modeActionButtons(actions);
 	return (
 		<View style={styles.footer}>
-			<View style={styles.footerEnd}>
-				{onCancel && (
-					<DockButton
-						icon="close-outline"
-						label="Cancel"
-						shortcut={cancelShortcut}
-						onPress={onCancel}
-					/>
-				)}
-			</View>
+			<View style={styles.footerEnd}>{cancel}</View>
 			<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
 				{title}
 			</Text>
-			<View style={[styles.footerEnd, styles.footerEndRight]}>
-				<DockButton
-					icon="checkmark-outline"
-					label={doneLabel}
-					shortcut={doneShortcut}
-					onPress={onDone}
-				/>
-			</View>
+			<View style={[styles.footerEnd, styles.footerEndRight]}>{done}</View>
 		</View>
 	);
 }
@@ -300,6 +324,10 @@ const styles = StyleSheet.create({
 	},
 	footerEndRight: {
 		alignItems: "flex-end",
+	},
+	modeActions: {
+		flexDirection: "row",
+		alignItems: "center",
 	},
 	title: {
 		flex: 1,

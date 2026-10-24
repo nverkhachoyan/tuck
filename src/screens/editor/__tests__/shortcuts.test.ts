@@ -52,6 +52,12 @@ describe("shortcutFor", () => {
 		});
 	});
 
+	test("steps a brush with plain brackets, and leaves a shifted one", () => {
+		assert.deepEqual(shortcutFor(press("[")), { type: "brushSize", step: -1 });
+		assert.deepEqual(shortcutFor(press("]")), { type: "brushSize", step: 1 });
+		assert.equal(shortcutFor(press("[", { shiftKey: true })), null);
+	});
+
 	test("zooms in, out, and to fit with the modifier", () => {
 		const zoom = (to: string) => ({ type: "zoom", to });
 		assert.deepEqual(shortcutFor(press("=", { metaKey: true })), zoom("in"));

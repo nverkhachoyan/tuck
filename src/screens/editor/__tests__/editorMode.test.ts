@@ -505,6 +505,40 @@ describe("shortcutCommand", () => {
 		}
 	});
 
+	test("[ and ] step a brush while Draw, Redact, or Cut out is open", () => {
+		const smaller = { type: "brushSize", step: -1 } as const;
+		const larger = { type: "brushSize", step: 1 } as const;
+		assert.deepEqual(shortcutCommand(drawing, null, smaller), smaller);
+		assert.deepEqual(
+			shortcutCommand(
+				run(initialEditorMode, { type: "startTool", tool: "redact" }),
+				null,
+				larger,
+			),
+			larger,
+		);
+		assert.deepEqual(
+			shortcutCommand(
+				run(initialEditorMode, {
+					type: "startCutOut",
+					layerId: "image",
+				}),
+				null,
+				smaller,
+			),
+			smaller,
+		);
+		assert.equal(
+			shortcutCommand(
+				run(initialEditorMode, { type: "startTool", tool: "find" }),
+				null,
+				smaller,
+			),
+			null,
+		);
+		assert.equal(shortcutCommand(initialEditorMode, "layer", smaller), null);
+	});
+
 	test("tool keys and L work with nothing selected; the rest pass", () => {
 		assert.equal(shortcutCommand(initialEditorMode, null, draw), draw);
 		assert.equal(shortcutCommand(initialEditorMode, null, sticker), sticker);

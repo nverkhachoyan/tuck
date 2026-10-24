@@ -30,7 +30,12 @@ import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, radii, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import { DockContent, type DockPanel, ToolTrays } from "./EditorDock";
+import {
+	ContextBarContent,
+	DockContent,
+	type DockPanel,
+	ToolTrays,
+} from "./EditorDock";
 import { openTray, takesKeys, toolImageId } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
@@ -43,12 +48,14 @@ import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
 import { mapStarters, ToolsPanel } from "./shell/ToolsPanel";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CropTool } from "./tools/crop/CropTool";
+import { stepCutSize } from "./tools/cutout/cutOutSettings";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
+import { stepBrushSize } from "./tools/draw/brushSettings";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
-import { redactionEffect } from "./tools/redact/redactSettings";
+import { redactionEffect, stepRedactSize } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
 import { StickerSheet } from "./tools/stickers/StickerSheet";
 import type { StickerImage } from "./tools/stickers/savedStickers";
@@ -307,6 +314,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			: selectedLayer
 				? "layer"
 				: "idle";
+	// Draw's options live in the header on a wide screen, and the inspector
+	// keeps the layers. The other tools still take the inspector.
+	const drawInBar = wide && panelKind === "draw";
 
 	const focused = useIsFocused();
 	const {
@@ -366,6 +376,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		duplicate: duplicateSelectedLayer,
 		arrange: arrangeSelected,
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
+		stepBrush: (step) => {
+			if (tool === "draw") {
+				const next = stepBrushSize(draw.settings, step);
+				if (next !== draw.settings) draw.change(next);
+			} else if (tool === "redact") {
+				const next = stepRedactSize(redact.settings, step);
+				if (next !== redact.settings) redact.change(next);
+			} else if (tool === "cutOut") {
+				const next = stepCutSize(cut.settings, step);
+				if (next !== cut.settings) cut.change(next);
+			}
+		},
 	});
 
 	const layerList = layerListProps({
@@ -491,9 +513,29 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						// Over the rail's tools.
 						backColumn={wide ? RAIL_INSET : undefined}
 						onBack={leave}
-						// Only a wide screen has room between Back and the actions.
-						title={wide ? projectTitle : undefined}
-						subtitle={saveProblem ? "Not saved" : "Saved on this device"}
+						// Only a wide screen has room between Back and the actions,
+						// and Draw's bar takes that room while it's open.
+						title={wide && !drawInBar ? projectTitle : undefined}
+						subtitle={
+							wide && !drawInBar
+								? saveProblem
+									? "Not saved"
+									: "Saved on this device"
+								: undefined
+						}
+						bar={
+							drawInBar ? (
+								<ContextBarContent
+									panel="draw"
+									dispatchMode={dispatchMode}
+									tools={tools}
+									customColor={customColor}
+									onCustomColor={setCustomColor}
+									onCancel={cancel}
+									onDone={done}
+								/>
+							) : undefined
+						}
 						action={
 							<HeaderActions
 								onReset={resetEdit}
@@ -552,6 +594,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							customColor={customColor}
 							onCustomColor={setCustomColor}
 							bottomInset={dockInset}
+							wide={wide}
 						/>
 						<Announcement message={cut.news} />
 						{saveProblem && (
@@ -583,13 +626,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						{/* After the tool's options, so taps on the dock reach it rather
 				    than closing them. */}
 						<Dock
-							panel={panelKind}
+							panel={drawInBar ? "idle" : panelKind}
 							layout={wide ? "inspector" : "bar"}
-							footer={dockFooter}
+							footer={drawInBar ? undefined : dockFooter}
 							keyboardOverlap={layout.keyboardOverlap}
 						>
 							<DockContent
-								panel={panelKind}
+								panel={drawInBar ? "idle" : panelKind}
 								optionsOpen={toolOptionsOpen}
 								onFind={targetImage ? startTool.find : undefined}
 								dispatchMode={dispatchMode}

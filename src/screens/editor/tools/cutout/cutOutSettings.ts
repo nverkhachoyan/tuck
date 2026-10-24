@@ -60,6 +60,21 @@ export function parseCutOutSettings(saved: unknown): CutOutSettings {
 	};
 }
 
+/** The brush in use, one size dot up or down. Pick has no size. */
+export function stepCutSize(
+	settings: CutOutSettings,
+	step: 1 | -1,
+): CutOutSettings {
+	if (settings.tool === "pick") return settings;
+	const key = settings.tool === "keep" ? "keepSize" : "eraseSize";
+	const next = Math.min(
+		CUT_BRUSH_SIZES.length - 1,
+		Math.max(0, settings[key] + step),
+	);
+	if (next === settings[key]) return settings;
+	return { ...settings, [key]: next };
+}
+
 /**
  * The tool in use: Pick needs this device to find subjects, so without it,
  * the eraser takes its place.

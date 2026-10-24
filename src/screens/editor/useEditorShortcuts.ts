@@ -41,6 +41,7 @@ export function useEditorShortcuts({
 	duplicate,
 	arrange,
 	nudge,
+	stepBrush,
 }: {
 	enabled: boolean;
 	modeState: EditorModeState;
@@ -58,6 +59,7 @@ export function useEditorShortcuts({
 	duplicate: () => void;
 	arrange: (move: ArrangeMove) => void;
 	nudge: (dx: number, dy: number) => void;
+	stepBrush: (step: 1 | -1) => void;
 }) {
 	const handleShortcut = (shortcut: Shortcut): boolean => {
 		const command = shortcutCommand(modeState, selection, shortcut);
@@ -111,6 +113,9 @@ export function useEditorShortcuts({
 				break;
 			case "nudge":
 				nudge(command.dx, command.dy);
+				break;
+			case "brushSize":
+				stepBrush(command.step);
 				break;
 			default:
 				assertNever(command);

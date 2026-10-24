@@ -7,12 +7,13 @@ import {
 	openTray,
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
+import { ContextBar } from "./shell/ContextBar";
 import { LayerActionsPanel } from "./shell/LayerActionsPanel";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
 import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
-import { BrushOptions, DrawPanel } from "./tools/draw/DrawPanel";
+import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindPanel, FindTray } from "./tools/find/FindPanel";
 import type { useFindTool } from "./tools/find/useFindTool";
@@ -55,10 +56,13 @@ export function ToolTrays({
 	customColor,
 	onCustomColor,
 	bottomInset,
+	wide = false,
 }: ModeProps & {
 	modeState: EditorModeState;
 	onCustomColor: (color: string) => void;
 	bottomInset: number;
+	// A wide screen shows Draw's options in the header, so its tray stays shut.
+	wide?: boolean;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = text;
@@ -77,7 +81,7 @@ export function ToolTrays({
 	});
 	return (
 		<>
-			{tray === "draw" && (
+			{tray === "draw" && !wide && (
 				<BrushOptions
 					settings={draw.settings}
 					customColor={customColor}
@@ -149,6 +153,60 @@ export function ToolTrays({
 				/>
 			)}
 		</>
+	);
+}
+
+/**
+ * What the wide editor's header holds instead of the project's title: the
+ * open tool's options. Phones have no bar; the dock shows the same tool.
+ * Only Draw so far. The others still use the inspector.
+ */
+export function ContextBarContent({
+	panel,
+	dispatchMode,
+	tools: { draw },
+	customColor,
+	onCustomColor,
+	onCancel,
+	onDone,
+	doneLabel,
+}: ModeProps & {
+	panel: DockPanel;
+	onCustomColor: (color: string) => void;
+	onCancel: () => void;
+	onDone: () => void;
+	doneLabel?: string;
+}) {
+	if (panel !== "draw") return null;
+	return (
+		<ContextBar
+			title="Draw"
+			onCancel={onCancel}
+			onDone={onDone}
+			doneLabel={doneLabel}
+			doneShortcut="Escape"
+		>
+			<DrawBar
+				settings={draw.settings}
+				customColor={customColor}
+				onChange={draw.change}
+				onPickCustom={(color) => {
+					draw.change({ ...draw.settings, color });
+					onCustomColor(color);
+				}}
+				onEyedropper={() =>
+					dispatchMode({
+						type: "startEyedropper",
+						eyedropper: {
+							apply: (color) => {
+								draw.change({ ...draw.settings, color });
+								onCustomColor(color);
+							},
+						},
+					})
+				}
+			/>
+		</ContextBar>
 	);
 }
 

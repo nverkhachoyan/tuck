@@ -44,6 +44,7 @@ export type Shortcut =
 	| { type: "reorder"; step: 1 | -1 }
 	| { type: "nudge"; dx: number; dy: number }
 	| { type: "zoom"; to: "in" | "out" | "fit" }
+	| { type: "brushSize"; step: 1 | -1 }
 	| { type: "tool"; tool: ToolKey }
 	| { type: "layers" }
 	| { type: "export" }
@@ -117,6 +118,9 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 	}
 	// Shift is left alone, so a capital typed by mistake does nothing.
 	if (press.shiftKey) return null;
+	// Plain brackets step a brush; ⌘/Ctrl with them reorders layers, above.
+	if (press.key === "[") return { type: "brushSize", step: -1 };
+	if (press.key === "]") return { type: "brushSize", step: 1 };
 	const letter = press.key.toUpperCase();
 	if (letter === LAYERS_KEY) return { type: "layers" };
 	const tool = TOOLS_BY_KEY.get(letter);
@@ -158,6 +162,8 @@ export const SHORTCUT_GROUPS: {
 			{ keys: "Delete", action: "Delete" },
 			{ keys: "Enter", action: "Edit the selected text" },
 			{ keys: "←↑→↓", action: "Nudge, with Shift for more" },
+			{ keys: "[", action: "Smaller brush" },
+			{ keys: "]", action: "Larger brush" },
 			{ keys: "Escape", action: "Done, or deselect" },
 		],
 	},

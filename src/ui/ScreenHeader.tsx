@@ -15,7 +15,9 @@ const BACK_SIZE = 44;
 
 /**
  * Top bar with a Back action, an optional centered title (with a `subtitle`
- * under it, in small print), and an optional trailing action. Back is a chevron; `backLabel` names where it goes, for
+ * under it, in small print), and an optional trailing action. `bar` takes
+ * the title's place and fills the room between Back and the action: the
+ * wide editor's context. Back is a chevron; `backLabel` names where it goes, for
  * assistive tech and as its tooltip on web. With `backColumn`, Back is
  * centered over a column that wide at the bar's left (the wide editor's
  * rail) rather than lined up with the edge. Without `onBack`, the title, if
@@ -30,6 +32,7 @@ export function ScreenHeader({
 	backColumn,
 	onBack,
 	action,
+	bar,
 }: {
 	title?: string;
 	subtitle?: string;
@@ -37,6 +40,7 @@ export function ScreenHeader({
 	backColumn?: number;
 	onBack?: () => void;
 	action?: ReactNode;
+	bar?: ReactNode;
 }) {
 	const heading = title ? (
 		<View style={styles.heading}>
@@ -53,12 +57,15 @@ export function ScreenHeader({
 	return (
 		<View style={styles.container}>
 			{onBack ? (
-				<>
-					{heading && <View style={styles.titleContainer}>{heading}</View>}
-					<BackButton label={backLabel} column={backColumn} onPress={onBack} />
-				</>
+				<BackButton label={backLabel} column={backColumn} onPress={onBack} />
 			) : (
-				(heading ?? <View />)
+				!bar && (heading ?? <View />)
+			)}
+			{bar ? (
+				<View style={styles.barSlot}>{bar}</View>
+			) : (
+				onBack &&
+				heading && <View style={styles.titleContainer}>{heading}</View>
 			)}
 			{action}
 		</View>
@@ -109,6 +116,14 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		alignItems: "center",
 		paddingHorizontal: space.md,
+	},
+	// Fills the room between Back and the trailing action.
+	barSlot: {
+		flex: 1,
+		minWidth: 0,
+		flexDirection: "row",
+		alignItems: "center",
+		marginLeft: space.sm,
 	},
 	// Centered on the whole bar rather than the space left of Back.
 	titleContainer: {

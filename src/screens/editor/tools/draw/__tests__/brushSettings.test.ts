@@ -10,6 +10,7 @@ import {
 	parseBrushSettings,
 	shapeEdit,
 	shapeStyleFor,
+	stepBrushSize,
 	withShape,
 } from "../brushSettings.ts";
 
@@ -169,5 +170,19 @@ describe("shapes", () => {
 		assert.deepEqual(shapeEdit(settings, thicker, canvas, 2), {
 			strokeWidth: (BRUSH_SIZES.shape[2] * 3000) / 2,
 		});
+	});
+});
+
+describe("stepBrushSize", () => {
+	test("moves the tool in use by one dot, and stays put at either end", () => {
+		const settings = { ...defaultBrushSettings, sizes };
+		assert.equal(stepBrushSize(settings, 1).sizes.pen, 3);
+		assert.equal(stepBrushSize(settings, -1).sizes.pen, 1);
+		const largest = {
+			...settings,
+			tool: "eraser" as const,
+			sizes: { ...sizes, eraser: 4 },
+		};
+		assert.equal(stepBrushSize(largest, 1), largest);
 	});
 });

@@ -74,6 +74,21 @@ export function parseRedactSettings(saved: unknown): RedactSettings {
 	};
 }
 
+/** The brush or eraser, one size dot up or down. A box has no size. */
+export function stepRedactSize(
+	settings: RedactSettings,
+	step: 1 | -1,
+): RedactSettings {
+	if (settings.tool === "box") return settings;
+	const key = settings.tool === "brush" ? "brushSize" : "eraserSize";
+	const next = Math.min(
+		REDACT_BRUSH_SIZES.length - 1,
+		Math.max(0, settings[key] + step),
+	);
+	if (next === settings[key]) return settings;
+	return { ...settings, [key]: next };
+}
+
 export function redactionEffect(
 	settings: RedactSettings,
 	size: Size,

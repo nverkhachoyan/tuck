@@ -10,6 +10,7 @@ import {
 	REDACT_BRUSH_SIZES,
 	redactionEffect,
 	sameEffect,
+	stepRedactSize,
 	withEffect,
 } from "../redactSettings.ts";
 
@@ -140,6 +141,17 @@ describe("parseRedactSettings", () => {
 				eraserSize: 3,
 			}),
 			{ ...defaultRedactSettings, eraserSize: 3 },
+		);
+	});
+});
+
+describe("stepRedactSize", () => {
+	test("steps the brush or eraser, and leaves a box alone", () => {
+		const brush = { ...defaultRedactSettings, tool: "brush" as const };
+		assert.equal(stepRedactSize(brush, 1).brushSize, brush.brushSize + 1);
+		assert.equal(
+			stepRedactSize(defaultRedactSettings, 1),
+			defaultRedactSettings,
 		);
 	});
 });

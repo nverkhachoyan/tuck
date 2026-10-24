@@ -130,27 +130,40 @@ export function ToolOption({
 }
 
 /** A row of `RingChoice`s, lined up with the color swatches. */
-export function ToolChoices({ children }: { children: ReactNode }) {
-	return <View style={styles.choices}>{children}</View>;
+export function ToolChoices({
+	nowrap = false,
+	children,
+}: {
+	nowrap?: boolean;
+	children: ReactNode;
+}) {
+	return (
+		<View style={[styles.choices, nowrap && styles.choicesNowrap]}>
+			{children}
+		</View>
+	);
 }
 
 /**
  * The five brush sizes, as dots. `color` is null for an eraser, whose dot is
- * an outline, and `tip` squarens a marker's or glows a neon's.
+ * an outline, and `tip` squarens a marker's or glows a neon's. `nowrap` keeps
+ * them on one line, for a bar that scrolls instead of wrapping.
  */
 export function SizeChoices({
 	index,
 	color,
 	tip,
+	nowrap = false,
 	onPick,
 }: {
 	index: number;
 	color: string | null;
 	tip?: PenTip;
+	nowrap?: boolean;
 	onPick: (index: number) => void;
 }) {
 	return (
-		<ToolChoices>
+		<ToolChoices nowrap={nowrap}>
 			{SIZE_DOTS.map((dot, choice) => (
 				<RingChoice
 					key={dot}
@@ -252,6 +265,10 @@ const styles = StyleSheet.create({
 		flexWrap: "wrap",
 		// As the swatches do, so the rows' first choices line up.
 		marginHorizontal: -9,
+	},
+	choicesNowrap: {
+		flexWrap: "nowrap",
+		marginHorizontal: 0,
 	},
 	dot: {
 		borderWidth: StyleSheet.hairlineWidth,

@@ -302,8 +302,20 @@ export function shortcutCommand(
 		return shortcut.type === "deselect" ? { type: "stopEyedropper" } : null;
 	}
 	if (state.mode.type === "tool") {
-		return shortcut.type === "deselect" ? { type: "doneWithTool" } : null;
+		if (shortcut.type === "deselect") return { type: "doneWithTool" };
+		// [ and ] step a brush while Draw, Redact, or Cut out is open. A
+		// sub-tool with no size, like a box, leaves the size where it is.
+		if (
+			shortcut.type === "brushSize" &&
+			(state.mode.tool === "draw" ||
+				state.mode.tool === "redact" ||
+				state.mode.tool === "cutOut")
+		) {
+			return shortcut;
+		}
+		return null;
 	}
+	if (shortcut.type === "brushSize") return null;
 	if (shortcut.type === "tool" || shortcut.type === "layers") return shortcut;
 	if (selection === null) return null;
 	if (shortcut.type === "edit" && selection !== "text") return null;
