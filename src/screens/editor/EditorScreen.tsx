@@ -19,6 +19,8 @@ import { exportHref } from "@/projects/projectRoute";
 import { addImage, openProjectName } from "@/projects/projectService";
 import { textIndexAt } from "@/render/textLayerLayout";
 import {
+	selectCanRedo,
+	selectCanUndo,
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 	useStore,
@@ -32,25 +34,22 @@ import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import {
-	DockContent,
-	type DockPanel,
-	HeaderActions,
-	layerActionsFor,
-	layerListProps,
-	type ToolStarters,
-	ToolTrays,
-	toolButtonsFor,
-} from "./EditorDock";
+import { DockContent, type DockPanel, ToolTrays } from "./EditorDock";
 import { type ShortcutCommand, shortcutCommand, takesKeys } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
 import { Dock, DockFooter, InspectorBackdrop } from "./shell/Dock";
+import { HeaderActions } from "./shell/HeaderActions";
+import { layerActionsFor } from "./shell/LayerActionsPanel";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
-import { ToolsPanel } from "./shell/ToolsPanel";
+import {
+	type ToolStarters,
+	ToolsPanel,
+	toolButtonsFor,
+} from "./shell/ToolsPanel";
 import type { Shortcut } from "./shortcuts";
 import { useAdjustController } from "./tools/adjust/useAdjustController";
 import { CropTool } from "./tools/crop/CropTool";
@@ -58,7 +57,7 @@ import { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
-import { LayersPanel } from "./tools/layers/LayersPanel";
+import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
 import { redactionEffect } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
 import { StickerSheet } from "./tools/stickers/StickerSheet";
@@ -133,6 +132,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
+	const canUndo = useStore(selectCanUndo);
+	const canRedo = useStore(selectCanRedo);
 	const actions = useEditorActions();
 	const {
 		addImageLayer,
@@ -621,7 +622,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						subtitle={saveProblem ? "Not saved" : "Saved on this device"}
 						action={
 							<HeaderActions
-								typing={editingText}
 								onReset={resetEdit}
 								// A wide screen's inspector always shows the layers.
 								layers={
@@ -632,6 +632,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 											}
 										: undefined
 								}
+								// While typing, undo and redo wait: the text isn't a step yet.
+								canUndo={canUndo && !editingText}
+								canRedo={canRedo && !editingText}
+								onUndo={undo}
+								onRedo={redo}
 								onExport={openExport}
 							/>
 						}

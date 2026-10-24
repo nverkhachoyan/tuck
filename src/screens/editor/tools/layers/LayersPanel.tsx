@@ -7,13 +7,14 @@ import Animated, {
 	FadeOutRight,
 	useSharedValue,
 } from "react-native-reanimated";
-import type { LayerGroup } from "@/model/document";
+import type { EditorDocument, LayerGroup } from "@/model/document";
 import type { Layer } from "@/model/layers/layer";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
 import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, typography } from "@/ui/theme";
+import type { EditorActions } from "../../useEditorActions";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 
 const SIDEBAR_WIDTH = 340;
@@ -361,6 +362,60 @@ function GroupRow({
 			</View>
 		</View>
 	);
+}
+
+type LayerListActions = Pick<
+	EditorActions,
+	| "selectLayer"
+	| "moveLayer"
+	| "setLayerHidden"
+	| "setLayerLocked"
+	| "deleteLayer"
+	| "setLayerGroupHidden"
+	| "setLayerGroupLocked"
+	| "deleteLayerGroup"
+	| "setBackground"
+>;
+
+/**
+ * The layers panel's props, from the document, the selection, and the store.
+ * Picking a layer ends any text being edited first.
+ */
+export function layerListProps({
+	document,
+	selectedLayer,
+	actions,
+	onFinishText,
+	onClose,
+	bottomInset,
+}: {
+	document: EditorDocument;
+	selectedLayer: Layer | undefined;
+	actions: LayerListActions;
+	onFinishText: () => void;
+	onClose: () => void;
+	bottomInset: number;
+}) {
+	return {
+		layers: document.layers,
+		groups: document.groups ?? [],
+		background: document.background,
+		selectedLayerId: selectedLayer?.id ?? null,
+		onSelect: (id: string) => {
+			onFinishText();
+			actions.selectLayer(id);
+		},
+		onMove: actions.moveLayer,
+		onSetHidden: actions.setLayerHidden,
+		onSetLocked: actions.setLayerLocked,
+		onDelete: actions.deleteLayer,
+		onSetGroupHidden: actions.setLayerGroupHidden,
+		onSetGroupLocked: actions.setLayerGroupLocked,
+		onDeleteGroup: actions.deleteLayerGroup,
+		onSetBackground: actions.setBackground,
+		onClose,
+		bottomInset,
+	};
 }
 
 const styles = StyleSheet.create({

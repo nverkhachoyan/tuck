@@ -1,4 +1,4 @@
-import { TOOL_KEYS } from "../shortcuts";
+import { TOOL_KEYS, type ToolKey } from "../shortcuts";
 import { ToolButton, ToolGrid, ToolRow } from "./ToolButton";
 
 export function CutOutButton({
@@ -135,4 +135,32 @@ export function ToolsPanel({
 	) : (
 		<ToolGrid>{tools}</ToolGrid>
 	);
+}
+
+/** What picking up each tool does, as its key would (see `TOOL_KEYS`). */
+export type ToolStarters = Record<ToolKey, () => void>;
+
+/**
+ * The tools' buttons' props: each tool's starter through `wrap` (see
+ * `fromRail`), with Adjust and Cut out only when there's an image for them.
+ */
+export function toolButtonsFor(
+	{
+		startTool,
+		addBusy,
+		hasImage,
+	}: { startTool: ToolStarters; addBusy: boolean; hasImage: boolean },
+	wrap: (start: () => void) => () => void = (start) => start,
+) {
+	return {
+		addBusy,
+		onAddText: wrap(startTool.text),
+		onDraw: wrap(startTool.draw),
+		onRedact: wrap(startTool.redact),
+		onSticker: wrap(startTool.sticker),
+		onPhoto: wrap(startTool.photo),
+		onCrop: wrap(startTool.crop),
+		onAdjust: hasImage ? wrap(startTool.adjust) : undefined,
+		onCutOut: hasImage ? wrap(startTool.cutOut) : undefined,
+	};
 }

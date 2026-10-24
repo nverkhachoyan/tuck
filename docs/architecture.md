@@ -22,7 +22,7 @@ render the same document offscreen with Skia.
   - `tools/adjust/` holds color adjustments.
   - `tools/layers/` holds the layers panel, where any layer is hidden, locked, deleted, or reordered.
   - `tools/stickers/` holds the sticker sheet, bundled stickers, and the ones people save.
-  - `shell/` holds the dock, the toolbar, layer actions, the selection bar, and the controls every tool's panel is built from.
+  - `shell/` holds the dock, the toolbar, the header's actions, layer actions, the selection bar, and the controls every tool's panel is built from.
   - `detection/` is the editor's only bridge to `image-analysis`: `imageDetection.ts` finds faces and text for Find, and `subjectDetection.ts` selects subjects and objects for Cut out.
   - `session/` holds the project session: `useProjectSession` opens the project, `useAutosave` saves it, and `SaveErrorBanner` shows a failed save.
   - The editor root holds `EditorScreen` and `EditorDock`, which compose the parts, and what spans the whole editor: adding images (`useAddImage`), its mode, its actions, keyboard shortcuts, and the delete notice. The background picker is in `src/ui/` because Create also uses it.

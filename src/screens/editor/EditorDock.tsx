@@ -1,12 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
 import type { Adjustments } from "@/model/adjustments";
-import type { EditorDocument } from "@/model/document";
-import type { Layer } from "@/model/layers/layer";
-import { selectCanRedo, selectCanUndo, useStore } from "@/store";
-import { Button } from "@/ui/Button";
-import { IconButton } from "@/ui/IconButton";
-import { TextButton } from "@/ui/TextButton";
 import type {
 	EditorModeAction,
 	EditorModeState,
@@ -14,7 +7,6 @@ import type {
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
 import { LayerActionsPanel } from "./shell/LayerActionsPanel";
-import { LAYERS_KEY, type ToolKey } from "./shortcuts";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustController } from "./tools/adjust/useAdjustController";
 import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
@@ -31,180 +23,10 @@ import {
 import type { useRedactTool } from "./tools/redact/useRedactTool";
 import { TextColorPicker, TextStylePanel } from "./tools/text/TextStylePanel";
 import type { TextEditing, useTextEditing } from "./tools/text/useTextEditing";
-import { type EditorActions, useEditorActions } from "./useEditorActions";
 
 // What the dock shows: a tool's panel, text's style, the selected layer's
 // actions, or, with nothing selected, the tools or the layers.
 export type DockPanel = EditorTool | "text" | "layer" | "idle";
-
-type LayerListActions = Pick<
-	EditorActions,
-	| "selectLayer"
-	| "moveLayer"
-	| "setLayerHidden"
-	| "setLayerLocked"
-	| "deleteLayer"
-	| "setLayerGroupHidden"
-	| "setLayerGroupLocked"
-	| "deleteLayerGroup"
-	| "setBackground"
->;
-
-/**
- * The layers panel's props, from the document, the selection, and the store.
- * Picking a layer ends any text being edited first.
- */
-export function layerListProps({
-	document,
-	selectedLayer,
-	actions,
-	onFinishText,
-	onClose,
-	bottomInset,
-}: {
-	document: EditorDocument;
-	selectedLayer: Layer | undefined;
-	actions: LayerListActions;
-	onFinishText: () => void;
-	onClose: () => void;
-	bottomInset: number;
-}) {
-	return {
-		layers: document.layers,
-		groups: document.groups ?? [],
-		background: document.background,
-		selectedLayerId: selectedLayer?.id ?? null,
-		onSelect: (id: string) => {
-			onFinishText();
-			actions.selectLayer(id);
-		},
-		onMove: actions.moveLayer,
-		onSetHidden: actions.setLayerHidden,
-		onSetLocked: actions.setLayerLocked,
-		onDelete: actions.deleteLayer,
-		onSetGroupHidden: actions.setLayerGroupHidden,
-		onSetGroupLocked: actions.setLayerGroupLocked,
-		onDeleteGroup: actions.deleteLayerGroup,
-		onSetBackground: actions.setBackground,
-		onClose,
-		bottomInset,
-	};
-}
-
-/** What picking up each tool does, as its key would (see `TOOL_KEYS`). */
-export type ToolStarters = Record<ToolKey, () => void>;
-
-/**
- * The tools' buttons' props: each tool's starter through `wrap` (see
- * `fromRail`), with Adjust and Cut out only when there's an image for them.
- */
-export function toolButtonsFor(
-	{
-		startTool,
-		addBusy,
-		hasImage,
-	}: { startTool: ToolStarters; addBusy: boolean; hasImage: boolean },
-	wrap: (start: () => void) => () => void = (start) => start,
-) {
-	return {
-		addBusy,
-		onAddText: wrap(startTool.text),
-		onDraw: wrap(startTool.draw),
-		onRedact: wrap(startTool.redact),
-		onSticker: wrap(startTool.sticker),
-		onPhoto: wrap(startTool.photo),
-		onCrop: wrap(startTool.crop),
-		onAdjust: hasImage ? wrap(startTool.adjust) : undefined,
-		onCutOut: hasImage ? wrap(startTool.cutOut) : undefined,
-	};
-}
-
-/** What the dock offers for `layer`, by its kind. */
-export function layerActionsFor({
-	layer,
-	startTool,
-	sticker,
-	onSaveSticker,
-}: {
-	layer: Layer;
-	startTool: ToolStarters;
-	sticker: "saving" | "saved" | undefined;
-	onSaveSticker: (() => void) | undefined;
-}) {
-	const image = layer.type === "image";
-	return {
-		onDraw:
-			layer.type === "drawing" || layer.type === "shape"
-				? startTool.draw
-				: undefined,
-		onRedact:
-			layer.type === "redaction" || image ? startTool.redact : undefined,
-		onAdjust: image ? startTool.adjust : undefined,
-		onFind: image && !layer.hidden ? startTool.find : undefined,
-		onCutOut: image && !layer.hidden ? startTool.cutOut : undefined,
-		sticker,
-		onSaveSticker,
-	};
-}
-
-/**
- * The header's actions: Reset while the image being adjusted has changes,
- * the layers where the inspector doesn't show them, undo and redo, and
- * Export. While `typing`, undo and redo wait: the text isn't a step yet.
- */
-export function HeaderActions({
-	typing,
-	onReset,
-	layers,
-	onExport,
-}: {
-	typing: boolean;
-	onReset?: () => void;
-	layers?: { open: boolean; onToggle: () => void };
-	onExport: () => void;
-}) {
-	const canUndo = useStore(selectCanUndo) && !typing;
-	const canRedo = useStore(selectCanRedo) && !typing;
-	const { undo, redo } = useEditorActions();
-	return (
-		<View style={styles.headerActions}>
-			{onReset && <TextButton label="Reset" onPress={onReset} />}
-			{layers && (
-				<IconButton
-					icon="layers-outline"
-					label="Layers"
-					shortcut={LAYERS_KEY}
-					selected={layers.open}
-					onPress={layers.onToggle}
-				/>
-			)}
-			<IconButton
-				icon="arrow-undo-outline"
-				label="Undo"
-				shortcut="mod+Z"
-				disabled={!canUndo}
-				onPress={undo}
-			/>
-			<IconButton
-				icon="arrow-redo-outline"
-				label="Redo"
-				shortcut="mod+shift+Z"
-				disabled={!canRedo}
-				onPress={redo}
-			/>
-			<View style={styles.exportAction}>
-				<Button
-					label="Export"
-					icon="share-outline"
-					variant="primary"
-					size="small"
-					shortcut="mod+E"
-					onPress={onExport}
-				/>
-			</View>
-		</View>
-	);
-}
 
 type ModeProps = {
 	dispatchMode: (action: EditorModeAction<TextEditing>) => void;
@@ -441,14 +263,3 @@ export function DockContent({
 			return idle;
 	}
 }
-
-const styles = StyleSheet.create({
-	headerActions: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 14,
-	},
-	exportAction: {
-		marginLeft: 6,
-	},
-});
