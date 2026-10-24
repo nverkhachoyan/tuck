@@ -76,8 +76,13 @@ function createProjectId() {
 	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function hasKnownImageUris(saved: SavedProject): boolean {
-	return [...imageFiles(saved.document)].every(isImageFile);
+/** A saved project's file, or null if this version can't open it. */
+function parseOpenableProject(json: string): SavedProject | null {
+	const saved = parseSavedProject(json);
+	if (!saved || ![...imageFiles(saved.document)].every(isImageFile)) {
+		return null;
+	}
+	return saved;
 }
 
 export function createProjectLifecycle(storage: ProjectStorage) {
@@ -260,8 +265,8 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		try {
 			const json = await storage.readProjectFile(id);
 			if (json === null) throw new Error(PROJECT_GONE_MESSAGE);
-			const saved = parseSavedProject(json);
-			if (!saved || !hasKnownImageUris(saved)) return null;
+			const saved = parseOpenableProject(json);
+			if (!saved) return null;
 			const urls = await imageUrls(id, imageFiles(saved.document));
 			const document = mapImageUris(
 				saved.document,
@@ -461,10 +466,8 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	async function readSaved(id: string): Promise<SavedProject> {
 		const json = await storage.readProjectFile(id);
 		if (json === null) throw new Error(PROJECT_GONE_MESSAGE);
-		const saved = parseSavedProject(json);
-		if (!saved || !hasKnownImageUris(saved)) {
-			throw new Error(NEWER_VERSION_MESSAGE);
-		}
+		const saved = parseOpenableProject(json);
+		if (!saved) throw new Error(NEWER_VERSION_MESSAGE);
 		return saved;
 	}
 
@@ -545,10 +548,8 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 						);
 						return null;
 					}
-					const saved = parseSavedProject(json);
-					if (!saved || !hasKnownImageUris(saved)) {
-						return { id, status: "unavailable" };
-					}
+					const saved = parseOpenableProject(json);
+					if (!saved) return { id, status: "unavailable" };
 					return {
 						id,
 						status: "ready",
@@ -583,8 +584,8 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			await closing;
 			if (openProjects.has(id)) return null;
 			const json = await storage.readProjectFile(id);
-			const saved = json === null ? null : parseSavedProject(json);
-			if (!saved || !hasKnownImageUris(saved)) return null;
+			const saved = json === null ? null : parseOpenableProject(json);
+			if (!saved) return null;
 			const { updatedAt } = saved;
 			if (saved.thumbnail?.updatedAt === updatedAt) return null;
 			const urls = await imageUrls(id, imageFiles(saved.document));
