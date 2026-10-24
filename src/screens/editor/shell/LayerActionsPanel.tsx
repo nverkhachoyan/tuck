@@ -1,6 +1,6 @@
 import type { Layer } from "@/model/layers/layer";
 import { ToolButton, ToolRow } from "./ToolButton";
-import { CutOutButton, type ToolStarters } from "./ToolsPanel";
+import type { ToolStarters } from "./ToolsPanel";
 
 /**
  * What only the selected photo, drawing, shape, or redaction can do, in
@@ -41,7 +41,13 @@ export function LayerActionsPanel({
 			{onFind && (
 				<ToolButton label="Find" icon="image-search-outline" onPress={onFind} />
 			)}
-			{onCutOut && <CutOutButton onPress={onCutOut} />}
+			{onCutOut && (
+				<ToolButton
+					label="Cut out"
+					icon="scissors-cutting"
+					onPress={onCutOut}
+				/>
+			)}
 			{onSaveSticker && (
 				<ToolButton
 					label={sticker === "saved" ? "Saved" : "Sticker"}

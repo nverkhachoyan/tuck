@@ -40,7 +40,7 @@ import { HeaderActions } from "./shell/HeaderActions";
 import { layerActionsFor } from "./shell/LayerActionsPanel";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
-import { ToolsPanel, toolButtonsFor } from "./shell/ToolsPanel";
+import { mapStarters, ToolsPanel } from "./shell/ToolsPanel";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CropTool } from "./tools/crop/CropTool";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
@@ -406,12 +406,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		adjust: adjustController,
 		text: textEditing,
 	};
-	// The tools' buttons, for the dock and, through `fromRail`, the rail.
-	const toolButtons = {
-		startTool,
-		addBusy,
-		hasImage: targetImage !== null,
-	};
+	const hasImage = targetImage !== null;
 	// What the dock offers for the selected layer, by its kind.
 	const layerActions =
 		selectedLayer &&
@@ -574,7 +569,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<ToolsPanel
 									vertical
 									tool={editingText ? "text" : tool}
-									{...toolButtonsFor(toolButtons, fromRail)}
+									addBusy={addBusy}
+									hasImage={hasImage}
+									startTool={mapStarters(startTool, fromRail)}
 								/>
 							</View>
 						)}
@@ -600,7 +597,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									wide ? (
 										<LayersPanel {...layerList} layout="inspector" open />
 									) : (
-										<ToolsPanel {...toolButtonsFor(toolButtons)} />
+										<ToolsPanel
+											addBusy={addBusy}
+											hasImage={hasImage}
+											startTool={startTool}
+										/>
 									)
 								}
 							/>

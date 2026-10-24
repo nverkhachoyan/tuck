@@ -1,26 +1,45 @@
+import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import type { ComponentProps } from "react";
 import { TOOL_KEYS, type ToolKey } from "../shortcuts";
 import { ToolButton, ToolGrid, ToolRow } from "./ToolButton";
 
-export function CutOutButton({
-	selected,
-	compact,
-	onPress,
-}: {
-	selected?: boolean;
-	compact?: boolean;
-	onPress: () => void;
-}) {
-	return (
-		<ToolButton
-			label="Cut out"
-			icon="scissors-cutting"
-			shortcut={TOOL_KEYS.cutOut}
-			selected={selected}
-			compact={compact}
-			onPress={onPress}
-		/>
-	);
-}
+type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+// A tool the dock can be showing. Find is one of Redact's, so it marks
+// Redact rather than a button of its own.
+type OpenTool = "text" | "draw" | "redact" | "find" | "adjust" | "cutOut";
+
+type ToolEntry = {
+	key: ToolKey;
+	label: string;
+	icon: ToolIcon;
+	// Hidden until the document has an image to work on.
+	needsImage?: boolean;
+	// Which open tools mark this button. Redact stays marked while Find is open.
+	markedWhile?: readonly OpenTool[];
+};
+
+// The order the dock and the rail show them.
+export const TOOLS: readonly ToolEntry[] = [
+	{ key: "text", label: "Text", icon: "format-text" },
+	{ key: "draw", label: "Draw", icon: "draw" },
+	{
+		key: "redact",
+		label: "Redact",
+		icon: "blur",
+		markedWhile: ["redact", "find"],
+	},
+	{ key: "sticker", label: "Sticker", icon: "sticker-emoji" },
+	{ key: "crop", label: "Crop", icon: "crop-rotate" },
+	{ key: "adjust", label: "Adjust", icon: "tune-variant", needsImage: true },
+	{
+		key: "cutOut",
+		label: "Cut out",
+		icon: "scissors-cutting",
+		needsImage: true,
+	},
+	{ key: "photo", label: "Add photo", icon: "image-plus-outline" },
+];
 
 /**
  * The editing tools, in the dock while no layer is selected: two rows on a
@@ -35,101 +54,33 @@ export function ToolsPanel({
 	vertical = false,
 	tool,
 	addBusy,
-	onAddText,
-	onDraw,
-	onRedact,
-	onSticker,
-	onPhoto,
-	onCrop,
-	onAdjust,
-	onCutOut,
+	hasImage,
+	startTool,
 }: {
 	vertical?: boolean;
-	tool?: "text" | "draw" | "redact" | "find" | "adjust" | "cutOut" | null;
+	tool?: OpenTool | null;
 	addBusy: boolean;
-	onAddText: () => void;
-	onDraw: () => void;
-	onRedact: () => void;
-	onSticker: () => void;
-	onPhoto: () => void;
-	onCrop: () => void;
-	onAdjust?: () => void;
-	onCutOut?: () => void;
+	hasImage: boolean;
+	startTool: ToolStarters;
 }) {
 	const compact = !vertical;
-	const tools = [
-		<ToolButton
-			key="text"
-			label="Text"
-			icon="format-text"
-			shortcut={TOOL_KEYS.text}
-			compact={compact}
-			selected={tool === "text"}
-			onPress={onAddText}
-		/>,
-		<ToolButton
-			key="draw"
-			label="Draw"
-			icon="draw"
-			shortcut={TOOL_KEYS.draw}
-			compact={compact}
-			selected={tool === "draw"}
-			onPress={onDraw}
-		/>,
-		<ToolButton
-			key="redact"
-			label="Redact"
-			icon="blur"
-			shortcut={TOOL_KEYS.redact}
-			compact={compact}
-			selected={tool === "redact" || tool === "find"}
-			onPress={onRedact}
-		/>,
-		<ToolButton
-			key="sticker"
-			label="Sticker"
-			icon="sticker-emoji"
-			shortcut={TOOL_KEYS.sticker}
-			compact={compact}
-			onPress={onSticker}
-		/>,
-		<ToolButton
-			key="crop"
-			label="Crop"
-			icon="crop-rotate"
-			shortcut={TOOL_KEYS.crop}
-			compact={compact}
-			onPress={onCrop}
-		/>,
-		onAdjust && (
+	const tools = TOOLS.filter((entry) => !entry.needsImage || hasImage).map(
+		(entry) => (
 			<ToolButton
-				key="adjust"
-				label="Adjust"
-				icon="tune-variant"
-				shortcut={TOOL_KEYS.adjust}
+				key={entry.key}
+				label={entry.label}
+				icon={entry.icon}
+				shortcut={TOOL_KEYS[entry.key]}
 				compact={compact}
-				selected={tool === "adjust"}
-				onPress={onAdjust}
+				selected={
+					tool != null &&
+					(entry.markedWhile ?? [entry.key]).some((mark) => mark === tool)
+				}
+				busy={entry.key === "photo" && addBusy}
+				onPress={startTool[entry.key]}
 			/>
 		),
-		onCutOut && (
-			<CutOutButton
-				key="cutOut"
-				selected={tool === "cutOut"}
-				compact={compact}
-				onPress={onCutOut}
-			/>
-		),
-		<ToolButton
-			key="photo"
-			label="Add photo"
-			icon="image-plus-outline"
-			shortcut={TOOL_KEYS.photo}
-			compact={compact}
-			busy={addBusy}
-			onPress={onPhoto}
-		/>,
-	];
+	);
 	return vertical ? (
 		<ToolRow vertical>{tools}</ToolRow>
 	) : (
@@ -140,27 +91,20 @@ export function ToolsPanel({
 /** What picking up each tool does, as its key would (see `TOOL_KEYS`). */
 export type ToolStarters = Record<ToolKey, () => void>;
 
-/**
- * The tools' buttons' props: each tool's starter through `wrap` (see
- * `fromRail`), with Adjust and Cut out only when there's an image for them.
- */
-export function toolButtonsFor(
-	{
-		startTool,
-		addBusy,
-		hasImage,
-	}: { startTool: ToolStarters; addBusy: boolean; hasImage: boolean },
-	wrap: (start: () => void) => () => void = (start) => start,
-) {
+/** Each starter passed through `wrap`, as the rail does with `fromRail`. */
+export function mapStarters(
+	starters: ToolStarters,
+	wrap: (start: () => void) => () => void,
+): ToolStarters {
 	return {
-		addBusy,
-		onAddText: wrap(startTool.text),
-		onDraw: wrap(startTool.draw),
-		onRedact: wrap(startTool.redact),
-		onSticker: wrap(startTool.sticker),
-		onPhoto: wrap(startTool.photo),
-		onCrop: wrap(startTool.crop),
-		onAdjust: hasImage ? wrap(startTool.adjust) : undefined,
-		onCutOut: hasImage ? wrap(startTool.cutOut) : undefined,
+		text: wrap(starters.text),
+		draw: wrap(starters.draw),
+		redact: wrap(starters.redact),
+		find: wrap(starters.find),
+		sticker: wrap(starters.sticker),
+		photo: wrap(starters.photo),
+		crop: wrap(starters.crop),
+		adjust: wrap(starters.adjust),
+		cutOut: wrap(starters.cutOut),
 	};
 }
