@@ -216,8 +216,8 @@ Landed with the file at 660 lines, 15 more than before: the three helpers and th
 
 ## Stage 10: Two jobs in `LiveStrokeOverlay`
 
-- [ ] `refactor: move the layers that follow the live transform out of LiveStrokeOverlay`
-- [ ] `refactor: share LiveStrokeOverlay's live lookups`
+- [x] `refactor: move the layers that follow the live transform out of LiveStrokeOverlay`
+- [x] `refactor: share LiveStrokeOverlay's live lookups`
 
 About half of `LiveStrokeOverlay.tsx` (160–334) draws layers that follow the live transform while selected. None of that is about strokes: `LiveRedaction`, `LiveRedactionBox`, `LiveFilteredBox`, `LiveShape`, `LiveFilteredStrokes`, `LiveMaskedRedaction`, and `LiveMaskedPicture`. The rest is the stroke being painted (`LiveStroke`, `NewLayerStroke`, and the views under them).
 
@@ -227,10 +227,12 @@ About half of `LiveStrokeOverlay.tsx` (160–334) draws layers that follow the l
 
 Check on web and the iOS simulator: a blurred box and a blurred brushed redaction moved and scaled, a shape's side dragged, a new shape and a new redaction box dragged out.
 
+Landed with `LiveStrokeOverlay.tsx` at 341 lines and `LiveLayerContent.tsx` at 204. Step 2's import order failed `npm run check` and was fixed in `style: sort LiveLayerContent's imports`.
+
 ## Stage 11: The transform gesture's pan snapshot
 
-- [ ] `refactor: keep the pan's starting transform in one shared value`
-- [ ] `refactor: share the transform gesture's uniform scaling`
+- [x] `refactor: keep the pan's starting transform in one shared value`
+- [x] `refactor: share the transform gesture's uniform scaling`
 
 When the pan starts (391–396), `useLayerTransformGesture` records the layer in six shared values: `startX` and `startY` (127–128), and `handleStartScaleX`, `handleStartScaleY`, `handleStartRotation`, and `handleStartBox` (143–146). `resizeTo` (214–220) and `dragEndTo` (279–285) then put a `start` transform back together from five of them. The names hide which gesture owns what: `startX` belongs to the pan, while `startScaleX` belongs to the pinch.
 
@@ -239,9 +241,11 @@ When the pan starts (391–396), `useLayerTransformGesture` records the layer in
 
 Run the iOS simulator after each step, checking: a move that snaps, a corner scale, a side resize of a text box in box mode and of one stretched, a line's end, the rotation knob, and a two-finger pinch and rotate. Run the same drags on web over CDP.
 
+Checked on web over CDP and on the iOS simulator, except a box's side in stretch mode, which reads the same `panStart` as box mode.
+
 ## Stage 12: One chip for the tool panels
 
-- [ ] `refactor: share the tool panels' chip as ui/Chip`
+- [x] `refactor: share the tool panels' chip as ui/Chip`
 
 Four controls are the same selectable chip: `AspectChip` (`CropTool.tsx`, 246–286), the font chip in `FontPicker` and the alignment chip in `AlignPicker` (`TextStylePanel.tsx`, 367–418 and 287–335), and `AdjustmentChoice` (`AdjustPanel.tsx`, from 115). Each is a `Pressable` whose children callback draws a frame with `webTransition`, `colors.hoverOverlay` on hover, a 0.96 scale when pressed, and `<Highlight />` when selected. `ui/Chip.tsx` holds that frame. It imports only `theme`, `interaction`, and `Highlight`.
 
@@ -253,24 +257,30 @@ Check what differs first, and keep it:
 
 `RedactPanel`'s `EffectChoice` and `StickerSheet`'s `CategoryChip` look alike but aren't the same: the first has no hover or press frame, and the second is a tab with the highlighter under it. They stay.
 
+Screenshots of Crop, Text's font and alignment tabs (with a chip hovered), and Adjust were pixel-identical before and after on web. On iOS, only Crop's chips were checked.
+
 ## Stage 13: The layers list's groups
 
-- [ ] `refactor: work out the layers list's rows in layerListEntries`
-- [ ] `refactor: share the layers list's background row and row actions`
+- [x] `refactor: work out the layers list's rows in layerListEntries`
+- [x] `refactor: share the layers list's background row and row actions`
 
 * Step 1: `GroupedLayerList` (192–288) works out the grouping inside its JSX: `groupsByLayer` (211–217), the `shown` set (219), and each group's layers (241–243). A pure `layerListEntries(layers, groups)` in `tools/layers/layerListEntries.ts` returns the rows, top first: a layer on its own, or a group in its topmost layer's place, holding its layers top first. Test it in `__tests__/`: no groups, a group whose layers aren't next to each other (it appears once, where its top layer is), and a group that lists a layer the document no longer has. `GroupedLayerList` maps the entries and keeps `expanded`.
 * Step 2: the Background row is written twice (182–186 and 281–284) and becomes a `BackgroundRow`. The five row callbacks are named one by one in `FlatLayerList`'s `LayerRow`, in both `StaticLayerRow` calls, and in both lists' parameters. Gather them into one `LayerRowActions` object (the type is in `LayerRow.tsx`, 38–44) and spread it.
 
 Check the panel on web and iOS with Find's grouped boxes: expand, collapse, hide, lock, and delete a group, and drag a row in a list with no groups.
 
+Checked on web only, with Find's text results grouped: expand, collapse, hide, lock, and delete, and a row dragged in a list with no groups.
+
 ## Stage 14: Home's notices and shared photos
 
-- [ ] `refactor: share home's notice and gather its shared photo effects`
+- [x] `refactor: share home's notice and gather its shared photo effects`
 
 * The save-failed notice (225–245) and the new-version notice (247–265) are the same markup: an icon, a message, and buttons. A local `Notice({ icon, color, message, children })` in `HomeScreen.tsx` renders both.
 * The two effects that open a shared photo (101–116), with the `shared` param and the `sessionOpen` selector, become a local `useSharedPhotos({ focused, status, openSharedPhoto })` in the same file. Their comments go with them. `openSharedPhoto` isn't memoized (`useHomeProjects.ts`, 172), so the effect runs on every render and its guard stops it. Keep the dependencies as they are: memoizing it is a separate change.
 
 Check on web: a shared photo through `/share-target` as AGENTS.md describes, and the new-version notice by forcing `useUpdateReady`.
+
+Checked on web with a photo put in the `tuck-shared` cache and opened through `?shared=`, not through `/share-target`, and the forced new-version notice, which was pixel-identical before and after. The file grew from 494 lines to 525: the hook and `Notice` take more lines than the code they replaced, and the screen's body is shorter.
 
 ## Considered and left out
 
