@@ -12,7 +12,7 @@ render the same document offscreen with Skia.
 - `src/app/` holds thin Expo Router route files. A project's editor is at `/projects/[id]` and its export at `/projects/[id]/export`, so a link or a reload opens the project from storage (`useProjectSession`); `vercel.json` serves those routes from the static export.
 - `src/screens/` owns the home, create, editor, export, and info screens (Settings, support, privacy, licenses, and the 404 page). The home screen starts from a photo, a pasted or dropped image, a photo shared from another app, or, through Create, an empty canvas at a preset or custom size.
 - `src/screens/editor/` is the interactive editor, in a folder per part:
-  - `canvas/` draws the document (`EditorScene`, `EditedTextView`, `LiveStrokeOverlay`, `SelectionOverlay`) and handles gestures, selection handles and cursors, hit-testing, and snapping.
+  - `canvas/` draws the document (`EditorScene`, `EditedTextView`, `LiveStrokeOverlay`, `LiveLayerContent`, `SelectionOverlay`) and handles gestures, selection handles and cursors, hit-testing, and snapping.
   - `tools/crop/` holds `CropTool`, which crops, turns, flips, and straightens the photo (the lowest locked one, or just the canvas without one) and expands the canvas around it; its geometry is in `cropGeometry.ts` and its box dragging in `cropDrag.ts`.
   - `tools/text/` holds the text panel and the full-screen `TextEditor`.
   - `tools/draw/` holds the drawing panel and brush settings.
