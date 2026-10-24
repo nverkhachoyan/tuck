@@ -139,7 +139,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		addStickerLayer,
 		duplicateSelectedLayer,
 		addMaskedRedaction,
-		deleteLayerGroup,
 		setAdjustments,
 		transformLayer,
 		resizeBox,
@@ -147,7 +146,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		moveLayer,
 		setLayerResizable,
 		reframe,
-		deleteLayer,
 		selectLayer,
 		undo,
 		redo,
@@ -284,36 +282,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 
 	const deleteNotice = useDeleteNotice(document);
-	const deleteWithNotice = (id: string) => {
-		const layer = document.layers.find((candidate) => candidate.id === id);
-		if (!layer) return;
-		deleteNotice.deleted(`${layerKindName(layer)} deleted`, () =>
-			deleteLayer(id),
-		);
-	};
-	const deleteGroupWithNotice = (id: string) => {
-		const group = document.groups?.find((candidate) => candidate.id === id);
-		if (!group) return;
-		deleteNotice.deleted(`${group.name} deleted`, () => deleteLayerGroup(id));
-	};
 
 	const selectedIndex = selectedLayer
 		? document.layers.indexOf(selectedLayer)
 		: -1;
-	const moveSelected = (step: 1 | -1) => {
-		if (!selectedLayer) return;
-		moveLayer(selectedLayer.id, selectedIndex + step);
-	};
+	const topIndex = document.layers.length - 1;
 	const arrangeSelected = (move: ArrangeMove) => {
 		if (!selectedLayer) return;
-		if (move === "forward") moveSelected(1);
-		else if (move === "backward") moveSelected(-1);
-		else {
-			moveLayer(
-				selectedLayer.id,
-				move === "front" ? document.layers.length - 1 : 0,
-			);
-		}
+		const to = {
+			front: topIndex,
+			forward: selectedIndex + 1,
+			backward: selectedIndex - 1,
+			back: 0,
+		};
+		moveLayer(selectedLayer.id, to[move]);
 	};
 
 	const startDrawing = () => {
@@ -446,7 +428,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				textEditing.editSelected();
 				break;
 			case "delete":
-				if (selectedLayer) deleteWithNotice(selectedLayer.id);
+				if (selectedLayer) deleteNotice.deleteLayer(selectedLayer.id);
 				break;
 			case "deselect":
 				selectLayer(null);
@@ -455,7 +437,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				duplicateSelectedLayer();
 				break;
 			case "reorder":
-				moveSelected(command.step);
+				arrangeSelected(command.step === 1 ? "forward" : "backward");
 				break;
 			case "nudge":
 				canvasRef.current?.nudgeSelection(command.dx, command.dy);
@@ -519,8 +501,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		selectedLayer,
 		actions: {
 			...actions,
-			deleteLayer: deleteWithNotice,
-			deleteLayerGroup: deleteGroupWithNotice,
+			deleteLayer: deleteNotice.deleteLayer,
+			deleteLayerGroup: deleteNotice.deleteGroup,
 		},
 		onFinishText: textEditing.finish,
 		onClose: closeLayers,
@@ -576,7 +558,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	const selectionBar = selectedLayer && (
 		<SelectionBar
-			canMoveForward={selectedIndex < document.layers.length - 1}
+			canMoveForward={selectedIndex < topIndex}
 			canMoveBackward={selectedIndex > 0}
 			onEdit={selectedTextLayer ? () => textEditing.editSelected() : undefined}
 			stretched={selectedLayer.resizable === true}
@@ -587,7 +569,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			}
 			onArrange={arrangeSelected}
 			onDuplicate={duplicateSelectedLayer}
-			onDelete={() => deleteWithNotice(selectedLayer.id)}
+			onDelete={() => deleteNotice.deleteLayer(selectedLayer.id)}
 		/>
 	);
 
