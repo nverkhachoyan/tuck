@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
@@ -23,49 +24,52 @@ export const STRENGTH_NAMES = {
 	pixelate: ["Small pixels", "Medium pixels", "Large pixels"],
 } as const;
 
-/**
- * The effect a redaction is drawn with: Solid, Blur, or Pixelate, then that
- * effect's color or its strength. Redact's bar shows it, and so does Find's,
- * for the style Done redacts what it found with.
- */
-export function RedactLook<T extends RedactLookSettings>({
-	settings,
-	customColor,
-	onChange,
-	onPickCustom,
-	onEyedropper,
-}: {
+type RedactLookProps<T extends RedactLookSettings> = {
 	settings: T;
 	customColor: string | null;
 	onChange: (settings: T) => void;
 	onPickCustom: (color: string) => void;
 	onEyedropper: () => void;
-}) {
+};
+
+/**
+ * The effect's controls, one each, so a bar group can measure them apart:
+ * Solid, Blur, or Pixelate, then that effect's color or its strength.
+ */
+export function redactLookItems<T extends RedactLookSettings>({
+	settings,
+	customColor,
+	onChange,
+	onPickCustom,
+	onEyedropper,
+}: RedactLookProps<T>): ReactNode[] {
 	const { effect } = settings;
 	const selected = EFFECTS.findIndex((choice) => choice.effect === effect);
-	return (
-		<>
-			<OptionSegments
-				label="Effect"
-				options={EFFECTS.map(({ title, icon }) => ({ title, icon }))}
-				selected={selected}
-				onSelect={(index) => {
-					const next = EFFECTS[index]?.effect;
-					if (!next || next === effect) return;
-					onChange({ ...settings, effect: next });
-				}}
-			/>
-			{effect === "solid" ? (
-				<ColorChip
-					label="Color"
-					value={settings.color}
-					customColor={customColor}
-					onPick={(color) => color && onChange({ ...settings, color })}
-					onPickCustom={onPickCustom}
-					onEyedropper={onEyedropper}
-				/>
-			) : (
-				STRENGTH_NAMES[effect].map((name, index) => (
+	return [
+		<OptionSegments
+			key="effect"
+			label="Effect"
+			options={EFFECTS.map(({ title, icon }) => ({ title, icon }))}
+			selected={selected}
+			onSelect={(index) => {
+				const next = EFFECTS[index]?.effect;
+				if (!next || next === effect) return;
+				onChange({ ...settings, effect: next });
+			}}
+		/>,
+		...(effect === "solid"
+			? [
+					<ColorChip
+						key="color"
+						label="Color"
+						value={settings.color}
+						customColor={customColor}
+						onPick={(color) => color && onChange({ ...settings, color })}
+						onPickCustom={onPickCustom}
+						onEyedropper={onEyedropper}
+					/>,
+				]
+			: STRENGTH_NAMES[effect].map((name, index) => (
 					<RingChoice
 						key={name}
 						label={name}
@@ -78,10 +82,18 @@ export function RedactLook<T extends RedactLookSettings>({
 							<PixelSquare strength={index} />
 						)}
 					</RingChoice>
-				))
-			)}
-		</>
-	);
+				))),
+	];
+}
+
+/**
+ * The effect a redaction is drawn with. Redact's bar shows it, and so does
+ * Find's, for the style Done redacts what it found with.
+ */
+export function RedactLook<T extends RedactLookSettings>(
+	props: RedactLookProps<T>,
+) {
+	return <>{redactLookItems(props)}</>;
 }
 
 /** A dot whose halo spreads further the stronger the blur. */

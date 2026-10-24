@@ -2,10 +2,14 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
 	Children,
 	type ComponentProps,
+	createContext,
 	Fragment,
 	isValidElement,
 	type ReactNode,
+	useContext,
 	useEffect,
+	useId,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -25,9 +29,58 @@ import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { ModeActions } from "./Dock";
 
-// Where the scrolling row fades, so options running past the edge read as
-// more to scroll to, like the text panel's font row.
+// How wide the fade is. On either side it ends on the first option that
+// doesn't fit whole, so the edge falls between options instead of across a label.
 const FADE_WIDTH = 32;
+// Long enough that a drag's scroll events, throttled below, don't each move
+// the fade: it settles once they stop.
+const FADE_SETTLE_MS = 120;
+
+type ItemBox = { parent: string; x: number; width: number };
+
+// Item positions, in a group's coordinates or a parent item's, so the fade
+// can add them up to a position in the scrolling row.
+type BarMetricsApi = {
+	reportGroup: (id: string, x: number) => void;
+	reportItem: (id: string, parent: string, x: number, width: number) => void;
+	forgetGroup: (id: string) => void;
+	forgetItem: (id: string) => void;
+};
+
+const BarMetrics = createContext<BarMetricsApi | null>(null);
+// The group, or the measured option, this control is laid out in.
+const BarParent = createContext<string | null>(null);
+
+function near(a: number, b: number) {
+	return Math.abs(a - b) < 0.5;
+}
+
+/**
+ * One measured option. Its `onLayout` x is relative to its parent, and nested
+ * options (a segment inside a segmented control) report through `BarParent`,
+ * so a box that only wraps other options isn't where the fade stops.
+ */
+function MeasuredItem({ children }: { children: ReactNode }) {
+	const metrics = useContext(BarMetrics);
+	const parent = useContext(BarParent);
+	const id = useId();
+	useEffect(() => () => metrics?.forgetItem(id), [metrics, id]);
+	return (
+		<BarParent.Provider value={id}>
+			<View
+				collapsable={false}
+				style={styles.item}
+				onLayout={(event) => {
+					if (!parent) return;
+					const { x, width } = event.nativeEvent.layout;
+					metrics?.reportItem(id, parent, x, width);
+				}}
+			>
+				{children}
+			</View>
+		</BarParent.Provider>
+	);
+}
 
 /**
  * The wide editor's header, between Back and the header's actions: the
@@ -126,46 +179,47 @@ export function OptionSegments({
 				const busy = option.busy === true;
 				const ink = chosen ? colors.onHighlight : colors.textPrimary;
 				return (
-					<Pressable
-						key={option.title}
-						accessibilityRole="radio"
-						accessibilityLabel={option.title}
-						accessibilityState={{ checked: chosen, busy, disabled: busy }}
-						disabled={busy}
-						onPress={() => onSelect(index)}
-						style={(state) => {
-							const { pressed, hovered } = interaction(state);
-							return [
-								styles.segment,
-								webTransition,
-								hovered && !busy && !chosen && styles.segmentHovered,
-								pressed && !busy && styles.segmentPressed,
-							];
-						}}
-					>
-						{chosen && <Highlight />}
-						{busy ? (
-							<ActivityIndicator color={colors.textPrimary} />
-						) : (
-							<>
-								{option.icon && (
-									<MaterialCommunityIcons
-										name={option.icon}
-										size={18}
-										color={ink}
-									/>
-								)}
-								<Text
-									style={[
-										styles.segmentLabel,
-										chosen && styles.segmentLabelChosen,
-									]}
-								>
-									{option.title}
-								</Text>
-							</>
-						)}
-					</Pressable>
+					<MeasuredItem key={option.title}>
+						<Pressable
+							accessibilityRole="radio"
+							accessibilityLabel={option.title}
+							accessibilityState={{ checked: chosen, busy, disabled: busy }}
+							disabled={busy}
+							onPress={() => onSelect(index)}
+							style={(state) => {
+								const { pressed, hovered } = interaction(state);
+								return [
+									styles.segment,
+									webTransition,
+									hovered && !busy && !chosen && styles.segmentHovered,
+									pressed && !busy && styles.segmentPressed,
+								];
+							}}
+						>
+							{chosen && <Highlight />}
+							{busy ? (
+								<ActivityIndicator color={colors.textPrimary} />
+							) : (
+								<>
+									{option.icon && (
+										<MaterialCommunityIcons
+											name={option.icon}
+											size={18}
+											color={ink}
+										/>
+									)}
+									<Text
+										style={[
+											styles.segmentLabel,
+											chosen && styles.segmentLabelChosen,
+										]}
+									>
+										{option.title}
+									</Text>
+								</>
+							)}
+						</Pressable>
+					</MeasuredItem>
 				);
 			})}
 		</View>
@@ -175,10 +229,31 @@ export function OptionSegments({
 /**
  * A row of the bar's options, 2 points apart. `BarSections` draws the rule
  * between one group and the next, so a tool never places a divider itself.
+ * Each option is measured, including the segments of an `OptionSegments`,
+ * so the fade can stop between them.
  */
 export function BarGroup({ children }: { children: ReactNode }) {
-	if (Children.toArray(children).length === 0) return null;
-	return <View style={styles.group}>{children}</View>;
+	const metrics = useContext(BarMetrics);
+	const groupId = useId();
+	const items = Children.toArray(children);
+	useEffect(() => () => metrics?.forgetGroup(groupId), [metrics, groupId]);
+	if (items.length === 0) return null;
+	return (
+		<BarParent.Provider value={groupId}>
+			<View
+				style={styles.group}
+				onLayout={(event) =>
+					metrics?.reportGroup(groupId, event.nativeEvent.layout.x)
+				}
+			>
+				{items.map((item) => (
+					<MeasuredItem key={isValidElement(item) ? item.key : "item"}>
+						{item}
+					</MeasuredItem>
+				))}
+			</View>
+		</BarParent.Provider>
+	);
 }
 
 /**
@@ -260,23 +335,182 @@ function ScrollFade({ children }: { children: ReactNode }) {
 	const [width, setWidth] = useState(0);
 	const [contentWidth, setContentWidth] = useState(0);
 	const [offset, setOffset] = useState(0);
-	const more = contentWidth - offset - width > 1;
-	return (
-		<View style={styles.scroll}>
-			<ScrollView
-				horizontal
-				showsHorizontalScrollIndicator={false}
-				contentContainerStyle={styles.scrollContent}
-				scrollEventThrottle={32}
-				onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-				onContentSizeChange={(next) => setContentWidth(next)}
-				onScroll={(event) => setOffset(event.nativeEvent.contentOffset.x)}
-			>
-				{children}
-			</ScrollView>
-			{more && <View style={styles.fade} />}
-		</View>
+	const [groups, setGroups] = useState<Record<string, number>>({});
+	const [items, setItems] = useState<Record<string, ItemBox>>({});
+	const offsetRef = useRef(0);
+	const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(
+		() => () => {
+			if (settle.current) clearTimeout(settle.current);
+		},
+		[],
 	);
+	const metrics = useMemo<BarMetricsApi>(
+		() => ({
+			reportGroup(id, x) {
+				setGroups((prev) =>
+					near(prev[id] ?? Number.NaN, x) ? prev : { ...prev, [id]: x },
+				);
+			},
+			reportItem(id, parent, x, width) {
+				if (width <= 0) return;
+				setItems((prev) => {
+					const current = prev[id];
+					if (
+						current &&
+						current.parent === parent &&
+						near(current.x, x) &&
+						near(current.width, width)
+					) {
+						return prev;
+					}
+					return { ...prev, [id]: { parent, x, width } };
+				});
+			},
+			forgetGroup(id) {
+				setGroups((prev) => {
+					if (!(id in prev)) return prev;
+					const next = { ...prev };
+					delete next[id];
+					return next;
+				});
+			},
+			forgetItem(id) {
+				setItems((prev) => {
+					if (!(id in prev)) return prev;
+					const next = { ...prev };
+					delete next[id];
+					return next;
+				});
+			},
+		}),
+		[],
+	);
+	const leaves = leafEdges(rowEdges(groups, items));
+	const visibleRight = offset + width;
+	const cut = fadeCut(leaves, visibleRight);
+	const cutLeft = fadeCutLeft(leaves, offset);
+	const overflows = contentWidth - offset - width > 1;
+	return (
+		<BarMetrics.Provider value={metrics}>
+			<View style={styles.scroll}>
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					contentContainerStyle={styles.scrollContent}
+					scrollEventThrottle={32}
+					onLayout={(event) => {
+						const next = event.nativeEvent.layout.width;
+						setWidth((prev) => (near(prev, next) ? prev : next));
+					}}
+					onContentSizeChange={(next) =>
+						setContentWidth((prev) => (near(prev, next) ? prev : next))
+					}
+					onScroll={(event) => {
+						offsetRef.current = event.nativeEvent.contentOffset.x;
+						if (settle.current) clearTimeout(settle.current);
+						settle.current = setTimeout(() => {
+							const x = offsetRef.current;
+							setOffset((prev) => (near(prev, x) ? prev : x));
+						}, FADE_SETTLE_MS);
+					}}
+				>
+					{children}
+				</ScrollView>
+				{(cut != null || cutLeft != null) && (
+					<View pointerEvents="none" style={styles.overlay}>
+						{cutLeft != null && (
+							<>
+								<View style={[styles.coverLeft, { width: cutLeft - offset }]} />
+								<View style={[styles.fadeLeft, { left: cutLeft - offset }]} />
+							</>
+						)}
+						{cut != null && (
+							<>
+								<View
+									style={[styles.fade, { left: cut - offset - FADE_WIDTH }]}
+								/>
+								<View style={[styles.cover, { left: cut - offset }]} />
+							</>
+						)}
+					</View>
+				)}
+				{cut == null && cutLeft == null && overflows && leaves.length === 0 && (
+					<View pointerEvents="none" style={styles.fadeEnd} />
+				)}
+			</View>
+		</BarMetrics.Provider>
+	);
+}
+
+// An option's left and right in the row: its ancestors' x added to its own.
+function rowEdges(
+	groups: Record<string, number>,
+	items: Record<string, ItemBox>,
+) {
+	const origin = (parent: string, depth: number): number | null => {
+		if (depth > 8) return null;
+		const groupX = groups[parent];
+		if (groupX != null) return groupX;
+		const above = items[parent];
+		if (!above) return null;
+		const base = origin(above.parent, depth + 1);
+		return base == null ? null : base + above.x;
+	};
+	const edges: { left: number; right: number }[] = [];
+	for (const item of Object.values(items)) {
+		const base = origin(item.parent, 0);
+		if (base == null || item.width <= 0) continue;
+		const left = base + item.x;
+		edges.push({ left, right: left + item.width });
+	}
+	return edges;
+}
+
+// Drop a box that only exists to hold smaller options, such as the view
+// around a whole segmented control. The fade stops on the options inside.
+function leafEdges(edges: { left: number; right: number }[]) {
+	return edges.filter((edge) => {
+		const width = edge.right - edge.left;
+		return !edges.some((other) => {
+			if (other === edge) return false;
+			return (
+				other.left >= edge.left - 0.5 &&
+				other.right <= edge.right + 0.5 &&
+				other.right - other.left < width - 0.5
+			);
+		});
+	});
+}
+
+// The left edge of the first option that doesn't fit in the row, or null
+// when the visible row already ends between options.
+function fadeCut(
+	edges: readonly { left: number; right: number }[],
+	visibleRight: number,
+) {
+	let cut: number | null = null;
+	for (const edge of edges) {
+		if (edge.right <= visibleRight + 1) continue;
+		if (cut == null || edge.left < cut) cut = edge.left;
+	}
+	if (cut == null || cut >= visibleRight) return null;
+	return cut;
+}
+
+// The right edge of the last option that runs in from the left, so scrolling
+// back doesn't slice a label either.
+function fadeCutLeft(
+	edges: readonly { left: number; right: number }[],
+	offset: number,
+) {
+	let cut: number | null = null;
+	for (const edge of edges) {
+		if (edge.left >= offset - 1) continue;
+		if (cut == null || edge.right > cut) cut = edge.right;
+	}
+	if (cut == null || cut <= offset) return null;
+	return cut;
 }
 
 const styles = StyleSheet.create({
@@ -295,19 +529,53 @@ const styles = StyleSheet.create({
 	scroll: {
 		flex: 1,
 		minWidth: 0,
+		overflow: "hidden",
 	},
 	scrollContent: {
 		flexDirection: "row",
 		alignItems: "center",
 	},
+	overlay: {
+		...StyleSheet.absoluteFill,
+	},
 	fade: {
+		position: "absolute",
+		top: 0,
+		bottom: 0,
+		width: FADE_WIDTH,
+		...fadeTo("right", colors.background),
+	},
+	fadeLeft: {
+		position: "absolute",
+		top: 0,
+		bottom: 0,
+		width: FADE_WIDTH,
+		...fadeTo("left", colors.background),
+	},
+	coverLeft: {
+		position: "absolute",
+		top: 0,
+		bottom: 0,
+		left: 0,
+		backgroundColor: colors.background,
+	},
+	fadeEnd: {
 		position: "absolute",
 		top: 0,
 		bottom: 0,
 		right: 0,
 		width: FADE_WIDTH,
-		pointerEvents: "none",
 		...fadeTo("right", colors.background),
+	},
+	cover: {
+		position: "absolute",
+		top: 0,
+		bottom: 0,
+		right: 0,
+		backgroundColor: colors.background,
+	},
+	item: {
+		flexShrink: 0,
 	},
 	divider: {
 		width: StyleSheet.hairlineWidth,

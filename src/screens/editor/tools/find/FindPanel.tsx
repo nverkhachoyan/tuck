@@ -4,7 +4,7 @@ import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { colors, space, typography } from "@/ui/theme";
 import { BarGroup, BarSections } from "../../shell/ContextBar";
-import { RedactLook } from "../../shell/redactStyle";
+import { type RedactLook, redactLookItems } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { Tray } from "../../shell/ToolOptions";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
@@ -69,9 +69,7 @@ const SCOPES = [
 export function FindBar(props: ComponentProps<typeof RedactLook>) {
 	return (
 		<BarSections>
-			<BarGroup>
-				<RedactLook {...props} />
-			</BarGroup>
+			<BarGroup>{redactLookItems(props)}</BarGroup>
 		</BarSections>
 	);
 }

@@ -13,7 +13,7 @@ import {
 } from "../../shell/ContextBar";
 import {
 	PixelSquare,
-	RedactLook,
+	redactLookItems,
 	STRENGTH_NAMES,
 	StrengthDot,
 } from "../../shell/redactStyle";
@@ -153,15 +153,14 @@ export function RedactBar({
 				)}
 			</BarGroup>
 			<BarGroup>
-				{tool !== "eraser" && (
-					<RedactLook
-						settings={settings}
-						customColor={customColor}
-						onChange={onChange}
-						onPickCustom={onPickCustom}
-						onEyedropper={onEyedropper}
-					/>
-				)}
+				{tool !== "eraser" &&
+					redactLookItems({
+						settings,
+						customColor,
+						onChange,
+						onPickCustom,
+						onEyedropper,
+					})}
 				{tool !== "box" && (
 					<SizeChoices
 						nowrap
