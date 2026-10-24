@@ -135,7 +135,7 @@ Rename the canvas's `targetImage` (line 644) to `outlinedImage`. It is the image
 
 ### 4.4 Hooks out of the body
 
-- [ ] `refactor: move the canvas's tool strokes into useToolStroke`
+- [x] `refactor: move the canvas's tool strokes into useToolStroke`
 - [ ] `refactor: move Find's taps on the canvas into useFindTap`
 - [ ] `refactor: move the canvas's hover cursor into useCanvasCursor`
 - [ ] `refactor: move Shift and the text-focus press into their own hooks`

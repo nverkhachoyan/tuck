@@ -49,7 +49,6 @@ import {
 } from "./canvasCursor";
 import {
 	type CanvasInput,
-	canAddTo,
 	cutImageId,
 	inputRules,
 	outlinedLayerFor,
@@ -62,7 +61,6 @@ import {
 	hitsLayer,
 	type LayerTarget,
 } from "./hitTest";
-import type { LiveStroke } from "./LiveStrokeOverlay";
 import { layerBounds } from "./layerBounds";
 import { layerTargets, resizeMode } from "./layerTargets";
 import {
@@ -78,13 +76,13 @@ import {
 	selectionScreenBounds,
 } from "./selectionBarPlacement";
 import { readShownViewport, type ShownViewport } from "./shownViewport";
-import { insideDocument, strokeIntent } from "./strokeIntent";
+import { insideDocument } from "./strokeIntent";
 import { useCanvasTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useDialDragGesture } from "./useDialDragGesture";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
-import { usePaintGesture } from "./usePaintGesture";
 import { useTextEditGesture } from "./useTextEditGesture";
+import { useToolStroke } from "./useToolStroke";
 import { useViewGesture } from "./useViewGesture";
 import {
 	type DocumentViewport,
@@ -214,15 +212,13 @@ export type EditorCanvasHandle = {
  * `layerTargets`, which the UI thread shares so a drag can pick its layer
  * there. With a mouse, the cursor shows what a press at the pointer would do.
  *
- * With a `tool` input, a single gesture paints instead, into the selected layer
- * if the tool can add to it, or drags out a shape or a redaction's box. The
- * selection then holds still, and only a redaction's or a shape's is
- * outlined, to show what the tool's style changes. Dragging out a box or a
- * shape, a tap picks the one to change, or none, and the one picked, or
- * just drawn, shows its handles: a drag from on it or them moves or resizes
- * it, and one from anywhere else draws another. Picking a color, where the
- * finger lifts is the point. While adjusting, a sideways drag anywhere turns
- * the adjustment's dial (`input.drag`).
+ * A tool's stroke is `useToolStroke`. The selection then holds still, and
+ * only a redaction's or a shape's is outlined, to show what the tool's style
+ * changes. Dragging out a box or a shape, a tap picks the one to change, or
+ * none, and the one picked, or just drawn, shows its handles: a drag from on
+ * it or them moves or resizes it, and one from anywhere else draws another.
+ * While adjusting, a sideways drag anywhere turns the adjustment's dial
+ * (`input.drag`).
  *
  * A tap away from what a tool works on calls `onTapAway`: off the document
  * while painting, off the searched image while finding, and anywhere while
@@ -578,82 +574,23 @@ export function EditorCanvas({
 		onCursor: setCursor,
 	});
 
-	const strokePoints = useSharedValue<number[]>([]);
-	const strokeId = useSharedValue(0);
-	// The last stroke handed to the document. It changes in the same render as
-	// the document, or the one after, so the scene stops drawing the stroke
-	// live only once it draws it from the document.
-	const [landedStrokeId, setLandedStrokeId] = useState(0);
-	const handleStroke = useCallback(
-		(points: number[], id: number) => {
-			if (!tool || points.length < 2) return;
-			setLandedStrokeId(id);
-			onToolInteractionEnd?.();
-			const intent = strokeIntent(tool, points, scale, documentSize);
-			switch (intent.type) {
-				case "pick":
-					onPickPoint?.(intent.point);
-					break;
-				case "tapAway":
-					lookups.tapAway(intent.point);
-					break;
-				case "paint":
-					onPaintStroke?.(points);
-					break;
-				case "box":
-					onDrawBox?.(intent.rect);
-					break;
-				case "shape":
-					onDrawShape?.(intent.placement);
-					break;
-				case "select": {
-					const hit = findLayerAt(targets, intent.point);
-					const tapped = document.layers.find((layer) => layer.id === hit?.id);
-					onSelectLayer?.(tapped?.type === intent.kind ? tapped.id : null);
-					break;
-				}
-				case "none":
-					break;
-			}
-		},
-		[
-			tool,
-			onPaintStroke,
-			onDrawBox,
-			onDrawShape,
-			onPickPoint,
-			onToolInteractionEnd,
-			onSelectLayer,
-			lookups,
-			documentSize,
-			scale,
-			targets,
-			document,
-		],
-	);
-	const paintGesture = usePaintGesture({
+	const { paintGesture, liveStroke } = useToolStroke({
+		tool,
 		viewport,
-		points: strokePoints,
-		strokeId,
-		onStroke: handleStroke,
+		scale,
+		documentSize,
+		document,
+		targets,
+		selectedLayer,
+		lookups,
 		standsAside: selectionDrag?.onSelection,
+		onPaintStroke,
+		onDrawBox,
+		onDrawShape,
+		onPickPoint,
+		onSelectLayer,
+		onToolInteractionEnd,
 	});
-	const liveStroke = useMemo<LiveStroke | null>(
-		() =>
-			tool && {
-				tool,
-				points: strokePoints,
-				id: strokeId,
-				landedId: landedStrokeId,
-				targetId:
-					tool.type === "cutBrush"
-						? tool.layerId
-						: selectedLayer && canAddTo(tool, selectedLayer)
-							? selectedLayer.id
-							: null,
-			},
-		[tool, strokePoints, strokeId, landedStrokeId, selectedLayer],
-	);
 	// The image a tool cuts out, or that's being adjusted, outlined only where
 	// it could be mistaken for another image.
 	const cuttingOutId = cutImageId(tool);
