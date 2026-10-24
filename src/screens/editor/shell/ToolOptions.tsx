@@ -2,6 +2,7 @@ import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { PenTip } from "@/model/layers/drawing";
+import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, typography } from "@/ui/theme";
 
 // The dock's widest, so a tray lines up with the dock it rises out of.
@@ -131,6 +132,37 @@ export function ToolOption({
 /** A row of `RingChoice`s, lined up with the color swatches. */
 export function ToolChoices({ children }: { children: ReactNode }) {
 	return <View style={styles.choices}>{children}</View>;
+}
+
+/**
+ * The five brush sizes, as dots. `color` is null for an eraser, whose dot is
+ * an outline, and `tip` squarens a marker's or glows a neon's.
+ */
+export function SizeChoices({
+	index,
+	color,
+	tip,
+	onPick,
+}: {
+	index: number;
+	color: string | null;
+	tip?: PenTip;
+	onPick: (index: number) => void;
+}) {
+	return (
+		<ToolChoices>
+			{SIZE_DOTS.map((dot, choice) => (
+				<RingChoice
+					key={dot}
+					label={`Size ${choice + 1} of ${SIZE_DOTS.length}`}
+					selected={choice === index}
+					onPress={() => onPick(choice)}
+				>
+					<SizeDot size={dot} color={color} tip={tip} />
+				</RingChoice>
+			))}
+		</ToolChoices>
+	);
 }
 
 // Each brush size's dot, in points: its order, not its true width.

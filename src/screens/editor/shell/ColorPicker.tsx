@@ -4,6 +4,7 @@ import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
 	Platform,
+	Pressable,
 	StyleSheet,
 	Text,
 	TextInput,
@@ -14,8 +15,10 @@ import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
 import { Button } from "@/ui/Button";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
 import { IconButton } from "@/ui/IconButton";
+import { interaction } from "@/ui/interaction";
+import { Popover } from "@/ui/Popover";
 import { Surface } from "@/ui/Surface";
-import { colors, radii, typography } from "@/ui/theme";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { ColorSwatches, isCustomColor } from "./ColorSwatches";
 
 // As wide as a row of seven swatches, so a picker on its own in a card is
@@ -85,6 +88,81 @@ export function ColorOptions({
 					onEyedropper={onEyedropper}
 				/>
 			)}
+		</>
+	);
+}
+
+const CHIP = 44;
+const CHIP_SWATCH = 22;
+
+/**
+ * The current color, as a swatch that opens `ColorOptions` in a popover: the
+ * swatches, the custom color, and the eyedropper. Starting the eyedropper
+ * closes the popover, as a tray does, so the canvas is in view.
+ */
+export function ColorChip({
+	label,
+	value,
+	customColor,
+	noneLabel,
+	onPick,
+	onPickCustom,
+	onEyedropper,
+}: {
+	label: string;
+	value: string | null;
+	customColor: string | null;
+	noneLabel?: string;
+	onPick: (color: string | null) => void;
+	onPickCustom: (color: string) => void;
+	onEyedropper?: () => void;
+}) {
+	const anchor = useRef<View>(null);
+	const [open, setOpen] = useState(false);
+	const close = () => setOpen(false);
+	return (
+		<>
+			<Pressable
+				ref={anchor}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				accessibilityState={{ expanded: open }}
+				onPress={() => setOpen((shown) => !shown)}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.chip,
+						webTransition,
+						hovered && styles.chipHovered,
+						pressed && styles.chipPressed,
+					];
+				}}
+			>
+				<View
+					style={[
+						styles.chipSwatch,
+						value === null ? styles.chipEmpty : { backgroundColor: value },
+					]}
+				>
+					{value === null && <View style={styles.chipSlash} />}
+				</View>
+			</Pressable>
+			<Popover anchor={anchor} open={open} onClose={close} label={label}>
+				<ColorOptions
+					value={value}
+					customColor={customColor}
+					noneLabel={noneLabel}
+					onPick={onPick}
+					onPickCustom={onPickCustom}
+					onEyedropper={
+						onEyedropper &&
+						(() => {
+							close();
+							onEyedropper();
+						})
+					}
+				/>
+			</Popover>
 		</>
 	);
 }
@@ -384,5 +462,38 @@ const styles = StyleSheet.create({
 	},
 	barThumb: {
 		top: "50%",
+	},
+	chip: {
+		width: CHIP,
+		height: CHIP,
+		borderRadius: CHIP / 2,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	chipHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	chipPressed: {
+		backgroundColor: colors.pressedOverlay,
+		transform: [{ scale: 0.92 }],
+	},
+	chipSwatch: {
+		width: CHIP_SWATCH,
+		height: CHIP_SWATCH,
+		borderRadius: CHIP_SWATCH / 2,
+		borderWidth: 1,
+		borderColor: colors.swatchRing,
+		alignItems: "center",
+		justifyContent: "center",
+		overflow: "hidden",
+	},
+	chipEmpty: {
+		backgroundColor: colors.surface,
+	},
+	chipSlash: {
+		width: 28,
+		height: 2,
+		backgroundColor: colors.textSecondary,
+		transform: [{ rotate: "-45deg" }],
 	},
 });

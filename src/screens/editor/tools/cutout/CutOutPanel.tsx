@@ -4,6 +4,7 @@ import { colors } from "@/ui/theme";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
 	SIZE_DOTS,
+	SizeChoices,
 	SizeDot,
 	ToolChoices,
 	ToolOption,
@@ -147,26 +148,17 @@ export function CutOutOptions({
 			dismissOnOutsidePress={false}
 		>
 			<ToolOption label="Size">
-				<ToolChoices>
-					{SIZE_DOTS.map((dot, index) => (
-						<RingChoice
-							key={dot}
-							label={`Size ${index + 1} of ${SIZE_DOTS.length}`}
-							selected={
-								index === (keep ? settings.keepSize : settings.eraseSize)
-							}
-							onPress={() =>
-								onChange(
-									keep
-										? { ...settings, keepSize: index }
-										: { ...settings, eraseSize: index },
-								)
-							}
-						>
-							<SizeDot size={dot} color={keep ? colors.textPrimary : null} />
-						</RingChoice>
-					))}
-				</ToolChoices>
+				<SizeChoices
+					index={keep ? settings.keepSize : settings.eraseSize}
+					color={keep ? colors.textPrimary : null}
+					onPick={(index) =>
+						onChange(
+							keep
+								? { ...settings, keepSize: index }
+								: { ...settings, eraseSize: index },
+						)
+					}
+				/>
 			</ToolOption>
 			<ToolOption label="Edge">
 				<ToolChoices>

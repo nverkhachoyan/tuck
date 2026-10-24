@@ -7,8 +7,7 @@ import { colors, radii, typography } from "@/ui/theme";
 import { ColorOptions } from "../../shell/ColorPicker";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
-	SIZE_DOTS,
-	SizeDot,
+	SizeChoices,
 	ToolChoices,
 	ToolOption,
 	ToolOptions,
@@ -181,20 +180,11 @@ export function RedactOptions({
 			)}
 			{tool !== "box" && (
 				<ToolOption label="Size">
-					<ToolChoices>
-						{SIZE_DOTS.map((dot, index) => (
-							<RingChoice
-								key={dot}
-								label={`Size ${index + 1} of ${SIZE_DOTS.length}`}
-								selected={
-									index === (brush ? settings.brushSize : settings.eraserSize)
-								}
-								onPress={() => pickSize(index)}
-							>
-								<SizeDot size={dot} color={brush ? colors.textPrimary : null} />
-							</RingChoice>
-						))}
-					</ToolChoices>
+					<SizeChoices
+						index={brush ? settings.brushSize : settings.eraserSize}
+						color={brush ? colors.textPrimary : null}
+						onPick={pickSize}
+					/>
 				</ToolOption>
 			)}
 		</ToolOptions>

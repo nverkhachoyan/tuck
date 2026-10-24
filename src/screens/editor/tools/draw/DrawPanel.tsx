@@ -7,8 +7,7 @@ import { ColorOptions } from "../../shell/ColorPicker";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
-	SIZE_DOTS,
-	SizeDot,
+	SizeChoices,
 	ToolChoices,
 	ToolOption,
 	ToolOptions,
@@ -188,22 +187,12 @@ export function BrushOptions({
 				</ToolOption>
 			)}
 			<ToolOption label="Size">
-				<ToolChoices>
-					{SIZE_DOTS.map((dot, index) => (
-						<RingChoice
-							key={dot}
-							label={`Size ${index + 1} of ${SIZE_DOTS.length}`}
-							selected={index === brushSizeIndex(settings)}
-							onPress={() => pickSize(index)}
-						>
-							<SizeDot
-								size={dot}
-								color={eraser ? null : settings.color}
-								tip={tip}
-							/>
-						</RingChoice>
-					))}
-				</ToolChoices>
+				<SizeChoices
+					index={brushSizeIndex(settings)}
+					color={eraser ? null : settings.color}
+					tip={tip}
+					onPick={pickSize}
+				/>
 			</ToolOption>
 		</ToolOptions>
 	);
