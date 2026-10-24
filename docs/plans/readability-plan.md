@@ -42,7 +42,7 @@ What changes:
 
 ## Stage 2: The store's state and its actions
 
-- [ ] `refactor: keep the editor store's actions under one actions object`
+- [x] `refactor: keep the editor store's actions under one actions object`
 - [ ] `refactor: import the store's selectors from editorSlice`
 
 `EditorSlice` declares the action signatures in about 80 lines, and each is written again as a wrapper around `model/edits`. `useEditorActions` then selects 31 of them one at a time. This stage comes before the screen and the canvas split, so the hooks those stages add can read `state.actions` themselves.

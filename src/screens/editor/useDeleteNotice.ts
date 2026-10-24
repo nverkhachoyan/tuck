@@ -14,9 +14,9 @@ type Notice = { message: string; after: EditorDocument | null };
  * that change instead, or after a few seconds.
  */
 export function useDeleteNotice(document: EditorDocument) {
-	const undo = useStore((state) => state.undo);
-	const deleteLayer = useStore((state) => state.deleteLayer);
-	const deleteLayerGroup = useStore((state) => state.deleteLayerGroup);
+	const { undo, deleteLayer, deleteLayerGroup } = useStore(
+		(state) => state.actions,
+	);
 	const [notice, setNotice] = useState<Notice | null>(null);
 
 	useEffect(() => {

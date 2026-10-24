@@ -16,7 +16,7 @@ export function useFindTool(
 	document: EditorDocument,
 	image: ImageLayer | null,
 ) {
-	const addRedactionBoxes = useStore((state) => state.addRedactionBoxes);
+	const { addRedactionBoxes } = useStore((state) => state.actions);
 	const detection = useImageDetection(detectionTargetKey(document, image));
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),

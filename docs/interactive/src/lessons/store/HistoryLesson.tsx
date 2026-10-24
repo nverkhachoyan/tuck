@@ -51,7 +51,7 @@ export function HistoryLesson() {
 	const { document, selectedLayerId } = state;
 	if (!document) return null;
 	const selected = selectSelectedLayer(state);
-	const actions = store.getState();
+	const actions = store.getState().actions;
 	const count = (type: Layer["type"]) =>
 		document.layers.filter((layer) => layer.type === type).length;
 

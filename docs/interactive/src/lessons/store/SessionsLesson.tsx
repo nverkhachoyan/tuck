@@ -36,7 +36,7 @@ export function SessionsLesson() {
 	const state = useStore(store);
 	const { document, session, selectedLayerId } = state;
 	if (!document) return null;
-	const actions = store.getState();
+	const actions = store.getState().actions;
 	const redaction = selectSelectedRedaction(state);
 	const redactions = document.layers.filter(
 		(layer) => layer.type === "redaction",

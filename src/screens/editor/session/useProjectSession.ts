@@ -75,7 +75,7 @@ async function switchToProject(routeId: string, stillWanted: () => boolean) {
 		}
 		// The home screen may have ended the same session meanwhile.
 		if (useStore.getState().document === document) {
-			useStore.getState().closeDocument();
+			useStore.getState().actions.closeDocument();
 		}
 	}
 
@@ -89,5 +89,5 @@ async function switchToProject(routeId: string, stillWanted: () => boolean) {
 		await closeProject(routeId, opened);
 		return;
 	}
-	useStore.getState().openDocument(opened, routeId);
+	useStore.getState().actions.openDocument(opened, routeId);
 }

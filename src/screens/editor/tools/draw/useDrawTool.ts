@@ -19,8 +19,7 @@ import {
 export function useDrawTool(active: boolean, documentSize: Size) {
 	const selectedShape = useStore(selectSelectedShape);
 	const selectedType = useStore((state) => selectSelectedLayer(state)?.type);
-	const setShapeStyle = useStore((state) => state.setShapeStyle);
-	const selectLayer = useStore((state) => state.selectLayer);
+	const { setShapeStyle, selectLayer } = useStore((state) => state.actions);
 	const [brushSettings, setBrushSettings] = usePreference(
 		"brushSettings",
 		parseBrushSettings,

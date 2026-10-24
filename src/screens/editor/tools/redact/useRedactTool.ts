@@ -17,7 +17,7 @@ import {
  */
 export function useRedactTool(documentSize: Size) {
 	const selectedRedaction = useStore(selectSelectedRedaction);
-	const setRedactionEffect = useStore((state) => state.setRedactionEffect);
+	const { setRedactionEffect } = useStore((state) => state.actions);
 	const [chosen, setChosen] = usePreference(
 		"redactSettings",
 		parseRedactSettings,

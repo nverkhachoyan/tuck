@@ -49,7 +49,7 @@ const PREVIEW_SIZE = 88;
 const SIDE_HEIGHT = 40;
 
 export default function CreateScreen() {
-	const openDocument = useStore((state) => state.openDocument);
+	const { openDocument } = useStore((state) => state.actions);
 	const router = useRouter();
 	const [background, setBackground] = useState<string | null>("#FFFFFF");
 	const { bottom } = useSafeAreaInsets();

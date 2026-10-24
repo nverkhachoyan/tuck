@@ -30,10 +30,8 @@ export function useTextEditing({
 	dispatchMode: (action: EditorModeAction) => void;
 }) {
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
-	const addTextLayer = useStore((state) => state.addTextLayer);
-	const updateTextLayer = useStore((state) => state.updateTextLayer);
-	const updateSelectedText = useStore((state) => state.updateSelectedText);
-	const deleteLayer = useStore((state) => state.deleteLayer);
+	const { addTextLayer, updateTextLayer, updateSelectedText, deleteLayer } =
+		useStore((state) => state.actions);
 	// New text starts in the style text was last given.
 	const [textStyle, setTextStyle] = usePreference("textStyle", parseTextStyle);
 	const editorRef = useRef<TextEditorHandle>(null);

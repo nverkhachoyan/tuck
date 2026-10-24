@@ -70,7 +70,6 @@ import { useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useDeleteNotice } from "./useDeleteNotice";
-import { useEditorActions } from "./useEditorActions";
 import { RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
@@ -134,7 +133,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
-	const actions = useEditorActions();
+	const actions = useStore((state) => state.actions);
 	const {
 		addImageLayer,
 		addStickerLayer,

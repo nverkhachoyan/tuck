@@ -40,8 +40,9 @@ function createTestStore() {
 
 function storeWithText() {
 	const store = createTestStore();
-	store.getState().openDocument(photo(), "project-1");
-	store.getState().addTextLayer("TOP TEXT");
+	const actions = store.getState().actions;
+	actions.openDocument(photo(), "project-1");
+	actions.addTextLayer("TOP TEXT");
 	const text = store.getState().document?.layers.at(-1) as TextLayer;
 	return { store, text };
 }
@@ -58,8 +59,9 @@ function textLayers(store: ReturnType<typeof createTestStore>) {
 describe("editorSlice", () => {
 	test("opening a document replaces the previous one and clears selection", () => {
 		const { store } = storeWithText();
+		const actions = store.getState().actions;
 		const next = photo();
-		store.getState().openDocument(next, "project-2");
+		actions.openDocument(next, "project-2");
 		assert.equal(store.getState().document, next);
 		assert.equal(store.getState().projectId, "project-2");
 		assert.equal(store.getState().selectedLayerId, null);
@@ -67,7 +69,8 @@ describe("editorSlice", () => {
 
 	test("closing clears the document, its project, and selection", () => {
 		const { store } = storeWithText();
-		store.getState().closeDocument();
+		const actions = store.getState().actions;
+		actions.closeDocument();
 		assert.equal(store.getState().document, null);
 		assert.equal(store.getState().projectId, null);
 		assert.equal(store.getState().selectedLayerId, null);
@@ -83,7 +86,8 @@ describe("editorSlice", () => {
 
 	test("adding a photo puts it on top, fitted and unlocked, and selects it", () => {
 		const { store, text } = storeWithText();
-		store.getState().addImageLayer("file:///added.jpg", 8000, 6000, true);
+		const actions = store.getState().actions;
+		actions.addImageLayer("file:///added.jpg", 8000, 6000, true);
 		const added = store.getState().document?.layers.at(-1);
 		assert.ok(added?.type === "image");
 		assert.equal(added.uri, "file:///added.jpg");
@@ -91,53 +95,55 @@ describe("editorSlice", () => {
 		assert.equal(added.transform.scaleX, (4000 * 0.8) / 8000);
 		assert.equal(store.getState().selectedLayerId, added.id);
 
-		store.getState().undo();
+		actions.undo();
 		assert.equal(store.getState().document?.layers.length, 2);
 		assert.equal(store.getState().selectedLayerId, text.id);
-		store.getState().redo();
+		actions.redo();
 		assert.equal(store.getState().document?.layers.at(-1), added);
 	});
 
 	test("adding a sticker puts it on top, marked, and selects it", () => {
 		const { store } = storeWithText();
-		store.getState().addStickerLayer("file:///sticker.png", 512, 512, false);
+		const actions = store.getState().actions;
+		actions.addStickerLayer("file:///sticker.png", 512, 512, false);
 		const added = store.getState().document?.layers.at(-1);
 		assert.ok(added?.type === "image");
 		assert.equal(added.sticker, true);
 		assert.equal(added.opaque, false);
 		assert.equal(store.getState().selectedLayerId, added.id);
 
-		store.getState().undo();
+		actions.undo();
 		assert.equal(store.getState().document?.layers.length, 2);
 	});
 
 	test("a blank canvas takes photos, and they move", () => {
 		const store = createTestStore();
-		store
-			.getState()
-			.openDocument(createBlankDocument(1080, 1080, null), "project-1");
-		store.getState().addImageLayer("file:///a.jpg", 400, 300, true);
-		store.getState().addImageLayer("file:///b.jpg", 400, 300, true);
+		const actions = store.getState().actions;
+		actions.openDocument(createBlankDocument(1080, 1080, null), "project-1");
+		actions.addImageLayer("file:///a.jpg", 400, 300, true);
+		actions.addImageLayer("file:///b.jpg", 400, 300, true);
 		const [first, second] = store.getState().document?.layers ?? [];
 		assert.equal(store.getState().selectedLayerId, second.id);
-		store.getState().nudgeLayer(first.id, 10, 0);
+		actions.nudgeLayer(first.id, 10, 0);
 		assert.equal(store.getState().document?.layers[0].transform.x, 550);
 	});
 
 	test("selecting a layer updates the selected text layer", () => {
 		const { store, text } = storeWithText();
-		store.getState().selectLayer(null);
+		const actions = store.getState().actions;
+		actions.selectLayer(null);
 		assert.equal(store.getState().selectedLayerId, null);
 		assert.equal(selectSelectedTextLayer(store.getState()), undefined);
 
-		store.getState().selectLayer(text.id);
+		actions.selectLayer(text.id);
 		assert.equal(store.getState().selectedLayerId, text.id);
 		assert.equal(selectSelectedTextLayer(store.getState()), text);
 	});
 
 	test("duplicating copies the selected text on top and selects the copy", () => {
 		const { store, text } = storeWithText();
-		store.getState().duplicateSelectedLayer();
+		const actions = store.getState().actions;
+		actions.duplicateSelectedLayer();
 		const [original, copy] = textLayers(store);
 		assert.equal(original, text);
 		assert.notEqual(copy.id, text.id);
@@ -147,6 +153,7 @@ describe("editorSlice", () => {
 
 	test("any layer type can be selected and duplicated", () => {
 		const store = createTestStore();
+		const actions = store.getState().actions;
 		const document = photo();
 		const sticker: ImageLayer = {
 			...(document.layers[0] as ImageLayer),
@@ -155,18 +162,16 @@ describe("editorSlice", () => {
 			height: 400,
 			locked: false,
 		};
-		store
-			.getState()
-			.openDocument(
-				{ ...document, layers: [...document.layers, sticker] },
-				"project-1",
-			);
+		actions.openDocument(
+			{ ...document, layers: [...document.layers, sticker] },
+			"project-1",
+		);
 
-		store.getState().selectLayer(sticker.id);
+		actions.selectLayer(sticker.id);
 		assert.equal(selectSelectedLayer(store.getState()), sticker);
 		assert.equal(selectSelectedTextLayer(store.getState()), undefined);
 
-		store.getState().duplicateSelectedLayer();
+		actions.duplicateSelectedLayer();
 		const copy = store.getState().document?.layers.at(-1);
 		assert.equal(copy?.type, "image");
 		assert.notEqual(copy?.id, sticker.id);
@@ -175,8 +180,9 @@ describe("editorSlice", () => {
 
 	test("updating text patches only the selected text layer", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM", { align: "left" });
-		store.getState().updateSelectedText({ color: "#FF3B30" });
+		const actions = store.getState().actions;
+		actions.addTextLayer("BOTTOM", { align: "left" });
+		actions.updateSelectedText({ color: "#FF3B30" });
 
 		const [first, last] = textLayers(store);
 		assert.equal(first, text, "unselected layer is untouched");
@@ -186,7 +192,8 @@ describe("editorSlice", () => {
 
 	test("new text takes the style it's given", () => {
 		const { store } = storeWithText();
-		store.getState().addTextLayer("BOTTOM", {
+		const actions = store.getState().actions;
+		actions.addTextLayer("BOTTOM", {
 			font: "serif",
 			outlineColor: null,
 		});
@@ -198,8 +205,9 @@ describe("editorSlice", () => {
 
 	test("text updates by id, whatever is selected now", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM");
-		store.getState().updateTextLayer(text.id, { text: "TOP", font: "serif" });
+		const actions = store.getState().actions;
+		actions.addTextLayer("BOTTOM");
+		actions.updateTextLayer(text.id, { text: "TOP", font: "serif" });
 
 		const [first, last] = textLayers(store);
 		assert.equal(first.text, "TOP");
@@ -207,28 +215,30 @@ describe("editorSlice", () => {
 		assert.equal(last.text, "BOTTOM");
 		assert.equal(store.getState().selectedLayerId, last.id);
 
-		store.getState().undo();
+		actions.undo();
 		assert.equal(textLayers(store)[0], text, "one undo step");
 	});
 
 	test("font and background box are edited like the other styles", () => {
 		const { store, text } = storeWithText();
-		store.getState().updateSelectedText({ font: "marker" });
-		store.getState().updateSelectedText({ backgroundColor: "#000000" });
+		const actions = store.getState().actions;
+		actions.updateSelectedText({ font: "marker" });
+		actions.updateSelectedText({ backgroundColor: "#000000" });
 		assert.equal(textLayers(store)[0].font, "marker");
 		assert.equal(textLayers(store)[0].backgroundColor, "#000000");
 
-		store.getState().undo();
-		store.getState().undo();
+		actions.undo();
+		actions.undo();
 		assert.deepEqual(textLayers(store), [text]);
 	});
 
 	test("transforms apply by id, not to whatever is selected now", () => {
 		const { store, text } = storeWithText();
-		store.getState().selectLayer(null);
+		const actions = store.getState().actions;
+		actions.selectLayer(null);
 		const transform = { x: 10, y: 20, scaleX: 2, scaleY: 2, rotation: 0.5 };
 
-		store.getState().transformLayer(text.id, transform);
+		actions.transformLayer(text.id, transform);
 
 		assert.deepEqual(textLayers(store)[0].transform, transform);
 		assert.equal(store.getState().selectedLayerId, null);
@@ -236,24 +246,26 @@ describe("editorSlice", () => {
 
 	test("enables free resize for text and image layers only", () => {
 		const { store, text } = storeWithText();
-		store.getState().setLayerResizable(text.id, true);
+		const actions = store.getState().actions;
+		actions.setLayerResizable(text.id, true);
 		assert.equal(textLayers(store)[0].resizable, true);
 
-		store.getState().addImageLayer("file:///added.jpg", 400, 300, true);
+		actions.addImageLayer("file:///added.jpg", 400, 300, true);
 		const image = store.getState().document?.layers.at(-1);
 		assert.equal(image?.type, "image");
 		if (image?.type !== "image") return;
-		store.getState().setLayerResizable(image.id, true);
+		actions.setLayerResizable(image.id, true);
 		assert.equal(store.getState().document?.layers.at(-1)?.resizable, true);
 
-		store.getState().setLayerResizable("missing", true);
-		store.getState().setLayerResizable(text.id, true);
+		actions.setLayerResizable("missing", true);
+		actions.setLayerResizable(text.id, true);
 		assert.equal(store.getState().past.length, 4, "no-ops do not add history");
 	});
 
 	test("deleting the selected layer removes it and clears selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().deleteLayer(text.id);
+		const actions = store.getState().actions;
+		actions.deleteLayer(text.id);
 		const { document, selectedLayerId } = store.getState();
 		assert.ok(!document?.layers.some((layer) => layer.id === text.id));
 		assert.equal(document?.layers.length, 1, "the photo stays");
@@ -262,44 +274,49 @@ describe("editorSlice", () => {
 
 	test("deleting another layer keeps the selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM");
+		const actions = store.getState().actions;
+		actions.addTextLayer("BOTTOM");
 		const { selectedLayerId } = store.getState();
-		store.getState().deleteLayer(text.id);
+		actions.deleteLayer(text.id);
 		assert.equal(textLayers(store).length, 1);
 		assert.equal(store.getState().selectedLayerId, selectedLayerId);
 	});
 
 	test("moving a layer reorders the stack and keeps the selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM");
+		const actions = store.getState().actions;
+		actions.addTextLayer("BOTTOM");
 		const { selectedLayerId } = store.getState();
-		store.getState().moveLayer(text.id, 2);
+		actions.moveLayer(text.id, 2);
 		assert.equal(textLayers(store).at(-1)?.id, text.id);
 		assert.equal(store.getState().selectedLayerId, selectedLayerId);
 	});
 
 	test("hiding the selected layer clears selection; showing doesn't select", () => {
 		const { store, text } = storeWithText();
-		store.getState().setLayerHidden(text.id, true);
+		const actions = store.getState().actions;
+		actions.setLayerHidden(text.id, true);
 		assert.equal(textLayers(store)[0].hidden, true);
 		assert.equal(store.getState().selectedLayerId, null);
 
-		store.getState().setLayerHidden(text.id, false);
+		actions.setLayerHidden(text.id, false);
 		assert.equal(textLayers(store)[0].hidden, false);
 		assert.equal(store.getState().selectedLayerId, null);
 	});
 
 	test("hiding another layer keeps the selection", () => {
 		const { store, text } = storeWithText();
-		store.getState().addTextLayer("BOTTOM");
+		const actions = store.getState().actions;
+		actions.addTextLayer("BOTTOM");
 		const { selectedLayerId } = store.getState();
-		store.getState().setLayerHidden(text.id, true);
+		actions.setLayerHidden(text.id, true);
 		assert.equal(store.getState().selectedLayerId, selectedLayerId);
 	});
 
 	test("nudging moves a layer by a document-space offset", () => {
 		const { store, text } = storeWithText();
-		store.getState().nudgeLayer(text.id, 5, -3);
+		const actions = store.getState().actions;
+		actions.nudgeLayer(text.id, 5, -3);
 		const { x, y } = textLayers(store)[0].transform;
 		assert.equal(x, text.transform.x + 5);
 		assert.equal(y, text.transform.y - 3);
@@ -307,10 +324,11 @@ describe("editorSlice", () => {
 
 	test("a locked photo can't be moved on the canvas", () => {
 		const { store } = storeWithText();
+		const actions = store.getState().actions;
 		const before = store.getState();
 		const photoId = before.document?.layers[0].id ?? "";
-		before.nudgeLayer(photoId, 1, 0);
-		before.transformLayer(photoId, {
+		actions.nudgeLayer(photoId, 1, 0);
+		actions.transformLayer(photoId, {
 			x: 0,
 			y: 0,
 			scaleX: 1,
@@ -322,91 +340,97 @@ describe("editorSlice", () => {
 
 	test("the photo reorders, hides, and deletes like any layer", () => {
 		const { store, text } = storeWithText();
+		const actions = store.getState().actions;
 		const photoId = store.getState().document?.layers[0].id ?? "";
 		const ids = () =>
 			store.getState().document?.layers.map((layer) => layer.id);
 
-		store.getState().moveLayer(photoId, 1);
+		actions.moveLayer(photoId, 1);
 		assert.deepEqual(ids(), [text.id, photoId]);
-		store.getState().setLayerHidden(photoId, true);
+		actions.setLayerHidden(photoId, true);
 		assert.equal(store.getState().document?.layers[1].hidden, true);
-		store.getState().deleteLayer(photoId);
+		actions.deleteLayer(photoId);
 		assert.deepEqual(ids(), [text.id]);
-		store.getState().deleteLayer(text.id);
+		actions.deleteLayer(text.id);
 		assert.deepEqual(ids(), []);
 
-		store.getState().undo();
-		store.getState().undo();
+		actions.undo();
+		actions.undo();
 		assert.deepEqual(ids(), [text.id, photoId]);
 	});
 
 	test("an unlocked photo moves; locking it again clears its selection", () => {
 		const { store } = storeWithText();
+		const actions = store.getState().actions;
 		const photoId = store.getState().document?.layers[0].id ?? "";
-		store.getState().setLayerLocked(photoId, false);
-		store.getState().selectLayer(photoId);
-		store.getState().nudgeLayer(photoId, 10, 0);
+		actions.setLayerLocked(photoId, false);
+		actions.selectLayer(photoId);
+		actions.nudgeLayer(photoId, 10, 0);
 		const moved = store.getState().document?.layers[0];
 		assert.equal(moved?.transform.x, 2010);
 
-		store.getState().setLayerLocked(photoId, true);
+		actions.setLayerLocked(photoId, true);
 		assert.equal(store.getState().document?.layers[0].locked, true);
 		assert.equal(store.getState().selectedLayerId, null);
-		store.getState().undo();
+		actions.undo();
 		assert.equal(store.getState().selectedLayerId, photoId);
 	});
 
 	test("reframing is one undo step, and an unchanged framing isn't one", () => {
 		const { store } = storeWithText();
+		const actions = store.getState().actions;
 		const before = store.getState();
 		const framing = documentFraming(before.document ?? photo());
-		before.reframe(framing, false);
+		actions.reframe(framing, false);
 		assert.equal(store.getState(), before);
 
-		before.reframe({ ...framing, width: 2000, height: 1000 }, false);
+		actions.reframe({ ...framing, width: 2000, height: 1000 }, false);
 		assert.equal(store.getState().document?.width, 2000);
 		assert.equal(store.getState().document?.height, 1000);
-		store.getState().undo();
+		actions.undo();
 		assert.equal(store.getState().document, before.document);
 	});
 
 	test("the background can be set and undone", () => {
 		const { store } = storeWithText();
+		const actions = store.getState().actions;
 		const before = store.getState();
-		before.setBackground(null);
+		actions.setBackground(null);
 		assert.equal(store.getState(), before);
-		before.setBackground("#FFFFFF");
+		actions.setBackground("#FFFFFF");
 		assert.equal(store.getState().document?.background, "#FFFFFF");
-		store.getState().undo();
+		actions.undo();
 		assert.equal(store.getState().document?.background, null);
 	});
 
 	test("edits without a document are ignored", () => {
 		const store = createTestStore();
+		const actions = store.getState().actions;
 		const before = store.getState();
-		before.addTextLayer("x");
-		before.addImageLayer("x", 1, 1, true);
-		before.updateSelectedText({ text: "y" });
-		before.duplicateSelectedLayer();
-		before.moveLayer("x", 1);
-		before.nudgeLayer("x", 1, 0);
-		before.setLayerHidden("x", true);
-		before.deleteLayer("x");
-		before.undo();
-		before.redo();
+		actions.addTextLayer("x");
+		actions.addImageLayer("x", 1, 1, true);
+		actions.updateSelectedText({ text: "y" });
+		actions.duplicateSelectedLayer();
+		actions.moveLayer("x", 1);
+		actions.nudgeLayer("x", 1, 0);
+		actions.setLayerHidden("x", true);
+		actions.deleteLayer("x");
+		actions.undo();
+		actions.redo();
 		assert.equal(store.getState(), before);
 	});
 
 	test("never mutates the previous document", () => {
 		const { store } = storeWithText();
+		const actions = store.getState().actions;
 		const document = store.getState().document;
 		const snapshot = structuredClone(document);
 		const id = store.getState().selectedLayerId ?? "";
-		store.getState().updateSelectedText({ text: "changed" });
-		store.getState().addTextLayer("more");
-		store.getState().moveLayer(id, 2);
-		store.getState().setLayerHidden(id, true);
-		store.getState().deleteLayer(id);
+		actions.updateSelectedText({ text: "changed" });
+		actions.addTextLayer("more");
+		actions.moveLayer(id, 2);
+		actions.setLayerHidden(id, true);
+		actions.deleteLayer(id);
 		assert.deepEqual(document, snapshot);
 	});
 
@@ -426,34 +450,37 @@ describe("editorSlice", () => {
 
 		test("a stroke starts a selected drawing on top, and the next joins it", () => {
 			const { store } = storeWithText();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
 			const [drawing] = drawings(store);
 			assert.equal(store.getState().document?.layers.at(-1), drawing);
 			assert.equal(store.getState().selectedLayerId, drawing.id);
 
-			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			actions.drawStroke(pen([100, 100, 200, 0]));
 			assert.equal(drawings(store).length, 1);
 			assert.equal(drawings(store)[0].strokes.length, 2);
 		});
 
 		test("a stroke with another layer selected starts a new drawing", () => {
 			const { store, text } = storeWithText();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().selectLayer(text.id);
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.selectLayer(text.id);
+			actions.drawStroke(pen([0, 0, 100, 100]));
 			assert.equal(drawings(store).length, 2);
 		});
 
 		test("an eraser only erases the selected drawing", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const eraser: Stroke = { type: "eraser", width: 30, points: [0, 0] };
-			store.getState().selectLayer(null);
+			actions.selectLayer(null);
 			const before = store.getState().document;
-			store.getState().drawStroke(eraser);
+			actions.drawStroke(eraser);
 			assert.equal(store.getState().document, before);
 
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().drawStroke(eraser);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.drawStroke(eraser);
 			assert.deepEqual(
 				drawings(store)[0].strokes.map((stroke) => stroke.type),
 				["pen", "eraser"],
@@ -462,12 +489,13 @@ describe("editorSlice", () => {
 
 		test("each stroke is an undo step, back to no drawing at all", () => {
 			const { store } = storeWithText();
-			store.getState().selectLayer(null);
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().drawStroke(pen([100, 100, 200, 0]));
-			store.getState().undo();
+			const actions = store.getState().actions;
+			actions.selectLayer(null);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.drawStroke(pen([100, 100, 200, 0]));
+			actions.undo();
 			assert.equal(drawings(store)[0].strokes.length, 1);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(drawings(store).length, 0);
 			assert.equal(store.getState().selectedLayerId, null);
 		});
@@ -491,12 +519,13 @@ describe("editorSlice", () => {
 
 		function storeWithGroup() {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const found = (x: number) => ({
 				width: 60,
 				height: 40,
 				transform: { x, y: 300, scaleX: 1, scaleY: 1, rotation: 0 },
 			});
-			store.getState().addRedactionBoxes([found(200), found(500)], blur);
+			actions.addRedactionBoxes([found(200), found(500)], blur);
 			const group = store.getState().document?.groups?.[0];
 			assert.ok(group);
 			return { store, text, group, boxes: redactions(store) };
@@ -504,7 +533,8 @@ describe("editorSlice", () => {
 
 		test("a box goes on top, centered on what it covers, and is selected", () => {
 			const { store } = storeWithText();
-			store.getState().addRedactionBox(box, black);
+			const actions = store.getState().actions;
+			actions.addRedactionBox(box, black);
 			const [redaction] = redactions(store);
 			assert.equal(store.getState().document?.layers.at(-1), redaction);
 			assert.equal(selectSelectedRedaction(store.getState()), redaction);
@@ -517,15 +547,14 @@ describe("editorSlice", () => {
 
 		test("a selection's redaction goes on top, over the image, and is selected", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const image = firstImage(store);
-			store
-				.getState()
-				.addMaskedRedaction(
-					image.id,
-					"file:///selection.png",
-					{ x: 0, y: 0, width: 4000, height: 3000 },
-					blur,
-				);
+			actions.addMaskedRedaction(
+				image.id,
+				"file:///selection.png",
+				{ x: 0, y: 0, width: 4000, height: 3000 },
+				blur,
+			);
 			const [redaction] = redactions(store);
 			assert.equal(selectSelectedRedaction(store.getState()), redaction);
 			assert.equal(redaction.shape, "mask");
@@ -534,8 +563,9 @@ describe("editorSlice", () => {
 
 		test("detected boxes are added unselected and undone together", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().addRedactionBoxes(
+			actions.addRedactionBoxes(
 				[
 					{
 						width: 120,
@@ -598,7 +628,7 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().selectedLayerId, null);
 			assert.equal(store.getState().past.length, 2, "one new history step");
 
-			store.getState().setLayerGroupHidden(group?.id ?? "", true);
+			actions.setLayerGroupHidden(group?.id ?? "", true);
 			assert.ok(
 				added.every((layer) => {
 					const current = store
@@ -607,66 +637,70 @@ describe("editorSlice", () => {
 					return current?.hidden;
 				}),
 			);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(store.getState().document?.groups?.length, 1);
 
-			store.getState().undo();
+			actions.undo();
 			assert.equal(store.getState().document, before);
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
 		test("a group's boxes lock and hide together, clearing a selection among them", () => {
 			const { store, text, group, boxes } = storeWithGroup();
-			store.getState().selectLayer(text.id);
-			store.getState().setLayerGroupLocked(group.id, true);
+			const actions = store.getState().actions;
+			actions.selectLayer(text.id);
+			actions.setLayerGroupLocked(group.id, true);
 			assert.ok(redactions(store).every((layer) => layer.locked));
 			assert.equal(store.getState().selectedLayerId, text.id);
 
-			store.getState().setLayerGroupLocked(group.id, false);
-			store.getState().selectLayer(boxes[1].id);
-			store.getState().setLayerGroupHidden(group.id, true);
+			actions.setLayerGroupLocked(group.id, false);
+			actions.selectLayer(boxes[1].id);
+			actions.setLayerGroupHidden(group.id, true);
 			assert.ok(redactions(store).every((layer) => layer.hidden));
 			assert.equal(store.getState().selectedLayerId, null);
 
-			store.getState().undo();
+			actions.undo();
 			assert.deepEqual(redactions(store), boxes);
 			assert.equal(store.getState().selectedLayerId, boxes[1].id);
-			store.getState().setLayerGroupLocked(group.id, true);
+			actions.setLayerGroupLocked(group.id, true);
 			assert.equal(store.getState().selectedLayerId, null);
 		});
 
 		test("a group's flags change nothing when its boxes already have them", () => {
 			const { store, group } = storeWithGroup();
+			const actions = store.getState().actions;
 			const before = store.getState();
-			before.setLayerGroupHidden(group.id, false);
-			before.setLayerGroupLocked(group.id, false);
-			before.setLayerGroupLocked("missing", true);
-			before.deleteLayerGroup("missing");
+			actions.setLayerGroupHidden(group.id, false);
+			actions.setLayerGroupLocked(group.id, false);
+			actions.setLayerGroupLocked("missing", true);
+			actions.deleteLayerGroup("missing");
 			assert.equal(store.getState(), before);
 		});
 
 		test("deleting a group removes its boxes, and a selection among them", () => {
 			const { store, text, group, boxes } = storeWithGroup();
-			store.getState().selectLayer(boxes[0].id);
-			store.getState().deleteLayerGroup(group.id);
+			const actions = store.getState().actions;
+			actions.selectLayer(boxes[0].id);
+			actions.deleteLayerGroup(group.id);
 			assert.deepEqual(redactions(store), []);
 			assert.deepEqual(store.getState().document?.groups, []);
 			assert.equal(store.getState().selectedLayerId, null);
 
-			store.getState().undo();
-			store.getState().selectLayer(text.id);
-			store.getState().deleteLayerGroup(group.id);
+			actions.undo();
+			actions.selectLayer(text.id);
+			actions.deleteLayerGroup(group.id);
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
 		test("resizing a box is one undo step, by id", () => {
 			const { store, text } = storeWithText();
-			store.getState().addRedactionBox(box, black);
+			const actions = store.getState().actions;
+			actions.addRedactionBox(box, black);
 			const [redaction] = redactions(store);
-			store.getState().selectLayer(text.id);
+			actions.selectLayer(text.id);
 			const steps = store.getState().past.length;
 			const moved = { ...redaction.transform, x: 280 };
-			store.getState().resizeBox(redaction.id, moved, 360, 80);
+			actions.resizeBox(redaction.id, moved, 360, 80);
 			const [resized] = redactions(store);
 			assert.equal(resized.shape === "box" && resized.width, 360);
 			assert.equal(resized.shape === "box" && resized.height, 80);
@@ -674,17 +708,18 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().selectedLayerId, text.id);
 			assert.equal(store.getState().past.length, steps + 1);
 
-			store.getState().undo();
+			actions.undo();
 			assert.deepEqual(redactions(store), [redaction]);
 		});
 
 		test("resizing to the same box, or no box, changes nothing", () => {
 			const { store } = storeWithText();
-			store.getState().addRedactionBox(box, black);
-			store.getState().paintRedaction(mask([0, 0, 100, 0]), black);
+			const actions = store.getState().actions;
+			actions.addRedactionBox(box, black);
+			actions.paintRedaction(mask([0, 0, 100, 0]), black);
 			const [boxed, brushed] = redactions(store);
 			const before = store.getState().document;
-			const resize = store.getState().resizeBox;
+			const resize = actions.resizeBox;
 			resize(boxed.id, boxed.transform, 300, 50);
 			resize(boxed.id, boxed.transform, 0, 50);
 			resize(brushed.id, brushed.transform, 300, 50);
@@ -694,35 +729,38 @@ describe("editorSlice", () => {
 
 		test("an empty box is ignored", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().addRedactionBox({ ...box, height: 0 }, black);
+			actions.addRedactionBox({ ...box, height: 0 }, black);
 			assert.equal(store.getState().document, before);
 		});
 
 		test("restyling is one undo step, and the same style isn't one", () => {
 			const { store } = storeWithText();
-			store.getState().addRedactionBox(box, black);
+			const actions = store.getState().actions;
+			actions.addRedactionBox(box, black);
 			const [redaction] = redactions(store);
 			const steps = store.getState().past.length;
-			store.getState().setRedactionEffect(redaction.id, { ...black });
+			actions.setRedactionEffect(redaction.id, { ...black });
 			assert.equal(store.getState().past.length, steps);
 
-			store.getState().setRedactionEffect(redaction.id, blur);
+			actions.setRedactionEffect(redaction.id, blur);
 			assert.deepEqual(redactions(store)[0].effect, blur);
-			store.getState().setRedactionEffect(redaction.id, pixels);
-			store.getState().setRedactionEffect(redaction.id, { ...pixels });
+			actions.setRedactionEffect(redaction.id, pixels);
+			actions.setRedactionEffect(redaction.id, { ...pixels });
 			assert.equal(store.getState().past.length, steps + 2);
-			store.getState().undo();
+			actions.undo();
 			assert.deepEqual(redactions(store)[0].effect, blur);
-			store.getState().undo();
+			actions.undo();
 			assert.deepEqual(redactions(store)[0].effect, black);
 		});
 
 		test("brush strokes join the selected brushed redaction", () => {
 			const { store } = storeWithText();
-			store.getState().paintRedaction(mask([0, 0, 100, 0]), blur);
-			store.getState().paintRedaction(mask([0, 50, 100, 50]), black);
-			store.getState().paintRedaction(mask([50, 0], "eraser"), black);
+			const actions = store.getState().actions;
+			actions.paintRedaction(mask([0, 0, 100, 0]), blur);
+			actions.paintRedaction(mask([0, 50, 100, 50]), black);
+			actions.paintRedaction(mask([50, 0], "eraser"), black);
 			const [redaction] = redactions(store);
 			assert.equal(redactions(store).length, 1);
 			assert.deepEqual(redaction.effect, blur, "keeps its own style");
@@ -735,12 +773,13 @@ describe("editorSlice", () => {
 
 		test("a brush over a selected box starts a new redaction; an eraser doesn't", () => {
 			const { store } = storeWithText();
-			store.getState().addRedactionBox(box, black);
+			const actions = store.getState().actions;
+			actions.addRedactionBox(box, black);
 			const before = store.getState().document;
-			store.getState().paintRedaction(mask([0, 0], "eraser"), black);
+			actions.paintRedaction(mask([0, 0], "eraser"), black);
 			assert.equal(store.getState().document, before);
 
-			store.getState().paintRedaction(mask([0, 0, 100, 0]), black);
+			actions.paintRedaction(mask([0, 0, 100, 0]), black);
 			assert.deepEqual(
 				redactions(store).map((layer) => layer.shape),
 				["box", "strokes"],
@@ -760,8 +799,9 @@ describe("editorSlice", () => {
 
 		test("a shape goes on top, selected, as one undo step", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const steps = store.getState().past.length;
-			store.getState().addShape("ellipse", place, style);
+			actions.addShape("ellipse", place, style);
 			const [shape] = shapes(store);
 			assert.equal(store.getState().document?.layers.at(-1), shape);
 			assert.equal(selectSelectedShape(store.getState()), shape);
@@ -771,32 +811,35 @@ describe("editorSlice", () => {
 
 		test("a box needs both sides, and a line only its length", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().addShape("rectangle", { ...place, height: 0 }, style);
-			store.getState().addShape("arrow", { ...place, width: 0 }, style);
+			actions.addShape("rectangle", { ...place, height: 0 }, style);
+			actions.addShape("arrow", { ...place, width: 0 }, style);
 			assert.equal(store.getState().document, before);
-			store.getState().addShape("arrow", { ...place, height: 0 }, style);
+			actions.addShape("arrow", { ...place, height: 0 }, style);
 			assert.equal(shapes(store).length, 1);
 		});
 
 		test("restyling is one undo step, and the same style isn't one", () => {
 			const { store } = storeWithText();
-			store.getState().addShape("rectangle", place, style);
+			const actions = store.getState().actions;
+			actions.addShape("rectangle", place, style);
 			const [shape] = shapes(store);
 			const steps = store.getState().past.length;
-			store.getState().setShapeStyle(shape.id, { ...style });
-			store.getState().setShapeStyle(shape.id, { shape: "line" });
+			actions.setShapeStyle(shape.id, { ...style });
+			actions.setShapeStyle(shape.id, { shape: "line" });
 			assert.equal(store.getState().past.length, steps);
 
-			store.getState().setShapeStyle(shape.id, { color: "#FFFFFF" });
+			actions.setShapeStyle(shape.id, { color: "#FFFFFF" });
 			assert.equal(shapes(store)[0].color, "#FFFFFF");
 			assert.equal(store.getState().past.length, steps + 1);
 		});
 
 		test("an eraser removes each shape it passes over, as one undo step", () => {
 			const { store } = storeWithText();
-			store.getState().addShape("rectangle", place, style);
-			store.getState().addShape("arrow", { ...place, y: 900 }, style);
+			const actions = store.getState().actions;
+			actions.addShape("rectangle", place, style);
+			actions.addShape("arrow", { ...place, y: 900 }, style);
 			const [box, arrow] = shapes(store);
 			const steps = store.getState().past.length;
 			// Across the rectangle's top edge, at y = 250, and nowhere near the arrow.
@@ -805,20 +848,21 @@ describe("editorSlice", () => {
 				width: 20,
 				points: [400, 200, 400, 300],
 			};
-			store.getState().drawStroke(eraser);
+			actions.drawStroke(eraser);
 			assert.deepEqual(shapes(store), [arrow]);
 			assert.equal(store.getState().past.length, steps + 1);
 			// The arrow was selected, and still is.
 			assert.equal(store.getState().selectedLayerId, arrow.id);
 
-			store.getState().undo();
+			actions.undo();
 			assert.deepEqual(shapes(store), [box, arrow]);
 		});
 
 		test("erasing the selected shape clears the selection", () => {
 			const { store } = storeWithText();
-			store.getState().addShape("line", place, style);
-			store.getState().drawStroke({
+			const actions = store.getState().actions;
+			actions.addShape("line", place, style);
+			actions.drawStroke({
 				type: "eraser",
 				width: 20,
 				points: [400, 300],
@@ -829,13 +873,14 @@ describe("editorSlice", () => {
 
 		test("an eraser leaves locked and hidden shapes, and misses nothing else", () => {
 			const { store } = storeWithText();
-			store.getState().addShape("line", place, style);
-			store.getState().addShape("line", place, style);
+			const actions = store.getState().actions;
+			actions.addShape("line", place, style);
+			actions.addShape("line", place, style);
 			const [locked, hidden] = shapes(store);
-			store.getState().setLayerLocked(locked.id, true);
-			store.getState().setLayerHidden(hidden.id, true);
+			actions.setLayerLocked(locked.id, true);
+			actions.setLayerHidden(hidden.id, true);
 			const before = store.getState().document;
-			store.getState().drawStroke({
+			actions.drawStroke({
 				type: "eraser",
 				width: 20,
 				points: [400, 300],
@@ -845,15 +890,16 @@ describe("editorSlice", () => {
 
 		test("an eraser erases in the selected drawing and removes shapes together", () => {
 			const { store } = storeWithText();
-			store.getState().addShape("line", place, style);
-			store.getState().drawStroke({
+			const actions = store.getState().actions;
+			actions.addShape("line", place, style);
+			actions.drawStroke({
 				type: "pen",
 				color: "#000000",
 				width: 10,
 				points: [0, 0, 100, 100],
 			});
 			const steps = store.getState().past.length;
-			store.getState().drawStroke({
+			actions.drawStroke({
 				type: "eraser",
 				width: 20,
 				points: [50, 50, 400, 300],
@@ -871,10 +917,11 @@ describe("editorSlice", () => {
 
 		test("resizing a line sets its length and angle", () => {
 			const { store } = storeWithText();
-			store.getState().addShape("arrow", place, style);
+			const actions = store.getState().actions;
+			actions.addShape("arrow", place, style);
 			const [line] = shapes(store);
 			const turned = { ...line.transform, rotation: 1 };
-			store.getState().resizeBox(line.id, turned, 320, 60);
+			actions.resizeBox(line.id, turned, 320, 60);
 			const [resized] = shapes(store);
 			assert.equal(resized.shape === "arrow" && resized.length, 320);
 			assert.deepEqual(resized.transform, turned);
@@ -884,166 +931,176 @@ describe("editorSlice", () => {
 	describe("history", () => {
 		test("undoing an add removes the text and restores the selection", () => {
 			const { store, text } = storeWithText();
-			store.getState().undo();
+			const actions = store.getState().actions;
+			actions.undo();
 			assert.equal(textLayers(store).length, 0);
 			assert.equal(store.getState().selectedLayerId, null);
 
-			store.getState().redo();
+			actions.redo();
 			assert.deepEqual(textLayers(store), [text]);
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
 		test("undoing a delete brings the layer back selected", () => {
 			const { store, text } = storeWithText();
-			store.getState().deleteLayer(text.id);
-			store.getState().undo();
+			const actions = store.getState().actions;
+			actions.deleteLayer(text.id);
+			actions.undo();
 			assert.deepEqual(textLayers(store), [text]);
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
 		test("undoing a hide shows the layer selected again", () => {
 			const { store, text } = storeWithText();
-			store.getState().setLayerHidden(text.id, true);
-			store.getState().undo();
+			const actions = store.getState().actions;
+			actions.setLayerHidden(text.id, true);
+			actions.undo();
 			assert.deepEqual(textLayers(store), [text]);
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
 		test("undoing a move restores the order", () => {
 			const { store, text } = storeWithText();
-			store.getState().addTextLayer("BOTTOM");
+			const actions = store.getState().actions;
+			actions.addTextLayer("BOTTOM");
 			const before = store.getState().document;
-			store.getState().moveLayer(text.id, 2);
-			store.getState().undo();
+			actions.moveLayer(text.id, 2);
+			actions.undo();
 			assert.equal(store.getState().document, before);
 		});
 
 		test("a run of nudges to one layer is a single undo step", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
 			const { past } = store.getState();
-			for (let i = 0; i < 5; i++) store.getState().nudgeLayer(text.id, 1, 0);
+			for (let i = 0; i < 5; i++) actions.nudgeLayer(text.id, 1, 0);
 			assert.equal(store.getState().past.length, past.length + 1);
 			assert.equal(textLayers(store)[0].transform.x, text.transform.x + 5);
 
-			store.getState().undo();
+			actions.undo();
 			assert.equal(store.getState().document, before);
 		});
 
 		test("any other change ends a run of nudges", () => {
 			const { store, text } = storeWithText();
-			store.getState().addTextLayer("OTHER");
+			const actions = store.getState().actions;
+			actions.addTextLayer("OTHER");
 			const other = textLayers(store)[1];
 			const { past } = store.getState();
 
-			store.getState().nudgeLayer(text.id, 1, 0);
-			store.getState().nudgeLayer(other.id, 1, 0);
-			store.getState().updateSelectedText({ color: "#FF3B30" });
-			store.getState().nudgeLayer(other.id, 1, 0);
-			store.getState().undo();
-			store.getState().nudgeLayer(other.id, 1, 0);
+			actions.nudgeLayer(text.id, 1, 0);
+			actions.nudgeLayer(other.id, 1, 0);
+			actions.updateSelectedText({ color: "#FF3B30" });
+			actions.nudgeLayer(other.id, 1, 0);
+			actions.undo();
+			actions.nudgeLayer(other.id, 1, 0);
 			assert.equal(store.getState().past.length, past.length + 4);
 		});
 
 		test("a nudge that joins a run still clears the redo stack", () => {
 			const { store, text } = storeWithText();
-			store.getState().nudgeLayer(text.id, 1, 0);
-			store.getState().updateSelectedText({ color: "#FF3B30" });
-			store.getState().undo();
-			store.getState().nudgeLayer(text.id, 1, 0);
+			const actions = store.getState().actions;
+			actions.nudgeLayer(text.id, 1, 0);
+			actions.updateSelectedText({ color: "#FF3B30" });
+			actions.undo();
+			actions.nudgeLayer(text.id, 1, 0);
 			assert.deepEqual(store.getState().future, []);
 		});
 
 		test("undo restores the exact earlier document", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().updateSelectedText({ color: "#FF3B30" });
-			store
-				.getState()
-				.transformLayer(text.id, { ...text.transform, x: 1, rotation: 1 });
+			actions.updateSelectedText({ color: "#FF3B30" });
+			actions.transformLayer(text.id, { ...text.transform, x: 1, rotation: 1 });
 			const after = store.getState().document;
 
-			store.getState().undo();
-			store.getState().undo();
+			actions.undo();
+			actions.undo();
 			assert.equal(store.getState().document, before);
 
-			store.getState().redo();
-			store.getState().redo();
+			actions.redo();
+			actions.redo();
 			assert.equal(store.getState().document, after);
 		});
 
 		test("a new edit after undo clears the redo stack", () => {
 			const { store } = storeWithText();
-			store.getState().updateSelectedText({ color: "#FF3B30" });
-			store.getState().undo();
-			store.getState().updateSelectedText({ color: "#34C759" });
+			const actions = store.getState().actions;
+			actions.updateSelectedText({ color: "#FF3B30" });
+			actions.undo();
+			actions.updateSelectedText({ color: "#34C759" });
 			assert.deepEqual(store.getState().future, []);
 		});
 
 		test("selecting and no-op edits aren't recorded", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const { past } = store.getState();
-			store.getState().selectLayer(null);
-			store.getState().selectLayer(text.id);
-			store
-				.getState()
-				.updateSelectedText({ text: text.text, align: text.align });
-			store.getState().moveLayer(text.id, 1);
-			store.getState().nudgeLayer(text.id, 0, 0);
-			store.getState().setLayerHidden(text.id, false);
-			store.getState().deleteLayer("missing");
+			actions.selectLayer(null);
+			actions.selectLayer(text.id);
+			actions.updateSelectedText({ text: text.text, align: text.align });
+			actions.moveLayer(text.id, 1);
+			actions.nudgeLayer(text.id, 0, 0);
+			actions.setLayerHidden(text.id, false);
+			actions.deleteLayer("missing");
 			assert.equal(store.getState().past, past);
 		});
 
 		test("no-op transforms preserve history and redo", () => {
 			const { store, text } = storeWithText();
-			store.getState().updateSelectedText({ color: "#FF3B30" });
-			store.getState().undo();
+			const actions = store.getState().actions;
+			actions.updateSelectedText({ color: "#FF3B30" });
+			actions.undo();
 			const before = store.getState();
 
-			before.transformLayer(text.id, text.transform);
+			actions.transformLayer(text.id, text.transform);
 			assert.equal(store.getState(), before);
 
-			before.transformLayer("missing", { ...text.transform, x: 1 });
+			actions.transformLayer("missing", { ...text.transform, x: 1 });
 			assert.equal(store.getState(), before);
 		});
 
 		test("only the most recent steps can be undone", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const documents = [store.getState().document];
 			for (let x = 1; x <= MAX_HISTORY + 5; x++) {
-				store.getState().transformLayer(text.id, { ...text.transform, x });
+				actions.transformLayer(text.id, { ...text.transform, x });
 				documents.push(store.getState().document);
 			}
 			assert.equal(store.getState().past.length, MAX_HISTORY);
 
-			while (store.getState().past.length > 0) store.getState().undo();
+			while (store.getState().past.length > 0) actions.undo();
 			assert.equal(store.getState().document, documents.at(-1 - MAX_HISTORY));
 
-			while (store.getState().future.length > 0) store.getState().redo();
+			while (store.getState().future.length > 0) actions.redo();
 			assert.equal(store.getState().document, documents.at(-1));
 			assert.equal(store.getState().past.length, MAX_HISTORY);
 		});
 
 		test("opening or closing a document clears history", () => {
 			const { store } = storeWithText();
-			store.getState().duplicateSelectedLayer();
-			store.getState().undo();
-			store.getState().openDocument(photo(), "project-1");
+			const actions = store.getState().actions;
+			actions.duplicateSelectedLayer();
+			actions.undo();
+			actions.openDocument(photo(), "project-1");
 			assert.deepEqual(store.getState().past, []);
 			assert.deepEqual(store.getState().future, []);
 
-			store.getState().addTextLayer("x");
-			store.getState().closeDocument();
+			actions.addTextLayer("x");
+			actions.closeDocument();
 			assert.deepEqual(store.getState().past, []);
 		});
 
 		test("undo and redo with nothing to step to change nothing", () => {
 			const store = createTestStore();
-			store.getState().openDocument(photo(), "project-1");
+			const actions = store.getState().actions;
+			actions.openDocument(photo(), "project-1");
 			const before = store.getState();
-			before.undo();
-			before.redo();
+			actions.undo();
+			actions.redo();
 			assert.equal(store.getState(), before);
 		});
 	});
@@ -1057,27 +1114,29 @@ describe("editorSlice", () => {
 
 		test("committing makes a session's changes one undo step", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
 			const pastLength = store.getState().past.length;
-			store.getState().beginSession();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().drawStroke(pen([100, 100, 200, 0]));
-			store.getState().commitSession();
+			actions.beginSession();
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.drawStroke(pen([100, 100, 200, 0]));
+			actions.commitSession();
 			assert.equal(store.getState().session, null);
 			assert.equal(store.getState().past.length, pastLength + 1);
 
-			store.getState().undo();
+			actions.undo();
 			assert.equal(store.getState().document, before);
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
 		test("canceling restores where the session started", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const { document: before, past } = store.getState();
-			store.getState().beginSession();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().deleteLayer(text.id);
-			store.getState().cancelSession();
+			actions.beginSession();
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.deleteLayer(text.id);
+			actions.cancelSession();
 			assert.equal(store.getState().document, before);
 			assert.equal(store.getState().selectedLayerId, text.id);
 			assert.deepEqual(store.getState().past, past);
@@ -1086,113 +1145,121 @@ describe("editorSlice", () => {
 
 		test("redo brings a canceled session back as one step", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().beginSession();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().deleteLayer(text.id);
+			actions.beginSession();
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.deleteLayer(text.id);
 			const { document: canceled, selectedLayerId } = store.getState();
-			store.getState().cancelSession();
+			actions.cancelSession();
 			assert.equal(selectCanRedo(store.getState()), true);
 
-			store.getState().redo();
+			actions.redo();
 			assert.equal(store.getState().document, canceled);
 			assert.equal(store.getState().selectedLayerId, selectedLayerId);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(store.getState().document, before);
 		});
 
 		test("a canceled session keeps the steps undone within it", () => {
 			const { store } = storeWithText();
-			store.getState().beginSession();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			const actions = store.getState().actions;
+			actions.beginSession();
+			actions.drawStroke(pen([0, 0, 100, 100]));
 			const oneStroke = store.getState().document;
-			store.getState().drawStroke(pen([100, 100, 200, 0]));
+			actions.drawStroke(pen([100, 100, 200, 0]));
 			const twoStrokes = store.getState().document;
-			store.getState().undo();
-			store.getState().cancelSession();
+			actions.undo();
+			actions.cancelSession();
 
-			store.getState().redo();
+			actions.redo();
 			assert.equal(store.getState().document, oneStroke);
-			store.getState().redo();
+			actions.redo();
 			assert.equal(store.getState().document, twoStrokes);
 		});
 
 		test("a session without changes leaves the history alone", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const { document, past } = store.getState();
-			store.getState().beginSession();
-			store.getState().commitSession();
+			actions.beginSession();
+			actions.commitSession();
 			assert.equal(store.getState().document, document);
 			assert.equal(store.getState().past, past);
 		});
 
 		test("undo stops at the session's start", () => {
 			const { store } = storeWithText();
-			store.getState().beginSession();
+			const actions = store.getState().actions;
+			actions.beginSession();
 			assert.equal(selectCanUndo(store.getState()), false);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(textLayers(store).length, 1);
 
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			actions.drawStroke(pen([0, 0, 100, 100]));
 			assert.equal(selectCanUndo(store.getState()), true);
-			store.getState().undo();
-			store.getState().undo();
+			actions.undo();
+			actions.undo();
 			assert.equal(textLayers(store).length, 1);
 		});
 
 		test("redo stops at the session's start, as undo does", () => {
 			const { store } = storeWithText();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().undo();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.undo();
 			const before = store.getState().document;
-			store.getState().beginSession();
+			actions.beginSession();
 			assert.equal(selectCanRedo(store.getState()), false);
-			store.getState().redo();
+			actions.redo();
 			assert.equal(store.getState().document, before);
 
-			store.getState().drawStroke(pen([100, 100, 200, 0]));
-			store.getState().undo();
+			actions.drawStroke(pen([100, 100, 200, 0]));
+			actions.undo();
 			assert.equal(selectCanRedo(store.getState()), true);
-			store.getState().redo();
+			actions.redo();
 			assert.notEqual(store.getState().document, before);
 		});
 
 		test("a session without changes leaves the redo steps from before it", () => {
 			const { store } = storeWithText();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
 			const drawn = store.getState().document;
-			store.getState().undo();
-			store.getState().beginSession();
-			store.getState().commitSession();
+			actions.undo();
+			actions.beginSession();
+			actions.commitSession();
 			assert.equal(selectCanRedo(store.getState()), true);
-			store.getState().redo();
+			actions.redo();
 			assert.equal(store.getState().document, drawn);
 		});
 
 		test("undoing within a session, then drawing again, still commits one step", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
 			const pastLength = store.getState().past.length;
-			store.getState().beginSession();
-			store.getState().drawStroke(pen([0, 0, 100, 100]));
-			store.getState().undo();
-			store.getState().drawStroke(pen([100, 100, 200, 0]));
-			store.getState().commitSession();
+			actions.beginSession();
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.undo();
+			actions.drawStroke(pen([100, 100, 200, 0]));
+			actions.commitSession();
 			assert.equal(store.getState().past.length, pastLength + 1);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(store.getState().document, before);
 		});
 
 		test("a session longer than the history keeps only its own step", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().beginSession();
+			actions.beginSession();
 			for (let i = 0; i <= MAX_HISTORY; i++) {
-				store.getState().drawStroke(pen([i, 0, i + 10, 10]));
+				actions.drawStroke(pen([i, 0, i + 10, 10]));
 			}
-			store.getState().commitSession();
+			actions.commitSession();
 			assert.equal(store.getState().past.length, 1);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(store.getState().document, before);
 		});
 	});
@@ -1201,30 +1268,33 @@ describe("editorSlice", () => {
 		const warm = { ...neutralAdjustments, temperature: 0.5 };
 		test("adjusting is one undo step, and undo takes it back", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const steps = store.getState().past.length;
-			store.getState().setAdjustments("photo", warm);
+			actions.setAdjustments("photo", warm);
 			assert.deepEqual(firstImage(store).adjustments, warm);
 			assert.equal(store.getState().past.length, steps + 1);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(firstImage(store).adjustments, undefined);
 		});
 
 		test("the same adjustments aren't a step, and none leaves them out", () => {
 			const { store } = storeWithText();
-			store.getState().setAdjustments("photo", warm);
+			const actions = store.getState().actions;
+			actions.setAdjustments("photo", warm);
 			const steps = store.getState().past.length;
-			store.getState().setAdjustments("photo", { ...warm });
+			actions.setAdjustments("photo", { ...warm });
 			assert.equal(store.getState().past.length, steps);
-			store.getState().setAdjustments("photo", neutralAdjustments);
+			actions.setAdjustments("photo", neutralAdjustments);
 			assert.equal("adjustments" in firstImage(store), false);
 			assert.equal(store.getState().past.length, steps + 1);
 		});
 
 		test("only images take adjustments", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().setAdjustments(text.id, warm);
-			store.getState().setAdjustments("missing", warm);
+			actions.setAdjustments(text.id, warm);
+			actions.setAdjustments("missing", warm);
 			assert.equal(store.getState().document, before);
 		});
 	});
@@ -1232,30 +1302,33 @@ describe("editorSlice", () => {
 	describe("setMask", () => {
 		test("cutting out is one undo step, and undo brings the background back", () => {
 			const { store } = storeWithText();
+			const actions = store.getState().actions;
 			const steps = store.getState().past.length;
-			store.getState().setMask("photo", "file:///mask.png");
+			actions.setMask("photo", "file:///mask.png");
 			assert.equal(firstImage(store).mask, "file:///mask.png");
 			assert.equal(store.getState().past.length, steps + 1);
-			store.getState().undo();
+			actions.undo();
 			assert.equal("mask" in firstImage(store), false);
 		});
 
 		test("the same mask isn't a step, and null takes it off", () => {
 			const { store } = storeWithText();
-			store.getState().setMask("photo", "file:///mask.png");
+			const actions = store.getState().actions;
+			actions.setMask("photo", "file:///mask.png");
 			const steps = store.getState().past.length;
-			store.getState().setMask("photo", "file:///mask.png");
+			actions.setMask("photo", "file:///mask.png");
 			assert.equal(store.getState().past.length, steps);
-			store.getState().setMask("photo", null);
+			actions.setMask("photo", null);
 			assert.equal("mask" in firstImage(store), false);
 			assert.equal(store.getState().past.length, steps + 1);
 		});
 
 		test("only images take a mask", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().setMask(text.id, "file:///mask.png");
-			store.getState().setMask("missing", "file:///mask.png");
+			actions.setMask(text.id, "file:///mask.png");
+			actions.setMask("missing", "file:///mask.png");
 			assert.equal(store.getState().document, before);
 		});
 	});
@@ -1263,20 +1336,22 @@ describe("editorSlice", () => {
 	describe("invertMask", () => {
 		test("inverting a cut is one undo step", () => {
 			const { store } = storeWithText();
-			store.getState().setMask("photo", "file:///mask.png");
+			const actions = store.getState().actions;
+			actions.setMask("photo", "file:///mask.png");
 			const steps = store.getState().past.length;
-			store.getState().invertMask("photo", "file:///inverse.png");
+			actions.invertMask("photo", "file:///inverse.png");
 			assert.equal(firstImage(store).mask, "file:///inverse.png");
 			assert.equal(store.getState().past.length, steps + 1);
-			store.getState().undo();
+			actions.undo();
 			assert.equal(firstImage(store).mask, "file:///mask.png");
 		});
 
 		test("an image that isn't cut has nothing to invert", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().invertMask("photo", "file:///inverse.png");
-			store.getState().invertMask(text.id, "file:///inverse.png");
+			actions.invertMask("photo", "file:///inverse.png");
+			actions.invertMask(text.id, "file:///inverse.png");
 			assert.equal(store.getState().document, before);
 		});
 	});
@@ -1287,40 +1362,44 @@ describe("editorSlice", () => {
 
 		test("erasing cuts a whole image by hand, a step at a time", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const steps = store.getState().past.length;
-			store.getState().paintMask("photo", eraser);
-			store.getState().paintMask("photo", pen);
+			actions.paintMask("photo", eraser);
+			actions.paintMask("photo", pen);
 			assert.equal(firstImage(store).maskStrokes?.length, 2);
 			assert.equal(store.getState().past.length, steps + 2);
 			assert.equal(store.getState().selectedLayerId, text.id, "kept");
-			store.getState().undo();
-			store.getState().undo();
+			actions.undo();
+			actions.undo();
 			assert.equal("maskStrokes" in firstImage(store), false);
 		});
 
 		test("keeping what's whole already isn't a step", () => {
 			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
 			const before = store.getState().document;
-			store.getState().paintMask("photo", pen);
-			store.getState().paintMask(text.id, eraser);
-			store.getState().paintMask("missing", eraser);
+			actions.paintMask("photo", pen);
+			actions.paintMask(text.id, eraser);
+			actions.paintMask("missing", eraser);
 			assert.equal(store.getState().document, before);
 		});
 
 		test("a new mask takes the strokes off", () => {
 			const { store } = storeWithText();
-			store.getState().setMask("photo", "file:///mask.png");
-			store.getState().paintMask("photo", pen);
-			store.getState().setMask("photo", "file:///other.png");
+			const actions = store.getState().actions;
+			actions.setMask("photo", "file:///mask.png");
+			actions.paintMask("photo", pen);
+			actions.setMask("photo", "file:///other.png");
 			assert.equal("maskStrokes" in firstImage(store), false);
 		});
 
 		test("a mask grown from the old one can keep them", () => {
 			const { store } = storeWithText();
-			store.getState().setMask("photo", "file:///mask.png");
-			store.getState().paintMask("photo", pen);
+			const actions = store.getState().actions;
+			actions.setMask("photo", "file:///mask.png");
+			actions.paintMask("photo", pen);
 			const steps = store.getState().past.length;
-			store.getState().setMask("photo", "file:///grown.png", {
+			actions.setMask("photo", "file:///grown.png", {
 				keepStrokes: true,
 			});
 			assert.equal(firstImage(store).mask, "file:///grown.png");

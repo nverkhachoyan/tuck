@@ -45,7 +45,7 @@ export function createLessonStore(onAction: (record: ActionRecord) => void) {
 	);
 	store
 		.getState()
-		.openDocument(
+		.actions.openDocument(
 			createDocumentFromImage("photo.jpg", 1200, 900, true),
 			"lesson",
 		);

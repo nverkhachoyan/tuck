@@ -4,6 +4,7 @@ import type { Point, Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import type { ShapePlacement } from "@/model/layers/shape";
 import { sampleColor } from "@/render/renderDocument";
+import type { EditorStoreActions } from "@/store/editorSlice";
 import { canvasInputFor, canvasToolFor } from "./editorCanvasInput";
 import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
 import { isCustomColor } from "./shell/ColorSwatches";
@@ -16,7 +17,6 @@ import {
 import type { CutOutSettings, CutOutTool } from "./tools/cutout/cutOutSettings";
 import type { BrushSettings } from "./tools/draw/brushSettings";
 import type { RedactSettings } from "./tools/redact/redactSettings";
-import type { EditorActions } from "./useEditorActions";
 
 /**
  * What input on the canvas does for the editor's state (see `canvasToolFor`
@@ -57,7 +57,7 @@ export function useCanvasInput({
 	onFindToggle: (sourceIndex: number) => void;
 	adjustController: ReturnType<typeof useAdjustController>;
 	actions: Pick<
-		EditorActions,
+		EditorStoreActions,
 		| "drawStroke"
 		| "paintRedaction"
 		| "paintMask"

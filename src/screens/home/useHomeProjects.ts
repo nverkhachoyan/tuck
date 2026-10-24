@@ -37,8 +37,7 @@ export type HomeStatus =
  * are rendered again.
  */
 export function useHomeProjects() {
-	const openDocument = useStore((state) => state.openDocument);
-	const closeDocument = useStore((state) => state.closeDocument);
+	const { openDocument, closeDocument } = useStore((state) => state.actions);
 	const router = useRouter();
 	const [status, setStatus] = useState<HomeStatus>("loading");
 	const [projects, setProjects] = useState<ProjectSummary[]>([]);

@@ -27,8 +27,7 @@ export function useCutOutTool({
 	onRedact: (layerId: string, mask: string, rect: Rect) => void;
 }) {
 	const projectId = useStore((state) => state.projectId);
-	const setMask = useStore((state) => state.setMask);
-	const invertMask = useStore((state) => state.invertMask);
+	const { setMask, invertMask } = useStore((state) => state.actions);
 	const layerId = useRef<string | null>(null);
 	layerId.current = layer?.id ?? null;
 	const [settings, change] = usePreference("cutOut", parseCutOutSettings);

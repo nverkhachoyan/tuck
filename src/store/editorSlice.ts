@@ -29,7 +29,10 @@ import {
 	paintRedaction,
 	setRedactionEffect,
 } from "../model/edits/redact.ts";
-import { addTextLayer, updateTextLayer } from "../model/edits/text.ts";
+import {
+	updateTextLayer as editTextLayer,
+	addTextLayer as placeTextLayer,
+} from "../model/edits/text.ts";
 import type { Framing } from "../model/framing.ts";
 import type { Rect, Transform } from "../model/geometry.ts";
 import type { Stroke } from "../model/layers/drawing.ts";
@@ -73,7 +76,7 @@ export type EditorSession = EditorSnapshot & {
 	redoStop: EditorSnapshot | undefined;
 };
 
-export type EditorSlice = {
+export type EditorState = {
 	document: EditorDocument | null;
 	// The saved project the document belongs to; null if it couldn't be saved.
 	projectId: string | null;
@@ -83,129 +86,51 @@ export type EditorSlice = {
 	// While a tool is open, where it started: Cancel returns there (and redo
 	// undoes the cancel), and its changes become one undo step when it's done.
 	session: EditorSession | null;
-	openDocument: (document: EditorDocument, projectId: string | null) => void;
-	closeDocument: () => void;
-	// A new layer goes in `area`, the part of the document in view, or else
-	// in the middle of the whole of it (see `createTextLayer`).
-	addTextLayer: (
-		text: string,
-		style?: Partial<TextLayerStyle>,
-		area?: Rect,
-	) => void;
-	addImageLayer: (
-		uri: string,
-		width: number,
-		height: number,
-		opaque: boolean,
-		area?: Rect,
-	) => void;
-	addStickerLayer: (
-		uri: string,
-		width: number,
-		height: number,
-		opaque: boolean,
-		area?: Rect,
-	) => void;
-	duplicateSelectedLayer: () => void;
-	drawStroke: (stroke: Stroke) => void;
-	addRedactionBox: (rect: Rect, effect: RedactionEffect) => void;
-	addRedactionBoxes: (
-		placements: readonly RedactionBoxPlacement[],
-		effect: RedactionEffect,
-		groupName?: string,
-	) => void;
-	addMaskedRedaction: (
-		imageId: string,
-		mask: string,
-		rect: Rect,
-		effect: RedactionEffect,
-	) => void;
-	setLayerGroupHidden: (id: string, hidden: boolean) => void;
-	setLayerGroupLocked: (id: string, locked: boolean) => void;
-	deleteLayerGroup: (id: string) => void;
-	paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) => void;
-	setRedactionEffect: (id: string, effect: RedactionEffect) => void;
-	addShape: (
-		shape: ShapeKind,
-		placement: ShapePlacement,
-		style: ShapeStyle,
-	) => void;
-	setShapeStyle: (id: string, edit: ShapeEdit) => void;
-	setAdjustments: (id: string, adjustments: Adjustments) => void;
-	setMask: (
-		id: string,
-		mask: string | null,
-		options?: { keepStrokes?: boolean },
-	) => void;
-	invertMask: (id: string, mask: string) => void;
-	paintMask: (id: string, stroke: CutStroke) => void;
-	updateSelectedText: (patch: TextLayerEdit) => void;
-	updateTextLayer: (id: string, patch: TextLayerEdit) => void;
-	transformLayer: (id: string, transform: Transform) => void;
-	resizeBox: (
-		id: string,
-		transform: Transform,
-		width: number,
-		height: number,
-	) => void;
-	nudgeLayer: (id: string, dx: number, dy: number) => void;
-	reframe: (framing: Framing, turnLayers: boolean) => void;
-	setBackground: (background: string | null) => void;
-	moveLayer: (id: string, toIndex: number) => void;
-	setLayerHidden: (id: string, hidden: boolean) => void;
-	setLayerLocked: (id: string, locked: boolean) => void;
-	setLayerResizable: (id: string, resizable: boolean) => void;
-	deleteLayer: (id: string) => void;
-	selectLayer: (id: string | null) => void;
-	undo: () => void;
-	redo: () => void;
-	beginSession: () => void;
-	commitSession: () => void;
-	cancelSession: () => void;
 };
+
+type EditorSet = (
+	partial: Partial<EditorState>,
+	replace?: false,
+	action?: string,
+) => void;
 
 export const selectSelectedLayer = ({
 	document,
 	selectedLayerId,
-}: EditorSlice): Layer | undefined =>
+}: EditorState): Layer | undefined =>
 	document?.layers.find((layer) => layer.id === selectedLayerId);
 
 export const selectSelectedTextLayer = (
-	state: EditorSlice,
+	state: EditorState,
 ): TextLayer | undefined => {
 	const layer = selectSelectedLayer(state);
 	return layer?.type === "text" ? layer : undefined;
 };
 
 export const selectSelectedRedaction = (
-	state: EditorSlice,
+	state: EditorState,
 ): RedactionLayer | undefined => {
 	const layer = selectSelectedLayer(state);
 	return layer?.type === "redaction" ? layer : undefined;
 };
 
 export const selectSelectedShape = (
-	state: EditorSlice,
+	state: EditorState,
 ): ShapeLayer | undefined => {
 	const layer = selectSelectedLayer(state);
 	return layer?.type === "shape" ? layer : undefined;
 };
 
 // Within a session, not past its start: Cancel is the way back from there.
-export const selectCanUndo = ({ past, document, session }: EditorSlice) =>
+export const selectCanUndo = ({ past, document, session }: EditorState) =>
 	past.length > 0 && document !== session?.document;
 
-export const selectCanRedo = ({ future, session }: EditorSlice) =>
+export const selectCanRedo = ({ future, session }: EditorState) =>
 	future.length > 0 && future[0] !== session?.redoStop;
 
-type SliceCreator<Slice> = StateCreator<
-	EditorSlice,
-	[["zustand/devtools", never]],
-	[],
-	Slice
->;
-
-export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
+// `get` is the document and its history. An action calls another directly,
+// since reading it from `get().actions` makes that action's return type `any`.
+export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	// The selection after `document` became `next`: a layer the edit added on
 	// top, so a stroke or restyle right after changes it, or else the selected
 	// layer while it's still there. A hidden or locked layer can't be
@@ -259,15 +184,15 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 	// nothing else has changed since, so the next nudge joins its undo step.
 	let lastNudge: { document: EditorDocument; id: string } | null = null;
 
-	return {
-		document: null,
-		projectId: null,
-		selectedLayerId: null,
-		past: [],
-		future: [],
-		session: null,
+	// By id, like `transformLayer`: text edited in place is committed to
+	// the layer it came from, whatever is selected by then.
+	const updateTextLayer = (id: string, patch: TextLayerEdit) =>
+		setDocument("editor/updateTextLayer", (document) =>
+			editTextLayer(document, id, patch),
+		);
 
-		openDocument: (document, projectId) =>
+	return {
+		openDocument: (document: EditorDocument, projectId: string | null) =>
 			set(
 				{
 					document,
@@ -295,12 +220,24 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				"editor/closeDocument",
 			),
 
-		addTextLayer: (text, style, area) =>
+		// A new layer goes in `area`, the part of the document in view, or else
+		// in the middle of the whole of it (see `createTextLayer`).
+		addTextLayer: (
+			text: string,
+			style?: Partial<TextLayerStyle>,
+			area?: Rect,
+		) =>
 			setDocument("editor/addTextLayer", (document) =>
-				addTextLayer(document, text, style, area),
+				placeTextLayer(document, text, style, area),
 			),
 
-		addImageLayer: (uri, width, height, opaque, area) => {
+		addImageLayer: (
+			uri: string,
+			width: number,
+			height: number,
+			opaque: boolean,
+			area?: Rect,
+		) => {
 			const { document } = get();
 			if (!document) return;
 			addOnTop(
@@ -309,7 +246,13 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 
-		addStickerLayer: (uri, width, height, opaque, area) => {
+		addStickerLayer: (
+			uri: string,
+			width: number,
+			height: number,
+			opaque: boolean,
+			area?: Rect,
+		) => {
 			const { document } = get();
 			if (!document) return;
 			addOnTop(
@@ -325,21 +268,25 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 		},
 
 		// A new drawing is selected, so the next stroke joins it too.
-		drawStroke: (stroke) =>
+		drawStroke: (stroke: Stroke) =>
 			setDocument("editor/drawStroke", (document) =>
 				drawStroke(document, get().selectedLayerId, stroke),
 			),
 
 		// On top and selected, so restyling it right after (see
 		// `setRedactionEffect`) changes it.
-		addRedactionBox: (rect, effect) =>
+		addRedactionBox: (rect: Rect, effect: RedactionEffect) =>
 			setDocument("editor/addRedactionBox", (document) =>
 				addRedactionBox(document, rect, effect),
 			),
 
 		// Detector proposals land as one undo step. None of them is selected:
 		// the group, not any one box, is what was added.
-		addRedactionBoxes: (placements, effect, groupName) =>
+		addRedactionBoxes: (
+			placements: readonly RedactionBoxPlacement[],
+			effect: RedactionEffect,
+			groupName?: string,
+		) =>
 			setDocument(
 				"editor/addRedactionBoxes",
 				(document) =>
@@ -348,112 +295,125 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			),
 
 		// Selected, like a box.
-		addMaskedRedaction: (imageId, mask, rect, effect) =>
+		addMaskedRedaction: (
+			imageId: string,
+			mask: string,
+			rect: Rect,
+			effect: RedactionEffect,
+		) =>
 			setDocument("editor/addMaskedRedaction", (document) =>
 				addMaskedRedaction(document, imageId, mask, rect, effect),
 			),
 
-		setLayerGroupHidden: (id, hidden) =>
+		setLayerGroupHidden: (id: string, hidden: boolean) =>
 			setDocument(
 				hidden ? "editor/hideLayerGroup" : "editor/showLayerGroup",
 				(document) => setLayerGroupFlag(document, id, "hidden", hidden),
 			),
 
-		setLayerGroupLocked: (id, locked) =>
+		setLayerGroupLocked: (id: string, locked: boolean) =>
 			setDocument(
 				locked ? "editor/lockLayerGroup" : "editor/unlockLayerGroup",
 				(document) => setLayerGroupFlag(document, id, "locked", locked),
 			),
 
-		deleteLayerGroup: (id) =>
+		deleteLayerGroup: (id: string) =>
 			setDocument("editor/deleteLayerGroup", (document) =>
 				deleteLayerGroup(document, id),
 			),
 
 		// Like `drawStroke`, a new redaction is selected, so the next stroke
 		// joins it.
-		paintRedaction: (stroke, effect) =>
+		paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) =>
 			setDocument("editor/paintRedaction", (document) =>
 				paintRedaction(document, get().selectedLayerId, stroke, effect),
 			),
 
-		setRedactionEffect: (id, effect) =>
+		setRedactionEffect: (id: string, effect: RedactionEffect) =>
 			setDocument("editor/setRedactionEffect", (document) =>
 				setRedactionEffect(document, id, effect),
 			),
 
 		// Selected, like a redaction's box, so restyling it right after (see
 		// `setShapeStyle`) changes it.
-		addShape: (shape, placement, style) =>
+		addShape: (
+			shape: ShapeKind,
+			placement: ShapePlacement,
+			style: ShapeStyle,
+		) =>
 			setDocument("editor/addShape", (document) =>
 				addShape(document, shape, placement, style),
 			),
 
-		setShapeStyle: (id, edit) =>
+		setShapeStyle: (id: string, edit: ShapeEdit) =>
 			setDocument("editor/setShapeStyle", (document) =>
 				setShapeStyle(document, id, edit),
 			),
 
 		// By id, like `transformLayer`: a dial's drag belongs to the image it
 		// started on.
-		setAdjustments: (id, adjustments) =>
+		setAdjustments: (id: string, adjustments: Adjustments) =>
 			setDocument("editor/setAdjustments", (document) =>
 				setAdjustments(document, id, adjustments),
 			),
 
 		// By id: the mask was found for the image it started on, which may no
 		// longer be selected, or may be gone.
-		setMask: (id, mask, options) =>
+		setMask: (
+			id: string,
+			mask: string | null,
+			options?: { keepStrokes?: boolean },
+		) =>
 			setDocument("editor/setMask", (document) =>
 				setMask(document, id, mask, options),
 			),
 
 		// By id, like `setMask`.
-		invertMask: (id, mask) =>
+		invertMask: (id: string, mask: string) =>
 			setDocument("editor/invertMask", (document) =>
 				invertMask(document, id, mask),
 			),
 
 		// By id, like `setMask`: the stroke refines the image the tool is
 		// cutting out, whatever is selected.
-		paintMask: (id, stroke) =>
+		paintMask: (id: string, stroke: CutStroke) =>
 			setDocument("editor/paintMask", (document) =>
 				paintMask(document, id, stroke),
 			),
 
-		updateSelectedText: (patch) => {
+		updateSelectedText: (patch: TextLayerEdit) => {
 			const selected = selectSelectedTextLayer(get());
-			if (selected) get().updateTextLayer(selected.id, patch);
+			if (selected) updateTextLayer(selected.id, patch);
 		},
 
-		// By id, like `transformLayer`: text edited in place is committed to
-		// the layer it came from, whatever is selected by then.
-		updateTextLayer: (id, patch) =>
-			setDocument("editor/updateTextLayer", (document) =>
-				updateTextLayer(document, id, patch),
-			),
+		updateTextLayer,
 
 		// By id rather than "the selected layer": a gesture can end just as the
 		// selection moves on, and its result belongs to the layer it moved.
-		transformLayer: (id, transform) =>
+		transformLayer: (id: string, transform: Transform) =>
 			setDocument("editor/transformLayer", (document) =>
 				transformLayer(document, id, transform),
 			),
 
 		// By id, like `transformLayer`.
-		resizeBox: (id, transform, width, height) =>
+		resizeBox: (
+			id: string,
+			transform: Transform,
+			width: number,
+			height: number,
+		) =>
 			setDocument("editor/resizeBox", (document) =>
 				resizeBox(document, id, transform, width, height),
 			),
 
-		setLayerResizable: (id, resizable) =>
+		setLayerResizable: (id: string, resizable: boolean) =>
 			setDocument("editor/setLayerResizable", (document) =>
 				setLayerResizable(document, id, resizable),
 			),
 
 		// A run of nudges to the same layer, like holding an arrow key, is a
 		// single undo step.
-		nudgeLayer: (id, dx, dy) => {
+		nudgeLayer: (id: string, dx: number, dy: number) => {
 			const { document } = get();
 			if (!document) return;
 			const next = nudgeLayer(document, id, dx, dy);
@@ -466,39 +426,39 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			lastNudge = { document: next, id };
 		},
 
-		reframe: (framing, turnLayers) =>
+		reframe: (framing: Framing, turnLayers: boolean) =>
 			setDocument("editor/reframe", (document) =>
 				reframe(document, framing, turnLayers),
 			),
 
-		setBackground: (background) =>
+		setBackground: (background: string | null) =>
 			setDocument("editor/setBackground", (document) =>
 				setBackground(document, background),
 			),
 
-		moveLayer: (id, toIndex) =>
+		moveLayer: (id: string, toIndex: number) =>
 			setDocument("editor/moveLayer", (document) =>
 				moveLayer(document, id, toIndex),
 			),
 
-		setLayerHidden: (id, hidden) =>
+		setLayerHidden: (id: string, hidden: boolean) =>
 			setDocument(
 				hidden ? "editor/hideLayer" : "editor/showLayer",
 				(document) => setLayerFlag(document, id, "hidden", hidden),
 			),
 
-		setLayerLocked: (id, locked) =>
+		setLayerLocked: (id: string, locked: boolean) =>
 			setDocument(
 				locked ? "editor/lockLayer" : "editor/unlockLayer",
 				(document) => setLayerFlag(document, id, "locked", locked),
 			),
 
-		deleteLayer: (id) =>
+		deleteLayer: (id: string) =>
 			setDocument("editor/deleteLayer", (document) =>
 				deleteLayer(document, id),
 			),
 
-		selectLayer: (id) =>
+		selectLayer: (id: string | null) =>
 			set({ selectedLayerId: id }, false, "editor/selectLayer"),
 
 		undo: () => {
@@ -584,7 +544,30 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			);
 		},
 	};
+}
+
+export type EditorStoreActions = ReturnType<typeof createEditorActions>;
+
+export type EditorSlice = EditorState & {
+	actions: EditorStoreActions;
 };
+
+type SliceCreator<Slice> = StateCreator<
+	EditorSlice,
+	[["zustand/devtools", never]],
+	[],
+	Slice
+>;
+
+export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => ({
+	document: null,
+	projectId: null,
+	selectedLayerId: null,
+	past: [],
+	future: [],
+	session: null,
+	actions: createEditorActions(set, get),
+});
 
 function snapshotOf({
 	document,
