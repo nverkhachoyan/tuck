@@ -93,7 +93,7 @@ After this step, in the browser pane: cancel after an Adjust drag, Find's Cancel
 
 ### 3.4 Shortcuts
 
-- [ ] `refactor: let useEditorShortcuts carry out the commands it finds`
+- [x] `refactor: let useEditorShortcuts carry out the commands it finds`
 
 `handleShortcut` and the `runShortcut` switch move into `useEditorShortcuts`, and the handlers are closed over there. The switch stays. It is already exhaustive through `assertNever`, and a handler table would leave all 17 handlers in the screen.
 

@@ -1,7 +1,6 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { neutralAdjustments } from "@/model/adjustments";
@@ -31,13 +30,7 @@ import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import { DockContent, type DockPanel, ToolTrays } from "./EditorDock";
-import {
-	openTray,
-	type ShortcutCommand,
-	shortcutCommand,
-	takesKeys,
-	toolImageId,
-} from "./editorMode";
+import { openTray, takesKeys, toolImageId } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
@@ -48,7 +41,6 @@ import { layerActionsFor } from "./shell/LayerActionsPanel";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
 import { ToolsPanel, toolButtonsFor } from "./shell/ToolsPanel";
-import type { Shortcut } from "./shortcuts";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CropTool } from "./tools/crop/CropTool";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
@@ -316,71 +308,25 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 	const openStickers = () => dispatchMode({ type: "openStickers" });
 
-	// Which shortcut does what, given what's open, is `shortcutCommand`'s.
-	const handleShortcut = (shortcut: Shortcut): boolean => {
-		const command = shortcutCommand(
-			modeState,
-			selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
-			shortcut,
-		);
-		if (command === null) return false;
-		if (command !== "held") runShortcut(command);
-		return true;
-	};
-	const runShortcut = (command: ShortcutCommand) => {
-		switch (command.type) {
-			case "openShortcuts":
-			case "closeShortcuts":
-			case "closeStickers":
-			case "stopEyedropper":
-				dispatchMode({ type: command.type });
-				break;
-			case "undo":
-				undo();
-				break;
-			case "redo":
-				redo();
-				break;
-			case "export":
-				openExport();
-				break;
-			case "zoom":
-				canvasRef.current?.zoom(command.to);
-				break;
-			case "doneWithTool":
-				done();
-				break;
-			case "tool":
-				startTool[command.tool]();
-				break;
-			case "layers":
-				dispatchMode({ type: "toggleLayers" });
-				break;
-			case "edit":
-				textEditing.editSelected();
-				break;
-			case "delete":
-				if (selectedLayer) deleteNotice.deleteLayer(selectedLayer.id);
-				break;
-			case "deselect":
-				selectLayer(null);
-				break;
-			case "duplicate":
-				duplicateSelectedLayer();
-				break;
-			case "reorder":
-				arrangeSelected(command.step === 1 ? "forward" : "backward");
-				break;
-			case "nudge":
-				canvasRef.current?.nudgeSelection(command.dx, command.dy);
-				break;
-			default:
-				assertNever(command);
-		}
-	};
 	useEditorShortcuts({
 		enabled: !keysTaken,
-		onShortcut: handleShortcut,
+		modeState,
+		selection: selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
+		dispatchMode,
+		undo,
+		redo,
+		openExport,
+		zoom: (to) => canvasRef.current?.zoom(to),
+		done,
+		startTool,
+		editSelected: () => textEditing.editSelected(),
+		deleteSelected: () => {
+			if (selectedLayer) deleteNotice.deleteLayer(selectedLayer.id);
+		},
+		deselect: () => selectLayer(null),
+		duplicate: duplicateSelectedLayer,
+		arrange: arrangeSelected,
+		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 	});
 
 	const panelKind: DockPanel = tool
