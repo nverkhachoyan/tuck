@@ -1,16 +1,12 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { neutralAdjustments } from "@/model/adjustments";
 import type { EditorDocument } from "@/model/document";
-import {
-	type Framing,
-	targetImageLayer,
-	visibleImageLayer,
-} from "@/model/framing";
+import { targetImageLayer, visibleImageLayer } from "@/model/framing";
 import { type Point, toLayerSpace } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
@@ -51,11 +47,7 @@ import { HeaderActions } from "./shell/HeaderActions";
 import { layerActionsFor } from "./shell/LayerActionsPanel";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
-import {
-	type ToolStarters,
-	ToolsPanel,
-	toolButtonsFor,
-} from "./shell/ToolsPanel";
+import { ToolsPanel, toolButtonsFor } from "./shell/ToolsPanel";
 import type { Shortcut } from "./shortcuts";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CropTool } from "./tools/crop/CropTool";
@@ -79,6 +71,7 @@ import { useDeleteNotice } from "./useDeleteNotice";
 import { RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
+import { type ToolWiring, useToolLifecycle } from "./useToolLifecycle";
 
 // What a tool's footer calls it.
 const TOOL_TITLES = {
@@ -151,16 +144,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		nudgeLayer,
 		moveLayer,
 		setLayerResizable,
-		reframe,
 		selectLayer,
 		undo,
 		redo,
-		beginSession,
-		commitSession,
 		cancelSession,
 	} = actions;
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
+	const toolWiring = useRef<ToolWiring | null>(null);
 
 	// What the editor is doing, and what's open over it. Adjust puts itself
 	// down if its image goes away, Find if its photo does, and a text color
@@ -203,13 +194,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const cutLayer = cutImageId
 		? visibleImageLayer(document, cutImageId)
 		: undefined;
-	// A tool's changes are one session: one undo step, or none if canceled.
-	// Closing the tool any way, leaving the editor included, keeps them.
-	useEffect(() => {
-		if (!tool) return;
-		beginSession();
-		return commitSession;
-	}, [tool, beginSession, commitSession]);
+	const { startTool, done, cancel, finishTool, closeCrop, finishCrop } =
+		useToolLifecycle({
+			mode,
+			textEditing,
+			dispatchMode,
+			visibleArea: () => canvasRef.current?.visibleArea(),
+			wiring: toolWiring,
+		});
 	const adjustController = useAdjustTool(adjustedLayer, setAdjustments);
 	const adjusting = useMemo(
 		() =>
@@ -303,58 +295,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		moveLayer(selectedLayer.id, to[move]);
 	};
 
-	const startDrawing = () => {
-		draw.chooseTool();
-		dispatchMode({ type: "startTool", tool: "draw" });
-	};
-	const startRedacting = () => {
-		redact.chooseTool();
-		dispatchMode({ type: "startTool", tool: "redact" });
-	};
-	const startAdjusting = () => {
-		if (!targetImage) return;
-		dispatchMode({ type: "startAdjust", layerId: targetImage.id });
-	};
-	const closeTool = () => {
-		dispatchMode({ type: "endTool" });
-		find.reset();
-	};
-	// Done with Draw or Redact goes back to the tools, not to the last stroke
-	// or box, still selected, where a stray drag would move it.
-	const finishTool = () => {
-		closeTool();
-		if (tool === "draw" || tool === "redact") selectLayer(null);
-	};
-	const cancelTool = () => {
-		cancelSession();
-		closeTool();
-	};
-	// The selected photo, or else the main one, like Find.
-	const startCutOut = () => {
-		if (!targetImage) return;
-		dispatchMode({ type: "startCutOut", layerId: targetImage.id });
-		cut.start(targetImage);
-	};
-	// In the selected photo, or else the main one.
-	const startFinding = () => {
-		if (!targetImage) return;
-		dispatchMode({ type: "startTool", tool: "find" });
-	};
-	// Find is one of Redact's tools, so Cancel goes back to Redact. Done
-	// redacts the regions chosen, in the style last picked rather than a
-	// selected redaction's, and goes back to the tools, as Redact's Done does.
-	const backToRedacting = () => {
-		find.reset();
-		startRedacting();
-	};
-	const finishFinding = () => {
-		find.redactChosen(redactionEffect(redact.chosen, documentSize));
-		closeTool();
-		selectLayer(null);
-	};
-	const doneWithTool = tool === "find" ? finishFinding : finishTool;
-	const cancelWithTool = tool === "find" ? backToRedacting : cancelTool;
-
 	// Text being typed is finished first, so it goes where the editor does.
 	const openExport = () => {
 		textEditing.finish();
@@ -363,19 +303,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const leave = () => {
 		textEditing.finish();
 		leaveEditor(router);
-	};
-
-	const startNewText = () =>
-		textEditing.startNew(canvasRef.current?.visibleArea());
-
-	const startCrop = () => dispatchMode({ type: "startCrop" });
-	const closeCrop = useCallback(
-		() => dispatchMode({ type: "endCrop" }),
-		[dispatchMode],
-	);
-	const finishCrop = (framing: Framing, turnLayers: boolean) => {
-		reframe(framing, turnLayers);
-		closeCrop();
 	};
 
 	// Stable, so the sheets' swipes aren't rebuilt on every render.
@@ -421,7 +348,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				canvasRef.current?.zoom(command.to);
 				break;
 			case "doneWithTool":
-				doneWithTool();
+				done();
 				break;
 			case "tool":
 				startTool[command.tool]();
@@ -487,18 +414,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 
-	// What each tool's key, button, and layer action picks up. A selected
-	// drawing or redaction takes the strokes, as its own Draw or Redact does.
-	const startTool: ToolStarters = {
-		text: startNewText,
-		draw: startDrawing,
-		redact: startRedacting,
-		find: startFinding,
-		sticker: openStickers,
-		photo: pickPhoto,
-		crop: startCrop,
-		adjust: startAdjusting,
-		cutOut: startCutOut,
+	toolWiring.current = {
+		targetImage,
+		documentSize,
+		draw,
+		redact,
+		find,
+		cut,
+		pickPhoto,
+		openStickers,
 	};
 
 	const layerList = layerListProps({
@@ -583,8 +507,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const dockFooter = tool ? (
 		<DockFooter
 			title={TOOL_TITLES[tool]}
-			onCancel={cancelWithTool}
-			onDone={doneWithTool}
+			onCancel={cancel}
+			onDone={done}
 			doneLabel={
 				tool === "find" && find.selectedCount > 0
 					? `Redact ${find.selectedCount} selected`
@@ -666,7 +590,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onToolInteractionEnd={() =>
 								dispatchMode({ type: "closeToolOptions" })
 							}
-							onTapAway={doneWithTool}
+							onTapAway={done}
 							adjusting={adjusting}
 							bottomInset={layout.canvasInset.bottom}
 							leftInset={layout.canvasInset.left}
@@ -716,7 +640,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							<DockContent
 								panel={panelKind}
 								optionsOpen={toolOptionsOpen}
-								onFind={targetImage ? startFinding : undefined}
+								onFind={targetImage ? startTool.find : undefined}
 								dispatchMode={dispatchMode}
 								draw={draw}
 								redact={redact}

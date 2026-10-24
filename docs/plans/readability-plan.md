@@ -79,7 +79,7 @@ Adjust's hook is the only tool hook called a controller (`useDrawTool`, `useReda
 
 ### 3.3 How tools open and close: `useToolLifecycle`
 
-- [ ] `refactor: gather the tools' start, Done, and Cancel into useToolLifecycle`
+- [x] `refactor: gather the tools' start, Done, and Cancel into useToolLifecycle`
 
 A new `useToolLifecycle.ts` at the editor root takes the session effect (begin when a tool opens, commit when it closes), `startDrawing`, `startRedacting`, `startAdjusting`, `startCutOut`, `startFinding`, `closeTool`, `finishTool`, `cancelTool`, `backToRedacting`, `finishFinding`, `doneWithTool`, `cancelWithTool`, the crop trio (`startCrop`, `closeCrop`, `finishCrop`), and the `startTool` table. It reads the mode, `targetImage`, `documentSize`, the tool hooks, `textEditing`, `dispatchMode`, `pickPhoto`, `openStickers`, and a way to read the visible area for new text. The store actions come from `useStore((state) => state.actions)`, not from a parameter. It returns `{ startTool, done, cancel, finishTool, closeCrop, finishCrop }`. The screen's Find button uses `startTool.find`.
 
