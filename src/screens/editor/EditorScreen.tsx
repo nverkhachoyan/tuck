@@ -18,13 +18,13 @@ import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage, openProjectName } from "@/projects/projectService";
 import { textIndexAt } from "@/render/textLayerLayout";
+import { useStore } from "@/store";
 import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
 	selectSelectedTextLayer,
-	useStore,
-} from "@/store";
+} from "@/store/editorSlice";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";

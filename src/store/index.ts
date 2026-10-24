@@ -1,30 +1,9 @@
 import { Platform } from "react-native";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import {
-	createEditorSlice,
-	type EditorSlice,
-	selectCanRedo,
-	selectCanUndo,
-	selectSelectedLayer,
-	selectSelectedRedaction,
-	selectSelectedShape,
-	selectSelectedTextLayer,
-} from "./editorSlice";
+import { createEditorSlice, type EditorSlice } from "./editorSlice";
 
-export {
-	type EditorSlice,
-	selectCanRedo,
-	selectCanUndo,
-	selectSelectedLayer,
-	selectSelectedRedaction,
-	selectSelectedShape,
-	selectSelectedTextLayer,
-};
-
-export type StoreState = EditorSlice;
-
-export const useStore = create<StoreState>()(
+export const useStore = create<EditorSlice>()(
 	devtools(
 		(...args) => ({
 			...createEditorSlice(...args),

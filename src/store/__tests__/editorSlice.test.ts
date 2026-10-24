@@ -17,6 +17,7 @@ import type { TextLayer } from "../../model/layers/text.ts";
 import type { MaskStroke } from "../../model/strokes.ts";
 import {
 	createEditorSlice,
+	type EditorSlice,
 	MAX_HISTORY,
 	selectCanRedo,
 	selectCanUndo,
@@ -25,13 +26,12 @@ import {
 	selectSelectedShape,
 	selectSelectedTextLayer,
 } from "../editorSlice.ts";
-import type { StoreState } from "../index.ts";
 
 const photo = () =>
 	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true);
 
 function createTestStore() {
-	return createStore<StoreState>()(
+	return createStore<EditorSlice>()(
 		devtools((...args) => ({ ...createEditorSlice(...args) }), {
 			enabled: false,
 		}),

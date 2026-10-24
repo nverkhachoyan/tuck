@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import type { Size } from "@/model/geometry";
 import { usePreference } from "@/platform/usePreference";
-import { selectSelectedRedaction, useStore } from "@/store";
+import { useStore } from "@/store";
+import { selectSelectedRedaction } from "@/store/editorSlice";
 import {
 	parseRedactSettings,
 	type RedactSettings,
