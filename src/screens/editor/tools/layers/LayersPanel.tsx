@@ -16,6 +16,7 @@ import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, typography } from "@/ui/theme";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
+import { layerListEntries } from "./layerListEntries";
 
 const SIDEBAR_WIDTH = 340;
 const SIDEBAR_MARGIN = 12;
@@ -208,20 +209,15 @@ function GroupedLayerList({
 	const [expanded, setExpanded] = useState<ReadonlySet<string>>(
 		() => new Set(),
 	);
-	const groupsByLayer = useMemo(() => {
-		const result = new Map<string, LayerGroup>();
-		for (const group of groups) {
-			for (const id of group.layerIds) result.set(id, group);
-		}
-		return result;
-	}, [groups]);
-	const topFirst = layers.slice().reverse();
-	const shown = new Set<string>();
+	const entries = useMemo(
+		() => layerListEntries(layers, groups),
+		[layers, groups],
+	);
 	return (
 		<ScrollView contentContainerStyle={[styles.column, styles.content]}>
-			{topFirst.map((layer) => {
-				const group = groupsByLayer.get(layer.id);
-				if (!group) {
+			{entries.map((entry) => {
+				if (entry.type === "layer") {
+					const { layer } = entry;
 					return (
 						<StaticLayerRow
 							key={layer.id}
@@ -236,11 +232,7 @@ function GroupedLayerList({
 						/>
 					);
 				}
-				if (shown.has(group.id)) return null;
-				shown.add(group.id);
-				const children = topFirst.filter((candidate) =>
-					group.layerIds.includes(candidate.id),
-				);
+				const { group, layers: children } = entry;
 				const isExpanded = expanded.has(group.id);
 				return (
 					<View key={group.id}>
