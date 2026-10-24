@@ -276,9 +276,10 @@ export function IdentityLesson() {
 			title: "Brighten the photo",
 			body: (
 				<p>
-					Drag <strong>brightness</strong> up and let go. The store calls{" "}
-					<code>withAdjustments</code>, gets a new layer back, and records an
-					undo step. The photo's <code>adjustments</code> key appears.
+					Drag <strong>brightness</strong> up and let go.{" "}
+					<code>setAdjustments</code> calls <code>withAdjustments</code>, gets a
+					new layer back, and the store records an undo step. The photo's{" "}
+					<code>adjustments</code> key appears.
 				</p>
 			),
 			done: (s) =>
@@ -372,8 +373,8 @@ export function IdentityLesson() {
 			name: "resizeLayerBox",
 		},
 		{
-			label: "store: setAdjustments",
-			file: "src/store/editorSlice.ts",
+			label: "setAdjustments",
+			file: "src/model/edits/adjust.ts",
 			name: "setAdjustments",
 		},
 		{

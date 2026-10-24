@@ -31,8 +31,8 @@ import {
 	type TextLayer,
 	type TextLayerEdit,
 	type TextLayerStyle,
-	withAdjustments,
 } from "../model/document.ts";
+import { setAdjustments } from "../model/edits/adjust.ts";
 import { reframe, setBackground } from "../model/edits/crop.ts";
 import { addShape, drawStroke, setShapeStyle } from "../model/edits/draw.ts";
 import {
@@ -486,13 +486,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// By id, like `transformLayer`: a dial's drag belongs to the image it
 		// started on.
-		setAdjustments: (id, adjustments) => {
-			const target = findLayer(id);
-			if (target?.type !== "image") return;
-			const adjusted = withAdjustments(target, adjustments);
-			if (adjusted === target) return;
-			replaceLayer("editor/setAdjustments", target, adjusted);
-		},
+		setAdjustments: (id, adjustments) =>
+			setDocument("editor/setAdjustments", (document) =>
+				setAdjustments(document, id, adjustments),
+			),
 
 		// By id: the mask was found for the image it started on, which may no
 		// longer be selected, or may be gone.
