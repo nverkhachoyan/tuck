@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	useAnimatedReaction,
 	useAnimatedStyle,
@@ -11,9 +11,8 @@ import {
 	type Adjustments,
 	adjustmentKeys,
 } from "@/model/adjustments";
-import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
-import { colors, radii, typography, webTransition } from "@/ui/theme";
+import { Chip } from "@/ui/Chip";
+import { colors, radii, typography } from "@/ui/theme";
 import { Dial } from "../../shell/Dial";
 import {
 	ADJUST_DIAL_MAX,
@@ -124,43 +123,23 @@ function AdjustmentChoice({
 	onPress: () => void;
 }) {
 	return (
-		<Pressable
+		<Chip
+			selected={selected}
+			onPress={onPress}
+			accessibilityLabel={changed ? `${label}, changed` : label}
 			// To a 44pt target.
 			hitSlop={{ top: 7, bottom: 7, left: 2, right: 2 }}
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={changed ? `${label}, changed` : label}
-			accessibilityState={{ selected }}
+			frameStyle={styles.choice}
 		>
-			{(state) => {
-				const { pressed, hovered } = interaction(state);
-				return (
-					<View
-						style={[
-							styles.choice,
-							webTransition,
-							hovered && styles.choiceHovered,
-							pressed && styles.choicePressed,
-						]}
-					>
-						{selected && <Highlight />}
-						<Text
-							style={[
-								styles.choiceLabel,
-								selected && styles.choiceLabelSelected,
-							]}
-						>
-							{label}
-						</Text>
-						{changed && (
-							<View
-								style={[styles.changed, selected && styles.changedSelected]}
-							/>
-						)}
-					</View>
-				);
-			}}
-		</Pressable>
+			<Text
+				style={[styles.choiceLabel, selected && styles.choiceLabelSelected]}
+			>
+				{label}
+			</Text>
+			{changed && (
+				<View style={[styles.changed, selected && styles.changedSelected]} />
+			)}
+		</Chip>
 	);
 }
 
@@ -210,14 +189,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 4,
 		paddingHorizontal: 10,
-		borderRadius: radii.small,
 		borderCurve: "continuous",
-	},
-	choiceHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	choicePressed: {
-		transform: [{ scale: 0.96 }],
 	},
 	choiceLabel: {
 		...typography.label,

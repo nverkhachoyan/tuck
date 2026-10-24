@@ -14,6 +14,7 @@ import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
+import { Chip } from "@/ui/Chip";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { ScreenHeader } from "@/ui/ScreenHeader";
@@ -157,12 +158,24 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 							contentContainerStyle={styles.aspects}
 						>
 							{ASPECTS.map(({ id, label }) => (
-								<AspectChip
+								<Chip
 									key={id}
-									label={label}
 									selected={id === aspect}
 									onPress={() => controller.pickAspect(id)}
-								/>
+									accessibilityLabel={`Aspect ratio ${label}`}
+									hitSlop={4}
+									style={styles.target}
+									frameStyle={styles.chip}
+								>
+									<Text
+										style={[
+											styles.chipLabel,
+											id === aspect && styles.chipLabelSelected,
+										]}
+									>
+										{label}
+									</Text>
+								</Chip>
 							))}
 						</ScrollView>
 					) : tab === "rotate" ? (
@@ -240,48 +253,6 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 				</ToolRow>
 			</Dock>
 		</View>
-	);
-}
-
-function AspectChip({
-	label,
-	selected,
-	onPress,
-}: {
-	label: string;
-	selected: boolean;
-	onPress: () => void;
-}) {
-	return (
-		<Pressable
-			hitSlop={4}
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={`Aspect ratio ${label}`}
-			accessibilityState={{ selected }}
-			style={styles.target}
-		>
-			{(state) => {
-				const { pressed, hovered } = interaction(state);
-				return (
-					<View
-						style={[
-							styles.chip,
-							webTransition,
-							hovered && styles.chipHovered,
-							pressed && styles.chipPressed,
-						]}
-					>
-						{selected && <Highlight />}
-						<Text
-							style={[styles.chipLabel, selected && styles.chipLabelSelected]}
-						>
-							{label}
-						</Text>
-					</View>
-				);
-			}}
-		</Pressable>
 	);
 }
 
@@ -371,15 +342,6 @@ const styles = StyleSheet.create({
 	},
 	chip: {
 		height: 32,
-		paddingHorizontal: 12,
-		borderRadius: radii.small,
-		justifyContent: "center",
-	},
-	chipHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	chipPressed: {
-		transform: [{ scale: 0.96 }],
 	},
 	chipLabel: {
 		...typography.label,

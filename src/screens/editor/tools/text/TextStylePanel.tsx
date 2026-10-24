@@ -17,10 +17,11 @@ import {
 	textFonts,
 } from "@/model/layers/text";
 import { TEXT_FONTS } from "@/render/fonts";
+import { Chip } from "@/ui/Chip";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
-import { colors, radii, typography, webTransition } from "@/ui/theme";
+import { colors, typography, webTransition } from "@/ui/theme";
 import type { TextColorKey } from "../../editorMode";
 import { ColorPicker } from "../../shell/ColorPicker";
 import { ColorSwatches, isCustomColor } from "../../shell/ColorSwatches";
@@ -296,37 +297,21 @@ function AlignPicker({
 			{ALIGNS.map(({ align, label, icon }) => {
 				const selected = align === value;
 				return (
-					<Pressable
+					<Chip
 						key={align}
-						hitSlop={4}
+						selected={selected}
 						onPress={() => onPick(align)}
-						accessibilityRole="button"
 						accessibilityLabel={label}
-						accessibilityState={{ selected }}
+						hitSlop={4}
 						style={styles.target}
+						frameStyle={[styles.fontChip, styles.alignChip]}
 					>
-						{(state) => {
-							const { pressed, hovered } = interaction(state);
-							return (
-								<View
-									style={[
-										styles.fontChip,
-										styles.alignChip,
-										webTransition,
-										hovered && styles.fontChipHovered,
-										pressed && styles.fontChipPressed,
-									]}
-								>
-									{selected && <Highlight />}
-									<MaterialCommunityIcons
-										name={icon}
-										size={20}
-										color={selected ? colors.onHighlight : colors.textPrimary}
-									/>
-								</View>
-							);
-						}}
-					</Pressable>
+						<MaterialCommunityIcons
+							name={icon}
+							size={20}
+							color={selected ? colors.onHighlight : colors.textPrimary}
+						/>
+					</Chip>
 				);
 			})}
 		</View>
@@ -376,41 +361,26 @@ function FontPicker({
 			{textFonts.map((font) => {
 				const selected = font === value;
 				return (
-					<Pressable
+					<Chip
 						key={font}
+						selected={selected}
+						onPress={() => onPick(font)}
+						accessibilityLabel={FONT_LABELS[font]}
 						// Half the gap between chips, so neighbors' targets meet.
 						hitSlop={4}
-						onPress={() => onPick(font)}
-						accessibilityRole="button"
-						accessibilityLabel={FONT_LABELS[font]}
-						accessibilityState={{ selected }}
 						style={styles.target}
+						frameStyle={styles.fontChip}
 					>
-						{(state) => {
-							const { pressed, hovered } = interaction(state);
-							return (
-								<View
-									style={[
-										styles.fontChip,
-										webTransition,
-										hovered && styles.fontChipHovered,
-										pressed && styles.fontChipPressed,
-									]}
-								>
-									{selected && <Highlight />}
-									<Text
-										style={[
-											styles.fontLabel,
-											selected && styles.fontLabelSelected,
-											{ fontFamily: TEXT_FONTS[font].family },
-										]}
-									>
-										{FONT_LABELS[font]}
-									</Text>
-								</View>
-							);
-						}}
-					</Pressable>
+						<Text
+							style={[
+								styles.fontLabel,
+								selected && styles.fontLabelSelected,
+								{ fontFamily: TEXT_FONTS[font].family },
+							]}
+						>
+							{FONT_LABELS[font]}
+						</Text>
+					</Chip>
 				);
 			})}
 		</ScrollRow>
@@ -490,15 +460,6 @@ const styles = StyleSheet.create({
 	},
 	fontChip: {
 		height: 34,
-		paddingHorizontal: 12,
-		borderRadius: radii.small,
-		justifyContent: "center",
-	},
-	fontChipHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	fontChipPressed: {
-		transform: [{ scale: 0.96 }],
 	},
 	fontLabel: {
 		fontSize: 16,
