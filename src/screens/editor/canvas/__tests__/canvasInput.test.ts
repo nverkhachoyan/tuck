@@ -2,10 +2,21 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createDrawingLayer } from "../../../../model/layers/drawing.ts";
-import { createRedactionBox } from "../../../../model/layers/redaction.ts";
+import {
+	createRedactionBox,
+	createRedactionStrokes,
+} from "../../../../model/layers/redaction.ts";
 import { createShapeLayer } from "../../../../model/layers/shape.ts";
 import type { DialDrag } from "../../shell/dialDrag.ts";
-import { type CanvasInput, inputRules } from "../canvasInput.ts";
+import {
+	type CanvasInput,
+	type CanvasTool,
+	canAddTo,
+	cutImageId,
+	inputRules,
+	outlinedLayerFor,
+	restyles,
+} from "../canvasInput.ts";
 
 const pen: CanvasInput = {
 	type: "tool",
@@ -126,5 +137,116 @@ describe("inputRules", () => {
 				cursor: "ew-resize",
 			});
 		}
+	});
+});
+
+const strokes = createRedactionStrokes(
+	{ type: "pen", width: 40, points: [0, 0, 20, 20] },
+	effect,
+);
+const cutBrush: CanvasTool = {
+	type: "cutBrush",
+	layerId: "photo",
+	brush: { type: "pen", width: 20 },
+};
+const pickSubject: CanvasTool = { type: "pickSubject", layerId: "photo" };
+
+describe("restyles", () => {
+	test("a redaction's or a shape's tool changes that kind of layer", () => {
+		assert.equal(restyles(redactBox.tool, redaction), true);
+		assert.equal(restyles(redactBrush.tool, redaction), true);
+		assert.equal(restyles(drawShape.tool, shape), true);
+		assert.equal(restyles(redactBox.tool, shape), false);
+		assert.equal(restyles(pen.tool, drawing), false);
+		assert.equal(restyles(redactBox.tool, undefined), false);
+	});
+});
+
+describe("canAddTo", () => {
+	test("strokes join an unlocked drawing or brushed redaction", () => {
+		assert.equal(canAddTo(pen.tool, drawing), true);
+		assert.equal(canAddTo(redactBrush.tool, strokes), true);
+		assert.equal(canAddTo(pen.tool, { ...drawing, locked: true }), false);
+		assert.equal(canAddTo(redactBrush.tool, redaction), false);
+		assert.equal(canAddTo(redactBox.tool, redaction), false);
+		assert.equal(canAddTo(cutBrush, drawing), false);
+	});
+});
+
+describe("cutImageId", () => {
+	test("a cut names its image, and other tools name none", () => {
+		assert.equal(cutImageId(cutBrush), "photo");
+		assert.equal(cutImageId(pickSubject), "photo");
+		assert.equal(cutImageId(pen.tool), null);
+		assert.equal(cutImageId(null), null);
+	});
+});
+
+describe("outlinedLayerFor", () => {
+	const none = {
+		cuttingOutId: null,
+		outlinedImage: false as const,
+		dragsSelection: false,
+		selectedLayer: undefined,
+		editedLayer: null,
+	};
+
+	test("cutting out or adjusting outlines the image, when there is one", () => {
+		assert.equal(
+			outlinedLayerFor({
+				...none,
+				input: { type: "tool", tool: cutBrush },
+				cuttingOutId: "photo",
+				outlinedImage: drawing,
+			}),
+			drawing,
+		);
+		assert.equal(
+			outlinedLayerFor({
+				...none,
+				input: { type: "tool", tool: cutBrush },
+				cuttingOutId: "photo",
+			}),
+			null,
+		);
+		assert.equal(
+			outlinedLayerFor({ ...none, input: adjust, outlinedImage: drawing }),
+			drawing,
+		);
+	});
+
+	test("a tool outlines the layer whose style it changes, unless that layer drags", () => {
+		assert.equal(
+			outlinedLayerFor({
+				...none,
+				input: redactBox,
+				selectedLayer: redaction,
+			}),
+			redaction,
+		);
+		assert.equal(
+			outlinedLayerFor({
+				...none,
+				input: redactBox,
+				dragsSelection: true,
+				selectedLayer: redaction,
+			}),
+			null,
+		);
+	});
+
+	test("editing text outlines the text, and selecting outlines nothing", () => {
+		assert.equal(
+			outlinedLayerFor({
+				...none,
+				input: { type: "editText" },
+				editedLayer: drawing,
+			}),
+			drawing,
+		);
+		assert.equal(
+			outlinedLayerFor({ ...none, input: { type: "select" } }),
+			null,
+		);
 	});
 });

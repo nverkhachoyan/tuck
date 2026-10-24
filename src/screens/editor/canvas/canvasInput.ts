@@ -101,3 +101,79 @@ function drags(tool: CanvasTool, layer: Layer | undefined): boolean {
 			return false;
 	}
 }
+
+/** Whether `tool`'s style shows, and changes, `layer`'s: a redaction's or a shape's. */
+export function restyles(
+	tool: CanvasTool,
+	layer: Layer | undefined,
+): layer is Layer {
+	switch (tool.type) {
+		case "redactBox":
+		case "redactBrush":
+			return layer?.type === "redaction";
+		case "drawShape":
+			return layer?.type === "shape";
+		case "draw":
+		case "pickColor":
+		case "cutBrush":
+		case "pickSubject":
+			return false;
+	}
+}
+
+/** Whether `tool`'s strokes join `layer`, rather than starting a new one. */
+export function canAddTo(tool: CanvasTool, layer: Layer): boolean {
+	if (layer.locked) return false;
+	switch (tool.type) {
+		case "draw":
+			return layer.type === "drawing";
+		case "redactBrush":
+			return layer.type === "redaction" && layer.shape === "strokes";
+		case "redactBox":
+		case "drawShape":
+		case "pickColor":
+		case "cutBrush":
+		case "pickSubject":
+			return false;
+	}
+}
+
+/** The image a cut paints or picks a subject in, or null. */
+export function cutImageId(tool: CanvasTool | null): string | null {
+	return tool?.type === "cutBrush" || tool?.type === "pickSubject"
+		? tool.layerId
+		: null;
+}
+
+/**
+ * The layer outlined for `input`: the image being cut out or adjusted, when
+ * it could be mistaken for another, the text being edited, or a redaction or
+ * shape whose style the tool changes.
+ */
+export function outlinedLayerFor({
+	input,
+	cuttingOutId,
+	outlinedImage,
+	dragsSelection,
+	selectedLayer,
+	editedLayer,
+}: {
+	input: CanvasInput;
+	cuttingOutId: string | null;
+	outlinedImage: Layer | false | undefined;
+	dragsSelection: boolean;
+	selectedLayer: Layer | undefined;
+	editedLayer: Layer | null;
+}): Layer | null {
+	return input.type === "tool"
+		? cuttingOutId !== null
+			? outlinedImage || null
+			: !dragsSelection && restyles(input.tool, selectedLayer)
+				? selectedLayer
+				: null
+		: input.type === "editText"
+			? editedLayer
+			: input.type === "adjust"
+				? outlinedImage || null
+				: null;
+}

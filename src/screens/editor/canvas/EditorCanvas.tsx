@@ -48,7 +48,13 @@ import {
 	cursorForHandle,
 	cursorStyle,
 } from "./canvasCursor";
-import { type CanvasInput, type CanvasTool, inputRules } from "./canvasInput";
+import {
+	type CanvasInput,
+	canAddTo,
+	cutImageId,
+	inputRules,
+	outlinedLayerFor,
+} from "./canvasInput";
 import { EditorScene, type LiveAdjustment } from "./EditorScene";
 import { handleMetrics, handleUnder } from "./handleMetrics";
 import {
@@ -182,10 +188,10 @@ export type EditorCanvasHandle = {
  * changes the document's size, starts afresh at the fit.
  *
  * All touch handling (tap-to-select, drag/pinch/rotate, the selection's
- * scale, resize, and rotate handles) is a single gesture on the canvas; selection is
- * resolved by hit-testing in document space, against `layerTargets`, which
- * the UI thread shares so a drag can pick its layer there. With a mouse, the
- * cursor shows what a press at the pointer would do.
+ * scale, resize, and rotate handles) is a single gesture on the canvas;
+ * selection is resolved by hit-testing in document space, against
+ * `layerTargets`, which the UI thread shares so a drag can pick its layer
+ * there. With a mouse, the cursor shows what a press at the pointer would do.
  *
  * With a `tool` input, a single gesture paints instead, into the selected layer
  * if the tool can add to it, or drags out a shape or a redaction's box. The
@@ -407,12 +413,12 @@ export function EditorCanvas({
 	);
 
 	// Where one finger moves the view too: anywhere while finding, whose taps
-	// don't drag, and while zoomed in, anywhere off the
-	// selected layer and its handles, so another layer is tapped before it's
-	// dragged. At the fit, where the view can't move, a drag picks up the
-	// layer under it, or moves the selection. Painting, typing, and
-	// adjusting keep one finger for themselves. Both the view's gesture and the layers' ask it,
-	// once, where the finger lands.
+	// don't drag, and while zoomed in, anywhere off the selected layer and
+	// its handles, so another layer is tapped before it's dragged. At the
+	// fit, where the view can't move, a drag picks up the layer under it, or
+	// moves the selection. Painting, typing, and adjusting keep one finger
+	// for themselves. Both the view's gesture and the layers' ask it, once,
+	// where the finger lands.
 	const oneFingerMode = rules.oneFinger;
 	const dragAlone = useMemo(() => {
 		if (oneFingerMode === null) return null;
@@ -636,15 +642,12 @@ export function EditorCanvas({
 	);
 	// The image a tool cuts out, or that's being adjusted, outlined only where
 	// it could be mistaken for another image.
-	const cuttingOutId =
-		tool?.type === "cutBrush" || tool?.type === "pickSubject"
-			? tool.layerId
-			: null;
-	const targetImageId = cuttingOutId ?? adjusting?.layerId;
-	const targetImage =
-		targetImageId !== undefined &&
+	const cuttingOutId = cutImageId(tool);
+	const outlinedImageId = cuttingOutId ?? adjusting?.layerId;
+	const outlinedImage =
+		outlinedImageId !== undefined &&
 		document.layers.filter((layer) => layer.type === "image").length > 1 &&
-		document.layers.find((layer) => layer.id === targetImageId);
+		document.layers.find((layer) => layer.id === outlinedImageId);
 	// Empty, text being edited is outlined around its placeholder.
 	const textEditLayer = textEdit?.layer ?? null;
 	const editedLayer = useMemo(
@@ -652,18 +655,14 @@ export function EditorCanvas({
 		[textEditLayer],
 	);
 	// A selection with handles has its outline from them.
-	const outlinedLayer =
-		input.type === "tool"
-			? cuttingOutId !== null
-				? targetImage || null
-				: !dragsSelection && restyles(input.tool, selectedLayer)
-					? selectedLayer
-					: null
-			: input.type === "editText"
-				? editedLayer
-				: input.type === "adjust"
-					? targetImage || null
-					: null;
+	const outlinedLayer = outlinedLayerFor({
+		input,
+		cuttingOutId,
+		outlinedImage,
+		dragsSelection,
+		selectedLayer,
+		editedLayer,
+	});
 	const handleIdleTap = useCallback(
 		(screenX: number, screenY: number) => {
 			if (scale === 0) return;
@@ -928,39 +927,6 @@ function SelectionBarFrame({
 			</Animated.View>
 		</View>
 	);
-}
-
-/** Whether `tool`'s style shows, and changes, `layer`'s: a redaction's or a shape's. */
-function restyles(tool: CanvasTool, layer: Layer | undefined): layer is Layer {
-	switch (tool.type) {
-		case "redactBox":
-		case "redactBrush":
-			return layer?.type === "redaction";
-		case "drawShape":
-			return layer?.type === "shape";
-		case "draw":
-		case "pickColor":
-		case "cutBrush":
-		case "pickSubject":
-			return false;
-	}
-}
-
-/** Whether `tool`'s strokes join `layer`, rather than starting a new one. */
-function canAddTo(tool: CanvasTool, layer: Layer): boolean {
-	if (layer.locked) return false;
-	switch (tool.type) {
-		case "draw":
-			return layer.type === "drawing";
-		case "redactBrush":
-			return layer.type === "redaction" && layer.shape === "strokes";
-		case "redactBox":
-		case "drawShape":
-		case "pickColor":
-		case "cutBrush":
-		case "pickSubject":
-			return false;
-	}
 }
 
 const styles = StyleSheet.create({

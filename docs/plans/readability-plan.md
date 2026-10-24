@@ -113,7 +113,7 @@ The 38-line comment on `EditorCanvas` is split in this stage: each paragraph mov
 
 ### 4.1 Decisions about tools and layers, in one place
 
-- [ ] `refactor: move the canvas's tool and layer checks into canvasInput`
+- [x] `refactor: move the canvas's tool and layer checks into canvasInput`
 
 `restyles` and `canAddTo` (at the bottom of `EditorCanvas.tsx`) and `drags` (in `canvasInput.ts`) all answer a question about a `CanvasTool` and a layer. Move the first two into `canvasInput.ts` beside `drags`. Turn the nested ternary that picks `outlinedLayer`, and `cuttingOutId`, into functions there too (`outlinedLayerFor`, `cutImageId`). Test all four in `canvas/__tests__/canvasInput.test.ts`.
 
