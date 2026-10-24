@@ -1,16 +1,19 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { shapeKinds } from "@/model/layers/shape";
-import { interaction } from "@/ui/interaction";
-import { Popover } from "@/ui/Popover";
 import { RingChoice } from "@/ui/RingChoice";
-import { colors, webTransition } from "@/ui/theme";
+import { colors } from "@/ui/theme";
 import { ColorChip, ColorOptions } from "../../shell/ColorPicker";
-import { BarGroup, BarSections, OptionSegments } from "../../shell/ContextBar";
+import {
+	BarChip,
+	BarGroup,
+	BarSections,
+	OptionSegments,
+} from "../../shell/ContextBar";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
+	SizeChip,
 	SizeChoices,
 	ToolChoices,
 	ToolOption,
@@ -99,10 +102,10 @@ const PEN_TIPS = [
 ] as const;
 
 /**
- * Draw's options in the wide editor's header: its sub-tools, the size, the
- * pen tip while a brush is in use, and chips for the color and the shape
- * kind. Choosing the sub-tool already in use leaves it, since the options
- * stay in view.
+ * Draw's options in the wide editor's header: its sub-tools, then the pen
+ * tip or the shape kind, the color, and the size. The tip, kind, and size
+ * are chips; the color stays a swatch. Choosing the sub-tool already in use
+ * leaves it, since the options stay in view.
  */
 export function DrawBar({
 	settings,
@@ -118,7 +121,6 @@ export function DrawBar({
 	onEyedropper: () => void;
 }) {
 	const eraser = settings.tool === "eraser";
-	const brush = isBrush(settings.tool);
 	const selected =
 		settings.tool === "shape" ? 1 : settings.tool === "eraser" ? 2 : 0;
 	const pickTool = (index: number) => {
@@ -147,23 +149,16 @@ export function DrawBar({
 				/>
 			</BarGroup>
 			<BarGroup>
-				<SizeChoices
-					nowrap
-					index={brushSizeIndex(settings)}
-					color={eraser ? null : settings.color}
-					tip={penTip(settings.tool)}
-					onPick={pickSize}
-				/>
-				{brush && (
-					<OptionSegments
-						label="Pen tip"
-						options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
-						selected={PEN_TIPS.findIndex((tip) => tip.tool === settings.tool)}
-						onSelect={(index) => {
-							const tool = PEN_TIPS[index]?.tool;
-							if (!tool || tool === settings.tool) return;
-							onChange({ ...settings, tool, lastBrush: tool });
-						}}
+				{isBrush(settings.tool) && (
+					<PenTipChip
+						tool={settings.tool}
+						onPick={(tool) => onChange({ ...settings, tool, lastBrush: tool })}
+					/>
+				)}
+				{settings.tool === "shape" && (
+					<ShapeKindChip
+						shape={settings.shape}
+						onPick={(shape) => onChange({ ...settings, shape })}
 					/>
 				)}
 				{!eraser && (
@@ -176,18 +171,43 @@ export function DrawBar({
 						onEyedropper={onEyedropper}
 					/>
 				)}
-				{settings.tool === "shape" && (
-					<ShapeKindChip
-						shape={settings.shape}
-						onPick={(shape) => onChange({ ...settings, shape })}
-					/>
-				)}
+				<SizeChip
+					index={brushSizeIndex(settings)}
+					color={eraser ? null : settings.color}
+					tip={penTip(settings.tool)}
+					onPick={pickSize}
+				/>
 			</BarGroup>
 		</BarSections>
 	);
 }
 
-/** The shape being drawn, as an icon that opens the kinds. */
+/** The pen in use, opening Pen, Marker, and Neon. */
+function PenTipChip({
+	tool,
+	onPick,
+}: {
+	tool: BrushTool;
+	onPick: (tool: BrushTool) => void;
+}) {
+	const selected = PEN_TIPS.findIndex((tip) => tip.tool === tool);
+	const tip = PEN_TIPS[selected] ?? PEN_TIPS[0];
+	return (
+		<BarChip label={tip.title} icon={tip.icon} text={tip.title}>
+			<OptionSegments
+				label="Pen tip"
+				options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
+				selected={selected}
+				onSelect={(index) => {
+					const next = PEN_TIPS[index]?.tool;
+					if (next && next !== tool) onPick(next);
+				}}
+			/>
+		</BarChip>
+	);
+}
+
+/** The shape being drawn, by name, opening the kinds. */
 function ShapeKindChip({
 	shape,
 	onPick,
@@ -195,59 +215,25 @@ function ShapeKindChip({
 	shape: BrushSettings["shape"];
 	onPick: (shape: BrushSettings["shape"]) => void;
 }) {
-	const anchor = useRef<View>(null);
-	const [open, setOpen] = useState(false);
 	return (
-		<>
-			<Pressable
-				ref={anchor}
-				accessibilityRole="button"
-				accessibilityLabel={SHAPE_NAMES[shape]}
-				accessibilityState={{ expanded: open }}
-				onPress={() => setOpen((shown) => !shown)}
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.kind,
-						webTransition,
-						hovered && styles.kindHovered,
-						pressed && styles.kindPressed,
-					];
-				}}
-			>
-				<MaterialCommunityIcons
-					name={SHAPE_ICONS[shape]}
-					size={18}
-					color={colors.textPrimary}
-				/>
-			</Pressable>
-			<Popover
-				anchor={anchor}
-				open={open}
-				onClose={() => setOpen(false)}
+		<BarChip
+			label={SHAPE_NAMES[shape]}
+			icon={SHAPE_ICONS[shape]}
+			text={SHAPE_NAMES[shape]}
+		>
+			<OptionSegments
 				label="Shape"
-			>
-				<ToolChoices nowrap>
-					{shapeKinds.map((kind) => (
-						<RingChoice
-							key={kind}
-							variant="highlight"
-							label={SHAPE_NAMES[kind]}
-							selected={shape === kind}
-							onPress={() => onPick(kind)}
-						>
-							{(ink) => (
-								<MaterialCommunityIcons
-									name={SHAPE_ICONS[kind]}
-									size={22}
-									color={ink}
-								/>
-							)}
-						</RingChoice>
-					))}
-				</ToolChoices>
-			</Popover>
-		</>
+				options={shapeKinds.map((kind) => ({
+					title: SHAPE_NAMES[kind],
+					icon: SHAPE_ICONS[kind],
+				}))}
+				selected={shapeKinds.indexOf(shape)}
+				onSelect={(index) => {
+					const kind = shapeKinds[index];
+					if (kind && kind !== shape) onPick(kind);
+				}}
+			/>
+		</BarChip>
 	);
 }
 
@@ -377,19 +363,5 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 		borderWidth: 1,
 		borderColor: colors.swatchRing,
-	},
-	kind: {
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	kindHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	kindPressed: {
-		backgroundColor: colors.pressedOverlay,
-		transform: [{ scale: 0.92 }],
 	},
 });

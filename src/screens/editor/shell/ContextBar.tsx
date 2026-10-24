@@ -25,6 +25,7 @@ import {
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { Popover } from "@/ui/Popover";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { ModeActions } from "./Dock";
@@ -327,6 +328,83 @@ export function BarButton({
 				<Text style={styles.actionLabel}>{label}</Text>
 			</Pressable>
 			{tooltip}
+		</>
+	);
+}
+
+/**
+ * An option that shows its current value and opens the choices in a popover.
+ * The bar's highlighter is for the mode; a chip is how a value is changed.
+ * `label` is for screen readers, `text` is what's drawn beside the glyph.
+ */
+export function BarChip({
+	label,
+	icon,
+	glyph,
+	text,
+	shortcut,
+	restoreFocus,
+	children,
+}: {
+	label: string;
+	icon?: BarIcon;
+	glyph?: ReactNode;
+	text: string;
+	shortcut?: string;
+	restoreFocus?: () => void;
+	children: ReactNode;
+}) {
+	const [open, setOpen] = useState(false);
+	const ownRef = useRef<View>(null);
+	const { anchor, tooltip } = useTooltip(label, shortcut);
+	const ref = anchor.ref ?? ownRef;
+	return (
+		<>
+			<Pressable
+				{...anchor}
+				ref={ref}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				accessibilityState={{ expanded: open }}
+				aria-expanded={open}
+				onPress={() => setOpen((shown) => !shown)}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.action,
+						webTransition,
+						hovered && styles.segmentHovered,
+						pressed && styles.segmentPressed,
+					];
+				}}
+			>
+				{glyph ??
+					(icon && (
+						<MaterialCommunityIcons
+							name={icon}
+							size={18}
+							color={colors.textPrimary}
+						/>
+					))}
+				<Text style={styles.actionLabel}>{text}</Text>
+				<MaterialCommunityIcons
+					name="chevron-down"
+					size={18}
+					color={colors.textPrimary}
+				/>
+			</Pressable>
+			{tooltip}
+			<Popover
+				anchor={ref}
+				open={open}
+				onClose={() => setOpen(false)}
+				label={label}
+				restoreFocus={restoreFocus}
+			>
+				{/* Choices aren't options in the row. Measuring them would
+				    place the fade on controls that aren't in the bar. */}
+				<BarParent.Provider value={null}>{children}</BarParent.Provider>
+			</Popover>
 		</>
 	);
 }

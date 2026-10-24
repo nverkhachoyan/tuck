@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import type { PenTip } from "@/model/layers/drawing";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, typography } from "@/ui/theme";
+import { BarChip } from "./ContextBar";
 
 // The dock's widest, so a tray lines up with the dock it rises out of.
 const TRAY_MAX_WIDTH = 520;
@@ -156,6 +157,49 @@ export function SizeChoices({
 
 // Each brush size's dot, in points: its order, not its true width.
 export const SIZE_DOTS = [4, 7, 11, 16, 22];
+
+/**
+ * The current brush size in the wide editor's bar: a dot in ink, opening the
+ * five sizes. `children` is more choices in that popover, such as a brush's
+ * edge. `[` and `]` still step the size, and the tooltip says so.
+ */
+export function SizeChip({
+	index,
+	color,
+	tip,
+	onPick,
+	children,
+}: {
+	index: number;
+	color: string | null;
+	tip?: PenTip;
+	onPick: (index: number) => void;
+	children?: ReactNode;
+}) {
+	const size = SIZE_DOTS[index] ?? SIZE_DOTS[0];
+	return (
+		<BarChip
+			label={`Size ${index + 1} of ${SIZE_DOTS.length}`}
+			text="Size"
+			shortcut="[ ]"
+			glyph={
+				<SizeDot
+					size={size}
+					color={color === null ? null : colors.textPrimary}
+				/>
+			}
+		>
+			<SizeChoices
+				nowrap
+				index={index}
+				color={color}
+				tip={tip}
+				onPick={onPick}
+			/>
+			{children}
+		</BarChip>
+	);
+}
 
 /**
  * A brush's tip: filled with its color, or an outline for an eraser. A
