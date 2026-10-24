@@ -127,7 +127,7 @@ Rename the canvas's `targetImage` (line 644) to `outlinedImage`. It is the image
 
 ### 4.3 Lookups the gestures share
 
-- [ ] `refactor: share the canvas's screen-to-document lookups`
+- [x] `refactor: share the canvas's screen-to-document lookups`
 
 `viewport`, `targets`, `scale`, `handleAt`, `layerAt`, and `tapAway` feed `handleTap`, `handleHover`, `handleStroke`, `handleDetectionTap`, `handleIdleTap`, and both worklets. Build one object of those lookups (`handleAt`, `layerAt`, `toDocument`, `tapAway`) for the hooks below to take. Without it, `useToolStroke` takes about 15 inputs.
 

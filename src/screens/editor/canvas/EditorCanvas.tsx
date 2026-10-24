@@ -26,7 +26,6 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
 import type { EditorDocument } from "@/model/document";
 import {
 	type Box,
@@ -79,7 +78,8 @@ import {
 	selectionScreenBounds,
 } from "./selectionBarPlacement";
 import { readShownViewport, type ShownViewport } from "./shownViewport";
-import { insideDocument, strokeIntent, TAP_SLOP_PX } from "./strokeIntent";
+import { insideDocument, strokeIntent } from "./strokeIntent";
+import { useCanvasTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useDialDragGesture } from "./useDialDragGesture";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
@@ -373,6 +373,12 @@ export function EditorCanvas({
 		);
 	}, [live, movableLayer]);
 
+	const toDocument = useCallback(
+		(screenX: number, screenY: number) =>
+			viewPointToDocument(viewport, { x: screenX, y: screenY }),
+		[viewport],
+	);
+
 	// The selected layer's handle under a point reported by the view.
 	const handleAt = useCallback(
 		(screenX: number, screenY: number) =>
@@ -381,21 +387,18 @@ export function EditorCanvas({
 						selectedLayer.transform,
 						layerBounds(selectedLayer),
 						resizeMode(selectedLayer),
-						viewPointToDocument(viewport, { x: screenX, y: screenY }),
+						toDocument(screenX, screenY),
 						scale,
 					)
 				: null,
-		[selectedLayer, viewport, scale],
+		[selectedLayer, toDocument, scale],
 	);
 
 	// Topmost selectable layer under a point reported by the view.
 	const layerAt = useCallback(
 		(screenX: number, screenY: number) =>
-			findLayerAt(
-				targets,
-				viewPointToDocument(viewport, { x: screenX, y: screenY }),
-			)?.id ?? null,
-		[targets, viewport],
+			findLayerAt(targets, toDocument(screenX, screenY))?.id ?? null,
+		[targets, toDocument],
 	);
 
 	const tapAway = useCallback(
@@ -405,31 +408,31 @@ export function EditorCanvas({
 		},
 		[onTapAway, onSelectLayer, targets],
 	);
+	const lookups = useMemo(
+		() => ({ handleAt, layerAt, toDocument, tapAway }),
+		[handleAt, layerAt, toDocument, tapAway],
+	);
 
 	const handleTap = useCallback(
 		(screenX: number, screenY: number) => {
 			// A click on a handle that didn't become a drag does nothing, rather
 			// than deselecting the layer that owns it.
-			if (scale === 0 || handleAt(screenX, screenY)) return;
-			const id = layerAt(screenX, screenY);
+			if (scale === 0 || lookups.handleAt(screenX, screenY)) return;
+			const id = lookups.layerAt(screenX, screenY);
 			tapOnNothing(id === null ? { x: screenX, y: screenY } : null);
 			if (id !== null && id === selectedLayerId) {
-				onTapSelectedLayer?.(
-					viewPointToDocument(viewport, { x: screenX, y: screenY }),
-				);
+				onTapSelectedLayer?.(lookups.toDocument(screenX, screenY));
 			} else {
 				onSelectLayer?.(id);
 			}
 		},
 		[
-			handleAt,
-			layerAt,
+			lookups,
 			onSelectLayer,
 			onTapSelectedLayer,
 			scale,
 			selectedLayerId,
 			tapOnNothing,
-			viewport,
 		],
 	);
 
@@ -488,7 +491,7 @@ export function EditorCanvas({
 	const handleHover = useCallback(
 		(screenX: number, screenY: number) => {
 			if (scale === 0) return;
-			const handle = handleAt(screenX, screenY);
+			const handle = lookups.handleAt(screenX, screenY);
 			if (handle && selectedLayer) {
 				setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
 				return;
@@ -496,29 +499,29 @@ export function EditorCanvas({
 			if (dragsSelection) {
 				const onSelection =
 					selectedLayerId !== null &&
-					layerAt(screenX, screenY) === selectedLayerId;
+					lookups.layerAt(screenX, screenY) === selectedLayerId;
 				setCursor(onSelection ? "move" : "crosshair");
 				return;
 			}
 			if (zoom) {
-				const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
+				const point = lookups.toDocument(screenX, screenY);
 				const onSelection =
 					selectedLayerId !== null &&
 					hitsLayer(targets, selectedLayerId, point);
 				setCursor(onSelection ? "move" : "grab");
 				return;
 			}
-			setCursor(layerAt(screenX, screenY) === null ? "default" : "move");
+			setCursor(
+				lookups.layerAt(screenX, screenY) === null ? "default" : "move",
+			);
 		},
 		[
 			dragsSelection,
-			handleAt,
-			layerAt,
+			lookups,
 			scale,
 			selectedLayer,
 			selectedLayerId,
 			targets,
-			viewport,
 			zoom,
 		],
 	);
@@ -592,7 +595,7 @@ export function EditorCanvas({
 					onPickPoint?.(intent.point);
 					break;
 				case "tapAway":
-					tapAway(intent.point);
+					lookups.tapAway(intent.point);
 					break;
 				case "paint":
 					onPaintStroke?.(points);
@@ -621,7 +624,7 @@ export function EditorCanvas({
 			onPickPoint,
 			onToolInteractionEnd,
 			onSelectLayer,
-			tapAway,
+			lookups,
 			documentSize,
 			scale,
 			targets,
@@ -677,20 +680,11 @@ export function EditorCanvas({
 	const handleIdleTap = useCallback(
 		(screenX: number, screenY: number) => {
 			if (scale === 0) return;
-			tapAway(viewPointToDocument(viewport, { x: screenX, y: screenY }));
+			lookups.tapAway(lookups.toDocument(screenX, screenY));
 		},
-		[tapAway, scale, viewport],
+		[lookups, scale],
 	);
-	// Short of a pinch's travel, so two fingers zooming aren't a tap.
-	const idleGesture = useMemo(
-		() =>
-			Gesture.Tap()
-				.maxDistance(TAP_SLOP_PX)
-				.onEnd((event, success) => {
-					if (success) scheduleOnRN(handleIdleTap, event.x, event.y);
-				}),
-		[handleIdleTap],
-	);
+	const idleGesture = useCanvasTap(handleIdleTap);
 	// While adjusting, a sideways drag turns the dial, and a tap still puts
 	// the tool down.
 	const adjustGesture = useDialDragGesture(
@@ -700,7 +694,7 @@ export function EditorCanvas({
 	const handleDetectionTap = useCallback(
 		(screenX: number, screenY: number) => {
 			if (input.type !== "find" || scale === 0) return;
-			const point = viewPointToDocument(viewport, { x: screenX, y: screenY });
+			const point = lookups.toDocument(screenX, screenY);
 			const hit = detectionAt(detections, point, 10 / scale);
 			if (hit) {
 				tapOnNothing(null);
@@ -708,8 +702,8 @@ export function EditorCanvas({
 				return;
 			}
 			// A miss on the image, as by a face, keeps finding, and a second one
-			// zooms (see `tapOnNothing`). Where the image is
-			// locked, it has no hit box, and shows only inside the document.
+			// zooms (see `tapOnNothing`). Where the image is locked, it has no
+			// hit box, and shows only inside the document.
 			const under = findLayerAt(targets, point)?.id ?? null;
 			const image = document.layers.find((layer) => layer.id === input.imageId);
 			const onImage =
@@ -719,29 +713,20 @@ export function EditorCanvas({
 						hitTestBox(image.transform, layerBounds(image), point)
 					: under === input.imageId;
 			if (onImage) tapOnNothing({ x: screenX, y: screenY });
-			else tapAway(point);
+			else lookups.tapAway(point);
 		},
 		[
 			input,
 			detections,
 			scale,
-			viewport,
+			lookups,
 			targets,
 			document,
 			documentSize,
-			tapAway,
 			tapOnNothing,
 		],
 	);
-	const detectionGesture = useMemo(
-		() =>
-			Gesture.Tap()
-				.maxDistance(TAP_SLOP_PX)
-				.onEnd((event, success) => {
-					if (success) scheduleOnRN(handleDetectionTap, event.x, event.y);
-				}),
-		[handleDetectionTap],
-	);
+	const detectionGesture = useCanvasTap(handleDetectionTap);
 
 	const modeGesture = {
 		select: gesture,
