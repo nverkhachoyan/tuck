@@ -12,8 +12,8 @@ import type { DialDrag } from "./shell/dialDrag";
 import {
 	ADJUST_DIAL_MAX,
 	ADJUST_DIAL_SCALE,
-	type useAdjustController,
-} from "./tools/adjust/useAdjustController";
+	type useAdjustTool,
+} from "./tools/adjust/useAdjustTool";
 import type { CutOutSettings, CutOutTool } from "./tools/cutout/cutOutSettings";
 import type { BrushSettings } from "./tools/draw/brushSettings";
 import type { RedactSettings } from "./tools/redact/redactSettings";
@@ -55,7 +55,7 @@ export function useCanvasInput({
 	};
 	findImageId: string | null;
 	onFindToggle: (sourceIndex: number) => void;
-	adjustController: ReturnType<typeof useAdjustController>;
+	adjustController: ReturnType<typeof useAdjustTool>;
 	actions: Pick<
 		EditorStoreActions,
 		| "drawStroke"

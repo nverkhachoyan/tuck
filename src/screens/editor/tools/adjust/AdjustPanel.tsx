@@ -19,7 +19,7 @@ import {
 	ADJUST_DIAL_MAX,
 	ADJUST_DIAL_SCALE,
 	type AdjustController,
-} from "./useAdjustController";
+} from "./useAdjustTool";
 
 const LABELS: Record<AdjustmentKey, string> = {
 	brightness: "Brightness",

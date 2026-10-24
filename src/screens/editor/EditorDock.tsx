@@ -8,7 +8,7 @@ import type {
 import { EyedropperHint } from "./shell/ColorPicker";
 import { LayerActionsPanel } from "./shell/LayerActionsPanel";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
-import type { useAdjustController } from "./tools/adjust/useAdjustController";
+import type { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
 import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { BrushOptions, DrawPanel } from "./tools/draw/DrawPanel";
@@ -178,7 +178,7 @@ export function DockContent({
 	panel: DockPanel;
 	optionsOpen: boolean;
 	onFind: (() => void) | undefined;
-	adjustController: ReturnType<typeof useAdjustController>;
+	adjustController: ReturnType<typeof useAdjustTool>;
 	adjustments: Adjustments | undefined;
 	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
 	idle: ReactNode;

@@ -64,7 +64,7 @@ What changes:
 
 ### 3.1 Adjust's hook
 
-- [ ] `refactor: rename useAdjustController to useAdjustTool`
+- [x] `refactor: rename useAdjustController to useAdjustTool`
 
 Adjust's hook is the only tool hook called a controller (`useDrawTool`, `useRedactTool`, `useFindTool`, `useCutOutTool`). Rename the file and the function. Crop's `useCropController` stays: it's internal to `CropTool`, not a hook the editor composes.
 

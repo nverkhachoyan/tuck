@@ -60,7 +60,7 @@ function syncAdjustments(
  * the document once it ends, as one undo step. Otherwise they follow the
  * document, through undo and redo.
  */
-export function useAdjustController(
+export function useAdjustTool(
 	layer: ImageLayer | undefined,
 	setAdjustments: (id: string, adjustments: Adjustments) => void,
 ): AdjustController {

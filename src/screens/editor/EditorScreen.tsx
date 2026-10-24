@@ -51,7 +51,7 @@ import {
 	toolButtonsFor,
 } from "./shell/ToolsPanel";
 import type { Shortcut } from "./shortcuts";
-import { useAdjustController } from "./tools/adjust/useAdjustController";
+import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CropTool } from "./tools/crop/CropTool";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { useDrawTool } from "./tools/draw/useDrawTool";
@@ -205,7 +205,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		beginSession();
 		return commitSession;
 	}, [tool, beginSession, commitSession]);
-	const adjustController = useAdjustController(adjustedLayer, setAdjustments);
+	const adjustController = useAdjustTool(adjustedLayer, setAdjustments);
 	const adjusting = useMemo(
 		() =>
 			adjustedLayer
