@@ -18,8 +18,10 @@ import {
 	Platform,
 	Pressable,
 	ScrollView,
+	type StyleProp,
 	StyleSheet,
 	Text,
+	type TextStyle,
 	View,
 } from "react-native";
 import { fadeTo } from "@/ui/gradient";
@@ -162,11 +164,15 @@ export function OptionSegments({
 	label,
 	options,
 	selected,
+	iconsOnly = false,
 	onSelect,
 }: {
 	label: string;
 	options: readonly SegmentOption[];
 	selected: number;
+	// Alignment is the one control that stays icons, since left, center, and
+	// right mean the same thing without their names.
+	iconsOnly?: boolean;
 	onSelect: (index: number) => void;
 }) {
 	return (
@@ -191,6 +197,7 @@ export function OptionSegments({
 								const { pressed, hovered } = interaction(state);
 								return [
 									styles.segment,
+									iconsOnly && styles.segmentIcon,
 									webTransition,
 									hovered && !busy && !chosen && styles.segmentHovered,
 									pressed && !busy && styles.segmentPressed,
@@ -209,14 +216,16 @@ export function OptionSegments({
 											color={ink}
 										/>
 									)}
-									<Text
-										style={[
-											styles.segmentLabel,
-											chosen && styles.segmentLabelChosen,
-										]}
-									>
-										{option.title}
-									</Text>
+									{!iconsOnly && (
+										<Text
+											style={[
+												styles.segmentLabel,
+												chosen && styles.segmentLabelChosen,
+											]}
+										>
+											{option.title}
+										</Text>
+									)}
 								</>
 							)}
 						</Pressable>
@@ -343,6 +352,7 @@ export function BarChip({
 	glyph,
 	text,
 	shortcut,
+	textStyle,
 	restoreFocus,
 	children,
 }: {
@@ -351,6 +361,8 @@ export function BarChip({
 	glyph?: ReactNode;
 	text: string;
 	shortcut?: string;
+	// The font chip draws its name in the font it sets.
+	textStyle?: StyleProp<TextStyle>;
 	restoreFocus?: () => void;
 	children: ReactNode;
 }) {
@@ -386,7 +398,7 @@ export function BarChip({
 							color={colors.textPrimary}
 						/>
 					))}
-				<Text style={styles.actionLabel}>{text}</Text>
+				<Text style={[styles.actionLabel, textStyle]}>{text}</Text>
 				<MaterialCommunityIcons
 					name="chevron-down"
 					size={18}
@@ -695,6 +707,11 @@ const styles = StyleSheet.create({
 	},
 	segmentPressed: {
 		backgroundColor: colors.pressedOverlay,
+	},
+	segmentIcon: {
+		width: 44,
+		paddingHorizontal: 0,
+		justifyContent: "center",
 	},
 	segmentLabel: {
 		...typography.labelStrong,

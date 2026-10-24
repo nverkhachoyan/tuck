@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
 	Pressable,
 	ScrollView,
@@ -21,12 +21,16 @@ import { Chip } from "@/ui/Chip";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
-import { Popover } from "@/ui/Popover";
 import { colors, typography, webTransition } from "@/ui/theme";
 import type { TextColorKey } from "../../editorMode";
 import { ColorChip, ColorPicker } from "../../shell/ColorPicker";
 import { ColorSwatches, isCustomColor } from "../../shell/ColorSwatches";
-import { BarGroup, BarSections } from "../../shell/ContextBar";
+import {
+	BarChip,
+	BarGroup,
+	BarSections,
+	OptionSegments,
+} from "../../shell/ContextBar";
 import { ToolOption, ToolOptions } from "../../shell/ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
@@ -77,7 +81,11 @@ const COLOR_NAMES: Record<TextColorKey, string> = {
 	backgroundColor: "Box",
 };
 
-type ColorMark = "format-color-text" | "format-textbox" | "rectangle-outline";
+const COLOR_TITLES: Record<TextColorKey, string> = {
+	color: "Color",
+	outlineColor: "Outline",
+	backgroundColor: "Box",
+};
 
 /**
  * A picker for one of a text layer's colors, in a card over the canvas (see
@@ -172,10 +180,10 @@ export function TextStylePanel({
 }
 
 /**
- * A text layer's style in the wide editor's header: alignment, then a chip
- * for the font and one each for the text, its outline, and its box. The
- * phone keeps the tabs. `restoreFocus` puts the caret back in the hidden
- * input when a chip's palette closes, and only while text is being typed.
+ * A text layer's style in the wide editor's header: alignment, then the
+ * font, then Color, Outline, and Box. Alignment stays icons. The phone keeps
+ * the tabs. `restoreFocus` puts the caret back in the hidden input when a
+ * chip closes, and only while text is being typed.
  */
 export function TextBar({
 	layer,
@@ -192,11 +200,11 @@ export function TextBar({
 	onEyedropper: (key: TextColorKey) => void;
 	restoreFocus?: () => void;
 }) {
-	const chip = (key: TextColorKey, icon: ColorMark, noneLabel?: string) => (
+	const chip = (key: TextColorKey, noneLabel?: string) => (
 		<ColorChip
 			key={key}
 			label={COLOR_NAMES[key]}
-			icon={icon}
+			title={COLOR_TITLES[key]}
 			value={layer[key]}
 			customColor={customColor}
 			noneLabel={noneLabel}
@@ -215,9 +223,15 @@ export function TextBar({
 	return (
 		<BarSections>
 			<BarGroup>
-				<AlignPicker
-					value={layer.align}
-					onPick={(align) => onChange({ align })}
+				<OptionSegments
+					label="Alignment"
+					iconsOnly
+					options={ALIGNS.map(({ label, icon }) => ({ title: label, icon }))}
+					selected={ALIGNS.findIndex((choice) => choice.align === layer.align)}
+					onSelect={(index) => {
+						const align = ALIGNS[index]?.align;
+						if (align && align !== layer.align) onChange({ align });
+					}}
 				/>
 			</BarGroup>
 			<BarGroup>
@@ -228,9 +242,9 @@ export function TextBar({
 				/>
 			</BarGroup>
 			<BarGroup>
-				{chip("color", "format-color-text")}
-				{chip("outlineColor", "format-textbox", "No outline")}
-				{chip("backgroundColor", "rectangle-outline", "No background")}
+				{chip("color")}
+				{chip("outlineColor", "No outline")}
+				{chip("backgroundColor", "No background")}
 			</BarGroup>
 		</BarSections>
 	);
@@ -246,47 +260,16 @@ function FontChip({
 	onPick: (font: TextFont) => void;
 	restoreFocus?: () => void;
 }) {
-	const anchor = useRef<View>(null);
-	const [open, setOpen] = useState(false);
 	return (
-		<>
-			<Pressable
-				ref={anchor}
-				accessibilityRole="button"
-				accessibilityLabel={FONT_LABELS[font]}
-				accessibilityState={{ expanded: open }}
-				onPress={() => setOpen((shown) => !shown)}
-				style={(state) => [
-					styles.fontButton,
-					webTransition,
-					interaction(state).hovered && styles.fontButtonHovered,
-					interaction(state).pressed && styles.fontButtonPressed,
-				]}
-			>
-				<MaterialCommunityIcons
-					name="format-font"
-					size={18}
-					color={colors.textPrimary}
-				/>
-				<Text
-					style={[
-						styles.fontButtonLabel,
-						{ fontFamily: TEXT_FONTS[font].family },
-					]}
-				>
-					{FONT_LABELS[font]}
-				</Text>
-			</Pressable>
-			<Popover
-				anchor={anchor}
-				open={open}
-				onClose={() => setOpen(false)}
-				label="Font"
-				restoreFocus={restoreFocus}
-			>
-				<FontPicker value={font} onPick={onPick} />
-			</Popover>
-		</>
+		<BarChip
+			label={FONT_LABELS[font]}
+			icon="format-font"
+			text={FONT_LABELS[font]}
+			textStyle={{ fontFamily: TEXT_FONTS[font].family }}
+			restoreFocus={restoreFocus}
+		>
+			<FontPicker value={font} onPick={onPick} />
+		</BarChip>
 	);
 }
 
@@ -591,24 +574,5 @@ const styles = StyleSheet.create({
 	},
 	fontLabelSelected: {
 		color: colors.onHighlight,
-	},
-	fontButton: {
-		height: 44,
-		flexShrink: 0,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 12,
-		borderRadius: 22,
-	},
-	fontButtonHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	fontButtonPressed: {
-		backgroundColor: colors.pressedOverlay,
-	},
-	fontButtonLabel: {
-		fontSize: 16,
-		color: colors.textPrimary,
 	},
 });

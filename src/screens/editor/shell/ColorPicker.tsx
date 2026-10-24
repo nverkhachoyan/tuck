@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
@@ -94,7 +93,7 @@ export function ColorOptions({
 }
 
 const CHIP = 44;
-const CHIP_SWATCH = 22;
+const CHIP_SWATCH = 20;
 
 /**
  * The current color, as a swatch that opens `ColorOptions` in a popover: the
@@ -103,7 +102,7 @@ const CHIP_SWATCH = 22;
  */
 export function ColorChip({
 	label,
-	icon,
+	title,
 	value,
 	customColor,
 	noneLabel,
@@ -113,9 +112,10 @@ export function ColorChip({
 	restoreFocus,
 }: {
 	label: string;
-	// A glyph beside the swatch, when several chips sit together and the
-	// swatch alone doesn't say which color it is.
-	icon?: ComponentProps<typeof MaterialCommunityIcons>["name"];
+	// A word beside the swatch, when several chips sit together and the
+	// swatch alone doesn't say which color it is. `label` stays the name a
+	// screen reader hears.
+	title?: string;
 	value: string | null;
 	customColor: string | null;
 	noneLabel?: string;
@@ -140,20 +140,14 @@ export function ColorChip({
 					const { pressed, hovered } = interaction(state);
 					return [
 						styles.chip,
-						icon && styles.chipMarked,
+						title ? styles.chipTitled : styles.chipRound,
 						webTransition,
 						hovered && styles.chipHovered,
 						pressed && styles.chipPressed,
 					];
 				}}
 			>
-				{icon && (
-					<MaterialCommunityIcons
-						name={icon}
-						size={18}
-						color={colors.textPrimary}
-					/>
-				)}
+				{title && <Text style={styles.chipTitle}>{title}</Text>}
 				<View
 					style={[
 						styles.chipSwatch,
@@ -486,11 +480,13 @@ const styles = StyleSheet.create({
 		top: "50%",
 	},
 	chip: {
-		width: CHIP,
 		height: CHIP,
-		borderRadius: CHIP / 2,
 		alignItems: "center",
 		justifyContent: "center",
+	},
+	chipRound: {
+		width: CHIP,
+		borderRadius: CHIP / 2,
 	},
 	chipHovered: {
 		backgroundColor: colors.hoverOverlay,
@@ -499,11 +495,15 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],
 	},
-	chipMarked: {
-		width: undefined,
+	chipTitled: {
 		flexDirection: "row",
 		gap: 6,
-		paddingHorizontal: 10,
+		paddingHorizontal: 12,
+		borderRadius: radii.small,
+	},
+	chipTitle: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
 	},
 	chipSwatch: {
 		width: CHIP_SWATCH,
