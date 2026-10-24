@@ -82,9 +82,19 @@ export function ContextBar({
 	);
 }
 
+type BarIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+type SegmentOption = {
+	title: string;
+	icon?: BarIcon;
+	busy?: boolean;
+};
+
 /**
- * A segmented row for a bar: one line of names, each a 44-point target, with
- * the chosen one highlighted. `label` names the group for screen readers.
+ * One choice among a tool's modes, as a single control: an icon and its
+ * name in each segment, the chosen one marked with the highlighter. The
+ * icon is the same glyph the dock uses for that mode. `label` names the
+ * group for screen readers.
  */
 export function OptionSegments({
 	label,
@@ -93,7 +103,7 @@ export function OptionSegments({
 	onSelect,
 }: {
 	label: string;
-	options: { title: string; busy?: boolean }[];
+	options: readonly SegmentOption[];
 	selected: number;
 	onSelect: (index: number) => void;
 }) {
@@ -106,6 +116,7 @@ export function OptionSegments({
 			{options.map((option, index) => {
 				const chosen = index === selected;
 				const busy = option.busy === true;
+				const ink = chosen ? colors.onHighlight : colors.textPrimary;
 				return (
 					<Pressable
 						key={option.title}
@@ -119,7 +130,7 @@ export function OptionSegments({
 							return [
 								styles.segment,
 								webTransition,
-								hovered && !busy && styles.segmentHovered,
+								hovered && !busy && !chosen && styles.segmentHovered,
 								pressed && !busy && styles.segmentPressed,
 							];
 						}}
@@ -128,14 +139,23 @@ export function OptionSegments({
 						{busy ? (
 							<ActivityIndicator color={colors.textPrimary} />
 						) : (
-							<Text
-								style={[
-									styles.segmentLabel,
-									chosen && styles.segmentLabelChosen,
-								]}
-							>
-								{option.title}
-							</Text>
+							<>
+								{option.icon && (
+									<MaterialCommunityIcons
+										name={option.icon}
+										size={18}
+										color={ink}
+									/>
+								)}
+								<Text
+									style={[
+										styles.segmentLabel,
+										chosen && styles.segmentLabelChosen,
+									]}
+								>
+									{option.title}
+								</Text>
+							</>
 						)}
 					</Pressable>
 				);
@@ -144,7 +164,10 @@ export function OptionSegments({
 	);
 }
 
-type BarIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
+/** A short rule between a bar's mode and the options that follow it. */
+export function BarRule() {
+	return <View style={styles.rule} />;
+}
 
 /**
  * A labeled action in the bar, 44 points tall, beside the segmented sub-tools.
@@ -265,17 +288,25 @@ const styles = StyleSheet.create({
 		marginLeft: space.xs,
 		backgroundColor: colors.border,
 	},
+	rule: {
+		width: StyleSheet.hairlineWidth,
+		height: 22,
+		flexShrink: 0,
+		backgroundColor: colors.border,
+	},
 	segments: {
 		flexDirection: "row",
 		flexShrink: 0,
 		alignItems: "center",
+		gap: 2,
 	},
 	segment: {
 		height: 44,
-		paddingHorizontal: 12,
-		borderRadius: radii.small,
+		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "center",
+		gap: 6,
+		paddingHorizontal: 10,
+		borderRadius: radii.small,
 	},
 	segmentHovered: {
 		backgroundColor: colors.hoverOverlay,
@@ -285,7 +316,7 @@ const styles = StyleSheet.create({
 	},
 	segmentLabel: {
 		...typography.labelStrong,
-		color: colors.textSecondary,
+		color: colors.textPrimary,
 	},
 	segmentLabelChosen: {
 		color: colors.onHighlight,

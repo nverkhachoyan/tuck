@@ -76,6 +76,8 @@ const COLOR_NAMES: Record<TextColorKey, string> = {
 	backgroundColor: "Box",
 };
 
+type ColorMark = "format-color-text" | "format-textbox" | "rectangle-outline";
+
 /**
  * A picker for one of a text layer's colors, in a card over the canvas (see
  * `ToolOptions`), since the dock's panel has no room for one. The text
@@ -189,10 +191,11 @@ export function TextBar({
 	onEyedropper: (key: TextColorKey) => void;
 	restoreFocus?: () => void;
 }) {
-	const chip = (key: TextColorKey, noneLabel?: string) => (
+	const chip = (key: TextColorKey, icon: ColorMark, noneLabel?: string) => (
 		<ColorChip
 			key={key}
 			label={COLOR_NAMES[key]}
+			icon={icon}
 			value={layer[key]}
 			customColor={customColor}
 			noneLabel={noneLabel}
@@ -219,9 +222,9 @@ export function TextBar({
 				onPick={(font) => onChange({ font })}
 				restoreFocus={restoreFocus}
 			/>
-			{chip("color")}
-			{chip("outlineColor", "No outline")}
-			{chip("backgroundColor", "No background")}
+			{chip("color", "format-color-text")}
+			{chip("outlineColor", "format-textbox", "No outline")}
+			{chip("backgroundColor", "rectangle-outline", "No background")}
 		</>
 	);
 }
@@ -253,6 +256,11 @@ function FontChip({
 					interaction(state).pressed && styles.fontButtonPressed,
 				]}
 			>
+				<MaterialCommunityIcons
+					name="format-font"
+					size={18}
+					color={colors.textPrimary}
+				/>
 				<Text
 					style={[
 						styles.fontButtonLabel,
@@ -580,7 +588,9 @@ const styles = StyleSheet.create({
 	fontButton: {
 		height: 44,
 		flexShrink: 0,
-		justifyContent: "center",
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
 		paddingHorizontal: 12,
 		borderRadius: 22,
 	},

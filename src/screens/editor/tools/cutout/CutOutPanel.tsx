@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
-import { BarButton, OptionSegments } from "../../shell/ContextBar";
+import { BarButton, BarRule, OptionSegments } from "../../shell/ContextBar";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
 	SIZE_DOTS,
@@ -157,10 +157,27 @@ export function CutOutBar({
 }) {
 	const options = [
 		...(onFindAll
-			? [{ title: "Pick", tool: "pick" as const, busy: finding === "one" }]
+			? [
+					{
+						title: "Pick",
+						tool: "pick" as const,
+						icon: "gesture-tap" as const,
+						busy: finding === "one",
+					},
+				]
 			: []),
-		{ title: "Keep", tool: "keep" as const, busy: false },
-		{ title: "Erase", tool: "erase" as const, busy: false },
+		{
+			title: "Keep",
+			tool: "keep" as const,
+			icon: "brush" as const,
+			busy: false,
+		},
+		{
+			title: "Erase",
+			tool: "erase" as const,
+			icon: "eraser" as const,
+			busy: false,
+		},
 	];
 	const selected = Math.max(
 		0,
@@ -179,6 +196,7 @@ export function CutOutBar({
 					onChange({ ...settings, tool: next });
 				}}
 			/>
+			<BarRule />
 			{onFindAll && (
 				<BarButton
 					label="Subjects"

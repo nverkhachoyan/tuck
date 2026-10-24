@@ -5,7 +5,7 @@ import { Highlight } from "@/ui/Highlight";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, typography } from "@/ui/theme";
 import { ColorOptions } from "../../shell/ColorPicker";
-import { BarButton, OptionSegments } from "../../shell/ContextBar";
+import { BarButton, BarRule, OptionSegments } from "../../shell/ContextBar";
 import {
 	PixelSquare,
 	RedactLook,
@@ -91,10 +91,10 @@ export function RedactPanel({
 }
 
 const REDACT_TOOLS = [
-	{ title: "Box" },
-	{ title: "Brush" },
-	{ title: "Eraser" },
-];
+	{ title: "Box", icon: "rectangle-outline" },
+	{ title: "Brush", icon: "brush" },
+	{ title: "Eraser", icon: "eraser" },
+] as const;
 /**
  * Redact's options in the wide editor's header: Box, Brush, and Eraser, Find
  * when there's a photo to look in, then the effect and its strength or color,
@@ -145,6 +145,7 @@ export function RedactBar({
 					onPress={onFind}
 				/>
 			)}
+			<BarRule />
 			{tool !== "eraser" && (
 				<RedactLook
 					settings={settings}

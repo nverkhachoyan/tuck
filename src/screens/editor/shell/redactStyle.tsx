@@ -13,9 +13,9 @@ type RedactLookSettings = {
 };
 
 const EFFECTS = [
-	{ title: "Solid", effect: "solid" },
-	{ title: "Blur", effect: "blur" },
-	{ title: "Pixelate", effect: "pixelate" },
+	{ title: "Solid", effect: "solid", icon: "format-color-fill" },
+	{ title: "Blur", effect: "blur", icon: "blur" },
+	{ title: "Pixelate", effect: "pixelate", icon: "checkerboard" },
 ] as const;
 
 export const STRENGTH_NAMES = {
@@ -47,7 +47,7 @@ export function RedactLook<T extends RedactLookSettings>({
 		<>
 			<OptionSegments
 				label="Effect"
-				options={EFFECTS.map(({ title }) => ({ title }))}
+				options={EFFECTS.map(({ title, icon }) => ({ title, icon }))}
 				selected={selected}
 				onSelect={(index) => {
 					const next = EFFECTS[index]?.effect;

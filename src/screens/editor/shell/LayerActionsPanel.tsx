@@ -1,4 +1,5 @@
 import type { Layer } from "@/model/layers/layer";
+import { TOOL_KEYS } from "../shortcuts";
 import { BarButton } from "./ContextBar";
 import { layerActionsFor } from "./layerActions";
 import { ToolButton, ToolRow } from "./ToolButton";
@@ -81,6 +82,7 @@ export function LayerBar({
 							key={key}
 							label={entry.label}
 							icon={entry.icon}
+							shortcut={TOOL_KEYS[key]}
 							onPress={startTool[key]}
 						/>
 					)
@@ -96,6 +98,7 @@ export function LayerBar({
 					}
 					busy={sticker === "saving"}
 					disabled={sticker === "saved"}
+					shortcut={TOOL_KEYS.sticker}
 					onPress={onSaveSticker}
 				/>
 			)}

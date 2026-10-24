@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMemo, useRef, useState } from "react";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { type ComponentProps, useMemo, useRef, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
@@ -102,6 +103,7 @@ const CHIP_SWATCH = 22;
  */
 export function ColorChip({
 	label,
+	icon,
 	value,
 	customColor,
 	noneLabel,
@@ -111,6 +113,9 @@ export function ColorChip({
 	restoreFocus,
 }: {
 	label: string;
+	// A glyph beside the swatch, when several chips sit together and the
+	// swatch alone doesn't say which color it is.
+	icon?: ComponentProps<typeof MaterialCommunityIcons>["name"];
 	value: string | null;
 	customColor: string | null;
 	noneLabel?: string;
@@ -135,12 +140,20 @@ export function ColorChip({
 					const { pressed, hovered } = interaction(state);
 					return [
 						styles.chip,
+						icon && styles.chipMarked,
 						webTransition,
 						hovered && styles.chipHovered,
 						pressed && styles.chipPressed,
 					];
 				}}
 			>
+				{icon && (
+					<MaterialCommunityIcons
+						name={icon}
+						size={16}
+						color={colors.textPrimary}
+					/>
+				)}
 				<View
 					style={[
 						styles.chipSwatch,
@@ -485,6 +498,12 @@ const styles = StyleSheet.create({
 	chipPressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],
+	},
+	chipMarked: {
+		width: undefined,
+		flexDirection: "row",
+		gap: 6,
+		paddingHorizontal: 10,
 	},
 	chipSwatch: {
 		width: CHIP_SWATCH,

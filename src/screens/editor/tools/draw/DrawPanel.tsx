@@ -7,7 +7,7 @@ import { Popover } from "@/ui/Popover";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, webTransition } from "@/ui/theme";
 import { ColorChip, ColorOptions } from "../../shell/ColorPicker";
-import { OptionSegments } from "../../shell/ContextBar";
+import { BarRule, OptionSegments } from "../../shell/ContextBar";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
@@ -92,15 +92,10 @@ export function DrawPanel({
 	);
 }
 
-const DRAW_TOOLS = [
-	{ title: "Brush" },
-	{ title: "Shape" },
-	{ title: "Eraser" },
-] as const;
 const PEN_TIPS = [
-	{ title: "Pen", tool: "pen" },
-	{ title: "Marker", tool: "marker" },
-	{ title: "Neon", tool: "neon" },
+	{ title: "Pen", tool: "pen", icon: "draw-pen" },
+	{ title: "Marker", tool: "marker", icon: "marker" },
+	{ title: "Neon", tool: "neon", icon: "shimmer" },
 ] as const;
 
 /**
@@ -141,10 +136,15 @@ export function DrawBar({
 		<>
 			<OptionSegments
 				label="Draw tool"
-				options={[...DRAW_TOOLS]}
+				options={[
+					{ title: "Brush", icon: TOOL_ICONS[settings.lastBrush] },
+					{ title: "Shape", icon: SHAPE_ICONS[settings.shape] },
+					{ title: "Eraser", icon: "eraser" },
+				]}
 				selected={selected}
 				onSelect={pickTool}
 			/>
+			<BarRule />
 			<SizeChoices
 				nowrap
 				index={brushSizeIndex(settings)}
@@ -155,7 +155,7 @@ export function DrawBar({
 			{brush && (
 				<OptionSegments
 					label="Pen tip"
-					options={PEN_TIPS.map(({ title }) => ({ title }))}
+					options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
 					selected={PEN_TIPS.findIndex((tip) => tip.tool === settings.tool)}
 					onSelect={(index) => {
 						const tool = PEN_TIPS[index]?.tool;
