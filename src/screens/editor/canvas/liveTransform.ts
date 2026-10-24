@@ -165,6 +165,22 @@ export function readLiveBox(live: LiveTransform): Box {
 	return { halfWidth: live.halfWidth.value, halfHeight: live.halfHeight.value };
 }
 
+// `transform` and `box` are the layer's own, from the document: while it's
+// the active layer, the live values stand in for them.
+export function liveTransformOf(
+	live: LiveTransform,
+	id: string,
+	transform: Transform,
+): Transform {
+	"worklet";
+	return live.activeId.value === id ? readLiveTransform(live) : transform;
+}
+
+export function liveBoxOf(live: LiveTransform, id: string, box: Box): Box {
+	"worklet";
+	return live.activeId.value === id ? readLiveBox(live) : box;
+}
+
 export function clampScale(scale: number) {
 	"worklet";
 	return Math.min(MAX_LAYER_SCALE, Math.max(MIN_LAYER_SCALE, scale));

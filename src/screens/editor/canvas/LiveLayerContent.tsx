@@ -31,7 +31,11 @@ import {
 } from "@/render/layers/RedactionLayerView";
 import { shapePath } from "@/render/layers/ShapeLayerView";
 import { useDecodedImage } from "@/render/useDecodedImage";
-import { type LiveTransform, readLiveTransform } from "./liveTransform";
+import {
+	liveBoxOf,
+	type LiveTransform,
+	liveTransformOf,
+} from "./liveTransform";
 
 /**
  * A redaction that follows the live values while it's selected, as
@@ -78,9 +82,10 @@ function LiveRedactionBox({
 }) {
 	const { id, width, height, effect } = layer;
 	const box = useDerivedValue<SkRect>(() => {
-		const active = live.activeId.value === id;
-		const w = active ? live.halfWidth.value : width / 2;
-		const h = active ? live.halfHeight.value : height / 2;
+		const { halfWidth: w, halfHeight: h } = liveBoxOf(live, id, {
+			halfWidth: width / 2,
+			halfHeight: height / 2,
+		});
 		return rect(-w, -h, w * 2, h * 2);
 	}, [id, width, height]);
 	return effect.type === "solid" ? (
@@ -103,11 +108,7 @@ function LiveFilteredBox({
 }) {
 	const { id, transform } = layer;
 	const filter = useDerivedValue(
-		() =>
-			redactionFilter(
-				effect,
-				live.activeId.value === id ? readLiveTransform(live) : transform,
-			),
+		() => redactionFilter(effect, liveTransformOf(live, id, transform)),
 		[id, effect, transform],
 	);
 	return <BackdropFilter clip={box} filter={<ImageFilter filter={filter} />} />;
@@ -128,13 +129,8 @@ export function LiveShape({
 	const { id, shape, strokeWidth } = layer;
 	const { halfWidth, halfHeight } = shapeBox(layer);
 	const path = useDerivedValue(() => {
-		const active = live.activeId.value === id;
-		return shapePath(
-			shape,
-			active ? live.halfWidth.value : halfWidth,
-			active ? live.halfHeight.value : halfHeight,
-			strokeWidth,
-		);
+		const box = liveBoxOf(live, id, { halfWidth, halfHeight });
+		return shapePath(shape, box.halfWidth, box.halfHeight, strokeWidth);
 	}, [id, shape, halfWidth, halfHeight, strokeWidth]);
 	return <Path path={path} color={layer.color} />;
 }
@@ -157,8 +153,7 @@ function LiveFilteredStrokes({
 	const marks = maskMarks(layer.strokes);
 	const box = drawingBox(layer);
 	const picture = useDerivedValue(() => {
-		const current =
-			live.activeId.value === id ? readLiveTransform(live) : transform;
+		const current = liveTransformOf(live, id, transform);
 		return transformsEqual(current, transform)
 			? committed
 			: recordLayerStrokes(effect, marks, box, current);
@@ -200,8 +195,7 @@ function LiveMaskedPicture({
 	const { id, effect, width, height, transform } = layer;
 	const committed = maskedRedactionPicture(layer, mask);
 	const picture = useDerivedValue(() => {
-		const current =
-			live.activeId.value === id ? readLiveTransform(live) : transform;
+		const current = liveTransformOf(live, id, transform);
 		return transformsEqual(current, transform)
 			? committed
 			: recordMaskedRedaction(effect, mask, width, height, current);

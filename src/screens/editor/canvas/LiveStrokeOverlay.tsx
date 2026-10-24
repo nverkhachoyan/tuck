@@ -14,7 +14,7 @@ import {
 	useDerivedValue,
 } from "react-native-reanimated";
 import type { ColorMatrix } from "@/model/adjustments";
-import { rectFromCorners } from "@/model/geometry";
+import { type Point, rectFromCorners } from "@/model/geometry";
 import { identityTransform } from "@/model/layers/base";
 import type { Brush } from "@/model/layers/drawing";
 import type { CutStroke } from "@/model/layers/image";
@@ -187,6 +187,15 @@ function unlanded(stroke: LiveStroke): number[] {
 	return stroke.id.value > stroke.landedId ? stroke.points.value : [];
 }
 
+// Where a drag's points began and where they are now.
+function dragEnds(points: number[]): [Point, Point] {
+	"worklet";
+	return [
+		{ x: points[0], y: points[1] },
+		{ x: points[points.length - 2], y: points[points.length - 1] },
+	];
+}
+
 /**
  * A stroke as it's being painted, in document space. Keyed by `landedId`, so
  * a landed stroke gives way to the document's copy in one update.
@@ -263,11 +272,8 @@ function LiveNewShape({
 	const placement = useDerivedValue(() => {
 		const points = unlanded(stroke);
 		if (points.length === 0) return null;
-		return shapeFromDrag(
-			shape,
-			{ x: points[0], y: points[1] },
-			{ x: points[points.length - 2], y: points[points.length - 1] },
-		);
+		const [from, to] = dragEnds(points);
+		return shapeFromDrag(shape, from, to);
 	});
 	const transform = useDerivedValue(() => {
 		const { x = 0, y = 0, rotation = 0 } = placement.value ?? {};
@@ -309,10 +315,8 @@ function LiveBox({
 	const box = useDerivedValue(() => {
 		const points = unlanded(stroke);
 		if (points.length === 0) return rect(0, 0, 0, 0);
-		return rectFromCorners(
-			{ x: points[0], y: points[1] },
-			{ x: points[points.length - 2], y: points[points.length - 1] },
-		);
+		const [from, to] = dragEnds(points);
+		return rectFromCorners(from, to);
 	});
 	return (
 		<Group>
