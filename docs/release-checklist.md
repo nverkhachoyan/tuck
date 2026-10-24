@@ -94,3 +94,19 @@ doesn't require terms.
     photos with the system picker and saves without reading.
 - [ ] Store listing: the text in `docs/store-listing/listing.md`, and the icon,
       feature graphic, and phone screenshots in `docs/store-listing/screenshots/`.
+
+## 5. tuck.tools
+
+- [ ] Once the App Store listing is live, point the site to it: add
+      `<meta name="apple-itunes-app" content="app-id=…">` to
+      `src/app/+html.tsx`, so Safari on iPhone shows the Smart App Banner,
+      and a store badge to the Support page. The same for Google Play once
+      its listing is live.
+- [ ] Check what only the deployed site can show:
+  - The headers and Content Security Policy Vercel sends
+    (`curl -sI https://www.tuck.tools/`), which `vercel.json` sets.
+  - Chrome's install prompt, and the home screen icon on iPhone.
+  - An update arriving through the service worker: home's "A new version
+    of Tuck is ready", then Reload.
+  - Sharing a photo to the installed app on Android, and opening one with
+    it on the desktop ("Open with").
