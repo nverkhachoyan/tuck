@@ -46,6 +46,7 @@ import { HeaderActions } from "./shell/HeaderActions";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
 import { mapStarters, ToolsPanel } from "./shell/ToolsPanel";
+import { AdjustInspector } from "./tools/adjust/AdjustPanel";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CropTool } from "./tools/crop/CropTool";
 import { stepCutSize } from "./tools/cutout/cutOutSettings";
@@ -315,16 +316,18 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			: selectedLayer
 				? "layer"
 				: "idle";
-	// Draw, Redact, Find, Cut out, and text live in the header on a wide
-	// screen, and the inspector keeps the layers. Find's results sit above
-	// them. The other tools still take the inspector.
+	// A wide screen's open tool, or a selected layer, lives in the header, and
+	// the inspector keeps the layers. Find's results and Adjust's dial sit
+	// above them. The other tools still take the inspector.
 	const inBar =
 		wide &&
 		(panelKind === "draw" ||
 			panelKind === "redact" ||
 			panelKind === "find" ||
 			panelKind === "cutOut" ||
-			panelKind === "text");
+			panelKind === "text" ||
+			panelKind === "layer" ||
+			panelKind === "adjust");
 
 	const focused = useIsFocused();
 	const {
@@ -545,20 +548,25 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 											? editingText
 												? textEditing.cancel
 												: undefined
-											: cancel
+											: panelKind === "layer"
+												? undefined
+												: cancel
 									}
 									onDone={
 										panelKind === "text"
 											? editingText
 												? textEditing.finish
 												: () => selectLayer(null)
-											: done
+											: panelKind === "layer"
+												? () => selectLayer(null)
+												: done
 									}
 									doneLabel={findDoneLabel}
 									editingText={editingText}
 									restoreTextFocus={() =>
 										textEditing.editorRef.current?.focus()
 									}
+									layerActions={layerActions || undefined}
 								/>
 							) : undefined
 						}
@@ -681,6 +689,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 											>
 												<LayersPanel {...layerList} layout="inspector" open />
 											</FindInspector>
+										) : panelKind === "adjust" ? (
+											<AdjustInspector
+												controller={adjustController}
+												adjustments={adjustedLayer?.adjustments}
+											>
+												<LayersPanel {...layerList} layout="inspector" open />
+											</AdjustInspector>
 										) : (
 											<LayersPanel {...layerList} layout="inspector" open />
 										)

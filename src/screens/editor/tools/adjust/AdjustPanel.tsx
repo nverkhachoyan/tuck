@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	useAnimatedReaction,
@@ -75,6 +75,29 @@ export function AdjustPanel({
 				onChange={controller.change}
 				onEnd={controller.end}
 			/>
+		</View>
+	);
+}
+
+/**
+ * Adjust on a wide screen: the same choices and dial, above the layers.
+ * The bar only names the tool. The readout still floats just above the dial.
+ */
+export function AdjustInspector({
+	controller,
+	adjustments,
+	children,
+}: {
+	controller: AdjustController;
+	adjustments: Adjustments | undefined;
+	children: ReactNode;
+}) {
+	return (
+		<View style={styles.inspectorStack}>
+			<View style={styles.section}>
+				<AdjustPanel controller={controller} adjustments={adjustments} />
+			</View>
+			{children}
 		</View>
 	);
 }
@@ -207,5 +230,15 @@ const styles = StyleSheet.create({
 	},
 	changedSelected: {
 		backgroundColor: colors.onHighlight,
+	},
+	inspectorStack: {
+		flex: 1,
+	},
+	// Tall enough for the chips, the dial, and the readout that floats above them.
+	section: {
+		height: 168,
+		paddingTop: 48,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
 	},
 });

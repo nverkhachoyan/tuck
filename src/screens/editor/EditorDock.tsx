@@ -8,7 +8,7 @@ import {
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
-import { LayerActionsPanel } from "./shell/LayerActionsPanel";
+import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import {
@@ -21,6 +21,7 @@ import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
 import type { useFindTool } from "./tools/find/useFindTool";
+import { layerKindName } from "./tools/layers/LayerRow";
 import {
 	EffectGlyph,
 	RedactBar,
@@ -189,6 +190,7 @@ export function ContextBarContent({
 	doneLabel,
 	editingText = false,
 	restoreTextFocus,
+	layerActions,
 }: ModeProps & {
 	panel: DockPanel;
 	onCustomColor: (color: string) => void;
@@ -198,6 +200,7 @@ export function ContextBarContent({
 	doneLabel?: string;
 	editingText?: boolean;
 	restoreTextFocus?: () => void;
+	layerActions?: ComponentProps<typeof LayerActionsPanel>;
 }) {
 	// For a bar whose colors go to `apply`: a color from its picker, which
 	// becomes the custom color too, and the eyedropper, for a color from the
@@ -324,6 +327,30 @@ export function ContextBarContent({
 					}
 					restoreFocus={editingText ? restoreTextFocus : undefined}
 				/>
+			</ContextBar>
+		);
+	}
+	if (panel === "adjust") {
+		return (
+			<ContextBar
+				title="Adjust"
+				onCancel={onCancel}
+				onDone={onDone}
+				doneLabel={doneLabel}
+				doneShortcut="Escape"
+			>
+				{null}
+			</ContextBar>
+		);
+	}
+	if (panel === "layer" && layerActions) {
+		return (
+			<ContextBar
+				title={layerKindName(layerActions.layer)}
+				onDone={onDone}
+				doneShortcut="Escape"
+			>
+				<LayerBar {...layerActions} />
 			</ContextBar>
 		);
 	}

@@ -155,31 +155,35 @@ export function BarButton({
 	icon,
 	shortcut,
 	busy = false,
+	disabled = false,
 	onPress,
 }: {
 	label: string;
 	icon: BarIcon;
 	shortcut?: string;
 	busy?: boolean;
+	disabled?: boolean;
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
+	const inactive = busy || disabled;
 	return (
 		<>
 			<Pressable
 				{...anchor}
 				accessibilityRole="button"
 				accessibilityLabel={label}
-				accessibilityState={{ disabled: busy, busy }}
-				disabled={busy}
+				accessibilityState={{ disabled: inactive, busy }}
+				disabled={inactive}
 				onPress={onPress}
 				style={(state) => {
 					const { pressed, hovered } = interaction(state);
 					return [
 						styles.action,
 						webTransition,
-						hovered && !busy && styles.segmentHovered,
-						pressed && !busy && styles.segmentPressed,
+						inactive && styles.actionInactive,
+						hovered && !inactive && styles.segmentHovered,
+						pressed && !inactive && styles.segmentPressed,
 					];
 				}}
 			>
@@ -298,5 +302,8 @@ const styles = StyleSheet.create({
 	actionLabel: {
 		...typography.labelStrong,
 		color: colors.textPrimary,
+	},
+	actionInactive: {
+		opacity: 0.4,
 	},
 });
