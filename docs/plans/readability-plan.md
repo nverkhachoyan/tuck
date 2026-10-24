@@ -149,7 +149,7 @@ Each hook goes in `canvas/` beside the gesture hooks it resembles, and each gest
 
 ### 4.5 The canvas's own controls
 
-- [ ] `refactor: move FitButton and SelectionBarFrame out of EditorCanvas`
+- [x] `refactor: move FitButton and SelectionBarFrame out of EditorCanvas`
 
 `canvas/FitButton.tsx` and `canvas/SelectionBarFrame.tsx`, which takes `SELECTION_BAR_GAPS` with it.
 

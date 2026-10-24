@@ -1,4 +1,3 @@
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Canvas, Group } from "@shopify/react-native-skia";
 import {
 	type ReactNode,
@@ -10,29 +9,16 @@ import {
 	useRef,
 	useState,
 } from "react";
-import {
-	type LayoutChangeEvent,
-	Pressable,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
+import { type LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-	useAnimatedStyle,
-	useDerivedValue,
-	useSharedValue,
-	withTiming,
-} from "react-native-reanimated";
+import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Box, Point, Rect, Transform } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
 import type { ShapePlacement } from "@/model/layers/shape";
 import { type TextSelection, withPlaceholder } from "@/model/textEditing";
-import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
-import { useTooltip } from "@/ui/Tooltip";
-import { colors, radii, space, typography, webTransition } from "@/ui/theme";
+import { colors, space, typography } from "@/ui/theme";
 import type { TextEditState } from "../editorMode";
 import { cursorStyle } from "./canvasCursor";
 import {
@@ -42,7 +28,8 @@ import {
 	outlinedLayerFor,
 } from "./canvasInput";
 import { EditorScene, type LiveAdjustment } from "./EditorScene";
-import { handleMetrics, handleUnder } from "./handleMetrics";
+import { FitButton } from "./FitButton";
+import { handleUnder } from "./handleMetrics";
 import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
 import { layerBounds } from "./layerBounds";
 import { layerTargets, resizeMode } from "./layerTargets";
@@ -53,12 +40,8 @@ import {
 	syncLiveTransform,
 	useLiveTransform,
 } from "./liveTransform";
+import { SelectionBarFrame } from "./SelectionBarFrame";
 import type { DetectionOverlayRegion } from "./SelectionOverlay";
-import {
-	placeSelectionBar,
-	selectionScreenBounds,
-} from "./selectionBarPlacement";
-import { readShownViewport, type ShownViewport } from "./shownViewport";
 import { useCanvasCursor } from "./useCanvasCursor";
 import { useCanvasTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
@@ -98,13 +81,6 @@ function liveHandleAt(
 	);
 }
 const NO_DETECTIONS: readonly DetectionOverlayRegion[] = [];
-// The selection bar's distance from the selection, above it past the rotate
-// knob or below it past the handles, and from the view's edges.
-const SELECTION_BAR_GAPS = {
-	above: handleMetrics.knobOffset + handleMetrics.size / 2 + 10,
-	below: handleMetrics.size / 2 + 12,
-	margin: 8,
-};
 
 type EditorCanvasProps = {
 	ref?: Ref<EditorCanvasHandle>;
@@ -669,106 +645,12 @@ export function EditorCanvas({
 	);
 }
 
-function FitButton({ onPress }: { onPress: () => void }) {
-	const { anchor, tooltip } = useTooltip("Zoom to fit", "mod+0");
-	return (
-		<>
-			<Surface style={styles.fitPill}>
-				<Pressable
-					{...anchor}
-					hitSlop={8}
-					onPress={onPress}
-					accessibilityRole="button"
-					accessibilityLabel="Zoom to fit"
-					style={(state) => {
-						const { pressed, hovered } = interaction(state);
-						return [
-							styles.fitButton,
-							webTransition,
-							hovered && styles.fitHovered,
-							pressed && styles.fitPressed,
-						];
-					}}
-				>
-					<MaterialCommunityIcons
-						name="fit-to-screen-outline"
-						size={18}
-						color={colors.textPrimary}
-					/>
-					<Text style={styles.fitLabel}>Fit</Text>
-				</Pressable>
-			</Surface>
-			{tooltip}
-		</>
-	);
-}
-
-/**
- * Places `children` by the selection (see `placeSelectionBar`), within
- * `width` and `height`, as the live values move it. It's hidden until it has
- * a size to place, and while a gesture holds the layer.
- */
-function SelectionBarFrame({
-	live,
-	shown,
-	width,
-	height,
-	children,
-}: {
-	live: LiveTransform;
-	shown: ShownViewport;
-	width: number;
-	height: number;
-	children: ReactNode;
-}) {
-	const barSize = useSharedValue({ width: 0, height: 0 });
-	const style = useAnimatedStyle(() => {
-		const { x, y } = placeSelectionBar(
-			selectionScreenBounds(
-				readLiveTransform(live),
-				readLiveBox(live),
-				readShownViewport(shown),
-			),
-			barSize.value,
-			{ width, height },
-			SELECTION_BAR_GAPS,
-		);
-		const visible =
-			barSize.value.width > 0 &&
-			live.activeId.value !== null &&
-			live.heldId.value === null;
-		return {
-			transform: [{ translateX: x }, { translateY: y }],
-			opacity: withTiming(visible ? 1 : 0, { duration: visible ? 160 : 80 }),
-		};
-	}, [live, shown, width, height]);
-	return (
-		// A plain view, since Reanimated drops `box-none` on web.
-		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-			<Animated.View
-				style={[styles.selectionBar, style]}
-				onLayout={(event) => {
-					const { width, height } = event.nativeEvent.layout;
-					barSize.value = { width, height };
-				}}
-			>
-				{children}
-			</Animated.View>
-		</View>
-	);
-}
-
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
 	canvas: {
 		flex: 1,
-	},
-	selectionBar: {
-		position: "absolute",
-		top: 0,
-		left: 0,
 	},
 	failure: {
 		position: "absolute",
@@ -779,27 +661,6 @@ const styles = StyleSheet.create({
 	},
 	fit: {
 		position: "absolute",
-	},
-	fitPill: {
-		borderRadius: radii.medium,
-	},
-	fitButton: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: space.xxs + 2,
-		paddingVertical: space.xs,
-		paddingLeft: space.sm - 2,
-		paddingRight: space.sm,
-	},
-	fitHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	fitPressed: {
-		backgroundColor: colors.pressedOverlay,
-	},
-	fitLabel: {
-		...typography.label,
-		color: colors.textPrimary,
 	},
 	failurePill: {
 		borderRadius: 18,
