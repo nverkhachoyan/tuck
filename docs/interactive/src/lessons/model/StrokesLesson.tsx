@@ -152,7 +152,7 @@ export function StrokesLesson() {
 			title: "Draw a stroke",
 			body: (
 				<p>
-					Draw anywhere. With no drawing selected, the store calls{" "}
+					Draw anywhere. With no drawing selected, <code>drawStroke</code> calls{" "}
 					<code>createDrawingLayer</code>. Its transform starts at the canvas's
 					top-left corner, then <code>recenterDrawing</code> moves the origin to
 					the middle of the ink and shifts every point to match: see the dashed
@@ -230,8 +230,8 @@ export function StrokesLesson() {
 			name: "hitTestDrawing",
 		},
 		{
-			label: "store: drawStroke",
-			file: "src/store/editorSlice.ts",
+			label: "drawStroke",
+			file: "src/model/edits/draw.ts",
 			name: "drawStroke",
 		},
 		{

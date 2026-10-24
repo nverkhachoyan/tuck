@@ -10,15 +10,12 @@ import {
 	withMask,
 } from "../model/cutout.ts";
 import {
-	createDrawingLayer,
 	createImageLayer,
-	createShapeLayer,
 	createStickerLayer,
 	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
 	groupsForLayers,
-	isLineShape,
 	type Layer,
 	type MaskStroke,
 	type RedactionBoxPlacement,
@@ -26,7 +23,6 @@ import {
 	type RedactionLayer,
 	reorderLayer,
 	resizeLayerBox,
-	restyleShape,
 	type ShapeEdit,
 	type ShapeKind,
 	type ShapeLayer,
@@ -38,7 +34,7 @@ import {
 	type TextLayerStyle,
 	withAdjustments,
 } from "../model/document.ts";
-import { addStroke } from "../model/drawing.ts";
+import { addShape, drawStroke, setShapeStyle } from "../model/edits/draw.ts";
 import {
 	addMaskedRedaction,
 	addRedactionBox,
@@ -57,7 +53,6 @@ import {
 	type Transform,
 	transformsEqual,
 } from "../model/geometry.ts";
-import { erasesShape } from "../model/shapes.ts";
 
 // Undo steps kept; the oldest are dropped beyond this.
 export const MAX_HISTORY = 100;
@@ -409,44 +404,11 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 			addOnTop("editor/duplicateSelectedLayer", duplicateLayer(layer));
 		},
 
-		// A stroke in document space joins the selected drawing, or starts a new
-		// one on top. That one is selected, so the next stroke joins it too. An
-		// eraser also removes each shape it passes over, whole, in the same undo
-		// step; a shape is one mark, so it's never left in pieces.
-		drawStroke: (stroke) => {
-			const { document } = get();
-			if (!document || stroke.points.length < 2) return;
-			const selected = selectSelectedLayer(get());
-			const target =
-				selected?.type === "drawing" && !selected.locked ? selected : null;
-			const erased = new Set(
-				stroke.type === "eraser"
-					? document.layers
-							.filter(
-								(layer) =>
-									layer.type === "shape" &&
-									!layer.locked &&
-									!layer.hidden &&
-									erasesShape(layer, stroke.points, stroke.width),
-							)
-							.map((layer) => layer.id)
-					: [],
-			);
-			if (target || erased.size > 0) {
-				setLayers(
-					"editor/drawStroke",
-					(layers) =>
-						layers
-							.filter((layer) => !erased.has(layer.id))
-							.map((layer) =>
-								layer === target ? addStroke(target, stroke) : layer,
-							),
-					selectionWithout(erased),
-				);
-			} else if (stroke.type === "pen") {
-				addOnTop("editor/drawStroke", createDrawingLayer(stroke));
-			}
-		},
+		// A new drawing is selected, so the next stroke joins it too.
+		drawStroke: (stroke) =>
+			setDocument("editor/drawStroke", (document) =>
+				drawStroke(document, get().selectedLayerId, stroke),
+			),
 
 		// On top and selected, so restyling it right after (see
 		// `setRedactionEffect`) changes it.
@@ -518,21 +480,17 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				setRedactionEffect(document, id, effect),
 			),
 
-		// On top and selected, like a redaction's box, so restyling it right
-		// after (see `setShapeStyle`) changes it. A box needs both sides.
-		addShape: (shape, placement, style) => {
-			const { width, height } = placement;
-			if (width <= 0 || (height <= 0 && !isLineShape(shape))) return;
-			addOnTop("editor/addShape", createShapeLayer(shape, placement, style));
-		},
+		// Selected, like a redaction's box, so restyling it right after (see
+		// `setShapeStyle`) changes it.
+		addShape: (shape, placement, style) =>
+			setDocument("editor/addShape", (document) =>
+				addShape(document, shape, placement, style),
+			),
 
-		setShapeStyle: (id, edit) => {
-			const target = findLayer(id);
-			if (target?.type !== "shape") return;
-			const restyled = restyleShape(target, edit);
-			if (restyled === target) return;
-			replaceLayer("editor/setShapeStyle", target, restyled);
-		},
+		setShapeStyle: (id, edit) =>
+			setDocument("editor/setShapeStyle", (document) =>
+				setShapeStyle(document, id, edit),
+			),
 
 		// By id, like `transformLayer`: a dial's drag belongs to the image it
 		// started on.

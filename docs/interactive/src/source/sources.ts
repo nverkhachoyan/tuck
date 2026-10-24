@@ -2,6 +2,7 @@ import adjustments from "@src/model/adjustments.ts?raw";
 import cutout from "@src/model/cutout.ts?raw";
 import documentFile from "@src/model/document.ts?raw";
 import drawing from "@src/model/drawing.ts?raw";
+import draw from "@src/model/edits/draw.ts?raw";
 import framing from "@src/model/framing.ts?raw";
 import geometry from "@src/model/geometry.ts?raw";
 import shapes from "@src/model/shapes.ts?raw";
@@ -29,6 +30,7 @@ export const sources = {
 	"src/model/cutout.ts": cutout,
 	"src/model/document.ts": documentFile,
 	"src/model/drawing.ts": drawing,
+	"src/model/edits/draw.ts": draw,
 	"src/model/framing.ts": framing,
 	"src/model/geometry.ts": geometry,
 	"src/model/shapes.ts": shapes,
