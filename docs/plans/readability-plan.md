@@ -182,10 +182,10 @@ Check both the phone grid and the wide rail, and a blank canvas with no image, w
 
 ## Stage 7: Small consistency fixes
 
-- [ ] `refactor: share the document's size between the editor's hooks`
+- [x] `docs: keep the three document size memos`
 - [ ] `refactor: rename editorCanvasInput to canvasInputFor`
 
-* Optional. `useMemo(() => ({ width: document.width, height: document.height }), …)` is written in `EditorScreen`, `EditorCanvas`, and `useFindTool`, three memos of four lines each. A `useDocumentSize(document)` at the editor root can replace them. `useFindTool` can instead take `size` from its caller. Skip this step if neither reads better.
+* Optional. `useMemo(() => ({ width: document.width, height: document.height }), …)` is written in `EditorScreen`, `EditorCanvas`, and `useFindTool`, three memos of four lines each. A `useDocumentSize(document)` at the editor root can replace them. `useFindTool` can instead take `size` from its caller. Skip this step if neither reads better. Left as the three memos: `useFindTool` still needs the document for its detection key, and a shared hook would hide why the canvas memo stays stable for the gestures that capture it.
 * `editorCanvasInput.ts`, `useCanvasInput.ts`, and `canvas/canvasInput.ts` are hard to tell apart. The first exports `canvasToolFor` and `canvasInputFor`, and `useCanvasInput` is named after the second. Rename the file and its test to `canvasInputFor.ts`.
 
 ## Stage 8: Long doc comments
