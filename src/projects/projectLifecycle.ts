@@ -85,6 +85,20 @@ function parseOpenableProject(json: string): SavedProject | null {
 	return saved;
 }
 
+/** The file an open project writes, with the name and creation time it has. */
+function fileFor(
+	project: OpenProject,
+	fields: Pick<SavedProject, "updatedAt" | "document" | "thumbnail">,
+): SavedProject {
+	const { createdAt, name } = project;
+	return {
+		version: PROJECT_VERSION,
+		createdAt,
+		...fields,
+		name: name ?? undefined,
+	};
+}
+
 export function createProjectLifecycle(storage: ProjectStorage) {
 	const openProjects = new Map<string, OpenProject>();
 
@@ -321,14 +335,11 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			if (savedJson === project.savedJson) return;
 			// A newly picked photo is not a project until an edit has existed.
 			if (!hasEdits(document) && project.savedJson === null) return;
-			const file: SavedProject = {
-				version: PROJECT_VERSION,
-				createdAt: project.createdAt,
+			const file = fileFor(project, {
 				updatedAt: Date.now(),
 				document: saved,
 				thumbnail: project.thumbnail ?? undefined,
-				name: project.name ?? undefined,
-			};
+			});
 			await storage.writeProjectFile(id, JSON.stringify(file));
 			project.savedJson = savedJson;
 			project.updatedAt = file.updatedAt;
@@ -354,14 +365,11 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				if (project.savedJson === null || project.updatedAt !== updatedAt) {
 					return;
 				}
-				const file: SavedProject = {
-					version: PROJECT_VERSION,
-					createdAt: project.createdAt,
+				const file = fileFor(project, {
 					updatedAt,
 					document: JSON.parse(project.savedJson),
 					thumbnail,
-					name: project.name ?? undefined,
-				};
+				});
 				await storage.writeProjectFile(id, JSON.stringify(file));
 				project.thumbnail = thumbnail;
 			});
