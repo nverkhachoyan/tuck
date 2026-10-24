@@ -4,11 +4,10 @@ import type { EditorDocument } from "@/model/document";
 import type { Point, Rect, Size } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
 import type { ShapePlacement } from "@/model/layers/shape";
-import { type CanvasTool, canAddTo } from "./canvasInput";
+import { type CanvasLookups, type CanvasTool, canAddTo } from "./canvasInput";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import type { LiveStroke } from "./LiveStrokeOverlay";
 import { strokeIntent } from "./strokeIntent";
-import type { CanvasLookups } from "./useCanvasTap";
 import { usePaintGesture } from "./usePaintGesture";
 import type { DocumentViewport } from "./viewport";
 

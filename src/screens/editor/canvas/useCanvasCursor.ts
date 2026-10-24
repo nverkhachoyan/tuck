@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 import type { Layer } from "@/model/layers/layer";
 import { type CanvasCursor, cursorForHandle } from "./canvasCursor";
+import type { CanvasLookups } from "./canvasInput";
 import { hitsLayer, type LayerTarget } from "./hitTest";
-import type { CanvasLookups } from "./useCanvasTap";
 import type { ViewZoom } from "./viewport";
 
 /**

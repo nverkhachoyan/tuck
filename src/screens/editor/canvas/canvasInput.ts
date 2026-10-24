@@ -1,3 +1,4 @@
+import type { Point } from "../../../model/geometry.ts";
 import type { Brush } from "../../../model/layers/drawing.ts";
 import type { CutStroke } from "../../../model/layers/image.ts";
 import type { Layer } from "../../../model/layers/layer.ts";
@@ -5,6 +6,7 @@ import type { RedactionEffect } from "../../../model/layers/redaction.ts";
 import type { ShapeKind, ShapeStyle } from "../../../model/layers/shape.ts";
 import type { MaskStroke } from "../../../model/strokes.ts";
 import type { DialDrag } from "../shell/dialDrag.ts";
+import type { Handle } from "./handleGeometry.ts";
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
@@ -38,6 +40,16 @@ export type CanvasInput =
 	| { type: "editText" }
 	| { type: "find"; imageId: string; onToggle: (sourceIndex: number) => void }
 	| { type: "adjust"; drag: DialDrag };
+
+// What the canvas's gestures ask about a point from the view. The hooks that
+// handle a tap, a stroke, or a hover take this instead of the viewport, the
+// targets, and the selection each.
+export type CanvasLookups = {
+	handleAt: (screenX: number, screenY: number) => Handle | null;
+	layerAt: (screenX: number, screenY: number) => string | null;
+	toDocument: (screenX: number, screenY: number) => Point;
+	tapAway: (point: Point) => void;
+};
 
 export type InputRules = {
 	// What the selection does: holds still, without handles; transforms with
