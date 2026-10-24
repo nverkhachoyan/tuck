@@ -16,7 +16,9 @@ const BACK_SIZE = 44;
 /**
  * Top bar with a Back action, an optional centered title (with a `subtitle`
  * under it, in small print), and an optional trailing action. Back is a chevron; `backLabel` names where it goes, for
- * assistive tech and as its tooltip on web. Without `onBack`, the title, if
+ * assistive tech and as its tooltip on web. With `backColumn`, Back is
+ * centered over a column that wide at the bar's left (the wide editor's
+ * rail) rather than lined up with the edge. Without `onBack`, the title, if
  * any, takes Back's place. Crop's header has neither: it covers the editor
  * like a dialog, its name is in the dock's footer, and it keeps only its
  * actions.
@@ -25,12 +27,14 @@ export function ScreenHeader({
 	title,
 	subtitle,
 	backLabel = "Back",
+	backColumn,
 	onBack,
 	action,
 }: {
 	title?: string;
 	subtitle?: string;
 	backLabel?: string;
+	backColumn?: number;
 	onBack?: () => void;
 	action?: ReactNode;
 }) {
@@ -51,7 +55,7 @@ export function ScreenHeader({
 			{onBack ? (
 				<>
 					{heading && <View style={styles.titleContainer}>{heading}</View>}
-					<BackButton label={backLabel} onPress={onBack} />
+					<BackButton label={backLabel} column={backColumn} onPress={onBack} />
 				</>
 			) : (
 				(heading ?? <View />)
@@ -63,9 +67,11 @@ export function ScreenHeader({
 
 function BackButton({
 	label,
+	column,
 	onPress,
 }: {
 	label: string;
+	column?: number;
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label);
@@ -80,6 +86,9 @@ function BackButton({
 					const { pressed, hovered } = interaction(state);
 					return [
 						styles.back,
+						column !== undefined && {
+							marginLeft: (column - BACK_SIZE) / 2 - space.md,
+						},
 						webTransition,
 						hovered && styles.backHovered,
 						pressed && styles.backPressed,

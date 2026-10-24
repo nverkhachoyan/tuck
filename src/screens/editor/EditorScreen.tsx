@@ -487,6 +487,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					    leaving keeps the changes, as the browser's own Back does. */}
 					<ScreenHeader
 						backLabel="Back to projects"
+						// Over the rail's tools.
+						backColumn={wide ? RAIL_WIDTH : undefined}
 						onBack={leave}
 						// Only a wide screen has room between Back and the actions.
 						title={wide ? projectTitle : undefined}
@@ -512,8 +514,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							/>
 						}
 					/>
-					{/* The dock covers the stage's bottom, which runs under it. */}
-					<CanvasStage ref={layout.stageRef} toBottom>
+					{/* The dock covers the stage's bottom, which runs under it. The
+					    rail and inspector frame it on a wide screen. */}
+					<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
 						<EditorCanvas
 							ref={canvasRef}
 							document={document}

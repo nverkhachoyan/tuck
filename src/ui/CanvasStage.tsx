@@ -9,20 +9,24 @@ const FRAME = 8;
 /**
  * The area a canvas sits in, in the screen's own color, so the photo rests
  * on the same surface as the bars around it. It's inset on every side on a
- * wide screen. The editor, the crop tool, and export share it, so the
- * canvas keeps its place between them. `toBottom` runs it down to the
+ * wide screen, unless `frameless`, for where bars already border it (the wide
+ * editor's rail and inspector). The editor and the crop tool share it, so
+ * the canvas keeps its place between them. `toBottom` runs it down to the
  * screen's edge, under the editor's dock; otherwise something sits below it.
  */
 export function CanvasStage({
 	ref,
 	toBottom = false,
+	frameless = false,
 	children,
 }: {
 	ref?: Ref<View>;
 	toBottom?: boolean;
+	frameless?: boolean;
 	children: ReactNode;
 }) {
-	const framed = useWindowDimensions().width >= FRAMED_MIN_WIDTH;
+	const wide = useWindowDimensions().width >= FRAMED_MIN_WIDTH;
+	const framed = wide && !frameless;
 	return (
 		<View
 			ref={ref}
