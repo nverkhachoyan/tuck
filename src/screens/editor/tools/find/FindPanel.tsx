@@ -62,9 +62,9 @@ const SCOPES = [
 ] as const;
 
 /**
- * Find's options in the wide editor's header: the effect and strength, or
- * color, of what Done redacts. Faces, text, and the results sit in the
- * inspector, above the layers they'll join.
+ * Find's options in the wide editor's header: the effect what Done redacts
+ * is drawn with, and its color when that's solid. Faces, text, and the
+ * results sit in the inspector, above the layers they'll join.
  */
 export function FindBar(props: ComponentProps<typeof RedactLook>) {
 	return (

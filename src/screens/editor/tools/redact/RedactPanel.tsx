@@ -19,6 +19,7 @@ import {
 } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
+	SizeChip,
 	SizeChoices,
 	ToolChoices,
 	ToolOption,
@@ -102,9 +103,9 @@ const REDACT_TOOLS = [
 ] as const;
 /**
  * Redact's options in the wide editor's header: Box, Brush, and Eraser, Find
- * when there's a photo to look in, then the effect and its strength or color,
- * and a size for the brush and eraser. Choosing the sub-tool already in use
- * leaves it, since the options stay in view.
+ * when there's a photo to look in, then the effect and, for a solid one, its
+ * color, and a size for the brush and eraser. Choosing the sub-tool already
+ * in use leaves it, since the options stay in view.
  */
 export function RedactBar({
 	settings,
@@ -162,8 +163,7 @@ export function RedactBar({
 						onEyedropper,
 					})}
 				{tool !== "box" && (
-					<SizeChoices
-						nowrap
+					<SizeChip
 						index={brush ? settings.brushSize : settings.eraserSize}
 						color={brush ? colors.textPrimary : null}
 						onPick={pickSize}
