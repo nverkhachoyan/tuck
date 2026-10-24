@@ -2,9 +2,18 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Highlight } from "@/ui/Highlight";
+import { interaction } from "@/ui/interaction";
 import { RingChoice } from "@/ui/RingChoice";
-import { colors, radii, typography } from "@/ui/theme";
+import { useTooltip } from "@/ui/Tooltip";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { ColorOptions } from "../../shell/ColorPicker";
+import { OptionSegments } from "../../shell/ContextBar";
+import {
+	PixelSquare,
+	RedactLook,
+	STRENGTH_NAMES,
+	StrengthDot,
+} from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
 	SizeChoices,
@@ -19,11 +28,6 @@ const EFFECT_NAMES: Record<RedactSettings["effect"], string> = {
 	solid: "Solid",
 	blur: "Blur",
 	pixelate: "Pixelate",
-};
-
-const STRENGTH_NAMES = {
-	blur: ["Light blur", "Medium blur", "Strong blur"],
-	pixelate: ["Small pixels", "Medium pixels", "Large pixels"],
 };
 
 /**
@@ -85,6 +89,107 @@ export function RedactPanel({
 				onPress={onToggleOptions}
 			/>
 		</ToolRow>
+	);
+}
+
+const REDACT_TOOLS = [
+	{ title: "Box" },
+	{ title: "Brush" },
+	{ title: "Eraser" },
+];
+/**
+ * Redact's options in the wide editor's header: Box, Brush, and Eraser, Find
+ * when there's a photo to look in, then the effect and its strength or color,
+ * and a size for the brush and eraser. Choosing the sub-tool already in use
+ * leaves it, since the options stay in view.
+ */
+export function RedactBar({
+	settings,
+	customColor,
+	onChange,
+	onPickCustom,
+	onEyedropper,
+	onFind,
+}: {
+	settings: RedactSettings;
+	customColor: string | null;
+	onChange: (settings: RedactSettings) => void;
+	onPickCustom: (color: string) => void;
+	onEyedropper: () => void;
+	onFind?: () => void;
+}) {
+	const { tool } = settings;
+	const selected = tool === "brush" ? 1 : tool === "eraser" ? 2 : 0;
+	const brush = tool === "brush";
+	const pickSize = (size: number) =>
+		onChange(
+			brush
+				? { ...settings, brushSize: size }
+				: { ...settings, eraserSize: size },
+		);
+	return (
+		<>
+			<OptionSegments
+				label="Redact tool"
+				options={REDACT_TOOLS}
+				selected={selected}
+				onSelect={(index) => {
+					const next = (["box", "brush", "eraser"] as const)[index];
+					if (!next || next === tool) return;
+					onChange({ ...settings, tool: next });
+				}}
+			/>
+			{onFind && <FindButton onPress={onFind} />}
+			{tool !== "eraser" && (
+				<RedactLook
+					settings={settings}
+					customColor={customColor}
+					onChange={onChange}
+					onPickCustom={onPickCustom}
+					onEyedropper={onEyedropper}
+				/>
+			)}
+			{tool !== "box" && (
+				<SizeChoices
+					nowrap
+					index={brush ? settings.brushSize : settings.eraserSize}
+					color={brush ? colors.textPrimary : null}
+					onPick={pickSize}
+				/>
+			)}
+		</>
+	);
+}
+
+/** Find, beside Redact's sub-tools: it leaves Redact for the scan. */
+function FindButton({ onPress }: { onPress: () => void }) {
+	const { anchor, tooltip } = useTooltip("Find", TOOL_KEYS.find);
+	return (
+		<>
+			<Pressable
+				{...anchor}
+				accessibilityRole="button"
+				accessibilityLabel="Find"
+				onPress={onPress}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.find,
+						webTransition,
+						hovered && styles.findHovered,
+						pressed && styles.findPressed,
+					];
+				}}
+			>
+				<MaterialCommunityIcons
+					name="image-search-outline"
+					size={20}
+					color={colors.textPrimary}
+				/>
+				<Text style={styles.findLabel}>Find</Text>
+			</Pressable>
+			{tooltip}
+		</>
 	);
 }
 
@@ -249,66 +354,32 @@ export function EffectGlyph({
 	);
 }
 
-/** A dot whose halo spreads further the stronger the blur. */
-function StrengthDot({ strength }: { strength: number }) {
-	const size = 14 + strength * 7;
-	return (
-		<View
-			style={[
-				styles.halo,
-				{ width: size, height: size, borderRadius: size / 2 },
-			]}
-		>
-			<View style={styles.core} />
-		</View>
-	);
-}
-
-/** Four pixels, larger the larger the pixelation's. */
-function PixelSquare({ strength }: { strength: number }) {
-	const size = 14 + strength * 6;
-	return (
-		<View style={[styles.pixels, { width: size, height: size }]}>
-			<View style={[styles.pixel, styles.pixelLit]} />
-			<View style={styles.pixel} />
-			<View style={styles.pixel} />
-			<View style={[styles.pixel, styles.pixelLit]} />
-		</View>
-	);
-}
-
 const styles = StyleSheet.create({
+	find: {
+		height: 44,
+		flexDirection: "row",
+		flexShrink: 0,
+		alignItems: "center",
+		gap: 6,
+		paddingHorizontal: 12,
+		borderRadius: radii.small,
+	},
+	findHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	findPressed: {
+		backgroundColor: colors.pressedOverlay,
+	},
+	findLabel: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
+	},
 	solidTile: {
 		width: 22,
 		height: 22,
 		borderRadius: 6,
 		borderWidth: 1,
 		borderColor: colors.swatchRing,
-	},
-	halo: {
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: colors.borderStrong,
-	},
-	core: {
-		width: 8,
-		height: 8,
-		borderRadius: 4,
-		backgroundColor: colors.textPrimary,
-	},
-	pixels: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		borderRadius: 3,
-		overflow: "hidden",
-	},
-	pixel: {
-		width: "50%",
-		height: "50%",
-		backgroundColor: colors.borderStrong,
-	},
-	pixelLit: {
-		backgroundColor: colors.textPrimary,
 	},
 	effectChoice: {
 		width: 56,

@@ -15,10 +15,11 @@ import { CutOutOptions, CutOutPanel } from "./tools/cutout/CutOutPanel";
 import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
-import { FindPanel, FindTray } from "./tools/find/FindPanel";
+import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
 import type { useFindTool } from "./tools/find/useFindTool";
 import {
 	EffectGlyph,
+	RedactBar,
 	RedactOptions,
 	RedactPanel,
 } from "./tools/redact/RedactPanel";
@@ -61,7 +62,8 @@ export function ToolTrays({
 	modeState: EditorModeState;
 	onCustomColor: (color: string) => void;
 	bottomInset: number;
-	// A wide screen shows Draw's options in the header, so its tray stays shut.
+	// A wide screen shows Draw, Redact, and Find in the header, so their trays
+	// stay shut. Find's results are an inspector section instead of a tray.
 	wide?: boolean;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
@@ -91,7 +93,7 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{tray === "redact" && (
+			{tray === "redact" && !wide && (
 				<RedactOptions
 					settings={redact.settings}
 					customColor={customColor}
@@ -103,7 +105,7 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{tray === "find" && (
+			{tray === "find" && !wide && (
 				<RedactOptions
 					settings={{ ...redact.chosen, tool: "box" }}
 					customColor={customColor}
@@ -126,18 +128,22 @@ export function ToolTrays({
 					onClose={closeTray}
 				/>
 			)}
-			{mode.type === "tool" && mode.tool === "find" && !tray && !eyedropper && (
-				<FindTray
-					state={find.state}
-					visibleIndices={find.visibleIndices}
-					selectedCount={find.selectedCount}
-					bottomInset={bottomInset}
-					onRetry={find.retry}
-					onStop={find.reset}
-					onSelectAll={find.selectAll}
-					onClear={find.clear}
-				/>
-			)}
+			{mode.type === "tool" &&
+				mode.tool === "find" &&
+				!tray &&
+				!eyedropper &&
+				!wide && (
+					<FindTray
+						state={find.state}
+						visibleIndices={find.visibleIndices}
+						selectedCount={find.selectedCount}
+						bottomInset={bottomInset}
+						onRetry={find.retry}
+						onStop={find.reset}
+						onSelectAll={find.selectAll}
+						onClear={find.clear}
+					/>
+				)}
 			{textPicker && styledText && (
 				<TextColorPicker
 					layer={styledText}
@@ -159,55 +165,99 @@ export function ToolTrays({
 /**
  * What the wide editor's header holds instead of the project's title: the
  * open tool's options. Phones have no bar; the dock shows the same tool.
- * Only Draw so far. The others still use the inspector.
+ * Draw, Redact, and Find so far. The others still use the inspector.
  */
 export function ContextBarContent({
 	panel,
 	dispatchMode,
-	tools: { draw },
+	tools: { draw, redact },
 	customColor,
 	onCustomColor,
+	onFind,
 	onCancel,
 	onDone,
 	doneLabel,
 }: ModeProps & {
 	panel: DockPanel;
 	onCustomColor: (color: string) => void;
+	onFind?: () => void;
 	onCancel: () => void;
 	onDone: () => void;
 	doneLabel?: string;
 }) {
-	if (panel !== "draw") return null;
-	return (
-		<ContextBar
-			title="Draw"
-			onCancel={onCancel}
-			onDone={onDone}
-			doneLabel={doneLabel}
-			doneShortcut="Escape"
-		>
-			<DrawBar
-				settings={draw.settings}
-				customColor={customColor}
-				onChange={draw.change}
-				onPickCustom={(color) => {
-					draw.change({ ...draw.settings, color });
-					onCustomColor(color);
-				}}
-				onEyedropper={() =>
-					dispatchMode({
-						type: "startEyedropper",
-						eyedropper: {
-							apply: (color) => {
-								draw.change({ ...draw.settings, color });
-								onCustomColor(color);
-							},
-						},
-					})
-				}
-			/>
-		</ContextBar>
-	);
+	// For a bar whose colors go to `apply`: a color from its picker, which
+	// becomes the custom color too, and the eyedropper, for a color from the
+	// canvas.
+	const colorTarget = (apply: (color: string) => void) => ({
+		onPickCustom: (color: string) => {
+			apply(color);
+			onCustomColor(color);
+		},
+		onEyedropper: () =>
+			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
+	});
+	if (panel === "draw") {
+		return (
+			<ContextBar
+				title="Draw"
+				onCancel={onCancel}
+				onDone={onDone}
+				doneLabel={doneLabel}
+				doneShortcut="Escape"
+			>
+				<DrawBar
+					settings={draw.settings}
+					customColor={customColor}
+					onChange={draw.change}
+					{...colorTarget((color) => draw.change({ ...draw.settings, color }))}
+				/>
+			</ContextBar>
+		);
+	}
+	if (panel === "redact") {
+		return (
+			<ContextBar
+				title="Redact"
+				onCancel={onCancel}
+				onDone={onDone}
+				doneLabel={doneLabel}
+				doneShortcut="Escape"
+			>
+				<RedactBar
+					settings={redact.settings}
+					customColor={customColor}
+					onChange={redact.change}
+					onFind={onFind}
+					{...colorTarget((color) =>
+						redact.change({ ...redact.settings, color }),
+					)}
+				/>
+			</ContextBar>
+		);
+	}
+	if (panel === "find") {
+		return (
+			<ContextBar
+				title="Find"
+				onCancel={onCancel}
+				onDone={onDone}
+				doneLabel={doneLabel}
+				doneShortcut="Escape"
+			>
+				<FindBar
+					settings={redact.chosen}
+					customColor={customColor}
+					onChange={(next) =>
+						redact.setChosen((current) => ({ ...current, ...next }))
+					}
+					{...colorTarget((color) =>
+						redact.setChosen((current) => ({ ...current, color })),
+					)}
+				/>
+			</ContextBar>
+		);
+	}
+	return null;
 }
 
 /**

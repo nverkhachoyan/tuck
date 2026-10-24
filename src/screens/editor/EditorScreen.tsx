@@ -52,6 +52,7 @@ import { stepCutSize } from "./tools/cutout/cutOutSettings";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { stepBrushSize } from "./tools/draw/brushSettings";
 import { useDrawTool } from "./tools/draw/useDrawTool";
+import { FindInspector } from "./tools/find/FindPanel";
 import { useFindTool } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
@@ -314,9 +315,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			: selectedLayer
 				? "layer"
 				: "idle";
-	// Draw's options live in the header on a wide screen, and the inspector
-	// keeps the layers. The other tools still take the inspector.
-	const drawInBar = wide && panelKind === "draw";
+	// Draw, Redact, and Find live in the header on a wide screen, and the
+	// inspector keeps the layers. Find's results sit above them. The other
+	// tools still take the inspector.
+	const inBar =
+		wide &&
+		(panelKind === "draw" || panelKind === "redact" || panelKind === "find");
 
 	const focused = useIsFocused();
 	const {
@@ -468,6 +472,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		/>
 	);
 
+	const findDoneLabel =
+		tool === "find" && find.selectedCount > 0
+			? `Redact ${find.selectedCount} selected`
+			: undefined;
 	// The dock's Cancel and Done, for the open tool, the text being typed, or
 	// the selected layer.
 	const dockFooter = tool ? (
@@ -475,11 +483,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			title={TOOL_TITLES[tool]}
 			onCancel={cancel}
 			onDone={done}
-			doneLabel={
-				tool === "find" && find.selectedCount > 0
-					? `Redact ${find.selectedCount} selected`
-					: undefined
-			}
+			doneLabel={findDoneLabel}
 			doneShortcut="Escape"
 		/>
 	) : editingText ? (
@@ -514,25 +518,27 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						backColumn={wide ? RAIL_INSET : undefined}
 						onBack={leave}
 						// Only a wide screen has room between Back and the actions,
-						// and Draw's bar takes that room while it's open.
-						title={wide && !drawInBar ? projectTitle : undefined}
+						// and a context bar takes that room while one is open.
+						title={wide && !inBar ? projectTitle : undefined}
 						subtitle={
-							wide && !drawInBar
+							wide && !inBar
 								? saveProblem
 									? "Not saved"
 									: "Saved on this device"
 								: undefined
 						}
 						bar={
-							drawInBar ? (
+							inBar ? (
 								<ContextBarContent
-									panel="draw"
+									panel={panelKind}
 									dispatchMode={dispatchMode}
 									tools={tools}
 									customColor={customColor}
 									onCustomColor={setCustomColor}
+									onFind={targetImage ? startTool.find : undefined}
 									onCancel={cancel}
 									onDone={done}
+									doneLabel={findDoneLabel}
 								/>
 							) : undefined
 						}
@@ -626,13 +632,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						{/* After the tool's options, so taps on the dock reach it rather
 				    than closing them. */}
 						<Dock
-							panel={drawInBar ? "idle" : panelKind}
+							panel={inBar ? "idle" : panelKind}
 							layout={wide ? "inspector" : "bar"}
-							footer={drawInBar ? undefined : dockFooter}
+							footer={inBar ? undefined : dockFooter}
 							keyboardOverlap={layout.keyboardOverlap}
 						>
 							<DockContent
-								panel={drawInBar ? "idle" : panelKind}
+								panel={inBar ? "idle" : panelKind}
 								optionsOpen={toolOptionsOpen}
 								onFind={targetImage ? startTool.find : undefined}
 								dispatchMode={dispatchMode}
@@ -642,7 +648,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								layerActions={layerActions}
 								idle={
 									wide ? (
-										<LayersPanel {...layerList} layout="inspector" open />
+										panelKind === "find" ? (
+											<FindInspector
+												state={find.state}
+												visibleIndices={find.visibleIndices}
+												selectedCount={find.selectedCount}
+												onFind={find.find}
+												onRetry={find.retry}
+												onStop={find.reset}
+												onSelectAll={find.selectAll}
+												onClear={find.clear}
+											>
+												<LayersPanel {...layerList} layout="inspector" open />
+											</FindInspector>
+										) : (
+											<LayersPanel {...layerList} layout="inspector" open />
+										)
 									) : (
 										<ToolsPanel
 											addBusy={addBusy}

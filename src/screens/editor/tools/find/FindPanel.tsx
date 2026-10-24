@@ -1,8 +1,9 @@
-import { type ReactNode, useState } from "react";
+import { type ComponentProps, type ReactNode, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
-import { colors, typography } from "@/ui/theme";
+import { colors, space, typography } from "@/ui/theme";
+import { RedactLook } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { Tray } from "../../shell/ToolOptions";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
@@ -60,6 +61,15 @@ const SCOPES = [
 ] as const;
 
 /**
+ * Find's options in the wide editor's header: the effect and strength, or
+ * color, of what Done redacts. Faces, text, and the results sit in the
+ * inspector, above the layers they'll join.
+ */
+export function FindBar(props: ComponentProps<typeof RedactLook>) {
+	return <RedactLook {...props} />;
+}
+
+/**
  * How the scan is going, then what it found, to choose from and redact, in
  * a tray. It has no backdrop: taps on the canvas toggle the regions found.
  */
@@ -87,13 +97,110 @@ export function FindTray({
 	const [stacked, setStacked] = useState(false);
 	return (
 		<Tray bottomInset={bottomInset}>
+			<FindBody
+				state={state}
+				visibleIndices={visibleIndices}
+				selectedCount={selectedCount}
+				stacked={stacked}
+				onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
+				onRetry={onRetry}
+				onStop={onStop}
+				onSelectAll={onSelectAll}
+				onClear={onClear}
+			/>
+		</Tray>
+	);
+}
+
+/**
+ * Find on a wide screen: what to look for, and what was found, above the
+ * layers. The bar holds the style, so this section has no Style button.
+ */
+export function FindInspector({
+	state,
+	visibleIndices,
+	selectedCount,
+	onFind,
+	onRetry,
+	onStop,
+	onSelectAll,
+	onClear,
+	children,
+}: {
+	state: ImageDetectionState;
+	visibleIndices: readonly number[];
+	selectedCount: number;
+	onFind: (scope: DetectionScope) => void;
+	onRetry: () => void;
+	onStop: () => void;
+	onSelectAll: () => void;
+	onClear: () => void;
+	children: ReactNode;
+}) {
+	const scanned = state.status === "idle" ? null : state.scope;
+	return (
+		<View style={styles.inspectorStack}>
+			<View style={styles.findSection}>
+				<View style={styles.scopes}>
+					{SCOPES.map(({ scope, label, icon }) => (
+						<ToolButton
+							key={scope}
+							label={label}
+							icon={icon}
+							selected={scanned === scope}
+							busy={state.status === "working" && scanned === scope}
+							onPress={() => onFind(scope)}
+						/>
+					))}
+				</View>
+				<FindBody
+					state={state}
+					visibleIndices={visibleIndices}
+					selectedCount={selectedCount}
+					stacked
+					onRetry={onRetry}
+					onStop={onStop}
+					onSelectAll={onSelectAll}
+					onClear={onClear}
+				/>
+			</View>
+			{children}
+		</View>
+	);
+}
+
+function FindBody({
+	state,
+	visibleIndices,
+	selectedCount,
+	stacked,
+	onMeasure,
+	onRetry,
+	onStop,
+	onSelectAll,
+	onClear,
+}: {
+	state: ImageDetectionState;
+	visibleIndices: readonly number[];
+	selectedCount: number;
+	stacked: boolean;
+	onMeasure?: (width: number) => void;
+	onRetry: () => void;
+	onStop: () => void;
+	onSelectAll: () => void;
+	onClear: () => void;
+}) {
+	return (
+		<>
 			<Announcement
 				message={announcement(state, visibleIndices.length, selectedCount)}
 			/>
 			<View
 				style={[styles.content, stacked && styles.stacked]}
-				onLayout={(event) =>
-					setStacked(event.nativeEvent.layout.width < STACK_BELOW_WIDTH)
+				onLayout={
+					onMeasure
+						? (event) => onMeasure(event.nativeEvent.layout.width)
+						: undefined
 				}
 			>
 				{state.status === "idle" && (
@@ -131,7 +238,7 @@ export function FindTray({
 					/>
 				)}
 			</View>
-		</Tray>
+		</>
 	);
 }
 
@@ -272,5 +379,17 @@ const styles = StyleSheet.create({
 		flexWrap: "wrap",
 		alignItems: "center",
 		gap: 8,
+	},
+	inspectorStack: {
+		flex: 1,
+	},
+	findSection: {
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+	},
+	scopes: {
+		flexDirection: "row",
+		justifyContent: "center",
+		paddingTop: space.xs,
 	},
 });
