@@ -1,12 +1,6 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-	ActivityIndicator,
-	StyleSheet,
-	Text,
-	useWindowDimensions,
-	View,
-} from "react-native";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { assertNever } from "@/lib/assertNever";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
@@ -40,7 +34,6 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
-import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import type { CanvasInput, CanvasTool } from "./canvas/canvasInput";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import {
@@ -59,14 +52,7 @@ import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
 import { isCustomColor } from "./shell/ColorSwatches";
-import {
-	Dock,
-	DockFooter,
-	INSPECTOR_TRAY_TOP,
-	INSPECTOR_WIDTH,
-	InspectorBackdrop,
-	useDockInset,
-} from "./shell/Dock";
+import { Dock, DockFooter, InspectorBackdrop } from "./shell/Dock";
 import type { DialDrag } from "./shell/dialDrag";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
@@ -89,10 +75,11 @@ import { brushFor, shapeStyleFor } from "./tools/draw/brushSettings";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
-import { LAYERS_SIDEBAR_INSET, LayersPanel } from "./tools/layers/LayersPanel";
+import { LayersPanel } from "./tools/layers/LayersPanel";
 import { maskBrush, redactionEffect } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
 import { StickerSheet } from "./tools/stickers/StickerSheet";
+import type { StickerImage } from "./tools/stickers/savedStickers";
 import { bundledStickerImage } from "./tools/stickers/stickerFile";
 import { useSavedStickers } from "./tools/stickers/useSavedStickers";
 import { useStickerSave } from "./tools/stickers/useStickerSave";
@@ -101,16 +88,9 @@ import { type TextEditing, useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
 import { useDeleteNotice } from "./useDeleteNotice";
 import { useEditorActions } from "./useEditorActions";
+import { RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
-
-// Wide enough to show layers in a sidebar rather than a bottom sheet.
-const SIDEBAR_MIN_WIDTH = 900;
-// Wide enough for a tool rail at the left and an inspector at the right,
-// which the dock, its trays, and the layers move into.
-const INSPECTOR_MIN_WIDTH = 1024;
-const RAIL_WIDTH = 76;
-const INSPECTOR_TRAY = { top: INSPECTOR_TRAY_TOP, width: INSPECTOR_WIDTH };
 
 // What a tool's footer calls it.
 const TOOL_TITLES = {
@@ -169,6 +149,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const projectId = useStore((state) => state.projectId);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
+	const actions = useEditorActions();
 	const {
 		addImageLayer,
 		addStickerLayer,
@@ -176,8 +157,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		drawStroke,
 		addRedactionBox,
 		addMaskedRedaction,
-		setLayerGroupHidden,
-		setLayerGroupLocked,
 		deleteLayerGroup,
 		paintRedaction,
 		addShape,
@@ -189,10 +168,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		resizeBox,
 		nudgeLayer,
 		moveLayer,
-		setLayerHidden,
-		setLayerLocked,
 		setLayerResizable,
-		setBackground,
 		reframe,
 		deleteLayer,
 		selectLayer,
@@ -201,7 +177,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		beginSession,
 		commitSession,
 		cancelSession,
-	} = useEditorActions();
+	} = actions;
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
 
@@ -221,27 +197,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		dispatchMode,
 	});
 	const { styledText } = textEditing;
+	const editingText = textEditing.edit !== null;
 	const cropping = mode.type === "crop";
 	const keysTaken = takesKeys(mode);
 	const layersOpen = modeState.sheet === "layers";
 	const stickersOpen = modeState.sheet === "stickers";
 	const savedStickers = useSavedStickers();
 	const stickerSave = useStickerSave(savedStickers.save);
-	const windowWidth = useWindowDimensions().width;
-	const layersBeside = windowWidth >= SIDEBAR_MIN_WIDTH;
-	const wide = windowWidth >= INSPECTOR_MIN_WIDTH;
-	// While typing, the dock rides the keyboard, bringing the text's style
-	// and Done, and the document fits above them.
-	const stageRef = useRef<View>(null);
-	const keyboardOverlap = useKeyboardOverlap(
-		stageRef,
-		textEditing.edit !== null,
-	);
-	const barInset = useDockInset(keyboardOverlap);
-	// As an inspector, the dock covers none of the canvas's bottom.
-	const dockInset = wide ? 0 : barInset;
-	// An open tray's height: the canvas fits above it as well as the dock.
-	const [trayHeight, setTrayHeight] = useState(0);
+	const layout = useEditorLayout({ typing: editingText, layersOpen });
+	const { wide, layersBeside, dockInset } = layout;
 	// The tool in the dock. While drawing, strokes on the canvas go into the
 	// selected drawing, or a new one; while redacting, into the selected
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
@@ -387,7 +351,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 	// What input on the canvas does: the eyedropper's or a painting tool's,
 	// then Find's taps, Adjust's stillness, typing, or else selecting.
-	const editingText = textEditing.edit !== null;
 	const canvasInput = useMemo((): CanvasInput => {
 		if (canvasTool) return { type: "tool", tool: canvasTool };
 		if (tool === "find" && targetImage) {
@@ -551,11 +514,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	// Text being typed is finished first, so it goes where the editor does.
 	const openExport = () => {
-		if (textEditing.edit) textEditing.finish();
+		textEditing.finish();
 		router.push(exportHref(projectId));
 	};
 	const leave = () => {
-		if (textEditing.edit) textEditing.finish();
+		textEditing.finish();
 		leaveEditor(router);
 	};
 
@@ -700,15 +663,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		document,
 		selectedLayer,
 		actions: {
-			selectLayer,
-			moveLayer,
-			setLayerHidden,
-			setLayerLocked,
+			...actions,
 			deleteLayer: deleteWithNotice,
-			setLayerGroupHidden,
-			setLayerGroupLocked,
 			deleteLayerGroup: deleteGroupWithNotice,
-			setBackground,
 		},
 		onFinishText: textEditing.finish,
 		onClose: closeLayers,
@@ -726,7 +683,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// A tool picked from the rail while another is open finishes that one.
 	const fromRail = (start: () => void) => () => {
 		if (tool) finishTool();
-		if (textEditing.edit) textEditing.finish();
+		textEditing.finish();
 		start();
 	};
 	// The tools' buttons, for the dock and, through `fromRail`, the rail.
@@ -755,9 +712,79 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			onSaveSticker: stickerSave.save,
 		});
 
+	// Takes back the open tool's changes to its image: Adjust's adjustments,
+	// or Cut out's cut.
+	const resetEdit = adjustedLayer?.adjustments
+		? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
+		: cutLayer && isCutOut(cutLayer)
+			? () => setMask(cutLayer.id, null)
+			: undefined;
+
+	// A tap on selected text edits it, with the caret where it landed.
+	const editSelectedTextAt =
+		selectedTextLayer &&
+		((point: Point) =>
+			textEditing.editSelected(
+				textIndexAt(
+					selectedTextLayer,
+					toLayerSpace(selectedTextLayer.transform, point),
+				),
+			));
+
+	const selectionBar = selectedLayer && (
+		<SelectionBar
+			canMoveForward={selectedIndex < document.layers.length - 1}
+			canMoveBackward={selectedIndex > 0}
+			onEdit={selectedTextLayer ? () => textEditing.editSelected() : undefined}
+			stretched={selectedLayer.resizable === true}
+			onToggleStretch={
+				selectedLayer.type === "text" || selectedLayer.type === "image"
+					? () => setLayerResizable(selectedLayer.id, !selectedLayer.resizable)
+					: undefined
+			}
+			onArrange={arrangeSelected}
+			onDuplicate={duplicateSelectedLayer}
+			onDelete={() => deleteWithNotice(selectedLayer.id)}
+		/>
+	);
+
+	// The dock's Cancel and Done, for the open tool, the text being typed, or
+	// the selected layer.
+	const dockFooter = tool ? (
+		<DockFooter
+			title={TOOL_TITLES[tool]}
+			onCancel={cancelWithTool}
+			onDone={doneWithTool}
+			doneLabel={
+				tool === "find" && find.selectedCount > 0
+					? `Redact ${find.selectedCount} selected`
+					: undefined
+			}
+			doneShortcut="Escape"
+		/>
+	) : editingText ? (
+		<DockFooter
+			title="Text"
+			onCancel={textEditing.cancel}
+			onDone={textEditing.finish}
+			doneShortcut="Escape"
+		/>
+	) : selectedLayer ? (
+		<DockFooter
+			title={layerKindName(selectedLayer)}
+			onDone={() => selectLayer(null)}
+			doneShortcut="Escape"
+		/>
+	) : undefined;
+
+	const addStickerFrom = (load: () => Promise<StickerImage | null>) => {
+		closeStickers();
+		addSticker(load);
+	};
+
 	return (
-		<TrayHeight.Provider value={setTrayHeight}>
-			<TrayPlacement.Provider value={wide ? INSPECTOR_TRAY : null}>
+		<TrayHeight.Provider value={layout.setTrayHeight}>
+			<TrayPlacement.Provider value={layout.trayPlacement}>
 				<View style={styles.container}>
 					{/* Back and Export stay through every tool and while typing:
 					    leaving keeps the changes, as the browser's own Back does. */}
@@ -769,17 +796,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						subtitle={saveProblem ? "Not saved" : "Saved on this device"}
 						action={
 							<HeaderActions
-								typing={textEditing.edit !== null}
-								onReset={
-									adjustedLayer?.adjustments
-										? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
-										: cutLayer && isCutOut(cutLayer)
-											? () => setMask(cutLayer.id, null)
-											: undefined
-								}
+								typing={editingText}
+								onReset={resetEdit}
 								// A wide screen's inspector always shows the layers.
 								layers={
-									!tool && !textEditing.edit && !wide
+									!tool && !editingText && !wide
 										? {
 												open: layersOpen,
 												onToggle: () => dispatchMode({ type: "toggleLayers" }),
@@ -791,7 +812,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						}
 					/>
 					{/* The dock covers the stage's bottom, which runs under it. */}
-					<CanvasStage ref={stageRef} toBottom>
+					<CanvasStage ref={layout.stageRef} toBottom>
 						<EditorCanvas
 							ref={canvasRef}
 							document={document}
@@ -800,17 +821,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onTextSelect={textEditing.select}
 							onTextEditDone={textEditing.finish}
 							onSelectLayer={selectLayer}
-							onTapSelectedLayer={
-								selectedTextLayer
-									? (point) =>
-											textEditing.editSelected(
-												textIndexAt(
-													selectedTextLayer,
-													toLayerSpace(selectedTextLayer.transform, point),
-												),
-											)
-									: undefined
-							}
+							onTapSelectedLayer={editSelectedTextAt}
 							onCommitTransform={transformLayer}
 							onResizeBox={resizeBox}
 							onNudgeLayer={nudgeLayer}
@@ -827,36 +838,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							}
 							onTapAway={doneWithTool}
 							adjusting={adjusting}
-							bottomInset={wide ? 0 : dockInset + trayHeight}
-							leftInset={wide ? RAIL_WIDTH : 0}
-							rightInset={wide ? INSPECTOR_WIDTH : 0}
-							selectionBar={
-								selectedLayer && (
-									<SelectionBar
-										canMoveForward={selectedIndex < document.layers.length - 1}
-										canMoveBackward={selectedIndex > 0}
-										onEdit={
-											selectedTextLayer
-												? () => textEditing.editSelected()
-												: undefined
-										}
-										stretched={selectedLayer.resizable === true}
-										onToggleStretch={
-											selectedLayer.type === "text" ||
-											selectedLayer.type === "image"
-												? () =>
-														setLayerResizable(
-															selectedLayer.id,
-															!selectedLayer.resizable,
-														)
-												: undefined
-										}
-										onArrange={arrangeSelected}
-										onDuplicate={duplicateSelectedLayer}
-										onDelete={() => deleteWithNotice(selectedLayer.id)}
-									/>
-								)
-							}
+							bottomInset={layout.canvasInset.bottom}
+							leftInset={layout.canvasInset.left}
+							rightInset={layout.canvasInset.right}
+							selectionBar={selectionBar}
 						/>
 						{wide && <InspectorBackdrop />}
 						<ToolTrays
@@ -880,13 +865,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							<SaveErrorBanner
 								message={saveProblem}
 								onRetry={projectId !== null ? retryAutosave : undefined}
-								rightInset={
-									wide
-										? INSPECTOR_WIDTH
-										: layersBeside && layersOpen
-											? LAYERS_SIDEBAR_INSET
-											: undefined
-								}
+								rightInset={layout.coveredRight}
 							/>
 						)}
 						{layersBeside && !wide && layersPanel}
@@ -894,7 +873,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							<View style={styles.rail}>
 								<ToolsPanel
 									vertical
-									tool={textEditing.edit ? "text" : tool}
+									tool={editingText ? "text" : tool}
 									{...toolButtonsFor(toolStarters, fromRail)}
 								/>
 							</View>
@@ -905,35 +884,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						<Dock
 							panel={panelKind}
 							layout={wide ? "inspector" : "bar"}
-							footer={
-								tool ? (
-									<DockFooter
-										title={TOOL_TITLES[tool]}
-										onCancel={cancelWithTool}
-										onDone={doneWithTool}
-										doneLabel={
-											tool === "find" && find.selectedCount > 0
-												? `Redact ${find.selectedCount} selected`
-												: undefined
-										}
-										doneShortcut="Escape"
-									/>
-								) : textEditing.edit ? (
-									<DockFooter
-										title="Text"
-										onCancel={textEditing.cancel}
-										onDone={textEditing.finish}
-										doneShortcut="Escape"
-									/>
-								) : selectedLayer ? (
-									<DockFooter
-										title={layerKindName(selectedLayer)}
-										onDone={() => selectLayer(null)}
-										doneShortcut="Escape"
-									/>
-								) : undefined
-							}
-							keyboardOverlap={keyboardOverlap}
+							footer={dockFooter}
+							keyboardOverlap={layout.keyboardOverlap}
 						>
 							<DockContent
 								panel={panelKind}
@@ -985,29 +937,23 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							action="Undo"
 							onAction={deleteNotice.undo}
 							inset={{
-								left: wide ? RAIL_WIDTH : 0,
-								right: wide
-									? INSPECTOR_WIDTH
-									: layersBeside && layersOpen
-										? LAYERS_SIDEBAR_INSET
-										: 0,
-								bottom: dockInset + trayHeight + space.md,
+								left: layout.canvasInset.left,
+								right: layout.coveredRight ?? 0,
+								bottom: layout.coveredBottom + space.md,
 							}}
 						/>
 					)}
 					<StickerSheet
 						open={stickersOpen}
 						onClose={closeStickers}
-						onAddSticker={(sticker) => {
-							closeStickers();
-							addSticker(() => bundledStickerImage(sticker));
-						}}
+						onAddSticker={(sticker) =>
+							addStickerFrom(() => bundledStickerImage(sticker))
+						}
 						savedStickers={savedStickers.stickers}
 						savedError={savedStickers.error}
-						onAddSaved={(sticker) => {
-							closeStickers();
-							addSticker(() => savedStickers.place(sticker));
-						}}
+						onAddSaved={(sticker) =>
+							addStickerFrom(() => savedStickers.place(sticker))
+						}
 						// Kept, then added at once, as it was picked to use.
 						onSaveNew={() => {
 							closeStickers();
