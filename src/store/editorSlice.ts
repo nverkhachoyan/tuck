@@ -12,7 +12,6 @@ import {
 import {
 	createImageLayer,
 	createStickerLayer,
-	createTextLayer,
 	duplicateLayer,
 	type EditorDocument,
 	groupsForLayers,
@@ -42,6 +41,7 @@ import {
 	paintRedaction,
 	setRedactionEffect,
 } from "../model/edits/redact.ts";
+import { addTextLayer, updateTextLayer } from "../model/edits/text.ts";
 import {
 	documentFraming,
 	type Framing,
@@ -371,14 +371,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 				"editor/closeDocument",
 			),
 
-		addTextLayer: (text, style, area) => {
-			const { document } = get();
-			if (!document) return;
-			addOnTop(
-				"editor/addTextLayer",
-				createTextLayer(document, text, style, area),
-			);
-		},
+		addTextLayer: (text, style, area) =>
+			setDocument("editor/addTextLayer", (document) =>
+				addTextLayer(document, text, style, area),
+			),
 
 		addImageLayer: (uri, width, height, opaque, area) => {
 			const { document } = get();
@@ -537,13 +533,10 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => {
 
 		// By id, like `transformLayer`: text edited in place is committed to
 		// the layer it came from, whatever is selected by then.
-		updateTextLayer: (id, patch) => {
-			const target = findLayer(id);
-			if (target?.type !== "text") return;
-			const keys = Object.keys(patch) as (keyof TextLayerEdit)[];
-			if (keys.every((key) => target[key] === patch[key])) return;
-			replaceLayer("editor/updateTextLayer", target, { ...target, ...patch });
-		},
+		updateTextLayer: (id, patch) =>
+			setDocument("editor/updateTextLayer", (document) =>
+				updateTextLayer(document, id, patch),
+			),
 
 		// By id rather than "the selected layer": a gesture can end just as the
 		// selection moves on, and its result belongs to the layer it moved.
