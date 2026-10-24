@@ -36,11 +36,7 @@ import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import type { TextEditState } from "../editorMode";
-import {
-	type CanvasCursor,
-	cursorForHandle,
-	cursorStyle,
-} from "./canvasCursor";
+import { cursorStyle } from "./canvasCursor";
 import {
 	type CanvasInput,
 	cutImageId,
@@ -65,6 +61,7 @@ import {
 	selectionScreenBounds,
 } from "./selectionBarPlacement";
 import { readShownViewport, type ShownViewport } from "./shownViewport";
+import { useCanvasCursor } from "./useCanvasCursor";
 import { useCanvasTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useDialDragGesture } from "./useDialDragGesture";
@@ -199,7 +196,7 @@ export type EditorCanvasHandle = {
  * scale, resize, and rotate handles) is a single gesture on the canvas;
  * selection is resolved by hit-testing in document space, against
  * `layerTargets`, which the UI thread shares so a drag can pick its layer
- * there. With a mouse, the cursor shows what a press at the pointer would do.
+ * there. With a mouse, the cursor is `useCanvasCursor`.
  *
  * A tool's stroke is `useToolStroke`. The selection then holds still, and
  * only a redaction's or a shape's is outlined, to show what the tool's style
@@ -243,7 +240,6 @@ export function EditorCanvas({
 	selectionBar,
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
-	const [cursor, setCursor] = useState<CanvasCursor>("default");
 	const [imageFailed, setImageFailed] = useState(false);
 	const containerRef = useRef<View>(null);
 	const live = useLiveTransform();
@@ -470,47 +466,15 @@ export function EditorCanvas({
 		return { onSelection, offSelection };
 	}, [dragsSelection, live, sharedTargets, viewport]);
 
-	// What a press at the pointer would do: grab a handle, move a layer, move
-	// the view, or nothing. Renders only when that changes, not on every
-	// pointer move.
-	const handleHover = useCallback(
-		(screenX: number, screenY: number) => {
-			if (scale === 0) return;
-			const handle = lookups.handleAt(screenX, screenY);
-			if (handle && selectedLayer) {
-				setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
-				return;
-			}
-			if (dragsSelection) {
-				const onSelection =
-					selectedLayerId !== null &&
-					lookups.layerAt(screenX, screenY) === selectedLayerId;
-				setCursor(onSelection ? "move" : "crosshair");
-				return;
-			}
-			if (zoom) {
-				const point = lookups.toDocument(screenX, screenY);
-				const onSelection =
-					selectedLayerId !== null &&
-					hitsLayer(targets, selectedLayerId, point);
-				setCursor(onSelection ? "move" : "grab");
-				return;
-			}
-			setCursor(
-				lookups.layerAt(screenX, screenY) === null ? "default" : "move",
-			);
-		},
-		[
-			dragsSelection,
-			lookups,
-			scale,
-			selectedLayer,
-			selectedLayerId,
-			targets,
-			zoom,
-		],
-	);
-	const handleHoverEnd = useCallback(() => setCursor("default"), []);
+	const { cursor, setCursor, handleHover, handleHoverEnd } = useCanvasCursor({
+		scale,
+		lookups,
+		selectedLayer,
+		selectedLayerId,
+		dragsSelection,
+		targets,
+		zoom,
+	});
 
 	const handleCommit = useCallback(
 		(id: string, transform: Transform) => onCommitTransform?.(id, transform),
