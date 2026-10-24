@@ -36,27 +36,20 @@ export const handleMetrics: HandleMetrics = hasFinePointer
 		// away: half of the 44pt minimum comfortable touch target.
 		{ size: 10, hitRadius: 22, knobOffset: 30 };
 
-const ALL_HANDLES: readonly Handle[] = [
-	...CORNERS,
-	"top",
-	"right",
-	"bottom",
-	"left",
-	"rotate",
-];
 const CORNERS_AND_KNOB: readonly Handle[] = [...CORNERS, "rotate"];
 const ENDS: readonly Handle[] = ["left", "right"];
 
 /**
  * The handles shown (and grabbable), with side handles only on a box that
- * resizes (see `ResizeMode`). A mouse always gets them all. On touch they'd cover small
- * text, leaving nothing to drag it by, so the corners and knob only appear
- * once the box is at least two touch targets tall on screen; smaller text
- * is still scaled and rotated with two fingers. A pair of side handles
- * appears once the box is four targets long between them, which leaves two
- * to drag it by, so a thin box over a line of text can still be stretched.
- * A line has only its ends, on the same terms as a pair of sides: dragging
- * one turns it, so it has no knob, and its corners would mean nothing.
+ * resizes (see `ResizeMode`). They'd cover a small layer, leaving nothing to
+ * drag it by, so the corners and knob only appear once the box is at least
+ * two handle targets (a touch's or a mouse's) tall on screen; a smaller
+ * layer is still scaled and rotated with two fingers, the keyboard, or the
+ * selection bar. A pair of side handles appears once the box is four
+ * targets long between them, which leaves two to drag it by, so a thin box
+ * over a line of text can still be stretched. A line has only its ends, on
+ * the same terms as a pair of sides: dragging one turns it, so it has no
+ * knob, and its corners would mean nothing.
  */
 export function shownHandles(
 	box: Box,
@@ -69,11 +62,8 @@ export function shownHandles(
 	const target = 2 * handleMetrics.hitRadius;
 	const width = 2 * box.halfWidth * scaleX * viewScale;
 	const height = 2 * box.halfHeight * scaleY * viewScale;
-	if (mode === "endpoints") {
-		return hasFinePointer || width >= target * 2 ? ENDS : [];
-	}
+	if (mode === "endpoints") return width >= target * 2 ? ENDS : [];
 	const resizable = mode !== "none";
-	if (hasFinePointer) return resizable ? ALL_HANDLES : CORNERS_AND_KNOB;
 	const handles: Handle[] =
 		Math.min(width, height) >= target ? [...CORNERS_AND_KNOB] : [];
 	if (resizable && height >= target * 2) handles.push("top", "bottom");
