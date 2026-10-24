@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { compactControls } from "./density";
 import { interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 import {
@@ -11,7 +12,7 @@ import {
 	webTransition,
 } from "./theme";
 
-const BACK_SIZE = 44;
+const BACK_SIZE = compactControls ? 36 : 44;
 
 /**
  * Top bar with a Back action, an optional centered title (with a `subtitle`
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
 	back: {
 		width: BACK_SIZE,
 		height: BACK_SIZE,
-		marginLeft: -10,
+		marginLeft: compactControls ? -5 : -10,
 		borderRadius: BACK_SIZE / 2,
 		alignItems: "center",
 		justifyContent: "center",

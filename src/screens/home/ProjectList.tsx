@@ -24,9 +24,9 @@ import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 
-// The home screen's content column, so a wide browser window doesn't
-// stretch it, and its side padding.
-export const HOME_MAX_WIDTH = 760;
+// The home screen's content column. Wide enough for a laptop's project
+// prints to sit in a real row, and still a column on a larger display.
+export const HOME_MAX_WIDTH = 1080;
 const PADDING = 16;
 const GAP = 16;
 const MIN_CARD_WIDTH = 150;

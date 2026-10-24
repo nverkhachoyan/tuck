@@ -3,6 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { compactControls } from "@/ui/density";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
@@ -21,14 +22,17 @@ const DOCK_MAX_WIDTH = 520;
 const DOCK_MARGIN = 10;
 // Between the dock and the keyboard, while it's up.
 const KEYBOARD_GAP = 8;
-const BUTTON_SIZE = 44;
+const BUTTON_SIZE = compactControls ? 36 : 44;
+const BUTTON_ICON_SIZE = compactControls ? 24 : 28;
 // A wide screen's inspector, along the right, which the dock becomes. Wide
 // enough for a row of five tools at their full spacing (see `ToolRow`), the
 // most a tool's panel shows.
 export const INSPECTOR_WIDTH = 352;
 // Between a wide screen's panels, the rail and the inspector, and the edges
-// of the canvas they rest beside.
-export const PANEL_GAP = space.sm;
+// of the canvas they rest beside, and their corners. Closer and tighter
+// where controls are sized for a mouse.
+export const PANEL_GAP = compactControls ? space.xs : space.sm;
+export const PANEL_RADIUS = compactControls ? radii.medium : radii.large;
 const PANEL_IN = FadeIn.duration(220).easing(Easing.bezier(0.2, 0, 0, 1));
 const PANEL_OUT = FadeOut.duration(120);
 
@@ -223,7 +227,11 @@ function DockButton({
 					];
 				}}
 			>
-				<Ionicons name={icon} size={28} color={colors.textPrimary} />
+				<Ionicons
+					name={icon}
+					size={BUTTON_ICON_SIZE}
+					color={colors.textPrimary}
+				/>
 			</Pressable>
 			{tooltip}
 		</>
@@ -258,7 +266,7 @@ const styles = StyleSheet.create({
 		right: PANEL_GAP,
 		bottom: PANEL_GAP,
 		width: INSPECTOR_WIDTH,
-		borderRadius: radii.large,
+		borderRadius: PANEL_RADIUS,
 	},
 	inspectorFill: {
 		flex: 1,

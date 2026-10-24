@@ -6,6 +6,7 @@ import {
 	StyleSheet,
 	Text,
 	TextInput,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -53,6 +54,9 @@ export default function CreateScreen() {
 	const router = useRouter();
 	const [background, setBackground] = useState<string | null>("#FFFFFF");
 	const { bottom } = useSafeAreaInsets();
+	// A laptop has room for the presets in one row, centered on the page.
+	// A phone keeps them in a narrow column.
+	const spread = useWindowDimensions().width >= 900;
 	const [busy, setBusy] = useState(false);
 	// Set at once, so a second tap can't start another project meanwhile.
 	const creating = useRef(false);
@@ -95,27 +99,33 @@ export default function CreateScreen() {
 			<ScrollView
 				keyboardShouldPersistTaps="handled"
 				automaticallyAdjustKeyboardInsets
-				contentContainerStyle={[styles.content, { paddingBottom: 24 + bottom }]}
+				contentContainerStyle={[
+					spread && styles.spreadScroll,
+					{ paddingBottom: 24 + bottom },
+				]}
 			>
-				<View style={styles.fill}>
-					<View style={styles.fillText}>
-						<Text style={styles.fillLabel}>Fill</Text>
-						<Text style={styles.fillValue}>{fillName(background)}</Text>
+				<View style={[styles.content, spread && styles.contentSpread]}>
+					<View style={styles.fill}>
+						<View style={styles.fillText}>
+							<Text style={styles.fillLabel}>Fill</Text>
+							<Text style={styles.fillValue}>{fillName(background)}</Text>
+						</View>
+						<BackgroundPicker value={background} onPick={setBackground} />
 					</View>
-					<BackgroundPicker value={background} onPick={setBackground} />
+					<View style={styles.grid}>
+						{PRESETS.map((preset) => (
+							<PresetTile
+								key={preset.name}
+								preset={preset}
+								background={background}
+								disabled={busy}
+								spread={spread}
+								onPress={() => void handleCreate(preset)}
+							/>
+						))}
+					</View>
+					<CustomSize disabled={busy} onCreate={handleCreate} />
 				</View>
-				<View style={styles.grid}>
-					{PRESETS.map((preset) => (
-						<PresetTile
-							key={preset.name}
-							preset={preset}
-							background={background}
-							disabled={busy}
-							onPress={() => void handleCreate(preset)}
-						/>
-					))}
-				</View>
-				<CustomSize disabled={busy} onCreate={handleCreate} />
 			</ScrollView>
 		</View>
 	);
@@ -224,11 +234,13 @@ function PresetTile({
 	preset,
 	background,
 	disabled,
+	spread,
 	onPress,
 }: {
 	preset: Preset;
 	background: string | null;
 	disabled: boolean;
+	spread: boolean;
 	onPress: () => void;
 }) {
 	const { name, ratio, width, height } = preset;
@@ -244,6 +256,7 @@ function PresetTile({
 				const { pressed, hovered } = interaction(state);
 				return [
 					styles.tile,
+					spread && styles.tileSpread,
 					webTransition,
 					hovered && styles.tileHovered,
 					pressed && styles.tilePressed,
@@ -285,13 +298,23 @@ const styles = StyleSheet.create({
 	screen: {
 		flex: 1,
 	},
-	// A phone-width column, like the welcome screen's.
+	// A phone-width column. On a laptop it widens and centers, so the presets
+	// can sit in one row instead of a stacked pair.
 	content: {
 		width: "100%",
 		maxWidth: 480,
 		alignSelf: "center",
 		gap: 16,
 		padding: 24,
+	},
+	// Grows to the page so a short form can sit in the middle of a laptop.
+	spreadScroll: {
+		flexGrow: 1,
+		justifyContent: "center",
+	},
+	contentSpread: {
+		maxWidth: 960,
+		paddingVertical: space.xl,
 	},
 	fill: {
 		flexDirection: "row",
@@ -333,6 +356,11 @@ const styles = StyleSheet.create({
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.border,
 		backgroundColor: colors.surface,
+	},
+	// One row of four, once the column is wide enough to hold them.
+	tileSpread: {
+		flexBasis: "20%",
+		maxWidth: "24%",
 	},
 	tileHovered: {
 		borderColor: colors.borderStrong,

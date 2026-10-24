@@ -227,7 +227,9 @@ The phone screen has three bands: a 56pt paper header (Back, Layers, Undo, Redo,
 
 Bars and sheets reach the screen's bottom edge, and each pads its own content by the bottom safe-area inset. Nothing sits under the home indicator.
 
-Wider windows rearrange the same parts. From 900pt the tools move into a 76pt rail down the left side. From 1024pt a 352pt inspector panel on the right (room for five tools in a row) holds the open tool's options. Home's content column is at most 760pt wide. Its project prints tile at least 150pt wide with a 16pt column gap and 20pt row gap, up to five across (two on a phone). From 1024pt the start buttons move from the bottom bar up to head the projects in a row.
+Wider windows rearrange the same parts. From 900pt the layers can sit beside the canvas. From 1024pt the tools move into an 84pt rail down the left, and the open tool's options go in the header. A 352pt inspector on the right holds the layers, with Find or Adjust above them, when the window is at least 960pt tall. A shorter window, such as a 13-inch laptop's browser, leaves that width to the photo until Layers, Find, or Adjust opens the panel. Home's content column is at most 1080pt wide. Its project prints tile at least 150pt wide with a 16pt column gap and 20pt row gap, up to five across (two on a phone). From 1024pt the ways to start head the projects, and on an empty home they sit with the wordmark rather than along the bottom.
+
+A web browser on a computer, with a mouse or trackpad, gets controls sized for the pointer rather than a finger, leaving the room to the photo. Every header is 48pt, with a 36pt Back. The rail is 64pt wide, with 36pt tool tiles, 20pt glyphs, 11px labels, and 8pt between tools. The context bar's options, chips, and ✕ and ✓ are 36pt tall. The rail and the inspector sit 8pt from the edges with 12pt corners. An iPad keeps the touch sizes: it reports a coarse pointer even with a trackpad.
 
 Gaps come from the spacing scale (4, 8, 12, 16, 24, 32). A one-off that matches no step may stay literal.
 
@@ -297,7 +299,7 @@ A 2px ink outline, 2px out from the control (`graphite-ink` at night), set in `s
 - **Do** keep one ink-bar primary action per screen, and make it the thing the user came to do.
 - **Do** draw anything over the photo in selection blue, with the dark halo under its lines.
 - **Do** take sizes from `typography`, corners from `radii`, and gaps from `space`.
-- **Do** give every tappable control at least a 44pt target, with `hitSlop` where the visible shape is smaller.
+- **Do** give every tappable control at least a 44pt target, with `hitSlop` where the visible shape is smaller. The exception is the controls sized for a mouse, which can be 36pt.
 - **Do** pad each bar and sheet's bottom content by the safe-area inset, and let its paper run to the screen's edge.
 - **Do** check every change in both palettes. The highlighter must look the same in each.
 

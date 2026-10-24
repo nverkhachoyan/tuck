@@ -28,7 +28,7 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { Surface } from "@/ui/Surface";
 import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
-import { colors, radii, space, typography } from "@/ui/theme";
+import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import {
 	ContextBarContent,
@@ -42,7 +42,13 @@ import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
 import { EyedropperHint } from "./shell/ColorPicker";
-import { Dock, DockFooter, Inspector, PANEL_GAP } from "./shell/Dock";
+import {
+	Dock,
+	DockFooter,
+	Inspector,
+	PANEL_GAP,
+	PANEL_RADIUS,
+} from "./shell/Dock";
 import { HeaderActions } from "./shell/HeaderActions";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight } from "./shell/ToolOptions";
@@ -185,8 +191,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const stickersOpen = modeState.sheet === "stickers";
 	const savedStickers = useSavedStickers();
 	const stickerSave = useStickerSave(savedStickers.save);
-	const layout = useEditorLayout({ typing: editingText, layersOpen });
-	const { wide, layersBeside, dockInset } = layout;
+	// Find and Adjust live in the inspector, so they open it even though
+	// starting a tool closes the layers sheet. A tall window has it open anyway.
+	const layout = useEditorLayout({
+		typing: editingText,
+		layersOpen,
+		inspectorRequested: layersOpen || tool === "find" || tool === "adjust",
+	});
+	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
 	const toolOptionsOpen = openTray(mode) !== null;
 	const adjustImageId = toolImageId(mode, "adjust");
 	const adjustedLayer = adjustImageId
@@ -317,9 +329,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			: selectedLayer
 				? "layer"
 				: "idle";
-	// A wide screen's open tool, or a selected layer, lives in the header, and
-	// the inspector keeps the layers. Find's results and Adjust's dial sit
-	// above them. The other tools still take the inspector.
+	// A wide screen's open tool, or a selected layer, lives in the header.
+	// Find's results and Adjust's dial sit in the inspector, above the layers.
 	const inBar =
 		wide &&
 		(panelKind === "draw" ||
@@ -571,9 +582,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					action={
 						<HeaderActions
 							onReset={resetEdit}
-							// A wide screen's inspector always shows the layers.
+							// A tall window's inspector already shows the layers.
 							layers={
-								!tool && !editingText && !wide
+								!tool && !editingText && !inspectorPinned
 									? {
 											open: layersOpen,
 											onToggle: () => dispatchMode({ type: "toggleLayers" }),
@@ -661,9 +672,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					)}
 
 					{/* After the tool's options, so taps on the dock reach it rather
-				    than closing them. A wide screen has no dock: the inspector
-				    is the layers, with Find or Adjust above them. */}
-					{wide ? (
+				    than closing them. A wide screen has no dock. Its inspector,
+				    when the window is tall enough or Layers, Find, or Adjust
+				    has it open, is the layers, with Find or Adjust above them. */}
+					{inspector ? (
 						<Inspector>
 							{panelKind === "find" ? (
 								<FindInspector
@@ -689,7 +701,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								<LayersPanel {...layerList} layout="inspector" open />
 							)}
 						</Inspector>
-					) : (
+					) : !wide ? (
 						<Dock
 							panel={panelKind}
 							footer={dockFooter}
@@ -713,7 +725,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								}
 							/>
 						</Dock>
-					)}
+					) : null}
 				</CanvasStage>
 				{!layersBeside && layersPanel}
 				{deleteNotice.message && (
@@ -798,7 +810,7 @@ const styles = StyleSheet.create({
 	},
 	rail: {
 		flexShrink: 1,
-		borderRadius: radii.large,
+		borderRadius: PANEL_RADIUS,
 	},
 	railContent: {
 		flexShrink: 1,

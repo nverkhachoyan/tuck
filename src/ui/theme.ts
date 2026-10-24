@@ -5,6 +5,7 @@ import {
 	type ViewStyle,
 } from "react-native";
 import { readPreference } from "@/platform/preferenceStore";
+import { compactControls } from "./density";
 
 /** The palette chosen in Settings: the system's, or always one of them. */
 export type ThemeSetting = "system" | "light" | "dark";
@@ -191,8 +192,8 @@ export const fonts = {
 };
 
 // Every bar across the top of a screen, so switching screens and tools never
-// shifts the content below.
-export const HEADER_HEIGHT = 56;
+// shifts the content below. Shorter where controls are sized for a mouse.
+export const HEADER_HEIGHT = compactControls ? 48 : 56;
 
 // A transparency checkerboard square's side, in screen pixels.
 export const CHECKER_CELL = 8;

@@ -47,7 +47,7 @@ import { HOME_MAX_WIDTH, ProjectList } from "./ProjectList";
 import { type HomeStatus, useHomeProjects } from "./useHomeProjects";
 
 // Wide enough to be used with a mouse, where reach doesn't matter: the ways
-// to start head the projects, as a web app's "new" actions usually do.
+// to start head the projects, or sit with the wordmark when there are none.
 // Narrower, they sit at the bottom, under the thumb.
 const START_ON_TOP_MIN_WIDTH = 1024;
 
@@ -114,20 +114,18 @@ export default function HomeScreen() {
 
 	const start = (
 		<View style={[styles.start, startOnTop && styles.startRow]}>
-			<View style={startOnTop && styles.startShare}>
-				<Button
-					label={openPhotoLabels[status]}
-					// The label changes while busy; a screen reader needs the verb.
-					accessibilityLabel={blocked ? undefined : "Open a photo"}
-					icon="images-outline"
-					variant="primary"
-					size={startOnTop ? "medium" : "large"}
-					disabled={blocked}
-					onPress={choosePhoto}
-				/>
-			</View>
-			<View style={[styles.startSecondary, startOnTop && styles.startShare]}>
-				<View style={styles.flex}>
+			<Button
+				label={openPhotoLabels[status]}
+				// The label changes while busy; a screen reader needs the verb.
+				accessibilityLabel={blocked ? undefined : "Open a photo"}
+				icon="images-outline"
+				variant="primary"
+				size={startOnTop ? "medium" : "large"}
+				disabled={blocked}
+				onPress={choosePhoto}
+			/>
+			<View style={styles.startSecondary}>
+				<View style={startOnTop ? undefined : styles.flex}>
 					<Button
 						label="Paste"
 						icon="clipboard-outline"
@@ -135,7 +133,7 @@ export default function HomeScreen() {
 						onPress={pasteImage}
 					/>
 				</View>
-				<View style={styles.flex}>
+				<View style={startOnTop ? undefined : styles.flex}>
 					<Button
 						label="Blank canvas"
 						icon="add"
@@ -196,6 +194,17 @@ export default function HomeScreen() {
 							</Animated.Text>
 						</>
 					)}
+					{startOnTop && (
+						<View style={styles.heroActions}>
+							{start}
+							{Platform.OS === "web" && (
+								<Text style={styles.hint}>
+									Or paste a screenshot, or drop an image anywhere.
+								</Text>
+							)}
+							<AboutLinks withSettings />
+						</View>
+					)}
 				</View>
 			)}
 
@@ -239,7 +248,7 @@ export default function HomeScreen() {
 				</Notice>
 			)}
 
-			{!(hasProjects && startOnTop) && (
+			{!startOnTop && (
 				<View
 					style={[
 						styles.bottomBar,
@@ -454,18 +463,24 @@ const styles = StyleSheet.create({
 	bottomColumn: {
 		gap: space.sm,
 	},
+	// With the wordmark on a wide empty home: the actions, the hint, the links.
+	heroActions: {
+		width: "100%",
+		maxWidth: 640,
+		alignSelf: "center",
+		gap: space.sm,
+		marginTop: space.lg,
+	},
 	// Stacked under the thumb: the photo first, the other ways under it. In a
-	// row across a wide screen's header.
+	// row across a wide screen, held to a comfortable width so the buttons
+	// don't stretch across a laptop.
 	start: {
 		gap: space.xs,
 	},
 	startRow: {
 		flexDirection: "row",
-	},
-	// Half the row each, in a row only: in a column, a flex child would
-	// collapse to nothing on native.
-	startShare: {
-		flex: 1,
+		maxWidth: 640,
+		alignSelf: "center",
 	},
 	startSecondary: {
 		flexDirection: "row",

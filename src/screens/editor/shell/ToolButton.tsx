@@ -16,10 +16,11 @@ import {
 	Text,
 	View,
 } from "react-native";
+import { compactControls } from "@/ui/density";
 import { Highlight } from "@/ui/Highlight";
 import { interaction, pressAtOnce } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
-import { colors, radii, typography, webTransition } from "@/ui/theme";
+import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 
 // A tool's narrowest width, and the space a row of them leaves between them
 // and at its ends while they fit.
@@ -43,7 +44,8 @@ type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
  * by its label alone, so only the tool in use is highlighted. `glyph`, when
  * given, is drawn in place of the icon (which still names the tool to the
  * type checker). In a `ToolGrid`, it's drawn a little smaller, to fit two
- * rows in the dock.
+ * rows in the dock, and in the rail smaller still where controls are sized
+ * for a mouse.
  */
 export function ToolButton({
 	label,
@@ -71,6 +73,7 @@ export function ToolButton({
 	onPress: () => void;
 }) {
 	const inRail = useContext(InRail);
+	const small = inRail && compactControls;
 	const { anchor, tooltip } = useTooltip(
 		label,
 		shortcut,
@@ -97,6 +100,7 @@ export function ToolButton({
 				style={[
 					styles.container,
 					compact && styles.compact,
+					small && styles.small,
 					disabled && styles.disabled,
 				]}
 			>
@@ -115,6 +119,7 @@ export function ToolButton({
 								style={[
 									styles.tile,
 									compact && styles.compactTile,
+									small && styles.smallTile,
 									webTransition,
 									lit && (danger ? styles.tileDanger : styles.tileHovered),
 									!inactive && pressed && styles.tilePressed,
@@ -124,13 +129,18 @@ export function ToolButton({
 									<ActivityIndicator color={ink} />
 								) : (
 									(glyph ?? (
-										<MaterialCommunityIcons name={icon} size={24} color={ink} />
+										<MaterialCommunityIcons
+											name={icon}
+											size={small ? 20 : 24}
+											color={ink}
+										/>
 									))
 								)}
 							</View>
 							<Text
 								style={[
 									styles.label,
+									small && styles.smallLabel,
 									selected && styles.labelSelected,
 									open && styles.labelOpen,
 								]}
@@ -221,10 +231,11 @@ const styles = StyleSheet.create({
 	rowScroll: {
 		flex: 1,
 	},
+	// Closer together where controls are sized for a mouse.
 	column: {
 		alignItems: "center",
-		gap: ROW_GAP,
-		paddingVertical: ROW_GAP,
+		gap: compactControls ? space.xs : ROW_GAP,
+		paddingVertical: compactControls ? space.xs : ROW_GAP,
 	},
 	// Grows to fill the panel rather than flexing, which would hold it to the
 	// panel's width, so it never scrolls.
@@ -239,6 +250,10 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	compact: {
+		gap: 2,
+	},
+	small: {
+		minWidth: 52,
 		gap: 2,
 	},
 	grid: {
@@ -278,6 +293,10 @@ const styles = StyleSheet.create({
 		width: 44,
 		height: 44,
 	},
+	smallTile: {
+		width: 36,
+		height: 36,
+	},
 	tilePressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],
@@ -286,6 +305,9 @@ const styles = StyleSheet.create({
 		...typography.caption,
 		letterSpacing: 0.1,
 		color: colors.textPrimary,
+	},
+	smallLabel: {
+		fontSize: 11,
 	},
 	labelSelected: {
 		color: colors.onHighlight,

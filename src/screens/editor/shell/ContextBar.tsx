@@ -24,6 +24,7 @@ import {
 	type TextStyle,
 	View,
 } from "react-native";
+import { compactControls } from "@/ui/density";
 import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
@@ -38,6 +39,9 @@ const FADE_WIDTH = 32;
 // Long enough that a drag's scroll events, throttled below, don't each move
 // the fade: it settles once they stop.
 const FADE_SETTLE_MS = 120;
+// A segment's, an action's, and a chip's height: a touch target, or less
+// where controls are sized for a mouse.
+const ITEM_HEIGHT = compactControls ? 36 : 44;
 
 type ItemBox = { parent: string; x: number; width: number };
 
@@ -288,7 +292,8 @@ export function BarSections({ children }: { children: ReactNode }) {
 }
 
 /**
- * A labeled action in the bar, 44 points tall, beside the segmented sub-tools.
+ * A labeled action in the bar, as tall as a segment, beside the segmented
+ * sub-tools.
  * `busy` swaps its icon for a spinner and ignores presses, as a tool button does.
  */
 export function BarButton({
@@ -698,7 +703,7 @@ const styles = StyleSheet.create({
 		gap: 2,
 	},
 	segment: {
-		height: 44,
+		height: ITEM_HEIGHT,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 6,
@@ -712,7 +717,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.pressedOverlay,
 	},
 	segmentIcon: {
-		width: 44,
+		width: ITEM_HEIGHT,
 		paddingHorizontal: 0,
 		justifyContent: "center",
 	},
@@ -724,7 +729,7 @@ const styles = StyleSheet.create({
 		color: colors.onHighlight,
 	},
 	action: {
-		height: 44,
+		height: ITEM_HEIGHT,
 		flexDirection: "row",
 		flexShrink: 0,
 		alignItems: "center",

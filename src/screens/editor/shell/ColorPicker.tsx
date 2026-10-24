@@ -13,6 +13,7 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
 import { Button } from "@/ui/Button";
+import { compactControls } from "@/ui/density";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
@@ -92,7 +93,8 @@ export function ColorOptions({
 	);
 }
 
-const CHIP = 44;
+// As tall as the context bar's other options.
+const CHIP = compactControls ? 36 : 44;
 const CHIP_SWATCH = 20;
 
 /**
