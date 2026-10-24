@@ -29,13 +29,18 @@ import type { useTextEditing } from "./tools/text/useTextEditing";
 // actions, or, with nothing selected, the tools or the layers.
 export type DockPanel = EditorTool | "text" | "layer" | "idle";
 
-type ModeProps = {
-	dispatchMode: (action: EditorModeAction) => void;
+export type EditorTools = {
 	draw: ReturnType<typeof useDrawTool>;
 	redact: ReturnType<typeof useRedactTool>;
 	find: ReturnType<typeof useFindTool>;
 	cut: ReturnType<typeof useCutOutTool>;
-	textEditing: ReturnType<typeof useTextEditing>;
+	adjust: ReturnType<typeof useAdjustTool>;
+	text: ReturnType<typeof useTextEditing>;
+};
+
+type ModeProps = {
+	dispatchMode: (action: EditorModeAction) => void;
+	tools: EditorTools;
 	customColor: string | null;
 };
 
@@ -46,11 +51,7 @@ type ModeProps = {
 export function ToolTrays({
 	modeState,
 	dispatchMode,
-	draw,
-	redact,
-	find,
-	cut,
-	textEditing,
+	tools: { draw, redact, find, cut, text },
 	customColor,
 	onCustomColor,
 	bottomInset,
@@ -60,7 +61,7 @@ export function ToolTrays({
 	bottomInset: number;
 }) {
 	const { mode, textPicker, eyedropper } = modeState;
-	const { styledText } = textEditing;
+	const { styledText } = text;
 	const tray = openTray(mode);
 	const closeTray = () => dispatchMode({ type: "closeToolOptions" });
 	// For a tray whose colors go to `apply`: a color from its picker, which
@@ -138,9 +139,7 @@ export function ToolTrays({
 					layer={styledText}
 					colorKey={textPicker.key}
 					bottomInset={bottomInset}
-					{...colorTarget((color) =>
-						textEditing.style({ [textPicker.key]: color }),
-					)}
+					{...colorTarget((color) => text.style({ [textPicker.key]: color }))}
 					onClose={() => dispatchMode({ type: "closeTextPicker" })}
 				/>
 			)}
@@ -161,13 +160,8 @@ export function DockContent({
 	panel,
 	optionsOpen,
 	dispatchMode,
-	draw,
-	redact,
-	find,
-	cut,
-	adjustController,
+	tools: { draw, redact, find, cut, adjust, text },
 	adjustments,
-	textEditing,
 	customColor,
 	layerActions,
 	idle,
@@ -176,13 +170,12 @@ export function DockContent({
 	panel: DockPanel;
 	optionsOpen: boolean;
 	onFind: (() => void) | undefined;
-	adjustController: ReturnType<typeof useAdjustTool>;
 	adjustments: Adjustments | undefined;
 	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
 	idle: ReactNode;
 }) {
 	const toggleOptions = () => dispatchMode({ type: "toggleToolOptions" });
-	const { styledText } = textEditing;
+	const { styledText } = text;
 	switch (panel) {
 		case "draw":
 			return (
@@ -219,9 +212,7 @@ export function DockContent({
 				/>
 			);
 		case "adjust":
-			return (
-				<AdjustPanel controller={adjustController} adjustments={adjustments} />
-			);
+			return <AdjustPanel controller={adjust} adjustments={adjustments} />;
 		case "cutOut":
 			return (
 				<CutOutPanel
@@ -244,7 +235,7 @@ export function DockContent({
 					<TextStylePanel
 						layer={styledText}
 						customColor={customColor}
-						onChange={textEditing.style}
+						onChange={text.style}
 						onOpenPicker={(key) =>
 							dispatchMode({
 								type: "openTextPicker",

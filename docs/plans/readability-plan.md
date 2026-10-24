@@ -101,7 +101,7 @@ A mapped handler type does not compile here. `{ [T in ShortcutCommand["type"]]: 
 
 ### 3.5 The tool hooks travel together
 
-- [ ] `refactor: pass the editor's tool hooks to the dock as one object`
+- [x] `refactor: pass the editor's tool hooks to the dock as one object`
 
 `draw`, `redact`, `find`, `cut`, `textEditing`, and `adjust` go to `ToolTrays` and `DockContent` one prop at a time, and `ModeProps` in `EditorDock.tsx` lists them. An `EditorTools` type there (`{ draw, redact, find, cut, adjust, text }`) replaces those fields, and both components take `tools`. `customColor` and `dispatchMode` stay separate props.
 

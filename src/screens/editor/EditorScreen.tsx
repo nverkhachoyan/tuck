@@ -398,6 +398,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		textEditing.finish();
 		start();
 	};
+	const tools = {
+		draw,
+		redact,
+		find,
+		cut,
+		adjust: adjustController,
+		text: textEditing,
+	};
 	// The tools' buttons, for the dock and, through `fromRail`, the rail.
 	const toolButtons = {
 		startTool,
@@ -547,11 +555,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						<ToolTrays
 							modeState={modeState}
 							dispatchMode={dispatchMode}
-							draw={draw}
-							redact={redact}
-							find={find}
-							cut={cut}
-							textEditing={textEditing}
+							tools={tools}
 							customColor={customColor}
 							onCustomColor={setCustomColor}
 							bottomInset={dockInset}
@@ -588,13 +592,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								optionsOpen={toolOptionsOpen}
 								onFind={targetImage ? startTool.find : undefined}
 								dispatchMode={dispatchMode}
-								draw={draw}
-								redact={redact}
-								find={find}
-								cut={cut}
-								adjustController={adjustController}
+								tools={tools}
 								adjustments={adjustedLayer?.adjustments}
-								textEditing={textEditing}
 								customColor={customColor}
 								layerActions={layerActions}
 								idle={
