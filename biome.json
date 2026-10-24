@@ -81,6 +81,32 @@
 			}
 		},
 		{
+			"includes": ["src/model/layers/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"**",
+											"!../*",
+											"!../../*",
+											"!node:*",
+											"!node:*/**"
+										],
+										"message": "model/ is plain TypeScript: it imports only other model files, and node: modules in tests. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/model/__tests__/**"],
 			"linter": {
 				"rules": {
