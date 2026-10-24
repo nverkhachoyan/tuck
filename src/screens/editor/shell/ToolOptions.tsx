@@ -14,11 +14,12 @@ const TRAY_MAX_WIDTH = 520;
 export const TrayHeight = createContext<(height: number) => void>(() => {});
 
 /**
- * Where trays go on a wide screen: into the inspector, `top` down its
- * `width`-wide column, rather than on the dock.
+ * Where trays go on a wide screen: into the inspector, `top` down and
+ * `right` in from the canvas's edge, `width` wide, rather than on the dock.
  */
 export const TrayPlacement = createContext<{
 	top: number;
+	right: number;
 	width: number;
 } | null>(null);
 
@@ -61,7 +62,11 @@ export function Tray({
 					placement
 						? [
 								styles.inspectorArea,
-								{ top: placement.top, width: placement.width },
+								{
+									top: placement.top,
+									right: placement.right,
+									width: placement.width,
+								},
 							]
 						: [styles.trayArea, { bottom: bottomInset }]
 				}
@@ -180,7 +185,6 @@ const styles = StyleSheet.create({
 	},
 	inspectorArea: {
 		position: "absolute",
-		right: 0,
 		pointerEvents: "box-none",
 	},
 	// Part of the inspector's column, under its panel.

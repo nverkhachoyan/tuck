@@ -4,8 +4,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { interaction } from "@/ui/interaction";
+import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
-import { colors, typography, webTransition } from "@/ui/theme";
+import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 
 // The dock's one fixed height, shared by every panel, so the canvas, fitted
 // above the dock, never moves when the selection or tool changes. A mode's
@@ -25,8 +26,23 @@ const BUTTON_SIZE = 44;
 // enough for a row of five tools at their full spacing (see `ToolRow`), the
 // most a tool's panel shows.
 export const INSPECTOR_WIDTH = 352;
-// Where a tray starts in the inspector: under its footer and panel.
-export const INSPECTOR_TRAY_TOP = FOOTER_HEIGHT + CONTENT_HEIGHT;
+// Between a wide screen's panels, the rail and the inspector, and the edges
+// of the canvas they rest beside.
+export const PANEL_GAP = space.sm;
+// The inspector's inside, within its card's edge, which its panel and trays
+// fill.
+const INSPECTOR_INSIDE = {
+	top: PANEL_GAP + StyleSheet.hairlineWidth,
+	right: PANEL_GAP + StyleSheet.hairlineWidth,
+	bottom: PANEL_GAP + StyleSheet.hairlineWidth,
+	width: INSPECTOR_WIDTH - 2 * StyleSheet.hairlineWidth,
+};
+// Where a tray goes in the inspector: under its footer and panel.
+export const INSPECTOR_TRAY = {
+	top: INSPECTOR_INSIDE.top + FOOTER_HEIGHT + CONTENT_HEIGHT,
+	right: INSPECTOR_INSIDE.right,
+	width: INSPECTOR_INSIDE.width,
+};
 const PANEL_IN = FadeIn.duration(220).easing(Easing.bezier(0.2, 0, 0, 1));
 const PANEL_OUT = FadeOut.duration(120);
 
@@ -56,11 +72,11 @@ function dockBottom(safeAreaBottom: number, keyboardOverlap: number) {
  * layer, puts a `DockFooter` in `footer`, under its panel. It rises above
  * the keyboard by `keyboardOverlap`, taking the footer along.
  *
- * As an `inspector`, on a wide screen, it's a column down the right
- * instead: the footer heads it, then the panel, then any tray (see
- * `Tray`). With no mode, the panel fills the column. It draws only its own
- * part of the column, so a tray under it shows; `InspectorBackdrop` draws
- * the rest, under the trays.
+ * As an `inspector`, on a wide screen, it's a card down the right instead,
+ * resting beside the canvas: the footer heads it, then the panel, then any
+ * tray (see `Tray`). With no mode, the panel fills the card. It draws only
+ * its own part of the card, so a tray under it shows; `InspectorBackdrop`
+ * draws the card itself, under the trays.
  */
 export function Dock({
 	panel,
@@ -120,9 +136,9 @@ export function Dock({
 	);
 }
 
-/** The inspector's column, under the trays that go into it. */
+/** The inspector's card, under the panel and trays that go into it. */
 export function InspectorBackdrop() {
-	return <View style={[styles.inspector, styles.inspectorBackdrop]} />;
+	return <Surface resting style={styles.inspectorCard} />;
 }
 
 /**
@@ -238,23 +254,30 @@ const styles = StyleSheet.create({
 	fullContent: {
 		height: DOCK_HEIGHT,
 	},
+	inspectorCard: {
+		position: "absolute",
+		top: PANEL_GAP,
+		right: PANEL_GAP,
+		bottom: PANEL_GAP,
+		width: INSPECTOR_WIDTH,
+		borderRadius: radii.large,
+		pointerEvents: "none",
+	},
+	// Within the card's edge, so the card draws it.
 	inspector: {
 		position: "absolute",
-		top: 0,
-		right: 0,
-		bottom: 0,
-		width: INSPECTOR_WIDTH,
-		borderLeftWidth: StyleSheet.hairlineWidth,
-		borderLeftColor: colors.border,
+		...INSPECTOR_INSIDE,
+		borderRadius: radii.large - StyleSheet.hairlineWidth,
+		borderCurve: "continuous",
+		overflow: "hidden",
 		backgroundColor: colors.background,
 	},
 	// Only the footer and panel, so the tray below shows.
 	inspectorTop: {
 		bottom: undefined,
 		height: FOOTER_HEIGHT + CONTENT_HEIGHT,
-	},
-	inspectorBackdrop: {
-		pointerEvents: "none",
+		borderBottomLeftRadius: 0,
+		borderBottomRightRadius: 0,
 	},
 	inspectorFooter: {
 		borderBottomWidth: StyleSheet.hairlineWidth,

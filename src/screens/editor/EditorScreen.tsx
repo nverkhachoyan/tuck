@@ -25,9 +25,10 @@ import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { ScreenHeader } from "@/ui/ScreenHeader";
+import { Surface } from "@/ui/Surface";
 import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
-import { colors, space, typography } from "@/ui/theme";
+import { colors, radii, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import { DockContent, type DockPanel, ToolTrays } from "./EditorDock";
 import { openTray, takesKeys, toolImageId } from "./editorMode";
@@ -35,7 +36,7 @@ import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
-import { Dock, DockFooter, InspectorBackdrop } from "./shell/Dock";
+import { Dock, DockFooter, InspectorBackdrop, PANEL_GAP } from "./shell/Dock";
 import { HeaderActions } from "./shell/HeaderActions";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight, TrayPlacement } from "./shell/ToolOptions";
@@ -59,7 +60,7 @@ import { useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useDeleteNotice } from "./useDeleteNotice";
-import { RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
+import { RAIL_INSET, RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
 import { useToolLifecycle, useToolSession } from "./useToolLifecycle";
@@ -488,7 +489,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					<ScreenHeader
 						backLabel="Back to projects"
 						// Over the rail's tools.
-						backColumn={wide ? RAIL_WIDTH : undefined}
+						backColumn={wide ? RAIL_INSET : undefined}
 						onBack={leave}
 						// Only a wide screen has room between Back and the actions.
 						title={wide ? projectTitle : undefined}
@@ -514,8 +515,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							/>
 						}
 					/>
-					{/* The dock covers the stage's bottom, which runs under it. The
-					    rail and inspector frame it on a wide screen. */}
+					{/* The dock covers the stage's bottom, which runs under it. On a
+					    wide screen the rail and inspector rest on it as cards. */}
 					<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
 						<EditorCanvas
 							ref={canvasRef}
@@ -562,14 +563,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						)}
 						{layersBeside && !wide && layersPanel}
 						{wide && (
-							<View style={styles.rail}>
-								<ToolsPanel
-									vertical
-									tool={editingText ? "text" : tool}
-									addBusy={addBusy}
-									hasImage={hasImage}
-									startTool={mapStarters(startTool, fromRail)}
-								/>
+							<View style={styles.railArea}>
+								<Surface
+									resting
+									style={styles.rail}
+									contentStyle={styles.railContent}
+								>
+									<ToolsPanel
+										vertical
+										tool={editingText ? "text" : tool}
+										addBusy={addBusy}
+										hasImage={hasImage}
+										startTool={mapStarters(startTool, fromRail)}
+									/>
+								</Surface>
 							</View>
 						)}
 
@@ -676,15 +683,22 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	rail: {
+	// The rail's card is as tall as its tools, and scrolls them only when the
+	// window is shorter.
+	railArea: {
 		position: "absolute",
-		top: 0,
-		left: 0,
-		bottom: 0,
+		top: PANEL_GAP,
+		left: PANEL_GAP,
+		bottom: PANEL_GAP,
 		width: RAIL_WIDTH,
-		borderRightWidth: StyleSheet.hairlineWidth,
-		borderRightColor: colors.border,
-		backgroundColor: colors.background,
+		pointerEvents: "box-none",
+	},
+	rail: {
+		flexShrink: 1,
+		borderRadius: radii.large,
+	},
+	railContent: {
+		flexShrink: 1,
 	},
 	status: {
 		flex: 1,

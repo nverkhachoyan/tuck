@@ -175,6 +175,12 @@ export const typography = {
 
 // Under anything floating over the canvas.
 export const floatingShadow = `0 10px 28px ${colors.shadow}`;
+// Under panels resting on the table beside the canvas (the wide editor's
+// rail and inspector): fainter, so the photo stays the thing that stands out.
+export const restingShadow =
+	colorScheme === "dark"
+		? "0 8px 24px rgba(0, 0, 0, 0.35)"
+		: "0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.06)";
 
 // The wordmark and home's headings, in Anton, the typeface of the captions
 // people make (`TEXT_FONTS.classic`, registered under this name). Until it

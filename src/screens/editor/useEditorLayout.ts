@@ -2,8 +2,9 @@ import { useRef, useState } from "react";
 import { useWindowDimensions, type View } from "react-native";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import {
-	INSPECTOR_TRAY_TOP,
+	INSPECTOR_TRAY,
 	INSPECTOR_WIDTH,
+	PANEL_GAP,
 	useDockInset,
 } from "./shell/Dock";
 import { LAYERS_SIDEBAR_INSET } from "./tools/layers/LayersPanel";
@@ -13,8 +14,12 @@ const SIDEBAR_MIN_WIDTH = 900;
 // Wide enough for a tool rail at the left and an inspector at the right,
 // which the dock, its trays, and the layers move into.
 const INSPECTOR_MIN_WIDTH = 1024;
-export const RAIL_WIDTH = 76;
-const INSPECTOR_TRAY = { top: INSPECTOR_TRAY_TOP, width: INSPECTOR_WIDTH };
+// Room for the chosen tool's highlight inside the rail's card.
+export const RAIL_WIDTH = 84;
+// How much of the canvas's sides the rail and the inspector cover, with the
+// gaps around their cards.
+export const RAIL_INSET = RAIL_WIDTH + 2 * PANEL_GAP;
+const INSPECTOR_INSET = INSPECTOR_WIDTH + 2 * PANEL_GAP;
 
 /**
  * Where the editor's parts go for the window's width, and how much of the
@@ -48,14 +53,14 @@ export function useEditorLayout({
 		setTrayHeight,
 		trayPlacement: wide ? INSPECTOR_TRAY : null,
 		canvasInset: {
-			left: wide ? RAIL_WIDTH : 0,
-			right: wide ? INSPECTOR_WIDTH : 0,
+			left: wide ? RAIL_INSET : 0,
+			right: wide ? INSPECTOR_INSET : 0,
 			bottom: wide ? 0 : dockInset + trayHeight,
 		},
 		// What covers the canvas's right edge, which a notice over the canvas
 		// keeps clear of: the inspector, or an open layers sidebar.
 		coveredRight: wide
-			? INSPECTOR_WIDTH
+			? INSPECTOR_INSET
 			: layersBeside && layersOpen
 				? LAYERS_SIDEBAR_INSET
 				: undefined,
