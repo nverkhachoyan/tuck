@@ -30,7 +30,7 @@ What goes in the bar:
 | A selected layer | | its actions (`layerActionsFor`) and Sticker | |
 | Adjust | | | (the inspector section) |
 
-Crop keeps its own full-screen header, and Stickers keeps its sheet. Phones and narrow windows keep the dock and trays exactly as they are.
+Crop and Stickers follow the wide layout too (see [wide-crop-stickers-plan.md](wide-crop-stickers-plan.md)): Crop's options sit in this bar, and stickers open beside the rail. Phones and narrow windows keep Crop's dock and the sticker sheet, and the dock and trays otherwise.
 
 ## Decisions
 

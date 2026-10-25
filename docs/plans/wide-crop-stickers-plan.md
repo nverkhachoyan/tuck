@@ -97,6 +97,8 @@ Commit: `feat: put Crop's options in the wide editor's context bar`
 * AGENTS.md's wide-window learning: Crop and Stickers in the list of what the bar and rail hold; `Popover`'s `placement`.
 * `npm run build --prefix docs/interactive`, in case a lesson quotes `CropTool` or `Popover`.
 
+Done. `context-bar-plan.md`, DESIGN.md's Layout, and AGENTS.md's wide-window learning now include Crop's header and the sticker popover, and `Popover`'s `placement`. The interactive lessons still build.
+
 Commit: `docs: describe Crop and Stickers on wide windows`
 
 ## Not covered by the browser
