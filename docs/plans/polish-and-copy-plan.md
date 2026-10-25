@@ -41,6 +41,8 @@ Each step passes `npm run check` and `npm run typecheck` (and `npm test` where i
 
 Check every tool at 1440 and 1024 (Text, Draw, Redact with Find, Sticker, Crop, Adjust, Cut out), and that the dock on a phone is unchanged.
 
+Checked on web, by night and by day. At 1440 and 1024 the open tool's rail label is bold and selected, with no highlighter, and the bar's mode keeps the one swipe (Brush, Align, Box, the sticker tab, Crop, Brightness, Pick). Find leaves Redact marked. At 390 the dock still highlights its mode, and the idle tools have none. Crop and Stickers had to be passed as the open tool, or the rail never marked them. React Native Web ignores `accessibilityState.selected`, so the button also sets `aria-selected`.
+
 Commit: `fix: mark the rail's open tool by its label, not a highlight`
 
 ### 2. Redact's tools in one order

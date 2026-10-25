@@ -721,7 +721,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							>
 								<ToolsPanel
 									vertical
-									tool={editingText ? "text" : tool}
+									tool={
+										editingText
+											? "text"
+											: cropping
+												? "crop"
+												: stickersOpen
+													? "sticker"
+													: tool
+									}
 									addBusy={addBusy}
 									hasImage={hasImage}
 									startTool={mapStarters(startTool, fromRail)}

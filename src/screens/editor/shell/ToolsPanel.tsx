@@ -8,7 +8,15 @@ type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 // A tool the dock can be showing. Find is one of Redact's, so it marks
 // Redact rather than a button of its own.
-type OpenTool = "text" | "draw" | "redact" | "find" | "adjust" | "cutOut";
+type OpenTool =
+	| "text"
+	| "draw"
+	| "redact"
+	| "find"
+	| "adjust"
+	| "cutOut"
+	| "crop"
+	| "sticker";
 
 type ToolEntry = {
 	key: ToolKey;
@@ -74,22 +82,27 @@ export function ToolsPanel({
 	const compact = !vertical;
 	const tools = TOOLS.filter(
 		(entry) => entry.dock !== false && (!entry.needsImage || hasImage),
-	).map((entry) => (
-		<ToolButton
-			key={entry.key}
-			label={entry.label}
-			icon={entry.icon}
-			shortcut={TOOL_KEYS[entry.key]}
-			compact={compact}
-			selected={
-				tool != null &&
-				(entry.markedWhile ?? [entry.key]).some((mark) => mark === tool)
-			}
-			busy={entry.key === "photo" && addBusy}
-			buttonRef={entry.key === "sticker" ? stickerAnchor : undefined}
-			onPress={startTool[entry.key]}
-		/>
-	));
+	).map((entry) => {
+		// The dock highlights the open tool. The rail only bolds its label:
+		// the highlighter belongs to the mode in the context bar.
+		const open =
+			tool != null &&
+			(entry.markedWhile ?? [entry.key]).some((mark) => mark === tool);
+		return (
+			<ToolButton
+				key={entry.key}
+				label={entry.label}
+				icon={entry.icon}
+				shortcut={TOOL_KEYS[entry.key]}
+				compact={compact}
+				selected={vertical ? undefined : open}
+				marked={vertical ? open : undefined}
+				busy={entry.key === "photo" && addBusy}
+				buttonRef={entry.key === "sticker" ? stickerAnchor : undefined}
+				onPress={startTool[entry.key]}
+			/>
+		);
+	});
 	return vertical ? (
 		<ToolRow vertical>{tools}</ToolRow>
 	) : (

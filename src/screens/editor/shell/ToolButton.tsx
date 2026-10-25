@@ -41,8 +41,10 @@ type ToolIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
  * around it until it's hovered or pressed. The tool in use is highlighted.
  * `busy` swaps the icon for a spinner while the tool's work runs, and blocks
  * a second press meanwhile. With a `shortcut`, web shows it on hover.
- * `selected` marks the tool in use, and `open` a button whose tray is open,
- * by its label alone, so only the tool in use is highlighted. `glyph`, when
+ * `selected` marks the tool in use with the highlighter. `marked` is the
+ * rail's open tool: the same bold label, without the highlighter, and still
+ * selected to a screen reader. `open` is a button whose tray is open, by its
+ * label alone, so only one thing is highlighted. `glyph`, when
  * given, is drawn in place of the icon (which still names the tool to the
  * type checker). In a `ToolGrid`, it's drawn a little smaller, to fit two
  * rows in the dock, and in the rail smaller still where controls are sized
@@ -56,6 +58,7 @@ export function ToolButton({
 	tone = "default",
 	disabled = false,
 	selected,
+	marked = false,
 	open = false,
 	busy = false,
 	compact = false,
@@ -69,6 +72,7 @@ export function ToolButton({
 	tone?: "default" | "danger";
 	disabled?: boolean;
 	selected?: boolean;
+	marked?: boolean;
 	open?: boolean;
 	busy?: boolean;
 	compact?: boolean;
@@ -103,9 +107,11 @@ export function ToolButton({
 				accessibilityState={{
 					disabled: inactive,
 					busy,
-					selected,
+					selected: selected || marked,
 					expanded: open,
 				}}
+				// React Native Web ignores accessibilityState.selected.
+				aria-selected={selected || marked || undefined}
 				style={[
 					styles.container,
 					compact && styles.compact,
@@ -118,12 +124,12 @@ export function ToolButton({
 					const lit = !inactive && (hovered || pressed);
 					const ink = danger
 						? colors.danger
-						: selected
+						: selected && !marked
 							? colors.onHighlight
 							: colors.textPrimary;
 					return (
 						<>
-							{selected && <Highlight style={styles.highlight} />}
+							{selected && !marked && <Highlight style={styles.highlight} />}
 							<View
 								style={[
 									styles.tile,
@@ -150,8 +156,8 @@ export function ToolButton({
 								style={[
 									styles.label,
 									small && styles.smallLabel,
-									selected && styles.labelSelected,
-									open && styles.labelOpen,
+									selected && !marked && styles.labelSelected,
+									(open || marked) && styles.labelOpen,
 								]}
 							>
 								{label}
