@@ -24,6 +24,11 @@ colors:
   shadow: "rgba(0, 0, 0, 0.16)"
   checker-dark: "#D3D5D9"
   checker-light: "#EDEEF0"
+  swatch-red: "#FF3B30"
+  swatch-yellow: "#FFD60A"
+  swatch-green: "#34C759"
+  swatch-blue: "#0A84FF"
+  swatch-purple: "#BF5AF2"
   graphite-paper: "#17181B"
   graphite-surface: "#202125"
   graphite-table: "#2B2C30"
@@ -192,10 +197,13 @@ Neutral paper and ink around a gray table, with one highlighter yellow and two f
 
 Interaction tints on borderless controls are overlays rather than colors: black at 5% on hover and 10% when pressed by day, and white at 7% and 13% at night. One pair of values works over any background.
 
-### Named Rules
-**The One Marker Rule.** Yellow means "chosen", and nothing else is yellow. No yellow buttons, badges, or decoration. If two things on screen are yellow, each must be a chosen option.
+### Document
+The drawing swatches are document content, like the caption fonts. A stroke, a shape, a caption, or a redaction can be red (`swatch-red`), yellow (`swatch-yellow`), green (`swatch-green`), or blue (`swatch-blue`), and white or black, which are paper and ink. The custom picker's rainbow also carries purple (`swatch-purple`). They belong to the photo, and they don't change with the palette.
 
-**The Off-Limits Photo Rule.** The app's chrome never tints, frosts, or overlaps the photo with color. Only selection blue draws over it, and only to show what's selected or proposed.
+### Named Rules
+**The One Marker Rule.** Yellow means "chosen", and nothing else in the chrome is yellow. A yellow stroke or swatch is the photo's content, not a chosen control. No yellow buttons, badges, or decoration. If two things in the chrome are yellow, each must be a chosen option.
+
+**The Off-Limits Photo Rule.** The app's chrome never tints, frosts, or overlaps the photo with color. Only selection blue draws over it, and only to show what's selected or proposed. Cut out's preview is the one exception: while choosing what to keep, what stays is washed green (`rgba(34, 197, 94, 0.35)`) and what goes is dimmed and washed red (`rgba(239, 68, 68, 0.5)`). The tint is only on screen then, and never in the file.
 
 **The Same Mark Rule.** The highlighter and its black ink are identical by day and at night. The wordmark, the icon, and every chosen state must look the same in both palettes.
 

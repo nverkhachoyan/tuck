@@ -119,6 +119,8 @@ Commit: `fix: use sentence case for every label`
 * The Off-Limits Photo Rule: Cut out's preview as its one exception.
 * Run `impeccable detect --json src` again: the swatch advisories should be gone.
 
+`impeccable detect --json src` reports no `#FF3B30`, `#FFD60A`, `#34C759`, `#0A84FF`, or `#BF5AF2`. Thirteen advisories remain, all test colors or the hue bar in `ui/gradient.ts`.
+
 Commit: `docs: name the drawing swatches and Cut out's preview in DESIGN.md`
 
 ## Risks
