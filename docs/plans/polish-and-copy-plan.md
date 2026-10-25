@@ -62,6 +62,8 @@ Commit: `fix: order Redact's tools the same on every layout`
 
 Check at 1440 and 1280 × 720 while dragging the dial and pressing its keys, and that the phone's floating value is unchanged.
 
+Checked on web, by night and by day. At 1440 and at 1280×720 the inspector heads Adjust with the name in Label Strong and the value in Figure ("Brightness +53"), live while the dial is dragged and while its arrow keys change it. Switching to Warmth shows 0, and Brightness still shows its own value. The section's height follows that content. At 390 the dock still floats the value over the canvas while the dial moves, and has no heading. A reaction already watching the dial missed a switch of adjustment, so the heading takes the saved value at that moment.
+
 Commit: `fix: head the inspector's Adjust with its value`
 
 ### 4. One left edge on the wide home
