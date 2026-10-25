@@ -821,6 +821,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				{cropping && (
 					<CropTool
 						document={document}
+						wide={wide}
 						onCancel={closeCrop}
 						onDone={finishCrop}
 					/>

@@ -294,7 +294,9 @@ export function BarSections({ children }: { children: ReactNode }) {
 /**
  * A labeled action in the bar, as tall as a segment, beside the segmented
  * sub-tools.
- * `busy` swaps its icon for a spinner and ignores presses, as a tool button does.
+ * - `busy` swaps its icon for a spinner and ignores presses, as a tool button does.
+ * - `checked` makes it a switch. The glyph shows the box; the highlighter
+ *   stays on the mode.
  */
 export function BarButton({
 	label,
@@ -302,6 +304,7 @@ export function BarButton({
 	shortcut,
 	busy = false,
 	disabled = false,
+	checked,
 	onPress,
 }: {
 	label: string;
@@ -309,17 +312,25 @@ export function BarButton({
 	shortcut?: string;
 	busy?: boolean;
 	disabled?: boolean;
+	checked?: boolean;
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
 	const inactive = busy || disabled;
+	const toggle = checked !== undefined;
 	return (
 		<>
 			<Pressable
 				{...anchor}
-				accessibilityRole="button"
+				accessibilityRole={toggle ? "switch" : "button"}
 				accessibilityLabel={label}
-				accessibilityState={{ disabled: inactive, busy }}
+				accessibilityState={{
+					disabled: inactive,
+					busy,
+					checked: toggle ? checked : undefined,
+				}}
+				// React Native Web ignores `accessibilityState.checked`.
+				aria-checked={toggle ? checked : undefined}
 				disabled={inactive}
 				onPress={onPress}
 				style={(state) => {

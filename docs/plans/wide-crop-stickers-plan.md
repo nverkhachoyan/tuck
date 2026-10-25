@@ -86,6 +86,8 @@ Commit: `feat: open stickers beside the rail on wide windows`
 
 Check at 1440, 1280 × 720, and 1024: every mode, every ratio from the chip (including Original after a turn), dragging the dial while watching the photo, Turn layers on and off with a text layer, a background color, Reset, ✕ (nothing changed), ✓ (one undo step), and a canvas without a photo (no dial, no strip's content). Check Escape closes an open popover without applying the crop, then applies it on a second press.
 
+Checked on web, by night and by day. At 1440, 1280 × 720, and 1024 the modes, the ratio chip's three rows, a turn of 4:5 into 5:4, the dial (360 wide, centered; a keyboard step moved it off 0°), Turn text with a text layer, a black background, Reset, Cancel with nothing saved, and Done as one undo step all work. A canvas with no locked photo shows the strip empty. Escape closes the ratio menu and leaves the crop; a second Escape applies it. The Rotate actions have to be separate children of the group, or they stack in one slot and the header grows past its row. At 390 the phone's dock and ratio row are unchanged. The iPad still opens the phone layout; that stays for later.
+
 Commit: `feat: put Crop's options in the wide editor's context bar`
 
 ### 5. Docs

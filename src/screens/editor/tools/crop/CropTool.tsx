@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useRef, useState } from "react";
 import {
 	BackHandler,
 	Platform,
@@ -10,16 +10,28 @@ import {
 	View,
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
+import { CheckerFill } from "@/ui/CheckerFill";
 import { Chip } from "@/ui/Chip";
+import { compactControls } from "@/ui/density";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { Popover } from "@/ui/Popover";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
+import {
+	BarButton,
+	BarChip,
+	BarGroup,
+	BarSections,
+	ContextBar,
+	OptionSegments,
+} from "../../shell/ContextBar";
 import { Dial } from "../../shell/Dial";
 import { Dock, DockFooter, useDockInset } from "../../shell/Dock";
 import type { DialScale } from "../../shell/dialDrag";
@@ -50,10 +62,23 @@ const TABS: { tab: CropTab; label: string; icon: IconName }[] = [
 // no photo to level.
 const CONTROLS_WITH_DIAL = 120;
 const CONTROLS_WITHOUT_DIAL = 64;
+// The wide layout keeps this strip under the photo in every mode, so the
+// photo holds still when Rotate is chosen. The dial sits in it, centered.
+const DIAL_STRIP = 100;
+const DIAL_WIDTH = 360;
 const TAB_IN = FadeIn.duration(160);
+// The ratio chip's rows: free shapes, then portrait, then landscape.
+type AspectId = (typeof ASPECTS)[number]["id"];
+const ASPECT_GROUPS: readonly AspectId[][] = [
+	["free", "original", "1:1"],
+	["4:5", "3:4", "9:16"],
+	["5:4", "4:3", "16:9"],
+];
 
 type CropToolProps = {
 	document: EditorDocument;
+	// A wide window puts the options in the header. A phone keeps the dock.
+	wide?: boolean;
 	onCancel: () => void;
 	// Gets the document's new framing, and whether other layers turn with
 	// the photo; an untouched crop gives back the current one.
@@ -63,14 +88,20 @@ type CropToolProps = {
 /**
  * Crops, turns, flips, and straightens the photo (the lowest locked one, see
  * `framingAnchor`), and sizes and fills the canvas around it, over the editor
- * until Done or Cancel. The box is the canvas-to-be: dragging it past the
- * photo's edges expands the canvas. With no locked photo, the canvas itself
- * is cropped and turned, and its layers with it.
- * Nothing changes in the document until Done, which is one undo step.
- * Cancel and Done are beside the dock, where its tabs are picked; each tab's
- * controls show just above it. Its header covers the editor's.
+ * until Done or Cancel.
+ * - The box is the canvas-to-be: dragging it past the photo's edges expands
+ *   the canvas. With no locked photo, the canvas itself is cropped and turned.
+ * - Nothing reaches the document until Done, which is one undo step.
+ * - A wide window keeps the modes in the header and a strip under the photo
+ *   for the straighten dial. A phone keeps the dock, with each tab's controls
+ *   just above it. Its header covers the editor's.
  */
-export function CropTool({ document, onCancel, onDone }: CropToolProps) {
+export function CropTool({
+	document,
+	wide = false,
+	onCancel,
+	onDone,
+}: CropToolProps) {
 	const controller = useCropController(document, onDone);
 	const { anchor, aspect, background, turnLayers } = controller;
 	const dockInset = useDockInset();
@@ -101,6 +132,9 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 	useEffect(() => {
 		if (Platform.OS !== "web") return;
 		const handleKeyDown = (event: KeyboardEvent) => {
+			// A popover takes Escape first, in the capture phase, and marks it
+			// handled. Applying here too would finish the crop as the menu closed.
+			if (event.defaultPrevented) return;
 			if (
 				event.key === "Escape" ||
 				(event.key === "Enter" && !isInteractiveElement(event.target))
@@ -113,34 +147,74 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	});
 
+	const reset = controller.changed && (
+		<TextButton label="Reset" onPress={controller.reset} />
+	);
+	const stage = (
+		<CanvasStage>
+			<CropCanvas
+				document={document}
+				anchor={anchor}
+				crop={controller.crop}
+				viewport={controller.viewport}
+				ratio={controller.ratio}
+				dragging={controller.dragging}
+				visible={controller.visible}
+				viewScale={controller.viewScale}
+				background={background}
+				turnLayers={turnLayers}
+				onLayout={controller.setViewSize}
+				onDragEnd={controller.settle}
+			/>
+		</CanvasStage>
+	);
+
+	if (wide) {
+		return (
+			<View style={styles.container}>
+				<ScreenHeader
+					bar={
+						<ContextBar
+							title="Crop"
+							onCancel={onCancel}
+							onDone={controller.done}
+							doneShortcut="Enter"
+						>
+							<CropBar
+								tab={tab}
+								aspect={aspect}
+								background={background}
+								turnLayers={turnLayers}
+								hasOtherLayers={hasOtherLayers}
+								onlyText={onlyText}
+								onTab={setTab}
+								onAspect={controller.pickAspect}
+								onRotate={controller.rotate}
+								onFlip={controller.flip}
+								onTurnLayers={controller.toggleTurnLayers}
+								onBackground={controller.setBackground}
+							/>
+						</ContextBar>
+					}
+					action={reset}
+				/>
+				{stage}
+				<DialStrip
+					show={tab === "rotate" && anchor.layer !== null}
+					straighten={controller.straighten}
+					onBegin={controller.straightenBegin}
+					onChange={controller.straightenChange}
+					onEnd={controller.straightenEnd}
+				/>
+			</View>
+		);
+	}
+
 	return (
 		<View style={styles.container}>
 			{/* As tall as the editor's header, so the canvas keeps its place. */}
-			<ScreenHeader
-				action={
-					controller.changed && (
-						<TextButton label="Reset" onPress={controller.reset} />
-					)
-				}
-			/>
-
-			<CanvasStage>
-				<CropCanvas
-					document={document}
-					anchor={anchor}
-					crop={controller.crop}
-					viewport={controller.viewport}
-					ratio={controller.ratio}
-					dragging={controller.dragging}
-					visible={controller.visible}
-					viewScale={controller.viewScale}
-					background={background}
-					turnLayers={turnLayers}
-					onLayout={controller.setViewSize}
-					onDragEnd={controller.settle}
-				/>
-			</CanvasStage>
-
+			<ScreenHeader action={reset} />
+			{stage}
 			<View
 				style={[
 					styles.controls,
@@ -158,24 +232,12 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 							contentContainerStyle={styles.aspects}
 						>
 							{ASPECTS.map(({ id, label }) => (
-								<Chip
+								<AspectChoice
 									key={id}
+									label={label}
 									selected={id === aspect}
 									onPress={() => controller.pickAspect(id)}
-									accessibilityLabel={`Aspect ratio ${label}`}
-									hitSlop={4}
-									style={styles.target}
-									frameStyle={styles.chip}
-								>
-									<Text
-										style={[
-											styles.chipLabel,
-											id === aspect && styles.chipLabelSelected,
-										]}
-									>
-										{label}
-									</Text>
-								</Chip>
+								/>
 							))}
 						</ScrollView>
 					) : tab === "rotate" ? (
@@ -252,6 +314,243 @@ export function CropTool({ document, onCancel, onDone }: CropToolProps) {
 					))}
 				</ToolRow>
 			</Dock>
+		</View>
+	);
+}
+
+/** The wide header's modes, then the options for the one that's chosen. */
+function CropBar({
+	tab,
+	aspect,
+	background,
+	turnLayers,
+	hasOtherLayers,
+	onlyText,
+	onTab,
+	onAspect,
+	onRotate,
+	onFlip,
+	onTurnLayers,
+	onBackground,
+}: {
+	tab: CropTab;
+	aspect: AspectId;
+	background: string | null;
+	turnLayers: boolean;
+	hasOtherLayers: boolean;
+	onlyText: boolean;
+	onTab: (tab: CropTab) => void;
+	onAspect: (id: AspectId) => void;
+	onRotate: () => void;
+	onFlip: () => void;
+	onTurnLayers: () => void;
+	onBackground: (background: string | null) => void;
+}) {
+	const current = ASPECTS.find((option) => option.id === aspect);
+	return (
+		<BarSections>
+			<BarGroup>
+				<OptionSegments
+					label="Crop"
+					options={TABS.map(({ label, icon }) => ({ title: label, icon }))}
+					selected={TABS.findIndex((item) => item.tab === tab)}
+					onSelect={(index) => {
+						const next = TABS[index];
+						if (next) onTab(next.tab);
+					}}
+				/>
+			</BarGroup>
+			{/* Each option is its own child. A fragment would be one slot, and
+			    the buttons would stack in it. */}
+			<BarGroup>
+				{tab === "crop" && (
+					<AspectMenu
+						label={current?.label ?? "Free"}
+						selected={aspect}
+						onPick={onAspect}
+					/>
+				)}
+				{tab === "rotate" && (
+					<BarButton icon="rotate-left" label="Rotate 90°" onPress={onRotate} />
+				)}
+				{tab === "rotate" && (
+					<BarButton icon="flip-horizontal" label="Flip" onPress={onFlip} />
+				)}
+				{tab === "rotate" && hasOtherLayers && (
+					<BarButton
+						icon={turnLayers ? "checkbox-marked" : "checkbox-blank-outline"}
+						label={onlyText ? "Turn text" : "Turn layers"}
+						checked={turnLayers}
+						onPress={onTurnLayers}
+					/>
+				)}
+				{tab === "canvas" && (
+					<BackgroundChip value={background} onPick={onBackground} />
+				)}
+			</BarGroup>
+		</BarSections>
+	);
+}
+
+/** The current ratio, opening the three rows of choices. */
+function AspectMenu({
+	label,
+	selected,
+	onPick,
+}: {
+	label: string;
+	selected: AspectId;
+	onPick: (id: AspectId) => void;
+}) {
+	return (
+		<BarChip label={`Aspect ratio ${label}`} icon="aspect-ratio" text={label}>
+			<View style={styles.aspectMenu}>
+				{ASPECT_GROUPS.map((group) => (
+					<View key={group.join()} style={styles.aspectRow}>
+						{group.map((id) => {
+							const choice = ASPECTS.find((option) => option.id === id);
+							if (!choice) return null;
+							return (
+								<AspectChoice
+									key={id}
+									label={choice.label}
+									selected={id === selected}
+									onPress={() => onPick(id)}
+								/>
+							);
+						})}
+					</View>
+				))}
+			</View>
+		</BarChip>
+	);
+}
+
+/** One ratio, highlighted while it's the crop's. */
+function AspectChoice({
+	label,
+	selected,
+	onPress,
+}: {
+	label: string;
+	selected: boolean;
+	onPress: () => void;
+}) {
+	return (
+		<Chip
+			selected={selected}
+			onPress={onPress}
+			accessibilityLabel={`Aspect ratio ${label}`}
+			hitSlop={4}
+			style={styles.target}
+			frameStyle={styles.chip}
+		>
+			<Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+				{label}
+			</Text>
+		</Chip>
+	);
+}
+
+/** The canvas fill, as a swatch that opens the three backgrounds. */
+function BackgroundChip({
+	value,
+	onPick,
+}: {
+	value: string | null;
+	onPick: (background: string | null) => void;
+}) {
+	const anchor = useRef<View>(null);
+	const [open, setOpen] = useState(false);
+	const label =
+		value === "#FFFFFF"
+			? "White background"
+			: value === "#000000"
+				? "Black background"
+				: "Transparent background";
+	return (
+		<>
+			<Pressable
+				ref={anchor}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				accessibilityState={{ expanded: open }}
+				aria-expanded={open}
+				onPress={() => setOpen((shown) => !shown)}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.backgroundChip,
+						webTransition,
+						hovered && styles.backgroundChipHovered,
+						pressed && styles.backgroundChipPressed,
+					];
+				}}
+			>
+				<Text style={styles.backgroundLabel}>Background</Text>
+				<View
+					style={[
+						styles.backgroundSwatch,
+						value !== null && { backgroundColor: value },
+					]}
+				>
+					{value === null && <CheckerFill width={20} height={20} cell={10} />}
+				</View>
+			</Pressable>
+			<Popover
+				anchor={anchor}
+				open={open}
+				onClose={() => setOpen(false)}
+				label={label}
+			>
+				<BackgroundPicker value={value} onPick={onPick} />
+			</Popover>
+		</>
+	);
+}
+
+/**
+ * Room for the straighten dial under the photo, whether or not it's showing,
+ * so choosing Rotate doesn't move the crop.
+ */
+function DialStrip({
+	show,
+	straighten,
+	onBegin,
+	onChange,
+	onEnd,
+}: {
+	show: boolean;
+	straighten: ComponentProps<typeof Dial>["value"];
+	onBegin: ComponentProps<typeof Dial>["onBegin"];
+	onChange: ComponentProps<typeof Dial>["onChange"];
+	onEnd: ComponentProps<typeof Dial>["onEnd"];
+}) {
+	const { bottom } = useSafeAreaInsets();
+	return (
+		<View
+			style={[
+				styles.dialStrip,
+				{ height: DIAL_STRIP + bottom, paddingBottom: bottom },
+			]}
+		>
+			{show && (
+				<View style={styles.dial}>
+					<Dial
+						value={straighten}
+						max={MAX_STRAIGHTEN}
+						scale={DEGREES}
+						label="Straighten"
+						increaseLabel="Increase angle"
+						decreaseLabel="Decrease angle"
+						readout={(degrees) => `${degrees}°`}
+						valueText={(degrees) => `${degrees} degrees`}
+						onBegin={onBegin}
+						onChange={onChange}
+						onEnd={onEnd}
+					/>
+				</View>
+			)}
 		</View>
 	);
 }
@@ -395,5 +694,46 @@ const styles = StyleSheet.create({
 	fillLabel: {
 		...typography.label,
 		color: colors.textSecondary,
+	},
+	aspectMenu: {
+		gap: 4,
+	},
+	aspectRow: {
+		flexDirection: "row",
+		gap: 8,
+	},
+	backgroundChip: {
+		height: compactControls ? 36 : 44,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		paddingHorizontal: 12,
+		borderRadius: radii.small,
+	},
+	backgroundChipHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	backgroundChipPressed: {
+		backgroundColor: colors.pressedOverlay,
+		transform: [{ scale: 0.92 }],
+	},
+	backgroundLabel: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
+	},
+	backgroundSwatch: {
+		width: 20,
+		height: 20,
+		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: colors.swatchRing,
+		overflow: "hidden",
+	},
+	dialStrip: {
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	dial: {
+		width: DIAL_WIDTH,
 	},
 });

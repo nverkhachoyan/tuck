@@ -22,9 +22,9 @@ const BACK_SIZE = compactControls ? 36 : 44;
  * assistive tech and as its tooltip on web. With `backColumn`, Back is
  * centered over a column that wide at the bar's left (the wide editor's
  * rail) rather than lined up with the edge. Without `onBack`, the title, if
- * any, takes Back's place. Crop's header has neither: it covers the editor
- * like a dialog, its name is in the dock's footer, and it keeps only its
- * actions.
+ * any, takes Back's place. Crop's phone header has neither: it covers the
+ * editor like a dialog, and its name is in the dock's footer. On a wide
+ * window that name and its options are the header's bar.
  */
 export function ScreenHeader({
 	title,
