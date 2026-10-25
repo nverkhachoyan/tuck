@@ -404,24 +404,29 @@ function AspectMenu({
 }) {
 	return (
 		<BarChip label={`Aspect ratio ${label}`} icon="aspect-ratio" text={label}>
-			<View style={styles.aspectMenu}>
-				{ASPECT_GROUPS.map((group) => (
-					<View key={group.join()} style={styles.aspectRow}>
-						{group.map((id) => {
-							const choice = ASPECTS.find((option) => option.id === id);
-							if (!choice) return null;
-							return (
-								<AspectChoice
-									key={id}
-									label={choice.label}
-									selected={id === selected}
-									onPress={() => onPick(id)}
-								/>
-							);
-						})}
-					</View>
-				))}
-			</View>
+			{(close) => (
+				<View style={styles.aspectMenu}>
+					{ASPECT_GROUPS.map((group) => (
+						<View key={group.join()} style={styles.aspectRow}>
+							{group.map((id) => {
+								const choice = ASPECTS.find((option) => option.id === id);
+								if (!choice) return null;
+								return (
+									<AspectChoice
+										key={id}
+										label={choice.label}
+										selected={id === selected}
+										onPress={() => {
+											onPick(id);
+											close();
+										}}
+									/>
+								);
+							})}
+						</View>
+					))}
+				</View>
+			)}
 		</BarChip>
 	);
 }

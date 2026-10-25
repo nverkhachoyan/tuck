@@ -217,18 +217,25 @@ export function CutOutBar({
 							)
 						}
 					>
-						<OptionSegments
-							label="Edge"
-							options={BRUSH_EDGES.map(({ title, icon }) => ({ title, icon }))}
-							selected={BRUSH_EDGES.findIndex(
-								(edge) => edge.soft === settings.soft,
-							)}
-							onSelect={(index) => {
-								const edge = BRUSH_EDGES[index];
-								if (!edge || edge.soft === settings.soft) return;
-								onChange({ ...settings, soft: edge.soft });
-							}}
-						/>
+						{(close) => (
+							<OptionSegments
+								label="Edge"
+								options={BRUSH_EDGES.map(({ title, icon }) => ({
+									title,
+									icon,
+								}))}
+								selected={BRUSH_EDGES.findIndex(
+									(edge) => edge.soft === settings.soft,
+								)}
+								onSelect={(index) => {
+									const edge = BRUSH_EDGES[index];
+									if (edge && edge.soft !== settings.soft) {
+										onChange({ ...settings, soft: edge.soft });
+									}
+									close();
+								}}
+							/>
+						)}
 					</SizeChip>
 				</BarGroup>
 			)}

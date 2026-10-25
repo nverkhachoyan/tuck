@@ -46,6 +46,7 @@ export function ColorOptions({
 	onPick,
 	onPickCustom,
 	onEyedropper,
+	onSwatch,
 }: {
 	value: string | null;
 	customColor: string | null;
@@ -53,6 +54,8 @@ export function ColorOptions({
 	onPick: (color: string | null) => void;
 	onPickCustom: (color: string) => void;
 	onEyedropper?: () => void;
+	// After a swatch's color is picked, not the custom color's.
+	onSwatch?: () => void;
 }) {
 	const [pickerOpen, setPickerOpen] = useState(false);
 	// The picker's color while it's dragged, before it's picked.
@@ -76,6 +79,7 @@ export function ColorOptions({
 				onPick={(color) => {
 					setPickerOpen(false);
 					onPick(color);
+					onSwatch?.();
 				}}
 			/>
 			{pickerOpen && (
@@ -99,8 +103,9 @@ const CHIP_SWATCH = 20;
 
 /**
  * The current color, as a swatch that opens `ColorOptions` in a popover: the
- * swatches, the custom color, and the eyedropper. Starting the eyedropper
- * closes the popover, as a tray does, so the canvas is in view. `title` is
+ * swatches, the custom color, and the eyedropper. A swatch closes it (see
+ * `BarChip`), while the custom color's picker keeps it open to drag. Starting
+ * the eyedropper closes it too, as a tray does, so the canvas is in view. `title` is
  * the word beside the swatch when several chips sit together. `label` is
  * what a screen reader hears.
  */
@@ -173,6 +178,7 @@ export function ColorChip({
 					customColor={customColor}
 					noneLabel={noneLabel}
 					onPick={onPick}
+					onSwatch={close}
 					onPickCustom={onPickCustom}
 					onEyedropper={
 						onEyedropper &&

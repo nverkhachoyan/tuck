@@ -268,7 +268,15 @@ function FontChip({
 			textStyle={{ fontFamily: TEXT_FONTS[font].family }}
 			restoreFocus={restoreFocus}
 		>
-			<FontPicker value={font} onPick={onPick} />
+			{(close) => (
+				<FontPicker
+					value={font}
+					onPick={(picked) => {
+						onPick(picked);
+						close();
+					}}
+				/>
+			)}
 		</BarChip>
 	);
 }

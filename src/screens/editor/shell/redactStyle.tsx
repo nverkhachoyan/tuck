@@ -55,36 +55,44 @@ export function redactLookItems<T extends RedactLookSettings>({
 			icon={current.icon}
 			text={current.title}
 		>
-			<View style={styles.effectChoices}>
-				<OptionSegments
-					label="Effect"
-					options={EFFECTS.map(({ title, icon }) => ({ title, icon }))}
-					selected={selected}
-					onSelect={(index) => {
-						const next = EFFECTS[index]?.effect;
-						if (!next || next === effect) return;
-						onChange({ ...settings, effect: next });
-					}}
-				/>
-				{effect !== "solid" && (
-					<ToolChoices nowrap>
-						{STRENGTH_NAMES[effect].map((name, index) => (
-							<RingChoice
-								key={name}
-								label={name}
-								selected={index === settings.strength}
-								onPress={() => onChange({ ...settings, strength: index })}
-							>
-								{effect === "blur" ? (
-									<StrengthDot strength={index} />
-								) : (
-									<PixelSquare strength={index} />
-								)}
-							</RingChoice>
-						))}
-					</ToolChoices>
-				)}
-			</View>
+			{(close) => (
+				<View style={styles.effectChoices}>
+					<OptionSegments
+						label="Effect"
+						options={EFFECTS.map(({ title, icon }) => ({ title, icon }))}
+						selected={selected}
+						onSelect={(index) => {
+							const next = EFFECTS[index]?.effect;
+							if (next && next !== effect) {
+								onChange({ ...settings, effect: next });
+							}
+							// Blur and pixelate show their strengths here next.
+							if (next === "solid") close();
+						}}
+					/>
+					{effect !== "solid" && (
+						<ToolChoices nowrap>
+							{STRENGTH_NAMES[effect].map((name, index) => (
+								<RingChoice
+									key={name}
+									label={name}
+									selected={index === settings.strength}
+									onPress={() => {
+										onChange({ ...settings, strength: index });
+										close();
+									}}
+								>
+									{effect === "blur" ? (
+										<StrengthDot strength={index} />
+									) : (
+										<PixelSquare strength={index} />
+									)}
+								</RingChoice>
+							))}
+						</ToolChoices>
+					)}
+				</View>
+			)}
 		</BarChip>,
 		...(effect === "solid"
 			? [

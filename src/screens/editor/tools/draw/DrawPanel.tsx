@@ -201,15 +201,18 @@ function PenTipChip({
 	const tip = PEN_TIPS[selected] ?? PEN_TIPS[0];
 	return (
 		<BarChip label={tip.title} icon={tip.icon} text={tip.title}>
-			<OptionSegments
-				label="Pen tip"
-				options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
-				selected={selected}
-				onSelect={(index) => {
-					const next = PEN_TIPS[index]?.tool;
-					if (next && next !== tool) onPick(next);
-				}}
-			/>
+			{(close) => (
+				<OptionSegments
+					label="Pen tip"
+					options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
+					selected={selected}
+					onSelect={(index) => {
+						const next = PEN_TIPS[index]?.tool;
+						if (next && next !== tool) onPick(next);
+						close();
+					}}
+				/>
+			)}
 		</BarChip>
 	);
 }
@@ -228,18 +231,21 @@ function ShapeKindChip({
 			icon={SHAPE_ICONS[shape]}
 			text={SHAPE_NAMES[shape]}
 		>
-			<OptionSegments
-				label="Shape"
-				options={shapeKinds.map((kind) => ({
-					title: SHAPE_NAMES[kind],
-					icon: SHAPE_ICONS[kind],
-				}))}
-				selected={shapeKinds.indexOf(shape)}
-				onSelect={(index) => {
-					const kind = shapeKinds[index];
-					if (kind && kind !== shape) onPick(kind);
-				}}
-			/>
+			{(close) => (
+				<OptionSegments
+					label="Shape"
+					options={shapeKinds.map((kind) => ({
+						title: SHAPE_NAMES[kind],
+						icon: SHAPE_ICONS[kind],
+					}))}
+					selected={shapeKinds.indexOf(shape)}
+					onSelect={(index) => {
+						const kind = shapeKinds[index];
+						if (kind && kind !== shape) onPick(kind);
+						close();
+					}}
+				/>
+			)}
 		</BarChip>
 	);
 }

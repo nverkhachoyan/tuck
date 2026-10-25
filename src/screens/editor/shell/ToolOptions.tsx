@@ -161,7 +161,8 @@ export const SIZE_DOTS = [4, 7, 11, 16, 22];
 /**
  * The current brush size in the wide editor's bar: a dot in ink, opening the
  * five sizes. `children` is more choices in that popover, such as a brush's
- * edge. `[` and `]` still step the size, and the tooltip says so.
+ * edge, and can take `close` (see `BarChip`). `[` and `]` still step the
+ * size, and the tooltip says so.
  */
 export function SizeChip({
 	index,
@@ -174,7 +175,7 @@ export function SizeChip({
 	color: string | null;
 	tip?: PenTip;
 	onPick: (index: number) => void;
-	children?: ReactNode;
+	children?: ReactNode | ((close: () => void) => ReactNode);
 }) {
 	const size = SIZE_DOTS[index] ?? SIZE_DOTS[0];
 	return (
@@ -189,16 +190,21 @@ export function SizeChip({
 				/>
 			}
 		>
-			<View style={styles.chipChoices}>
-				<SizeChoices
-					nowrap
-					index={index}
-					color={color}
-					tip={tip}
-					onPick={onPick}
-				/>
-				{children}
-			</View>
+			{(close) => (
+				<View style={styles.chipChoices}>
+					<SizeChoices
+						nowrap
+						index={index}
+						color={color}
+						tip={tip}
+						onPick={(picked) => {
+							onPick(picked);
+							close();
+						}}
+					/>
+					{typeof children === "function" ? children(close) : children}
+				</View>
+			)}
 		</BarChip>
 	);
 }

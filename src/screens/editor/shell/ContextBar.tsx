@@ -364,6 +364,8 @@ export function BarButton({
  * An option that shows its current value and opens the choices in a popover.
  * The bar's highlighter is for the mode; a chip is how a value is changed.
  * `label` is for screen readers, `text` is what's drawn beside the glyph.
+ * `children` can take `close`, for a choice that's complete once made: the
+ * popover is modal, so left open it would take the next press on the canvas.
  */
 export function BarChip({
 	label,
@@ -383,9 +385,10 @@ export function BarChip({
 	// The font chip draws its name in the font it sets.
 	textStyle?: StyleProp<TextStyle>;
 	restoreFocus?: () => void;
-	children: ReactNode;
+	children: ReactNode | ((close: () => void) => ReactNode);
 }) {
 	const [open, setOpen] = useState(false);
+	const close = () => setOpen(false);
 	const ownRef = useRef<View>(null);
 	const { anchor, tooltip } = useTooltip(label, shortcut);
 	const ref = anchor.ref ?? ownRef;
@@ -428,13 +431,15 @@ export function BarChip({
 			<Popover
 				anchor={ref}
 				open={open}
-				onClose={() => setOpen(false)}
+				onClose={close}
 				label={label}
 				restoreFocus={restoreFocus}
 			>
 				{/* Choices aren't options in the row. Measuring them would
 				    place the fade on controls that aren't in the bar. */}
-				<BarParent.Provider value={null}>{children}</BarParent.Provider>
+				<BarParent.Provider value={null}>
+					{typeof children === "function" ? children(close) : children}
+				</BarParent.Provider>
 			</Popover>
 		</>
 	);
