@@ -6,9 +6,11 @@ import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
 import { importSharedPhoto } from "@/photos/sharedPhoto";
 import { copyName, type ProjectSummary } from "@/projects/projectFile";
+import { isProjectOpenElsewhere } from "@/projects/projectLifecycle";
 import { editorHref } from "@/projects/projectRoute";
 import {
 	closeProject,
+	copyOpenProject,
 	createProject,
 	deleteProject,
 	duplicateProject,
@@ -188,16 +190,39 @@ export function useHomeProjects() {
 			return openPhoto(await importPhoto(uri));
 		});
 
-	const openSavedProject = (id: string) =>
-		open("Couldn't open project", async () => {
-			const document = await openProject(id);
+	// After the alert closes, so it isn't nested inside the open that failed.
+	const openCopy = (id: string) =>
+		open("Couldn't open a copy", async () => {
+			const copyId = await copyOpenProject(id);
+			const document = await openProject(copyId);
 			if (!document) {
 				showAlert(
 					"Couldn't open project",
 					"It may have been saved by a newer version of the app.",
 				);
 			}
-			return document && { id, document };
+			return document && { id: copyId, document };
+		});
+
+	const openSavedProject = (id: string) =>
+		open("Couldn't open project", async () => {
+			try {
+				const document = await openProject(id);
+				if (!document) {
+					showAlert(
+						"Couldn't open project",
+						"It may have been saved by a newer version of the app.",
+					);
+				}
+				return document && { id, document };
+			} catch (error) {
+				if (!isProjectOpenElsewhere(error)) throw error;
+				showAlert("Couldn't open project", errorMessage(error), [
+					{ text: "Cancel", style: "cancel" },
+					{ text: "Open a copy", onPress: () => void openCopy(id) },
+				]);
+				return null;
+			}
 		});
 
 	const confirmDeleteProject = (id: string) =>

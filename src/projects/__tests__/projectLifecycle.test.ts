@@ -15,6 +15,7 @@ import {
 } from "../projectFile.ts";
 import {
 	createProjectLifecycle,
+	isProjectOpenElsewhere,
 	type ProjectStorage,
 } from "../projectLifecycle.ts";
 
@@ -30,6 +31,9 @@ function createHarness(
 	write: Write = async (id, json, files) => {
 		files.set(id, json);
 	},
+	// When a read should see something other than the saved file, such as a
+	// file another tab is in the middle of replacing.
+	read?: (id: string, files: Map<string, string>) => Promise<string | null>,
 ) {
 	const files = new Map<string, string>();
 	// Each project's image files; a project with none has no entry.
@@ -72,6 +76,7 @@ function createHarness(
 			if (kept?.size === 0) images.delete(id);
 		},
 		async readProjectFile(id) {
+			if (read) return read(id, files);
 			return files.get(id) ?? null;
 		},
 		async writeProjectFile(id, json) {
@@ -936,6 +941,74 @@ describe("renaming and duplicating", () => {
 		await assert.rejects(harness.projects.renameProject(id, "Name"));
 		assert.equal(harness.files.get(id), before);
 		assert.equal(harness.files.size, 1);
+	});
+
+	test("a project open elsewhere can be copied without claiming it", async () => {
+		const harness = createHarness();
+		const id = await createSavedProject(harness);
+		const saved = harness.files.get(id);
+		harness.openElsewhere.add(id);
+		await assert.rejects(harness.projects.openProject(id), (error: unknown) => {
+			assert.equal(isProjectOpenElsewhere(error), true);
+			assert.equal(
+				error instanceof Error && error.message,
+				"This project is open in another tab. Close it there, then try again.",
+			);
+			return true;
+		});
+
+		const copyId = await harness.projects.copyOpenProject(id);
+		const copy = savedProject(harness, copyId);
+		assert.equal(
+			JSON.stringify(copy.document),
+			JSON.stringify(savedProject(harness, id).document),
+		);
+		assert.equal(copy.name, "CAPTION copy");
+		assert.ok(harness.images.get(copyId)?.has(PHOTO_FILE));
+		assert.equal(harness.files.get(id), saved);
+		await assert.rejects(
+			harness.projects.openProject(id),
+			isProjectOpenElsewhere,
+		);
+	});
+
+	test("a copy raced with a save is one whole file, the old or the new", async () => {
+		let reads = 0;
+		let markWaiting: () => void = () => {};
+		const retryWaiting = new Promise<void>((resolve) => {
+			markWaiting = resolve;
+		});
+		let releaseRetry: () => void = () => {};
+		const retryGate = new Promise<void>((resolve) => {
+			releaseRetry = resolve;
+		});
+		const harness = createHarness(undefined, async (id, files) => {
+			reads += 1;
+			if (reads === 1) return "{torn";
+			if (reads === 2) {
+				markWaiting();
+				await retryGate;
+			}
+			return files.get(id) ?? null;
+		});
+		const id = await createSavedProject(harness);
+		const older = savedProject(harness, id);
+		harness.openElsewhere.add(id);
+		const pending = harness.projects.copyOpenProject(id);
+		await retryWaiting;
+		const newerDocument = addText(older.document, "NEWER");
+		harness.files.set(
+			id,
+			JSON.stringify({ ...older, document: newerDocument }),
+		);
+		releaseRetry();
+		const copyId = await pending;
+		const copy = savedProject(harness, copyId);
+		assert.deepEqual(copy.document, newerDocument);
+		assert.equal(
+			copy.document.layers.filter((layer) => layer.type === "text").length,
+			2,
+		);
 	});
 
 	test("a project this version can't open can't be renamed or copied", async () => {

@@ -98,6 +98,8 @@ Commit: `feat: name projects without text by what they hold and when`
 
 Check in two browser tabs: open a project in one, open it from home in the other, choose Open a copy, and check the copy opens with the last saved edits while the first tab keeps working.
 
+Checked on web in two tabs, by day and by night. With Trip open in the first tab, the second tab's home offers "This project is open in another tab. Close it there, then try again." with Cancel and Open a copy. The copy opens as Trip copy with the saved caption "Hello caption", and the first tab still opens Text and cancels it. Opening the same address in the second tab shows that message with Back to projects beside Try Again (night). A native save writes a whole draft and renames it over the file, and web writes in one put, so a read is one version; a copy retries once when the first read doesn't parse.
+
 Commit: `feat: offer a copy of a project that's open in another tab`
 
 ### 7. Sentence case

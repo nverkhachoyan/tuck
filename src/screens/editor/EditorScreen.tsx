@@ -126,7 +126,15 @@ export default function EditorScreen() {
 					<>
 						<Text style={styles.statusTitle}>Couldn't open project</Text>
 						<Text style={styles.statusMessage}>{session.message}</Text>
-						<Button label="Try Again" onPress={session.retry} />
+						<View style={styles.statusActions}>
+							{session.openElsewhere ? (
+								<Button
+									label="Back to projects"
+									onPress={() => leaveEditor(router)}
+								/>
+							) : null}
+							<Button label="Try Again" onPress={session.retry} />
+						</View>
 					</>
 				)}
 			</View>
@@ -898,6 +906,12 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 		textAlign: "center",
 		maxWidth: 320,
-		marginBottom: 12,
+	},
+	statusActions: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "center",
+		gap: space.sm,
+		marginTop: space.sm,
 	},
 });

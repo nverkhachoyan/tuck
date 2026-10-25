@@ -2,7 +2,10 @@ import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/errorMessage";
 import type { EditorDocument } from "@/model/document";
-import { NEWER_VERSION_MESSAGE } from "@/projects/projectLifecycle";
+import {
+	isProjectOpenElsewhere,
+	NEWER_VERSION_MESSAGE,
+} from "@/projects/projectLifecycle";
 import { projectRouteId, UNSAVED_PROJECT } from "@/projects/projectRoute";
 import { closeProject, openProject } from "@/projects/projectService";
 import { renderThumbnail } from "@/render/renderDocument";
@@ -11,7 +14,12 @@ import { useStore } from "@/store";
 type ProjectSession =
 	| { status: "open"; document: EditorDocument }
 	| { status: "opening" }
-	| { status: "failed"; message: string; retry: () => void };
+	| {
+			status: "failed";
+			message: string;
+			openElsewhere: boolean;
+			retry: () => void;
+	  };
 
 /**
  * The editing session a project route shows. Usually the screen that led here
@@ -30,6 +38,7 @@ export function useProjectSession(routeId: string): ProjectSession {
 	const [failure, setFailure] = useState<{
 		routeId: string;
 		message: string;
+		openElsewhere: boolean;
 	} | null>(null);
 	const failed = failure?.routeId === routeId ? failure : null;
 	// Set at once, so a render before the project opens can't open it again.
@@ -49,7 +58,11 @@ export function useProjectSession(routeId: string): ProjectSession {
 		opening.current = true;
 		void switchToProject(routeId, () => wanted.current)
 			.catch((error: unknown) => {
-				setFailure({ routeId, message: errorMessage(error) });
+				setFailure({
+					routeId,
+					message: errorMessage(error),
+					openElsewhere: isProjectOpenElsewhere(error),
+				});
 			})
 			.finally(() => {
 				opening.current = false;
@@ -59,7 +72,14 @@ export function useProjectSession(routeId: string): ProjectSession {
 	const retry = useCallback(() => setFailure(null), []);
 
 	if (document) return { status: "open", document };
-	if (failed) return { status: "failed", message: failed.message, retry };
+	if (failed) {
+		return {
+			status: "failed",
+			message: failed.message,
+			openElsewhere: failed.openElsewhere,
+			retry,
+		};
+	}
 	return { status: "opening" };
 }
 

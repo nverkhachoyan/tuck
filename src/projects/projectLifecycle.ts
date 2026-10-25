@@ -7,6 +7,7 @@ import {
 	hasEdits,
 } from "../model/document.ts";
 import {
+	copyName,
 	imageFiles,
 	isImageFile,
 	mapImageUris,
@@ -47,6 +48,29 @@ export const MISSING_IMAGE_MESSAGE = "One of this project's photos is missing.";
 export const NEWER_VERSION_MESSAGE =
 	"It may have been saved by a newer version of the app.";
 const PROJECT_GONE_MESSAGE = "This project no longer exists.";
+
+/** Another tab holds the project, so this one can't claim it. */
+export const PROJECT_OPEN_ELSEWHERE = "open-elsewhere";
+
+const OPEN_ELSEWHERE_MESSAGE =
+	"This project is open in another tab. Close it there, then try again.";
+
+export class ProjectOpenElsewhereError extends Error {
+	readonly code = PROJECT_OPEN_ELSEWHERE;
+	constructor() {
+		super(OPEN_ELSEWHERE_MESSAGE);
+		this.name = "ProjectOpenElsewhereError";
+	}
+}
+
+export function isProjectOpenElsewhere(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		error.code === PROJECT_OPEN_ELSEWHERE
+	);
+}
 
 type OpenProject = {
 	// The file behind each image URL the document may use: every file the
@@ -292,7 +316,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	async function openProject(id: string): Promise<EditorDocument | null> {
 		await closing;
 		if (!(await storage.claimProject(id))) {
-			throw new Error("This project is already open in another tab.");
+			throw new ProjectOpenElsewhereError();
 		}
 		let opened = false;
 		try {
@@ -473,7 +497,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	): Promise<T> {
 		await closing;
 		if (openProjects.has(id) || !(await storage.claimProject(id))) {
-			throw new Error("This project is open in another tab.");
+			throw new ProjectOpenElsewhereError();
 		}
 		try {
 			return await work();
@@ -485,6 +509,26 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	/** A closed project's saved file, which this version can open. */
 	async function readSaved(id: string): Promise<SavedProject> {
 		const json = await storage.readProjectFile(id);
+		return savedFromJson(json);
+	}
+
+	/**
+	 * The saved file as another tab may be writing it. A write replaces the
+	 * file whole, so a read is the previous save or the next one. A read that
+	 * doesn't parse is tried once more, in case it caught the replace.
+	 */
+	async function readSavedUnclaimed(id: string): Promise<SavedProject> {
+		const json = await storage.readProjectFile(id);
+		try {
+			return savedFromJson(json);
+		} catch (error) {
+			if (json === null || !(error instanceof Error)) throw error;
+			if (error.message !== NEWER_VERSION_MESSAGE) throw error;
+			return savedFromJson(await storage.readProjectFile(id));
+		}
+	}
+
+	function savedFromJson(json: string | null): SavedProject {
 		if (json === null) throw new Error(PROJECT_GONE_MESSAGE);
 		const saved = parseOpenableProject(json);
 		if (!saved) throw new Error(NEWER_VERSION_MESSAGE);
@@ -517,35 +561,60 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	function duplicateProject(id: string, name: string): Promise<void> {
 		return withClosedProject(id, async () => {
 			const saved = await readSaved(id);
-			const copyId = createProjectId();
-			if (!(await storage.claimProject(copyId))) {
-				throw new Error("Couldn't start the copy.");
-			}
-			try {
-				for (const file of imageFiles(saved.document)) {
-					await storage.copyImage(id, file, copyId);
-				}
-				const now = Date.now();
-				const { thumbnail } = saved;
-				const copy: SavedProject = {
-					version: PROJECT_VERSION,
-					createdAt: now,
-					updatedAt: now,
-					document: saved.document,
-					thumbnail:
-						thumbnail?.updatedAt === saved.updatedAt
-							? { ...thumbnail, updatedAt: now }
-							: thumbnail,
-					name: projectName(name) ?? undefined,
-				};
-				await storage.writeProjectFile(copyId, JSON.stringify(copy));
-			} catch (error) {
-				await storage.removeProject(copyId).catch(() => {});
-				throw error;
-			} finally {
-				await storage.releaseProject(copyId);
-			}
+			await writeCopy(id, saved, name);
 		});
+	}
+
+	/**
+	 * A new project with the last saved copy of `id`, which another tab may
+	 * still hold open. It isn't claimed here: the read takes whatever whole
+	 * file is saved, and the copy is claimed on its own.
+	 */
+	async function copyOpenProject(id: string): Promise<string> {
+		const saved = await readSavedUnclaimed(id);
+		const listed = await listProjects();
+		const labels = listed.flatMap((project) =>
+			project.status === "ready" ? [project.label] : [],
+		);
+		const label = saved.name ?? projectLabel(saved.document, saved.createdAt);
+		return writeCopy(id, saved, copyName(label, labels));
+	}
+
+	/** `saved`, and the image files its layers use, as a new project called `name`. */
+	async function writeCopy(
+		fromId: string,
+		saved: SavedProject,
+		name: string,
+	): Promise<string> {
+		const copyId = createProjectId();
+		if (!(await storage.claimProject(copyId))) {
+			throw new Error("Couldn't start the copy.");
+		}
+		try {
+			for (const file of imageFiles(saved.document)) {
+				await storage.copyImage(fromId, file, copyId);
+			}
+			const now = Date.now();
+			const { thumbnail } = saved;
+			const copy: SavedProject = {
+				version: PROJECT_VERSION,
+				createdAt: now,
+				updatedAt: now,
+				document: saved.document,
+				thumbnail:
+					thumbnail?.updatedAt === saved.updatedAt
+						? { ...thumbnail, updatedAt: now }
+						: thumbnail,
+				name: projectName(name) ?? undefined,
+			};
+			await storage.writeProjectFile(copyId, JSON.stringify(copy));
+			return copyId;
+		} catch (error) {
+			await storage.removeProject(copyId).catch(() => {});
+			throw error;
+		} finally {
+			await storage.releaseProject(copyId);
+		}
 	}
 
 	/**
@@ -660,6 +729,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		deleteProject,
 		renameProject,
 		duplicateProject,
+		copyOpenProject,
 		listProjects,
 		updateThumbnail,
 	};
