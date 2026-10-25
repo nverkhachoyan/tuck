@@ -9,6 +9,7 @@ export const {
 	createBlankProject,
 	openProject,
 	openProjectName,
+	openProjectCreatedAt,
 	addImage,
 	closeProject,
 	deleteProject,

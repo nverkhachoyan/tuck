@@ -153,6 +153,11 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		return openProjects.get(id)?.name ?? null;
 	}
 
+	/** When an open project was made, beside `openProjectName`. */
+	function openProjectCreatedAt(id: string): number | null {
+		return openProjects.get(id)?.createdAt ?? null;
+	}
+
 	function savedDocument(id: string, document: EditorDocument) {
 		const project = openProjects.get(id);
 		if (!project) return null;
@@ -569,7 +574,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 						id,
 						status: "ready",
 						updatedAt: saved.updatedAt,
-						label: saved.name ?? projectLabel(saved.document),
+						label: saved.name ?? projectLabel(saved.document, saved.createdAt),
 						thumbnail: saved.thumbnail?.url ?? null,
 						thumbnailOutdated: saved.thumbnail?.updatedAt !== saved.updatedAt,
 					};
@@ -643,6 +648,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 		subscribeAutosave,
 		getAutosaveError,
 		openProjectName,
+		openProjectCreatedAt,
 		hasUnsavedChanges,
 		queueAutosave,
 		flushAutosave,

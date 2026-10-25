@@ -17,7 +17,11 @@ import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
-import { addImage, openProjectName } from "@/projects/projectService";
+import {
+	addImage,
+	openProjectCreatedAt,
+	openProjectName,
+} from "@/projects/projectService";
 import { textIndexAt } from "@/render/textLayerLayout";
 import { useStore } from "@/store";
 import {
@@ -303,13 +307,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
 
-	// What home lists the project as: the name it was given, or its text.
-	const projectTitle = useMemo(
-		() =>
-			(projectId !== null && openProjectName(projectId)) ||
-			projectLabel(document),
-		[projectId, document],
-	);
+	// What home lists the project as: the name it was given, its text, or what
+	// it holds and when it was made.
+	const projectTitle = useMemo(() => {
+		const name = projectId !== null ? openProjectName(projectId) : null;
+		if (name) return name;
+		const createdAt =
+			projectId !== null ? openProjectCreatedAt(projectId) : null;
+		return projectLabel(document, createdAt ?? Date.now());
+	}, [projectId, document]);
 
 	const editNotice = useEditNotice(document);
 

@@ -85,6 +85,8 @@ Commit: `fix: line up home's start buttons with the projects`
 
 Check home with several projects of each kind, rename one, clear its name (it goes back to the label), and duplicate one.
 
+Checked on web, by night and by day, at 1440 and 390. A photo with no text is "Photo · Oct 24, 8:00 PM", a canvas with a stroke and no text is "Canvas · Oct 24, 8:01 PM", and a photo with text is "Hello caption". The wide editor's header uses the same label. Home still shows "Today, 8:00 PM" under it. Renaming the text project to Trip sticks. Duplicating the photo lists "Photo · Oct 24, 8:00 PM copy"; clearing that copy's name lists it as "Photo · Oct 24, 8:02 PM", when the copy was made. `createdAt` isn't in the store, so the header reads it beside `openProjectName`.
+
 Commit: `feat: name projects without text by what they hold and when`
 
 ### 6. A way out of "open in another tab"

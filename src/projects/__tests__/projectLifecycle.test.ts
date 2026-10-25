@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { formatCreatedAt } from "../../lib/formatCreatedAt.ts";
 import { withMask } from "../../model/cutout.ts";
 import type { EditorDocument } from "../../model/document.ts";
 import { createImageLayer, type ImageLayer } from "../../model/layers/image.ts";
@@ -255,7 +256,8 @@ describe("closing and reopening", () => {
 		});
 		const [listed] = await harness.projects.listProjects();
 		assert.ok(listed.status === "ready");
-		assert.equal(listed.label, "Untitled");
+		const saved = savedProject(harness, id);
+		assert.equal(listed.label, `Photo · ${formatCreatedAt(saved.createdAt)}`);
 	});
 
 	test("a blank canvas is a project once edited, with no photo", async () => {
@@ -840,6 +842,11 @@ describe("renaming and duplicating", () => {
 		await harness.projects.openProject(unnamed);
 		assert.equal(harness.projects.openProjectName(named), "Keeper");
 		assert.equal(harness.projects.openProjectName(unnamed), null);
+		assert.equal(
+			harness.projects.openProjectCreatedAt(named),
+			savedProject(harness, named).createdAt,
+		);
+		assert.equal(harness.projects.openProjectCreatedAt("missing"), null);
 	});
 
 	test("a copy has the document and the images it uses, on top", async (t) => {

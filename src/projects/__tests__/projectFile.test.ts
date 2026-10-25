@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { formatCreatedAt } from "../../lib/formatCreatedAt.ts";
 import { withMask } from "../../model/cutout.ts";
 import {
 	createBlankDocument,
@@ -533,22 +534,36 @@ describe("parseSavedProject", () => {
 });
 
 describe("projectLabel", () => {
+	const createdAt = new Date(2026, 9, 24, 15, 15).getTime();
+	const dated = (kind: "Photo" | "Canvas") =>
+		`${kind} · ${formatCreatedAt(createdAt)}`;
+
 	test("is the top visible text, on one line", () => {
 		const document = documentWithText("BOTTOM", "TOP\n  TEXT ");
-		assert.equal(projectLabel(document), "TOP TEXT");
+		assert.equal(projectLabel(document, createdAt), "TOP TEXT");
 		document.layers[2] = { ...document.layers[2], hidden: true };
-		assert.equal(projectLabel(document), "BOTTOM");
+		assert.equal(projectLabel(document, createdAt), "BOTTOM");
 	});
 
-	test("falls back when there's no text", () => {
-		assert.equal(projectLabel(documentWithText()), "Untitled");
-		assert.equal(projectLabel(createBlankDocument(100, 100, null)), "Untitled");
+	test("falls back to what the project holds and when it was made", () => {
+		assert.equal(projectLabel(documentWithText(), createdAt), dated("Photo"));
+		assert.equal(
+			projectLabel(createBlankDocument(100, 100, null), createdAt),
+			dated("Canvas"),
+		);
+		const hidden = documentWithText("SECRET");
+		hidden.layers[1] = { ...hidden.layers[1], hidden: true };
+		assert.equal(projectLabel(hidden, createdAt), dated("Photo"));
+		assert.equal(
+			projectLabel(documentWithText(), createdAt, "Keeper"),
+			"Keeper",
+		);
 	});
 
 	test("reads text at the bottom of the stack", () => {
 		const document = createBlankDocument(1080, 1080, "#FFFFFF");
 		document.layers.push(createTextLayer(document, "ONLY"));
-		assert.equal(projectLabel(document), "ONLY");
+		assert.equal(projectLabel(document, createdAt), "ONLY");
 	});
 });
 
@@ -579,6 +594,12 @@ describe("copyName", () => {
 	test("counts a copy of a copy on from the original", () => {
 		assert.equal(copyName("Trip copy", ["Trip copy"]), "Trip copy 2");
 		assert.equal(copyName("Trip copy 2", ["Trip copy"]), "Trip copy 2");
+	});
+
+	test("names a copy of a dated label from that label", () => {
+		const label = "Photo · Oct 24, 3:15 PM";
+		assert.equal(copyName(label, []), `${label} copy`);
+		assert.equal(copyName(label, [`${label} copy`]), `${label} copy 2`);
 	});
 
 	test("leaves room for the count after a long label", () => {

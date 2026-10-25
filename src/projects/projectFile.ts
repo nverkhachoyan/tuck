@@ -1,3 +1,4 @@
+import { formatCreatedAt } from "../lib/formatCreatedAt.ts";
 import type { EditorDocument } from "../model/document.ts";
 import { isLayer, layerFiles } from "../model/layers/layer.ts";
 import { isColorOrNull, isFields, isPositive } from "../model/values.ts";
@@ -56,8 +57,8 @@ export type SavedProject = {
 	// the project lives can change (on iOS, with every app update).
 	document: EditorDocument;
 	thumbnail?: ProjectThumbnail;
-	// Given by renaming; without one, it's listed by its text (see
-	// `projectLabel`).
+	// Given by renaming; without one, it's listed by its text, or by what it
+	// holds and when it was made (see `projectLabel`).
 	name?: string;
 };
 
@@ -73,7 +74,7 @@ export type ProjectSummary =
 			id: string;
 			status: "ready";
 			updatedAt: number;
-			// Its name, or else its text.
+			// Its name, or else its text, or what it holds and when.
 			label: string;
 			thumbnail: string | null;
 			// Missing, or older than the latest save; see `updateThumbnail`.
@@ -166,14 +167,26 @@ export function copyName(label: string, taken: Iterable<string>): string {
 	}
 }
 
-/** What a project is listed as: its top text, since that's what it's remembered by. */
-export function projectLabel(document: EditorDocument): string {
+/**
+ * What a project is listed as. A name it was given, then its top text, since
+ * that's what it's remembered by. With neither, a photo at the bottom is
+ * "Photo · {when it was made}", and anything else is "Canvas · …".
+ */
+export function projectLabel(
+	document: EditorDocument,
+	createdAt: number,
+	name?: string | null,
+): string {
+	if (name) return name;
 	for (let i = document.layers.length - 1; i >= 0; i--) {
 		const layer = document.layers[i];
 		const text = layer.type === "text" ? layer.text.replace(/\s+/g, " ") : "";
 		if (!layer.hidden && text.trim()) return text.trim();
 	}
-	return "Untitled";
+	const bottom = document.layers[0];
+	const kind =
+		bottom?.type === "image" && bottom.sticker !== true ? "Photo" : "Canvas";
+	return `${kind} · ${formatCreatedAt(createdAt)}`;
 }
 
 /** An older project as this version would have saved it. */
