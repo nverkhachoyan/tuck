@@ -51,6 +51,8 @@ Commit: `fix: mark the rail's open tool by its label, not a highlight`
 
 Check the phone dock, and that F still opens Find.
 
+Checked on web at 390, by day and by night. The dock is Box, Brush, Eraser, Find, Style. Find opens from its button, and F from the editor opens it too. The wide bar was already that order.
+
 Commit: `fix: order Redact's tools the same on every layout`
 
 ### 3. Adjust's value heading the inspector

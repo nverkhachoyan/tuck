@@ -36,9 +36,9 @@ const EFFECT_NAMES: Record<RedactSettings["effect"], string> = {
 
 /**
  * The redact tools, in place of the toolbar while redacting: a box to drag
- * out, a brush, Find (with a photo to look in, for faces and text), the
- * brush's eraser, and their style, which opens over the canvas. Tapping the
- * tool that's in use opens the style too.
+ * out, a brush, the brush's eraser, Find (with a photo to look in, for faces
+ * and text), and their style, which opens over the canvas. The same order as
+ * the wide bar. Tapping the tool that's in use opens the style too.
  */
 export function RedactPanel({
 	settings,
@@ -71,6 +71,12 @@ export function RedactPanel({
 				selected={settings.tool === "brush"}
 				onPress={() => pickTool("brush")}
 			/>
+			<ToolButton
+				label="Eraser"
+				icon="eraser"
+				selected={settings.tool === "eraser"}
+				onPress={() => pickTool("eraser")}
+			/>
 			{onFind && (
 				<ToolButton
 					label="Find"
@@ -79,12 +85,6 @@ export function RedactPanel({
 					onPress={onFind}
 				/>
 			)}
-			<ToolButton
-				label="Eraser"
-				icon="eraser"
-				selected={settings.tool === "eraser"}
-				onPress={() => pickTool("eraser")}
-			/>
 			<ToolButton
 				label="Style"
 				icon="palette-outline"
