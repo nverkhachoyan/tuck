@@ -183,6 +183,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	return (
 		<View
 			ref={containerRef}
+			accessibilityViewIsModal
 			style={[styles.container, { height: screenSize.height - originY }]}
 			onLayout={() =>
 				containerRef.current?.measureInWindow((_x, y) => setOriginY(y))

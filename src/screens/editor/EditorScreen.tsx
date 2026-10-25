@@ -1,6 +1,12 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+	ActivityIndicator,
+	Platform,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { isHexColor } from "@/lib/color";
 import { errorMessage } from "@/lib/errorMessage";
 import { neutralAdjustments } from "@/model/adjustments";
@@ -361,6 +367,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			panelKind === "adjust");
 
 	const focused = useIsFocused();
+	// Under the export sheet, the editor is out of reach on web: inert takes
+	// it out of the Tab order and the accessibility tree. React Native Web
+	// doesn't pass `inert` through, so it's set on the element.
+	const rootRef = useRef<View>(null);
+	useEffect(() => {
+		if (Platform.OS !== "web") return;
+		const root = rootRef.current as unknown as HTMLElement | null;
+		root?.toggleAttribute("inert", !focused);
+	}, [focused]);
 	const {
 		busy: addBusy,
 		dragging,
@@ -547,7 +562,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	return (
 		<TrayHeight.Provider value={layout.setTrayHeight}>
-			<View style={styles.container}>
+			<View ref={rootRef} style={styles.container}>
 				{/* Back and Export stay through every tool and while typing:
 					    leaving keeps the changes, as the browser's own Back does. */}
 				<ScreenHeader
