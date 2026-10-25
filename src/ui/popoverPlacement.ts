@@ -9,17 +9,32 @@ export type PopoverRect = {
 	height: number;
 };
 
+export type PopoverPlacement = "below" | "beside";
+
 /**
- * Where a card hangs from `anchor`: below it, or above it when that would
- * pass the window's bottom, then shifted in so it stays inside the window.
- * The card's left lines up with the control's, which is where a menu grows
- * from.
+ * Where a card hangs from `anchor`, then shifted in so it stays inside the
+ * window.
+ * - `below` (the default) hangs it under the control, or above it near the
+ *   window's bottom. The card's left lines up with the control's.
+ * - `beside` puts it at the control's right edge, top-aligned, and moves it
+ *   up when it would pass the window's bottom.
  */
 export function placePopover(
 	anchor: PopoverRect,
 	card: { width: number; height: number },
 	viewport: { width: number; height: number },
+	placement: PopoverPlacement = "below",
 ): { left: number; top: number } {
+	if (placement === "beside") {
+		return {
+			left: clamp(
+				anchor.x + anchor.width + POPOVER_GAP,
+				card.width,
+				viewport.width,
+			),
+			top: clamp(anchor.y, card.height, viewport.height),
+		};
+	}
 	const below = anchor.y + anchor.height + POPOVER_GAP;
 	const fitsBelow = below + card.height <= viewport.height - POPOVER_MARGIN;
 	const rawTop = fitsBelow ? below : anchor.y - POPOVER_GAP - card.height;

@@ -9,7 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { Pressable, StyleSheet, View, type ViewStyle } from "react-native";
 import type { PopoverProps } from "./Popover";
-import { placePopover } from "./popoverPlacement";
+import { type PopoverPlacement, placePopover } from "./popoverPlacement";
 import { colors, floatingShadow, radii, space } from "./theme";
 
 // What Tab cycles through. A React Native pressable is a `role="button"`,
@@ -26,10 +26,12 @@ const FOCUSABLE = [
 ].join(", ");
 
 /**
- * A card anchored below a control, or above it near the window's bottom,
- * kept inside the window's edges.
+ * A card anchored to a control and kept inside the window.
  * - Portaled to the page's body, so a scroll view or a transformed parent
  *   can't clip it, and positioned from the anchor's box.
+ * - `placement` is `below` by default: under the control, or above it near
+ *   the window's bottom. `beside` puts it at the control's right, top-aligned,
+ *   and moves it up to stay inside the window.
  * - An outside press closes it, through a layer behind the card: a pressable
  *   wrapping the card would close it on any click inside.
  * - Escape closes it in the capture phase, before the editor's shortcuts,
@@ -42,6 +44,7 @@ export function Popover({
 	open,
 	onClose,
 	label,
+	placement = "below",
 	restoreFocus,
 	children,
 }: PopoverProps) {
@@ -51,6 +54,7 @@ export function Popover({
 			anchor={anchor}
 			label={label}
 			onClose={onClose}
+			placement={placement}
 			restoreFocus={restoreFocus}
 		>
 			{children}
@@ -62,12 +66,14 @@ function PopoverFrame({
 	anchor,
 	label,
 	onClose,
+	placement,
 	restoreFocus,
 	children,
 }: {
 	anchor: RefObject<View | null>;
 	label: string;
 	onClose: () => void;
+	placement: PopoverPlacement;
 	restoreFocus?: () => void;
 	children: ReactNode;
 }) {
@@ -91,6 +97,7 @@ function PopoverFrame({
 				{ x: box.left, y: box.top, width: box.width, height: box.height },
 				size,
 				{ width: window.innerWidth, height: window.innerHeight },
+				placement,
 			);
 			setPosition((current) =>
 				current?.left === next.left && current.top === next.top
@@ -106,7 +113,7 @@ function PopoverFrame({
 			window.removeEventListener("resize", place);
 			window.removeEventListener("scroll", place, true);
 		};
-	}, [anchor]);
+	}, [anchor, placement]);
 
 	useEffect(() => {
 		const card = cardRef.current as unknown as HTMLElement | null;

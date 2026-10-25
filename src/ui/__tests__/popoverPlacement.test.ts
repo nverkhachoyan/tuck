@@ -21,6 +21,27 @@ describe("placePopover", () => {
 		);
 	});
 
+	test("opens beside the control, top-aligned, and moves up at the bottom", () => {
+		assert.deepEqual(
+			placePopover(
+				{ x: 40, y: 80, width: 44, height: 44 },
+				card,
+				viewport,
+				"beside",
+			),
+			{ left: 92, top: 80 },
+		);
+		assert.deepEqual(
+			placePopover(
+				{ x: 40, y: 560, width: 44, height: 36 },
+				card,
+				viewport,
+				"beside",
+			),
+			{ left: 92, top: 472 },
+		);
+	});
+
 	test("keeps the card inside the window when the control is at an edge", () => {
 		assert.deepEqual(
 			placePopover({ x: 760, y: 8, width: 44, height: 44 }, card, viewport),

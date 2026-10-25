@@ -13,7 +13,11 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
-import { type PopoverRect, placePopover } from "./popoverPlacement";
+import {
+	type PopoverPlacement,
+	type PopoverRect,
+	placePopover,
+} from "./popoverPlacement";
 import { colors, floatingShadow, radii, space } from "./theme";
 
 export type PopoverProps = {
@@ -24,6 +28,11 @@ export type PopoverProps = {
 	/** Names the dialog for screen readers. */
 	label: string;
 	/**
+	 * `below` hangs the card under the control. `beside` opens it to the
+	 * control's right, for a button in the rail.
+	 */
+	placement?: PopoverPlacement;
+	/**
 	 * Where focus goes when the card closes, instead of back to `anchor`.
 	 * Text editing uses it so the caret returns to the hidden input.
 	 */
@@ -32,17 +41,21 @@ export type PopoverProps = {
 };
 
 /**
- * A card anchored below a control, or above it near the window's bottom,
- * kept inside the window's edges. An outside press closes it. It's a dialog
- * for screen readers. On web, Escape closes it before the page's shortcuts
- * see the key, and focus moves into it and back to `anchor` when it closes,
- * or to `restoreFocus` when that's given (see `Popover.web.tsx`).
+ * A card anchored to a control and kept inside the window.
+ * - `placement` is `below` by default: under the control, or above it near
+ *   the window's bottom. `beside` puts it at the control's right, top-aligned,
+ *   and moves it up to stay inside the window.
+ * - An outside press closes it. It's a dialog for screen readers.
+ * - On web, Escape closes it before the page's shortcuts see the key, and
+ *   focus moves into it and back to `anchor` when it closes, or to
+ *   `restoreFocus` when that's given (see `Popover.web.tsx`).
  */
 export function Popover({
 	anchor,
 	open,
 	onClose,
 	label,
+	placement = "below",
 	restoreFocus,
 	children,
 }: PopoverProps) {
@@ -59,6 +72,7 @@ export function Popover({
 				anchor={anchor}
 				label={label}
 				onClose={onClose}
+				placement={placement}
 				restoreFocus={restoreFocus}
 			>
 				{children}
@@ -71,12 +85,14 @@ function PopoverFrame({
 	anchor,
 	label,
 	onClose,
+	placement,
 	restoreFocus,
 	children,
 }: {
 	anchor: RefObject<View | null>;
 	label: string;
 	onClose: () => void;
+	placement: PopoverPlacement;
 	restoreFocus?: () => void;
 	children: ReactNode;
 }) {
@@ -98,7 +114,7 @@ function PopoverFrame({
 	}, []);
 	const position =
 		anchorRect && cardSize
-			? placePopover(anchorRect, cardSize, viewport)
+			? placePopover(anchorRect, cardSize, viewport, placement)
 			: undefined;
 	return (
 		<View style={styles.frame}>
