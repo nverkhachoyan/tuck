@@ -40,7 +40,7 @@ Each step passes `npm run check` and `npm run typecheck` (and `npm test` where i
 
 ### 1. A halo under Crop's handles
 
-* `CropCanvas.tsx`: draw the outline and corners over a `SELECTION_HALO` stroke 3.5 screen pixels wide, as `SelectionOutline` does (export the halo width from `canvas/SelectionOverlay.tsx` alongside `SELECTION_HALO`).
+* `CropCanvas.tsx`: draw the outline and corners over a `SELECTION_HALO` stroke 3.5 screen pixels wide, as `SelectionOutline` does (export the halo width from `canvas/SelectionOverlay.tsx` alongside `SELECTION_HALO`). The corners are already a 3-pixel stroke, thicker than that halo, so theirs is wide enough to leave the same dark margin the selection's halo leaves around its line (`SELECTION_HALO_PX - SELECTION_STROKE_PX` beyond the white).
 
 Check on a photo with a white edge and one with a dark edge, at the fit and zoomed, on web and the iOS simulator.
 

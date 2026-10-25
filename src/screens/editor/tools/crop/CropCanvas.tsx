@@ -27,6 +27,11 @@ import { CanvasBackground, LayerContent } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";
 import { type CanvasCursor, cursorStyle } from "../../canvas/canvasCursor";
+import {
+	SELECTION_HALO,
+	SELECTION_HALO_PX,
+	SELECTION_STROKE_PX,
+} from "../../canvas/SelectionOverlay";
 import type { DocumentViewport } from "../../canvas/viewport";
 import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
@@ -293,14 +298,36 @@ function CropFrame({
 	const handles = useDerivedValue(() => paths.value.handles);
 	const frameWidth = useDerivedValue(() => FRAME_STROKE_PX / scale.value);
 	const handleWidth = useDerivedValue(() => HANDLE_STROKE_PX / scale.value);
+	// The outline takes the selection's 3.5-pixel halo. The corners are already
+	// thicker than that stroke, so theirs is wide enough to leave the same dark
+	// margin the selection's halo leaves around its line.
+	const frameHalo = useDerivedValue(() => SELECTION_HALO_PX / scale.value);
+	const handleHalo = useDerivedValue(
+		() =>
+			(HANDLE_STROKE_PX + SELECTION_HALO_PX - SELECTION_STROKE_PX) /
+			scale.value,
+	);
 
 	return (
 		<>
 			<Path
 				path={frame}
+				color={SELECTION_HALO}
+				style="stroke"
+				strokeWidth={frameHalo}
+			/>
+			<Path
+				path={frame}
 				color="rgba(255, 255, 255, 0.8)"
 				style="stroke"
 				strokeWidth={frameWidth}
+			/>
+			<Path
+				path={handles}
+				color={SELECTION_HALO}
+				style="stroke"
+				strokeWidth={handleHalo}
+				strokeCap="square"
 			/>
 			<Path
 				path={handles}

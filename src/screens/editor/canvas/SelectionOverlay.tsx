@@ -19,7 +19,8 @@ import type { LiveTransform } from "./liveTransform";
 
 export const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
-const SELECTION_HALO_PX = 3.5;
+// Crop's frame uses the same width.
+export const SELECTION_HALO_PX = 3.5;
 export const SELECTION_HALO = "rgba(0, 0, 0, 0.22)";
 // A detected region's check mark's radius, in screen pixels: a share of the
 // region's shorter side on screen, within these bounds, so marks on small
