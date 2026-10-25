@@ -16,8 +16,12 @@ export type BrushSettings = {
 	tool: DrawTool;
 	// The brush Brush returns to after drawing a shape or erasing.
 	lastBrush: BrushTool;
-	// Every pen and shape draws in it, whatever its tip or kind.
+	// Every pen and shape draws in it, except the highlighter, which keeps
+	// `highlightColor`. The see-through marker, when it has its own tip, uses
+	// this shared color too.
 	color: string;
+	// The highlighter's own color. Yellow to start.
+	highlightColor: string;
 	// What the shape tool drags out.
 	shape: ShapeKind;
 	// Indexes into each tool's `BRUSH_SIZES`; each keeps its own.
@@ -28,6 +32,7 @@ export const defaultBrushSettings: BrushSettings = {
 	tool: "pen",
 	lastBrush: "pen",
 	color: "#FF3B30",
+	highlightColor: "#FFD60A",
 	shape: "arrow",
 	sizes: { pen: 1, marker: 2, neon: 1, shape: 2, eraser: 3 },
 };
@@ -57,10 +62,8 @@ const shortSide = (size: Size) => Math.min(size.width, size.height);
  */
 export function parseBrushSettings(saved: unknown): BrushSettings {
 	if (typeof saved !== "object" || saved === null) return defaultBrushSettings;
-	const { tool, lastBrush, color, shape, sizes } = saved as Record<
-		string,
-		unknown
-	>;
+	const { tool, lastBrush, color, highlightColor, shape, sizes } =
+		saved as Record<string, unknown>;
 	const savedSizes = (
 		typeof sizes === "object" && sizes !== null ? sizes : {}
 	) as Record<string, unknown>;
@@ -83,6 +86,9 @@ export function parseBrushSettings(saved: unknown): BrushSettings {
 			BRUSH_TOOLS.find((brush) => brush === parsedTool) ??
 			"pen",
 		color: isHexColor(color) ? color : defaultBrushSettings.color,
+		highlightColor: isHexColor(highlightColor)
+			? highlightColor
+			: defaultBrushSettings.highlightColor,
 		shape:
 			shapeKinds.find((kind) => kind === shape) ?? defaultBrushSettings.shape,
 		sizes: {
@@ -103,8 +109,24 @@ export function penTip(tool: DrawTool): PenTip | undefined {
 	return tool === "marker" || tool === "neon" ? tool : undefined;
 }
 
+/** The color the tool in use draws with. The highlighter keeps its own. */
+export function brushColor(settings: BrushSettings): string {
+	return settings.tool === "marker" ? settings.highlightColor : settings.color;
+}
+
+/** Settings with the tool in use drawing in `color`. */
+export function withBrushColor(
+	settings: BrushSettings,
+	color: string,
+): BrushSettings {
+	return settings.tool === "marker"
+		? { ...settings, highlightColor: color }
+		: { ...settings, color };
+}
+
 export function brushFor(settings: BrushSettings, size: Size): Brush {
-	const { tool, color } = settings;
+	const { tool } = settings;
+	const color = brushColor(settings);
 	const width = BRUSH_SIZES[tool][settings.sizes[tool]] * shortSide(size);
 	if (tool === "eraser") return { type: "eraser", width };
 	const tip = penTip(tool);

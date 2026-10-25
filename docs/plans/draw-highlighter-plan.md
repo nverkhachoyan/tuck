@@ -80,6 +80,8 @@ Commit: `feat: call Draw's marker a highlighter`
 
 Check: pick yellow for the highlighter and red for the pen, draw with each, reload, and both colors come back.
 
+Checked on web, by day and by night. At 1440 the highlighter's chip stays yellow and the pen's stays red after a reload, and picking green for the highlighter left the pen red. At 390 the brush options row shows the same, the yellow swatch marked while the highlighter is chosen. A stroke wasn't drawn here: the browser's synthetic pointer doesn't drive the paint gesture. `brushFor` gives the highlighter its color and the pen its own. The see-through Marker isn't a separate tip yet; every tool but the highlighter still uses the shared color, which is what that tip will use.
+
 Commit: `feat: give the highlighter its own color`
 
 ### 4. Highlights that multiply

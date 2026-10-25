@@ -29,12 +29,17 @@ describe("brushFor", () => {
 		});
 	});
 
-	test("gives a marker or a neon pen its tip, and its own sizes", () => {
-		const settings = { ...defaultBrushSettings, color: "#0A84FF", sizes };
+	test("gives a highlighter its own color and tip, and a neon the shared color", () => {
+		const settings = {
+			...defaultBrushSettings,
+			color: "#0A84FF",
+			highlightColor: "#FFD60A",
+			sizes,
+		};
 		const size = { width: 1000, height: 2000 };
 		assert.deepEqual(brushFor({ ...settings, tool: "marker" }, size), {
 			type: "pen",
-			color: "#0A84FF",
+			color: "#FFD60A",
 			width: BRUSH_SIZES.marker[0] * 1000,
 			tip: "marker",
 		});
@@ -44,6 +49,7 @@ describe("brushFor", () => {
 			width: BRUSH_SIZES.neon[3] * 1000,
 			tip: "neon",
 		});
+		assert.equal(settings.color, "#0A84FF");
 	});
 
 	test("uses the eraser's own size, and no color", () => {
@@ -77,6 +83,7 @@ describe("parseBrushSettings", () => {
 			tool: "shape" as const,
 			lastBrush: "neon" as const,
 			color: "#6B2FA0",
+			highlightColor: "#FFD60A",
 			shape: "ellipse" as const,
 			sizes: { pen: 0, marker: 4, neon: 2, shape: 3, eraser: 1 },
 		};
@@ -120,11 +127,31 @@ describe("parseBrushSettings", () => {
 		assert.deepEqual(parseBrushSettings(saved), {
 			...saved,
 			lastBrush: "neon",
+			highlightColor: defaultBrushSettings.highlightColor,
 		});
 	});
 
 	test("uses pen as the last brush when an old non-brush tool has none", () => {
 		assert.equal(parseBrushSettings({ tool: "shape" }).lastBrush, "pen");
+	});
+
+	test("fills a highlighter color an older save doesn't have", () => {
+		const parsed = parseBrushSettings({
+			tool: "marker",
+			color: "#FF3B30",
+			sizes: defaultBrushSettings.sizes,
+		});
+		assert.equal(parsed.highlightColor, "#FFD60A");
+		assert.equal(parsed.color, "#FF3B30");
+	});
+
+	test("replaces a damaged highlighter color with the default", () => {
+		const parsed = parseBrushSettings({
+			...defaultBrushSettings,
+			highlightColor: "yellow",
+		});
+		assert.equal(parsed.highlightColor, "#FFD60A");
+		assert.equal(parsed.color, defaultBrushSettings.color);
 	});
 });
 

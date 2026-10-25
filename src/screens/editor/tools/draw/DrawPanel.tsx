@@ -22,9 +22,11 @@ import {
 import {
 	type BrushSettings,
 	type BrushTool,
+	brushColor,
 	brushSizeIndex,
 	type DrawTool,
 	penTip,
+	withBrushColor,
 } from "./brushSettings";
 
 const TOOL_ICONS = {
@@ -87,7 +89,7 @@ export function DrawPanel({
 			<ToolButton
 				label="Style"
 				icon="palette-outline"
-				glyph={<ColorGlyph color={settings.color} />}
+				glyph={<ColorGlyph color={brushColor(settings)} />}
 				open={optionsOpen}
 				onPress={onToggleOptions}
 			/>
@@ -164,16 +166,18 @@ export function DrawBar({
 				{!eraser && (
 					<ColorChip
 						label="Color"
-						value={settings.color}
+						value={brushColor(settings)}
 						customColor={customColor}
-						onPick={(color) => color && onChange({ ...settings, color })}
+						onPick={(color) =>
+							color && onChange(withBrushColor(settings, color))
+						}
 						onPickCustom={onPickCustom}
 						onEyedropper={onEyedropper}
 					/>
 				)}
 				<SizeChip
 					index={brushSizeIndex(settings)}
-					color={eraser ? null : settings.color}
+					color={eraser ? null : brushColor(settings)}
 					tip={penTip(settings.tool)}
 					onPick={pickSize}
 				/>
@@ -327,9 +331,11 @@ export function BrushOptions({
 			{!eraser && (
 				<ToolOption label="Color">
 					<ColorOptions
-						value={settings.color}
+						value={brushColor(settings)}
 						customColor={customColor}
-						onPick={(color) => color && onChange({ ...settings, color })}
+						onPick={(color) =>
+							color && onChange(withBrushColor(settings, color))
+						}
 						onPickCustom={onPickCustom}
 						onEyedropper={onEyedropper}
 					/>
@@ -338,7 +344,7 @@ export function BrushOptions({
 			<ToolOption label="Size">
 				<SizeChoices
 					index={brushSizeIndex(settings)}
-					color={eraser ? null : settings.color}
+					color={eraser ? null : brushColor(settings)}
 					tip={tip}
 					onPick={pickSize}
 				/>

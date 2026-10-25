@@ -17,6 +17,7 @@ import {
 	CutOutPanel,
 } from "./tools/cutout/CutOutPanel";
 import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
+import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
@@ -97,7 +98,9 @@ export function ToolTrays({
 					customColor={customColor}
 					bottomInset={bottomInset}
 					onChange={draw.change}
-					{...colorTarget((color) => draw.change({ ...draw.settings, color }))}
+					{...colorTarget((color) =>
+						draw.change(withBrushColor(draw.settings, color)),
+					)}
 					onClose={closeTray}
 				/>
 			)}
@@ -222,7 +225,9 @@ export function ContextBarContent({
 					settings={draw.settings}
 					customColor={customColor}
 					onChange={draw.change}
-					{...colorTarget((color) => draw.change({ ...draw.settings, color }))}
+					{...colorTarget((color) =>
+						draw.change(withBrushColor(draw.settings, color)),
+					)}
 				/>
 			</ContextBar>
 		);
