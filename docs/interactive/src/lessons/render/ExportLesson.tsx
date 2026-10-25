@@ -132,8 +132,9 @@ export default function ExportLesson() {
 				<p>
 					Press <strong>Export</strong>. <code>renderDocument</code> decodes
 					every image the visible layers draw, draws{" "}
-					<code>DocumentRenderScene</code> offscreen with Skia's{" "}
-					<code>drawAsImage</code>, at the document's own size, and{" "}
+					<code>DocumentRenderScene</code> offscreen with{" "}
+					<code>drawOffscreen</code> (Skia's <code>drawAsImage</code>, or on web
+					one surface kept between drawings), at the document's own size, and{" "}
 					<code>encodeImage</code> makes a JPEG. The scene is the one on the
 					left, so the file can't differ from what you saw.
 				</p>

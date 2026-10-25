@@ -1,7 +1,6 @@
 import {
 	AlphaType,
 	ColorType,
-	drawAsImage,
 	Fill,
 	Group,
 	ImageFormat,
@@ -11,6 +10,7 @@ import {
 	Image as SkiaImage,
 } from "@shopify/react-native-skia";
 import type { ImageLayer } from "@/model/layers/image";
+import { drawOffscreen } from "@/render/drawOffscreen";
 import { CutMask, imageBox } from "@/render/layers/ImageLayerView";
 
 // Turns white into black and black into white. Its last column is in 0–1
@@ -31,7 +31,7 @@ export async function cutShowsAt(
 	const box = imageBox(layer);
 	const x = box.x + at.x * layer.width;
 	const y = box.y + at.y * layer.height;
-	const image = await drawAsImage(
+	const image = await drawOffscreen(
 		<Group>
 			<Fill color="black" />
 			<Group transform={[{ translateX: 0.5 - x }, { translateY: 0.5 - y }]}>
@@ -67,7 +67,7 @@ export async function combineMasks(
 	const width = Math.max(mask?.width() ?? 0, subject.width());
 	const height = Math.max(mask?.height() ?? 0, subject.height());
 	const box = { x: 0, y: 0, width, height };
-	const combined = await drawAsImage(
+	const combined = await drawOffscreen(
 		<Group>
 			<Fill color="black" />
 			{mask && <SkiaImage image={mask} {...box} fit="fill" />}
@@ -96,7 +96,7 @@ export async function invertedMask(
 ): Promise<Uint8Array> {
 	const width = mask?.width() ?? 1;
 	const height = mask?.height() ?? 1;
-	const inverted = await drawAsImage(
+	const inverted = await drawOffscreen(
 		<Group>
 			<Fill color="black" />
 			{mask && (

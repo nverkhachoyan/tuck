@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
+	Image,
 	Linking,
 	Platform,
 	Pressable,
@@ -17,15 +18,24 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { errorMessage } from "@/lib/errorMessage";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
+import { CheckerFill } from "@/ui/CheckerFill";
 import { Segmented } from "@/ui/Segmented";
 import { showAlert } from "@/ui/showAlert";
-import { colors, radii, space, typography } from "@/ui/theme";
+import {
+	CHECKER_CELL,
+	colors,
+	floatingShadow,
+	radii,
+	space,
+	typography,
+} from "@/ui/theme";
 import { copyImage } from "./copyImage";
 import {
 	type ExportFormat,
@@ -34,9 +44,18 @@ import {
 } from "./exportFormat";
 import { type ExportSize, exportSizes } from "./exportSizes";
 import { canShareImages, saveImage, saveLabels, shareImage } from "./saveImage";
-import { useRenderedDocument } from "./useRenderedDocument";
+import { type RenderState, useRenderedDocument } from "./useRenderedDocument";
 
 type Busy = "saving" | "sharing" | "copying";
+
+// The preview strip's height, taller on a wide window. On a window too short
+// for the sheet, under its cap, the strip gives way first, down to the least.
+const PREVIEW_HEIGHT = 180;
+const WIDE_PREVIEW_HEIGHT = 220;
+const MIN_PREVIEW_HEIGHT = 120;
+const WIDE_MIN_WIDTH = 1024;
+// The sheet's cap, as a share of the screen's height (`styles.column`).
+const SHEET_MAX_SHARE = 0.9;
 
 /** Export, as a sheet over the editor. */
 export default function ExportScreen() {
@@ -140,6 +159,26 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const screenSize = useWindowDimensions();
 	const containerRef = useRef<View>(null);
 	const [originY, setOriginY] = useState(0);
+	// The preview strip's height: its own, or on a window too short for the
+	// sheet under its cap, what's left beside the header above it and the
+	// options below, but no less than `MIN_PREVIEW_HEIGHT`. Shrinking the
+	// sheet's content to fit instead fought its entering slide on web.
+	const { bottom } = useSafeAreaInsets();
+	const [headerHeight, setHeaderHeight] = useState(0);
+	const [optionsHeight, setOptionsHeight] = useState(0);
+	const nominalPreview =
+		screenSize.width >= WIDE_MIN_WIDTH ? WIDE_PREVIEW_HEIGHT : PREVIEW_HEIGHT;
+	const room =
+		(screenSize.height - originY) * SHEET_MAX_SHARE -
+		headerHeight -
+		optionsHeight -
+		bottom;
+	const previewHeight =
+		optionsHeight === 0
+			? nominalPreview
+			: Math.round(
+					Math.min(nominalPreview, Math.max(MIN_PREVIEW_HEIGHT, room)),
+				);
 
 	return (
 		<View
@@ -158,7 +197,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			/>
 			<View style={styles.column}>
 				<BottomSheet title="Export" closeLabel="Close" onClose={close}>
-					<View style={styles.content}>
+					<ExportPreview
+						state={state}
+						aspect={document.width / document.height}
+						height={previewHeight}
+						onHeaderHeight={setHeaderHeight}
+						onBlack={format === "jpeg" && transparent}
+						checkered={format === "png" && transparent}
+						onRetry={retry}
+					/>
+					<View
+						style={styles.content}
+						onLayout={(event) =>
+							setOptionsHeight(event.nativeEvent.layout.height)
+						}
+					>
 						{sizes.length > 1 && (
 							<Segmented
 								label="Size"
@@ -193,20 +246,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								changed();
 							}}
 						/>
-						{state.status === "rendering" && (
-							<View style={styles.status}>
-								<ActivityIndicator color={colors.textSecondary} />
-								<Text style={styles.statusText}>Preparing the image…</Text>
-							</View>
-						)}
-						{state.status === "failed" && (
-							<View style={styles.status}>
-								<Text style={styles.statusText}>
-									Couldn't render the image.
-								</Text>
-								<Button label="Try Again" size="small" onPress={retry} />
-							</View>
-						)}
 						{saved ? (
 							<View style={styles.done} accessibilityLiveRegion="polite">
 								<Ionicons
@@ -277,6 +316,106 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 }
 
 /**
+ * The image being exported, fitted into a strip on the light table with a
+ * print's shadow: a check before it leaves, not a control. While it renders,
+ * and if rendering fails, the strip says so, over the last render while
+ * there's one. A transparent document sits on black when the format fills it
+ * so, and on the checkerboard when it keeps it. It shows the render's own
+ * small copy (see `useRenderedDocument`), so it holds no Skia image.
+ */
+function ExportPreview({
+	state,
+	aspect,
+	height,
+	onBlack,
+	checkered,
+	onRetry,
+	onHeaderHeight,
+}: {
+	state: RenderState;
+	// The document's width over its height.
+	aspect: number;
+	height: number;
+	// Where the strip starts in the sheet: the height of the header above it.
+	onHeaderHeight: (height: number) => void;
+	onBlack: boolean;
+	checkered: boolean;
+	onRetry: () => void;
+}) {
+	const [size, setSize] = useState({ width: 0, height: 0 });
+	const preview =
+		state.status === "ready"
+			? state.preview
+			: state.status === "rendering"
+				? state.previous
+				: null;
+	const fitted =
+		preview && size.width > 0 ? fitInto(aspect, size.width, size.height) : null;
+	return (
+		<View
+			style={[styles.preview, { height }, onBlack && styles.previewOnBlack]}
+			onLayout={(event) => {
+				const { y, width, height } = event.nativeEvent.layout;
+				setSize({ width, height });
+				onHeaderHeight(y);
+			}}
+		>
+			{preview && fitted && (
+				<View style={[styles.print, fitted]}>
+					{/* The print casts the shadow; this clips what's on it. */}
+					<View style={styles.printFace}>
+						{checkered && (
+							<CheckerFill
+								width={fitted.width}
+								height={fitted.height}
+								cell={CHECKER_CELL}
+							/>
+						)}
+						<Image
+							source={{ uri: preview }}
+							style={StyleSheet.absoluteFill}
+							accessibilityLabel="Preview of the exported image"
+						/>
+					</View>
+				</View>
+			)}
+			{state.status === "rendering" && (
+				<View style={[styles.status, preview && styles.statusOver]}>
+					<ActivityIndicator color={colors.textSecondary} />
+					<Text style={styles.statusText}>Preparing the image…</Text>
+				</View>
+			)}
+			{state.status === "failed" && (
+				<View style={styles.status}>
+					<Text style={styles.statusText}>Couldn't render the image.</Text>
+					<Button label="Try Again" size="small" onPress={onRetry} />
+				</View>
+			)}
+		</View>
+	);
+}
+
+// The preview's margin inside its strip.
+const PREVIEW_INSET = space.md;
+
+// An image of `aspect` (its width over its height), fitted into the strip
+// inside its margin, in whole points.
+function fitInto(aspect: number, width: number, height: number) {
+	const room = {
+		width: width - PREVIEW_INSET * 2,
+		height: height - PREVIEW_INSET * 2,
+	};
+	const fitted =
+		room.width / room.height > aspect
+			? { width: room.height * aspect, height: room.height }
+			: { width: room.width, height: room.width / aspect };
+	return {
+		width: Math.max(1, Math.round(fitted.width)),
+		height: Math.max(1, Math.round(fitted.height)),
+	};
+}
+
+/**
  * A size's name: the document's own size (or the largest export can hold,
  * when that's too big), then smaller ones for sharing.
  */
@@ -310,11 +449,42 @@ const styles = StyleSheet.create({
 		paddingTop: space.md,
 		paddingBottom: space.lg,
 	},
+	preview: {
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: colors.canvasWell,
+		overflow: "hidden",
+	},
+	// What a JPEG fills transparency with: the file's black, not a palette's.
+	previewOnBlack: {
+		backgroundColor: "#000000",
+	},
+	// A print's shadows on the table, as the editor draws the canvas's.
+	print: {
+		boxShadow: `0 1px 1.5px ${colors.shadow}, 0 8px 14px ${colors.shadow}`,
+	},
+	printFace: {
+		position: "absolute",
+		top: 0,
+		right: 0,
+		bottom: 0,
+		left: 0,
+		overflow: "hidden",
+	},
 	status: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
 		gap: space.xs,
+	},
+	// Over the last render while the next one runs.
+	statusOver: {
+		position: "absolute",
+		paddingHorizontal: space.sm,
+		paddingVertical: space.xs,
+		borderRadius: radii.medium,
+		backgroundColor: colors.surface,
+		boxShadow: floatingShadow,
 	},
 	statusText: {
 		...typography.label,

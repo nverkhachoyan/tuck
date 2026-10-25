@@ -1,7 +1,6 @@
 import {
 	AlphaType,
 	ColorType,
-	drawAsImage,
 	Fill,
 	Group,
 	ImageFormat,
@@ -15,6 +14,7 @@ import type { ImageLayer } from "@/model/layers/image";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";
+import { drawOffscreen } from "./drawOffscreen";
 import { keptBounds } from "./keptBounds";
 import { CutCoverage, ImageLayerView } from "./layers/ImageLayerView";
 
@@ -32,7 +32,7 @@ export async function renderDocument(
 ): Promise<SkImage> {
 	const decoded = await decodeImageLayers(document.layers, decodedImages);
 	try {
-		const result = await drawAsImage(
+		const result = await drawOffscreen(
 			<Group transform={[{ scale }]}>
 				<DocumentRenderScene document={document} images={decoded.images} />
 			</Group>,
@@ -79,7 +79,7 @@ export async function sampleColor(
 	const top = Math.floor(point.y) - SAMPLE_RADIUS;
 	const decoded = await decodeImageLayers(document.layers, decodedImages);
 	try {
-		const image = await drawAsImage(
+		const image = await drawOffscreen(
 			<Group transform={[{ translateX: -left }, { translateY: -top }]}>
 				<DocumentRenderScene document={document} images={decoded.images} />
 			</Group>,
@@ -182,7 +182,7 @@ async function renderKept(
 		width: number,
 		height: number,
 	) =>
-		drawAsImage(
+		drawOffscreen(
 			<Group>
 				<Fill blendMode="clear" />
 				<Group
