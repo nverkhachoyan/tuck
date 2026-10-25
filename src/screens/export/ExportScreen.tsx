@@ -155,10 +155,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// On iOS the modal's frame starts below the window's top but is laid out
 	// as tall as the stack, which leaves a gap under the sheet. Measured from
 	// where the screen starts, which its own height doesn't move, the
-	// container reaches the window's bottom exactly.
+	// container reaches the window's bottom exactly. The sheet waits for
+	// that measurement: its entering slide settles where the container's
+	// bottom was when it began, which a later change of height leaves behind.
 	const screenSize = useWindowDimensions();
 	const containerRef = useRef<View>(null);
-	const [originY, setOriginY] = useState(0);
+	const [measuredOriginY, setOriginY] = useState<number | null>(null);
+	const originY = measuredOriginY ?? 0;
 	// The preview strip's height: its own, or on a window too short for the
 	// sheet under its cap, what's left beside the header above it and the
 	// options below, but no less than `MIN_PREVIEW_HEIGHT`. Shrinking the
@@ -196,122 +199,124 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				onPress={close}
 				accessibilityLabel="Close export"
 			/>
-			<View style={styles.column}>
-				<BottomSheet title="Export" closeLabel="Close" onClose={close}>
-					<ExportPreview
-						state={state}
-						aspect={document.width / document.height}
-						height={previewHeight}
-						onHeaderHeight={setHeaderHeight}
-						onBlack={format === "jpeg" && transparent}
-						checkered={format === "png" && transparent}
-						onRetry={retry}
-					/>
-					<View
-						style={styles.content}
-						onLayout={(event) =>
-							setOptionsHeight(event.nativeEvent.layout.height)
-						}
-					>
-						{sizes.length > 1 && (
+			{measuredOriginY !== null && (
+				<View style={styles.column}>
+					<BottomSheet title="Export" closeLabel="Close" onClose={close}>
+						<ExportPreview
+							state={state}
+							aspect={document.width / document.height}
+							height={previewHeight}
+							onHeaderHeight={setHeaderHeight}
+							onBlack={format === "jpeg" && transparent}
+							checkered={format === "png" && transparent}
+							onRetry={retry}
+						/>
+						<View
+							style={styles.content}
+							onLayout={(event) =>
+								setOptionsHeight(event.nativeEvent.layout.height)
+							}
+						>
+							{sizes.length > 1 && (
+								<Segmented
+									label="Size"
+									disabled={busy !== null}
+									options={sizes.map(({ width, height }, index) => ({
+										title: sizeName(index, sizes),
+										detail: `${width} × ${height}`,
+										accessibilityLabel: `${sizeName(index, sizes)}, ${width} by ${height} pixels`,
+									}))}
+									selected={Math.min(sizeIndex, sizes.length - 1)}
+									onSelect={(index) => {
+										setSizeIndex(index);
+										changed();
+									}}
+								/>
+							)}
 							<Segmented
-								label="Size"
+								label="Format"
 								disabled={busy !== null}
-								options={sizes.map(({ width, height }, index) => ({
-									title: sizeName(index, sizes),
-									detail: `${width} × ${height}`,
-									accessibilityLabel: `${sizeName(index, sizes)}, ${width} by ${height} pixels`,
+								options={(["jpeg", "png"] as const).map((value) => ({
+									title: exportFormats[value].label,
+									detail:
+										value === "png"
+											? "Keeps transparency"
+											: transparent
+												? "Fills transparency black"
+												: "Smaller file",
 								}))}
-								selected={Math.min(sizeIndex, sizes.length - 1)}
+								selected={format === "jpeg" ? 0 : 1}
 								onSelect={(index) => {
-									setSizeIndex(index);
+									setFormat(index === 0 ? "jpeg" : "png");
 									changed();
 								}}
 							/>
-						)}
-						<Segmented
-							label="Format"
-							disabled={busy !== null}
-							options={(["jpeg", "png"] as const).map((value) => ({
-								title: exportFormats[value].label,
-								detail:
-									value === "png"
-										? "Keeps transparency"
-										: transparent
-											? "Fills transparency black"
-											: "Smaller file",
-							}))}
-							selected={format === "jpeg" ? 0 : 1}
-							onSelect={(index) => {
-								setFormat(index === 0 ? "jpeg" : "png");
-								changed();
-							}}
-						/>
-						{saved ? (
-							<View style={styles.done} accessibilityLiveRegion="polite">
-								<Ionicons
-									name="checkmark-circle"
-									size={22}
-									color={colors.textPrimary}
-								/>
-								<Text style={styles.doneLabel}>{saveLabels.done}</Text>
-							</View>
-						) : (
-							<Button
-								label={busy === "saving" ? saveLabels.busy : saveLabels.idle}
-								icon="download-outline"
-								variant="primary"
-								size="large"
-								disabled={!ready || busy !== null}
-								onPress={handleSave}
-							/>
-						)}
-						<View style={styles.secondaryActions}>
-							{/* Most desktop browsers can't share files. */}
-							{canShare && (
-								<View style={styles.secondaryAction}>
-									<Button
-										label={busy === "sharing" ? "Opening…" : "Share"}
-										icon="share-outline"
-										size="large"
-										disabled={!ready || busy !== null}
-										onPress={handleShare}
+							{saved ? (
+								<View style={styles.done} accessibilityLiveRegion="polite">
+									<Ionicons
+										name="checkmark-circle"
+										size={22}
+										color={colors.textPrimary}
 									/>
+									<Text style={styles.doneLabel}>{saveLabels.done}</Text>
 								</View>
+							) : (
+								<Button
+									label={busy === "saving" ? saveLabels.busy : saveLabels.idle}
+									icon="download-outline"
+									variant="primary"
+									size="large"
+									disabled={!ready || busy !== null}
+									onPress={handleSave}
+								/>
 							)}
-							<View style={styles.secondaryAction}>
-								{copied ? (
-									<View style={styles.done} accessibilityLiveRegion="polite">
-										<Ionicons
-											name="checkmark-circle"
-											size={22}
-											color={colors.textPrimary}
+							<View style={styles.secondaryActions}>
+								{/* Most desktop browsers can't share files. */}
+								{canShare && (
+									<View style={styles.secondaryAction}>
+										<Button
+											label={busy === "sharing" ? "Opening…" : "Share"}
+											icon="share-outline"
+											size="large"
+											disabled={!ready || busy !== null}
+											onPress={handleShare}
 										/>
-										<Text style={styles.doneLabel}>Copied</Text>
 									</View>
-								) : (
-									<Button
-										label={busy === "copying" ? "Copying…" : "Copy"}
-										icon="copy-outline"
-										size="large"
-										disabled={!ready || busy !== null}
-										onPress={handleCopy}
-									/>
 								)}
+								<View style={styles.secondaryAction}>
+									{copied ? (
+										<View style={styles.done} accessibilityLiveRegion="polite">
+											<Ionicons
+												name="checkmark-circle"
+												size={22}
+												color={colors.textPrimary}
+											/>
+											<Text style={styles.doneLabel}>Copied</Text>
+										</View>
+									) : (
+										<Button
+											label={busy === "copying" ? "Copying…" : "Copy"}
+											icon="copy-outline"
+											size="large"
+											disabled={!ready || busy !== null}
+											onPress={handleCopy}
+										/>
+									)}
+								</View>
 							</View>
-						</View>
-						{/* Saved, the edit is finished: straight back to the projects,
+							{/* Saved, the edit is finished: straight back to the projects,
 						    which ends the session, rather than through the editor. */}
-						{saved && (
-							<Button
-								label="Back to projects"
-								size="large"
-								onPress={() => router.dismissTo("/")}
-							/>
-						)}
-					</View>
-				</BottomSheet>
-			</View>
+							{saved && (
+								<Button
+									label="Back to projects"
+									size="large"
+									onPress={() => router.dismissTo("/")}
+								/>
+							)}
+						</View>
+					</BottomSheet>
+				</View>
+			)}
 		</View>
 	);
 }
