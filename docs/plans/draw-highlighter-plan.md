@@ -118,6 +118,8 @@ Commit: `feat: straighten a highlight by holding at its end`
 * AGENTS.md: the multiplying layer, why it must be its own layer (the saved layer around a drawing), and anything the spike found about blends on a platform.
 * The interactive lessons, if one covers drawing layers or `drawStroke`.
 
+DESIGN.md is unchanged. The strokes lesson still walks through a plain pen, and its source tabs quote `createDrawingLayer` and `drawStroke` by name, so they show the blend without a lesson edit. AGENTS.md records the multiplying layer and the web spike.
+
 Commit: `docs: describe the highlighter's layers`
 
 ## Not doing
