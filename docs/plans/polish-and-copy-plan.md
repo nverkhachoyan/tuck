@@ -72,6 +72,8 @@ Commit: `fix: head the inspector's Adjust with its value`
 
 Check at 1440 and 1024 with projects and without, and the phone.
 
+Checked on web, by day and by night. With projects, at 1440 and 1024, Open a photo lines up with the wordmark and the first print (the same left edge), and the footer links stay centered. With none, at 1440 and 1024, the start row stays centered under the wordmark. At 390 the buttons stay in the bottom bar.
+
 Commit: `fix: line up home's start buttons with the projects`
 
 ### 5. Names for projects without text

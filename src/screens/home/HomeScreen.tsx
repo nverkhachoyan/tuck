@@ -113,7 +113,16 @@ export default function HomeScreen() {
 	useFocusEffect(useCallback(() => () => setEditing(false), []));
 
 	const start = (
-		<View style={[styles.start, startOnTop && styles.startRow]}>
+		<View
+			style={[
+				styles.start,
+				startOnTop && styles.startRow,
+				// With projects, the row shares the column's left edge with the
+				// wordmark and the prints. On an empty home it stays centered
+				// under the wordmark.
+				startOnTop && hasProjects && styles.startAligned,
+			]}
+		>
 			<Button
 				label={openPhotoLabels[status]}
 				// The label changes while busy; a screen reader needs the verb.
@@ -473,7 +482,8 @@ const styles = StyleSheet.create({
 	},
 	// Stacked under the thumb: the photo first, the other ways under it. In a
 	// row across a wide screen, held to a comfortable width so the buttons
-	// don't stretch across a laptop.
+	// don't stretch across a laptop. Centered on an empty home; with projects,
+	// lined up with the wordmark.
 	start: {
 		gap: space.xs,
 	},
@@ -481,6 +491,9 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		maxWidth: 640,
 		alignSelf: "center",
+	},
+	startAligned: {
+		alignSelf: "flex-start",
 	},
 	startSecondary: {
 		flexDirection: "row",
