@@ -133,7 +133,7 @@ export default function EditorScreen() {
 									onPress={() => leaveEditor(router)}
 								/>
 							) : null}
-							<Button label="Try Again" onPress={session.retry} />
+							<Button label="Try again" onPress={session.retry} />
 						</View>
 					</>
 				)}

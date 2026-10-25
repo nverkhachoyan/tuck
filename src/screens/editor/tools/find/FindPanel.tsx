@@ -272,14 +272,14 @@ function FindBody({
 						<Status
 							title={`No ${scopeName(state.scope)} found`}
 							message={state.issues[0].message}
-							action="Try Again"
+							action="Try again"
 							onAction={onRetry}
 						/>
 					) : (
 						<Status
 							title={`No ${scopeName(state.scope)} found`}
 							message="Draw a box over anything you want hidden."
-							action="Back to Redact"
+							action="Back to redact"
 							onAction={onBack}
 						/>
 					))}

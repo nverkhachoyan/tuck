@@ -132,7 +132,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					"Allow this app to add photos in Settings to save your edit.",
 					[
 						{ text: "Cancel", style: "cancel" },
-						{ text: "Open Settings", onPress: () => Linking.openSettings() },
+						{ text: "Open settings", onPress: () => Linking.openSettings() },
 					],
 				);
 			}
@@ -304,7 +304,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						    which ends the session, rather than through the editor. */}
 						{saved && (
 							<Button
-								label="Back to Projects"
+								label="Back to projects"
 								size="large"
 								onPress={() => router.dismissTo("/")}
 							/>
@@ -389,7 +389,7 @@ function ExportPreview({
 			{state.status === "failed" && (
 				<View style={styles.status}>
 					<Text style={styles.statusText}>Couldn't render the image.</Text>
-					<Button label="Try Again" size="small" onPress={onRetry} />
+					<Button label="Try again" size="small" onPress={onRetry} />
 				</View>
 			)}
 		</View>

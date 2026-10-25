@@ -50,7 +50,7 @@ export function SelectionBar({
 					<View style={styles.divider} />
 					<BarButton
 						icon="arrange-bring-to-front"
-						label="To Front"
+						label="To front"
 						disabled={!canMoveForward}
 						onPress={() => onArrange("front")}
 					/>
@@ -70,7 +70,7 @@ export function SelectionBar({
 					/>
 					<BarButton
 						icon="arrange-send-to-back"
-						label="To Back"
+						label="To back"
 						disabled={!canMoveBackward}
 						onPress={() => onArrange("back")}
 					/>

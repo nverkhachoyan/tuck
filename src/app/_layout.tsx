@@ -59,9 +59,9 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 			<Text style={styles.failureTitle}>Something went wrong</Text>
 			<Text style={styles.failureMessage}>{errorMessage(error)}</Text>
 			<View style={styles.failureActions}>
-				<Button label="Try Again" variant="primary" onPress={handleRetry} />
+				<Button label="Try again" variant="primary" onPress={handleRetry} />
 				<Button
-					label={copied ? "Copied" : "Copy Details"}
+					label={copied ? "Copied" : "Copy details"}
 					icon={copied ? "checkmark" : "copy-outline"}
 					onPress={() => void copyDetails()}
 				/>

@@ -237,9 +237,9 @@ export default function HomeScreen() {
 					color={colors.danger}
 					message="Your edits are still open. Retry saving or return to the editor."
 				>
-					<Button label="Retry Save" onPress={finishSession} />
+					<Button label="Retry save" onPress={finishSession} />
 					<Button
-						label="Return to Editor"
+						label="Return to editor"
 						onPress={() =>
 							router.push(editorHref(useStore.getState().projectId))
 						}

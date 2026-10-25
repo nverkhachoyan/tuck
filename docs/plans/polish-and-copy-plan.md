@@ -109,6 +109,8 @@ Commit: `feat: offer a copy of a project that's open in another tab`
 
 Check each changed label on screen.
 
+Checked on web, by day and by night, at 1440 and 390. New canvas, Email support, and Not found (Open Tuck stays) show on their pages. The editor's lock screen shows Try again beside Back to projects. Arrange shows To front and To back. Find on a photo with no faces shows Back to redact, in the inspector and in the phone's tray. Export shows Back to projects after a download. The page's load-failure template says Try again. A second search also caught Return to editor and Back to redact. Save to Photos stays, since Photos is the app's name. Retry save, Open settings, Copy details, and Try again on a failed scan or a failed export render show only in those failures, so they weren't on screen.
+
 Commit: `fix: use sentence case for every label`
 
 ### 8. DESIGN.md

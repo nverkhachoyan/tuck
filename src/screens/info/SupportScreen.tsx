@@ -21,7 +21,7 @@ export default function SupportScreen() {
 				</Paragraph>
 				<View style={styles.action}>
 					<Button
-						label="Email Support"
+						label="Email support"
 						icon="mail-outline"
 						onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
 					/>

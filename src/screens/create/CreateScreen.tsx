@@ -91,7 +91,7 @@ export default function CreateScreen() {
 	return (
 		<View role="main" style={styles.screen}>
 			<ScreenHeader
-				title="New Canvas"
+				title="New canvas"
 				onBack={() =>
 					router.canGoBack() ? router.back() : router.replace("/")
 				}

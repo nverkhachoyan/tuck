@@ -140,7 +140,7 @@ export default function Root({ children }: { children: ReactNode }) {
 							Part of it didn't load. Check your connection and try again. Tuck
 							needs a recent version of Chrome, Edge, Firefox, or Safari.
 						</p>
-						<button type="button">Try Again</button>
+						<button type="button">Try again</button>
 					</Fallback>
 				</template>
 				{bodyNodes}
