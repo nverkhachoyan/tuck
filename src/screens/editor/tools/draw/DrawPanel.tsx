@@ -36,7 +36,7 @@ const TOOL_ICONS = {
 
 const BRUSH_NAMES: Record<BrushTool, string> = {
 	pen: "Pen",
-	marker: "Marker",
+	marker: "Highlighter",
 	neon: "Neon",
 };
 
@@ -97,7 +97,7 @@ export function DrawPanel({
 
 const PEN_TIPS = [
 	{ title: "Pen", tool: "pen", icon: "draw-pen" },
-	{ title: "Marker", tool: "marker", icon: "marker" },
+	{ title: "Highlighter", tool: "marker", icon: "marker" },
 	{ title: "Neon", tool: "neon", icon: "shimmer" },
 ] as const;
 
@@ -182,7 +182,7 @@ export function DrawBar({
 	);
 }
 
-/** The pen in use, opening Pen, Marker, and Neon. */
+/** The pen in use, opening Pen, Highlighter, and Neon. */
 function PenTipChip({
 	tool,
 	onPick,

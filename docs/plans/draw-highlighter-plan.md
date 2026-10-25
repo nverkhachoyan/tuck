@@ -11,6 +11,18 @@ Draw's Marker tip is most of a highlighter. In `render/layers/DrawingLayerView.t
 * **Lines come out wobbly.** Highlighting a line of text by finger, or even by mouse, leaves a wavy band. Draw has no way to draw a straight one.
 * **It's called Marker.** The word people use for this is highlighter.
 
+A scratch branch (not committed) drew marker-only layers with `Group layer={<Paint blendMode="multiply" />}` at full strength, instead of 45% opacity. On web, by day and at night, at 1440 and at 390:
+
+* CanvasKit accepts the blend. Nothing threw.
+* Over white, yellow `#FFD60A` stays that yellow, and black text under it stays black. A plain pen in the same yellow covers the text.
+* A second multiplying layer over the first darkens the overlap to `#FFB400`. Strokes in one layer composite first and multiply once, so the darkening only happens between layers.
+* Over a blue sticker the yellow becomes a dark olive (`58, 103, 8`); the blue beside it stays. A solid redaction above the highlight covers it (`34, 34, 34`), with no yellow through it.
+* On a near-black canvas the band disappears and white text turns the highlight color. That is the dark-screenshot problem below.
+* The export preview's pixels match the editor, by day and at night. The night chrome goes graphite and the print does not. The redaction is a neutral gray and stays `34, 34, 34`, so on web, where the editor and the export are both sRGB, the blend doesn't shift.
+* Home's thumbnail shows the same yellow and the black text under it.
+
+Not checked: the iOS simulator, Android, or a stroke drawn live. On each, draw a marker across black text on white and across white text on black, export JPEG and PNG, and compare the file with the editor, including a gray. The thumbnail should match. A highlight under a redaction, over a sticker, and over another highlight should match the web results above.
+
 ## Decisions
 
 * **Marker becomes Highlighter.** The label in Draw's tip choices (`DrawPanel.tsx`) and its chip read "Highlighter". The saved id stays `"marker"` (`penTips` in `model/layers/drawing.ts`), so saved projects and settings don't change. Text's "Marker" font style (`TextStylePanel.tsx`) is a different thing and keeps its name.
@@ -29,6 +41,8 @@ Draw's Marker tip is most of a highlighter. In `render/layers/DrawingLayerView.t
 
 The plan assumes option 2 until the spike shows how both look; settle it before step 3.
 
+Settled: option 2. Multiply looks right on a light screenshot, and on a dark one the band vanishes, which is what the kept Marker is for. The spike showed no problem with keeping both.
+
 ## Steps
 
 Each step passes `npm run check` and `npm run typecheck` (and `npm test` where it touches pure modules), and ends with a commit message handed over. Check on web at 390 and 1440 points wide, by day and at night, and on the iOS simulator; the spike covers Android too.
@@ -45,12 +59,16 @@ Not committed. In a scratch branch, give `DrawingLayerView`'s group a `layer={<P
 
 Write what was found into this plan's "What's there already", and settle the open question.
 
+Checked on web, by day and by night, at 1440 and 390, with saved marker layers (a light canvas and a near-black one). The blend works, as written above. iOS and Android still need the same scenes drawn and exported there.
+
 ### 2. Marker becomes Highlighter
 
 * `DrawPanel.tsx`: the tip's title and label. Its icon stays `marker`.
 * Text's font style keeps "Marker".
 
 Check the dock's tip row on a phone and the tip chip's popover on a wide window.
+
+Checked on web, by day and by night. At 1440 the tip chip reads Highlighter and its popover offers Pen, Highlighter, and Neon. At 390 the brush options row is Pen, Highlighter, Neon. Text's font style is still Marker.
 
 Commit: `feat: call Draw's marker a highlighter`
 
