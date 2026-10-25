@@ -44,6 +44,8 @@ Each step passes `npm run check` and `npm run typecheck` (and `npm test` where i
 
 Check on a photo with a white edge and one with a dark edge, at the fit and zoomed, on web and the iOS simulator.
 
+Done. On web, a half-white, half-black photo showed the halo at the fit and in a narrower window, at the same screen thickness. On the iPhone it looked right on a light edge and a dark edge, at the fit and after the view refit.
+
 Commit: `fix: give Crop's handles the selection's halo`
 
 ### 2. Popovers beside their anchor
@@ -52,6 +54,8 @@ Commit: `fix: give Crop's handles the selection's halo`
 * Its doc comment, in the short-paragraph-then-list form AGENTS.md asks for.
 
 Check with a throwaway caller near the window's top and bottom, then remove it.
+
+Done on web. A temporary control at the top of the window opened the card at its right edge, top-aligned, and one at the bottom slid the card up to stay inside the window. The control was removed. Nothing in the app opens beside its anchor until Stickers do, so there is no phone check yet.
 
 Commit: `feat: let a popover open beside its control`
 
