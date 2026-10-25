@@ -2,6 +2,7 @@ import {
 	BackdropFilter,
 	Group,
 	ImageFilter,
+	Paint,
 	Path,
 	Picture,
 	Rect,
@@ -134,6 +135,7 @@ export function StrokeTarget({
 							key={stroke.landedId}
 							stroke={stroke}
 							brush={tool.brush}
+							full={tool.brush.type === "pen" && tool.brush.tip === "marker"}
 						/>
 					</Group>
 				)
@@ -158,10 +160,23 @@ export function NewLayerStroke({
 }) {
 	const { tool } = stroke;
 	switch (tool.type) {
-		case "draw":
-			return tool.brush.type === "pen" ? (
-				<LivePath stroke={stroke} brush={tool.brush} />
-			) : null;
+		case "draw": {
+			if (tool.brush.type !== "pen") return null;
+			const path = (
+				<LivePath
+					stroke={stroke}
+					brush={tool.brush}
+					full={tool.brush.tip === "marker"}
+				/>
+			);
+			// A new highlighter multiplies as it's drawn. It lands as its own
+			// layer, which multiplies the same way.
+			return tool.brush.tip === "marker" ? (
+				<Group layer={<Paint blendMode="multiply" />}>{path}</Group>
+			) : (
+				path
+			);
+		}
 		case "redactBrush":
 			return tool.brush.type === "pen" ? (
 				<LiveRedactionStrokes layer={null} stroke={stroke} tool={tool} />
@@ -200,9 +215,17 @@ function dragEnds(points: number[]): [Point, Point] {
  * A stroke as it's being painted, in document space. Keyed by `landedId`, so
  * a landed stroke gives way to the document's copy in one update.
  */
-function LivePath({ stroke, brush }: { stroke: LiveStroke; brush: Brush }) {
+function LivePath({
+	stroke,
+	brush,
+	full = false,
+}: {
+	stroke: LiveStroke;
+	brush: Brush;
+	full?: boolean;
+}) {
 	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
-	return <BrushStroke path={path} brush={brush} />;
+	return <BrushStroke path={path} brush={brush} full={full} />;
 }
 
 /** A stroke on an image's cut as it's being painted, in document space. */

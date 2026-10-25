@@ -1,13 +1,18 @@
 import {
 	BlurMask,
 	Group,
+	Paint,
 	Path,
 	Skia,
 	type SkPath,
 } from "@shopify/react-native-skia";
 import type { ComponentProps, ReactNode } from "react";
 import { mixColors } from "@/lib/color";
-import type { Brush, DrawingLayer } from "@/model/layers/drawing";
+import {
+	type Brush,
+	type DrawingLayer,
+	layerBlend,
+} from "@/model/layers/drawing";
 import type { MaskStroke } from "@/model/strokes";
 
 // A marker's ink is see-through, so what it highlights shows through it.
@@ -73,14 +78,16 @@ export function DrawingLayerView({
 	layer: DrawingLayer;
 	children?: ReactNode;
 }) {
+	const multiply = layerBlend(layer) === "multiply";
 	return (
-		<Group layer>
+		<Group layer={multiply ? <Paint blendMode="multiply" /> : true}>
 			{layer.strokes.map((stroke, index) => (
 				<BrushStroke
 					// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
 					key={index}
 					path={pathFor(stroke)}
 					brush={stroke}
+					full={multiply}
 				/>
 			))}
 			{children}
@@ -95,9 +102,12 @@ export function DrawingLayerView({
 export function BrushStroke({
 	path,
 	brush,
+	full = false,
 }: {
 	path: ComponentProps<typeof Path>["path"];
 	brush: Brush;
+	// Draw a highlighter at full strength. The layer around it multiplies.
+	full?: boolean;
 }) {
 	if (brush.type === "pen" && brush.tip === "neon") {
 		const { color, width } = brush;
@@ -126,7 +136,7 @@ export function BrushStroke({
 			</>
 		);
 	}
-	return <Path path={path} {...brushPaint(brush)} />;
+	return <Path path={path} {...brushPaint(brush, full)} />;
 }
 
 const ROUND_STROKE = {
@@ -137,7 +147,7 @@ const ROUND_STROKE = {
 
 // Round ends, but a marker's are square, like a highlighter's chisel tip.
 // One path per stroke, so a marker crossing itself doesn't darken.
-function brushPaint(brush: Brush) {
+function brushPaint(brush: Brush, full: boolean) {
 	if (brush.type === "eraser") {
 		return {
 			...ROUND_STROKE,
@@ -146,12 +156,15 @@ function brushPaint(brush: Brush) {
 			blendMode: "clear",
 		} as const;
 	}
-	const marker = brush.tip === "marker";
+	const marker = brush.tip === "marker" || brush.tip === "ink";
 	return {
 		...ROUND_STROKE,
 		strokeWidth: brush.width,
 		strokeCap: marker ? "square" : "round",
 		color: brush.color,
-		opacity: marker ? MARKER_OPACITY : 1,
+		// A multiplying highlighter is see-through because of the blend.
+		// The marker tip, and a highlighter saved before it multiplied, stay
+		// at the ink's own opacity.
+		opacity: marker && !(full && brush.tip === "marker") ? MARKER_OPACITY : 1,
 	} as const;
 }

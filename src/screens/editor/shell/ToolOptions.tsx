@@ -225,7 +225,8 @@ export function SizeDot({
 					? styles.eraserDot
 					: { backgroundColor: color, borderColor: colors.borderStrong },
 				color !== null &&
-					tip === "marker" && { borderRadius: size / 4, opacity: 0.6 },
+					(tip === "marker" || tip === "ink") && { borderRadius: size / 4 },
+				color !== null && tip === "ink" && { opacity: 0.6 },
 				color !== null &&
 					tip === "neon" && {
 						borderColor: colors.textPrimary,

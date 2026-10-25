@@ -171,6 +171,20 @@ describe("canAddTo", () => {
 		assert.equal(canAddTo(redactBrush.tool, redaction), false);
 		assert.equal(canAddTo(redactBox.tool, redaction), false);
 		assert.equal(canAddTo(cutBrush, drawing), false);
+		const highlighter: CanvasTool = {
+			type: "draw",
+			brush: { type: "pen", color: "#FFD60A", width: 40, tip: "marker" },
+		};
+		const marker: CanvasTool = {
+			type: "draw",
+			brush: { type: "pen", color: "#FF3B30", width: 40, tip: "ink" },
+		};
+		const multiplying = { ...drawing, blend: "multiply" as const };
+		assert.equal(canAddTo(highlighter, multiplying), true);
+		assert.equal(canAddTo(highlighter, drawing), false);
+		assert.equal(canAddTo(pen.tool, multiplying), false);
+		assert.equal(canAddTo(marker, drawing), true);
+		assert.equal(canAddTo(marker, multiplying), false);
 	});
 });
 

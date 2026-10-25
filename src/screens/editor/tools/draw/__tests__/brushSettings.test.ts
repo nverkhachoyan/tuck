@@ -14,7 +14,7 @@ import {
 	withShape,
 } from "../brushSettings.ts";
 
-const sizes = { pen: 2, marker: 0, neon: 3, shape: 1, eraser: 4 };
+const sizes = { pen: 2, marker: 0, ink: 1, neon: 3, shape: 1, eraser: 4 };
 
 describe("brushFor", () => {
 	test("sizes the pen by the canvas's shorter side", () => {
@@ -48,6 +48,12 @@ describe("brushFor", () => {
 			color: "#0A84FF",
 			width: BRUSH_SIZES.neon[3] * 1000,
 			tip: "neon",
+		});
+		assert.deepEqual(brushFor({ ...settings, tool: "ink" }, size), {
+			type: "pen",
+			color: "#0A84FF",
+			width: BRUSH_SIZES.ink[1] * 1000,
+			tip: "ink",
 		});
 		assert.equal(settings.color, "#0A84FF");
 	});
@@ -85,7 +91,7 @@ describe("parseBrushSettings", () => {
 			color: "#6B2FA0",
 			highlightColor: "#FFD60A",
 			shape: "ellipse" as const,
-			sizes: { pen: 0, marker: 4, neon: 2, shape: 3, eraser: 1 },
+			sizes: { pen: 0, marker: 4, ink: 2, neon: 2, shape: 3, eraser: 1 },
 		};
 		assert.deepEqual(
 			parseBrushSettings(JSON.parse(JSON.stringify(settings))),

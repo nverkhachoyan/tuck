@@ -1,5 +1,9 @@
 import type { Point } from "../../../model/geometry.ts";
-import type { Brush } from "../../../model/layers/drawing.ts";
+import {
+	type Brush,
+	layerBlend,
+	strokeBlend,
+} from "../../../model/layers/drawing.ts";
 import type { CutStroke } from "../../../model/layers/image.ts";
 import type { Layer } from "../../../model/layers/layer.ts";
 import type { RedactionEffect } from "../../../model/layers/redaction.ts";
@@ -138,7 +142,11 @@ export function canAddTo(tool: CanvasTool, layer: Layer): boolean {
 	if (layer.locked) return false;
 	switch (tool.type) {
 		case "draw":
-			return layer.type === "drawing";
+			return (
+				layer.type === "drawing" &&
+				(tool.brush.type === "eraser" ||
+					strokeBlend(tool.brush) === layerBlend(layer))
+			);
 		case "redactBrush":
 			return layer.type === "redaction" && layer.shape === "strokes";
 		case "redactBox":

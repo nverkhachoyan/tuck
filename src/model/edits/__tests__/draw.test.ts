@@ -39,6 +39,50 @@ describe("drawStroke", () => {
 		assert.equal(top<DrawingLayer>(joined).strokes.length, 2);
 	});
 
+	test("an eraser joins a multiplying drawing and a plain one", () => {
+		const eraser: Stroke = {
+			type: "eraser",
+			width: 20,
+			points: [10, 10, 40, 40],
+		};
+		const highlighter: Stroke = { ...pen, color: "#FFD60A", tip: "marker" };
+		for (const stroke of [pen, highlighter]) {
+			const first = drawStroke(blank(), null, stroke);
+			const { id } = top<DrawingLayer>(first);
+			const erased = drawStroke(first, id, eraser);
+			assert.equal(erased.layers.length, 1);
+			assert.equal(top<DrawingLayer>(erased).strokes.length, 2);
+			assert.equal(top<DrawingLayer>(erased).strokes[1].type, "eraser");
+		}
+	});
+
+	test("a highlighter multiplies, and only joins a layer that does", () => {
+		const highlighter: Stroke = { ...pen, color: "#FFD60A", tip: "marker" };
+		const ink: Stroke = { ...pen, tip: "ink" };
+		const highlight = drawStroke(blank(), null, highlighter);
+		const layer = top<DrawingLayer>(highlight);
+		assert.equal(layer.blend, "multiply");
+		const joined = drawStroke(highlight, layer.id, highlighter);
+		assert.equal(joined.layers.length, 1);
+		assert.equal(top<DrawingLayer>(joined).strokes.length, 2);
+		const penOver = drawStroke(highlight, layer.id, pen);
+		assert.equal(penOver.layers.length, 2);
+		assert.equal(top<DrawingLayer>(penOver).blend, undefined);
+		const markerOver = drawStroke(highlight, layer.id, ink);
+		assert.equal(markerOver.layers.length, 2);
+		assert.equal(top<DrawingLayer>(markerOver).blend, undefined);
+
+		const plain = drawStroke(blank(), null, pen);
+		const plainId = top<DrawingLayer>(plain).id;
+		assert.equal(top<DrawingLayer>(plain).blend, undefined);
+		const over = drawStroke(plain, plainId, highlighter);
+		assert.equal(over.layers.length, 2);
+		assert.equal(top<DrawingLayer>(over).blend, "multiply");
+		const inkJoined = drawStroke(plain, plainId, ink);
+		assert.equal(inkJoined.layers.length, 1);
+		assert.equal(top<DrawingLayer>(inkJoined).strokes.length, 2);
+	});
+
 	test("starts a new drawing over a locked one", () => {
 		const first = drawStroke(blank(), null, pen);
 		const locked = {

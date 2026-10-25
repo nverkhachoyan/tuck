@@ -32,6 +32,7 @@ import {
 const TOOL_ICONS = {
 	pen: "draw-pen",
 	marker: "marker",
+	ink: "brush",
 	neon: "shimmer",
 	eraser: "eraser",
 } as const;
@@ -39,6 +40,7 @@ const TOOL_ICONS = {
 const BRUSH_NAMES: Record<BrushTool, string> = {
 	pen: "Pen",
 	marker: "Highlighter",
+	ink: "Marker",
 	neon: "Neon",
 };
 
@@ -100,6 +102,7 @@ export function DrawPanel({
 const PEN_TIPS = [
 	{ title: "Pen", tool: "pen", icon: "draw-pen" },
 	{ title: "Highlighter", tool: "marker", icon: "marker" },
+	{ title: "Marker", tool: "ink", icon: "brush" },
 	{ title: "Neon", tool: "neon", icon: "shimmer" },
 ] as const;
 
@@ -285,7 +288,7 @@ export function BrushOptions({
 			{isBrush(settings.tool) && (
 				<ToolOption label="Brush">
 					<ToolChoices>
-						{(["pen", "marker", "neon"] as const).map((brush) => (
+						{(["pen", "marker", "ink", "neon"] as const).map((brush) => (
 							<RingChoice
 								key={brush}
 								variant="highlight"
@@ -354,7 +357,9 @@ export function BrushOptions({
 }
 
 function isBrush(tool: DrawTool): tool is BrushTool {
-	return tool === "pen" || tool === "marker" || tool === "neon";
+	return (
+		tool === "pen" || tool === "marker" || tool === "ink" || tool === "neon"
+	);
 }
 
 /** The current brush color in the dock's Style tile. */

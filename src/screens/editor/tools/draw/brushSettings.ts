@@ -17,8 +17,7 @@ export type BrushSettings = {
 	// The brush Brush returns to after drawing a shape or erasing.
 	lastBrush: BrushTool;
 	// Every pen and shape draws in it, except the highlighter, which keeps
-	// `highlightColor`. The see-through marker, when it has its own tip, uses
-	// this shared color too.
+	// `highlightColor`. The see-through marker uses this shared color too.
 	color: string;
 	// The highlighter's own color. Yellow to start.
 	highlightColor: string;
@@ -34,7 +33,7 @@ export const defaultBrushSettings: BrushSettings = {
 	color: "#FF3B30",
 	highlightColor: "#FFD60A",
 	shape: "arrow",
-	sizes: { pen: 1, marker: 2, neon: 1, shape: 2, eraser: 3 },
+	sizes: { pen: 1, marker: 2, ink: 2, neon: 1, shape: 2, eraser: 3 },
 };
 
 // Brush widths as a share of the canvas's shorter side, like a new text's
@@ -46,13 +45,21 @@ export const defaultBrushSettings: BrushSettings = {
 export const BRUSH_SIZES: Record<DrawTool, number[]> = {
 	pen: [0.005, 0.01, 0.02, 0.035, 0.06],
 	marker: [0.015, 0.025, 0.04, 0.06, 0.09],
+	ink: [0.015, 0.025, 0.04, 0.06, 0.09],
 	neon: [0.012, 0.022, 0.038, 0.06, 0.09],
 	shape: [0.004, 0.008, 0.013, 0.02, 0.03],
 	eraser: [0.005, 0.01, 0.02, 0.035, 0.06],
 };
 
-const DRAW_TOOLS: DrawTool[] = ["pen", "marker", "neon", "shape", "eraser"];
-const BRUSH_TOOLS: BrushTool[] = ["pen", "marker", "neon"];
+const DRAW_TOOLS: DrawTool[] = [
+	"pen",
+	"marker",
+	"ink",
+	"neon",
+	"shape",
+	"eraser",
+];
+const BRUSH_TOOLS: BrushTool[] = ["pen", "marker", "ink", "neon"];
 
 const shortSide = (size: Size) => Math.min(size.width, size.height);
 
@@ -94,6 +101,7 @@ export function parseBrushSettings(saved: unknown): BrushSettings {
 		sizes: {
 			pen: sizeOf("pen"),
 			marker: sizeOf("marker"),
+			ink: sizeOf("ink"),
 			neon: sizeOf("neon"),
 			shape: sizeOf("shape"),
 			eraser: sizeOf("eraser"),
@@ -106,7 +114,9 @@ export function brushSizeIndex(settings: BrushSettings): number {
 }
 
 export function penTip(tool: DrawTool): PenTip | undefined {
-	return tool === "marker" || tool === "neon" ? tool : undefined;
+	return tool === "marker" || tool === "ink" || tool === "neon"
+		? tool
+		: undefined;
 }
 
 /** The color the tool in use draws with. The highlighter keeps its own. */

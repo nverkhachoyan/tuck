@@ -5,7 +5,12 @@ import {
 	replaceLayer,
 	withLayers,
 } from "../document.ts";
-import { createDrawingLayer, type Stroke } from "../layers/drawing.ts";
+import {
+	createDrawingLayer,
+	layerBlend,
+	type Stroke,
+	strokeBlend,
+} from "../layers/drawing.ts";
 import {
 	createShapeLayer,
 	isLineShape,
@@ -32,6 +37,11 @@ export function drawStroke(
 	const selected = findLayer(document, selectedLayerId);
 	const target =
 		selected?.type === "drawing" && !selected.locked ? selected : null;
+	// A pen joins the selected drawing only when it composites the same way.
+	// An eraser clears whichever drawing is selected.
+	const joins =
+		target !== null &&
+		(stroke.type === "eraser" || strokeBlend(stroke) === layerBlend(target));
 	const erased = new Set(
 		stroke.type === "eraser"
 			? document.layers
@@ -45,12 +55,14 @@ export function drawStroke(
 					.map((layer) => layer.id)
 			: [],
 	);
-	if (target || erased.size > 0) {
+	if (joins || erased.size > 0) {
 		return withLayers(
 			document,
 			document.layers
 				.filter((layer) => !erased.has(layer.id))
-				.map((layer) => (layer === target ? addStroke(target, stroke) : layer)),
+				.map((layer) =>
+					joins && layer === target ? addStroke(target, stroke) : layer,
+				),
 		);
 	}
 	if (stroke.type !== "pen") return document;

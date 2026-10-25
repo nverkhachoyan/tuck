@@ -2,10 +2,10 @@ import { isMaskStroke, recenterDrawing } from "../strokes.ts";
 import { isFields } from "../values.ts";
 import { createLayerId, identityTransform, type LayerBase } from "./base.ts";
 
-// A pen's tip, when it isn't a plain round one: a marker's flat, see-through
-// ink, or a neon tube's glow. Named for how they look; `DrawingLayerView`
-// draws each.
-export const penTips = ["marker", "neon"] as const;
+// A pen's tip, when it isn't a plain round one. `marker` multiplies like a
+// highlighter, `ink` is the see-through marker, and `neon` glows.
+// Named for how they look; `DrawingLayerView` draws each.
+export const penTips = ["marker", "ink", "neon"] as const;
 export type PenTip = (typeof penTips)[number];
 
 /**
@@ -35,7 +35,22 @@ export function isStroke(value: unknown): boolean {
 export type DrawingLayer = LayerBase & {
 	type: "drawing";
 	strokes: Stroke[];
+	// How the whole layer composites onto what's under it. Absent draws
+	// normally. Anything else is ignored, so a newer blend still opens.
+	blend?: "multiply";
 };
+
+/** The blend a stroke starts its layer with. Only a highlighter multiplies. */
+export function strokeBlend(stroke: Brush): "multiply" | undefined {
+	return stroke.type === "pen" && stroke.tip === "marker"
+		? "multiply"
+		: undefined;
+}
+
+/** `multiply` when the layer says so. Any other saved value draws normally. */
+export function layerBlend(layer: { blend?: unknown }): "multiply" | undefined {
+	return layer.blend === "multiply" ? "multiply" : undefined;
+}
 
 /**
  * A drawing begun by a pen stroke in document space. An eraser can't start
@@ -44,10 +59,12 @@ export type DrawingLayer = LayerBase & {
 export function createDrawingLayer(
 	stroke: Stroke & { type: "pen" },
 ): DrawingLayer {
+	const blend = strokeBlend(stroke);
 	return recenterDrawing({
 		type: "drawing",
 		id: createLayerId("drawing"),
 		strokes: [stroke],
+		...(blend ? { blend } : {}),
 		transform: identityTransform,
 		hidden: false,
 		locked: false,
