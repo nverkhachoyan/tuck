@@ -362,6 +362,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		[dispatchMode],
 	);
 	const openStickers = () => dispatchMode({ type: "openStickers" });
+	// What to do once the sticker popover has gone (see `onSaveNew`).
+	const afterStickers = useRef<(() => void) | null>(null);
+	const stickersDismissed = useCallback(() => {
+		const next = afterStickers.current;
+		afterStickers.current = null;
+		next?.();
+	}, []);
 
 	const panelKind: DockPanel = tool
 		? tool
@@ -583,12 +590,16 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		savedError: savedStickers.error,
 		onAddSaved: (sticker: ShownSticker) =>
 			addStickerFrom(() => savedStickers.place(sticker)),
-		// Kept, then added at once, as it was picked to use.
+		// Kept, then added at once, as it was picked to use. The picker
+		// can't open over the popover's modal on iOS, so it waits for it to go.
 		onSaveNew: () => {
+			const pick = () =>
+				pickSticker(async (image) =>
+					savedStickers.place(await savedStickers.save(image)),
+				);
 			closeStickers();
-			pickSticker(async (image) =>
-				savedStickers.place(await savedStickers.save(image)),
-			);
+			if (wide) afterStickers.current = pick;
+			else pick();
 		},
 		onDeleteSaved: (sticker: ShownSticker) => {
 			savedStickers.remove(sticker).catch((error: unknown) => {
@@ -829,6 +840,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						anchor={stickerAnchor}
 						open={stickersOpen}
 						onClose={closeStickers}
+						onDismiss={stickersDismissed}
 						{...stickerActions}
 					/>
 				) : (

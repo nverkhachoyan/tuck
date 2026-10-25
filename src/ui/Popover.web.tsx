@@ -38,6 +38,7 @@ const FOCUSABLE = [
  *   which listen as the key bubbles, so Escape doesn't also finish a tool.
  * - It's a dialog: focus moves into it, Tab stays inside, and focus returns
  *   to `anchor` when it closes, or to `restoreFocus` when that's given.
+ * - `onDismiss` runs as it closes: nothing on the page waits for it.
  */
 export function Popover({
 	anchor,
@@ -46,8 +47,14 @@ export function Popover({
 	label,
 	placement = "below",
 	restoreFocus,
+	onDismiss,
 	children,
 }: PopoverProps) {
+	const wasOpen = useRef(open);
+	useEffect(() => {
+		if (wasOpen.current && !open) onDismiss?.();
+		wasOpen.current = open;
+	}, [open, onDismiss]);
 	if (!open) return null;
 	return (
 		<PopoverFrame

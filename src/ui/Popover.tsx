@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
 	Modal,
+	Platform,
 	Pressable,
 	StyleSheet,
 	useWindowDimensions,
@@ -37,6 +38,11 @@ export type PopoverProps = {
 	 * Text editing uses it so the caret returns to the hidden input.
 	 */
 	restoreFocus?: () => void;
+	/**
+	 * Called once the card has gone and another screen can be shown, such as
+	 * the photo picker. On iOS that's when its modal finishes dismissing.
+	 */
+	onDismiss?: () => void;
 	children: ReactNode;
 };
 
@@ -46,6 +52,8 @@ export type PopoverProps = {
  *   the window's bottom. `beside` puts it at the control's right, top-aligned,
  *   and moves it up to stay inside the window.
  * - An outside press closes it. It's a dialog for screen readers.
+ * - On iOS its modal stays mounted while it closes, so `onDismiss` can wait
+ *   for UIKit: a screen presented sooner goes down with the modal.
  * - On web, Escape closes it before the page's shortcuts see the key, and
  *   focus moves into it and back to `anchor` when it closes, or to
  *   `restoreFocus` when that's given (see `Popover.web.tsx`).
@@ -57,15 +65,17 @@ export function Popover({
 	label,
 	placement = "below",
 	restoreFocus,
+	onDismiss,
 	children,
 }: PopoverProps) {
-	if (!open) return null;
+	useDismissElsewhere(open, onDismiss);
 	return (
 		<Modal
 			transparent
-			visible
+			visible={open}
 			animationType="none"
 			onRequestClose={onClose}
+			onDismiss={onDismiss}
 			statusBarTranslucent
 		>
 			<PopoverFrame
@@ -79,6 +89,16 @@ export function Popover({
 			</PopoverFrame>
 		</Modal>
 	);
+}
+
+// Android's modal has no `onDismiss`, and closes before anything it would
+// stand in the way of, so it's called as the popover closes.
+function useDismissElsewhere(open: boolean, onDismiss?: () => void) {
+	const wasOpen = useRef(open);
+	useEffect(() => {
+		if (wasOpen.current && !open && Platform.OS !== "ios") onDismiss?.();
+		wasOpen.current = open;
+	}, [open, onDismiss]);
 }
 
 function PopoverFrame({

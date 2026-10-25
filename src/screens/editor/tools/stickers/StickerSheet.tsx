@@ -116,11 +116,13 @@ export function StickerPopover({
 	anchor,
 	open,
 	onClose,
+	onDismiss,
 	...content
 }: StickerContentProps & {
 	anchor: RefObject<View | null>;
 	open: boolean;
 	onClose: () => void;
+	onDismiss: () => void;
 }) {
 	return (
 		<Popover
@@ -129,6 +131,7 @@ export function StickerPopover({
 			open={open}
 			placement="beside"
 			onClose={onClose}
+			onDismiss={onDismiss}
 		>
 			<View style={styles.popoverBody}>
 				<StickerContent {...content} />
