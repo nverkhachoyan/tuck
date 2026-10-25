@@ -5,6 +5,7 @@ import {
 	createContext,
 	isValidElement,
 	type ReactNode,
+	type RefObject,
 	useContext,
 	useState,
 } from "react";
@@ -58,6 +59,7 @@ export function ToolButton({
 	open = false,
 	busy = false,
 	compact = false,
+	buttonRef,
 	onPress,
 }: {
 	label: string;
@@ -70,6 +72,8 @@ export function ToolButton({
 	open?: boolean;
 	busy?: boolean;
 	compact?: boolean;
+	// The pressable, when a popover hangs from this button.
+	buttonRef?: RefObject<View | null>;
 	onPress: () => void;
 }) {
 	const inRail = useContext(InRail);
@@ -85,6 +89,11 @@ export function ToolButton({
 		<>
 			<Pressable
 				{...(shortcut ? anchor : undefined)}
+				// The tooltip's anchor and a popover's share this pressable.
+				ref={(node: View | null) => {
+					if (shortcut && anchor.ref) anchor.ref.current = node;
+					if (buttonRef) buttonRef.current = node;
+				}}
 				{...pressAtOnce}
 				hitSlop={8}
 				disabled={inactive}

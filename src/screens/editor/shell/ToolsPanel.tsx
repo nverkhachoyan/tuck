@@ -1,5 +1,6 @@
 import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { ComponentProps } from "react";
+import type { ComponentProps, RefObject } from "react";
+import type { View } from "react-native";
 import { TOOL_KEYS, type ToolKey } from "../shortcuts";
 import { ToolButton, ToolGrid, ToolRow } from "./ToolButton";
 
@@ -50,9 +51,10 @@ export const TOOLS: readonly ToolEntry[] = [
  * rail, where they stay while a tool is in use, marking it (Find is
  * Redact's). The tool's options are in the header's context bar, not here.
  * On web, each shows the letter that picks it up (see `TOOL_KEYS`) on hover.
- * Sticker opens the sheet of stickers; Add photo picks a photo to add, and
- * spins while one is on its way. Adjust and Cut out show only with an image
- * to adjust or cut out.
+ * Sticker opens the sheet of stickers on a phone, or a popover beside the
+ * rail's button (`stickerAnchor`) on a wide window. Add photo picks a photo
+ * to add, and spins while one is on its way. Adjust and Cut out show only
+ * with an image to adjust or cut out.
  */
 export function ToolsPanel({
 	vertical = false,
@@ -60,12 +62,14 @@ export function ToolsPanel({
 	addBusy,
 	hasImage,
 	startTool,
+	stickerAnchor,
 }: {
 	vertical?: boolean;
 	tool?: OpenTool | null;
 	addBusy: boolean;
 	hasImage: boolean;
 	startTool: ToolStarters;
+	stickerAnchor?: RefObject<View | null>;
 }) {
 	const compact = !vertical;
 	const tools = TOOLS.filter(
@@ -82,6 +86,7 @@ export function ToolsPanel({
 				(entry.markedWhile ?? [entry.key]).some((mark) => mark === tool)
 			}
 			busy={entry.key === "photo" && addBusy}
+			buttonRef={entry.key === "sticker" ? stickerAnchor : undefined}
 			onPress={startTool[entry.key]}
 		/>
 	));

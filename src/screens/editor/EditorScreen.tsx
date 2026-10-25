@@ -72,9 +72,11 @@ import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
 import { redactionEffect, stepRedactSize } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
-import { StickerSheet } from "./tools/stickers/StickerSheet";
+import type { Sticker } from "./tools/stickers/bundledStickers";
+import { StickerPopover, StickerSheet } from "./tools/stickers/StickerSheet";
 import type { StickerImage } from "./tools/stickers/savedStickers";
 import { bundledStickerImage } from "./tools/stickers/stickerFile";
+import type { ShownSticker } from "./tools/stickers/useSavedStickers";
 import { useSavedStickers } from "./tools/stickers/useSavedStickers";
 import { useStickerSave } from "./tools/stickers/useStickerSave";
 import { TextEditor } from "./tools/text/TextEditor";
@@ -371,6 +373,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// it out of the Tab order and the accessibility tree. React Native Web
 	// doesn't pass `inert` through, so it's set on the element.
 	const rootRef = useRef<View>(null);
+	const stickerAnchor = useRef<View>(null);
 	useEffect(() => {
 		if (Platform.OS !== "web") return;
 		const root = rootRef.current as unknown as HTMLElement | null;
@@ -559,6 +562,26 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		closeStickers();
 		addSticker(load);
 	};
+	const stickerActions = {
+		onAddSticker: (sticker: Sticker) =>
+			addStickerFrom(() => bundledStickerImage(sticker)),
+		savedStickers: savedStickers.stickers,
+		savedError: savedStickers.error,
+		onAddSaved: (sticker: ShownSticker) =>
+			addStickerFrom(() => savedStickers.place(sticker)),
+		// Kept, then added at once, as it was picked to use.
+		onSaveNew: () => {
+			closeStickers();
+			pickSticker(async (image) =>
+				savedStickers.place(await savedStickers.save(image)),
+			);
+		},
+		onDeleteSaved: (sticker: ShownSticker) => {
+			savedStickers.remove(sticker).catch((error: unknown) => {
+				showAlert("Couldn't delete sticker", errorMessage(error));
+			});
+		},
+	};
 
 	return (
 		<TrayHeight.Provider value={layout.setTrayHeight}>
@@ -702,6 +725,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									addBusy={addBusy}
 									hasImage={hasImage}
 									startTool={mapStarters(startTool, fromRail)}
+									stickerAnchor={stickerAnchor}
 								/>
 							</Surface>
 						</View>
@@ -778,30 +802,20 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						}}
 					/>
 				)}
-				<StickerSheet
-					open={stickersOpen}
-					onClose={closeStickers}
-					onAddSticker={(sticker) =>
-						addStickerFrom(() => bundledStickerImage(sticker))
-					}
-					savedStickers={savedStickers.stickers}
-					savedError={savedStickers.error}
-					onAddSaved={(sticker) =>
-						addStickerFrom(() => savedStickers.place(sticker))
-					}
-					// Kept, then added at once, as it was picked to use.
-					onSaveNew={() => {
-						closeStickers();
-						pickSticker(async (image) =>
-							savedStickers.place(await savedStickers.save(image)),
-						);
-					}}
-					onDeleteSaved={(sticker) => {
-						savedStickers.remove(sticker).catch((error: unknown) => {
-							showAlert("Couldn't delete sticker", errorMessage(error));
-						});
-					}}
-				/>
+				{wide ? (
+					<StickerPopover
+						anchor={stickerAnchor}
+						open={stickersOpen}
+						onClose={closeStickers}
+						{...stickerActions}
+					/>
+				) : (
+					<StickerSheet
+						open={stickersOpen}
+						onClose={closeStickers}
+						{...stickerActions}
+					/>
+				)}
 
 				{dragging && <DropOverlay label="Drop to add to the canvas" />}
 				{cropping && (

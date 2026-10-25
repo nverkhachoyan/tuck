@@ -62,11 +62,13 @@ Commit: `feat: let a popover open beside its control`
 ### 3. Stickers in a popover on wide windows
 
 * `ToolsPanel` passes a ref to its Sticker button (a prop, threaded to that `ToolButton`'s pressable).
-* `StickerSheet.tsx` exports a `StickerPopover`: `Popover` with `placement="beside"`, anchored to that ref, holding `StickerContent`. The grid fits its width already (it measures a view inside its scroll view, per AGENTS.md); check it lands on six tiles across.
+* `StickerSheet.tsx` exports a `StickerPopover`: `Popover` with `placement="beside"`, anchored to that ref, holding `StickerContent`. The grid fits its width already (it measures a view inside its scroll view, per AGENTS.md); check it lands on six tiles across. A 360-point card would measure five: the card and the grid each pad 12, and a classic scrollbar takes about 16 more, so the grid is fixed at six tiles of 56 and the card is wider by the paddings and the scrollbar. The Sticker button's pressable already holds the tooltip's ref, so the anchor ref is assigned beside it.
 * `EditorScreen` renders the popover in place of the sheet when `wide`. Opening, closing, adding, saving a new sticker, and deleting one keep their handlers.
 * The sheet's doc comment notes it's the phone's.
 
 Check at 1440 and 1024: open from the rail, switch tabs, add a bundled sticker, add one of Yours, save a new one, delete one (hover's delete button), Escape, an outside click. On iPad, check touch and that long-press delete still works inside the popover.
+
+Checked on web at 1440 and 1024: the card opens at the button's right, top-aligned, with six tiles on a row; Hands, adding a bundled sticker, saving one of Yours (which also places it), the hover delete, Escape, and an outside click all work. At 390 the phone's sheet is unchanged. iPad touch and long-press delete are still to check.
 
 Commit: `feat: open stickers beside the rail on wide windows`
 

@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import {
 	ActivityIndicator,
 	Image,
@@ -16,6 +16,7 @@ import { usePreference } from "@/platform/usePreference";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { Popover } from "@/ui/Popover";
 import { showAlert } from "@/ui/showAlert";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
 import {
@@ -33,6 +34,10 @@ const GRID_PADDING = 12;
 // Tall enough for five rows of stickers, so switching categories doesn't
 // resize the sheet. On a short screen it gives way first.
 const GRID_HEIGHT = 5 * (TILE + GRID_GAP) + GRID_PADDING;
+// A classic scrollbar takes about this much out of the scroll view. The grid
+// measures the width left inside it, so the popover allows for one. An
+// overlay scrollbar takes none, and the extra width still holds six tiles.
+const SCROLLBAR = 16;
 
 // The person's own stickers come first, then the bundled ones.
 type StickerTab = "yours" | StickerCategory;
@@ -59,12 +64,11 @@ type StickerContentProps = SavedStickerProps & {
 };
 
 /**
- * The stickers to add to the canvas, by category, remembering the last one
- * shown (photos are added with the dock's Photo). Yours
- * holds the person's own: `onSaveNew` picks an image to keep as one, and a
- * long press (or on web, a hovered delete button) deletes one once
- * confirmed. A tap outside the sheet, or swiping it down, closes it. Stays
- * mounted while closed, so the sheet can animate out.
+ * The phone's sticker sheet.
+ * - The same tabs and grid as `StickerPopover`, which a wide window opens
+ *   beside the rail instead.
+ * - A tap outside, or swiping it down, closes it.
+ * - Stays mounted while closed, so the sheet can animate out.
  */
 export function StickerSheet({
 	open,
@@ -102,6 +106,43 @@ export function StickerSheet({
 	);
 }
 
+/**
+ * Stickers beside the rail's Sticker button on a wide window.
+ * - The same tabs and grid as the phone's sheet. The grid is wide enough for
+ *   six tiles, and tall enough for five rows.
+ * - Escape, or a press outside, closes it. The photo is not dimmed.
+ */
+export function StickerPopover({
+	anchor,
+	open,
+	onClose,
+	...content
+}: StickerContentProps & {
+	anchor: RefObject<View | null>;
+	open: boolean;
+	onClose: () => void;
+}) {
+	return (
+		<Popover
+			anchor={anchor}
+			label="Stickers"
+			open={open}
+			placement="beside"
+			onClose={onClose}
+		>
+			<View style={styles.popoverBody}>
+				<StickerContent {...content} />
+			</View>
+		</Popover>
+	);
+}
+
+/**
+ * The stickers to add, by category, remembering the last one shown.
+ * Yours holds the person's own: `onSaveNew` picks an image to keep as one,
+ * and a long press (or on web, a hovered delete button) deletes one once
+ * confirmed.
+ */
 function StickerContent({ onAddSticker, ...saved }: StickerContentProps) {
 	const [tab, setTab] = usePreference("stickerCategory", parseTab);
 	// Measured inside the scroll view, clear of a web scrollbar.
@@ -357,6 +398,12 @@ const styles = StyleSheet.create({
 	},
 	scrim: {
 		backgroundColor: colors.sheetScrim,
+	},
+	// Six tiles of `TILE`, plus the grid's padding and a scrollbar. The
+	// popover's card pads too, so it is wider than 360: a card of 360 would
+	// measure five tiles.
+	popoverBody: {
+		width: 6 * TILE + 5 * GRID_GAP + GRID_PADDING * 2 + SCROLLBAR,
 	},
 	// A phone's width, and no wider on a large screen.
 	column: {
