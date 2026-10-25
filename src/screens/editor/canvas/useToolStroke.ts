@@ -9,6 +9,7 @@ import { findLayerAt, type LayerTarget } from "./hitTest";
 import type { LiveStroke } from "./LiveStrokeOverlay";
 import { strokeIntent } from "./strokeIntent";
 import { usePaintGesture } from "./usePaintGesture";
+import { useShiftHeld } from "./useShiftHeld";
 import type { DocumentViewport } from "./viewport";
 
 /**
@@ -105,12 +106,18 @@ export function useToolStroke({
 			document,
 		],
 	);
+	const shiftHeld = useShiftHeld();
 	const paintGesture = usePaintGesture({
 		viewport,
 		points: strokePoints,
 		strokeId,
 		onStroke: handleStroke,
 		standsAside,
+		straighten:
+			tool?.type === "draw" &&
+			tool.brush.type === "pen" &&
+			tool.brush.tip === "marker",
+		shiftHeld,
 	});
 	const liveStroke = useMemo<LiveStroke | null>(
 		() =>

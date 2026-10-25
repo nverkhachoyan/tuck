@@ -13,6 +13,7 @@ import {
 	drawingBox,
 	hitTestDrawing,
 	recenterDrawing,
+	straightStroke,
 } from "../strokes.ts";
 
 const pen = (points: number[], width = 10): Stroke & { type: "pen" } => ({
@@ -158,6 +159,27 @@ describe("hitTestDrawing", () => {
 	test("ignores what the eraser drew", () => {
 		const layer = addStroke(square, eraser([0, 0, 50, 50]));
 		assert.ok(!hitTestDrawing(layer, { x: 25, y: 25 }, 0));
+	});
+});
+
+describe("straightStroke", () => {
+	test("is the line from the first point to the last", () => {
+		assert.deepEqual(
+			straightStroke([0, 0, 20, 40, 30, 10, 80, 50]),
+			[0, 0, 80, 50],
+		);
+	});
+
+	test("snaps to level within 5 degrees, and keeps a steeper line", () => {
+		assert.deepEqual(straightStroke([0, 0, 40, 10, 100, 8]), [0, 0, 100, 0]);
+		assert.deepEqual(straightStroke([0, 0, -100, 4]), [0, 0, -100, 0]);
+		assert.deepEqual(straightStroke([0, 0, 100, 10]), [0, 0, 100, 10]);
+		assert.deepEqual(straightStroke([0, 0, 0, 100]), [0, 0, 0, 100]);
+	});
+
+	test("leaves a dot alone", () => {
+		assert.deepEqual(straightStroke([4, 6]), [4, 6]);
+		assert.deepEqual(straightStroke([]), []);
 	});
 });
 

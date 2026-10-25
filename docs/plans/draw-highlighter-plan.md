@@ -108,6 +108,8 @@ Commit: `feat: draw highlights that multiply onto the photo`
 
 Check by finger on the iOS simulator (hold, then drag on: the line follows), by mouse with Shift on web, a quick stroke that ends without holding (stays freehand), and that Pen and Neon don't straighten.
 
+Checked on web, by day and by night: Draw opens on the highlighter with no load error, and the page is white by day and rgb(23, 24, 27) at night. A stroke wasn't painted. The browser's synthetic pointer doesn't drive the paint gesture, so Shift, a quick freehand stroke, and Pen and Neon weren't compared on the canvas. `straightStroke` tests cover the line from the first point to the last and the 5° level snap. On a simulator or with a mouse: hold Shift and drag the highlighter (straight from the first move, level within 5°), then a quick curve without Shift (stays freehand). Pen, Marker, and Neon stay freehand even with Shift. On the simulator, hold still at the end of a highlight for about half a second: it snaps to a line, ticks, and keeps following the finger as that line.
+
 Commit: `feat: straighten a highlight by holding at its end`
 
 ### 6. Docs

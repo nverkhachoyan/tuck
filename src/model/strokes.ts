@@ -172,6 +172,28 @@ function nearLine(points: number[], point: Point, reach: number): boolean {
 	return false;
 }
 
+// How close to horizontal a straightened stroke snaps flat, in radians.
+const LEVEL = (5 * Math.PI) / 180;
+
+/**
+ * A stroke as the straight line from its first point to its last.
+ * Within 5° of level it is horizontal, through the first point.
+ */
+export function straightStroke(points: number[]): number[] {
+	"worklet";
+	if (points.length < 4) return points;
+	const x0 = points[0];
+	const y0 = points[1];
+	const x1 = points[points.length - 2];
+	const y1 = points[points.length - 1];
+	const angle = Math.atan2(y1 - y0, x1 - x0);
+	const toLevel = Math.min(
+		Math.abs(angle),
+		Math.abs(Math.abs(angle) - Math.PI),
+	);
+	return [x0, y0, x1, toLevel <= LEVEL ? y0 : y1];
+}
+
 /**
  * Whether a point in a layer's own space is within `padding` of what one
  * of its pens drew. Unlike a box, this lets a tap inside a circle drawn
