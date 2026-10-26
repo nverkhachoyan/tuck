@@ -321,7 +321,6 @@ export function ContextBarContent({
 							eyedropper: {
 								apply: (color) => {
 									text.style({ [key]: color });
-									onCustomColor(color);
 								},
 							},
 						})
