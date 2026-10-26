@@ -108,6 +108,10 @@ Commit: `refactor: draw the inspector's tool sections from the views table`
 
 Commit: `docs: describe the editor's tool views table`
 
+### Result
+
+`EditorDock.tsx` came to 453 lines, not about 330: it now also holds `ToolViewContext` (about 50 lines) and the inspector's Find and Adjust sections, while `EditorInspector.tsx` went from 60 lines to 30. Review added a `findResults` helper for what Find's results tray and inspector section share, and typed Find's style change as a whole `RedactSettings`, which made `FindBar` generic like `RedactLook`.
+
 ## Not in this plan
 
 * Folding titles, starters, canvas input, or size steps into the table. See Decisions: they're plain TypeScript or ordered hooks, and they're already in one place each (`TOOL_TITLES` is a `Record` too).
