@@ -8,7 +8,6 @@ import {
 	View,
 } from "react-native";
 import { isHexColor } from "@/lib/color";
-import { errorMessage } from "@/lib/errorMessage";
 import { neutralAdjustments } from "@/model/adjustments";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
@@ -35,7 +34,6 @@ import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { ScreenHeader } from "@/ui/ScreenHeader";
-import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
@@ -61,12 +59,9 @@ import { ToolsPanel } from "./shell/ToolsPanel";
 import { CropTool } from "./tools/crop/CropTool";
 import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
-import type { Sticker } from "./tools/stickers/bundledStickers";
 import { StickerPopover, StickerSheet } from "./tools/stickers/StickerSheet";
-import type { StickerImage } from "./tools/stickers/savedStickers";
-import { bundledStickerImage } from "./tools/stickers/stickerFile";
-import type { ShownSticker } from "./tools/stickers/useSavedStickers";
 import { useSavedStickers } from "./tools/stickers/useSavedStickers";
+import { useStickerActions } from "./tools/stickers/useStickerActions";
 import { useStickerSave } from "./tools/stickers/useStickerSave";
 import { TextEditor } from "./tools/text/TextEditor";
 import { useAddImage } from "./useAddImage";
@@ -225,13 +220,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		[dispatchMode],
 	);
 	const openStickers = () => dispatchMode({ type: "openStickers" });
-	// What to do once the sticker popover has gone (see `onSaveNew`).
-	const afterStickers = useRef<(() => void) | null>(null);
-	const stickersDismissed = useCallback(() => {
-		const next = afterStickers.current;
-		afterStickers.current = null;
-		next?.();
-	}, []);
 
 	const {
 		tools,
@@ -479,34 +467,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			doneShortcut: "Escape",
 		};
 
-	const addStickerFrom = (load: () => Promise<StickerImage | null>) => {
-		closeStickers();
-		addSticker(load);
-	};
-	const stickerActions = {
-		onAddSticker: (sticker: Sticker) =>
-			addStickerFrom(() => bundledStickerImage(sticker)),
-		savedStickers: savedStickers.stickers,
-		savedError: savedStickers.error,
-		onAddSaved: (sticker: ShownSticker) =>
-			addStickerFrom(() => savedStickers.place(sticker)),
-		// Kept, then added at once, as it was picked to use. The picker
-		// can't open over the popover's modal on iOS, so it waits for it to go.
-		onSaveNew: () => {
-			const pick = () =>
-				pickSticker(async (image) =>
-					savedStickers.place(await savedStickers.save(image)),
-				);
-			closeStickers();
-			if (wide) afterStickers.current = pick;
-			else pick();
-		},
-		onDeleteSaved: (sticker: ShownSticker) => {
-			savedStickers.remove(sticker).catch((error: unknown) => {
-				showAlert("Couldn't delete sticker", errorMessage(error));
-			});
-		},
-	};
+	const stickerActions = useStickerActions({
+		savedStickers,
+		addSticker,
+		pickSticker,
+		closeStickers,
+		waitForDismiss: wide,
+	});
 
 	return (
 		<TrayHeight.Provider value={layout.setTrayHeight}>
@@ -694,7 +661,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						anchor={stickerAnchor}
 						open={stickersOpen}
 						onClose={closeStickers}
-						onDismiss={stickersDismissed}
 						{...stickerActions}
 					/>
 				) : (

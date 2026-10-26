@@ -73,10 +73,12 @@ type StickerContentProps = SavedStickerProps & {
 export function StickerSheet({
 	open,
 	onClose,
+	onDismiss: _onDismiss,
 	...content
 }: StickerContentProps & {
 	open: boolean;
 	onClose: () => void;
+	onDismiss?: () => void;
 }) {
 	return (
 		<View style={styles.area}>
