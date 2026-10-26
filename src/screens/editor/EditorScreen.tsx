@@ -11,7 +11,7 @@ import { isHexColor } from "@/lib/color";
 import { neutralAdjustments } from "@/model/adjustments";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
-import { type Point, type Rect, toLayerSpace } from "@/model/geometry";
+import { type Point, toLayerSpace } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import { projectLabel } from "@/projects/projectFile";
@@ -57,6 +57,7 @@ import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
 import { CropTool } from "./tools/crop/CropTool";
+import { useReviewZoom } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
 import { StickerPopover, StickerSheet } from "./tools/stickers/StickerSheet";
@@ -147,6 +148,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	} = actions;
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
+	const rootRef = useRef<View>(null);
+	const stickerAnchor = useRef<View>(null);
 
 	// What the editor is doing, and what's open over it. Adjust puts itself
 	// down if its image goes away, Find if its photo does, and a text color
@@ -176,16 +179,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	);
 
 	const focused = useIsFocused();
-	// Under the export sheet, the editor is out of reach on web: inert takes
-	// it out of the Tab order and the accessibility tree. React Native Web
-	// doesn't pass `inert` through, so it's set on the element.
-	const rootRef = useRef<View>(null);
-	const stickerAnchor = useRef<View>(null);
-	useEffect(() => {
-		if (Platform.OS !== "web") return;
-		const root = rootRef.current as unknown as HTMLElement | null;
-		root?.toggleAttribute("inert", !focused);
-	}, [focused]);
 	const {
 		busy: addBusy,
 		dragging,
@@ -243,6 +236,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onRedacted: editNotice.redacted,
 	});
 
+	useReviewZoom(tools.find.review, {
+		zoomToArea: (area) => canvasRef.current?.zoomToArea(area),
+		fit: () => canvasRef.current?.zoom("fit"),
+	});
+
 	const editingText = tools.text.edit !== null;
 	const { styledText } = tools.text;
 	const savedStickers = useSavedStickers();
@@ -270,23 +268,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		"customColor",
 		parseCustomColor,
 	);
-	// Reviewing what Find found zooms to each region it steps to, and back to
-	// the fit once it stops (finishing or leaving Find included). Keyed on
-	// the region, so other renders don't undo a pan.
-	const reviewedRegion = tools.find.review.current?.sourceIndex ?? null;
-	const reviewBounds = useRef<Rect | null>(null);
-	reviewBounds.current = tools.find.review.current?.bounds ?? null;
-	const zoomedToReview = useRef(false);
-	useEffect(() => {
-		const canvas = canvasRef.current;
-		if (reviewedRegion !== null && reviewBounds.current) {
-			canvas?.zoomToArea(reviewBounds.current);
-			zoomedToReview.current = true;
-		} else if (zoomedToReview.current) {
-			canvas?.zoom("fit");
-			zoomedToReview.current = false;
-		}
-	}, [reviewedRegion]);
 
 	const canvasInput = useCanvasInput({
 		document,
@@ -315,8 +296,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
 
-	// What home lists the project as: the name it was given, its text, or what
-	// it holds and when it was made.
+	// Web-only and display-only details: inert takes the editor out of the tab
+	// order and accessibility tree under the export sheet on web, and what home
+	// lists the project as for the wide header.
+	useEffect(() => {
+		if (Platform.OS !== "web") return;
+		const root = rootRef.current as unknown as HTMLElement | null;
+		root?.toggleAttribute("inert", !focused);
+	}, [focused]);
 	const projectTitle = useMemo(() => {
 		const name = projectId !== null ? openProjectName(projectId) : null;
 		if (name) return name;

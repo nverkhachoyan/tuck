@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EditorDocument } from "@/model/document";
 import { boundingBox, type Rect } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
@@ -32,6 +32,11 @@ export type FindReview = {
 	step: (delta: 1 | -1) => void;
 	toggle: () => void;
 	stop: () => void;
+};
+
+export type ReviewView = {
+	zoomToArea: (rect: Rect) => void;
+	fit: () => void;
 };
 
 /**
@@ -150,6 +155,30 @@ export function useFindTool(
 			return { count: result.boxes.length, feature: result.feature };
 		},
 	};
+}
+
+/**
+ * Reviewing what Find found zooms to each region it steps to, and back to
+ * the fit once it stops (finishing or leaving Find included). Keyed on
+ * the region, so other renders don't undo a pan.
+ */
+export function useReviewZoom(review: FindReview, view: ReviewView) {
+	const reviewedRegion = review.current?.sourceIndex ?? null;
+	const reviewBounds = useRef<Rect | null>(null);
+	reviewBounds.current = review.current?.bounds ?? null;
+	const zoomedToReview = useRef(false);
+	const viewRef = useRef(view);
+	viewRef.current = view;
+
+	useEffect(() => {
+		if (reviewedRegion !== null && reviewBounds.current) {
+			viewRef.current.zoomToArea(reviewBounds.current);
+			zoomedToReview.current = true;
+		} else if (zoomedToReview.current) {
+			viewRef.current.fit();
+			zoomedToReview.current = false;
+		}
+	}, [reviewedRegion]);
 }
 
 // A found region's upright bounds in the document.
