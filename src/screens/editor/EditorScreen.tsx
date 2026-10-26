@@ -42,7 +42,7 @@ import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
 import { ContextBarContent, DockContent, ToolTrays } from "./EditorDock";
 import { modeChrome } from "./editorChrome";
-import { openTray, takesKeys, toolImageId } from "./editorMode";
+import { openTray, takesKeys } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
@@ -61,18 +61,10 @@ import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight } from "./shell/ToolOptions";
 import { mapStarters, ToolsPanel } from "./shell/ToolsPanel";
 import { AdjustInspector } from "./tools/adjust/AdjustPanel";
-import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { CropTool } from "./tools/crop/CropTool";
-import { stepCutSize } from "./tools/cutout/cutOutSettings";
-import { useCutOutTool } from "./tools/cutout/useCutOutTool";
-import { stepBrushSize } from "./tools/draw/brushSettings";
-import { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindInspector } from "./tools/find/FindPanel";
-import { useFindTool } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
-import { redactionEffect, stepRedactSize } from "./tools/redact/redactSettings";
-import { useRedactTool } from "./tools/redact/useRedactTool";
 import type { Sticker } from "./tools/stickers/bundledStickers";
 import { StickerPopover, StickerSheet } from "./tools/stickers/StickerSheet";
 import type { StickerImage } from "./tools/stickers/savedStickers";
@@ -81,14 +73,13 @@ import type { ShownSticker } from "./tools/stickers/useSavedStickers";
 import { useSavedStickers } from "./tools/stickers/useSavedStickers";
 import { useStickerSave } from "./tools/stickers/useStickerSave";
 import { TextEditor } from "./tools/text/TextEditor";
-import { useTextEditing } from "./tools/text/useTextEditing";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
 import { RAIL_INSET, RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
-import { useToolLifecycle, useToolSession } from "./useToolLifecycle";
+import { useEditorTools } from "./useToolLifecycle";
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
@@ -153,7 +144,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		addImageLayer,
 		addStickerLayer,
 		duplicateSelectedLayer,
-		addMaskedRedaction,
 		setAdjustments,
 		transformLayer,
 		resizeBox,
@@ -163,7 +153,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		selectLayer,
 		undo,
 		redo,
-		cancelSession,
 	} = actions;
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
@@ -183,194 +172,17 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
 	// what's found. While adjusting, the canvas holds still. While cutting
 	// out, taps pick a subject, or strokes paint the cut. A tap away from what
-	// the tool works on puts it down, as Done does. The session must begin
-	// before `useToolLifecycle`'s effect starts Cut out's cut, so this call
-	// stays ahead of it.
+	// the tool works on puts it down, as Done does.
 	const tool = mode.type === "tool" ? mode.tool : null;
-	useToolSession(tool);
-	const textEditing = useTextEditing({
-		document,
-		edit: mode.type === "text" ? mode.edit : null,
-		dispatchMode,
-	});
-	const { styledText } = textEditing;
-	const editingText = textEditing.edit !== null;
 	const cropping = mode.type === "crop";
 	const keysTaken = takesKeys(mode);
 	const layersOpen = modeState.sheet === "layers";
 	const stickersOpen = modeState.sheet === "stickers";
-	const savedStickers = useSavedStickers();
-	const stickerSave = useStickerSave(savedStickers.save);
-	// Find and Adjust live in the inspector, so they open it even though
-	// starting a tool closes the layers sheet. A tall window has it open anyway.
-	const layout = useEditorLayout({
-		typing: editingText,
-		layersOpen,
-		inspectorRequested: layersOpen || tool === "find" || tool === "adjust",
-	});
-	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
-	const toolOptionsOpen = openTray(mode) !== null;
-	const adjustImageId = toolImageId(mode, "adjust");
-	const adjustedLayer = adjustImageId
-		? visibleImageLayer(document, adjustImageId)
-		: undefined;
-	const cutImageId = toolImageId(mode, "cutOut");
-	const cutLayer = cutImageId
-		? visibleImageLayer(document, cutImageId)
-		: undefined;
-	const adjustController = useAdjustTool(adjustedLayer, setAdjustments);
-	const adjusting = useMemo(
-		() =>
-			adjustedLayer
-				? { layerId: adjustedLayer.id, matrix: adjustController.matrix }
-				: null,
-		[adjustedLayer, adjustController.matrix],
-	);
-	// The last color picked from a color picker, which every custom swatch
-	// keeps while a preset is in use. Null until there's one. Like the tools'
-	// settings, it's kept between sessions.
-	const [customColor, setCustomColor] = usePreference(
-		"customColor",
-		parseCustomColor,
-	);
+
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
-	const draw = useDrawTool(tool === "draw", documentSize);
-	const redact = useRedactTool(documentSize);
-	const find = useFindTool(document, targetImage);
-	// Reviewing what Find found zooms to each region it steps to, and back to
-	// the fit once it stops (finishing or leaving Find included). Keyed on
-	// the region, so other renders don't undo a pan.
-	const reviewedRegion = find.review.current?.sourceIndex ?? null;
-	const reviewBounds = useRef<Rect | null>(null);
-	reviewBounds.current = find.review.current?.bounds ?? null;
-	const zoomedToReview = useRef(false);
-	useEffect(() => {
-		const canvas = canvasRef.current;
-		if (reviewedRegion !== null && reviewBounds.current) {
-			canvas?.zoomToArea(reviewBounds.current);
-			zoomedToReview.current = true;
-		} else if (zoomedToReview.current) {
-			canvas?.zoom("fit");
-			zoomedToReview.current = false;
-		}
-	}, [reviewedRegion]);
-	// Redacting the cut's selection puts the image back as it was before
-	// Cut out, with a redaction over what was selected, and goes on to
-	// Redact to choose how it hides it.
-	const cut = useCutOutTool({
-		layer: cutLayer,
-		onRedact: (layerId, mask, rect) => {
-			cancelSession();
-			addMaskedRedaction(
-				layerId,
-				mask,
-				rect,
-				redactionEffect(redact.chosen, documentSize),
-			);
-			// Box, which moves the redaction, as `chooseTool` would pick
-			// once it's selected: this render hasn't seen it yet.
-			redact.setChosen((current) => ({ ...current, tool: "box" }));
-			dispatchMode({ type: "startTool", tool: "redact" });
-		},
-	});
-	const canvasInput = useCanvasInput({
-		document,
-		size: documentSize,
-		tool,
-		eyedropper,
-		editingText,
-		draw: draw.settings,
-		redact: redact.settings,
-		cut,
-		findImageId: targetImage?.id ?? null,
-		onFindToggle: find.toggle,
-		adjustController,
-		actions,
-		dispatchMode,
-		onCustomColor: setCustomColor,
-	});
-
-	const { error: autosaveError, retry: retryAutosave } = useAutosave(
-		projectId,
-		document,
-		latestDocument,
-	);
-	const saveProblem =
-		projectId === null
-			? "This project couldn't be saved, so your edits won't be kept."
-			: autosaveError;
-
-	// What home lists the project as: the name it was given, its text, or what
-	// it holds and when it was made.
-	const projectTitle = useMemo(() => {
-		const name = projectId !== null ? openProjectName(projectId) : null;
-		if (name) return name;
-		const createdAt =
-			projectId !== null ? openProjectCreatedAt(projectId) : null;
-		return projectLabel(document, createdAt ?? Date.now());
-	}, [projectId, document]);
-
-	const editNotice = useEditNotice(document);
-
-	const selectedIndex = selectedLayer
-		? document.layers.indexOf(selectedLayer)
-		: -1;
-	const topIndex = document.layers.length - 1;
-	const arrangeSelected = (move: ArrangeMove) => {
-		if (!selectedLayer) return;
-		const to = {
-			front: topIndex,
-			forward: selectedIndex + 1,
-			backward: selectedIndex - 1,
-			back: 0,
-		};
-		moveLayer(selectedLayer.id, to[move]);
-	};
-
-	// Text being typed is finished first, so it goes where the editor does.
-	const openExport = () => {
-		textEditing.finish();
-		router.push(exportHref(projectId));
-	};
-	const leave = () => {
-		textEditing.finish();
-		leaveEditor(router);
-	};
-
-	// Stable, so the sheets' swipes aren't rebuilt on every render.
-	const closeLayers = useCallback(
-		() => dispatchMode({ type: "closeLayers" }),
-		[dispatchMode],
-	);
-	const closeStickers = useCallback(
-		() => dispatchMode({ type: "closeStickers" }),
-		[dispatchMode],
-	);
-	const openStickers = () => dispatchMode({ type: "openStickers" });
-	// What to do once the sticker popover has gone (see `onSaveNew`).
-	const afterStickers = useRef<(() => void) | null>(null);
-	const stickersDismissed = useCallback(() => {
-		const next = afterStickers.current;
-		afterStickers.current = null;
-		next?.();
-	}, []);
-
-	// The dock's panel, and its Cancel, Done, and title, chosen once for both
-	// layouts. A wide screen's open tool, or a selected layer, lives in the
-	// header. Find's results and Adjust's dial sit in the inspector, above the
-	// layers.
-	const chrome = modeChrome({
-		tool,
-		editingText,
-		styledText: styledText !== undefined,
-		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
-		findChosen: find.selectedCount,
-		wide,
-	});
-	const { panel, inBar } = chrome;
 
 	const focused = useIsFocused();
 	// Under the export sheet, the editor is out of reach on web: inert takes
@@ -405,22 +217,168 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 	});
 
-	const { startTool, done, cancel, finishTool, closeCrop, finishCrop } =
-		useToolLifecycle({
-			mode,
-			targetImage,
-			documentSize,
-			draw,
-			redact,
-			find,
-			cut,
-			textEditing,
-			pickPhoto,
-			openStickers,
-			dispatchMode,
-			visibleArea: () => canvasRef.current?.visibleArea(),
-			onRedacted: editNotice.redacted,
-		});
+	const editNotice = useEditNotice(document);
+
+	// Stable, so the sheets' swipes aren't rebuilt on every render.
+	const closeLayers = useCallback(
+		() => dispatchMode({ type: "closeLayers" }),
+		[dispatchMode],
+	);
+	const closeStickers = useCallback(
+		() => dispatchMode({ type: "closeStickers" }),
+		[dispatchMode],
+	);
+	const openStickers = () => dispatchMode({ type: "openStickers" });
+	// What to do once the sticker popover has gone (see `onSaveNew`).
+	const afterStickers = useRef<(() => void) | null>(null);
+	const stickersDismissed = useCallback(() => {
+		const next = afterStickers.current;
+		afterStickers.current = null;
+		next?.();
+	}, []);
+
+	const {
+		tools,
+		startTool,
+		done,
+		cancel,
+		finishTool,
+		closeCrop,
+		finishCrop,
+		stepToolSize,
+		adjustedLayer,
+	} = useEditorTools({
+		document,
+		mode,
+		dispatchMode,
+		targetImage,
+		documentSize,
+		pickPhoto,
+		openStickers,
+		visibleArea: () => canvasRef.current?.visibleArea(),
+		onRedacted: editNotice.redacted,
+	});
+
+	const editingText = tools.text.edit !== null;
+	const { styledText } = tools.text;
+	const savedStickers = useSavedStickers();
+	const stickerSave = useStickerSave(savedStickers.save);
+	// Find and Adjust live in the inspector, so they open it even though
+	// starting a tool closes the layers sheet. A tall window has it open anyway.
+	const layout = useEditorLayout({
+		typing: editingText,
+		layersOpen,
+		inspectorRequested: layersOpen || tool === "find" || tool === "adjust",
+	});
+	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
+	const toolOptionsOpen = openTray(mode) !== null;
+	const adjusting = useMemo(
+		() =>
+			adjustedLayer
+				? { layerId: adjustedLayer.id, matrix: tools.adjust.matrix }
+				: null,
+		[adjustedLayer, tools.adjust.matrix],
+	);
+	// The last color picked from a color picker, which every custom swatch
+	// keeps while a preset is in use. Null until there's one. Like the tools'
+	// settings, it's kept between sessions.
+	const [customColor, setCustomColor] = usePreference(
+		"customColor",
+		parseCustomColor,
+	);
+	// Reviewing what Find found zooms to each region it steps to, and back to
+	// the fit once it stops (finishing or leaving Find included). Keyed on
+	// the region, so other renders don't undo a pan.
+	const reviewedRegion = tools.find.review.current?.sourceIndex ?? null;
+	const reviewBounds = useRef<Rect | null>(null);
+	reviewBounds.current = tools.find.review.current?.bounds ?? null;
+	const zoomedToReview = useRef(false);
+	useEffect(() => {
+		const canvas = canvasRef.current;
+		if (reviewedRegion !== null && reviewBounds.current) {
+			canvas?.zoomToArea(reviewBounds.current);
+			zoomedToReview.current = true;
+		} else if (zoomedToReview.current) {
+			canvas?.zoom("fit");
+			zoomedToReview.current = false;
+		}
+	}, [reviewedRegion]);
+
+	const canvasInput = useCanvasInput({
+		document,
+		size: documentSize,
+		tool,
+		eyedropper,
+		editingText,
+		draw: tools.draw.settings,
+		redact: tools.redact.settings,
+		cut: tools.cut,
+		findImageId: targetImage?.id ?? null,
+		onFindToggle: tools.find.toggle,
+		adjustController: tools.adjust,
+		actions,
+		dispatchMode,
+		onCustomColor: setCustomColor,
+	});
+
+	const { error: autosaveError, retry: retryAutosave } = useAutosave(
+		projectId,
+		document,
+		latestDocument,
+	);
+	const saveProblem =
+		projectId === null
+			? "This project couldn't be saved, so your edits won't be kept."
+			: autosaveError;
+
+	// What home lists the project as: the name it was given, its text, or what
+	// it holds and when it was made.
+	const projectTitle = useMemo(() => {
+		const name = projectId !== null ? openProjectName(projectId) : null;
+		if (name) return name;
+		const createdAt =
+			projectId !== null ? openProjectCreatedAt(projectId) : null;
+		return projectLabel(document, createdAt ?? Date.now());
+	}, [projectId, document]);
+
+	const selectedIndex = selectedLayer
+		? document.layers.indexOf(selectedLayer)
+		: -1;
+	const topIndex = document.layers.length - 1;
+	const arrangeSelected = (move: ArrangeMove) => {
+		if (!selectedLayer) return;
+		const to = {
+			front: topIndex,
+			forward: selectedIndex + 1,
+			backward: selectedIndex - 1,
+			back: 0,
+		};
+		moveLayer(selectedLayer.id, to[move]);
+	};
+
+	// Text being typed is finished first, so it goes where the editor does.
+	const openExport = () => {
+		tools.text.finish();
+		router.push(exportHref(projectId));
+	};
+	const leave = () => {
+		tools.text.finish();
+		leaveEditor(router);
+	};
+
+	// The dock's panel, and its Cancel, Done, and title, chosen once for both
+	// layouts. A wide screen's open tool, or a selected layer, lives in the
+	// header. Find's results and Adjust's dial sit in the inspector, above the
+	// layers.
+	const chrome = modeChrome({
+		tool,
+		editingText,
+		styledText: styledText !== undefined,
+		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
+		findChosen: tools.find.selectedCount,
+		wide,
+	});
+	const { panel, inBar } = chrome;
 
 	useEditorShortcuts({
 		enabled: !keysTaken,
@@ -433,7 +391,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		zoom: (to) => canvasRef.current?.zoom(to),
 		done,
 		startTool,
-		editSelected: () => textEditing.editSelected(),
+		editSelected: () => tools.text.editSelected(),
 		deleteSelected: () => {
 			if (selectedLayer) editNotice.deleteLayer(selectedLayer.id);
 		},
@@ -441,18 +399,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		duplicate: duplicateSelectedLayer,
 		arrange: arrangeSelected,
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
-		stepBrush: (step) => {
-			if (tool === "draw") {
-				const next = stepBrushSize(draw.settings, step);
-				if (next !== draw.settings) draw.change(next);
-			} else if (tool === "redact") {
-				const next = stepRedactSize(redact.settings, step);
-				if (next !== redact.settings) redact.change(next);
-			} else if (tool === "cutOut") {
-				const next = stepCutSize(cut.settings, step);
-				if (next !== cut.settings) cut.change(next);
-			}
-		},
+		stepBrush: stepToolSize,
 	});
 
 	const layerList = layerListProps({
@@ -463,7 +410,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			deleteLayer: editNotice.deleteLayer,
 			deleteLayerGroup: editNotice.deleteGroup,
 		},
-		onFinishText: textEditing.finish,
+		onFinishText: tools.text.finish,
 		onClose: closeLayers,
 		bottomInset: dockInset,
 	});
@@ -479,16 +426,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// A tool picked from the rail while another is open finishes that one.
 	const fromRail = (start: () => void) => () => {
 		if (tool) finishTool();
-		textEditing.finish();
+		tools.text.finish();
 		start();
-	};
-	const tools = {
-		draw,
-		redact,
-		find,
-		cut,
-		adjust: adjustController,
-		text: textEditing,
 	};
 	const hasImage = targetImage !== null;
 	// What the dock offers for the selected layer, by its kind.
@@ -503,13 +442,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// or Cut out's cut.
 	const resetEdit = adjustedLayer?.adjustments
 		? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
-		: cut.reset;
+		: tools.cut.reset;
 
 	// A tap on selected text edits it, with the caret where it landed.
 	const editSelectedTextAt =
 		selectedTextLayer &&
 		((point: Point) =>
-			textEditing.editSelected(
+			tools.text.editSelected(
 				textIndexAt(
 					selectedTextLayer,
 					toLayerSpace(selectedTextLayer.transform, point),
@@ -520,7 +459,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		<SelectionBar
 			canMoveForward={selectedIndex < topIndex}
 			canMoveBackward={selectedIndex > 0}
-			onEdit={selectedTextLayer ? () => textEditing.editSelected() : undefined}
+			onEdit={selectedTextLayer ? () => tools.text.editSelected() : undefined}
 			stretched={selectedLayer.resizable === true}
 			onToggleStretch={
 				selectedLayer.type === "text" || selectedLayer.type === "image"
@@ -535,10 +474,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	// The dock's footer and the context bar's title, Cancel, and Done, for
 	// the open tool, the text being typed or styled, or the selected layer.
-	const onCancel = { tool: cancel, text: textEditing.cancel };
+	const onCancel = { tool: cancel, text: tools.text.cancel };
 	const onDone = {
 		tool: done,
-		text: textEditing.finish,
+		text: tools.text.finish,
 		deselect: () => selectLayer(null),
 	};
 	const modeActions: ({ title: string } & ModeActionProps) | null =
@@ -610,7 +549,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								onFind={targetImage ? startTool.find : undefined}
 								chrome={modeActions}
 								editingText={editingText}
-								restoreTextFocus={() => textEditing.editorRef.current?.focus()}
+								restoreTextFocus={() => tools.text.editorRef.current?.focus()}
 								layerActions={layerActions || undefined}
 							/>
 						) : undefined
@@ -643,9 +582,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						ref={canvasRef}
 						document={document}
 						selectedLayer={selectedLayer}
-						textEdit={textEditing.edit}
-						onTextSelect={textEditing.select}
-						onTextEditDone={textEditing.finish}
+						textEdit={tools.text.edit}
+						onTextSelect={tools.text.select}
+						onTextEditDone={tools.text.finish}
 						onSelectLayer={selectLayer}
 						onTapSelectedLayer={editSelectedTextAt}
 						onCommitTransform={transformLayer}
@@ -653,7 +592,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						onNudgeLayer={nudgeLayer}
 						{...canvasInput}
 						detections={
-							tool === "find" && !eyedropper ? find.overlay : undefined
+							tool === "find" && !eyedropper ? tools.find.overlay : undefined
 						}
 						onToolInteractionEnd={() =>
 							dispatchMode({ type: "closeToolOptions" })
@@ -681,7 +620,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							onCancel={() => dispatchMode({ type: "stopEyedropper" })}
 						/>
 					)}
-					<Announcement message={cut.news} />
+					<Announcement message={tools.cut.news} />
 					{saveProblem && (
 						<SaveErrorBanner
 							message={saveProblem}
@@ -725,22 +664,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						<Inspector>
 							{panel === "find" ? (
 								<FindInspector
-									state={find.state}
-									visibleIndices={find.visibleIndices}
-									selectedCount={find.selectedCount}
-									review={find.review}
-									onFind={find.find}
-									onRetry={find.retry}
+									state={tools.find.state}
+									visibleIndices={tools.find.visibleIndices}
+									selectedCount={tools.find.selectedCount}
+									review={tools.find.review}
+									onFind={tools.find.find}
+									onRetry={tools.find.retry}
 									onBack={cancel}
-									onStop={find.reset}
-									onSelectAll={find.selectAll}
-									onClear={find.clear}
+									onStop={tools.find.reset}
+									onSelectAll={tools.find.selectAll}
+									onClear={tools.find.clear}
 								>
 									<LayersPanel {...layerList} layout="inspector" open />
 								</FindInspector>
 							) : panel === "adjust" ? (
 								<AdjustInspector
-									controller={adjustController}
+									controller={tools.adjust}
 									adjustments={adjustedLayer?.adjustments}
 								>
 									<LayersPanel {...layerList} layout="inspector" open />
@@ -813,15 +752,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						onDone={finishCrop}
 					/>
 				)}
-				{textEditing.edit && (
+				{tools.text.edit && (
 					<TextEditor
-						ref={textEditing.editorRef}
-						text={textEditing.edit.layer.text}
-						initialSelection={textEditing.edit.initialSelection}
-						onChangeText={textEditing.changeText}
-						onSelectionChange={textEditing.changeSelection}
-						onFocusChange={textEditing.changeFocus}
-						onDone={textEditing.finish}
+						ref={tools.text.editorRef}
+						text={tools.text.edit.layer.text}
+						initialSelection={tools.text.edit.initialSelection}
+						onChangeText={tools.text.changeText}
+						onSelectionChange={tools.text.changeSelection}
+						onFocusChange={tools.text.changeFocus}
+						onDone={tools.text.finish}
 					/>
 				)}
 				{modeState.shortcutsOpen && (

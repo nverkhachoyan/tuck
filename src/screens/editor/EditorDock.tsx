@@ -11,40 +11,28 @@ import { ContextBar } from "./shell/ContextBar";
 import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
-import type { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import {
 	CutOutBar,
 	CutOutOptions,
 	CutOutPanel,
 } from "./tools/cutout/CutOutPanel";
-import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
-import type { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
-import type { useFindTool } from "./tools/find/useFindTool";
 import {
 	EffectGlyph,
 	RedactBar,
 	RedactOptions,
 	RedactPanel,
 } from "./tools/redact/RedactPanel";
-import type { useRedactTool } from "./tools/redact/useRedactTool";
 import {
 	TextBar,
 	TextColorPicker,
 	TextStylePanel,
 } from "./tools/text/TextStylePanel";
-import type { useTextEditing } from "./tools/text/useTextEditing";
+import type { EditorTools } from "./useToolLifecycle";
 
-export type EditorTools = {
-	draw: ReturnType<typeof useDrawTool>;
-	redact: ReturnType<typeof useRedactTool>;
-	find: ReturnType<typeof useFindTool>;
-	cut: ReturnType<typeof useCutOutTool>;
-	adjust: ReturnType<typeof useAdjustTool>;
-	text: ReturnType<typeof useTextEditing>;
-};
+export type { EditorTools } from "./useToolLifecycle";
 
 type ModeProps = {
 	dispatchMode: (action: EditorModeAction) => void;
