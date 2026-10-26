@@ -5,13 +5,16 @@ import { scheduleOnRN } from "react-native-worklets";
 import { hitTestBox, toLayerSpace } from "@/model/geometry";
 import { type TextSelection, wordRange } from "@/model/textEditing";
 import { textIndexAt } from "@/render/textLayerLayout";
-import type { TextEditState } from "../editorMode";
-import { createDoubleTap } from "./doubleTap";
-import { hasFinePointer } from "./handleMetrics";
-import { layerBounds } from "./layerBounds";
-import { HIT_PADDING_PX } from "./layerTargets";
-import { TAP_SLOP_PX } from "./strokeIntent";
-import { type DocumentViewport, viewPointToDocument } from "./viewport";
+import { createDoubleTap } from "../../canvas/doubleTap";
+import { hasFinePointer } from "../../canvas/handleMetrics";
+import { layerBounds } from "../../canvas/layerBounds";
+import { HIT_PADDING_PX } from "../../canvas/layerTargets";
+import { TAP_SLOP_PX } from "../../canvas/strokeIntent";
+import {
+	type DocumentViewport,
+	viewPointToDocument,
+} from "../../canvas/viewport";
+import type { TextEditState } from "../../editorMode";
 
 type TextPressPhase = "begin" | "move" | "end" | "cancel";
 

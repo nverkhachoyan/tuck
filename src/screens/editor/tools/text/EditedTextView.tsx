@@ -22,8 +22,8 @@ import { clampSelection, withPlaceholder } from "@/model/textEditing";
 import { TextLayerView } from "@/render/layers/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
 import { colors } from "@/ui/theme";
-import type { TextEditState } from "../editorMode";
-import { SELECTION_HALO } from "./SelectionOverlay";
+import { SELECTION_HALO } from "../../canvas/SelectionOverlay";
+import type { TextEditState } from "../../editorMode";
 
 // A caret's width, and its halo's on each side, in screen pixels, and how
 // long it stays on, then off, as it blinks.

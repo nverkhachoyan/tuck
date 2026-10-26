@@ -7,7 +7,6 @@ import type { Layer } from "@/model/layers/layer";
 import { CanvasBackground } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colorScheme, colors } from "@/ui/theme";
-import { EditedTextView } from "./canvas/EditedTextView";
 import {
 	type LiveStroke,
 	NewLayerStroke,
@@ -23,6 +22,7 @@ import {
 	useScreenPixels,
 } from "./canvas/SelectionOverlay";
 import type { TextEditState } from "./editorMode";
+import { EditedTextView } from "./tools/text/EditedTextView";
 
 // The canvas's shadows on the table around it, as a print's: a tight one
 // where it touches and a soft one that lifts it, in screen pixels. At night,

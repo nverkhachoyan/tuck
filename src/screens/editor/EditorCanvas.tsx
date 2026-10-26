@@ -45,10 +45,8 @@ import { useCanvasTap } from "./canvas/useCanvasTap";
 import { useCanvasZoom } from "./canvas/useCanvasZoom";
 import { useDialDragGesture } from "./canvas/useDialDragGesture";
 import { useFindTap } from "./canvas/useFindTap";
-import { useKeepTextFocus } from "./canvas/useKeepTextFocus";
 import { useLayerTransformGesture } from "./canvas/useLayerTransformGesture";
 import { useShiftHeld } from "./canvas/useShiftHeld";
-import { useTextEditGesture } from "./canvas/useTextEditGesture";
 import { useToolStroke } from "./canvas/useToolStroke";
 import { useViewGesture } from "./canvas/useViewGesture";
 import {
@@ -58,6 +56,8 @@ import {
 } from "./canvas/viewport";
 import { EditorScene, type LiveAdjustment } from "./EditorScene";
 import type { TextEditState } from "./editorMode";
+import { useKeepTextFocus } from "./tools/text/useKeepTextFocus";
+import { useTextEditGesture } from "./tools/text/useTextEditGesture";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
