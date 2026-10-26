@@ -25,6 +25,7 @@ import {
 	RedactOptions,
 	RedactPanel,
 } from "./tools/redact/RedactPanel";
+import type { RedactSettings } from "./tools/redact/redactSettings";
 import {
 	TextBar,
 	TextColorPicker,
@@ -85,6 +86,210 @@ export function toolViewContext(
 		closeTray: () => dispatchMode({ type: "closeToolOptions" }),
 	};
 }
+
+/** Draw's color, from its picker or the eyedropper, in its tray and its bar. */
+function drawColor({
+	tools: { draw },
+	customColor,
+	colorTarget,
+}: ToolViewContext) {
+	return {
+		customColor,
+		...colorTarget((color) =>
+			draw.change(withBrushColor(draw.settings, color)),
+		),
+	};
+}
+
+/** Redact's color, in its tray and its bar. */
+function redactColor({
+	tools: { redact },
+	customColor,
+	colorTarget,
+}: ToolViewContext) {
+	return {
+		customColor,
+		...colorTarget((color) => redact.change({ ...redact.settings, color })),
+	};
+}
+
+/**
+ * The style Find redacts with, Redact's `chosen`, in Find's tray and bar. It
+ * shows as the box tool, and a change leaves `chosen`'s own tool alone.
+ */
+function findStyle({
+	tools: { redact },
+	customColor,
+	colorTarget,
+}: ToolViewContext) {
+	return {
+		settings: { ...redact.chosen, tool: "box" as const },
+		customColor,
+		onChange: ({ tool: _, ...style }: Partial<RedactSettings>) =>
+			redact.setChosen((settings) => ({ ...settings, ...style })),
+		...colorTarget((color) =>
+			redact.setChosen((settings) => ({ ...settings, color })),
+		),
+	};
+}
+
+/** What Cut out's dock panel and bar both take. */
+function cutOutProps({ tools: { cut } }: ToolViewContext) {
+	return {
+		settings: cut.settings,
+		tool: cut.tool,
+		finding: cut.finding,
+		onChange: cut.change,
+		onFindAll: cut.findAll,
+		inverting: cut.inverting,
+		onInvert: cut.invert,
+		redacting: cut.redacting,
+		onRedact: cut.redact,
+	};
+}
+
+/**
+ * What one panel shows, wherever the editor shows it. Each field renders
+ * elements from the context and calls no hooks, so React keeps each view as
+ * it would a switch's branch.
+ * - `dock`: the phone dock's panel.
+ * - `bar`: the wide header's options, inside the shared `ContextBar`; without
+ *   it, the bar has the title, ✕, and ✓ only.
+ * - `keepBarFocus`: whether a press in the bar keeps the text's caret.
+ * - `tray`: the phone's tray of options, while `optionsOpen`.
+ * - `results`: what sits over the canvas while no tray is open.
+ * - `inspector`: a section above the wide inspector's layers, given them as
+ *   `layers`.
+ */
+type ToolViews = {
+	dock: (context: ToolViewContext) => ReactNode;
+	bar?: (context: ToolViewContext) => ReactNode;
+	keepBarFocus?: (context: ToolViewContext) => boolean;
+	tray?: (context: ToolViewContext) => ReactNode;
+	results?: (context: ToolViewContext) => ReactNode;
+	inspector?: (context: ToolViewContext, layers: ReactNode) => ReactNode;
+};
+
+/**
+ * Every panel's views but `"idle"`'s, whose dock the screen passes in and
+ * which is never in the bar. A tool added to `EditorTool` needs an entry
+ * here. `modeChrome` picks `"text"` only with styled text and `"layer"` only
+ * with a selected layer, so their checks below never fail.
+ */
+const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
+	draw: {
+		dock: ({ tools: { draw }, optionsOpen, toggleOptions }) => (
+			<DrawPanel
+				settings={draw.settings}
+				optionsOpen={optionsOpen}
+				onChange={draw.change}
+				onToggleOptions={toggleOptions}
+			/>
+		),
+		bar: (context) => (
+			<DrawBar
+				settings={context.tools.draw.settings}
+				onChange={context.tools.draw.change}
+				{...drawColor(context)}
+			/>
+		),
+	},
+	redact: {
+		dock: ({ tools: { redact }, optionsOpen, toggleOptions, onFind }) => (
+			<RedactPanel
+				settings={redact.settings}
+				optionsOpen={optionsOpen}
+				onChange={redact.change}
+				onToggleOptions={toggleOptions}
+				onFind={onFind}
+			/>
+		),
+		bar: (context) => (
+			<RedactBar
+				settings={context.tools.redact.settings}
+				onChange={context.tools.redact.change}
+				onFind={context.onFind}
+				{...redactColor(context)}
+			/>
+		),
+	},
+	find: {
+		dock: ({ tools: { find, redact }, optionsOpen, toggleOptions }) => (
+			<FindPanel
+				state={find.state}
+				styleGlyph={
+					<EffectGlyph settings={redact.chosen} effect={redact.chosen.effect} />
+				}
+				optionsOpen={optionsOpen}
+				onFind={find.find}
+				onToggleOptions={toggleOptions}
+			/>
+		),
+		bar: (context) => <FindBar {...findStyle(context)} />,
+	},
+	cutOut: {
+		dock: (context) => (
+			<CutOutPanel
+				{...cutOutProps(context)}
+				optionsOpen={context.optionsOpen}
+				onToggleOptions={context.toggleOptions}
+			/>
+		),
+		bar: (context) => <CutOutBar {...cutOutProps(context)} />,
+	},
+	adjust: {
+		dock: ({ tools: { adjust }, adjustments }) => (
+			<AdjustPanel controller={adjust} adjustments={adjustments} />
+		),
+	},
+	text: {
+		dock: ({ tools: { text }, customColor, dispatchMode }) => {
+			const { styledText } = text;
+			return (
+				styledText && (
+					<TextStylePanel
+						layer={styledText}
+						customColor={customColor}
+						onChange={text.style}
+						onOpenPicker={(key) =>
+							dispatchMode({
+								type: "openTextPicker",
+								layerId: styledText.id,
+								key,
+							})
+						}
+					/>
+				)
+			);
+		},
+		bar: ({
+			tools: { text },
+			customColor,
+			onCustomColor,
+			colorTarget,
+			editingText,
+			restoreTextFocus,
+		}) =>
+			text.styledText && (
+				<TextBar
+					layer={text.styledText}
+					customColor={customColor}
+					onChange={text.style}
+					onPickCustom={onCustomColor}
+					onEyedropper={(key) =>
+						colorTarget((color) => text.style({ [key]: color })).onEyedropper()
+					}
+					restoreFocus={editingText ? restoreTextFocus : undefined}
+				/>
+			),
+		keepBarFocus: ({ editingText }) => editingText,
+	},
+	layer: {
+		dock: ({ layerActions }) =>
+			layerActions && <LayerActionsPanel {...layerActions} />,
+		bar: ({ layerActions }) => layerActions && <LayerBar {...layerActions} />,
+	},
+};
 
 /**
  * What opens over the canvas, above the dock: the tool's tray, Find's
@@ -194,7 +399,8 @@ export function ToolTrays({
  * What the wide editor's header holds instead of the project's title: the
  * open tool's options, or a selected layer's actions. Phones have no bar;
  * the dock shows the same tools. With nothing in context, the header keeps
- * the title.
+ * the title. One `ContextBar` stays mounted as the panel changes, keeping
+ * its scroll and fades.
  */
 export function ContextBarContent({
 	context,
@@ -206,107 +412,13 @@ export function ContextBarContent({
 	// The bar's title, Cancel, and Done, which `modeChrome` chose.
 	chrome: { title: string } & ModeActionProps;
 }) {
-	const {
-		tools: { draw, redact, cut, text },
-		customColor,
-		onCustomColor,
-		colorTarget,
-		onFind,
-		editingText,
-		restoreTextFocus,
-		layerActions,
-	} = context;
-	if (panel === "draw") {
-		return (
-			<ContextBar {...chrome}>
-				<DrawBar
-					settings={draw.settings}
-					customColor={customColor}
-					onChange={draw.change}
-					{...colorTarget((color) =>
-						draw.change(withBrushColor(draw.settings, color)),
-					)}
-				/>
-			</ContextBar>
-		);
-	}
-	if (panel === "redact") {
-		return (
-			<ContextBar {...chrome}>
-				<RedactBar
-					settings={redact.settings}
-					customColor={customColor}
-					onChange={redact.change}
-					onFind={onFind}
-					{...colorTarget((color) =>
-						redact.change({ ...redact.settings, color }),
-					)}
-				/>
-			</ContextBar>
-		);
-	}
-	if (panel === "find") {
-		return (
-			<ContextBar {...chrome}>
-				<FindBar
-					settings={redact.chosen}
-					customColor={customColor}
-					onChange={(next) =>
-						redact.setChosen((current) => ({ ...current, ...next }))
-					}
-					{...colorTarget((color) =>
-						redact.setChosen((current) => ({ ...current, color })),
-					)}
-				/>
-			</ContextBar>
-		);
-	}
-	if (panel === "cutOut") {
-		return (
-			<ContextBar {...chrome}>
-				<CutOutBar
-					settings={cut.settings}
-					tool={cut.tool}
-					finding={cut.finding}
-					onChange={cut.change}
-					onFindAll={cut.findAll}
-					inverting={cut.inverting}
-					onInvert={cut.invert}
-					redacting={cut.redacting}
-					onRedact={cut.redact}
-				/>
-			</ContextBar>
-		);
-	}
-	if (panel === "text") {
-		const { styledText } = text;
-		if (!styledText) return null;
-		return (
-			<ContextBar {...chrome} keepFocus={editingText}>
-				<TextBar
-					layer={styledText}
-					customColor={customColor}
-					onChange={text.style}
-					onPickCustom={onCustomColor}
-					onEyedropper={(key) =>
-						colorTarget((color) => text.style({ [key]: color })).onEyedropper()
-					}
-					restoreFocus={editingText ? restoreTextFocus : undefined}
-				/>
-			</ContextBar>
-		);
-	}
-	if (panel === "adjust") {
-		return <ContextBar {...chrome}>{null}</ContextBar>;
-	}
-	if (panel === "layer" && layerActions) {
-		return (
-			<ContextBar {...chrome}>
-				<LayerBar {...layerActions} />
-			</ContextBar>
-		);
-	}
-	return null;
+	if (panel === "idle") return null;
+	const views = TOOL_VIEWS[panel];
+	return (
+		<ContextBar {...chrome} keepFocus={views.keepBarFocus?.(context) ?? false}>
+			{views.bar?.(context) ?? null}
+		</ContextBar>
+	);
 }
 
 /**
@@ -322,90 +434,5 @@ export function DockContent({
 	panel: DockPanel;
 	idle: ReactNode;
 }) {
-	const {
-		tools: { draw, redact, find, cut, adjust, text },
-		dispatchMode,
-		customColor,
-		optionsOpen,
-		toggleOptions,
-		onFind,
-		adjustments,
-		layerActions,
-	} = context;
-	const { styledText } = text;
-	switch (panel) {
-		case "draw":
-			return (
-				<DrawPanel
-					settings={draw.settings}
-					optionsOpen={optionsOpen}
-					onChange={draw.change}
-					onToggleOptions={toggleOptions}
-				/>
-			);
-		case "redact":
-			return (
-				<RedactPanel
-					settings={redact.settings}
-					optionsOpen={optionsOpen}
-					onChange={redact.change}
-					onToggleOptions={toggleOptions}
-					onFind={onFind}
-				/>
-			);
-		case "find":
-			return (
-				<FindPanel
-					state={find.state}
-					styleGlyph={
-						<EffectGlyph
-							settings={redact.chosen}
-							effect={redact.chosen.effect}
-						/>
-					}
-					optionsOpen={optionsOpen}
-					onFind={find.find}
-					onToggleOptions={toggleOptions}
-				/>
-			);
-		case "adjust":
-			return <AdjustPanel controller={adjust} adjustments={adjustments} />;
-		case "cutOut":
-			return (
-				<CutOutPanel
-					settings={cut.settings}
-					tool={cut.tool}
-					finding={cut.finding}
-					optionsOpen={optionsOpen}
-					onChange={cut.change}
-					onToggleOptions={toggleOptions}
-					onFindAll={cut.findAll}
-					inverting={cut.inverting}
-					onInvert={cut.invert}
-					redacting={cut.redacting}
-					onRedact={cut.redact}
-				/>
-			);
-		case "text":
-			return (
-				styledText && (
-					<TextStylePanel
-						layer={styledText}
-						customColor={customColor}
-						onChange={text.style}
-						onOpenPicker={(key) =>
-							dispatchMode({
-								type: "openTextPicker",
-								layerId: styledText.id,
-								key,
-							})
-						}
-					/>
-				)
-			);
-		case "layer":
-			return layerActions && <LayerActionsPanel {...layerActions} />;
-		case "idle":
-			return idle;
-	}
+	return panel === "idle" ? idle : TOOL_VIEWS[panel].dock(context);
 }
