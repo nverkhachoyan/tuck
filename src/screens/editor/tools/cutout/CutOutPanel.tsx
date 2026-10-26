@@ -17,7 +17,14 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
-import type { CutOutSettings, CutOutTool } from "./cutOutSettings";
+import {
+	type CutBrushTool,
+	type CutOutSettings,
+	type CutOutTool,
+	cutSizeIndex,
+	isCutBrush,
+	withCutSize,
+} from "./cutOutSettings";
 
 /**
  * Cut out's tools, in place of the toolbar while cutting an image out:
@@ -59,7 +66,6 @@ export function CutOutPanel({
 		if (choice === tool && choice !== "pick") onToggleOptions();
 		else onChange({ ...settings, tool: choice });
 	};
-	const brush = tool !== "pick";
 	return (
 		<ToolRow>
 			{onFindAll && (
@@ -91,17 +97,13 @@ export function CutOutPanel({
 				selected={tool === "erase"}
 				onPress={() => pickTool("erase")}
 			/>
-			{brush && (
+			{isCutBrush(tool) && (
 				<ToolButton
 					label="Size"
 					icon="circle-medium"
 					glyph={
 						<SizeDot
-							size={
-								SIZE_DOTS[
-									tool === "keep" ? settings.keepSize : settings.eraseSize
-								]
-							}
+							size={SIZE_DOTS[cutSizeIndex(settings, tool)]}
 							color={tool === "keep" ? colors.textPrimary : null}
 						/>
 					}
@@ -189,7 +191,6 @@ export function CutOutBar({
 		0,
 		options.findIndex((option) => option.tool === tool),
 	);
-	const brush = tool === "keep" || tool === "erase";
 	return (
 		<BarSections>
 			<BarGroup>
@@ -204,18 +205,12 @@ export function CutOutBar({
 					}}
 				/>
 			</BarGroup>
-			{brush && (
+			{isCutBrush(tool) && (
 				<BarGroup>
 					<SizeChip
-						index={tool === "keep" ? settings.keepSize : settings.eraseSize}
+						index={cutSizeIndex(settings, tool)}
 						color={tool === "keep" ? colors.textPrimary : null}
-						onPick={(index) =>
-							onChange(
-								tool === "keep"
-									? { ...settings, keepSize: index }
-									: { ...settings, eraseSize: index },
-							)
-						}
+						onPick={(index) => onChange(withCutSize(settings, tool, index))}
 					>
 						{(close) => (
 							<OptionSegments
@@ -283,12 +278,11 @@ export function CutOutOptions({
 	onClose,
 }: {
 	settings: CutOutSettings;
-	tool: "keep" | "erase";
+	tool: CutBrushTool;
 	bottomInset: number;
 	onChange: (settings: CutOutSettings) => void;
 	onClose: () => void;
 }) {
-	const keep = tool === "keep";
 	return (
 		<ToolOptions
 			closeLabel="Close brush options"
@@ -298,15 +292,9 @@ export function CutOutOptions({
 		>
 			<ToolOption label="Size">
 				<SizeChoices
-					index={keep ? settings.keepSize : settings.eraseSize}
-					color={keep ? colors.textPrimary : null}
-					onPick={(index) =>
-						onChange(
-							keep
-								? { ...settings, keepSize: index }
-								: { ...settings, eraseSize: index },
-						)
-					}
+					index={cutSizeIndex(settings, tool)}
+					color={tool === "keep" ? colors.textPrimary : null}
+					onPick={(index) => onChange(withCutSize(settings, tool, index))}
 				/>
 			</ToolOption>
 			<ToolOption label="Edge">

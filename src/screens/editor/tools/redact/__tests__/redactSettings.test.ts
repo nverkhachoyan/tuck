@@ -9,9 +9,11 @@ import {
 	parseRedactSettings,
 	REDACT_BRUSH_SIZES,
 	redactionEffect,
+	redactSizeIndex,
 	sameEffect,
 	stepRedactSize,
 	withEffect,
+	withRedactSize,
 } from "../redactSettings.ts";
 
 const photo = { width: 4000, height: 3000 };
@@ -56,6 +58,35 @@ describe("maskBrush", () => {
 			type: "eraser",
 			width: REDACT_BRUSH_SIZES[4] * 3000,
 		});
+	});
+});
+
+describe("redactSizeIndex", () => {
+	const settings = { ...defaultRedactSettings, brushSize: 0, eraserSize: 4 };
+
+	test("is the brush's or the eraser's own size", () => {
+		assert.equal(redactSizeIndex({ ...settings, tool: "brush" }), 0);
+		assert.equal(redactSizeIndex({ ...settings, tool: "eraser" }), 4);
+	});
+
+	test("is none for boxes", () => {
+		assert.equal(redactSizeIndex({ ...settings, tool: "box" }), null);
+	});
+});
+
+describe("withRedactSize", () => {
+	const settings = { ...defaultRedactSettings, brushSize: 0, eraserSize: 4 };
+
+	test("changes only the size of the tool in use", () => {
+		const brush = { ...settings, tool: "brush" as const };
+		assert.deepEqual(withRedactSize(brush, 3), { ...brush, brushSize: 3 });
+		const eraser = { ...settings, tool: "eraser" as const };
+		assert.deepEqual(withRedactSize(eraser, 1), { ...eraser, eraserSize: 1 });
+	});
+
+	test("leaves a box's settings as they are", () => {
+		const box = { ...settings, tool: "box" as const };
+		assert.equal(withRedactSize(box, 3), box);
 	});
 });
 

@@ -26,7 +26,12 @@ import {
 	ToolOptions,
 } from "../../shell/ToolOptions";
 import { TOOL_KEYS } from "../../shortcuts";
-import type { RedactSettings, RedactTool } from "./redactSettings";
+import {
+	type RedactSettings,
+	type RedactTool,
+	redactSizeIndex,
+	withRedactSize,
+} from "./redactSettings";
 
 const EFFECT_NAMES: Record<RedactSettings["effect"], string> = {
 	solid: "Solid",
@@ -124,13 +129,7 @@ export function RedactBar({
 }) {
 	const { tool } = settings;
 	const selected = tool === "brush" ? 1 : tool === "eraser" ? 2 : 0;
-	const brush = tool === "brush";
-	const pickSize = (size: number) =>
-		onChange(
-			brush
-				? { ...settings, brushSize: size }
-				: { ...settings, eraserSize: size },
-		);
+	const size = redactSizeIndex(settings);
 	return (
 		<BarSections>
 			<BarGroup>
@@ -162,11 +161,11 @@ export function RedactBar({
 						onPickCustom,
 						onEyedropper,
 					})}
-				{tool !== "box" && (
+				{size !== null && (
 					<SizeChip
-						index={brush ? settings.brushSize : settings.eraserSize}
-						color={brush ? colors.textPrimary : null}
-						onPick={pickSize}
+						index={size}
+						color={tool === "brush" ? colors.textPrimary : null}
+						onPick={(index) => onChange(withRedactSize(settings, index))}
 					/>
 				)}
 			</BarGroup>
@@ -198,13 +197,7 @@ export function RedactOptions({
 	onClose: () => void;
 }) {
 	const { tool, effect } = settings;
-	const brush = tool === "brush";
-	const pickSize = (size: number) =>
-		onChange(
-			brush
-				? { ...settings, brushSize: size }
-				: { ...settings, eraserSize: size },
-		);
+	const size = redactSizeIndex(settings);
 	return (
 		<ToolOptions
 			closeLabel="Close redaction style"
@@ -264,12 +257,12 @@ export function RedactOptions({
 					)}
 				</>
 			)}
-			{tool !== "box" && (
+			{size !== null && (
 				<ToolOption label="Size">
 					<SizeChoices
-						index={brush ? settings.brushSize : settings.eraserSize}
-						color={brush ? colors.textPrimary : null}
-						onPick={pickSize}
+						index={size}
+						color={tool === "brush" ? colors.textPrimary : null}
+						onPick={(index) => onChange(withRedactSize(settings, index))}
 					/>
 				</ToolOption>
 			)}

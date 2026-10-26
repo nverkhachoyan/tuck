@@ -25,8 +25,10 @@ import {
 	brushColor,
 	brushSizeIndex,
 	type DrawTool,
+	isBrush,
 	penTip,
 	withBrushColor,
+	withBrushSize,
 } from "./brushSettings";
 
 const TOOL_ICONS = {
@@ -134,11 +136,7 @@ export function DrawBar({
 		else if (index === 1) onChange({ ...settings, tool: "shape" });
 		else onChange({ ...settings, tool: "eraser" });
 	};
-	const pickSize = (size: number) =>
-		onChange({
-			...settings,
-			sizes: { ...settings.sizes, [settings.tool]: size },
-		});
+	const pickSize = (size: number) => onChange(withBrushSize(settings, size));
 	return (
 		<BarSections>
 			<BarGroup>
@@ -278,11 +276,7 @@ export function BrushOptions({
 	const tip = penTip(settings.tool);
 	const pickBrush = (brush: BrushTool) =>
 		onChange({ ...settings, tool: brush, lastBrush: brush });
-	const pickSize = (size: number) =>
-		onChange({
-			...settings,
-			sizes: { ...settings.sizes, [settings.tool]: size },
-		});
+	const pickSize = (size: number) => onChange(withBrushSize(settings, size));
 
 	return (
 		<ToolOptions
@@ -359,12 +353,6 @@ export function BrushOptions({
 				/>
 			</ToolOption>
 		</ToolOptions>
-	);
-}
-
-function isBrush(tool: DrawTool): tool is BrushTool {
-	return (
-		tool === "pen" || tool === "marker" || tool === "ink" || tool === "neon"
 	);
 }
 

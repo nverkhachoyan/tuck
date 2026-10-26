@@ -61,6 +61,11 @@ const DRAW_TOOLS: DrawTool[] = [
 ];
 const BRUSH_TOOLS: BrushTool[] = ["pen", "marker", "ink", "neon"];
 
+/** Whether `tool` is a brush: the pen, or the pen with one of its tips. */
+export function isBrush(tool: DrawTool): tool is BrushTool {
+	return BRUSH_TOOLS.some((brush) => brush === tool);
+}
+
 const shortSide = (size: Size) => Math.min(size.width, size.height);
 
 /**
@@ -113,10 +118,16 @@ export function brushSizeIndex(settings: BrushSettings): number {
 	return settings.sizes[settings.tool];
 }
 
+/** Settings with the tool in use at size `index`; the others keep theirs. */
+export function withBrushSize(
+	settings: BrushSettings,
+	index: number,
+): BrushSettings {
+	return { ...settings, sizes: { ...settings.sizes, [settings.tool]: index } };
+}
+
 export function penTip(tool: DrawTool): PenTip | undefined {
-	return tool === "marker" || tool === "ink" || tool === "neon"
-		? tool
-		: undefined;
+	return isBrush(tool) && tool !== "pen" ? tool : undefined;
 }
 
 /** The color the tool in use draws with. The highlighter keeps its own. */
@@ -163,10 +174,7 @@ export function stepBrushSize(
 		Math.max(0, brushSizeIndex(settings) + step),
 	);
 	if (next === brushSizeIndex(settings)) return settings;
-	return {
-		...settings,
-		sizes: { ...settings.sizes, [settings.tool]: next },
-	};
+	return withBrushSize(settings, next);
 }
 
 /**
