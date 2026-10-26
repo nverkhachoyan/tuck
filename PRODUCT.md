@@ -32,11 +32,11 @@ Tagline in use: "The last touch for photos and screenshots." Alternative: "Make 
 
 ## Capabilities and Constraints
 
-- Tools: text edited in place on the canvas (fonts, colors, an eyedropper, alignment, outline, background box); Redact (box or brush, as solid, blur, or pixelate, with Find for faces and text); Crop (aspect presets, turns, flips, straightening, and expanding the canvas); Adjust (brightness, contrast, saturation, warmth); Draw (pen, marker, neon, eraser, and shapes); Cut out (subject and object selection as a reversible mask, with Keep and Erase brushes, Invert, and Redact); stickers (bundled emoji and the user's own, including cut-outs); adding photos as layers; a layers panel; undo and redo.
+- Tools: text edited in place on the canvas (fonts, colors, an eyedropper, alignment, outline, background box); Redact (box or brush, as solid, blur, or pixelate, with Find for faces and text); Crop (aspect presets, turns, flips, straightening, and expanding the canvas); Adjust (brightness, contrast, saturation, warmth); Draw (pen, highlighter, marker, neon, eraser, and shapes); Cut out (subject and object selection as a reversible mask, with Keep and Erase brushes, Invert, and Redact); stickers (bundled emoji and the user's own, including cut-outs); adding photos as layers; a layers panel; undo and redo.
 - Each tool remembers its settings between sessions.
 - Built with Expo and React Native. Skia draws the canvas and the export alike. Native code only for detection and the share target. Runs in a development build, not Expo Go.
 - No backend, accounts, cloud storage, remote processing, or AI APIs. Not planned: generative fill, prompt editing, face recognition, template galleries, feeds, or "AI Studio"-style surfaces.
-- Not built yet: highlights, shadows, exposure, vignette, and sharpen; PDF redaction (researched, deferred).
+- Not built yet: highlights, shadows, exposure, vignette, and sharpen; PDF redaction (researched in `docs/pdf-redaction.md`, deferred).
 - Undecided: the public release date.
 
 ## Brand Commitments
@@ -48,7 +48,7 @@ Tagline in use: "The last touch for photos and screenshots." Alternative: "Make 
 
 ## Evidence on Hand
 
-- The working app on iOS, Android, and web, verified on a real iPhone for the core flow, plus the plans in `docs/plans/` and the staged roadmap in `VISION.md`.
+- The working app on iOS, Android, and web, verified on a real iPhone for the core flow, plus what's left to do in `docs/plans/follow-ups-plan.md`.
 - Absent, and not to be invented: users, reviews, testimonials, download counts, an App Store or Play listing, pricing, press, or performance claims.
 
 ## Product Principles

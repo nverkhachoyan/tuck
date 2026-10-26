@@ -7,26 +7,32 @@ space, while gesture state is held outside React during an interaction and
 committed to the document when the gesture ends. Export and project thumbnails
 render the same document offscreen with Skia.
 
+Skia draws the whole editing surface: the canvas is never a set of positioned
+React Native views, which only make the chrome around it (toolbars, panels,
+dialogs). The editor is the project's own, with no commercial photo-editor SDK,
+and native code stays behind narrow modules (`modules/`) rather than taking
+over any of the editor.
+
 ## Modules
 
 - `src/app/` holds thin Expo Router route files. A project's editor is at `/projects/[id]` and its export at `/projects/[id]/export`, so a link or a reload opens the project from storage (`useProjectSession`); `vercel.json` serves those routes from the static export.
 - `src/screens/` owns the home, create, editor, export, and info screens (Settings, support, privacy, licenses, and the 404 page). The home screen starts from a photo, a pasted or dropped image, a photo shared from another app, or, through Create, an empty canvas at a preset or custom size.
 - `src/screens/editor/` is the interactive editor, in a folder per part:
-  - `canvas/` draws the document (`EditorScene`, `EditedTextView`, `LiveStrokeOverlay`, `LiveLayerContent`, `SelectionOverlay`) and handles gestures, selection handles and cursors, hit-testing, and snapping.
+  - `canvas/` holds the canvas pieces every mode shares: the viewport and zoom, live transforms (`LiveLayerContent`, `LiveStrokeOverlay`), the selection overlay, handles and cursors, hit-testing, snapping, and the stroke pipeline Draw, Redact, and Cut out share. It imports nothing else from the editor but `shell/`, and tools may import it.
   - `tools/crop/` holds `CropTool`, which crops, turns, flips, and straightens the photo (the lowest locked one, or just the canvas without one) and expands the canvas around it; its geometry is in `cropGeometry.ts` and its box dragging in `cropDrag.ts`.
-  - `tools/text/` holds the text panel and the full-screen `TextEditor`.
+  - `tools/text/` holds the text panel, `TextEditor` (the hidden input that takes the keyboard), and text's pieces on the canvas: `EditedTextView`, which draws the draft with its caret and selection, and its edit gesture.
   - `tools/draw/` holds the drawing panel and brush settings.
   - `tools/redact/` holds the redaction panel and settings.
-  - `tools/find/` holds face and text detection (`useImageDetection`, `FindPanel`).
+  - `tools/find/` holds face and text detection (`useImageDetection`, `FindPanel`), and the found regions' outlines and taps on the canvas (`DetectionOutline`, `useFindTap`).
   - `tools/cutout/` holds subject and object selection, mask refinement brushes, invert, and mask-shaped redactions.
-  - `tools/adjust/` holds color adjustments.
+  - `tools/adjust/` holds color adjustments, and the sideways drag on the photo that turns the dial (`useDialDragGesture`).
   - `tools/layers/` holds the layers panel, where any layer is hidden, locked, deleted, or reordered.
   - `tools/stickers/` holds the sticker sheet, bundled stickers, and the ones people save.
   - Draw's, Redact's, and Cut out's rules are in their settings modules (`brushSettings`, `redactSettings`, `cutOutSettings`): which size the sub-tool in use keeps, and what counts as a brush. Each panel file holds one table per list of choices (`BRUSHES`, `REDACT_TOOLS`, `CUT_TOOLS`, `BRUSH_EDGES`), and its dock panel, bar, and tray read both.
   - `shell/` holds the dock, the wide editor's context bar and inspector, the toolbar, the header's actions, layer actions, the selection bar, and the controls every tool's panel is built from. On a wide screen the rail picks a tool, the header shows that tool's options, and the inspector keeps the layers (Find's results and Adjust's dial sit above them). Phones keep the dock and its trays.
   - `detection/` is the editor's only bridge to `image-analysis`: `imageDetection.ts` finds faces and text for Find, and `subjectDetection.ts` selects subjects and objects for Cut out.
   - `session/` holds the project session: `useProjectSession` opens the project, `useAutosave` saves it, and `SaveErrorBanner` shows a failed save.
-  - The editor root holds `EditorScreen`, `EditorDock` (`TOOL_VIEWS`, what each panel shows in the dock, the bar, the trays, and the inspector, while its title and actions stay in `editorChrome`), `EditorRail`, `EditorInspector`, and `editorChrome` (which chooses the panel, Done, and Cancel for both layouts), which compose the parts, and what spans the whole editor: adding images (`useAddImage`), its mode, how its tools are built and how they open and close (`useToolLifecycle`: `useEditorTools`), keyboard shortcuts, and the edit notice (`useEditNotice`). The background picker is in `src/ui/` because Create also uses it.
+  - The editor root holds `EditorScreen`, `EditorDock` (`TOOL_VIEWS`, what each panel shows in the dock, the bar, the trays, and the inspector, while its title and actions stay in `editorChrome`), `EditorRail`, `EditorInspector`, `EditorCanvas` and `EditorScene` (which compose the canvas with each tool's gestures and overlays), and `editorChrome` (which chooses the panel, Done, and Cancel for both layouts), which compose the parts, and what spans the whole editor: adding images (`useAddImage`), its mode, how its tools are built and how they open and close (`useToolLifecycle`: `useEditorTools`), keyboard shortcuts, and the edit notice (`useEditNotice`). The background picker is in `src/ui/` because Create also uses it.
 - `src/model/` defines the document, layers, cutout masks, and geometry as plain data: no React. The document is the canvas (its size, and a background fill or transparency) and its layers, which may be none. A photo is an image layer like any other: a document's own photo starts locked, and can be unlocked, reordered, hidden, or deleted; photos added later start unlocked. `framing.ts` moves the framing's anchor (the lowest visible locked image, or with none, the canvas itself) to a new place on a new canvas and keeps every other layer over the same spot, which is all cropping, turning, and flipping are.
 - `src/store/` is the Zustand store shared across screens: `index.ts` combines the slices into `useStore`, and `editorSlice.ts` owns the document, selection, undo history, tool sessions, and every edit that mutates them.
 - `src/photos/` picks, pastes, drops, or receives a shared photo and re-encodes it as JPEG (iPhone photos are commonly HEIC, which Skia cannot decode).

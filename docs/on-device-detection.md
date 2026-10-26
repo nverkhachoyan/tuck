@@ -4,7 +4,7 @@ Research into three features, done in September 2026:
 
 * Detect faces, so they can be redacted in one step.
 * Detect text, so it can be redacted in one step.
-* Remove a photo's background (Stage 4).
+* Remove a photo's background.
 
 Everything must run on the device. No external APIs, no cloud inference, and no photo ever leaves the phone or the browser.
 
@@ -14,7 +14,7 @@ On iOS and Android, don't install a third-party package. Write one local Expo mo
 
 No single dependency covers all three features. The closest, `react-native-nitro-vision-kit`, does background removal and text but not faces, needs iOS 18 for text, and has no web version. On web, MediaPipe covers faces and background removal but has no text recognition.
 
-This widens the background-removal module that VISION.md's Stage 4 first called for (`modules/image-segmentation/`) into `modules/image-analysis/`, and Stage 4 now covers all three features. They need the same development build, so faces and text cost little extra alongside background removal.
+This widens the background-removal module first planned (`modules/image-segmentation/`) into `modules/image-analysis/`, covering all three features. They need the same development build, so faces and text cost little extra alongside background removal.
 
 ## Dependencies
 
@@ -58,7 +58,7 @@ Tried on three photos with 9 to 36 faces, 3000 pixels wide (September 2026), Vis
 
 * **iOS:** `VNRecognizeTextRequest` returns each line, and `boundingBox(for:)` returns the box of any range of it, so words can be redacted on their own.
 * **Android:** ML Kit text recognition v2 returns blocks, lines, elements (words), and symbols, each with a box and corner points. Google advises characters of at least 16×16 pixels. Add only the Latin script; each other script is its own artifact.
-* **Web:** `tesseract.js` returns blocks, paragraphs, lines, words, and symbols with boxes. It's strongest on screenshots, VISION.md's main redaction case, and weaker on text in photos (signs, license plates). If that matters, `ppu-paddle-ocr` (PaddleOCR on ONNX Runtime) detects text in photos better, but pulls in opencv.js (13 MB) and ONNX Runtime Web.
+* **Web:** `tesseract.js` returns blocks, paragraphs, lines, words, and symbols with boxes. It's strongest on screenshots, the main case for redaction, and weaker on text in photos (signs, license plates). If that matters, `ppu-paddle-ocr` (PaddleOCR on ONNX Runtime) detects text in photos better, but pulls in opencv.js (13 MB) and ONNX Runtime Web.
 
 ### Background removal
 

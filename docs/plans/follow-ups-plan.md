@@ -48,6 +48,17 @@ Cut out's Subjects, Pick (MobileSAM on every platform), Keep and Erase, Invert, 
 
 The iPad store screenshots come from a Release build (see `docs/store-listing/listing.md`). The wide editor now shows a tool's options in the header, so retake them if the listing shows the editor with a tool open.
 
+## 6. Later
+
+Ideas carried over from the roadmap that VISION.md held, not yet planned. Weigh each on its own before starting one.
+
+* More adjustments: highlights, shadows, exposure, vignette, and sharpen. Add them one at a time, only where they feel as good as the four there are.
+* PDF redaction, researched in [docs/pdf-redaction.md](../pdf-redaction.md): flatten each page to an image, redact it in the editor, and write a new PDF.
+* Blurring license plates automatically, as Find does faces.
+* Redacting several photos at once.
+* Collages.
+* Better HEIC and RAW import.
+
 ## Considered and left
 
 These were weighed in the removed plans and set aside. Don't add them unless use shows they're missed.

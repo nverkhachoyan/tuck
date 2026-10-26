@@ -4,10 +4,10 @@ A local-first Expo photo editor for quick edits such as adding captions, making
 memes, blurring or redacting sensitive details, cropping, and cutting out
 subjects.
 
-- Product vision and roadmap: [VISION.md](./VISION.md)
-- Product positioning and principles: [PRODUCT.md](./PRODUCT.md)
+- Product vision, positioning, and principles: [PRODUCT.md](./PRODUCT.md)
 - Design system: [DESIGN.md](./DESIGN.md)
 - Codebase architecture: [docs/architecture.md](./docs/architecture.md)
+- What's left to do: [docs/plans/follow-ups-plan.md](./docs/plans/follow-ups-plan.md)
 
 ## Getting started
 
