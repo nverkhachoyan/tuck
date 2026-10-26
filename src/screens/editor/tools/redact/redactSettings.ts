@@ -2,6 +2,7 @@ import { isHexColor } from "../../../../lib/color.ts";
 import type { Size } from "../../../../model/geometry.ts";
 import type { RedactionEffect } from "../../../../model/layers/redaction.ts";
 import type { MaskStroke } from "../../../../model/strokes.ts";
+import type { CanvasTool } from "../../canvas/canvasInput.ts";
 
 export type RedactTool = "box" | "brush" | "eraser";
 
@@ -147,6 +148,21 @@ export function maskBrush(
 		type: settings.tool === "brush" ? "pen" : "eraser",
 		width: REDACT_BRUSH_SIZES[index] * shortSide(size),
 	};
+}
+
+/**
+ * What dragging on a canvas of `size` does with Redact: paints with its
+ * brush or eraser, or drags out its box.
+ */
+export function redactCanvasTool(
+	settings: RedactSettings,
+	size: Size,
+): CanvasTool {
+	const effect = redactionEffect(settings, size);
+	const brush = maskBrush(settings, size);
+	return brush
+		? { type: "redactBrush", brush, effect }
+		: { type: "redactBox", effect };
 }
 
 /**

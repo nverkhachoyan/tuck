@@ -1,5 +1,6 @@
 import type { Size } from "../../../../model/geometry.ts";
 import type { CutStroke } from "../../../../model/layers/image.ts";
+import type { CanvasTool } from "../../canvas/canvasInput.ts";
 
 // Picks the subject under a tap, or paints the cut by hand: keeping what
 // it removed, or erasing what it kept.
@@ -148,4 +149,21 @@ export function cutBrush(
 		width,
 		...(settings.soft ? { feather: width * SOFT_FEATHER } : {}),
 	};
+}
+
+/**
+ * What dragging on a canvas of `size` does with Cut out's `tool` in the
+ * image `layerId`: paints the cut with its brush, or picks the subject with
+ * a tap.
+ */
+export function cutCanvasTool(
+	layerId: string,
+	settings: CutOutSettings,
+	tool: CutOutTool,
+	size: Size,
+): CanvasTool {
+	const brush = cutBrush(settings, tool, size);
+	return brush
+		? { type: "cutBrush", layerId, brush }
+		: { type: "pickSubject", layerId };
 }

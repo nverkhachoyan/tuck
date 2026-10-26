@@ -8,6 +8,7 @@ import {
 	PIXEL_SIZES,
 	parseRedactSettings,
 	REDACT_BRUSH_SIZES,
+	redactCanvasTool,
 	redactionEffect,
 	redactSizeIndex,
 	sameEffect,
@@ -184,5 +185,24 @@ describe("stepRedactSize", () => {
 			stepRedactSize(defaultRedactSettings, 1),
 			defaultRedactSettings,
 		);
+	});
+});
+
+describe("redactCanvasTool", () => {
+	test("drags out the box", () => {
+		const boxes = { ...defaultRedactSettings, tool: "box" as const };
+		assert.deepEqual(redactCanvasTool(boxes, photo), {
+			type: "redactBox",
+			effect: redactionEffect(boxes, photo),
+		});
+	});
+
+	test("paints with the brush", () => {
+		const brushes = { ...defaultRedactSettings, tool: "brush" as const };
+		assert.deepEqual(redactCanvasTool(brushes, photo), {
+			type: "redactBrush",
+			brush: maskBrush(brushes, photo),
+			effect: redactionEffect(brushes, photo),
+		});
 	});
 });

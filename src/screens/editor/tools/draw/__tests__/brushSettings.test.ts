@@ -8,6 +8,7 @@ import {
 	brushFor,
 	brushSizeIndex,
 	defaultBrushSettings,
+	drawCanvasTool,
 	isBrush,
 	parseBrushSettings,
 	penTip,
@@ -263,5 +264,25 @@ describe("stepBrushSize", () => {
 			sizes: { ...sizes, eraser: 4 },
 		};
 		assert.equal(stepBrushSize(largest, 1), largest);
+	});
+});
+
+describe("drawCanvasTool", () => {
+	const photo = { width: 4000, height: 3000 };
+
+	test("draws with the brush", () => {
+		assert.deepEqual(drawCanvasTool(defaultBrushSettings, photo), {
+			type: "draw",
+			brush: brushFor(defaultBrushSettings, photo),
+		});
+	});
+
+	test("drags out the shape", () => {
+		const shapes = { ...defaultBrushSettings, tool: "shape" as const };
+		assert.deepEqual(drawCanvasTool(shapes, photo), {
+			type: "drawShape",
+			shape: shapes.shape,
+			style: shapeStyleFor(shapes, photo),
+		});
 	});
 });

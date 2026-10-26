@@ -5,17 +5,15 @@ import type { DialDrag } from "./shell/dialDrag.ts";
 import {
 	type CutOutSettings,
 	type CutOutTool,
-	cutBrush,
+	cutCanvasTool,
 } from "./tools/cutout/cutOutSettings.ts";
 import {
 	type BrushSettings,
-	brushFor,
-	shapeStyleFor,
+	drawCanvasTool,
 } from "./tools/draw/brushSettings.ts";
 import {
-	maskBrush,
 	type RedactSettings,
-	redactionEffect,
+	redactCanvasTool,
 } from "./tools/redact/redactSettings.ts";
 
 /**
@@ -40,26 +38,10 @@ export function canvasToolFor({
 	size: Size;
 }): CanvasTool | null {
 	if (eyedropper) return { type: "pickColor" };
-	if (cut) {
-		const brush = cutBrush(cut.settings, cut.tool, size);
-		return brush
-			? { type: "cutBrush", layerId: cut.layerId, brush }
-			: { type: "pickSubject", layerId: cut.layerId };
-	}
-	if (tool === "draw" && draw.tool === "shape") {
-		return {
-			type: "drawShape",
-			shape: draw.shape,
-			style: shapeStyleFor(draw, size),
-		};
-	}
-	if (tool === "draw") return { type: "draw", brush: brushFor(draw, size) };
-	if (tool !== "redact") return null;
-	const effect = redactionEffect(redact, size);
-	const brush = maskBrush(redact, size);
-	return brush
-		? { type: "redactBrush", brush, effect }
-		: { type: "redactBox", effect };
+	if (cut) return cutCanvasTool(cut.layerId, cut.settings, cut.tool, size);
+	if (tool === "draw") return drawCanvasTool(draw, size);
+	if (tool === "redact") return redactCanvasTool(redact, size);
+	return null;
 }
 
 /**

@@ -8,6 +8,7 @@ import {
 	type ShapeStyle,
 	shapeKinds,
 } from "../../../../model/layers/shape.ts";
+import type { CanvasTool } from "../../canvas/canvasInput.ts";
 
 export type DrawTool = "pen" | PenTip | "shape" | "eraser";
 export type BrushTool = "pen" | PenTip;
@@ -161,6 +162,23 @@ export function shapeStyleFor(settings: BrushSettings, size: Size): ShapeStyle {
 		color: settings.color,
 		strokeWidth: BRUSH_SIZES.shape[settings.sizes.shape] * shortSide(size),
 	};
+}
+
+/**
+ * What dragging on a canvas of `size` does with Draw: drags out its shape,
+ * or draws with its brush.
+ */
+export function drawCanvasTool(
+	settings: BrushSettings,
+	size: Size,
+): CanvasTool {
+	return settings.tool === "shape"
+		? {
+				type: "drawShape",
+				shape: settings.shape,
+				style: shapeStyleFor(settings, size),
+			}
+		: { type: "draw", brush: brushFor(settings, size) };
 }
 
 /** The tool in use, one size dot up or down, staying put at either end. */

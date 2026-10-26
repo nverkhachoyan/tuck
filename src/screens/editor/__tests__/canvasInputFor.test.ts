@@ -4,16 +4,8 @@ import { describe, test } from "node:test";
 import { canvasInputFor, canvasToolFor } from "../canvasInputFor.ts";
 import type { DialDrag } from "../shell/dialDrag.ts";
 import { defaultCutOutSettings } from "../tools/cutout/cutOutSettings.ts";
-import {
-	brushFor,
-	defaultBrushSettings,
-	shapeStyleFor,
-} from "../tools/draw/brushSettings.ts";
-import {
-	defaultRedactSettings,
-	maskBrush,
-	redactionEffect,
-} from "../tools/redact/redactSettings.ts";
+import { defaultBrushSettings } from "../tools/draw/brushSettings.ts";
+import { defaultRedactSettings } from "../tools/redact/redactSettings.ts";
 
 const size = { width: 4000, height: 3000 };
 const base = {
@@ -47,55 +39,17 @@ describe("canvasToolFor", () => {
 		);
 	});
 
-	test("taps to pick a subject with Cut out's Pick", () => {
-		assert.deepEqual(
-			canvasToolFor({ ...base, tool: "cutOut", cut: { ...cut, tool: "pick" } }),
-			{ type: "pickSubject", layerId: "photo" },
+	test("gives Cut out the canvas over Draw", () => {
+		assert.equal(
+			canvasToolFor({ ...base, tool: "draw", cut: { ...cut, tool: "pick" } })
+				?.type,
+			"pickSubject",
 		);
 	});
 
-	test("paints the cut with Cut out's brushes", () => {
-		const tool = canvasToolFor({
-			...base,
-			tool: "cutOut",
-			cut: { ...cut, tool: "erase" },
-		});
-		assert.equal(tool?.type, "cutBrush");
-		assert.equal(tool?.type === "cutBrush" && tool.layerId, "photo");
-		assert.equal(tool?.type === "cutBrush" && tool.brush.type, "eraser");
-	});
-
-	test("draws with Draw's brush, or drags out its shape", () => {
-		assert.deepEqual(canvasToolFor({ ...base, tool: "draw" }), {
-			type: "draw",
-			brush: brushFor(defaultBrushSettings, size),
-		});
-		const shapes = { ...defaultBrushSettings, tool: "shape" as const };
-		assert.deepEqual(canvasToolFor({ ...base, tool: "draw", draw: shapes }), {
-			type: "drawShape",
-			shape: shapes.shape,
-			style: shapeStyleFor(shapes, size),
-		});
-	});
-
-	test("drags out Redact's box, or paints with its brush", () => {
-		const boxes = { ...defaultRedactSettings, tool: "box" as const };
-		assert.deepEqual(
-			canvasToolFor({ ...base, tool: "redact", redact: boxes }),
-			{
-				type: "redactBox",
-				effect: redactionEffect(boxes, size),
-			},
-		);
-		const brushes = { ...defaultRedactSettings, tool: "brush" as const };
-		assert.deepEqual(
-			canvasToolFor({ ...base, tool: "redact", redact: brushes }),
-			{
-				type: "redactBrush",
-				brush: maskBrush(brushes, size),
-				effect: redactionEffect(brushes, size),
-			},
-		);
+	test("hands Draw and Redact their own canvas tools", () => {
+		assert.equal(canvasToolFor({ ...base, tool: "draw" })?.type, "draw");
+		assert.equal(canvasToolFor({ ...base, tool: "redact" })?.type, "redactBox");
 	});
 
 	test("leaves Find and Adjust's canvas to their own input", () => {

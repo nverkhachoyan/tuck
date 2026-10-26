@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import {
 	CUT_BRUSH_SIZES,
 	cutBrush,
+	cutCanvasTool,
 	cutOutTool,
 	cutSizeIndex,
 	defaultCutOutSettings,
@@ -158,5 +159,27 @@ describe("stepCutSize", () => {
 			eraseSize: picking.eraseSize + 1,
 		});
 		assert.equal(stepCutSize(picking, "pick", 1), picking);
+	});
+});
+
+describe("cutCanvasTool", () => {
+	const photo = { width: 4000, height: 3000 };
+
+	test("taps to pick a subject with Pick", () => {
+		assert.deepEqual(
+			cutCanvasTool("photo", defaultCutOutSettings, "pick", photo),
+			{ type: "pickSubject", layerId: "photo" },
+		);
+	});
+
+	test("paints the cut with the brushes", () => {
+		assert.deepEqual(
+			cutCanvasTool("photo", defaultCutOutSettings, "erase", photo),
+			{
+				type: "cutBrush",
+				layerId: "photo",
+				brush: cutBrush(defaultCutOutSettings, "erase", photo),
+			},
+		);
 	});
 });
