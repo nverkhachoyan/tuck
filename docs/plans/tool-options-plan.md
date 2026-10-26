@@ -154,6 +154,17 @@ Commit: `refactor: share the custom swatch's rule`
 
 Commit: `docs: describe where a tool's options are defined`
 
+### Result
+
+Done in seven commits, the fix first and then one per step.
+
+* **The fix.** Reproduced on web with `canFind` forced false and a saved Pick: Erase was chosen, and `]` left the size chip at "Size 3 of 5" and `eraseSize` at 2. After `fix: step Cut out's eraser size when it stands in for Pick`, it moved to 4 of 5 and saved 3. Where subjects can be found, `]` with Pick chosen still changes nothing. No other place where the layouts disagree turned up, so there are no other `fix:` commits.
+* **The panel files.** `DrawPanel.tsx` went from 384 lines to 378, `RedactPanel.tsx` from 361 to 333, and `CutOutPanel.tsx` from 335 to 306. Draw fell well short of the 30 to 50 aimed for: typing `BRUSHES`'s icons and adding `DRAW_SUB_TOOLS` and the bar's icons took back most of what the four lists gave. `TextStylePanel.tsx` went from 586 to 580 and `ColorPicker.tsx` from 537 to 536.
+* **The settings modules.** `brushSettings.ts` went from 211 lines to 219, `redactSettings.ts` from 163 to 186, and `cutOutSettings.ts` from 107 to 151, more than the 15 planned: `cutSizeIndex` has an overload, so a tool narrowed by `isCutBrush` reads a number, and each new function has a doc comment. Their tests grew by 46, 31, and 74 lines.
+* **Shell.** `redactStyle.tsx` went from 180 lines to 197 (`StrengthChoices` in, `RedactLook` out), and `ColorSwatches.tsx` from 123 to 144 (`customSwatch`).
+* **A new pen tip** now needs one entry in `BRUSHES` for the editor's views, as well as its saved id, sizes, and drawing in `brushSettings.ts` and the model.
+* **How it was checked.** `npm run check`, `npm run typecheck`, and `npm test` before each push. On web, at 390 and 1440 points wide, a script walked each step's tool through its dock, bar, tray, and chips (every sub-tool, the sub-tool already in use, every choice, the custom swatch and a drag of its picker, and `[` and `]`), recording the saved settings and each labeled control's state after every action, and the walk matched the one recorded before the step. Cut out was also walked with `canFind` forced false. The iOS and iPad simulators weren't run: the work was done where neither is available.
+
 ## Not in this plan
 
 * **The context bar's fade geometry.** `rowEdges`, `leafEdges`, `fadeCut`, and `fadeCutLeft` in `ContextBar.tsx` are pure and untested, and `8c1a506` rewrote them. Moving them to `shell/barFade.ts` with tests is the natural next refactor. It's separate because it shares nothing with the tools' options.

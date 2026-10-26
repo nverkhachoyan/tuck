@@ -22,6 +22,7 @@ render the same document offscreen with Skia.
   - `tools/adjust/` holds color adjustments.
   - `tools/layers/` holds the layers panel, where any layer is hidden, locked, deleted, or reordered.
   - `tools/stickers/` holds the sticker sheet, bundled stickers, and the ones people save.
+  - Draw's, Redact's, and Cut out's rules are in their settings modules (`brushSettings`, `redactSettings`, `cutOutSettings`): which size the sub-tool in use keeps, and what counts as a brush. Each panel file holds one table per list of choices (`BRUSHES`, `REDACT_TOOLS`, `CUT_TOOLS`, `BRUSH_EDGES`), and its dock panel, bar, and tray read both.
   - `shell/` holds the dock, the wide editor's context bar and inspector, the toolbar, the header's actions, layer actions, the selection bar, and the controls every tool's panel is built from. On a wide screen the rail picks a tool, the header shows that tool's options, and the inspector keeps the layers (Find's results and Adjust's dial sit above them). Phones keep the dock and its trays.
   - `detection/` is the editor's only bridge to `image-analysis`: `imageDetection.ts` finds faces and text for Find, and `subjectDetection.ts` selects subjects and objects for Cut out.
   - `session/` holds the project session: `useProjectSession` opens the project, `useAutosave` saves it, and `SaveErrorBanner` shows a failed save.
