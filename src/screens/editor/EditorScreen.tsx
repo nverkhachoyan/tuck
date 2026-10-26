@@ -558,7 +558,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						rightInset={layout.canvasInset.right}
 						selectionBar={selectionBar}
 					/>
-					{!wide && <ToolTrays context={toolViews} modeState={modeState} />}
+					{!wide && (
+						<ToolTrays
+							context={toolViews}
+							modeState={modeState}
+							panel={panel}
+						/>
+					)}
 					{wide && eyedropper && (
 						<EyedropperHint
 							onCancel={() => dispatchMode({ type: "stopEyedropper" })}

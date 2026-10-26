@@ -156,8 +156,11 @@ function cutOutProps({ tools: { cut } }: ToolViewContext) {
  * - `bar`: the wide header's options, inside the shared `ContextBar`; without
  *   it, the bar has the title, ✕, and ✓ only.
  * - `keepBarFocus`: whether a press in the bar keeps the text's caret.
- * - `tray`: the phone's tray of options, while `optionsOpen`.
- * - `results`: what sits over the canvas while no tray is open.
+ * - `tray`: the phone's tray of options, while `optionsOpen`. Redact's and
+ *   Find's are both `RedactOptions`, but React never carries one's state to
+ *   the other: starting a tool always closes the tray.
+ * - `results`: what sits over the canvas while no tray is open and the
+ *   eyedropper isn't running.
  * - `inspector`: a section above the wide inspector's layers, given them as
  *   `layers`.
  */
@@ -186,6 +189,15 @@ const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 				onToggleOptions={toggleOptions}
 			/>
 		),
+		tray: (context) => (
+			<BrushOptions
+				settings={context.tools.draw.settings}
+				bottomInset={context.bottomInset}
+				onChange={context.tools.draw.change}
+				{...drawColor(context)}
+				onClose={context.closeTray}
+			/>
+		),
 		bar: (context) => (
 			<DrawBar
 				settings={context.tools.draw.settings}
@@ -202,6 +214,15 @@ const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 				onChange={redact.change}
 				onToggleOptions={toggleOptions}
 				onFind={onFind}
+			/>
+		),
+		tray: (context) => (
+			<RedactOptions
+				settings={context.tools.redact.settings}
+				bottomInset={context.bottomInset}
+				onChange={context.tools.redact.change}
+				{...redactColor(context)}
+				onClose={context.closeTray}
 			/>
 		),
 		bar: (context) => (
@@ -225,6 +246,27 @@ const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 				onToggleOptions={toggleOptions}
 			/>
 		),
+		tray: (context) => (
+			<RedactOptions
+				{...findStyle(context)}
+				bottomInset={context.bottomInset}
+				onClose={context.closeTray}
+			/>
+		),
+		results: ({ tools: { find }, bottomInset, onBackToRedact }) => (
+			<FindTray
+				state={find.state}
+				visibleIndices={find.visibleIndices}
+				selectedCount={find.selectedCount}
+				review={find.review}
+				bottomInset={bottomInset}
+				onRetry={find.retry}
+				onBack={onBackToRedact}
+				onStop={find.reset}
+				onSelectAll={find.selectAll}
+				onClear={find.clear}
+			/>
+		),
 		bar: (context) => <FindBar {...findStyle(context)} />,
 	},
 	cutOut: {
@@ -235,6 +277,17 @@ const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 				onToggleOptions={context.toggleOptions}
 			/>
 		),
+		// The pick tool has no options.
+		tray: ({ tools: { cut }, bottomInset, closeTray }) =>
+			cut.tool !== "pick" && (
+				<CutOutOptions
+					settings={cut.settings}
+					tool={cut.tool}
+					bottomInset={bottomInset}
+					onChange={cut.change}
+					onClose={closeTray}
+				/>
+			),
 		bar: (context) => <CutOutBar {...cutOutProps(context)} />,
 	},
 	adjust: {
@@ -298,85 +351,28 @@ const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 export function ToolTrays({
 	context,
 	modeState,
+	panel,
 }: {
 	context: ToolViewContext;
 	modeState: EditorModeState;
+	panel: DockPanel;
 }) {
 	const {
-		tools: { draw, redact, find, cut, text },
+		tools: { text },
 		dispatchMode,
-		customColor,
 		colorTarget,
-		closeTray,
 		bottomInset,
-		onBackToRedact,
 	} = context;
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = text;
 	const tray = openTray(mode);
 	return (
 		<>
-			{tray === "draw" && (
-				<BrushOptions
-					settings={draw.settings}
-					customColor={customColor}
-					bottomInset={bottomInset}
-					onChange={draw.change}
-					{...colorTarget((color) =>
-						draw.change(withBrushColor(draw.settings, color)),
-					)}
-					onClose={closeTray}
-				/>
-			)}
-			{tray === "redact" && (
-				<RedactOptions
-					settings={redact.settings}
-					customColor={customColor}
-					bottomInset={bottomInset}
-					onChange={redact.change}
-					{...colorTarget((color) =>
-						redact.change({ ...redact.settings, color }),
-					)}
-					onClose={closeTray}
-				/>
-			)}
-			{tray === "find" && (
-				<RedactOptions
-					settings={{ ...redact.chosen, tool: "box" }}
-					customColor={customColor}
-					bottomInset={bottomInset}
-					onChange={({ tool: _, ...style }) =>
-						redact.setChosen((settings) => ({ ...settings, ...style }))
-					}
-					{...colorTarget((color) =>
-						redact.setChosen((settings) => ({ ...settings, color })),
-					)}
-					onClose={closeTray}
-				/>
-			)}
-			{tray === "cutOut" && cut.tool !== "pick" && (
-				<CutOutOptions
-					settings={cut.settings}
-					tool={cut.tool}
-					bottomInset={bottomInset}
-					onChange={cut.change}
-					onClose={closeTray}
-				/>
-			)}
-			{mode.type === "tool" && mode.tool === "find" && !tray && !eyedropper && (
-				<FindTray
-					state={find.state}
-					visibleIndices={find.visibleIndices}
-					selectedCount={find.selectedCount}
-					review={find.review}
-					bottomInset={bottomInset}
-					onRetry={find.retry}
-					onBack={onBackToRedact}
-					onStop={find.reset}
-					onSelectAll={find.selectAll}
-					onClear={find.clear}
-				/>
-			)}
+			{tray && TOOL_VIEWS[tray].tray?.(context)}
+			{!tray &&
+				!eyedropper &&
+				panel !== "idle" &&
+				TOOL_VIEWS[panel].results?.(context)}
 			{textPicker && styledText && (
 				<TextColorPicker
 					layer={styledText}
