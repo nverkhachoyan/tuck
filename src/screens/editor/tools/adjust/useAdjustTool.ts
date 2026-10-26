@@ -31,6 +31,15 @@ export const ADJUST_DIAL_SCALE: DialScale = {
 	wholeSteps: true,
 };
 
+/**
+ * An image layer whose adjustments a control is changing: `matrix` colors
+ * it meanwhile, following the control without rendering React.
+ */
+export type LiveAdjustment = {
+	layerId: string;
+	matrix: DerivedValue<ColorMatrix>;
+};
+
 export type AdjustController = {
 	matrix: DerivedValue<ColorMatrix>;
 	chosen: AdjustmentKey;

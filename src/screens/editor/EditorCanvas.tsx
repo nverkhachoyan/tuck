@@ -42,7 +42,6 @@ import { SelectionBarFrame } from "./canvas/SelectionBarFrame";
 import { useCanvasCursor } from "./canvas/useCanvasCursor";
 import { useCanvasTap } from "./canvas/useCanvasTap";
 import { useCanvasZoom } from "./canvas/useCanvasZoom";
-import { useDialDragGesture } from "./canvas/useDialDragGesture";
 import { useLayerTransformGesture } from "./canvas/useLayerTransformGesture";
 import { useShiftHeld } from "./canvas/useShiftHeld";
 import { useToolStroke } from "./canvas/useToolStroke";
@@ -52,8 +51,10 @@ import {
 	type ViewFrame,
 	viewPointToDocument,
 } from "./canvas/viewport";
-import { EditorScene, type LiveAdjustment } from "./EditorScene";
+import { EditorScene } from "./EditorScene";
 import type { TextEditState } from "./editorMode";
+import type { LiveAdjustment } from "./tools/adjust/useAdjustTool";
+import { useDialDragGesture } from "./tools/adjust/useDialDragGesture";
 import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline";
 import { useFindTap } from "./tools/find/useFindTap";
 import { useKeepTextFocus } from "./tools/text/useKeepTextFocus";

@@ -1,7 +1,6 @@
 import { Fill, Group, Rect, rect, Shadow } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
-import type { ColorMatrix } from "@/model/adjustments";
 import type { EditorDocument } from "@/model/document";
 import type { Layer } from "@/model/layers/layer";
 import { CanvasBackground } from "@/render/LayerContent";
@@ -20,6 +19,7 @@ import {
 	useScreenPixels,
 } from "./canvas/SelectionOverlay";
 import type { TextEditState } from "./editorMode";
+import type { LiveAdjustment } from "./tools/adjust/useAdjustTool";
 import {
 	DetectionOutline,
 	type DetectionOverlayRegion,
@@ -35,15 +35,6 @@ const LIFT_OFFSET_PX = 8;
 const LIFT_BLUR_PX = 14;
 const EDGE_PX = 1;
 const showEdge = colorScheme === "dark";
-
-/**
- * An image layer whose adjustments a control is changing: `matrix` colors
- * it meanwhile, following the control without rendering React.
- */
-export type LiveAdjustment = {
-	layerId: string;
-	matrix: DerivedValue<ColorMatrix>;
-};
 
 type EditorSceneProps = {
 	document: EditorDocument;
