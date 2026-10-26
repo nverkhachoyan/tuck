@@ -37,13 +37,9 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import {
-	ContextBarContent,
-	DockContent,
-	EditorInspector,
-	EditorRail,
-	ToolTrays,
-} from "./EditorDock";
+import { ContextBarContent, DockContent, ToolTrays } from "./EditorDock";
+import { EditorInspector } from "./EditorInspector";
+import { EditorRail } from "./EditorRail";
 import { modeChrome, railChosenTool } from "./editorChrome";
 import { openTray, takesKeys } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";

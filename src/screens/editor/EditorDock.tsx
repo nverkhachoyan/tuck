@@ -1,25 +1,16 @@
-import type { ComponentProps, ReactNode, RefObject } from "react";
-import { StyleSheet, View } from "react-native";
+import type { ComponentProps, ReactNode } from "react";
 import type { Adjustments } from "@/model/adjustments";
-import { Surface } from "@/ui/Surface";
-import type { DockPanel, RailTool } from "./editorChrome";
+import type { DockPanel } from "./editorChrome";
 import {
 	type EditorModeAction,
 	type EditorModeState,
-	type EditorTool,
 	openTray,
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
-import {
-	Inspector,
-	type ModeActionProps,
-	PANEL_GAP,
-	PANEL_RADIUS,
-} from "./shell/Dock";
+import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
-import { mapStarters, type ToolStarters, ToolsPanel } from "./shell/ToolsPanel";
-import { AdjustInspector, AdjustPanel } from "./tools/adjust/AdjustPanel";
+import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import {
 	CutOutBar,
 	CutOutOptions,
@@ -27,13 +18,7 @@ import {
 } from "./tools/cutout/CutOutPanel";
 import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
-import {
-	FindBar,
-	FindInspector,
-	FindPanel,
-	FindTray,
-} from "./tools/find/FindPanel";
-import { LayersPanel, type layerListProps } from "./tools/layers/LayersPanel";
+import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
 import {
 	EffectGlyph,
 	RedactBar,
@@ -45,7 +30,6 @@ import {
 	TextColorPicker,
 	TextStylePanel,
 } from "./tools/text/TextStylePanel";
-import { RAIL_WIDTH } from "./useEditorLayout";
 import type { EditorTools } from "./useToolLifecycle";
 
 export type { EditorTools } from "./useToolLifecycle";
@@ -420,117 +404,3 @@ export function DockContent({
 			return idle;
 	}
 }
-
-/**
- * What the wide editor shows on the right when the window is tall enough, or
- * when Layers, Find, or Adjust has it open: the layers list, with Find or
- * Adjust above it.
- */
-export function EditorInspector({
-	panel,
-	find,
-	adjust,
-	adjustments,
-	onFindBack,
-	layerList,
-}: {
-	panel: DockPanel;
-	find: EditorTools["find"];
-	adjust: EditorTools["adjust"];
-	adjustments: Adjustments | undefined;
-	onFindBack: () => void;
-	layerList: ReturnType<typeof layerListProps>;
-}) {
-	const layers = <LayersPanel {...layerList} layout="inspector" open />;
-	return (
-		<Inspector>
-			{panel === "find" ? (
-				<FindInspector
-					state={find.state}
-					visibleIndices={find.visibleIndices}
-					selectedCount={find.selectedCount}
-					review={find.review}
-					onFind={find.find}
-					onRetry={find.retry}
-					onBack={onFindBack}
-					onStop={find.reset}
-					onSelectAll={find.selectAll}
-					onClear={find.clear}
-				>
-					{layers}
-				</FindInspector>
-			) : panel === "adjust" ? (
-				<AdjustInspector controller={adjust} adjustments={adjustments}>
-					{layers}
-				</AdjustInspector>
-			) : (
-				layers
-			)}
-		</Inspector>
-	);
-}
-
-/**
- * The editing tools on a wide screen, in a card floating along the left.
- * Picking a tool while another is open finishes the earlier one first.
- */
-export function EditorRail({
-	chosen,
-	addBusy,
-	hasImage,
-	startTool,
-	tool,
-	finishTool,
-	finishText,
-	stickerAnchor,
-}: {
-	chosen: RailTool | null;
-	addBusy: boolean;
-	hasImage: boolean;
-	startTool: ToolStarters;
-	tool: EditorTool | null;
-	finishTool: () => void;
-	finishText: () => void;
-	stickerAnchor?: RefObject<View | null>;
-}) {
-	// A tool picked from the rail while another is open finishes that one.
-	const fromRail = (start: () => void) => () => {
-		if (tool) finishTool();
-		finishText();
-		start();
-	};
-	return (
-		<View style={styles.railArea}>
-			<Surface resting style={styles.rail} contentStyle={styles.railContent}>
-				<ToolsPanel
-					vertical
-					tool={chosen}
-					addBusy={addBusy}
-					hasImage={hasImage}
-					startTool={mapStarters(startTool, fromRail)}
-					stickerAnchor={stickerAnchor}
-				/>
-			</Surface>
-		</View>
-	);
-}
-
-const styles = StyleSheet.create({
-	// The rail's card is as tall as its tools, and scrolls them only when the
-	// window is shorter.
-	railArea: {
-		position: "absolute",
-		top: PANEL_GAP,
-		left: PANEL_GAP,
-		bottom: PANEL_GAP,
-		width: RAIL_WIDTH,
-		pointerEvents: "box-none",
-	},
-	rail: {
-		flexShrink: 1,
-		borderRadius: PANEL_RADIUS,
-	},
-	railContent: {
-		flexShrink: 1,
-	},
-});
