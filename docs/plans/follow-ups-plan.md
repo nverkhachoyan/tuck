@@ -25,7 +25,7 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 
 * **The bar's fade geometry.** `rowEdges`, `leafEdges`, `fadeCut`, and `fadeCutLeft` in `shell/ContextBar.tsx` are pure and untested. Move them to `shell/barFade.ts`, with tests.
 * **`TextStylePanel`'s `ScrollRow`.** A simpler fade than the bar's, for the dock's font and swatch rows. Once the bar's geometry has its own file, the row can share it.
-* **Each tool's canvas input.** `canvasInput.ts`'s `inputRules` and `outlinedLayerFor` switch over every mode, and `EditorCanvas` calls each tool's gesture hook by name. Each tool could export its own rules and gesture, as `TOOL_VIEWS` does for its views. Tools can import `canvas/` now, so their types are in reach. This changes an API, so it wants a plan of its own.
+* **Each tool's canvas input.** `canvasInput.ts`'s `inputRules` and `outlinedLayerFor` switch over every mode, and `EditorCanvas` calls each tool's gesture hook by name. Each tool could export its own rules and gesture, as `TOOL_VIEWS` does for its views. Tools can import `canvas/` now, so their types are in reach. Planned in [canvas-input-plan.md](canvas-input-plan.md).
 * **Small ones.** Crop's straighten dial has its props written out twice, in `CropTool` and `DialStrip`; tidy that when Crop next changes. `EditorDock.tsx` holds `TOOL_VIEWS` and could be named for it. The wide window's `EyedropperHint` could move to an overlay both layouts share.
 
 ## 4. Smart selection
