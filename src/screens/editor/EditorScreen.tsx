@@ -35,34 +35,30 @@ import { Button } from "@/ui/Button";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { ScreenHeader } from "@/ui/ScreenHeader";
-import { Surface } from "@/ui/Surface";
 import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import { ContextBarContent, DockContent, ToolTrays } from "./EditorDock";
-import { modeChrome } from "./editorChrome";
+import {
+	ContextBarContent,
+	DockContent,
+	EditorInspector,
+	EditorRail,
+	ToolTrays,
+} from "./EditorDock";
+import { modeChrome, railChosenTool } from "./editorChrome";
 import { openTray, takesKeys } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
 import { EyedropperHint } from "./shell/ColorPicker";
-import {
-	Dock,
-	DockFooter,
-	Inspector,
-	type ModeActionProps,
-	PANEL_GAP,
-	PANEL_RADIUS,
-} from "./shell/Dock";
+import { Dock, DockFooter, type ModeActionProps } from "./shell/Dock";
 import { HeaderActions } from "./shell/HeaderActions";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight } from "./shell/ToolOptions";
-import { mapStarters, ToolsPanel } from "./shell/ToolsPanel";
-import { AdjustInspector } from "./tools/adjust/AdjustPanel";
+import { ToolsPanel } from "./shell/ToolsPanel";
 import { CropTool } from "./tools/crop/CropTool";
-import { FindInspector } from "./tools/find/FindPanel";
 import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
 import type { Sticker } from "./tools/stickers/bundledStickers";
@@ -76,7 +72,7 @@ import { TextEditor } from "./tools/text/TextEditor";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
-import { RAIL_INSET, RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
+import { RAIL_INSET, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
 import { useEditorTools } from "./useToolLifecycle";
@@ -423,12 +419,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		/>
 	);
 
-	// A tool picked from the rail while another is open finishes that one.
-	const fromRail = (start: () => void) => () => {
-		if (tool) finishTool();
-		tools.text.finish();
-		start();
-	};
 	const hasImage = targetImage !== null;
 	// What the dock offers for the selected layer, by its kind.
 	const layerActions = selectedLayer && {
@@ -630,30 +620,21 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					)}
 					{layersBeside && !wide && layersPanel}
 					{wide && (
-						<View style={styles.railArea}>
-							<Surface
-								resting
-								style={styles.rail}
-								contentStyle={styles.railContent}
-							>
-								<ToolsPanel
-									vertical
-									tool={
-										editingText
-											? "text"
-											: cropping
-												? "crop"
-												: stickersOpen
-													? "sticker"
-													: tool
-									}
-									addBusy={addBusy}
-									hasImage={hasImage}
-									startTool={mapStarters(startTool, fromRail)}
-									stickerAnchor={stickerAnchor}
-								/>
-							</Surface>
-						</View>
+						<EditorRail
+							chosen={railChosenTool({
+								tool,
+								editingText,
+								cropping,
+								stickersOpen,
+							})}
+							addBusy={addBusy}
+							hasImage={hasImage}
+							startTool={startTool}
+							tool={tool}
+							finishTool={finishTool}
+							finishText={tools.text.finish}
+							stickerAnchor={stickerAnchor}
+						/>
 					)}
 
 					{/* After the tool's options, so taps on the dock reach it rather
@@ -661,33 +642,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				    when the window is tall enough or Layers, Find, or Adjust
 				    has it open, is the layers, with Find or Adjust above them. */}
 					{inspector ? (
-						<Inspector>
-							{panel === "find" ? (
-								<FindInspector
-									state={tools.find.state}
-									visibleIndices={tools.find.visibleIndices}
-									selectedCount={tools.find.selectedCount}
-									review={tools.find.review}
-									onFind={tools.find.find}
-									onRetry={tools.find.retry}
-									onBack={cancel}
-									onStop={tools.find.reset}
-									onSelectAll={tools.find.selectAll}
-									onClear={tools.find.clear}
-								>
-									<LayersPanel {...layerList} layout="inspector" open />
-								</FindInspector>
-							) : panel === "adjust" ? (
-								<AdjustInspector
-									controller={tools.adjust}
-									adjustments={adjustedLayer?.adjustments}
-								>
-									<LayersPanel {...layerList} layout="inspector" open />
-								</AdjustInspector>
-							) : (
-								<LayersPanel {...layerList} layout="inspector" open />
-							)}
-						</Inspector>
+						<EditorInspector
+							panel={panel}
+							find={tools.find}
+							adjust={tools.adjust}
+							adjustments={adjustedLayer?.adjustments}
+							onFindBack={cancel}
+							layerList={layerList}
+						/>
 					) : !wide ? (
 						<Dock
 							panel={panel}
@@ -776,23 +738,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-	},
-	// The rail's card is as tall as its tools, and scrolls them only when the
-	// window is shorter.
-	railArea: {
-		position: "absolute",
-		top: PANEL_GAP,
-		left: PANEL_GAP,
-		bottom: PANEL_GAP,
-		width: RAIL_WIDTH,
-		pointerEvents: "box-none",
-	},
-	rail: {
-		flexShrink: 1,
-		borderRadius: PANEL_RADIUS,
-	},
-	railContent: {
-		flexShrink: 1,
 	},
 	status: {
 		flex: 1,

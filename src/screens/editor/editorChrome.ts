@@ -99,3 +99,33 @@ export function modeChrome({
 	}
 	return chrome("idle", null);
 }
+
+// A tool the wide editor's rail highlights as chosen.
+export type RailTool = EditorTool | "text" | "crop" | "sticker";
+
+export type RailChosenToolInput = {
+	tool: EditorTool | null;
+	editingText: boolean;
+	cropping: boolean;
+	stickersOpen: boolean;
+};
+
+/**
+ * Which tool the wide rail highlights as chosen:
+ * - `editingText`: text being typed, which marks Text.
+ * - `cropping`: the crop screen, which marks Crop.
+ * - `stickersOpen`: the sticker popover, which marks Sticker.
+ * - `tool`: the open tool (Find marks Redact through its entry).
+ * When none is active, no tool is marked.
+ */
+export function railChosenTool({
+	tool,
+	editingText,
+	cropping,
+	stickersOpen,
+}: RailChosenToolInput): RailTool | null {
+	if (editingText) return "text";
+	if (cropping) return "crop";
+	if (stickersOpen) return "sticker";
+	return tool;
+}

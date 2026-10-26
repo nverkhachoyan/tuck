@@ -5,6 +5,7 @@ import {
 	type DockPanel,
 	type ModeChromeInput,
 	modeChrome,
+	railChosenTool,
 } from "../editorChrome.ts";
 import type { EditorTool } from "../editorMode.ts";
 
@@ -149,5 +150,72 @@ describe("modeChrome", () => {
 			// The layouts differ only in where the panel goes.
 			assert.deepEqual({ ...wide, inBar: false }, phone, panel);
 		}
+	});
+});
+
+describe("railChosenTool", () => {
+	const idle = {
+		tool: null,
+		editingText: false,
+		cropping: false,
+		stickersOpen: false,
+	};
+
+	test("with nothing active, no tool is chosen", () => {
+		assert.equal(railChosenTool(idle), null);
+	});
+
+	test("each tool marks its own button", () => {
+		for (const [tool] of TOOLS) {
+			assert.equal(railChosenTool({ ...idle, tool }), tool);
+		}
+	});
+
+	test("text being typed marks Text", () => {
+		assert.equal(railChosenTool({ ...idle, editingText: true }), "text");
+	});
+
+	test("cropping marks Crop", () => {
+		assert.equal(railChosenTool({ ...idle, cropping: true }), "crop");
+	});
+
+	test("stickers open marks Sticker", () => {
+		assert.equal(railChosenTool({ ...idle, stickersOpen: true }), "sticker");
+	});
+
+	test("text being typed comes before crop, stickers, and tools", () => {
+		assert.equal(
+			railChosenTool({
+				tool: "draw",
+				editingText: true,
+				cropping: true,
+				stickersOpen: true,
+			}),
+			"text",
+		);
+	});
+
+	test("crop comes before stickers and tools", () => {
+		assert.equal(
+			railChosenTool({
+				tool: "draw",
+				editingText: false,
+				cropping: true,
+				stickersOpen: true,
+			}),
+			"crop",
+		);
+	});
+
+	test("stickers come before tools", () => {
+		assert.equal(
+			railChosenTool({
+				tool: "draw",
+				editingText: false,
+				cropping: false,
+				stickersOpen: true,
+			}),
+			"sticker",
+		);
 	});
 });
