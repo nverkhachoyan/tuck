@@ -114,7 +114,7 @@ Commit: `refactor: move find's review zoom into the find tool`
 
 * `docs/architecture.md`: in the editor root's line, add `editorChrome` and say that `useToolLifecycle` builds the tools too (`useEditorTools`).
 * AGENTS.md's editor-root description under Project Structure: the same.
-* Count `ScreenContent`'s lines, and note here, under the steps, what it came to.
+* Count `ScreenContent`'s lines, and note here, under the steps, what it came to: `ScreenContent` came to 563 lines (from 727, lines 127–689), and `EditorScreen.tsx` as a whole came to 719 lines (from 929).
 
 Commit: `docs: describe the editor's tools hook and chrome`
 
