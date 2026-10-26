@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import type { EditorDocument } from "@/model/document";
-import type { Point, Rect, Size } from "@/model/geometry";
+import type { Point, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
-import type { ShapePlacement } from "@/model/layers/shape";
 import { sampleColor } from "@/render/renderDocument";
 import type { EditorStoreActions } from "@/store/editorSlice";
+import type { ToolStroke } from "./canvas/canvasInput";
 import { canvasInputFor, canvasToolFor } from "./canvasInputFor";
 import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
 import { isCustomColor } from "./shell/ColorSwatches";
@@ -113,35 +113,9 @@ export function useCanvasInput({
 		[canvasTool, tool, findImageId, onFindToggle, adjustDrag, editingText],
 	);
 
-	const onPaintStroke = (points: number[]) => {
-		if (canvasTool?.type === "draw") {
-			actions.drawStroke({ ...canvasTool.brush, points });
-		} else if (canvasTool?.type === "redactBrush") {
-			actions.paintRedaction(
-				{ ...canvasTool.brush, points },
-				canvasTool.effect,
-			);
-		} else if (canvasTool?.type === "cutBrush") {
-			actions.paintMask(canvasTool.layerId, { ...canvasTool.brush, points });
-		}
-	};
-	const onDrawBox = (rect: Rect) => {
-		if (canvasTool?.type === "redactBox") {
-			actions.addRedactionBox(rect, canvasTool.effect);
-		}
-	};
-	const onDrawShape = (placement: ShapePlacement) => {
-		if (canvasTool?.type === "drawShape") {
-			actions.addShape(canvasTool.shape, placement, canvasTool.style);
-		}
-	};
 	// A picked color becomes the custom color too, unless a swatch already
 	// has it. Where the canvas shows nothing, it keeps waiting for a tap.
-	const onPickPoint = async (point: Point) => {
-		if (canvasTool?.type === "pickSubject") {
-			cut.pickSubject(point);
-			return;
-		}
+	const pickColor = async (point: Point) => {
 		const target = eyedropper;
 		if (!target) return;
 		const color = await sampleColor(document, point).catch(() => null);
@@ -150,6 +124,37 @@ export function useCanvasInput({
 		if (isCustomColor(color)) onCustomColor(color);
 		dispatchMode({ type: "stopEyedropper", eyedropper: target });
 	};
+	const finishStroke = (stroke: ToolStroke) => {
+		switch (stroke.type) {
+			case "draw":
+				actions.drawStroke({ ...stroke.brush, points: stroke.points });
+				break;
+			case "redactBrush":
+				actions.paintRedaction(
+					{ ...stroke.brush, points: stroke.points },
+					stroke.effect,
+				);
+				break;
+			case "cutBrush":
+				actions.paintMask(stroke.layerId, {
+					...stroke.brush,
+					points: stroke.points,
+				});
+				break;
+			case "redactBox":
+				actions.addRedactionBox(stroke.rect, stroke.effect);
+				break;
+			case "drawShape":
+				actions.addShape(stroke.shape, stroke.placement, stroke.style);
+				break;
+			case "pickColor":
+				void pickColor(stroke.point);
+				break;
+			case "pickSubject":
+				cut.pickSubject(stroke.point);
+				break;
+		}
+	};
 
-	return { input, onPaintStroke, onDrawBox, onDrawShape, onPickPoint };
+	return { input, onToolStroke: finishStroke };
 }

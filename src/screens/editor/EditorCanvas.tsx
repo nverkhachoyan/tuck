@@ -15,7 +15,6 @@ import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Box, Point, Rect, Transform } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
-import type { ShapePlacement } from "@/model/layers/shape";
 import { type TextSelection, withPlaceholder } from "@/model/textEditing";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
@@ -25,6 +24,7 @@ import {
 	cutImageId,
 	inputRules,
 	outlinedLayerFor,
+	type ToolStroke,
 } from "./canvas/canvasInput";
 import { FitButton } from "./canvas/FitButton";
 import { handleUnder } from "./canvas/handleMetrics";
@@ -110,15 +110,10 @@ type EditorCanvasProps = {
 	) => void;
 	// Moves a layer by a document-space offset (see `nudgeSelection`).
 	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
-	// A finished stroke's points, in document space.
-	onPaintStroke?: (points: number[]) => void;
-	// A finished redaction box, in document space.
-	onDrawBox?: (rect: Rect) => void;
-	// A finished shape, in document space.
-	onDrawShape?: (placement: ShapePlacement) => void;
-	// Where a tap, or a drag's end, picks a color, or where a tap picks the
-	// subject to cut out, in document space.
-	onPickPoint?: (point: Point) => void;
+	// A finished stroke with a tool, in document space: a brush's points, a
+	// redaction's box, a shape, or where a tap, or a drag's end, picks a color
+	// or the subject to cut out.
+	onToolStroke?: (stroke: ToolStroke) => void;
 	// A canvas-tool gesture has finished. A tool can use this to put away its
 	// options after the same gesture has drawn, rather than blocking the draw.
 	onToolInteractionEnd?: () => void;
@@ -177,7 +172,8 @@ export type EditorCanvasHandle = {
  * `layerTargets`, which the UI thread shares so a drag can pick its layer
  * there. With a mouse, the cursor is `useCanvasCursor`.
  *
- * A tool's stroke is `useToolStroke`. The selection then holds still, and
+ * A tool's stroke is `useToolStroke`, handed to `onToolStroke` once it's
+ * finished. The selection then holds still, and
  * only a redaction's or a shape's is outlined, to show what the tool's style
  * changes. Dragging out a box or a shape, a tap picks the one to change, or
  * none, and the one picked, or just drawn, shows its handles: a drag from on
@@ -205,10 +201,7 @@ export function EditorCanvas({
 	onCommitTransform,
 	onResizeBox,
 	onNudgeLayer,
-	onPaintStroke,
-	onDrawBox,
-	onDrawShape,
-	onPickPoint,
+	onToolStroke,
 	onToolInteractionEnd,
 	onTapAway,
 	adjusting = null,
@@ -486,10 +479,7 @@ export function EditorCanvas({
 		selectedLayer,
 		lookups,
 		standsAside: selectionDrag?.onSelection,
-		onPaintStroke,
-		onDrawBox,
-		onDrawShape,
-		onPickPoint,
+		onToolStroke,
 		onSelectLayer,
 		onToolInteractionEnd,
 	});

@@ -1,14 +1,10 @@
 import {
 	type Point,
-	type Rect,
 	rectFromCorners,
 	type Size,
 } from "../../../model/geometry.ts";
-import {
-	isLineShape,
-	type ShapePlacement,
-} from "../../../model/layers/shape.ts";
-import type { CanvasTool } from "./canvasInput.ts";
+import { isLineShape } from "../../../model/layers/shape.ts";
+import type { CanvasTool, ToolStroke } from "./canvasInput.ts";
 import { shapeFromDrag } from "./shapeDrag.ts";
 
 // A box or a line dragged no further than this either way, in screen
@@ -17,13 +13,12 @@ export const TAP_SLOP_PX = 6;
 
 /** What a finished stroke with a tool asks for. */
 export type StrokeIntent =
-	// The color under the stroke's end, or the subject under a tap.
-	| { type: "pick"; point: Point }
+	// What the stroke made with its tool, for the editor: a brush's points, a
+	// box, a shape, the color under the stroke's end, or the subject under a
+	// tap.
+	| { type: "finish"; stroke: ToolStroke }
 	// A tap off the document, which puts the tool down.
 	| { type: "tapAway"; point: Point }
-	| { type: "paint" }
-	| { type: "box"; rect: Rect }
-	| { type: "shape"; placement: ShapePlacement }
 	// A tap on the document, which selects the layer of `kind` under it, a
 	// box to restyle, or else nothing.
 	| { type: "select"; point: Point; kind: "redaction" | "shape" }
@@ -42,7 +37,9 @@ export function strokeIntent(
 	documentSize: Size,
 ): StrokeIntent {
 	const end = { x: points[points.length - 2], y: points[points.length - 1] };
-	if (tool.type === "pickColor") return { type: "pick", point: end };
+	if (tool.type === "pickColor") {
+		return { type: "finish", stroke: { ...tool, point: end } };
+	}
 	const start = { x: points[0], y: points[1] };
 	if (
 		!insideDocument(documentSize, start) &&
@@ -52,11 +49,11 @@ export function strokeIntent(
 	}
 	if (tool.type === "pickSubject") {
 		return staysWithin(points, TAP_SLOP_PX / scale)
-			? { type: "pick", point: start }
+			? { type: "finish", stroke: { ...tool, point: start } }
 			: { type: "none" };
 	}
 	if (tool.type !== "redactBox" && tool.type !== "drawShape") {
-		return { type: "paint" };
+		return { type: "finish", stroke: { ...tool, points } };
 	}
 	const line = tool.type === "drawShape" && isLineShape(tool.shape);
 	const box = rectFromCorners(start, end);
@@ -67,9 +64,11 @@ export function strokeIntent(
 	if (!line && Math.min(box.width, box.height) * scale < TAP_SLOP_PX) {
 		return { type: "none" };
 	}
-	return tool.type === "redactBox"
-		? { type: "box", rect: box }
-		: { type: "shape", placement: shapeFromDrag(tool.shape, start, end) };
+	const stroke: ToolStroke =
+		tool.type === "redactBox"
+			? { ...tool, rect: box }
+			: { ...tool, placement: shapeFromDrag(tool.shape, start, end) };
+	return { type: "finish", stroke };
 }
 
 export function insideDocument(size: Size, point: Point): boolean {

@@ -25,15 +25,18 @@ describe("strokeIntent", () => {
 	test("picks the color under the stroke's end", () => {
 		assert.deepEqual(
 			strokeIntent({ type: "pickColor" }, [10, 10, 30, 40], 1, size),
-			{ type: "pick", point: { x: 30, y: 40 } },
+			{
+				type: "finish",
+				stroke: { type: "pickColor", point: { x: 30, y: 40 } },
+			},
 		);
 	});
 
 	test("picks the subject under a tap, and leaves a drag be", () => {
 		const pick: CanvasTool = { type: "pickSubject", layerId: "photo" };
 		assert.deepEqual(strokeIntent(pick, [100, 200, 103, 202], 1, size), {
-			type: "pick",
-			point: { x: 100, y: 200 },
+			type: "finish",
+			stroke: { ...pick, point: { x: 100, y: 200 } },
 		});
 		assert.deepEqual(strokeIntent(pick, [100, 200, 300, 400], 1, size), {
 			type: "none",
@@ -44,7 +47,8 @@ describe("strokeIntent", () => {
 			brush: { type: "eraser", width: 30 },
 		};
 		assert.deepEqual(strokeIntent(cut, [100, 200], 1, size), {
-			type: "paint",
+			type: "finish",
+			stroke: { ...cut, points: [100, 200] },
 		});
 	});
 
@@ -59,17 +63,19 @@ describe("strokeIntent", () => {
 
 	test("paints a brush's strokes, even from off the document", () => {
 		assert.deepEqual(strokeIntent(pen, [10, 10, 100, 100], 1, size), {
-			type: "paint",
+			type: "finish",
+			stroke: { ...pen, points: [10, 10, 100, 100] },
 		});
 		assert.deepEqual(strokeIntent(brush, [-20, 50, 100, 50], 1, size), {
-			type: "paint",
+			type: "finish",
+			stroke: { ...brush, points: [-20, 50, 100, 50] },
 		});
 	});
 
 	test("makes a box between the drag's ends, either way round", () => {
 		assert.deepEqual(strokeIntent(box, [300, 200, 100, 150], 1, size), {
-			type: "box",
-			rect: { x: 100, y: 150, width: 200, height: 50 },
+			type: "finish",
+			stroke: { ...box, rect: { x: 100, y: 150, width: 200, height: 50 } },
 		});
 	});
 
@@ -77,8 +83,11 @@ describe("strokeIntent", () => {
 		const start = { x: 100, y: 100 };
 		const end = { x: 300, y: 250 };
 		assert.deepEqual(strokeIntent(rectangle, [100, 100, 300, 250], 1, size), {
-			type: "shape",
-			placement: shapeFromDrag("rectangle", start, end),
+			type: "finish",
+			stroke: {
+				...rectangle,
+				placement: shapeFromDrag("rectangle", start, end),
+			},
 		});
 	});
 
@@ -86,7 +95,7 @@ describe("strokeIntent", () => {
 		const flat = [100, 100, 300, 103];
 		assert.deepEqual(strokeIntent(box, flat, 1, size), { type: "none" });
 		assert.deepEqual(strokeIntent(rectangle, flat, 1, size), { type: "none" });
-		assert.equal(strokeIntent(arrow, flat, 1, size).type, "shape");
+		assert.equal(strokeIntent(arrow, flat, 1, size).type, "finish");
 	});
 
 	test("takes a short drag as a tap that selects a box to restyle", () => {
@@ -104,7 +113,7 @@ describe("strokeIntent", () => {
 
 	test("measures the tap slop on screen, so zoomed out a drag is a tap", () => {
 		const drag = [100, 100, 140, 130];
-		assert.equal(strokeIntent(box, drag, 1, size).type, "box");
+		assert.equal(strokeIntent(box, drag, 1, size).type, "finish");
 		assert.equal(strokeIntent(box, drag, 0.1, size).type, "select");
 	});
 });

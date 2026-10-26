@@ -1,4 +1,4 @@
-import type { Point } from "../../../model/geometry.ts";
+import type { Point, Rect } from "../../../model/geometry.ts";
 import {
 	type Brush,
 	layerBlend,
@@ -7,7 +7,11 @@ import {
 import type { CutStroke } from "../../../model/layers/image.ts";
 import type { Layer } from "../../../model/layers/layer.ts";
 import type { RedactionEffect } from "../../../model/layers/redaction.ts";
-import type { ShapeKind, ShapeStyle } from "../../../model/layers/shape.ts";
+import type {
+	ShapeKind,
+	ShapePlacement,
+	ShapeStyle,
+} from "../../../model/layers/shape.ts";
 import type { MaskStroke } from "../../../model/strokes.ts";
 import type { DialDrag } from "../shell/dialDrag.ts";
 import type { Handle } from "./handleGeometry.ts";
@@ -30,6 +34,23 @@ export type CanvasTool =
 	  }
 	| { type: "cutBrush"; layerId: string; brush: Omit<CutStroke, "points"> }
 	| { type: "pickSubject"; layerId: string };
+
+/**
+ * A finished stroke with a tool: the tool, with what the stroke made, in
+ * document space: a brush's points, a redaction's box, a shape's placement,
+ * or the point picked.
+ */
+export type ToolStroke =
+	| (Extract<CanvasTool, { type: "draw" | "redactBrush" | "cutBrush" }> & {
+			points: number[];
+	  })
+	| (Extract<CanvasTool, { type: "redactBox" }> & { rect: Rect })
+	| (Extract<CanvasTool, { type: "drawShape" }> & {
+			placement: ShapePlacement;
+	  })
+	| (Extract<CanvasTool, { type: "pickColor" | "pickSubject" }> & {
+			point: Point;
+	  });
 
 /**
  * What input on the canvas does, one at a time: select and transform

@@ -1,10 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSharedValue } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
-import type { Point, Rect, Size } from "@/model/geometry";
+import type { Size } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
-import type { ShapePlacement } from "@/model/layers/shape";
-import { type CanvasLookups, type CanvasTool, canAddTo } from "./canvasInput";
+import {
+	type CanvasLookups,
+	type CanvasTool,
+	canAddTo,
+	type ToolStroke,
+} from "./canvasInput";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import type { LiveStroke } from "./LiveStrokeOverlay";
 import { strokeIntent } from "./strokeIntent";
@@ -33,10 +37,7 @@ export function useToolStroke({
 	selectedLayer,
 	lookups,
 	standsAside,
-	onPaintStroke,
-	onDrawBox,
-	onDrawShape,
-	onPickPoint,
+	onToolStroke,
 	onSelectLayer,
 	onToolInteractionEnd,
 }: {
@@ -49,10 +50,7 @@ export function useToolStroke({
 	selectedLayer: Layer | undefined;
 	lookups: CanvasLookups;
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
-	onPaintStroke?: (points: number[]) => void;
-	onDrawBox?: (rect: Rect) => void;
-	onDrawShape?: (placement: ShapePlacement) => void;
-	onPickPoint?: (point: Point) => void;
+	onToolStroke?: (stroke: ToolStroke) => void;
 	onSelectLayer?: (id: string | null) => void;
 	onToolInteractionEnd?: () => void;
 }) {
@@ -66,20 +64,11 @@ export function useToolStroke({
 			onToolInteractionEnd?.();
 			const intent = strokeIntent(tool, points, scale, documentSize);
 			switch (intent.type) {
-				case "pick":
-					onPickPoint?.(intent.point);
+				case "finish":
+					onToolStroke?.(intent.stroke);
 					break;
 				case "tapAway":
 					lookups.tapAway(intent.point);
-					break;
-				case "paint":
-					onPaintStroke?.(points);
-					break;
-				case "box":
-					onDrawBox?.(intent.rect);
-					break;
-				case "shape":
-					onDrawShape?.(intent.placement);
 					break;
 				case "select": {
 					const hit = findLayerAt(targets, intent.point);
@@ -93,10 +82,7 @@ export function useToolStroke({
 		},
 		[
 			tool,
-			onPaintStroke,
-			onDrawBox,
-			onDrawShape,
-			onPickPoint,
+			onToolStroke,
 			onToolInteractionEnd,
 			onSelectLayer,
 			lookups,
