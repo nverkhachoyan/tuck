@@ -4,7 +4,7 @@ import type { Point, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { sampleColor } from "@/render/renderDocument";
 import type { EditorStoreActions } from "@/store/editorSlice";
-import type { ToolStroke } from "./canvas/canvasInput";
+import type { ToolStroke } from "./canvas/canvasTool";
 import { canvasInputFor, canvasToolFor } from "./canvasInputFor";
 import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
 import { isCustomColor } from "./shell/ColorSwatches";

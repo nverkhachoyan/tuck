@@ -8,7 +8,7 @@ import {
 	type ShapeStyle,
 	shapeKinds,
 } from "../../../../model/layers/shape.ts";
-import type { CanvasTool } from "../../canvas/canvasInput.ts";
+import type { CanvasTool } from "../../canvas/canvasTool.ts";
 
 export type DrawTool = "pen" | PenTip | "shape" | "eraser";
 export type BrushTool = "pen" | PenTip;

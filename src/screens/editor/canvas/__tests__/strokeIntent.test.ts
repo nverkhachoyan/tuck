@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { CanvasTool } from "../canvasInput.ts";
+import type { CanvasTool } from "../canvasTool.ts";
 import { shapeFromDrag } from "../shapeDrag.ts";
 import { strokeIntent } from "../strokeIntent.ts";
 

@@ -4,7 +4,7 @@ import {
 	type Size,
 } from "../../../model/geometry.ts";
 import { isLineShape } from "../../../model/layers/shape.ts";
-import type { CanvasTool, ToolStroke } from "./canvasInput.ts";
+import type { CanvasTool, ToolStroke } from "./canvasTool.ts";
 import { shapeFromDrag } from "./shapeDrag.ts";
 
 // A box or a line dragged no further than this either way, in screen

@@ -2,7 +2,7 @@ import { isHexColor } from "../../../../lib/color.ts";
 import type { Size } from "../../../../model/geometry.ts";
 import type { RedactionEffect } from "../../../../model/layers/redaction.ts";
 import type { MaskStroke } from "../../../../model/strokes.ts";
-import type { CanvasTool } from "../../canvas/canvasInput.ts";
+import type { CanvasTool } from "../../canvas/canvasTool.ts";
 
 export type RedactTool = "box" | "brush" | "eraser";
 

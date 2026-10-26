@@ -1,11 +1,12 @@
 import { useCallback } from "react";
 import type { EditorDocument } from "@/model/document";
 import { hitTestBox, type Point, type Size } from "@/model/geometry";
-import type { CanvasInput, CanvasLookups } from "../../canvas/canvasInput";
+import type { CanvasLookups } from "../../canvas/canvasTool";
 import { findLayerAt, type LayerTarget } from "../../canvas/hitTest";
 import { layerBounds } from "../../canvas/layerBounds";
 import { insideDocument } from "../../canvas/strokeIntent";
 import { useCanvasTap } from "../../canvas/useCanvasTap";
+import type { CanvasInput } from "../../canvasInputFor";
 import type { DetectionOverlayRegion } from "./DetectionOutline";
 import { detectionAt } from "./findResults";
 

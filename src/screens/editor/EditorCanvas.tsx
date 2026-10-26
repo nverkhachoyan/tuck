@@ -19,13 +19,7 @@ import { type TextSelection, withPlaceholder } from "@/model/textEditing";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
 import { cursorStyle } from "./canvas/canvasCursor";
-import {
-	type CanvasInput,
-	cutImageId,
-	inputRules,
-	outlinedLayerFor,
-	type ToolStroke,
-} from "./canvas/canvasInput";
+import { cutImageId, type ToolStroke } from "./canvas/canvasTool";
 import { FitButton } from "./canvas/FitButton";
 import { handleUnder } from "./canvas/handleMetrics";
 import { findLayerAt, hitsLayer, type LayerTarget } from "./canvas/hitTest";
@@ -51,6 +45,11 @@ import {
 	type ViewFrame,
 	viewPointToDocument,
 } from "./canvas/viewport";
+import {
+	type CanvasInput,
+	inputRules,
+	outlinedLayerFor,
+} from "./canvasInputFor";
 import { EditorScene } from "./EditorScene";
 import type { TextEditState } from "./editorMode";
 import type { LiveAdjustment } from "./tools/adjust/useAdjustTool";

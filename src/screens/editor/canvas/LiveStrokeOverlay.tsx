@@ -40,7 +40,7 @@ import {
 	toTransformList,
 } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";
-import type { CanvasTool } from "./canvasInput";
+import type { CanvasTool } from "./canvasTool";
 import { LiveRedaction, LiveShape } from "./LiveLayerContent";
 import type { LiveTransform } from "./liveTransform";
 import { SELECTION_STROKE_PX, useScreenPixels } from "./SelectionOverlay";

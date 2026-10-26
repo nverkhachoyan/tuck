@@ -8,7 +8,7 @@ import {
 	type CanvasTool,
 	canAddTo,
 	type ToolStroke,
-} from "./canvasInput";
+} from "./canvasTool";
 import { findLayerAt, type LayerTarget } from "./hitTest";
 import type { LiveStroke } from "./LiveStrokeOverlay";
 import { strokeIntent } from "./strokeIntent";
