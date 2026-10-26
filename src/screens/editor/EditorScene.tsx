@@ -14,14 +14,16 @@ import {
 } from "./canvas/LiveStrokeOverlay";
 import type { LiveTransform } from "./canvas/liveTransform";
 import {
-	DetectionOutline,
-	type DetectionOverlayRegion,
 	SelectionHandles,
 	SelectionOutline,
 	SnapGuides,
 	useScreenPixels,
 } from "./canvas/SelectionOverlay";
 import type { TextEditState } from "./editorMode";
+import {
+	DetectionOutline,
+	type DetectionOverlayRegion,
+} from "./tools/find/DetectionOutline";
 import { EditedTextView } from "./tools/text/EditedTextView";
 
 // The canvas's shadows on the table around it, as a print's: a tight one

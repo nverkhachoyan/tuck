@@ -1,12 +1,13 @@
 import { useCallback } from "react";
 import type { EditorDocument } from "@/model/document";
 import { hitTestBox, type Point, type Size } from "@/model/geometry";
-import type { CanvasInput, CanvasLookups } from "./canvasInput";
-import { detectionAt, findLayerAt, type LayerTarget } from "./hitTest";
-import { layerBounds } from "./layerBounds";
-import type { DetectionOverlayRegion } from "./SelectionOverlay";
-import { insideDocument } from "./strokeIntent";
-import { useCanvasTap } from "./useCanvasTap";
+import type { CanvasInput, CanvasLookups } from "../../canvas/canvasInput";
+import { findLayerAt, type LayerTarget } from "../../canvas/hitTest";
+import { layerBounds } from "../../canvas/layerBounds";
+import { insideDocument } from "../../canvas/strokeIntent";
+import { useCanvasTap } from "../../canvas/useCanvasTap";
+import type { DetectionOverlayRegion } from "./DetectionOutline";
+import { detectionAt } from "./findResults";
 
 /**
  * A tap while finding. One on a found region toggles it. A miss on the

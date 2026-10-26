@@ -1,4 +1,9 @@
 import type { EditorDocument } from "../../../../model/document.ts";
+import {
+	hitTestBox,
+	type Point,
+	type Transform,
+} from "../../../../model/geometry.ts";
 import type { ImageLayer } from "../../../../model/layers/image.ts";
 import type { RedactionBoxPlacement } from "../../../../model/layers/redaction.ts";
 import type { DetectionFeature } from "../../detection/imageDetection.ts";
@@ -94,4 +99,28 @@ export function readingOrder(
 	return rows.flatMap((row) =>
 		row.sort((a, b) => regions[a].transform.x - regions[b].transform.x),
 	);
+}
+
+/**
+ * The detected region under a document-space point, each padded by
+ * `padding` so a small one stays tappable, and the smallest where padded
+ * regions overlap. Null when there's none.
+ */
+export function detectionAt<
+	Region extends { transform: Transform; width: number; height: number },
+>(regions: readonly Region[], point: Point, padding: number): Region | null {
+	let hit: Region | null = null;
+	for (const region of regions) {
+		const box = {
+			halfWidth: region.width / 2 + padding,
+			halfHeight: region.height / 2 + padding,
+		};
+		if (
+			hitTestBox(region.transform, box, point) &&
+			(!hit || region.width * region.height < hit.width * hit.height)
+		) {
+			hit = region;
+		}
+	}
+	return hit;
 }

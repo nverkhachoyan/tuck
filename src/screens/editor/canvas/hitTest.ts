@@ -74,27 +74,3 @@ export function hitsLayer(
 	const target = targets.find((candidate) => candidate.id === id);
 	return target !== undefined && findLayerAt([target], point) !== null;
 }
-
-/**
- * The detected region under a document-space point, each padded by
- * `padding` so a small one stays tappable, and the smallest where padded
- * regions overlap. Null when there's none.
- */
-export function detectionAt<
-	Region extends { transform: Transform; width: number; height: number },
->(regions: readonly Region[], point: Point, padding: number): Region | null {
-	let hit: Region | null = null;
-	for (const region of regions) {
-		const box = {
-			halfWidth: region.width / 2 + padding,
-			halfHeight: region.height / 2 + padding,
-		};
-		if (
-			hitTestBox(region.transform, box, point) &&
-			(!hit || region.width * region.height < hit.width * hit.height)
-		) {
-			hit = region;
-		}
-	}
-	return hit;
-}
