@@ -1,60 +1,64 @@
 import type { ComponentProps, ReactNode } from "react";
 import type { Adjustments } from "@/model/adjustments";
+import type { DockPanel } from "./editorChrome";
 import {
 	type EditorModeAction,
 	type EditorModeState,
-	type EditorTool,
 	openTray,
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
+import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
-import type { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import {
 	CutOutBar,
 	CutOutOptions,
 	CutOutPanel,
 } from "./tools/cutout/CutOutPanel";
-import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
-import type { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
-import type { useFindTool } from "./tools/find/useFindTool";
-import { layerKindName } from "./tools/layers/LayerRow";
 import {
 	EffectGlyph,
 	RedactBar,
 	RedactOptions,
 	RedactPanel,
 } from "./tools/redact/RedactPanel";
-import type { useRedactTool } from "./tools/redact/useRedactTool";
 import {
 	TextBar,
 	TextColorPicker,
 	TextStylePanel,
 } from "./tools/text/TextStylePanel";
-import type { useTextEditing } from "./tools/text/useTextEditing";
+import type { EditorTools } from "./useToolLifecycle";
 
-// What the dock shows: a tool's panel, text's style, the selected layer's
-// actions, or, with nothing selected, the tools or the layers.
-export type DockPanel = EditorTool | "text" | "layer" | "idle";
-
-export type EditorTools = {
-	draw: ReturnType<typeof useDrawTool>;
-	redact: ReturnType<typeof useRedactTool>;
-	find: ReturnType<typeof useFindTool>;
-	cut: ReturnType<typeof useCutOutTool>;
-	adjust: ReturnType<typeof useAdjustTool>;
-	text: ReturnType<typeof useTextEditing>;
-};
+export type { EditorTools } from "./useToolLifecycle";
 
 type ModeProps = {
 	dispatchMode: (action: EditorModeAction) => void;
 	tools: EditorTools;
 	customColor: string | null;
 };
+
+/**
+ * For a tray or bar whose colors go to `apply`: a color from its picker, which
+ * becomes the custom color too, and the eyedropper, for a color from the
+ * canvas.
+ */
+function colorTarget(
+	apply: (color: string) => void,
+	onCustomColor: (color: string) => void,
+	dispatchMode: (action: EditorModeAction) => void,
+) {
+	return {
+		onPickCustom: (color: string) => {
+			apply(color);
+			onCustomColor(color);
+		},
+		onEyedropper: () =>
+			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
+	};
+}
 
 /**
  * What opens over the canvas, above the dock: the tool's tray, Find's
@@ -79,17 +83,6 @@ export function ToolTrays({
 	const { styledText } = text;
 	const tray = openTray(mode);
 	const closeTray = () => dispatchMode({ type: "closeToolOptions" });
-	// For a tray whose colors go to `apply`: a color from its picker, which
-	// becomes the custom color too, and the eyedropper, for a color from the
-	// canvas.
-	const colorTarget = (apply: (color: string) => void) => ({
-		onPickCustom: (color: string) => {
-			apply(color);
-			onCustomColor(color);
-		},
-		onEyedropper: () =>
-			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-	});
 	return (
 		<>
 			{tray === "draw" && (
@@ -98,8 +91,10 @@ export function ToolTrays({
 					customColor={customColor}
 					bottomInset={bottomInset}
 					onChange={draw.change}
-					{...colorTarget((color) =>
-						draw.change(withBrushColor(draw.settings, color)),
+					{...colorTarget(
+						(color) => draw.change(withBrushColor(draw.settings, color)),
+						onCustomColor,
+						dispatchMode,
 					)}
 					onClose={closeTray}
 				/>
@@ -110,8 +105,10 @@ export function ToolTrays({
 					customColor={customColor}
 					bottomInset={bottomInset}
 					onChange={redact.change}
-					{...colorTarget((color) =>
-						redact.change({ ...redact.settings, color }),
+					{...colorTarget(
+						(color) => redact.change({ ...redact.settings, color }),
+						onCustomColor,
+						dispatchMode,
 					)}
 					onClose={closeTray}
 				/>
@@ -124,8 +121,10 @@ export function ToolTrays({
 					onChange={({ tool: _, ...style }) =>
 						redact.setChosen((settings) => ({ ...settings, ...style }))
 					}
-					{...colorTarget((color) =>
-						redact.setChosen((settings) => ({ ...settings, color })),
+					{...colorTarget(
+						(color) => redact.setChosen((settings) => ({ ...settings, color })),
+						onCustomColor,
+						dispatchMode,
 					)}
 					onClose={closeTray}
 				/>
@@ -158,7 +157,11 @@ export function ToolTrays({
 					layer={styledText}
 					colorKey={textPicker.key}
 					bottomInset={bottomInset}
-					{...colorTarget((color) => text.style({ [textPicker.key]: color }))}
+					{...colorTarget(
+						(color) => text.style({ [textPicker.key]: color }),
+						onCustomColor,
+						dispatchMode,
+					)}
 					onClose={() => dispatchMode({ type: "closeTextPicker" })}
 				/>
 			)}
@@ -184,9 +187,7 @@ export function ContextBarContent({
 	customColor,
 	onCustomColor,
 	onFind,
-	onCancel,
-	onDone,
-	doneLabel,
+	chrome,
 	editingText = false,
 	restoreTextFocus,
 	layerActions,
@@ -194,39 +195,23 @@ export function ContextBarContent({
 	panel: DockPanel;
 	onCustomColor: (color: string) => void;
 	onFind?: () => void;
-	onCancel?: () => void;
-	onDone: () => void;
-	doneLabel?: string;
+	// The bar's title, Cancel, and Done, which `modeChrome` chose.
+	chrome: { title: string } & ModeActionProps;
 	editingText?: boolean;
 	restoreTextFocus?: () => void;
 	layerActions?: ComponentProps<typeof LayerActionsPanel>;
 }) {
-	// For a bar whose colors go to `apply`: a color from its picker, which
-	// becomes the custom color too, and the eyedropper, for a color from the
-	// canvas.
-	const colorTarget = (apply: (color: string) => void) => ({
-		onPickCustom: (color: string) => {
-			apply(color);
-			onCustomColor(color);
-		},
-		onEyedropper: () =>
-			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-	});
 	if (panel === "draw") {
 		return (
-			<ContextBar
-				title="Draw"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<DrawBar
 					settings={draw.settings}
 					customColor={customColor}
 					onChange={draw.change}
-					{...colorTarget((color) =>
-						draw.change(withBrushColor(draw.settings, color)),
+					{...colorTarget(
+						(color) => draw.change(withBrushColor(draw.settings, color)),
+						onCustomColor,
+						dispatchMode,
 					)}
 				/>
 			</ContextBar>
@@ -234,20 +219,16 @@ export function ContextBarContent({
 	}
 	if (panel === "redact") {
 		return (
-			<ContextBar
-				title="Redact"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<RedactBar
 					settings={redact.settings}
 					customColor={customColor}
 					onChange={redact.change}
 					onFind={onFind}
-					{...colorTarget((color) =>
-						redact.change({ ...redact.settings, color }),
+					{...colorTarget(
+						(color) => redact.change({ ...redact.settings, color }),
+						onCustomColor,
+						dispatchMode,
 					)}
 				/>
 			</ContextBar>
@@ -255,21 +236,17 @@ export function ContextBarContent({
 	}
 	if (panel === "find") {
 		return (
-			<ContextBar
-				title="Find"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<FindBar
 					settings={redact.chosen}
 					customColor={customColor}
 					onChange={(next) =>
 						redact.setChosen((current) => ({ ...current, ...next }))
 					}
-					{...colorTarget((color) =>
-						redact.setChosen((current) => ({ ...current, color })),
+					{...colorTarget(
+						(color) => redact.setChosen((current) => ({ ...current, color })),
+						onCustomColor,
+						dispatchMode,
 					)}
 				/>
 			</ContextBar>
@@ -277,13 +254,7 @@ export function ContextBarContent({
 	}
 	if (panel === "cutOut") {
 		return (
-			<ContextBar
-				title="Cut out"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<CutOutBar
 					settings={cut.settings}
 					tool={cut.tool}
@@ -302,29 +273,18 @@ export function ContextBarContent({
 		const { styledText } = text;
 		if (!styledText) return null;
 		return (
-			<ContextBar
-				title="Text"
-				keepFocus={editingText}
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome} keepFocus={editingText}>
 				<TextBar
 					layer={styledText}
 					customColor={customColor}
 					onChange={text.style}
 					onPickCustom={onCustomColor}
 					onEyedropper={(key) =>
-						dispatchMode({
-							type: "startEyedropper",
-							eyedropper: {
-								apply: (color) => {
-									text.style({ [key]: color });
-									onCustomColor(color);
-								},
-							},
-						})
+						colorTarget(
+							(color) => text.style({ [key]: color }),
+							onCustomColor,
+							dispatchMode,
+						).onEyedropper()
 					}
 					restoreFocus={editingText ? restoreTextFocus : undefined}
 				/>
@@ -332,25 +292,11 @@ export function ContextBarContent({
 		);
 	}
 	if (panel === "adjust") {
-		return (
-			<ContextBar
-				title="Adjust"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
-				{null}
-			</ContextBar>
-		);
+		return <ContextBar {...chrome}>{null}</ContextBar>;
 	}
 	if (panel === "layer" && layerActions) {
 		return (
-			<ContextBar
-				title={layerKindName(layerActions.layer)}
-				onDone={onDone}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<LayerBar {...layerActions} />
 			</ContextBar>
 		);

@@ -1,26 +1,161 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { Framing } from "@/model/framing";
+import type { EditorDocument } from "@/model/document";
+import { type Framing, visibleImageLayer } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { useStore } from "@/store";
 import type { DetectionFeature } from "./detection/imageDetection";
-import type { EditorMode, EditorModeAction, EditorTool } from "./editorMode";
+import {
+	type EditorMode,
+	type EditorModeAction,
+	type EditorTool,
+	toolImageId,
+} from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
-import type { useCutOutTool } from "./tools/cutout/useCutOutTool";
-import type { useDrawTool } from "./tools/draw/useDrawTool";
-import type { useFindTool } from "./tools/find/useFindTool";
-import { redactionEffect } from "./tools/redact/redactSettings";
-import type { useRedactTool } from "./tools/redact/useRedactTool";
-import type { useTextEditing } from "./tools/text/useTextEditing";
+import { useAdjustTool } from "./tools/adjust/useAdjustTool";
+import { stepCutSize } from "./tools/cutout/cutOutSettings";
+import { useCutOutTool } from "./tools/cutout/useCutOutTool";
+import { stepBrushSize } from "./tools/draw/brushSettings";
+import { useDrawTool } from "./tools/draw/useDrawTool";
+import { useFindTool } from "./tools/find/useFindTool";
+import { redactionEffect, stepRedactSize } from "./tools/redact/redactSettings";
+import { useRedactTool } from "./tools/redact/useRedactTool";
+import { useTextEditing } from "./tools/text/useTextEditing";
+
+export type EditorTools = {
+	draw: ReturnType<typeof useDrawTool>;
+	redact: ReturnType<typeof useRedactTool>;
+	find: ReturnType<typeof useFindTool>;
+	cut: ReturnType<typeof useCutOutTool>;
+	adjust: ReturnType<typeof useAdjustTool>;
+	text: ReturnType<typeof useTextEditing>;
+};
+
+/**
+ * All of the editor's tools, their undo session, and their starters, Done,
+ * and Cancel. `useToolSession` runs ahead of the tool hooks and
+ * `useToolLifecycle`, so its effect begins the session before `useToolLifecycle`
+ * starts Cut out's cut: calling it later would put a remembered cut in the
+ * session's starting document, where Cancel can't take it back.
+ */
+export function useEditorTools({
+	document,
+	mode,
+	dispatchMode,
+	targetImage,
+	documentSize,
+	pickPhoto,
+	openStickers,
+	visibleArea,
+	onRedacted,
+}: {
+	document: EditorDocument;
+	mode: EditorMode;
+	dispatchMode: (action: EditorModeAction) => void;
+	targetImage: ImageLayer | null;
+	documentSize: Size;
+	pickPhoto: () => void;
+	openStickers: () => void;
+	visibleArea: () => Rect | undefined;
+	onRedacted: (count: number, feature: DetectionFeature | null) => void;
+}) {
+	const { cancelSession, addMaskedRedaction, setAdjustments } = useStore(
+		(state) => state.actions,
+	);
+	const tool = mode.type === "tool" ? mode.tool : null;
+
+	useToolSession(tool);
+
+	const text = useTextEditing({
+		document,
+		edit: mode.type === "text" ? mode.edit : null,
+		dispatchMode,
+	});
+
+	const adjustImageId = toolImageId(mode, "adjust");
+	const adjustedLayer = adjustImageId
+		? visibleImageLayer(document, adjustImageId)
+		: undefined;
+	const adjust = useAdjustTool(adjustedLayer, setAdjustments);
+
+	const draw = useDrawTool(tool === "draw", documentSize);
+	const redact = useRedactTool(documentSize);
+	const find = useFindTool(document, targetImage);
+
+	const cutImageId = toolImageId(mode, "cutOut");
+	const cutLayer = cutImageId
+		? visibleImageLayer(document, cutImageId)
+		: undefined;
+	const cut = useCutOutTool({
+		layer: cutLayer,
+		onRedact: (layerId, mask, rect) => {
+			cancelSession();
+			addMaskedRedaction(
+				layerId,
+				mask,
+				rect,
+				redactionEffect(redact.chosen, documentSize),
+			);
+			redact.setChosen((current) => ({ ...current, tool: "box" }));
+			dispatchMode({ type: "startTool", tool: "redact" });
+		},
+	});
+
+	const lifecycle = useToolLifecycle({
+		mode,
+		targetImage,
+		documentSize,
+		draw,
+		redact,
+		find,
+		cut,
+		textEditing: text,
+		pickPhoto,
+		openStickers,
+		dispatchMode,
+		visibleArea,
+		onRedacted,
+	});
+
+	const stepToolSize = (step: 1 | -1) => {
+		if (tool === "draw") {
+			const next = stepBrushSize(draw.settings, step);
+			if (next !== draw.settings) draw.change(next);
+		} else if (tool === "redact") {
+			const next = stepRedactSize(redact.settings, step);
+			if (next !== redact.settings) redact.change(next);
+		} else if (tool === "cutOut") {
+			const next = stepCutSize(cut.settings, step);
+			if (next !== cut.settings) cut.change(next);
+		}
+	};
+
+	const tools: EditorTools = {
+		draw,
+		redact,
+		find,
+		cut,
+		adjust,
+		text,
+	};
+
+	return {
+		tools,
+		startTool: lifecycle.startTool,
+		done: lifecycle.done,
+		cancel: lifecycle.cancel,
+		finishTool: lifecycle.finishTool,
+		closeCrop: lifecycle.closeCrop,
+		finishCrop: lifecycle.finishCrop,
+		stepToolSize,
+		adjustedLayer,
+		cutLayer,
+	};
+}
 
 /**
  * A tool's changes as one session: one undo step, or none if canceled.
- * Closing the tool any way, leaving the editor included, keeps them. Called
- * ahead of the tool hooks and `useToolLifecycle`, so its effect runs before
- * theirs. Only `useToolLifecycle` writes the store from an effect, starting
- * Cut out's cut once this session has begun: moving this call later would
- * put a remembered cut in the session's starting document, where Cancel
- * can't take it back.
+ * Closing the tool any way, leaving the editor included, keeps them.
  */
 export function useToolSession(tool: EditorTool | null) {
 	const { beginSession, commitSession } = useStore((state) => state.actions);
@@ -33,8 +168,8 @@ export function useToolSession(tool: EditorTool | null) {
 
 /**
  * How the editor's tools open and close: their starters, Done, and Cancel.
- * Called after `useToolSession`, whose effect must run before the one here
- * that starts Cut out's cut.
+ * Called by `useEditorTools` after `useToolSession`, whose effect must run
+ * before the one here that starts Cut out's cut.
  */
 export function useToolLifecycle({
 	mode,
