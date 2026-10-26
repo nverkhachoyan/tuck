@@ -10,7 +10,7 @@ import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
 import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
-import { AdjustPanel } from "./tools/adjust/AdjustPanel";
+import { AdjustInspector, AdjustPanel } from "./tools/adjust/AdjustPanel";
 import {
 	CutOutBar,
 	CutOutOptions,
@@ -18,7 +18,12 @@ import {
 } from "./tools/cutout/CutOutPanel";
 import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
-import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
+import {
+	FindBar,
+	FindInspector,
+	FindPanel,
+	FindTray,
+} from "./tools/find/FindPanel";
 import {
 	EffectGlyph,
 	RedactBar,
@@ -179,7 +184,7 @@ type ToolViews = {
  * here. `modeChrome` picks `"text"` only with styled text and `"layer"` only
  * with a selected layer, so their checks below never fail.
  */
-const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
+export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 	draw: {
 		dock: ({ tools: { draw }, optionsOpen, toggleOptions }) => (
 			<DrawPanel
@@ -268,6 +273,22 @@ const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 			/>
 		),
 		bar: (context) => <FindBar {...findStyle(context)} />,
+		inspector: ({ tools: { find }, onBackToRedact }, layers) => (
+			<FindInspector
+				state={find.state}
+				visibleIndices={find.visibleIndices}
+				selectedCount={find.selectedCount}
+				review={find.review}
+				onFind={find.find}
+				onRetry={find.retry}
+				onBack={onBackToRedact}
+				onStop={find.reset}
+				onSelectAll={find.selectAll}
+				onClear={find.clear}
+			>
+				{layers}
+			</FindInspector>
+		),
 	},
 	cutOut: {
 		dock: (context) => (
@@ -293,6 +314,11 @@ const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 	adjust: {
 		dock: ({ tools: { adjust }, adjustments }) => (
 			<AdjustPanel controller={adjust} adjustments={adjustments} />
+		),
+		inspector: ({ tools: { adjust }, adjustments }, layers) => (
+			<AdjustInspector controller={adjust} adjustments={adjustments}>
+				{layers}
+			</AdjustInspector>
 		),
 	},
 	text: {
