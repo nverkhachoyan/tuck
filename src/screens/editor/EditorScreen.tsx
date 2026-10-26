@@ -37,7 +37,12 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import { ContextBarContent, DockContent, ToolTrays } from "./EditorDock";
+import {
+	ContextBarContent,
+	DockContent,
+	ToolTrays,
+	toolViewContext,
+} from "./EditorDock";
 import { EditorInspector } from "./EditorInspector";
 import { EditorRail } from "./EditorRail";
 import { modeChrome, railChosenTool } from "./editorChrome";
@@ -399,6 +404,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onSaveSticker: stickerSave.save,
 	};
 
+	// What the dock, the bar, the trays, and the inspector read.
+	const toolViews = toolViewContext({
+		tools,
+		dispatchMode,
+		customColor,
+		onCustomColor: setCustomColor,
+		optionsOpen: toolOptionsOpen,
+		bottomInset: dockInset,
+		onFind: targetImage ? startTool.find : undefined,
+		onBackToRedact: cancel,
+		adjustments: adjustedLayer?.adjustments,
+		layerActions: layerActions || undefined,
+		editingText,
+		restoreTextFocus: () => tools.text.editorRef.current?.focus(),
+	});
+
 	// Takes back the open tool's changes to its image: Adjust's adjustments,
 	// or Cut out's cut.
 	const resetEdit = adjustedLayer?.adjustments
@@ -481,16 +502,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					bar={
 						inBar && modeActions ? (
 							<ContextBarContent
+								context={toolViews}
 								panel={panel}
-								dispatchMode={dispatchMode}
-								tools={tools}
-								customColor={customColor}
-								onCustomColor={setCustomColor}
-								onFind={targetImage ? startTool.find : undefined}
 								chrome={modeActions}
-								editingText={editingText}
-								restoreTextFocus={() => tools.text.editorRef.current?.focus()}
-								layerActions={layerActions || undefined}
 							/>
 						) : undefined
 					}
@@ -544,17 +558,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						rightInset={layout.canvasInset.right}
 						selectionBar={selectionBar}
 					/>
-					{!wide && (
-						<ToolTrays
-							modeState={modeState}
-							dispatchMode={dispatchMode}
-							tools={tools}
-							customColor={customColor}
-							onCustomColor={setCustomColor}
-							onBackToRedact={cancel}
-							bottomInset={dockInset}
-						/>
-					)}
+					{!wide && <ToolTrays context={toolViews} modeState={modeState} />}
 					{wide && eyedropper && (
 						<EyedropperHint
 							onCancel={() => dispatchMode({ type: "stopEyedropper" })}
@@ -593,11 +597,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				    has it open, is the layers, with Find or Adjust above them. */}
 					{inspector ? (
 						<EditorInspector
+							context={toolViews}
 							panel={panel}
-							find={tools.find}
-							adjust={tools.adjust}
-							adjustments={adjustedLayer?.adjustments}
-							onFindBack={cancel}
 							layerList={layerList}
 						/>
 					) : !wide ? (
@@ -607,14 +608,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							keyboardOverlap={layout.keyboardOverlap}
 						>
 							<DockContent
+								context={toolViews}
 								panel={panel}
-								optionsOpen={toolOptionsOpen}
-								onFind={targetImage ? startTool.find : undefined}
-								dispatchMode={dispatchMode}
-								tools={tools}
-								adjustments={adjustedLayer?.adjustments}
-								customColor={customColor}
-								layerActions={layerActions}
 								idle={
 									<ToolsPanel
 										addBusy={addBusy}

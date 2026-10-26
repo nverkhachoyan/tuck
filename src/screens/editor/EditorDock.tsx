@@ -34,29 +34,55 @@ import type { EditorTools } from "./useToolLifecycle";
 
 export type { EditorTools } from "./useToolLifecycle";
 
-type ModeProps = {
-	dispatchMode: (action: EditorModeAction) => void;
+/**
+ * What every tool view reads, built once by the screen for the dock, the bar,
+ * the trays, and the inspector.
+ */
+export type ToolViewContext = {
 	tools: EditorTools;
+	dispatchMode: (action: EditorModeAction) => void;
 	customColor: string | null;
+	// A color from a picker, which becomes the custom color.
+	onCustomColor: (color: string) => void;
+	// For a tray or bar whose colors go to `apply`: a color from its picker,
+	// which becomes the custom color too, and the eyedropper, for a color
+	// from the canvas.
+	colorTarget: (apply: (color: string) => void) => {
+		onPickCustom: (color: string) => void;
+		onEyedropper: () => void;
+	};
+	// Whether the phone's tray of tool options is open.
+	optionsOpen: boolean;
+	toggleOptions: () => void;
+	closeTray: () => void;
+	bottomInset: number;
+	// Redact's way into Find, when there's an image to search.
+	onFind: (() => void) | undefined;
+	// Find's way out when it found nothing: what its ✕ does.
+	onBackToRedact: () => void;
+	adjustments: Adjustments | undefined;
+	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
+	editingText: boolean;
+	restoreTextFocus: () => void;
 };
 
-/**
- * For a tray or bar whose colors go to `apply`: a color from its picker, which
- * becomes the custom color too, and the eyedropper, for a color from the
- * canvas.
- */
-function colorTarget(
-	apply: (color: string) => void,
-	onCustomColor: (color: string) => void,
-	dispatchMode: (action: EditorModeAction) => void,
-) {
+/** Builds the tool views' context, binding `colorTarget` to `onCustomColor`. */
+export function toolViewContext(
+	props: Omit<ToolViewContext, "colorTarget" | "toggleOptions" | "closeTray">,
+): ToolViewContext {
+	const { dispatchMode, onCustomColor } = props;
 	return {
-		onPickCustom: (color: string) => {
-			apply(color);
-			onCustomColor(color);
-		},
-		onEyedropper: () =>
-			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
+		...props,
+		colorTarget: (apply) => ({
+			onPickCustom: (color) => {
+				apply(color);
+				onCustomColor(color);
+			},
+			onEyedropper: () =>
+				dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
+		}),
+		toggleOptions: () => dispatchMode({ type: "toggleToolOptions" }),
+		closeTray: () => dispatchMode({ type: "closeToolOptions" }),
 	};
 }
 
@@ -65,24 +91,24 @@ function colorTarget(
  * results, a text color picker, and the eyedropper's hint.
  */
 export function ToolTrays({
+	context,
 	modeState,
-	dispatchMode,
-	tools: { draw, redact, find, cut, text },
-	customColor,
-	onCustomColor,
-	onBackToRedact,
-	bottomInset,
-}: ModeProps & {
+}: {
+	context: ToolViewContext;
 	modeState: EditorModeState;
-	onCustomColor: (color: string) => void;
-	// Find's way out when it found nothing: what its ✕ does.
-	onBackToRedact: () => void;
-	bottomInset: number;
 }) {
+	const {
+		tools: { draw, redact, find, cut, text },
+		dispatchMode,
+		customColor,
+		colorTarget,
+		closeTray,
+		bottomInset,
+		onBackToRedact,
+	} = context;
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = text;
 	const tray = openTray(mode);
-	const closeTray = () => dispatchMode({ type: "closeToolOptions" });
 	return (
 		<>
 			{tray === "draw" && (
@@ -91,10 +117,8 @@ export function ToolTrays({
 					customColor={customColor}
 					bottomInset={bottomInset}
 					onChange={draw.change}
-					{...colorTarget(
-						(color) => draw.change(withBrushColor(draw.settings, color)),
-						onCustomColor,
-						dispatchMode,
+					{...colorTarget((color) =>
+						draw.change(withBrushColor(draw.settings, color)),
 					)}
 					onClose={closeTray}
 				/>
@@ -105,10 +129,8 @@ export function ToolTrays({
 					customColor={customColor}
 					bottomInset={bottomInset}
 					onChange={redact.change}
-					{...colorTarget(
-						(color) => redact.change({ ...redact.settings, color }),
-						onCustomColor,
-						dispatchMode,
+					{...colorTarget((color) =>
+						redact.change({ ...redact.settings, color }),
 					)}
 					onClose={closeTray}
 				/>
@@ -121,10 +143,8 @@ export function ToolTrays({
 					onChange={({ tool: _, ...style }) =>
 						redact.setChosen((settings) => ({ ...settings, ...style }))
 					}
-					{...colorTarget(
-						(color) => redact.setChosen((settings) => ({ ...settings, color })),
-						onCustomColor,
-						dispatchMode,
+					{...colorTarget((color) =>
+						redact.setChosen((settings) => ({ ...settings, color })),
 					)}
 					onClose={closeTray}
 				/>
@@ -157,11 +177,7 @@ export function ToolTrays({
 					layer={styledText}
 					colorKey={textPicker.key}
 					bottomInset={bottomInset}
-					{...colorTarget(
-						(color) => text.style({ [textPicker.key]: color }),
-						onCustomColor,
-						dispatchMode,
-					)}
+					{...colorTarget((color) => text.style({ [textPicker.key]: color }))}
 					onClose={() => dispatchMode({ type: "closeTextPicker" })}
 				/>
 			)}
@@ -181,26 +197,25 @@ export function ToolTrays({
  * the title.
  */
 export function ContextBarContent({
+	context,
 	panel,
-	dispatchMode,
-	tools: { draw, redact, cut, text },
-	customColor,
-	onCustomColor,
-	onFind,
 	chrome,
-	editingText = false,
-	restoreTextFocus,
-	layerActions,
-}: ModeProps & {
+}: {
+	context: ToolViewContext;
 	panel: DockPanel;
-	onCustomColor: (color: string) => void;
-	onFind?: () => void;
 	// The bar's title, Cancel, and Done, which `modeChrome` chose.
 	chrome: { title: string } & ModeActionProps;
-	editingText?: boolean;
-	restoreTextFocus?: () => void;
-	layerActions?: ComponentProps<typeof LayerActionsPanel>;
 }) {
+	const {
+		tools: { draw, redact, cut, text },
+		customColor,
+		onCustomColor,
+		colorTarget,
+		onFind,
+		editingText,
+		restoreTextFocus,
+		layerActions,
+	} = context;
 	if (panel === "draw") {
 		return (
 			<ContextBar {...chrome}>
@@ -208,10 +223,8 @@ export function ContextBarContent({
 					settings={draw.settings}
 					customColor={customColor}
 					onChange={draw.change}
-					{...colorTarget(
-						(color) => draw.change(withBrushColor(draw.settings, color)),
-						onCustomColor,
-						dispatchMode,
+					{...colorTarget((color) =>
+						draw.change(withBrushColor(draw.settings, color)),
 					)}
 				/>
 			</ContextBar>
@@ -225,10 +238,8 @@ export function ContextBarContent({
 					customColor={customColor}
 					onChange={redact.change}
 					onFind={onFind}
-					{...colorTarget(
-						(color) => redact.change({ ...redact.settings, color }),
-						onCustomColor,
-						dispatchMode,
+					{...colorTarget((color) =>
+						redact.change({ ...redact.settings, color }),
 					)}
 				/>
 			</ContextBar>
@@ -243,10 +254,8 @@ export function ContextBarContent({
 					onChange={(next) =>
 						redact.setChosen((current) => ({ ...current, ...next }))
 					}
-					{...colorTarget(
-						(color) => redact.setChosen((current) => ({ ...current, color })),
-						onCustomColor,
-						dispatchMode,
+					{...colorTarget((color) =>
+						redact.setChosen((current) => ({ ...current, color })),
 					)}
 				/>
 			</ContextBar>
@@ -280,11 +289,7 @@ export function ContextBarContent({
 					onChange={text.style}
 					onPickCustom={onCustomColor}
 					onEyedropper={(key) =>
-						colorTarget(
-							(color) => text.style({ [key]: color }),
-							onCustomColor,
-							dispatchMode,
-						).onEyedropper()
+						colorTarget((color) => text.style({ [key]: color })).onEyedropper()
 					}
 					restoreFocus={editingText ? restoreTextFocus : undefined}
 				/>
@@ -309,24 +314,24 @@ export function ContextBarContent({
  * typed or selected, the selected layer's actions, or else `idle`.
  */
 export function DockContent({
+	context,
 	panel,
-	optionsOpen,
-	dispatchMode,
-	tools: { draw, redact, find, cut, adjust, text },
-	adjustments,
-	customColor,
-	layerActions,
 	idle,
-	onFind,
-}: ModeProps & {
+}: {
+	context: ToolViewContext;
 	panel: DockPanel;
-	optionsOpen: boolean;
-	onFind: (() => void) | undefined;
-	adjustments: Adjustments | undefined;
-	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
 	idle: ReactNode;
 }) {
-	const toggleOptions = () => dispatchMode({ type: "toggleToolOptions" });
+	const {
+		tools: { draw, redact, find, cut, adjust, text },
+		dispatchMode,
+		customColor,
+		optionsOpen,
+		toggleOptions,
+		onFind,
+		adjustments,
+		layerActions,
+	} = context;
 	const { styledText } = text;
 	switch (panel) {
 		case "draw":

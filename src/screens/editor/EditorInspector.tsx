@@ -1,10 +1,9 @@
-import type { Adjustments } from "@/model/adjustments";
+import type { ToolViewContext } from "./EditorDock";
 import type { DockPanel } from "./editorChrome";
 import { Inspector } from "./shell/Dock";
 import { AdjustInspector } from "./tools/adjust/AdjustPanel";
 import { FindInspector } from "./tools/find/FindPanel";
 import { LayersPanel, type layerListProps } from "./tools/layers/LayersPanel";
-import type { EditorTools } from "./useToolLifecycle";
 
 /**
  * What the wide editor shows on the right when the window is tall enough, or
@@ -12,20 +11,19 @@ import type { EditorTools } from "./useToolLifecycle";
  * Adjust above it.
  */
 export function EditorInspector({
+	context,
 	panel,
-	find,
-	adjust,
-	adjustments,
-	onFindBack,
 	layerList,
 }: {
+	context: ToolViewContext;
 	panel: DockPanel;
-	find: EditorTools["find"];
-	adjust: EditorTools["adjust"];
-	adjustments: Adjustments | undefined;
-	onFindBack: () => void;
 	layerList: ReturnType<typeof layerListProps>;
 }) {
+	const {
+		tools: { find, adjust },
+		adjustments,
+		onBackToRedact,
+	} = context;
 	const layers = <LayersPanel {...layerList} layout="inspector" open />;
 	return (
 		<Inspector>
@@ -37,7 +35,7 @@ export function EditorInspector({
 					review={find.review}
 					onFind={find.find}
 					onRetry={find.retry}
-					onBack={onFindBack}
+					onBack={onBackToRedact}
 					onStop={find.reset}
 					onSelectAll={find.selectAll}
 					onClear={find.clear}
