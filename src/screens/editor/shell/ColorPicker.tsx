@@ -20,7 +20,7 @@ import { interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
-import { ColorSwatches, isCustomColor } from "./ColorSwatches";
+import { ColorSwatches, customSwatch } from "./ColorSwatches";
 
 // As wide as a row of seven swatches, so a picker on its own in a card is
 // the size of one under them.
@@ -61,21 +61,20 @@ export function ColorOptions({
 	// The picker's color while it's dragged, before it's picked.
 	const [draft, setDraft] = useState<string | null>(null);
 	const shown = draft ?? value;
-	const toggleCustom = () => {
-		if (!pickerOpen && customColor && !isCustomColor(value)) {
-			onPick(customColor);
-		}
-		setPickerOpen(!pickerOpen);
-	};
+	// Opens the picker, or closes it once it's open.
+	const custom = customSwatch(shown, customColor, onPick, () =>
+		setPickerOpen(true),
+	);
 	return (
 		<>
 			<ColorSwatches
 				value={shown}
 				noneLabel={noneLabel}
-				custom={{
-					color: isCustomColor(shown) ? shown : customColor,
-					onPress: toggleCustom,
-				}}
+				custom={
+					pickerOpen
+						? { ...custom, onPress: () => setPickerOpen(false) }
+						: custom
+				}
 				onPick={(color) => {
 					setPickerOpen(false);
 					onPick(color);
