@@ -120,5 +120,5 @@ Commit: `docs: describe the editor's tools hook and chrome`
 
 ## Not in this plan
 
-* Splitting `EditorDock.tsx`'s per-tool switches into a registry of tools. `DockContent`, `ContextBarContent`, and `ToolTrays` each switch on the panel, and a table of tools could replace all three. It's a bigger change than this plan's other steps, and it would touch every tool's panel, so it's worth doing only once steps 1–4 have shown what the tools really have in common.
+* Splitting `EditorDock.tsx`'s per-tool switches into a registry of tools. `DockContent`, `ContextBarContent`, and `ToolTrays` each switch on the panel, and a table of tools could replace all three. It's a bigger change than this plan's other steps, and it would touch every tool's panel, so it's worth doing only once steps 1–4 have shown what the tools really have in common. `tool-views-registry-plan.md` picks it up.
 * `projectLifecycle.ts`. Its complexity comes from the domain, and its tests already cover it.
