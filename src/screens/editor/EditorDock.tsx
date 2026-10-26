@@ -130,11 +130,26 @@ function findStyle({
 	return {
 		settings: { ...redact.chosen, tool: "box" as const },
 		customColor,
-		onChange: ({ tool: _, ...style }: Partial<RedactSettings>) =>
+		onChange: ({ tool: _, ...style }: RedactSettings) =>
 			redact.setChosen((settings) => ({ ...settings, ...style })),
 		...colorTarget((color) =>
 			redact.setChosen((settings) => ({ ...settings, color })),
 		),
+	};
+}
+
+/** What Find's results take, in the phone's tray and the inspector. */
+function findResults({ tools: { find }, onBackToRedact }: ToolViewContext) {
+	return {
+		state: find.state,
+		visibleIndices: find.visibleIndices,
+		selectedCount: find.selectedCount,
+		review: find.review,
+		onRetry: find.retry,
+		onBack: onBackToRedact,
+		onStop: find.reset,
+		onSelectAll: find.selectAll,
+		onClear: find.clear,
 	};
 }
 
@@ -258,34 +273,12 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 				onClose={context.closeTray}
 			/>
 		),
-		results: ({ tools: { find }, bottomInset, onBackToRedact }) => (
-			<FindTray
-				state={find.state}
-				visibleIndices={find.visibleIndices}
-				selectedCount={find.selectedCount}
-				review={find.review}
-				bottomInset={bottomInset}
-				onRetry={find.retry}
-				onBack={onBackToRedact}
-				onStop={find.reset}
-				onSelectAll={find.selectAll}
-				onClear={find.clear}
-			/>
+		results: (context) => (
+			<FindTray {...findResults(context)} bottomInset={context.bottomInset} />
 		),
 		bar: (context) => <FindBar {...findStyle(context)} />,
-		inspector: ({ tools: { find }, onBackToRedact }, layers) => (
-			<FindInspector
-				state={find.state}
-				visibleIndices={find.visibleIndices}
-				selectedCount={find.selectedCount}
-				review={find.review}
-				onFind={find.find}
-				onRetry={find.retry}
-				onBack={onBackToRedact}
-				onStop={find.reset}
-				onSelectAll={find.selectAll}
-				onClear={find.clear}
-			>
+		inspector: (context, layers) => (
+			<FindInspector {...findResults(context)} onFind={context.tools.find.find}>
 				{layers}
 			</FindInspector>
 		),

@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	ActivityIndicator,
@@ -15,7 +15,11 @@ import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { BarGroup, BarSections } from "../../shell/ContextBar";
-import { type RedactLook, redactLookItems } from "../../shell/redactStyle";
+import {
+	type RedactLookProps,
+	type RedactLookSettings,
+	redactLookItems,
+} from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { Tray } from "../../shell/ToolOptions";
 import type { FindReview } from "./useFindTool";
@@ -78,7 +82,9 @@ const SCOPES = [
  * is drawn with, and its color when that's solid. Faces, text, and the
  * results sit in the inspector, above the layers they'll join.
  */
-export function FindBar(props: ComponentProps<typeof RedactLook>) {
+export function FindBar<T extends RedactLookSettings>(
+	props: RedactLookProps<T>,
+) {
 	return (
 		<BarSections>
 			<BarGroup>{redactLookItems(props)}</BarGroup>

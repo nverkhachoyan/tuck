@@ -8,7 +8,7 @@ import { ToolChoices } from "./ToolOptions";
 
 // The part of a redaction's settings the bars show. Declared here so shell
 // doesn't import the redact tool: both Redact and Find hand their settings over.
-type RedactLookSettings = {
+export type RedactLookSettings = {
 	effect: "solid" | "blur" | "pixelate";
 	color: string;
 	strength: number;
@@ -25,7 +25,7 @@ export const STRENGTH_NAMES = {
 	pixelate: ["Small pixels", "Medium pixels", "Large pixels"],
 } as const;
 
-type RedactLookProps<T extends RedactLookSettings> = {
+export type RedactLookProps<T extends RedactLookSettings> = {
 	settings: T;
 	customColor: string | null;
 	onChange: (settings: T) => void;
