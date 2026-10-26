@@ -119,24 +119,30 @@ export function inputRules(
 	}
 }
 
+// What each kind's stroke does to the layer selected: whether it drags out
+// a new one in place of moving that one, and the kind of layer whose style
+// it shows and changes.
+const CANVAS_TOOLS: Record<
+	CanvasTool["type"],
+	{ dragsOut: boolean; restyles: "redaction" | "shape" | null }
+> = {
+	draw: { dragsOut: false, restyles: null },
+	drawShape: { dragsOut: true, restyles: "shape" },
+	pickColor: { dragsOut: false, restyles: null },
+	redactBox: { dragsOut: true, restyles: "redaction" },
+	redactBrush: { dragsOut: false, restyles: "redaction" },
+	cutBrush: { dragsOut: false, restyles: null },
+	pickSubject: { dragsOut: false, restyles: null },
+};
+
 /**
  * Whether `tool` moves `layer` when it's selected: one it drags out, a
  * redaction or a shape, and not locked.
  */
 function drags(tool: CanvasTool, layer: Layer | undefined): boolean {
-	if (!layer || layer.locked) return false;
-	switch (tool.type) {
-		case "redactBox":
-			return layer.type === "redaction";
-		case "drawShape":
-			return layer.type === "shape";
-		case "draw":
-		case "redactBrush":
-		case "pickColor":
-		case "cutBrush":
-		case "pickSubject":
-			return false;
-	}
+	return (
+		!layer?.locked && CANVAS_TOOLS[tool.type].dragsOut && restyles(tool, layer)
+	);
 }
 
 /** Whether `tool`'s style shows, and changes, `layer`'s: a redaction's or a shape's. */
@@ -144,18 +150,7 @@ export function restyles(
 	tool: CanvasTool,
 	layer: Layer | undefined,
 ): layer is Layer {
-	switch (tool.type) {
-		case "redactBox":
-		case "redactBrush":
-			return layer?.type === "redaction";
-		case "drawShape":
-			return layer?.type === "shape";
-		case "draw":
-		case "pickColor":
-		case "cutBrush":
-		case "pickSubject":
-			return false;
-	}
+	return layer?.type === CANVAS_TOOLS[tool.type].restyles;
 }
 
 /** Whether `tool`'s strokes join `layer`, rather than starting a new one. */
@@ -181,9 +176,7 @@ export function canAddTo(tool: CanvasTool, layer: Layer): boolean {
 
 /** The image a cut paints or picks a subject in, or null. */
 export function cutImageId(tool: CanvasTool | null): string | null {
-	return tool?.type === "cutBrush" || tool?.type === "pickSubject"
-		? tool.layerId
-		: null;
+	return tool && "layerId" in tool ? tool.layerId : null;
 }
 
 /**
