@@ -16,6 +16,7 @@ import {
 } from "./tools/adjust/useAdjustTool";
 import type { CutOutSettings, CutOutTool } from "./tools/cutout/cutOutSettings";
 import type { BrushSettings } from "./tools/draw/brushSettings";
+import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline";
 import type { RedactSettings } from "./tools/redact/redactSettings";
 
 /**
@@ -33,8 +34,7 @@ export function useCanvasInput({
 	draw,
 	redact,
 	cut,
-	findImageId,
-	onFindToggle,
+	find,
 	adjustController,
 	actions,
 	dispatchMode,
@@ -53,8 +53,11 @@ export function useCanvasInput({
 		tool: CutOutTool;
 		pickSubject: (point: Point) => void;
 	};
-	findImageId: string | null;
-	onFindToggle: (sourceIndex: number) => void;
+	find: {
+		imageId: string;
+		regions: readonly DetectionOverlayRegion[];
+		onToggle: (sourceIndex: number) => void;
+	} | null;
 	adjustController: ReturnType<typeof useAdjustTool>;
 	actions: Pick<
 		EditorStoreActions,
@@ -98,19 +101,36 @@ export function useCanvasInput({
 		}),
 		[dialValue, begin, change, end],
 	);
+	// A new `find` each render, the same regions: the input changes only
+	// with its parts.
+	const findImageId = find?.imageId ?? null;
+	const findRegions = find?.regions;
+	const onFindToggle = find?.onToggle;
 	const input = useMemo(
 		() =>
 			canvasInputFor({
 				canvasTool,
 				tool,
 				find:
-					findImageId === null
+					findImageId === null || !findRegions || !onFindToggle
 						? null
-						: { imageId: findImageId, onToggle: onFindToggle },
+						: {
+								imageId: findImageId,
+								regions: findRegions,
+								onToggle: onFindToggle,
+							},
 				adjustDrag,
 				editingText,
 			}),
-		[canvasTool, tool, findImageId, onFindToggle, adjustDrag, editingText],
+		[
+			canvasTool,
+			tool,
+			findImageId,
+			findRegions,
+			onFindToggle,
+			adjustDrag,
+			editingText,
+		],
 	);
 
 	// A picked color becomes the custom color too, unless a swatch already

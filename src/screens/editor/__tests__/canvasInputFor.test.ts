@@ -71,7 +71,7 @@ describe("canvasToolFor", () => {
 
 describe("canvasInputFor", () => {
 	const adjustDrag = { value: 0 } as unknown as DialDrag;
-	const found = { imageId: "photo", onToggle: () => {} };
+	const found = { imageId: "photo", regions: [], onToggle: () => {} };
 	const inputs = {
 		canvasTool: null,
 		tool: null,
@@ -165,6 +165,7 @@ const adjust: CanvasInput = { type: "adjust", drag: {} as DialDrag };
 const find: CanvasInput = {
 	type: "find",
 	imageId: "photo",
+	regions: [],
 	onToggle: () => {},
 };
 

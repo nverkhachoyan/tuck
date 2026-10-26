@@ -279,8 +279,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		draw: tools.draw.settings,
 		redact: tools.redact.settings,
 		cut: tools.cut,
-		findImageId: targetImage?.id ?? null,
-		onFindToggle: tools.find.toggle,
+		find: targetImage && {
+			imageId: targetImage.id,
+			regions: tools.find.overlay,
+			onToggle: tools.find.toggle,
+		},
 		adjustController: tools.adjust,
 		actions,
 		dispatchMode,
@@ -545,9 +548,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						onResizeBox={resizeBox}
 						onNudgeLayer={nudgeLayer}
 						{...canvasInput}
-						detections={
-							tool === "find" && !eyedropper ? tools.find.overlay : undefined
-						}
 						onToolInteractionEnd={() =>
 							dispatchMode({ type: "closeToolOptions" })
 						}

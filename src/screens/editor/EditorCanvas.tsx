@@ -123,9 +123,6 @@ type EditorCanvasProps = {
 	// While set, this image's adjustments are being changed, drawn live. With
 	// an `adjust` input, it's outlined when there are other images.
 	adjusting?: LiveAdjustment | null;
-	// Temporary detector proposals, drawn over the document; a `find` input's
-	// taps toggle them.
-	detections?: readonly DetectionOverlayRegion[];
 	// How much of the view's bottom is covered by panels floating over it,
 	// and by the keyboard they ride on. The document fits above them, and
 	// what's past its edges shows under.
@@ -204,7 +201,6 @@ export function EditorCanvas({
 	onToolInteractionEnd,
 	onTapAway,
 	adjusting = null,
-	detections = NO_DETECTIONS,
 	bottomInset = 0,
 	leftInset = 0,
 	rightInset = 0,
@@ -510,10 +506,9 @@ export function EditorCanvas({
 		idleGesture,
 	);
 	const detectionGesture = useFindTap({
-		input,
+		find: input.type === "find" ? input : null,
 		scale,
 		lookups,
-		detections,
 		targets,
 		document,
 		documentSize,
@@ -575,7 +570,9 @@ export function EditorCanvas({
 									outlinedLayer={outlinedLayer}
 									adjusting={adjusting}
 									cuttingOutId={cuttingOutId}
-									detections={detections}
+									detections={
+										input.type === "find" ? input.regions : NO_DETECTIONS
+									}
 									onImageError={handleImageError}
 								/>
 							</Group>

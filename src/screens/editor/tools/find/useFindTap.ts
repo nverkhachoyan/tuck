@@ -7,7 +7,6 @@ import { layerBounds } from "../../canvas/layerBounds";
 import { insideDocument } from "../../canvas/strokeIntent";
 import { useCanvasTap } from "../../canvas/useCanvasTap";
 import type { CanvasInput } from "../../canvasInputFor";
-import type { DetectionOverlayRegion } from "./DetectionOutline";
 import { detectionAt } from "./findResults";
 
 /**
@@ -17,19 +16,17 @@ import { detectionAt } from "./findResults";
  * only inside the document. A tap off the image puts the tool down.
  */
 export function useFindTap({
-	input,
+	find,
 	scale,
 	lookups,
-	detections,
 	targets,
 	document,
 	documentSize,
 	tapOnNothing,
 }: {
-	input: CanvasInput;
+	find: Extract<CanvasInput, { type: "find" }> | null;
 	scale: number;
 	lookups: CanvasLookups;
-	detections: readonly DetectionOverlayRegion[];
 	targets: readonly LayerTarget[];
 	document: EditorDocument;
 	documentSize: Size;
@@ -37,35 +34,26 @@ export function useFindTap({
 }) {
 	const handleDetectionTap = useCallback(
 		(screenX: number, screenY: number) => {
-			if (input.type !== "find" || scale === 0) return;
+			if (!find || scale === 0) return;
 			const point = lookups.toDocument(screenX, screenY);
-			const hit = detectionAt(detections, point, 10 / scale);
+			const hit = detectionAt(find.regions, point, 10 / scale);
 			if (hit) {
 				tapOnNothing(null);
-				input.onToggle(hit.sourceIndex);
+				find.onToggle(hit.sourceIndex);
 				return;
 			}
 			const under = findLayerAt(targets, point)?.id ?? null;
-			const image = document.layers.find((layer) => layer.id === input.imageId);
+			const image = document.layers.find((layer) => layer.id === find.imageId);
 			const onImage =
 				under === null
 					? image !== undefined &&
 						insideDocument(documentSize, point) &&
 						hitTestBox(image.transform, layerBounds(image), point)
-					: under === input.imageId;
+					: under === find.imageId;
 			if (onImage) tapOnNothing({ x: screenX, y: screenY });
 			else lookups.tapAway(point);
 		},
-		[
-			input,
-			detections,
-			scale,
-			lookups,
-			targets,
-			document,
-			documentSize,
-			tapOnNothing,
-		],
+		[find, scale, lookups, targets, document, documentSize, tapOnNothing],
 	);
 	return useCanvasTap(handleDetectionTap);
 }

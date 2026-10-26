@@ -17,6 +17,7 @@ import {
 	type BrushSettings,
 	drawCanvasTool,
 } from "./tools/draw/brushSettings.ts";
+import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline.tsx";
 import {
 	type RedactSettings,
 	redactCanvasTool,
@@ -25,15 +26,20 @@ import {
 /**
  * What input on the canvas does, one at a time: select and transform
  * layers; paint, drag out a box or a shape, or pick a color with a `tool`;
- * place the caret in, or select, the text being edited; toggle what Find
- * found in the image `imageId`; or, while adjusting, hold the layers still
+ * place the caret in, or select, the text being edited; toggle the
+ * `regions` Find found in the image `imageId`; or, while adjusting, hold the layers still
  * and turn the dial with a sideways drag (`drag`).
  */
 export type CanvasInput =
 	| { type: "select" }
 	| { type: "tool"; tool: CanvasTool }
 	| { type: "editText" }
-	| { type: "find"; imageId: string; onToggle: (sourceIndex: number) => void }
+	| {
+			type: "find";
+			imageId: string;
+			regions: readonly DetectionOverlayRegion[];
+			onToggle: (sourceIndex: number) => void;
+	  }
 	| { type: "adjust"; drag: DialDrag };
 
 export type InputRules = {
@@ -120,7 +126,7 @@ export function canvasInputFor({
 }: {
 	canvasTool: CanvasTool | null;
 	tool: EditorTool | null;
-	find: { imageId: string; onToggle: (sourceIndex: number) => void } | null;
+	find: Omit<Extract<CanvasInput, { type: "find" }>, "type"> | null;
 	adjustDrag: DialDrag;
 	editingText: boolean;
 }): CanvasInput {
