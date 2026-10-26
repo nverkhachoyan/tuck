@@ -812,6 +812,8 @@
 											"@/app/**",
 											"@/screens/**",
 											"!@/screens/editor/**",
+											"@/screens/editor/*",
+											"../*",
 											"../tools/adjust/**",
 											"../../tools/adjust/**",
 											"@/screens/editor/tools/adjust/**",
@@ -858,7 +860,79 @@
 											"../../../../screens/**",
 											"../../../../app/**"
 										],
-										"message": "canvas/ imports only the editor root and shell/: no tool, session/, detection/, route, or other screen. See AGENTS.md."
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, session/, detection/, a route, or another screen. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/screens/editor/canvas/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"!@/screens/editor/**",
+											"@/screens/editor/*",
+											"../../*",
+											"../tools/adjust/**",
+											"../../tools/adjust/**",
+											"@/screens/editor/tools/adjust/**",
+											"../tools/crop/**",
+											"../../tools/crop/**",
+											"@/screens/editor/tools/crop/**",
+											"../tools/cutout/**",
+											"../../tools/cutout/**",
+											"@/screens/editor/tools/cutout/**",
+											"../tools/draw/**",
+											"../../tools/draw/**",
+											"@/screens/editor/tools/draw/**",
+											"../tools/find/**",
+											"../../tools/find/**",
+											"@/screens/editor/tools/find/**",
+											"../tools/layers/**",
+											"../../tools/layers/**",
+											"@/screens/editor/tools/layers/**",
+											"../tools/redact/**",
+											"../../tools/redact/**",
+											"@/screens/editor/tools/redact/**",
+											"../tools/stickers/**",
+											"../../tools/stickers/**",
+											"@/screens/editor/tools/stickers/**",
+											"../tools/text/**",
+											"../../tools/text/**",
+											"@/screens/editor/tools/text/**",
+											"../session/**",
+											"../../session/**",
+											"@/screens/editor/session/**",
+											"../detection/**",
+											"../../detection/**",
+											"@/screens/editor/detection/**",
+											"../../create/**",
+											"../../export/**",
+											"../../home/**",
+											"../../info/**",
+											"../../../create/**",
+											"../../../export/**",
+											"../../../home/**",
+											"../../../info/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../../screens/**",
+											"../../../../app/**"
+										],
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, session/, detection/, a route, or another screen. See AGENTS.md."
 									}
 								]
 							}
