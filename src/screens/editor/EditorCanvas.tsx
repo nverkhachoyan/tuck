@@ -19,45 +19,45 @@ import type { ShapePlacement } from "@/model/layers/shape";
 import { type TextSelection, withPlaceholder } from "@/model/textEditing";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
-import type { TextEditState } from "../editorMode";
-import { cursorStyle } from "./canvasCursor";
+import { cursorStyle } from "./canvas/canvasCursor";
 import {
 	type CanvasInput,
 	cutImageId,
 	inputRules,
 	outlinedLayerFor,
-} from "./canvasInput";
-import { EditorScene, type LiveAdjustment } from "./EditorScene";
-import { FitButton } from "./FitButton";
-import { handleUnder } from "./handleMetrics";
-import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
-import { layerBounds } from "./layerBounds";
-import { layerTargets, resizeMode } from "./layerTargets";
+} from "./canvas/canvasInput";
+import { FitButton } from "./canvas/FitButton";
+import { handleUnder } from "./canvas/handleMetrics";
+import { findLayerAt, hitsLayer, type LayerTarget } from "./canvas/hitTest";
+import { layerBounds } from "./canvas/layerBounds";
+import { layerTargets, resizeMode } from "./canvas/layerTargets";
 import {
 	type LiveTransform,
 	readLiveBox,
 	readLiveTransform,
 	syncLiveTransform,
 	useLiveTransform,
-} from "./liveTransform";
-import { SelectionBarFrame } from "./SelectionBarFrame";
-import type { DetectionOverlayRegion } from "./SelectionOverlay";
-import { useCanvasCursor } from "./useCanvasCursor";
-import { useCanvasTap } from "./useCanvasTap";
-import { useCanvasZoom } from "./useCanvasZoom";
-import { useDialDragGesture } from "./useDialDragGesture";
-import { useFindTap } from "./useFindTap";
-import { useKeepTextFocus } from "./useKeepTextFocus";
-import { useLayerTransformGesture } from "./useLayerTransformGesture";
-import { useShiftHeld } from "./useShiftHeld";
-import { useTextEditGesture } from "./useTextEditGesture";
-import { useToolStroke } from "./useToolStroke";
-import { useViewGesture } from "./useViewGesture";
+} from "./canvas/liveTransform";
+import { SelectionBarFrame } from "./canvas/SelectionBarFrame";
+import type { DetectionOverlayRegion } from "./canvas/SelectionOverlay";
+import { useCanvasCursor } from "./canvas/useCanvasCursor";
+import { useCanvasTap } from "./canvas/useCanvasTap";
+import { useCanvasZoom } from "./canvas/useCanvasZoom";
+import { useDialDragGesture } from "./canvas/useDialDragGesture";
+import { useFindTap } from "./canvas/useFindTap";
+import { useKeepTextFocus } from "./canvas/useKeepTextFocus";
+import { useLayerTransformGesture } from "./canvas/useLayerTransformGesture";
+import { useShiftHeld } from "./canvas/useShiftHeld";
+import { useTextEditGesture } from "./canvas/useTextEditGesture";
+import { useToolStroke } from "./canvas/useToolStroke";
+import { useViewGesture } from "./canvas/useViewGesture";
 import {
 	type DocumentViewport,
 	type ViewFrame,
 	viewPointToDocument,
-} from "./viewport";
+} from "./canvas/viewport";
+import { EditorScene, type LiveAdjustment } from "./EditorScene";
+import type { TextEditState } from "./editorMode";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.

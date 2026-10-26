@@ -7,14 +7,13 @@ import type { Layer } from "@/model/layers/layer";
 import { CanvasBackground } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colorScheme, colors } from "@/ui/theme";
-import type { TextEditState } from "../editorMode";
-import { EditedTextView } from "./EditedTextView";
+import { EditedTextView } from "./canvas/EditedTextView";
 import {
 	type LiveStroke,
 	NewLayerStroke,
 	StrokeTarget,
-} from "./LiveStrokeOverlay";
-import type { LiveTransform } from "./liveTransform";
+} from "./canvas/LiveStrokeOverlay";
+import type { LiveTransform } from "./canvas/liveTransform";
 import {
 	DetectionOutline,
 	type DetectionOverlayRegion,
@@ -22,7 +21,8 @@ import {
 	SelectionOutline,
 	SnapGuides,
 	useScreenPixels,
-} from "./SelectionOverlay";
+} from "./canvas/SelectionOverlay";
+import type { TextEditState } from "./editorMode";
 
 // The canvas's shadows on the table around it, as a print's: a tight one
 // where it touches and a soft one that lifts it, in screen pixels. At night,

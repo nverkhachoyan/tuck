@@ -868,75 +868,9 @@
 			}
 		},
 		{
-			"includes": ["src/screens/editor/tools/crop/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"!@/screens/editor/**",
-											"../adjust/**",
-											"../../adjust/**",
-											"@/screens/editor/tools/adjust/**",
-											"../crop/**",
-											"../../crop/**",
-											"@/screens/editor/tools/crop/**",
-											"../cutout/**",
-											"../../cutout/**",
-											"@/screens/editor/tools/cutout/**",
-											"../draw/**",
-											"../../draw/**",
-											"@/screens/editor/tools/draw/**",
-											"../find/**",
-											"../../find/**",
-											"@/screens/editor/tools/find/**",
-											"../layers/**",
-											"../../layers/**",
-											"@/screens/editor/tools/layers/**",
-											"../redact/**",
-											"../../redact/**",
-											"@/screens/editor/tools/redact/**",
-											"../stickers/**",
-											"../../stickers/**",
-											"@/screens/editor/tools/stickers/**",
-											"../text/**",
-											"../../text/**",
-											"@/screens/editor/tools/text/**",
-											"../../session/**",
-											"../../../session/**",
-											"@/screens/editor/session/**",
-											"../../../create/**",
-											"../../../export/**",
-											"../../../home/**",
-											"../../../info/**",
-											"../../../../create/**",
-											"../../../../export/**",
-											"../../../../home/**",
-											"../../../../info/**",
-											"../../../../screens/**",
-											"../../../../app/**",
-											"../../../../../screens/**",
-											"../../../../../app/**"
-										],
-										"message": "crop/ doesn't import the editor's other tools, session/, a route, or another screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
 			"includes": [
 				"src/screens/editor/tools/adjust/**",
+				"src/screens/editor/tools/crop/**",
 				"src/screens/editor/tools/cutout/**",
 				"src/screens/editor/tools/draw/**",
 				"src/screens/editor/tools/find/**",
@@ -961,9 +895,6 @@
 											"../adjust/**",
 											"../../adjust/**",
 											"@/screens/editor/tools/adjust/**",
-											"../../canvas/**",
-											"../../../canvas/**",
-											"@/screens/editor/canvas/**",
 											"../crop/**",
 											"../../crop/**",
 											"@/screens/editor/tools/crop/**",
@@ -1004,7 +935,7 @@
 											"../../../../../screens/**",
 											"../../../../../app/**"
 										],
-										"message": "The editor's tools (adjust/, cutout/, draw/, find/, layers/, redact/, stickers/, text/) don't import each other, canvas/, session/, a route, or another screen: what they share is at the editor root, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools don't import each other, session/, a route, or another screen: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}

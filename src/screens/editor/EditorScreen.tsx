@@ -36,7 +36,7 @@ import { DropOverlay } from "@/ui/DropOverlay";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
-import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
+import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import {
 	ContextBarContent,
 	DockContent,
