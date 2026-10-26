@@ -4,6 +4,8 @@ import type { CutStroke } from "../../../../model/layers/image.ts";
 // Picks the subject under a tap, or paints the cut by hand: keeping what
 // it removed, or erasing what it kept.
 export type CutOutTool = "pick" | "keep" | "erase";
+// The tools that paint, each with a size of its own.
+export type CutBrushTool = Exclude<CutOutTool, "pick">;
 
 export type CutOutSettings = {
 	tool: CutOutTool;
@@ -60,19 +62,60 @@ export function parseCutOutSettings(saved: unknown): CutOutSettings {
 	};
 }
 
-/** The brush in use, one size dot up or down. Pick has no size. */
+/** Whether `tool` paints the cut by hand, rather than picking a subject. */
+export function isCutBrush(tool: CutOutTool): tool is CutBrushTool {
+	return tool !== "pick";
+}
+
+// Where Keep and Erase each keep their size.
+const SIZE_KEYS = { keep: "keepSize", erase: "eraseSize" } as const;
+
+/**
+ * The size of `tool`, an index into `CUT_BRUSH_SIZES`. Null for Pick, which
+ * has none. Each of these takes the tool in use rather than reading
+ * `settings.tool`, which may be a Pick the eraser stands in for (see
+ * `cutOutTool`).
+ */
+export function cutSizeIndex(
+	settings: CutOutSettings,
+	tool: CutBrushTool,
+): number;
+export function cutSizeIndex(
+	settings: CutOutSettings,
+	tool: CutOutTool,
+): number | null;
+export function cutSizeIndex(
+	settings: CutOutSettings,
+	tool: CutOutTool,
+): number | null {
+	return isCutBrush(tool) ? settings[SIZE_KEYS[tool]] : null;
+}
+
+/**
+ * Settings with `tool` at size `index`; the other brush keeps its own. Pick
+ * has no size, so its settings stay as they are.
+ */
+export function withCutSize(
+	settings: CutOutSettings,
+	tool: CutOutTool,
+	index: number,
+): CutOutSettings {
+	return isCutBrush(tool)
+		? { ...settings, [SIZE_KEYS[tool]]: index }
+		: settings;
+}
+
+/** The brush `tool`, one size dot up or down. Pick has no size. */
 export function stepCutSize(
 	settings: CutOutSettings,
+	tool: CutOutTool,
 	step: 1 | -1,
 ): CutOutSettings {
-	if (settings.tool === "pick") return settings;
-	const key = settings.tool === "keep" ? "keepSize" : "eraseSize";
-	const next = Math.min(
-		CUT_BRUSH_SIZES.length - 1,
-		Math.max(0, settings[key] + step),
-	);
-	if (next === settings[key]) return settings;
-	return { ...settings, [key]: next };
+	const index = cutSizeIndex(settings, tool);
+	if (index === null) return settings;
+	const next = Math.min(CUT_BRUSH_SIZES.length - 1, Math.max(0, index + step));
+	if (next === index) return settings;
+	return withCutSize(settings, tool, next);
 }
 
 /**
@@ -96,9 +139,10 @@ export function cutBrush(
 	tool: CutOutTool,
 	size: Size,
 ): Omit<CutStroke, "points"> | null {
-	if (tool === "pick") return null;
-	const index = tool === "keep" ? settings.keepSize : settings.eraseSize;
-	const width = CUT_BRUSH_SIZES[index] * Math.min(size.width, size.height);
+	if (!isCutBrush(tool)) return null;
+	const width =
+		CUT_BRUSH_SIZES[cutSizeIndex(settings, tool)] *
+		Math.min(size.width, size.height);
 	return {
 		type: tool === "keep" ? "pen" : "eraser",
 		width,

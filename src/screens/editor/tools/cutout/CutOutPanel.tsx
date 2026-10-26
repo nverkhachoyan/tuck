@@ -1,4 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import type { ComponentProps } from "react";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
 import {
@@ -17,7 +18,34 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
-import type { CutOutSettings, CutOutTool } from "./cutOutSettings";
+import {
+	type CutBrushTool,
+	type CutOutSettings,
+	type CutOutTool,
+	cutSizeIndex,
+	isCutBrush,
+	withCutSize,
+} from "./cutOutSettings";
+
+type Icon = ComponentProps<typeof MaterialCommunityIcons>["name"];
+
+// Cut out's sub-tools, in the order the dock and the bar show them.
+const CUT_TOOLS = [
+	{ tool: "pick", title: "Pick", icon: "gesture-tap" },
+	{ tool: "keep", title: "Keep", icon: "brush" },
+	{ tool: "erase", title: "Erase", icon: "eraser" },
+] as const satisfies readonly { tool: CutOutTool; title: string; icon: Icon }[];
+
+// The sub-tools on offer: Pick only where this device can find subjects.
+const cutTools = (canPick: boolean) =>
+	CUT_TOOLS.filter(({ tool }) => canPick || tool !== "pick");
+
+// The brushes' edges, in the order the size chip's popover and the tray
+// show them.
+const BRUSH_EDGES = [
+	{ soft: true, title: "Soft", icon: "blur-radial" },
+	{ soft: false, title: "Hard", icon: "circle" },
+] as const satisfies readonly { soft: boolean; title: string; icon: Icon }[];
 
 /**
  * Cut out's tools, in place of the toolbar while cutting an image out:
@@ -59,7 +87,6 @@ export function CutOutPanel({
 		if (choice === tool && choice !== "pick") onToggleOptions();
 		else onChange({ ...settings, tool: choice });
 	};
-	const brush = tool !== "pick";
 	return (
 		<ToolRow>
 			{onFindAll && (
@@ -70,38 +97,25 @@ export function CutOutPanel({
 					onPress={onFindAll}
 				/>
 			)}
-			{onFindAll && (
-				<ToolButton
-					label="Pick"
-					icon="gesture-tap"
-					selected={tool === "pick"}
-					busy={finding === "one"}
-					onPress={() => pickTool("pick")}
-				/>
+			{cutTools(onFindAll !== undefined).map(
+				({ tool: choice, title, icon }) => (
+					<ToolButton
+						key={choice}
+						label={title}
+						icon={icon}
+						selected={tool === choice}
+						busy={choice === "pick" && finding === "one"}
+						onPress={() => pickTool(choice)}
+					/>
+				),
 			)}
-			<ToolButton
-				label="Keep"
-				icon="brush"
-				selected={tool === "keep"}
-				onPress={() => pickTool("keep")}
-			/>
-			<ToolButton
-				label="Erase"
-				icon="eraser"
-				selected={tool === "erase"}
-				onPress={() => pickTool("erase")}
-			/>
-			{brush && (
+			{isCutBrush(tool) && (
 				<ToolButton
 					label="Size"
 					icon="circle-medium"
 					glyph={
 						<SizeDot
-							size={
-								SIZE_DOTS[
-									tool === "keep" ? settings.keepSize : settings.eraseSize
-								]
-							}
+							size={SIZE_DOTS[cutSizeIndex(settings, tool)]}
 							color={tool === "keep" ? colors.textPrimary : null}
 						/>
 					}
@@ -128,11 +142,6 @@ export function CutOutPanel({
 		</ToolRow>
 	);
 }
-
-const BRUSH_EDGES = [
-	{ soft: true, title: "Soft", icon: "blur-radial" },
-	{ soft: false, title: "Hard", icon: "circle" },
-] as const;
 
 /**
  * Cut out's options in the wide editor's header: Pick, Keep, and Erase, then
@@ -161,35 +170,14 @@ export function CutOutBar({
 	redacting: boolean;
 	onRedact?: () => void;
 }) {
-	const options = [
-		...(onFindAll
-			? [
-					{
-						title: "Pick",
-						tool: "pick" as const,
-						icon: "gesture-tap" as const,
-						busy: finding === "one",
-					},
-				]
-			: []),
-		{
-			title: "Keep",
-			tool: "keep" as const,
-			icon: "brush" as const,
-			busy: false,
-		},
-		{
-			title: "Erase",
-			tool: "erase" as const,
-			icon: "eraser" as const,
-			busy: false,
-		},
-	];
+	const options = cutTools(onFindAll !== undefined).map((option) => ({
+		...option,
+		busy: option.tool === "pick" && finding === "one",
+	}));
 	const selected = Math.max(
 		0,
 		options.findIndex((option) => option.tool === tool),
 	);
-	const brush = tool === "keep" || tool === "erase";
 	return (
 		<BarSections>
 			<BarGroup>
@@ -204,18 +192,12 @@ export function CutOutBar({
 					}}
 				/>
 			</BarGroup>
-			{brush && (
+			{isCutBrush(tool) && (
 				<BarGroup>
 					<SizeChip
-						index={tool === "keep" ? settings.keepSize : settings.eraseSize}
+						index={cutSizeIndex(settings, tool)}
 						color={tool === "keep" ? colors.textPrimary : null}
-						onPick={(index) =>
-							onChange(
-								tool === "keep"
-									? { ...settings, keepSize: index }
-									: { ...settings, eraseSize: index },
-							)
-						}
+						onPick={(index) => onChange(withCutSize(settings, tool, index))}
 					>
 						{(close) => (
 							<OptionSegments
@@ -283,12 +265,11 @@ export function CutOutOptions({
 	onClose,
 }: {
 	settings: CutOutSettings;
-	tool: "keep" | "erase";
+	tool: CutBrushTool;
 	bottomInset: number;
 	onChange: (settings: CutOutSettings) => void;
 	onClose: () => void;
 }) {
-	const keep = tool === "keep";
 	return (
 		<ToolOptions
 			closeLabel="Close brush options"
@@ -298,33 +279,23 @@ export function CutOutOptions({
 		>
 			<ToolOption label="Size">
 				<SizeChoices
-					index={keep ? settings.keepSize : settings.eraseSize}
-					color={keep ? colors.textPrimary : null}
-					onPick={(index) =>
-						onChange(
-							keep
-								? { ...settings, keepSize: index }
-								: { ...settings, eraseSize: index },
-						)
-					}
+					index={cutSizeIndex(settings, tool)}
+					color={tool === "keep" ? colors.textPrimary : null}
+					onPick={(index) => onChange(withCutSize(settings, tool, index))}
 				/>
 			</ToolOption>
 			<ToolOption label="Edge">
 				<ToolChoices>
-					{[true, false].map((soft) => (
+					{BRUSH_EDGES.map(({ soft, title, icon }) => (
 						<RingChoice
 							key={String(soft)}
 							variant="highlight"
-							label={soft ? "Soft edge" : "Hard edge"}
+							label={`${title} edge`}
 							selected={settings.soft === soft}
 							onPress={() => onChange({ ...settings, soft })}
 						>
 							{(ink) => (
-								<MaterialCommunityIcons
-									name={soft ? "blur-radial" : "circle"}
-									size={22}
-									color={ink}
-								/>
+								<MaterialCommunityIcons name={icon} size={22} color={ink} />
 							)}
 						</RingChoice>
 					))}

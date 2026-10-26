@@ -1,16 +1,20 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { penTips } from "../../../../../model/layers/drawing.ts";
 import { createShapeLayer } from "../../../../../model/layers/shape.ts";
 import {
 	BRUSH_SIZES,
 	brushFor,
 	brushSizeIndex,
 	defaultBrushSettings,
+	isBrush,
 	parseBrushSettings,
+	penTip,
 	shapeEdit,
 	shapeStyleFor,
 	stepBrushSize,
+	withBrushSize,
 	withShape,
 } from "../brushSettings.ts";
 
@@ -75,6 +79,48 @@ describe("brushSizeIndex", () => {
 		const settings = { ...defaultBrushSettings, sizes };
 		assert.equal(brushSizeIndex({ ...settings, tool: "neon" }), 3);
 		assert.equal(brushSizeIndex({ ...settings, tool: "marker" }), 0);
+	});
+});
+
+describe("withBrushSize", () => {
+	test("changes only the size of the tool in use", () => {
+		const settings = { ...defaultBrushSettings, tool: "ink" as const, sizes };
+		assert.deepEqual(withBrushSize(settings, 4), {
+			...settings,
+			sizes: { ...sizes, ink: 4 },
+		});
+		const eraser = { ...settings, tool: "eraser" as const };
+		assert.deepEqual(withBrushSize(eraser, 0).sizes, { ...sizes, eraser: 0 });
+	});
+});
+
+describe("isBrush", () => {
+	const drawTools = [
+		"pen",
+		"marker",
+		"ink",
+		"neon",
+		"shape",
+		"eraser",
+	] as const;
+
+	test("is a brush exactly where a saved last brush is kept", () => {
+		for (const tool of drawTools) {
+			const kept =
+				parseBrushSettings({ tool: "shape", lastBrush: tool }).lastBrush ===
+				tool;
+			assert.equal(isBrush(tool), kept, tool);
+		}
+	});
+
+	test("is the pen and every tool with a pen tip", () => {
+		for (const tool of drawTools) {
+			assert.equal(isBrush(tool), tool === "pen" || penTip(tool) !== undefined);
+		}
+		assert.deepEqual(
+			drawTools.filter((tool) => penTip(tool) !== undefined),
+			[...penTips],
+		);
 	});
 });
 

@@ -24,7 +24,7 @@ import { interaction } from "@/ui/interaction";
 import { colors, typography, webTransition } from "@/ui/theme";
 import type { TextColorKey } from "../../editorMode";
 import { ColorChip, ColorPicker } from "../../shell/ColorPicker";
-import { ColorSwatches, isCustomColor } from "../../shell/ColorSwatches";
+import { ColorSwatches, customSwatch } from "../../shell/ColorSwatches";
 import {
 	BarChip,
 	BarGroup,
@@ -294,20 +294,14 @@ function TabContent({
 	onChange: (patch: TextLayerEdit) => void;
 	onOpenPicker: (key: TextColorKey) => void;
 }) {
-	// The custom swatch picks the custom color again, if the value isn't
-	// custom, and opens the picker over the canvas: the dock has no room.
-	const custom = (key: TextColorKey) => {
-		const value = layer[key];
-		return {
-			color: isCustomColor(value) ? value : customColor,
-			onPress: () => {
-				if (customColor && !isCustomColor(value)) {
-					onChange({ [key]: customColor });
-				}
-				onOpenPicker(key);
-			},
-		};
-	};
+	// The custom swatch opens the picker over the canvas: the dock has no room.
+	const custom = (key: TextColorKey) =>
+		customSwatch(
+			layer[key],
+			customColor,
+			(color) => onChange({ [key]: color }),
+			() => onOpenPicker(key),
+		);
 	switch (tab) {
 		case "align":
 			return (

@@ -74,19 +74,43 @@ export function parseRedactSettings(saved: unknown): RedactSettings {
 	};
 }
 
+// Where the brush and the eraser each keep their size.
+const SIZE_KEYS = { brush: "brushSize", eraser: "eraserSize" } as const;
+
+/**
+ * The size of the tool in use, an index into `REDACT_BRUSH_SIZES`. Null for
+ * the box, which has none.
+ */
+export function redactSizeIndex(settings: RedactSettings): number | null {
+	return settings.tool === "box" ? null : settings[SIZE_KEYS[settings.tool]];
+}
+
+/**
+ * Settings with the brush or eraser in use at size `index`; the other keeps
+ * its own. The box has no size, so its settings stay as they are.
+ */
+export function withRedactSize(
+	settings: RedactSettings,
+	index: number,
+): RedactSettings {
+	return settings.tool === "box"
+		? settings
+		: { ...settings, [SIZE_KEYS[settings.tool]]: index };
+}
+
 /** The brush or eraser, one size dot up or down. A box has no size. */
 export function stepRedactSize(
 	settings: RedactSettings,
 	step: 1 | -1,
 ): RedactSettings {
-	if (settings.tool === "box") return settings;
-	const key = settings.tool === "brush" ? "brushSize" : "eraserSize";
+	const index = redactSizeIndex(settings);
+	if (index === null) return settings;
 	const next = Math.min(
 		REDACT_BRUSH_SIZES.length - 1,
-		Math.max(0, settings[key] + step),
+		Math.max(0, index + step),
 	);
-	if (next === settings[key]) return settings;
-	return { ...settings, [key]: next };
+	if (next === index) return settings;
+	return withRedactSize(settings, next);
 }
 
 export function redactionEffect(
@@ -117,9 +141,8 @@ export function maskBrush(
 	settings: RedactSettings,
 	size: Size,
 ): Omit<MaskStroke, "points"> | null {
-	if (settings.tool === "box") return null;
-	const index =
-		settings.tool === "brush" ? settings.brushSize : settings.eraserSize;
+	const index = redactSizeIndex(settings);
+	if (index === null) return null;
 	return {
 		type: settings.tool === "brush" ? "pen" : "eraser",
 		width: REDACT_BRUSH_SIZES[index] * shortSide(size),

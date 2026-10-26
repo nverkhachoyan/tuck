@@ -1,4 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import type { ComponentProps } from "react";
 import { StyleSheet, View } from "react-native";
 import { shapeKinds } from "@/model/layers/shape";
 import { RingChoice } from "@/ui/RingChoice";
@@ -25,24 +26,28 @@ import {
 	brushColor,
 	brushSizeIndex,
 	type DrawTool,
+	isBrush,
 	penTip,
 	withBrushColor,
+	withBrushSize,
 } from "./brushSettings";
 
-const TOOL_ICONS = {
-	pen: "draw-pen",
-	marker: "marker",
-	ink: "brush",
-	neon: "shimmer",
-	eraser: "eraser",
-} as const;
+// Draw's brushes, in the order the tip chip and the tray list them: each
+// one's tool, its name, and its icon, which the dock's Brush shows for the
+// last brush.
+const BRUSHES = [
+	{ tool: "pen", title: "Pen", icon: "draw-pen" },
+	{ tool: "marker", title: "Highlighter", icon: "marker" },
+	{ tool: "ink", title: "Marker", icon: "brush" },
+	{ tool: "neon", title: "Neon", icon: "shimmer" },
+] as const satisfies readonly {
+	tool: BrushTool;
+	title: string;
+	icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
+}[];
 
-const BRUSH_NAMES: Record<BrushTool, string> = {
-	pen: "Pen",
-	marker: "Highlighter",
-	ink: "Marker",
-	neon: "Neon",
-};
+const brushOf = (tool: BrushTool) =>
+	BRUSHES.find((brush) => brush.tool === tool) ?? BRUSHES[0];
 
 /**
  * The drawing tools, in place of the toolbar while drawing: Brush returns to
@@ -72,7 +77,7 @@ export function DrawPanel({
 		<ToolRow>
 			<ToolButton
 				label="Brush"
-				icon={TOOL_ICONS[settings.lastBrush]}
+				icon={brushOf(settings.lastBrush).icon}
 				selected={isBrush(settings.tool)}
 				onPress={pickBrush}
 			/>
@@ -99,11 +104,12 @@ export function DrawPanel({
 	);
 }
 
-const PEN_TIPS = [
-	{ title: "Pen", tool: "pen", icon: "draw-pen" },
-	{ title: "Highlighter", tool: "marker", icon: "marker" },
-	{ title: "Marker", tool: "ink", icon: "brush" },
-	{ title: "Neon", tool: "neon", icon: "shimmer" },
+// The sub-tools the bar's segments choose between. Brush brings back the
+// last brush.
+const DRAW_SUB_TOOLS = [
+	{ tool: "brush", title: "Brush" },
+	{ tool: "shape", title: "Shape" },
+	{ tool: "eraser", title: "Eraser" },
 ] as const;
 
 /**
@@ -126,29 +132,32 @@ export function DrawBar({
 	onEyedropper: () => void;
 }) {
 	const eraser = settings.tool === "eraser";
-	const selected =
-		settings.tool === "shape" ? 1 : settings.tool === "eraser" ? 2 : 0;
+	const icons = {
+		brush: brushOf(settings.lastBrush).icon,
+		shape: SHAPE_ICONS[settings.shape],
+		eraser: "eraser",
+	} as const;
+	const selected = DRAW_SUB_TOOLS.findIndex(
+		({ tool }) => tool === (isBrush(settings.tool) ? "brush" : settings.tool),
+	);
 	const pickTool = (index: number) => {
-		if (index === selected) return;
-		if (index === 0) onChange({ ...settings, tool: settings.lastBrush });
-		else if (index === 1) onChange({ ...settings, tool: "shape" });
-		else onChange({ ...settings, tool: "eraser" });
-	};
-	const pickSize = (size: number) =>
+		const next = DRAW_SUB_TOOLS[index]?.tool;
+		if (!next || index === selected) return;
 		onChange({
 			...settings,
-			sizes: { ...settings.sizes, [settings.tool]: size },
+			tool: next === "brush" ? settings.lastBrush : next,
 		});
+	};
+	const pickSize = (size: number) => onChange(withBrushSize(settings, size));
 	return (
 		<BarSections>
 			<BarGroup>
 				<OptionSegments
 					label="Draw tool"
-					options={[
-						{ title: "Brush", icon: TOOL_ICONS[settings.lastBrush] },
-						{ title: "Shape", icon: SHAPE_ICONS[settings.shape] },
-						{ title: "Eraser", icon: "eraser" },
-					]}
+					options={DRAW_SUB_TOOLS.map(({ tool, title }) => ({
+						title,
+						icon: icons[tool],
+					}))}
 					selected={selected}
 					onSelect={pickTool}
 				/>
@@ -189,7 +198,7 @@ export function DrawBar({
 	);
 }
 
-/** The pen in use, opening Pen, Highlighter, and Neon. */
+/** The brush in use, by name, opening every brush in `BRUSHES`. */
 function PenTipChip({
 	tool,
 	onPick,
@@ -197,17 +206,16 @@ function PenTipChip({
 	tool: BrushTool;
 	onPick: (tool: BrushTool) => void;
 }) {
-	const selected = PEN_TIPS.findIndex((tip) => tip.tool === tool);
-	const tip = PEN_TIPS[selected] ?? PEN_TIPS[0];
+	const tip = brushOf(tool);
 	return (
 		<BarChip label={tip.title} icon={tip.icon} text={tip.title}>
 			{(close) => (
 				<OptionSegments
 					label="Pen tip"
-					options={PEN_TIPS.map(({ title, icon }) => ({ title, icon }))}
-					selected={selected}
+					options={BRUSHES.map(({ title, icon }) => ({ title, icon }))}
+					selected={BRUSHES.indexOf(tip)}
 					onSelect={(index) => {
-						const next = PEN_TIPS[index]?.tool;
+						const next = BRUSHES[index]?.tool;
 						if (next && next !== tool) onPick(next);
 						close();
 					}}
@@ -278,11 +286,7 @@ export function BrushOptions({
 	const tip = penTip(settings.tool);
 	const pickBrush = (brush: BrushTool) =>
 		onChange({ ...settings, tool: brush, lastBrush: brush });
-	const pickSize = (size: number) =>
-		onChange({
-			...settings,
-			sizes: { ...settings.sizes, [settings.tool]: size },
-		});
+	const pickSize = (size: number) => onChange(withBrushSize(settings, size));
 
 	return (
 		<ToolOptions
@@ -294,20 +298,16 @@ export function BrushOptions({
 			{isBrush(settings.tool) && (
 				<ToolOption label="Brush">
 					<ToolChoices>
-						{(["pen", "marker", "ink", "neon"] as const).map((brush) => (
+						{BRUSHES.map(({ tool, title, icon }) => (
 							<RingChoice
-								key={brush}
+								key={tool}
 								variant="highlight"
-								label={BRUSH_NAMES[brush]}
-								selected={settings.tool === brush}
-								onPress={() => pickBrush(brush)}
+								label={title}
+								selected={settings.tool === tool}
+								onPress={() => pickBrush(tool)}
 							>
 								{(ink) => (
-									<MaterialCommunityIcons
-										name={TOOL_ICONS[brush]}
-										size={22}
-										color={ink}
-									/>
+									<MaterialCommunityIcons name={icon} size={22} color={ink} />
 								)}
 							</RingChoice>
 						))}
@@ -359,12 +359,6 @@ export function BrushOptions({
 				/>
 			</ToolOption>
 		</ToolOptions>
-	);
-}
-
-function isBrush(tool: DrawTool): tool is BrushTool {
-	return (
-		tool === "pen" || tool === "marker" || tool === "ink" || tool === "neon"
 	);
 }
 

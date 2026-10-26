@@ -16,6 +16,7 @@ import {
 	CutOutOptions,
 	CutOutPanel,
 } from "./tools/cutout/CutOutPanel";
+import { isCutBrush } from "./tools/cutout/cutOutSettings";
 import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import {
@@ -293,7 +294,7 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 		),
 		// The pick tool has no options.
 		tray: ({ tools: { cut }, bottomInset, closeTray }) =>
-			cut.tool !== "pick" && (
+			isCutBrush(cut.tool) && (
 				<CutOutOptions
 					settings={cut.settings}
 					tool={cut.tool}

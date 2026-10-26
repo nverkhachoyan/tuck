@@ -14,13 +14,15 @@ export type RedactLookSettings = {
 	strength: number;
 };
 
-const EFFECTS = [
+// The redaction effects, in the order the bars and Redact's tray list them:
+// each one's name and the bar's icon for it.
+export const EFFECTS = [
 	{ title: "Solid", effect: "solid", icon: "format-color-fill" },
 	{ title: "Blur", effect: "blur", icon: "blur" },
 	{ title: "Pixelate", effect: "pixelate", icon: "checkerboard" },
 ] as const;
 
-export const STRENGTH_NAMES = {
+const STRENGTH_NAMES = {
 	blur: ["Light blur", "Medium blur", "Strong blur"],
 	pixelate: ["Small pixels", "Medium pixels", "Large pixels"],
 } as const;
@@ -71,25 +73,15 @@ export function redactLookItems<T extends RedactLookSettings>({
 						}}
 					/>
 					{effect !== "solid" && (
-						<ToolChoices nowrap>
-							{STRENGTH_NAMES[effect].map((name, index) => (
-								<RingChoice
-									key={name}
-									label={name}
-									selected={index === settings.strength}
-									onPress={() => {
-										onChange({ ...settings, strength: index });
-										close();
-									}}
-								>
-									{effect === "blur" ? (
-										<StrengthDot strength={index} />
-									) : (
-										<PixelSquare strength={index} />
-									)}
-								</RingChoice>
-							))}
-						</ToolChoices>
+						<StrengthChoices
+							nowrap
+							effect={effect}
+							strength={settings.strength}
+							onPick={(strength) => {
+								onChange({ ...settings, strength });
+								close();
+							}}
+						/>
 					)}
 				</View>
 			)}
@@ -111,17 +103,42 @@ export function redactLookItems<T extends RedactLookSettings>({
 }
 
 /**
- * The effect a redaction is drawn with. Redact's bar shows it, and so does
- * Find's, for the style Done redacts what it found with.
+ * Blur's or pixelation's strengths, ringed when chosen, in Redact's tray and
+ * in the effect chip's popover. `nowrap` keeps them on one line.
  */
-export function RedactLook<T extends RedactLookSettings>(
-	props: RedactLookProps<T>,
-) {
-	return <>{redactLookItems(props)}</>;
+export function StrengthChoices({
+	effect,
+	strength,
+	nowrap = false,
+	onPick,
+}: {
+	effect: Exclude<RedactLookSettings["effect"], "solid">;
+	strength: number;
+	nowrap?: boolean;
+	onPick: (strength: number) => void;
+}) {
+	return (
+		<ToolChoices nowrap={nowrap}>
+			{STRENGTH_NAMES[effect].map((name, index) => (
+				<RingChoice
+					key={name}
+					label={name}
+					selected={index === strength}
+					onPress={() => onPick(index)}
+				>
+					{effect === "blur" ? (
+						<StrengthDot strength={index} />
+					) : (
+						<PixelSquare strength={index} />
+					)}
+				</RingChoice>
+			))}
+		</ToolChoices>
+	);
 }
 
 /** A dot whose halo spreads further the stronger the blur. */
-export function StrengthDot({ strength }: { strength: number }) {
+function StrengthDot({ strength }: { strength: number }) {
 	const size = 14 + strength * 7;
 	return (
 		<View
@@ -136,7 +153,7 @@ export function StrengthDot({ strength }: { strength: number }) {
 }
 
 /** Four pixels, larger the larger the pixelation's. */
-export function PixelSquare({ strength }: { strength: number }) {
+function PixelSquare({ strength }: { strength: number }) {
 	const size = 14 + strength * 6;
 	return (
 		<View style={[styles.pixels, { width: size, height: size }]}>

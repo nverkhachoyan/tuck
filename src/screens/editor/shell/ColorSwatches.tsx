@@ -28,6 +28,27 @@ export function isCustomColor(value: string | null): value is string {
 export type CustomSwatch = { color: string | null; onPress: () => void };
 
 /**
+ * The custom swatch for a color now `value`. It shows the value when that's
+ * custom, and the editor's `customColor` otherwise. A press picks
+ * `customColor` again (`pickCustom`) unless the value is already custom,
+ * then opens the picker (`open`).
+ */
+export function customSwatch(
+	value: string | null,
+	customColor: string | null,
+	pickCustom: (color: string) => void,
+	open: () => void,
+): CustomSwatch {
+	return {
+		color: isCustomColor(value) ? value : customColor,
+		onPress: () => {
+			if (customColor && !isCustomColor(value)) pickCustom(customColor);
+			open();
+		},
+	};
+}
+
+/**
  * The color swatches, led by a "none" swatch when `noneLabel` is given, and
  * followed by a custom one when `custom` is.
  */
