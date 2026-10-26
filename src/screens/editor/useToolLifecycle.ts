@@ -125,7 +125,7 @@ export function useEditorTools({
 			const next = stepRedactSize(redact.settings, step);
 			if (next !== redact.settings) redact.change(next);
 		} else if (tool === "cutOut") {
-			const next = stepCutSize(cut.settings, step);
+			const next = stepCutSize(cut.settings, cut.tool, step);
 			if (next !== cut.settings) cut.change(next);
 		}
 	};

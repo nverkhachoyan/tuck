@@ -82,7 +82,20 @@ describe("cutBrush", () => {
 describe("stepCutSize", () => {
 	test("steps the brush in use, and leaves Pick alone", () => {
 		const keep = { ...defaultCutOutSettings, tool: "keep" as const };
-		assert.equal(stepCutSize(keep, 1).keepSize, keep.keepSize + 1);
-		assert.equal(stepCutSize(defaultCutOutSettings, -1), defaultCutOutSettings);
+		assert.equal(stepCutSize(keep, "keep", 1).keepSize, keep.keepSize + 1);
+		assert.equal(
+			stepCutSize(defaultCutOutSettings, "pick", -1),
+			defaultCutOutSettings,
+		);
+	});
+
+	test("steps the eraser's size when it stands in for a saved Pick", () => {
+		const picking = { ...defaultCutOutSettings, tool: "pick" as const };
+		const stepped = stepCutSize(picking, cutOutTool(picking, false), 1);
+		assert.deepEqual(stepped, {
+			...picking,
+			eraseSize: picking.eraseSize + 1,
+		});
+		assert.equal(stepCutSize(picking, "pick", 1), picking);
 	});
 });
