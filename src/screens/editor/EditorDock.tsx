@@ -57,6 +57,26 @@ type ModeProps = {
 };
 
 /**
+ * For a tray or bar whose colors go to `apply`: a color from its picker, which
+ * becomes the custom color too, and the eyedropper, for a color from the
+ * canvas.
+ */
+function colorTarget(
+	apply: (color: string) => void,
+	onCustomColor: (color: string) => void,
+	dispatchMode: (action: EditorModeAction) => void,
+) {
+	return {
+		onPickCustom: (color: string) => {
+			apply(color);
+			onCustomColor(color);
+		},
+		onEyedropper: () =>
+			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
+	};
+}
+
+/**
  * What opens over the canvas, above the dock: the tool's tray, Find's
  * results, a text color picker, and the eyedropper's hint.
  */
@@ -79,17 +99,6 @@ export function ToolTrays({
 	const { styledText } = text;
 	const tray = openTray(mode);
 	const closeTray = () => dispatchMode({ type: "closeToolOptions" });
-	// For a tray whose colors go to `apply`: a color from its picker, which
-	// becomes the custom color too, and the eyedropper, for a color from the
-	// canvas.
-	const colorTarget = (apply: (color: string) => void) => ({
-		onPickCustom: (color: string) => {
-			apply(color);
-			onCustomColor(color);
-		},
-		onEyedropper: () =>
-			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-	});
 	return (
 		<>
 			{tray === "draw" && (
@@ -98,8 +107,10 @@ export function ToolTrays({
 					customColor={customColor}
 					bottomInset={bottomInset}
 					onChange={draw.change}
-					{...colorTarget((color) =>
-						draw.change(withBrushColor(draw.settings, color)),
+					{...colorTarget(
+						(color) => draw.change(withBrushColor(draw.settings, color)),
+						onCustomColor,
+						dispatchMode,
 					)}
 					onClose={closeTray}
 				/>
@@ -110,8 +121,10 @@ export function ToolTrays({
 					customColor={customColor}
 					bottomInset={bottomInset}
 					onChange={redact.change}
-					{...colorTarget((color) =>
-						redact.change({ ...redact.settings, color }),
+					{...colorTarget(
+						(color) => redact.change({ ...redact.settings, color }),
+						onCustomColor,
+						dispatchMode,
 					)}
 					onClose={closeTray}
 				/>
@@ -124,8 +137,10 @@ export function ToolTrays({
 					onChange={({ tool: _, ...style }) =>
 						redact.setChosen((settings) => ({ ...settings, ...style }))
 					}
-					{...colorTarget((color) =>
-						redact.setChosen((settings) => ({ ...settings, color })),
+					{...colorTarget(
+						(color) => redact.setChosen((settings) => ({ ...settings, color })),
+						onCustomColor,
+						dispatchMode,
 					)}
 					onClose={closeTray}
 				/>
@@ -158,7 +173,11 @@ export function ToolTrays({
 					layer={styledText}
 					colorKey={textPicker.key}
 					bottomInset={bottomInset}
-					{...colorTarget((color) => text.style({ [textPicker.key]: color }))}
+					{...colorTarget(
+						(color) => text.style({ [textPicker.key]: color }),
+						onCustomColor,
+						dispatchMode,
+					)}
 					onClose={() => dispatchMode({ type: "closeTextPicker" })}
 				/>
 			)}
@@ -201,17 +220,6 @@ export function ContextBarContent({
 	restoreTextFocus?: () => void;
 	layerActions?: ComponentProps<typeof LayerActionsPanel>;
 }) {
-	// For a bar whose colors go to `apply`: a color from its picker, which
-	// becomes the custom color too, and the eyedropper, for a color from the
-	// canvas.
-	const colorTarget = (apply: (color: string) => void) => ({
-		onPickCustom: (color: string) => {
-			apply(color);
-			onCustomColor(color);
-		},
-		onEyedropper: () =>
-			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-	});
 	if (panel === "draw") {
 		return (
 			<ContextBar
@@ -225,8 +233,10 @@ export function ContextBarContent({
 					settings={draw.settings}
 					customColor={customColor}
 					onChange={draw.change}
-					{...colorTarget((color) =>
-						draw.change(withBrushColor(draw.settings, color)),
+					{...colorTarget(
+						(color) => draw.change(withBrushColor(draw.settings, color)),
+						onCustomColor,
+						dispatchMode,
 					)}
 				/>
 			</ContextBar>
@@ -246,8 +256,10 @@ export function ContextBarContent({
 					customColor={customColor}
 					onChange={redact.change}
 					onFind={onFind}
-					{...colorTarget((color) =>
-						redact.change({ ...redact.settings, color }),
+					{...colorTarget(
+						(color) => redact.change({ ...redact.settings, color }),
+						onCustomColor,
+						dispatchMode,
 					)}
 				/>
 			</ContextBar>
@@ -268,8 +280,10 @@ export function ContextBarContent({
 					onChange={(next) =>
 						redact.setChosen((current) => ({ ...current, ...next }))
 					}
-					{...colorTarget((color) =>
-						redact.setChosen((current) => ({ ...current, color })),
+					{...colorTarget(
+						(color) => redact.setChosen((current) => ({ ...current, color })),
+						onCustomColor,
+						dispatchMode,
 					)}
 				/>
 			</ContextBar>
@@ -316,14 +330,11 @@ export function ContextBarContent({
 					onChange={text.style}
 					onPickCustom={onCustomColor}
 					onEyedropper={(key) =>
-						dispatchMode({
-							type: "startEyedropper",
-							eyedropper: {
-								apply: (color) => {
-									text.style({ [key]: color });
-								},
-							},
-						})
+						colorTarget(
+							(color) => text.style({ [key]: color }),
+							onCustomColor,
+							dispatchMode,
+						).onEyedropper()
 					}
 					restoreFocus={editingText ? restoreTextFocus : undefined}
 				/>
