@@ -119,7 +119,7 @@ export function Inspector({ children }: { children: ReactNode }) {
 	);
 }
 
-type ModeActionProps = {
+export type ModeActionProps = {
 	onCancel?: () => void;
 	cancelShortcut?: string;
 	onDone: () => void;

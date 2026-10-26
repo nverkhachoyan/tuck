@@ -1,13 +1,14 @@
 import type { ComponentProps, ReactNode } from "react";
 import type { Adjustments } from "@/model/adjustments";
+import type { DockPanel } from "./editorChrome";
 import {
 	type EditorModeAction,
 	type EditorModeState,
-	type EditorTool,
 	openTray,
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
+import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
 import { AdjustPanel } from "./tools/adjust/AdjustPanel";
 import type { useAdjustTool } from "./tools/adjust/useAdjustTool";
@@ -22,7 +23,6 @@ import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import type { useDrawTool } from "./tools/draw/useDrawTool";
 import { FindBar, FindPanel, FindTray } from "./tools/find/FindPanel";
 import type { useFindTool } from "./tools/find/useFindTool";
-import { layerKindName } from "./tools/layers/LayerRow";
 import {
 	EffectGlyph,
 	RedactBar,
@@ -36,10 +36,6 @@ import {
 	TextStylePanel,
 } from "./tools/text/TextStylePanel";
 import type { useTextEditing } from "./tools/text/useTextEditing";
-
-// What the dock shows: a tool's panel, text's style, the selected layer's
-// actions, or, with nothing selected, the tools or the layers.
-export type DockPanel = EditorTool | "text" | "layer" | "idle";
 
 export type EditorTools = {
 	draw: ReturnType<typeof useDrawTool>;
@@ -203,9 +199,7 @@ export function ContextBarContent({
 	customColor,
 	onCustomColor,
 	onFind,
-	onCancel,
-	onDone,
-	doneLabel,
+	chrome,
 	editingText = false,
 	restoreTextFocus,
 	layerActions,
@@ -213,22 +207,15 @@ export function ContextBarContent({
 	panel: DockPanel;
 	onCustomColor: (color: string) => void;
 	onFind?: () => void;
-	onCancel?: () => void;
-	onDone: () => void;
-	doneLabel?: string;
+	// The bar's title, Cancel, and Done, which `modeChrome` chose.
+	chrome: { title: string } & ModeActionProps;
 	editingText?: boolean;
 	restoreTextFocus?: () => void;
 	layerActions?: ComponentProps<typeof LayerActionsPanel>;
 }) {
 	if (panel === "draw") {
 		return (
-			<ContextBar
-				title="Draw"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<DrawBar
 					settings={draw.settings}
 					customColor={customColor}
@@ -244,13 +231,7 @@ export function ContextBarContent({
 	}
 	if (panel === "redact") {
 		return (
-			<ContextBar
-				title="Redact"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<RedactBar
 					settings={redact.settings}
 					customColor={customColor}
@@ -267,13 +248,7 @@ export function ContextBarContent({
 	}
 	if (panel === "find") {
 		return (
-			<ContextBar
-				title="Find"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<FindBar
 					settings={redact.chosen}
 					customColor={customColor}
@@ -291,13 +266,7 @@ export function ContextBarContent({
 	}
 	if (panel === "cutOut") {
 		return (
-			<ContextBar
-				title="Cut out"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<CutOutBar
 					settings={cut.settings}
 					tool={cut.tool}
@@ -316,14 +285,7 @@ export function ContextBarContent({
 		const { styledText } = text;
 		if (!styledText) return null;
 		return (
-			<ContextBar
-				title="Text"
-				keepFocus={editingText}
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome} keepFocus={editingText}>
 				<TextBar
 					layer={styledText}
 					customColor={customColor}
@@ -342,25 +304,11 @@ export function ContextBarContent({
 		);
 	}
 	if (panel === "adjust") {
-		return (
-			<ContextBar
-				title="Adjust"
-				onCancel={onCancel}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut="Escape"
-			>
-				{null}
-			</ContextBar>
-		);
+		return <ContextBar {...chrome}>{null}</ContextBar>;
 	}
 	if (panel === "layer" && layerActions) {
 		return (
-			<ContextBar
-				title={layerKindName(layerActions.layer)}
-				onDone={onDone}
-				doneShortcut="Escape"
-			>
+			<ContextBar {...chrome}>
 				<LayerBar {...layerActions} />
 			</ContextBar>
 		);

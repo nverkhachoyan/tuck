@@ -40,12 +40,8 @@ import { showAlert } from "@/ui/showAlert";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
-import {
-	ContextBarContent,
-	DockContent,
-	type DockPanel,
-	ToolTrays,
-} from "./EditorDock";
+import { ContextBarContent, DockContent, ToolTrays } from "./EditorDock";
+import { modeChrome } from "./editorChrome";
 import { openTray, takesKeys, toolImageId } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
@@ -56,6 +52,7 @@ import {
 	Dock,
 	DockFooter,
 	Inspector,
+	type ModeActionProps,
 	PANEL_GAP,
 	PANEL_RADIUS,
 } from "./shell/Dock";
@@ -92,15 +89,6 @@ import { RAIL_INSET, RAIL_WIDTH, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
 import { useToolLifecycle, useToolSession } from "./useToolLifecycle";
-
-// What a tool's footer calls it.
-const TOOL_TITLES = {
-	draw: "Draw",
-	redact: "Redact",
-	find: "Find",
-	adjust: "Adjust",
-	cutOut: "Cut out",
-};
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
@@ -370,24 +358,19 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		next?.();
 	}, []);
 
-	const panelKind: DockPanel = tool
-		? tool
-		: styledText
-			? "text"
-			: selectedLayer
-				? "layer"
-				: "idle";
-	// A wide screen's open tool, or a selected layer, lives in the header.
-	// Find's results and Adjust's dial sit in the inspector, above the layers.
-	const inBar =
-		wide &&
-		(panelKind === "draw" ||
-			panelKind === "redact" ||
-			panelKind === "find" ||
-			panelKind === "cutOut" ||
-			panelKind === "text" ||
-			panelKind === "layer" ||
-			panelKind === "adjust");
+	// The dock's panel, and its Cancel, Done, and title, chosen once for both
+	// layouts. A wide screen's open tool, or a selected layer, lives in the
+	// header. Find's results and Adjust's dial sit in the inspector, above the
+	// layers.
+	const chrome = modeChrome({
+		tool,
+		editingText,
+		styledText: styledText !== undefined,
+		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
+		findChosen: find.selectedCount,
+		wide,
+	});
+	const { panel, inBar } = chrome;
 
 	const focused = useIsFocused();
 	// Under the export sheet, the editor is out of reach on web: inert takes
@@ -550,34 +533,22 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		/>
 	);
 
-	const findDoneLabel =
-		tool === "find" && find.selectedCount > 0
-			? `Redact ${find.selectedCount} chosen`
-			: undefined;
-	// The dock's Cancel and Done, for the open tool, the text being typed, or
-	// the selected layer.
-	const dockFooter = tool ? (
-		<DockFooter
-			title={TOOL_TITLES[tool]}
-			onCancel={cancel}
-			onDone={done}
-			doneLabel={findDoneLabel}
-			doneShortcut="Escape"
-		/>
-	) : editingText ? (
-		<DockFooter
-			title="Text"
-			onCancel={textEditing.cancel}
-			onDone={textEditing.finish}
-			doneShortcut="Escape"
-		/>
-	) : selectedLayer ? (
-		<DockFooter
-			title={layerKindName(selectedLayer)}
-			onDone={() => selectLayer(null)}
-			doneShortcut="Escape"
-		/>
-	) : undefined;
+	// The dock's footer and the context bar's title, Cancel, and Done, for
+	// the open tool, the text being typed or styled, or the selected layer.
+	const onCancel = { tool: cancel, text: textEditing.cancel };
+	const onDone = {
+		tool: done,
+		text: textEditing.finish,
+		deselect: () => selectLayer(null),
+	};
+	const modeActions: ({ title: string } & ModeActionProps) | null =
+		chrome.actions && {
+			title: chrome.actions.title,
+			onCancel: chrome.actions.cancel && onCancel[chrome.actions.cancel],
+			onDone: onDone[chrome.actions.done],
+			doneLabel: chrome.actions.doneLabel,
+			doneShortcut: "Escape",
+		};
 
 	const addStickerFrom = (load: () => Promise<StickerImage | null>) => {
 		closeStickers();
@@ -629,33 +600,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							: undefined
 					}
 					bar={
-						inBar ? (
+						inBar && modeActions ? (
 							<ContextBarContent
-								panel={panelKind}
+								panel={panel}
 								dispatchMode={dispatchMode}
 								tools={tools}
 								customColor={customColor}
 								onCustomColor={setCustomColor}
 								onFind={targetImage ? startTool.find : undefined}
-								onCancel={
-									panelKind === "text"
-										? editingText
-											? textEditing.cancel
-											: undefined
-										: panelKind === "layer"
-											? undefined
-											: cancel
-								}
-								onDone={
-									panelKind === "text"
-										? editingText
-											? textEditing.finish
-											: () => selectLayer(null)
-										: panelKind === "layer"
-											? () => selectLayer(null)
-											: done
-								}
-								doneLabel={findDoneLabel}
+								chrome={modeActions}
 								editingText={editingText}
 								restoreTextFocus={() => textEditing.editorRef.current?.focus()}
 								layerActions={layerActions || undefined}
@@ -770,7 +723,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				    has it open, is the layers, with Find or Adjust above them. */}
 					{inspector ? (
 						<Inspector>
-							{panelKind === "find" ? (
+							{panel === "find" ? (
 								<FindInspector
 									state={find.state}
 									visibleIndices={find.visibleIndices}
@@ -785,7 +738,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								>
 									<LayersPanel {...layerList} layout="inspector" open />
 								</FindInspector>
-							) : panelKind === "adjust" ? (
+							) : panel === "adjust" ? (
 								<AdjustInspector
 									controller={adjustController}
 									adjustments={adjustedLayer?.adjustments}
@@ -798,12 +751,12 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						</Inspector>
 					) : !wide ? (
 						<Dock
-							panel={panelKind}
-							footer={dockFooter}
+							panel={panel}
+							footer={modeActions ? <DockFooter {...modeActions} /> : undefined}
 							keyboardOverlap={layout.keyboardOverlap}
 						>
 							<DockContent
-								panel={panelKind}
+								panel={panel}
 								optionsOpen={toolOptionsOpen}
 								onFind={targetImage ? startTool.find : undefined}
 								dispatchMode={dispatchMode}
