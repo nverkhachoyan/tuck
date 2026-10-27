@@ -64,7 +64,6 @@ Ideas carried over from the roadmap that VISION.md held, not yet planned. Weigh 
 These were weighed in the removed plans and set aside. Don't add them unless use shows they're missed.
 
 * Snapping highlights to lines of text, and straightening for every pen, not only the highlighter.
-* A long press or ⌘↩ on Find's ✓ that finishes Redact too.
 * Pinch to zoom in the export preview.
 * One props type for a tool's panel, bar, and tray, and splitting `FindPanel.tsx`'s views.
 * A done state for Share, since the share sheet can't say whether anything was sent.

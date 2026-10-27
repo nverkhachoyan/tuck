@@ -102,14 +102,6 @@ export function useEditorTools({
 		redact.chooseTool();
 		dispatchMode({ type: "startTool", start: { tool: "redact" } });
 	};
-	// Two ways back into Redact, which pick its sub-tool differently. Find
-	// is one of Redact's tools, so its Cancel and Done go back to Redact as
-	// it would start, with the sub-tool for the selection or the one last
-	// used, to draw over anything Find missed.
-	const backToRedacting = () => {
-		find.reset();
-		startRedacting();
-	};
 	// Cut out's Redact ends its session, adds the masked redaction, and opens
 	// Redact's box on it. It sets the box itself: `startRedacting` would pick
 	// from the selection as it was before the redaction was added.
@@ -184,16 +176,16 @@ export function useEditorTools({
 		if (!targetImage) return;
 		dispatchMode({ type: "startTool", start: { tool: "find" } });
 	};
-	// Find's Done first redacts the regions chosen, in the style last picked
-	// rather than a selected redaction's, and says how many, with Undo.
+	// Find's Done redacts the regions chosen, in the look rather than a
+	// selected redaction's, and says how many, with Undo.
 	const finishFinding = () => {
 		const result = find.redactChosen(redactionEffect(redactLook, documentSize));
-		backToRedacting();
+		closeTool();
 		selectLayer(null);
 		if (result) onRedacted(result.count, result.feature);
 	};
 	const done = tool === "find" ? finishFinding : finishTool;
-	const cancel = tool === "find" ? backToRedacting : cancelTool;
+	const cancel = cancelTool;
 
 	const startNewText = () => text.startNew(visibleArea());
 	const startCrop = () => dispatchMode({ type: "startCrop" });

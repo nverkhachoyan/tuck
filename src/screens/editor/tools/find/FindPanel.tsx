@@ -102,7 +102,7 @@ export function FindTray({
 	review,
 	bottomInset,
 	onRetry,
-	onBack,
+	onCancel,
 	onStop,
 	onSelectAll,
 	onClear,
@@ -113,7 +113,7 @@ export function FindTray({
 	review: FindReview;
 	bottomInset: number;
 	onRetry: () => void;
-	onBack: () => void;
+	onCancel: () => void;
 	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
@@ -131,7 +131,7 @@ export function FindTray({
 				stacked={stacked}
 				onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
 				onRetry={onRetry}
-				onBack={onBack}
+				onCancel={onCancel}
 				onStop={onStop}
 				onSelectAll={onSelectAll}
 				onClear={onClear}
@@ -172,7 +172,7 @@ export function FindInspector({
 	review,
 	onFind,
 	onRetry,
-	onBack,
+	onCancel,
 	onStop,
 	onSelectAll,
 	onClear,
@@ -184,7 +184,7 @@ export function FindInspector({
 	review: FindReview;
 	onFind: (scope: DetectionScope) => void;
 	onRetry: () => void;
-	onBack: () => void;
+	onCancel: () => void;
 	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
@@ -213,7 +213,7 @@ export function FindInspector({
 					review={review}
 					stacked
 					onRetry={onRetry}
-					onBack={onBack}
+					onCancel={onCancel}
 					onStop={onStop}
 					onSelectAll={onSelectAll}
 					onClear={onClear}
@@ -232,7 +232,7 @@ function FindBody({
 	stacked,
 	onMeasure,
 	onRetry,
-	onBack,
+	onCancel,
 	onStop,
 	onSelectAll,
 	onClear,
@@ -244,7 +244,7 @@ function FindBody({
 	stacked: boolean;
 	onMeasure?: (width: number) => void;
 	onRetry: () => void;
-	onBack: () => void;
+	onCancel: () => void;
 	onStop: () => void;
 	onSelectAll: () => void;
 	onClear: () => void;
@@ -292,7 +292,7 @@ function FindBody({
 					/>
 				)}
 				{/* A scan that failed can be tried again; one that found nothing
-				    leaves drawing a box by hand, back in Redact. */}
+				    leaves drawing a box by hand, in Redact. */}
 				{state.status === "empty" &&
 					(state.issues[0] ? (
 						<Status
@@ -304,9 +304,9 @@ function FindBody({
 					) : (
 						<Status
 							title={`No ${scopeName(state.scope)} found`}
-							message="Draw a box over anything you want hidden."
-							action="Back to redact"
-							onAction={onBack}
+							message="Draw a box over it with Redact instead."
+							action="Close"
+							onAction={onCancel}
 						/>
 					))}
 			</View>

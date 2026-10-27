@@ -66,8 +66,9 @@ export type ToolViewContext = {
 	bottomInset: number;
 	// Redact's way into Find, when there's an image to search.
 	onFind: (() => void) | undefined;
-	// Find's way out when it found nothing: what its ✕ does.
-	onBackToRedact: () => void;
+	// The open tool's Cancel, which Find's tray also offers when it found
+	// nothing.
+	onCancel: () => void;
 	// How new redactions look, whichever tool adds them.
 	redactLook: RedactLook;
 	changeRedactLook: (change: Partial<RedactLook>) => void;
@@ -139,14 +140,14 @@ function findStyle({
 }
 
 /** What Find's results take, in the phone's tray and the inspector. */
-function findResults({ tools: { find }, onBackToRedact }: ToolViewContext) {
+function findResults({ tools: { find }, onCancel }: ToolViewContext) {
 	return {
 		state: find.state,
 		visibleIndices: find.visibleIndices,
 		selectedCount: find.selectedCount,
 		review: find.review,
 		onRetry: find.retry,
-		onBack: onBackToRedact,
+		onCancel,
 		onStop: find.reset,
 		onSelectAll: find.selectAll,
 		onClear: find.clear,

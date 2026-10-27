@@ -418,7 +418,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		optionsOpen: toolOptionsOpen,
 		bottomInset: dockInset,
 		onFind: targetImage ? startTool.find : undefined,
-		onBackToRedact: cancel,
+		onCancel: cancel,
 		redactLook,
 		changeRedactLook,
 		adjustments: adjustedLayer?.adjustments,
