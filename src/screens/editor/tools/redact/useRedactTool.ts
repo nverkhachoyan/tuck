@@ -15,6 +15,8 @@ import { type RedactSettings, stepRedactSize } from "./redactSettings";
  * ones then share, so a redaction can be picked to match. Changing them
  * restyles that one. `stepSize` steps the brush's size for `[` and `]`.
  */
+export type RedactController = ReturnType<typeof useRedactTool>;
+
 export function useRedactTool(
 	documentSize: Size,
 	chosen: RedactSettings,

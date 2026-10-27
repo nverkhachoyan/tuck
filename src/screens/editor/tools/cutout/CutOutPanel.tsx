@@ -2,6 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
+import { useEditorContext } from "../../editorContext";
 import {
 	BarButton,
 	BarGroup,
@@ -57,19 +58,12 @@ const BRUSH_EDGES = [
  * hides what it keeps under a redaction (`redact`): inverted first, that
  * blurs only the background. Each spins while it works.
  */
-export function CutOutPanel({
-	controller,
-	optionsOpen,
-	onToggleOptions,
-}: {
-	controller: CutOutController;
-	optionsOpen: boolean;
-	onToggleOptions: () => void;
-}) {
+export function CutOutPanel({ controller }: { controller: CutOutController }) {
+	const { trayOpen, toggleTray } = useEditorContext();
 	const { settings, tool, finding, findAll, inverting, invert } = controller;
 	const { redacting, redact, change } = controller;
 	const pickTool = (choice: CutOutTool) => {
-		if (choice === tool && choice !== "pick") onToggleOptions();
+		if (choice === tool && choice !== "pick") toggleTray();
 		else change({ ...settings, tool: choice });
 	};
 	return (
@@ -102,8 +96,8 @@ export function CutOutPanel({
 							color={tool === "keep" ? colors.textPrimary : null}
 						/>
 					}
-					open={optionsOpen}
-					onPress={onToggleOptions}
+					open={trayOpen}
+					onPress={toggleTray}
 				/>
 			)}
 			{invert && (
@@ -224,20 +218,17 @@ export function CutOutBar({ controller }: { controller: CutOutController }) {
  */
 export function CutOutOptions({
 	controller,
-	bottomInset,
-	onClose,
 }: {
 	controller: CutOutController;
-	bottomInset: number;
-	onClose: () => void;
 }) {
+	const { bottomInset, closeTray } = useEditorContext();
 	const { settings, tool, change: onChange } = controller;
 	if (!isCutBrush(tool)) return null;
 	return (
 		<ToolOptions
 			closeLabel="Close brush options"
 			bottomInset={bottomInset}
-			onClose={onClose}
+			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>
 			<ToolOption label="Size">

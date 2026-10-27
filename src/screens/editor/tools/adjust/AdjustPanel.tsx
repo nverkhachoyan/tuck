@@ -6,11 +6,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import {
-	type AdjustmentKey,
-	type Adjustments,
-	adjustmentKeys,
-} from "@/model/adjustments";
+import { type AdjustmentKey, adjustmentKeys } from "@/model/adjustments";
 import { Chip } from "@/ui/Chip";
 import { colors, radii, space, typography } from "@/ui/theme";
 import { Dial } from "../../shell/Dial";
@@ -33,21 +29,19 @@ const signed = (steps: number) => (steps > 0 ? `+${steps}` : `${steps}`);
 
 /**
  * The Adjust tool's dock panel: a choice of adjustment, each marked while
- * `adjustments` changes it, over the dial that changes the chosen one, which
+ * the image's adjustments change it, over the dial that changes the chosen one, which
  * a sideways drag over the photo turns too. While it changes, its value
  * shows large just above the dock. The inspector passes `floatingValue` false
  * and heads the section with the value instead.
  */
 export function AdjustPanel({
 	controller,
-	adjustments,
 	floatingValue = true,
 }: {
 	controller: AdjustController;
-	adjustments: Adjustments | undefined;
 	floatingValue?: boolean;
 }) {
-	const { chosen, choose } = controller;
+	const { adjustments, chosen, choose } = controller;
 	const label = LABELS[chosen];
 	return (
 		<View style={[styles.panel, floatingValue && styles.panelFill]}>
@@ -89,22 +83,16 @@ export function AdjustPanel({
  */
 export function AdjustInspector({
 	controller,
-	adjustments,
 	children,
 }: {
 	controller: AdjustController;
-	adjustments: Adjustments | undefined;
 	children: ReactNode;
 }) {
 	return (
 		<View style={styles.inspectorStack}>
 			<View style={styles.section}>
-				<AdjustHeading controller={controller} adjustments={adjustments} />
-				<AdjustPanel
-					controller={controller}
-					adjustments={adjustments}
-					floatingValue={false}
-				/>
+				<AdjustHeading controller={controller} />
+				<AdjustPanel controller={controller} floatingValue={false} />
 			</View>
 			{children}
 		</View>
@@ -112,13 +100,8 @@ export function AdjustInspector({
 }
 
 /** The chosen adjustment and its value, live as the dial moves. */
-function AdjustHeading({
-	controller,
-	adjustments,
-}: {
-	controller: AdjustController;
-	adjustments: Adjustments | undefined;
-}) {
+function AdjustHeading({ controller }: { controller: AdjustController }) {
+	const { adjustments } = controller;
 	const label = LABELS[controller.chosen];
 	// The saved value, for the moment a choice changes. A reaction already
 	// watching the dial can miss that, since the dial's shared value is stable.

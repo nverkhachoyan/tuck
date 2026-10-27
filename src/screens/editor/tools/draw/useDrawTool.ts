@@ -19,6 +19,8 @@ import {
  * a box, starts a new shape instead. `stepSize` steps the brush's size for
  * `[` and `]`.
  */
+export type DrawController = ReturnType<typeof useDrawTool>;
+
 export function useDrawTool(active: boolean, documentSize: Size) {
 	const selectedShape = useStore(selectSelectedShape);
 	const selectedType = useStore((state) => selectSelectedLayer(state)?.type);

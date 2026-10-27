@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { shapeKinds } from "@/model/layers/shape";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
+import { useColorTarget, useEditorContext } from "../../editorContext";
 import { ColorChip, ColorOptions } from "../../shell/ColorPicker";
 import {
 	BarChip,
@@ -31,6 +32,7 @@ import {
 	withBrushColor,
 	withBrushSize,
 } from "./brushSettings";
+import type { DrawController } from "./useDrawTool";
 
 // Draw's brushes, in the order the tip chip and the tray list them: each
 // one's tool, its name, and its icon, which the dock's Brush shows for the
@@ -55,23 +57,18 @@ const brushOf = (tool: BrushTool) =>
  * opens the shared options tray. Tapping the active tool opens that tray too.
  */
 export function DrawPanel({
-	settings,
-	optionsOpen,
-	onChange,
-	onToggleOptions,
+	controller: { settings, change },
 }: {
-	settings: BrushSettings;
-	optionsOpen: boolean;
-	onChange: (settings: BrushSettings) => void;
-	onToggleOptions: () => void;
+	controller: DrawController;
 }) {
+	const { trayOpen, toggleTray } = useEditorContext();
 	const pickTool = (tool: DrawTool) => {
-		if (tool === settings.tool) onToggleOptions();
-		else onChange({ ...settings, tool });
+		if (tool === settings.tool) toggleTray();
+		else change({ ...settings, tool });
 	};
 	const pickBrush = () => {
-		if (isBrush(settings.tool)) onToggleOptions();
-		else onChange({ ...settings, tool: settings.lastBrush });
+		if (isBrush(settings.tool)) toggleTray();
+		else change({ ...settings, tool: settings.lastBrush });
 	};
 	return (
 		<ToolRow>
@@ -97,8 +94,8 @@ export function DrawPanel({
 				label="Style"
 				icon="palette-outline"
 				glyph={<ColorGlyph color={brushColor(settings)} />}
-				open={optionsOpen}
-				onPress={onToggleOptions}
+				open={trayOpen}
+				onPress={toggleTray}
 			/>
 		</ToolRow>
 	);
@@ -119,18 +116,13 @@ const DRAW_SUB_TOOLS = [
  * leaves it, since the options stay in view.
  */
 export function DrawBar({
-	settings,
-	customColor,
-	onChange,
-	onPickCustom,
-	onEyedropper,
+	controller: { settings, change },
 }: {
-	settings: BrushSettings;
-	customColor: string | null;
-	onChange: (settings: BrushSettings) => void;
-	onPickCustom: (color: string) => void;
-	onEyedropper: () => void;
+	controller: DrawController;
 }) {
+	const { customColor, onPickCustom, onEyedropper } = useColorTarget((color) =>
+		change(withBrushColor(settings, color)),
+	);
 	const eraser = settings.tool === "eraser";
 	const icons = {
 		brush: brushOf(settings.lastBrush).icon,
@@ -143,12 +135,12 @@ export function DrawBar({
 	const pickTool = (index: number) => {
 		const next = DRAW_SUB_TOOLS[index]?.tool;
 		if (!next || index === selected) return;
-		onChange({
+		change({
 			...settings,
 			tool: next === "brush" ? settings.lastBrush : next,
 		});
 	};
-	const pickSize = (size: number) => onChange(withBrushSize(settings, size));
+	const pickSize = (size: number) => change(withBrushSize(settings, size));
 	return (
 		<BarSections>
 			<BarGroup>
@@ -166,13 +158,13 @@ export function DrawBar({
 				{isBrush(settings.tool) && (
 					<PenTipChip
 						tool={settings.tool}
-						onPick={(tool) => onChange({ ...settings, tool, lastBrush: tool })}
+						onPick={(tool) => change({ ...settings, tool, lastBrush: tool })}
 					/>
 				)}
 				{settings.tool === "shape" && (
 					<ShapeKindChip
 						shape={settings.shape}
-						onPick={(shape) => onChange({ ...settings, shape })}
+						onPick={(shape) => change({ ...settings, shape })}
 					/>
 				)}
 				{!eraser && (
@@ -180,9 +172,7 @@ export function DrawBar({
 						label="Color"
 						value={brushColor(settings)}
 						customColor={customColor}
-						onPick={(color) =>
-							color && onChange(withBrushColor(settings, color))
-						}
+						onPick={(color) => color && change(withBrushColor(settings, color))}
 						onPickCustom={onPickCustom}
 						onEyedropper={onEyedropper}
 					/>
@@ -261,38 +251,28 @@ function ShapeKindChip({
 /**
  * The brush's color and size, and the shape tool's kind, in a tray above the
  * dock (see `ToolOptions`). The custom swatch opens a picker for any color
- * (see `ColorOptions`).
+ * (see `ColorOptions`), and the eyedropper picks one from the canvas.
  */
 export function BrushOptions({
-	settings,
-	customColor,
-	bottomInset,
-	onChange,
-	onPickCustom,
-	onEyedropper,
-	onClose,
+	controller: { settings, change },
 }: {
-	settings: BrushSettings;
-	customColor: string | null;
-	bottomInset: number;
-	onChange: (settings: BrushSettings) => void;
-	// A color from the picker, which becomes the editor's custom color.
-	onPickCustom: (color: string) => void;
-	// Sets out to pick the brush's color from the canvas.
-	onEyedropper: () => void;
-	onClose: () => void;
+	controller: DrawController;
 }) {
+	const { bottomInset, closeTray } = useEditorContext();
+	const { customColor, onPickCustom, onEyedropper } = useColorTarget((color) =>
+		change(withBrushColor(settings, color)),
+	);
 	const eraser = settings.tool === "eraser";
 	const tip = penTip(settings.tool);
 	const pickBrush = (brush: BrushTool) =>
-		onChange({ ...settings, tool: brush, lastBrush: brush });
-	const pickSize = (size: number) => onChange(withBrushSize(settings, size));
+		change({ ...settings, tool: brush, lastBrush: brush });
+	const pickSize = (size: number) => change(withBrushSize(settings, size));
 
 	return (
 		<ToolOptions
 			closeLabel="Close brush options"
 			bottomInset={bottomInset}
-			onClose={onClose}
+			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>
 			{isBrush(settings.tool) && (
@@ -323,7 +303,7 @@ export function BrushOptions({
 								variant="highlight"
 								label={SHAPE_NAMES[shape]}
 								selected={settings.shape === shape}
-								onPress={() => onChange({ ...settings, shape })}
+								onPress={() => change({ ...settings, shape })}
 							>
 								{(ink) => (
 									<MaterialCommunityIcons
@@ -342,9 +322,7 @@ export function BrushOptions({
 					<ColorOptions
 						value={brushColor(settings)}
 						customColor={customColor}
-						onPick={(color) =>
-							color && onChange(withBrushColor(settings, color))
-						}
+						onPick={(color) => color && change(withBrushColor(settings, color))}
 						onPickCustom={onPickCustom}
 						onEyedropper={onEyedropper}
 					/>

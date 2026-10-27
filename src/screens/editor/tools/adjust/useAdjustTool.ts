@@ -41,6 +41,8 @@ export type LiveAdjustment = {
 };
 
 export type AdjustController = {
+	// The image's saved adjustments, which the dial's changes commit to.
+	adjustments: Adjustments | undefined;
 	matrix: DerivedValue<ColorMatrix>;
 	chosen: AdjustmentKey;
 	choose: (key: AdjustmentKey) => void;
@@ -116,6 +118,7 @@ export function useAdjustTool(
 	}, [held, values, commit]);
 
 	return {
+		adjustments: layer?.adjustments,
 		matrix,
 		chosen,
 		choose,

@@ -22,6 +22,7 @@ import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { colors, typography, webTransition } from "@/ui/theme";
+import { useColorTarget, useEditorContext } from "../../editorContext";
 import type { TextColorKey } from "../../editorMode";
 import { ColorChip, ColorPicker } from "../../shell/ColorPicker";
 import { ColorSwatches, customSwatch } from "../../shell/ColorSwatches";
@@ -95,21 +96,18 @@ const COLOR_TITLES: Record<TextColorKey, string> = {
 export function TextColorPicker({
 	layer,
 	colorKey,
-	bottomInset,
-	onPickCustom,
-	onEyedropper,
+	onChange,
 	onClose,
 }: {
 	layer: TextLayer;
 	colorKey: TextColorKey;
-	bottomInset: number;
-	// A color from the picker, for the text, which becomes the editor's
-	// custom color too.
-	onPickCustom: (color: string) => void;
-	// Sets out to pick the color from the canvas.
-	onEyedropper: () => void;
+	onChange: (patch: TextLayerEdit) => void;
 	onClose: () => void;
 }) {
+	const { bottomInset } = useEditorContext();
+	const { onPickCustom, onEyedropper } = useColorTarget((color) =>
+		onChange({ [colorKey]: color }),
+	);
 	return (
 		<ToolOptions
 			closeLabel="Close color picker"
@@ -130,8 +128,6 @@ export function TextColorPicker({
 
 type TextStylePanelProps = {
 	layer: TextLayer;
-	// The editor's custom color, which the custom swatch shows.
-	customColor: string | null;
 	onChange: (patch: TextLayerEdit) => void;
 	// The custom swatch was tapped: open a picker for one of the colors.
 	onOpenPicker: (key: TextColorKey) => void;
@@ -147,10 +143,10 @@ type TextStylePanelProps = {
  */
 export function TextStylePanel({
 	layer,
-	customColor,
 	onChange,
 	onOpenPicker,
 }: TextStylePanelProps) {
+	const { customColor } = useEditorContext();
 	const [tab, setTab] = useState<Tab>("font");
 
 	return (
@@ -187,19 +183,14 @@ export function TextStylePanel({
  */
 export function TextBar({
 	layer,
-	customColor,
 	onChange,
-	onPickCustom,
-	onEyedropper,
 	restoreFocus,
 }: {
 	layer: TextLayer;
-	customColor: string | null;
 	onChange: (patch: TextLayerEdit) => void;
-	onPickCustom: (color: string) => void;
-	onEyedropper: (key: TextColorKey) => void;
 	restoreFocus?: () => void;
 }) {
+	const { customColor, setCustomColor, startEyedropper } = useEditorContext();
 	const chip = (key: TextColorKey, noneLabel?: string) => (
 		<ColorChip
 			key={key}
@@ -214,9 +205,11 @@ export function TextBar({
 			}}
 			onPickCustom={(color) => {
 				onChange({ [key]: color });
-				onPickCustom(color);
+				setCustomColor(color);
 			}}
-			onEyedropper={() => onEyedropper(key)}
+			onEyedropper={() =>
+				startEyedropper((color) => onChange({ [key]: color }))
+			}
 			restoreFocus={restoreFocus}
 		/>
 	);

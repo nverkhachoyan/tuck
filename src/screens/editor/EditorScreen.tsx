@@ -43,11 +43,12 @@ import {
 	DockContent,
 	hasInspectorSection,
 	ToolTrays,
-	toolViewContext,
+	type ToolViewContext,
 } from "./EditorDock";
 import { EditorInspector } from "./EditorInspector";
 import { EditorRail } from "./EditorRail";
 import { modeChrome, railChosenTool } from "./editorChrome";
+import { EditorContext, type EditorContextValue } from "./editorContext";
 import { openTray, takesKeys } from "./editorMode";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
@@ -409,22 +410,28 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onSaveSticker: stickerSave.save,
 	};
 
-	// What the dock, the bar, the trays, and the inspector read.
-	const toolViews = toolViewContext({
-		tools,
-		dispatchMode,
+	// What every tool's views read from the editor around them, and what the
+	// dock, the bar, the trays, and the inspector read besides.
+	const editorContext: EditorContextValue = {
 		customColor,
-		onCustomColor: setCustomColor,
-		optionsOpen: toolOptionsOpen,
-		bottomInset: dockInset,
-		onCancel: cancel,
+		setCustomColor,
+		startEyedropper: (apply) =>
+			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
 		redactLook,
 		changeRedactLook,
-		adjustments: adjustedLayer?.adjustments,
+		trayOpen: toolOptionsOpen,
+		toggleTray: () => dispatchMode({ type: "toggleToolOptions" }),
+		closeTray: () => dispatchMode({ type: "closeToolOptions" }),
+		bottomInset: dockInset,
+		cancel,
+	};
+	const toolViews: ToolViewContext = {
+		tools,
+		dispatchMode,
 		layerActions: layerActions || undefined,
 		editingText,
 		restoreTextFocus: () => tools.text.editorRef.current?.focus(),
-	});
+	};
 
 	// Takes back the open tool's changes to its image: Adjust's adjustments,
 	// or Cut out's cut.
@@ -483,190 +490,194 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	return (
 		<TrayHeight.Provider value={layout.setTrayHeight}>
-			<View ref={rootRef} style={styles.container}>
-				<EditorHeader
-					wide={wide}
-					title={title}
-					saved={!saveProblem}
-					onBack={leave}
-					bar={
-						inBar && modeActions ? (
-							<ContextBarContent
-								context={toolViews}
-								panel={panel}
-								chrome={modeActions}
-							/>
-						) : undefined
-					}
-				>
-					<HeaderActions
-						onReset={resetEdit}
-						// A tall window's inspector already shows the layers.
-						layers={
-							!tool && !editingText && !inspectorPinned
-								? {
-										open: layersOpen,
-										onToggle: () => dispatchMode({ type: "toggleLayers" }),
-									}
-								: undefined
+			<EditorContext.Provider value={editorContext}>
+				<View ref={rootRef} style={styles.container}>
+					<EditorHeader
+						wide={wide}
+						title={title}
+						saved={!saveProblem}
+						onBack={leave}
+						bar={
+							inBar && modeActions ? (
+								<ContextBarContent
+									context={toolViews}
+									panel={panel}
+									chrome={modeActions}
+								/>
+							) : undefined
 						}
-						// While typing, undo and redo wait: the text isn't a step yet.
-						canUndo={canUndo && !editingText}
-						canRedo={canRedo && !editingText}
-						onUndo={undo}
-						onRedo={redo}
-						onExport={openExport}
-					/>
-				</EditorHeader>
-				{/* The dock covers the stage's bottom, which runs under it. On a
+					>
+						<HeaderActions
+							onReset={resetEdit}
+							// A tall window's inspector already shows the layers.
+							layers={
+								!tool && !editingText && !inspectorPinned
+									? {
+											open: layersOpen,
+											onToggle: () => dispatchMode({ type: "toggleLayers" }),
+										}
+									: undefined
+							}
+							// While typing, undo and redo wait: the text isn't a step yet.
+							canUndo={canUndo && !editingText}
+							canRedo={canRedo && !editingText}
+							onUndo={undo}
+							onRedo={redo}
+							onExport={openExport}
+						/>
+					</EditorHeader>
+					{/* The dock covers the stage's bottom, which runs under it. On a
 					    wide screen the rail and inspector rest on it as cards. */}
-				<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
-					<EditorCanvas
-						ref={canvasRef}
-						document={document}
-						selectedLayer={selectedLayer}
-						textEdit={tools.text.edit}
-						onTextSelect={tools.text.select}
-						onTextEditDone={tools.text.finish}
-						onSelectLayer={selectLayer}
-						onTapSelectedLayer={editSelectedTextAt}
-						onCommitTransform={transformLayer}
-						onResizeBox={resizeBox}
-						onNudgeLayer={nudgeLayer}
-						{...canvasInput}
-						onToolInteractionEnd={() =>
-							dispatchMode({ type: "closeToolOptions" })
-						}
-						onTapAway={done}
-						adjusting={adjusting}
-						bottomInset={layout.canvasInset.bottom}
-						leftInset={layout.canvasInset.left}
-						rightInset={layout.canvasInset.right}
-						selectionBar={selectionBar}
-					/>
-					{!wide && (
-						<ToolTrays
-							context={toolViews}
-							modeState={modeState}
-							panel={panel}
+					<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
+						<EditorCanvas
+							ref={canvasRef}
+							document={document}
+							selectedLayer={selectedLayer}
+							textEdit={tools.text.edit}
+							onTextSelect={tools.text.select}
+							onTextEditDone={tools.text.finish}
+							onSelectLayer={selectLayer}
+							onTapSelectedLayer={editSelectedTextAt}
+							onCommitTransform={transformLayer}
+							onResizeBox={resizeBox}
+							onNudgeLayer={nudgeLayer}
+							{...canvasInput}
+							onToolInteractionEnd={() =>
+								dispatchMode({ type: "closeToolOptions" })
+							}
+							onTapAway={done}
+							adjusting={adjusting}
+							bottomInset={layout.canvasInset.bottom}
+							leftInset={layout.canvasInset.left}
+							rightInset={layout.canvasInset.right}
+							selectionBar={selectionBar}
 						/>
-					)}
-					{wide && eyedropper && (
-						<EyedropperHint
-							onCancel={() => dispatchMode({ type: "stopEyedropper" })}
-						/>
-					)}
-					<Announcement message={tools.cut.news} />
-					{saveProblem && (
-						<SaveErrorBanner
-							message={saveProblem}
-							onRetry={projectId !== null ? retryAutosave : undefined}
-							rightInset={layout.coveredRight}
-						/>
-					)}
-					{layersBeside && !wide && layersPanel}
-					{wide && (
-						<EditorRail
-							chosen={railChosenTool({
-								tool,
-								editingText,
-								cropping,
-								stickersOpen,
-							})}
-							addBusy={addBusy}
-							hasImage={hasImage}
-							startTool={startTool}
-							tool={tool}
-							finishTool={finishTool}
-							finishText={tools.text.finish}
-							stickerAnchor={stickerAnchor}
-						/>
-					)}
+						{!wide && (
+							<ToolTrays
+								context={toolViews}
+								modeState={modeState}
+								panel={panel}
+							/>
+						)}
+						{wide && eyedropper && (
+							<EyedropperHint
+								onCancel={() => dispatchMode({ type: "stopEyedropper" })}
+							/>
+						)}
+						<Announcement message={tools.cut.news} />
+						{saveProblem && (
+							<SaveErrorBanner
+								message={saveProblem}
+								onRetry={projectId !== null ? retryAutosave : undefined}
+								rightInset={layout.coveredRight}
+							/>
+						)}
+						{layersBeside && !wide && layersPanel}
+						{wide && (
+							<EditorRail
+								chosen={railChosenTool({
+									tool,
+									editingText,
+									cropping,
+									stickersOpen,
+								})}
+								addBusy={addBusy}
+								hasImage={hasImage}
+								startTool={startTool}
+								tool={tool}
+								finishTool={finishTool}
+								finishText={tools.text.finish}
+								stickerAnchor={stickerAnchor}
+							/>
+						)}
 
-					{/* After the tool's options, so taps on the dock reach it rather
+						{/* After the tool's options, so taps on the dock reach it rather
 				    than closing them. A wide screen has no dock. Its inspector,
 				    when the window is tall enough or Layers, Find, or Adjust
 				    has it open, is the layers, with Find or Adjust above them. */}
-					{inspector ? (
-						<EditorInspector
-							context={toolViews}
-							panel={panel}
-							layerList={layerList}
-						/>
-					) : !wide ? (
-						<Dock
-							panel={panel}
-							footer={modeActions ? <DockFooter {...modeActions} /> : undefined}
-							keyboardOverlap={layout.keyboardOverlap}
-						>
-							<DockContent
+						{inspector ? (
+							<EditorInspector
 								context={toolViews}
 								panel={panel}
-								idle={
-									<ToolsPanel
-										addBusy={addBusy}
-										hasImage={hasImage}
-										startTool={startTool}
-									/>
-								}
+								layerList={layerList}
 							/>
-						</Dock>
-					) : null}
-				</CanvasStage>
-				{!layersBeside && layersPanel}
-				{editNotice.message && (
-					<Toast
-						message={editNotice.message}
-						action="Undo"
-						onAction={editNotice.undo}
-						inset={{
-							left: layout.canvasInset.left,
-							right: layout.coveredRight ?? 0,
-							bottom: layout.coveredBottom + space.md,
-						}}
-					/>
-				)}
-				{wide ? (
-					<StickerPopover
-						anchor={stickerAnchor}
-						open={stickersOpen}
-						onClose={closeStickers}
-						{...stickerActions}
-					/>
-				) : (
-					<StickerSheet
-						open={stickersOpen}
-						onClose={closeStickers}
-						{...stickerActions}
-					/>
-				)}
+						) : !wide ? (
+							<Dock
+								panel={panel}
+								footer={
+									modeActions ? <DockFooter {...modeActions} /> : undefined
+								}
+								keyboardOverlap={layout.keyboardOverlap}
+							>
+								<DockContent
+									context={toolViews}
+									panel={panel}
+									idle={
+										<ToolsPanel
+											addBusy={addBusy}
+											hasImage={hasImage}
+											startTool={startTool}
+										/>
+									}
+								/>
+							</Dock>
+						) : null}
+					</CanvasStage>
+					{!layersBeside && layersPanel}
+					{editNotice.message && (
+						<Toast
+							message={editNotice.message}
+							action="Undo"
+							onAction={editNotice.undo}
+							inset={{
+								left: layout.canvasInset.left,
+								right: layout.coveredRight ?? 0,
+								bottom: layout.coveredBottom + space.md,
+							}}
+						/>
+					)}
+					{wide ? (
+						<StickerPopover
+							anchor={stickerAnchor}
+							open={stickersOpen}
+							onClose={closeStickers}
+							{...stickerActions}
+						/>
+					) : (
+						<StickerSheet
+							open={stickersOpen}
+							onClose={closeStickers}
+							{...stickerActions}
+						/>
+					)}
 
-				{dragging && <DropOverlay label="Drop to add to the canvas" />}
-				{cropping && (
-					<CropTool
-						document={document}
-						wide={wide}
-						onCancel={closeCrop}
-						onDone={finishCrop}
-					/>
-				)}
-				{tools.text.edit && (
-					<TextEditor
-						ref={tools.text.editorRef}
-						text={tools.text.edit.layer.text}
-						initialSelection={tools.text.edit.initialSelection}
-						onChangeText={tools.text.changeText}
-						onSelectionChange={tools.text.changeSelection}
-						onFocusChange={tools.text.changeFocus}
-						onDone={tools.text.finish}
-					/>
-				)}
-				{modeState.shortcutsOpen && (
-					<ShortcutsOverlay
-						onClose={() => dispatchMode({ type: "closeShortcuts" })}
-					/>
-				)}
-			</View>
+					{dragging && <DropOverlay label="Drop to add to the canvas" />}
+					{cropping && (
+						<CropTool
+							document={document}
+							wide={wide}
+							onCancel={closeCrop}
+							onDone={finishCrop}
+						/>
+					)}
+					{tools.text.edit && (
+						<TextEditor
+							ref={tools.text.editorRef}
+							text={tools.text.edit.layer.text}
+							initialSelection={tools.text.edit.initialSelection}
+							onChangeText={tools.text.changeText}
+							onSelectionChange={tools.text.changeSelection}
+							onFocusChange={tools.text.changeFocus}
+							onDone={tools.text.finish}
+						/>
+					)}
+					{modeState.shortcutsOpen && (
+						<ShortcutsOverlay
+							onClose={() => dispatchMode({ type: "closeShortcuts" })}
+						/>
+					)}
+				</View>
+			</EditorContext.Provider>
 		</TrayHeight.Provider>
 	);
 }

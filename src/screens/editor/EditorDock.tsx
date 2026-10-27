@@ -1,5 +1,4 @@
 import type { ComponentProps, ReactNode } from "react";
-import type { Adjustments } from "@/model/adjustments";
 import type { DockPanel } from "./editorChrome";
 import {
 	type EditorModeAction,
@@ -10,15 +9,12 @@ import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
 import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
-import type { RedactLook } from "./shell/redactLook";
-import { EffectGlyph } from "./shell/redactStyle";
 import { AdjustInspector, AdjustPanel } from "./tools/adjust/AdjustPanel";
 import {
 	CutOutBar,
 	CutOutOptions,
 	CutOutPanel,
 } from "./tools/cutout/CutOutPanel";
-import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import {
 	FindBar,
@@ -42,99 +38,16 @@ import type { EditorTools } from "./useEditorTools";
 export type { EditorTools } from "./useEditorTools";
 
 /**
- * What every tool view reads, built once by the screen for the dock, the bar,
- * the trays, and the inspector.
+ * What the panels read that isn't in the editor's context (see
+ * `editorContext.ts`): the tools, and what text and a selected layer show.
  */
 export type ToolViewContext = {
 	tools: EditorTools;
 	dispatchMode: (action: EditorModeAction) => void;
-	customColor: string | null;
-	// A color from a picker, which becomes the custom color.
-	onCustomColor: (color: string) => void;
-	// For a tray or bar whose colors go to `apply`: a color from its picker,
-	// which becomes the custom color too, and the eyedropper, for a color
-	// from the canvas.
-	colorTarget: (apply: (color: string) => void) => {
-		onPickCustom: (color: string) => void;
-		onEyedropper: () => void;
-	};
-	// Whether the phone's tray of tool options is open.
-	optionsOpen: boolean;
-	toggleOptions: () => void;
-	closeTray: () => void;
-	bottomInset: number;
-	// The open tool's Cancel, which Find's tray also offers when it found
-	// nothing.
-	onCancel: () => void;
-	// How new redactions look, whichever tool adds them.
-	redactLook: RedactLook;
-	changeRedactLook: (change: Partial<RedactLook>) => void;
-	adjustments: Adjustments | undefined;
 	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
 	editingText: boolean;
 	restoreTextFocus: () => void;
 };
-
-/** Builds the tool views' context, binding `colorTarget` to `onCustomColor`. */
-export function toolViewContext(
-	props: Omit<ToolViewContext, "colorTarget" | "toggleOptions" | "closeTray">,
-): ToolViewContext {
-	const { dispatchMode, onCustomColor } = props;
-	return {
-		...props,
-		colorTarget: (apply) => ({
-			onPickCustom: (color) => {
-				apply(color);
-				onCustomColor(color);
-			},
-			onEyedropper: () =>
-				dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-		}),
-		toggleOptions: () => dispatchMode({ type: "toggleToolOptions" }),
-		closeTray: () => dispatchMode({ type: "closeToolOptions" }),
-	};
-}
-
-/** Draw's color, from its picker or the eyedropper, in its tray and its bar. */
-function drawColor({
-	tools: { draw },
-	customColor,
-	colorTarget,
-}: ToolViewContext) {
-	return {
-		customColor,
-		...colorTarget((color) =>
-			draw.change(withBrushColor(draw.settings, color)),
-		),
-	};
-}
-
-/** Redact's color, in its tray and its bar. */
-function redactColor({
-	tools: { redact },
-	customColor,
-	colorTarget,
-}: ToolViewContext) {
-	return {
-		customColor,
-		...colorTarget((color) => redact.change({ ...redact.settings, color })),
-	};
-}
-
-/** The look Find redacts with, in its tray and bar. */
-function findStyle({
-	redactLook,
-	changeRedactLook,
-	customColor,
-	colorTarget,
-}: ToolViewContext) {
-	return {
-		settings: redactLook,
-		customColor,
-		onChange: changeRedactLook,
-		...colorTarget((color) => changeRedactLook({ color })),
-	};
-}
 
 /**
  * What one panel shows, wherever the editor shows it. Each field renders
@@ -144,7 +57,7 @@ function findStyle({
  * - `bar`: the wide header's options, inside the shared `ContextBar`; without
  *   it, the bar has the title, ✕, and ✓ only.
  * - `keepBarFocus`: whether a press in the bar keeps the text's caret.
- * - `tray`: the phone's tray of options, while `optionsOpen`.
+ * - `tray`: the phone's tray of options, while it's open.
  * - `results`: what sits over the canvas while no tray is open and the
  *   eyedropper isn't running.
  * - `inspector`: a section above the wide inspector's layers, given them as
@@ -167,124 +80,42 @@ type ToolViews = {
  */
 export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 	draw: {
-		dock: ({ tools: { draw }, optionsOpen, toggleOptions }) => (
-			<DrawPanel
-				settings={draw.settings}
-				optionsOpen={optionsOpen}
-				onChange={draw.change}
-				onToggleOptions={toggleOptions}
-			/>
-		),
-		tray: (context) => (
-			<BrushOptions
-				settings={context.tools.draw.settings}
-				bottomInset={context.bottomInset}
-				onChange={context.tools.draw.change}
-				{...drawColor(context)}
-				onClose={context.closeTray}
-			/>
-		),
-		bar: (context) => (
-			<DrawBar
-				settings={context.tools.draw.settings}
-				onChange={context.tools.draw.change}
-				{...drawColor(context)}
-			/>
-		),
+		dock: ({ tools: { draw } }) => <DrawPanel controller={draw} />,
+		tray: ({ tools: { draw } }) => <BrushOptions controller={draw} />,
+		bar: ({ tools: { draw } }) => <DrawBar controller={draw} />,
 	},
 	redact: {
-		dock: ({ tools: { redact }, optionsOpen, toggleOptions }) => (
-			<RedactPanel
-				settings={redact.settings}
-				optionsOpen={optionsOpen}
-				onChange={redact.change}
-				onToggleOptions={toggleOptions}
-			/>
-		),
-		tray: (context) => (
-			<RedactOptions
-				settings={context.tools.redact.settings}
-				bottomInset={context.bottomInset}
-				onChange={context.tools.redact.change}
-				{...redactColor(context)}
-				onClose={context.closeTray}
-			/>
-		),
-		bar: (context) => (
-			<RedactBar
-				settings={context.tools.redact.settings}
-				onChange={context.tools.redact.change}
-				{...redactColor(context)}
-			/>
-		),
+		dock: ({ tools: { redact } }) => <RedactPanel controller={redact} />,
+		tray: ({ tools: { redact } }) => <RedactOptions controller={redact} />,
+		bar: ({ tools: { redact } }) => <RedactBar controller={redact} />,
 	},
 	find: {
-		dock: ({ tools: { find }, redactLook, optionsOpen, toggleOptions }) => (
-			<FindPanel
-				controller={find}
-				styleGlyph={
-					<EffectGlyph settings={redactLook} effect={redactLook.effect} />
-				}
-				optionsOpen={optionsOpen}
-				onToggleOptions={toggleOptions}
-			/>
-		),
-		tray: (context) => (
-			<FindOptions
-				{...findStyle(context)}
-				bottomInset={context.bottomInset}
-				onClose={context.closeTray}
-			/>
-		),
-		results: ({ tools: { find }, bottomInset, onCancel }) => (
-			<FindTray
-				controller={find}
-				bottomInset={bottomInset}
-				onCancel={onCancel}
-			/>
-		),
-		bar: (context) => <FindBar {...findStyle(context)} />,
-		inspector: ({ tools: { find }, onCancel }, layers) => (
-			<FindInspector controller={find} onCancel={onCancel}>
-				{layers}
-			</FindInspector>
+		dock: ({ tools: { find } }) => <FindPanel controller={find} />,
+		tray: () => <FindOptions />,
+		results: ({ tools: { find } }) => <FindTray controller={find} />,
+		bar: () => <FindBar />,
+		inspector: ({ tools: { find } }, layers) => (
+			<FindInspector controller={find}>{layers}</FindInspector>
 		),
 	},
 	cutOut: {
-		dock: ({ tools: { cut }, optionsOpen, toggleOptions }) => (
-			<CutOutPanel
-				controller={cut}
-				optionsOpen={optionsOpen}
-				onToggleOptions={toggleOptions}
-			/>
-		),
-		tray: ({ tools: { cut }, bottomInset, closeTray }) => (
-			<CutOutOptions
-				controller={cut}
-				bottomInset={bottomInset}
-				onClose={closeTray}
-			/>
-		),
+		dock: ({ tools: { cut } }) => <CutOutPanel controller={cut} />,
+		tray: ({ tools: { cut } }) => <CutOutOptions controller={cut} />,
 		bar: ({ tools: { cut } }) => <CutOutBar controller={cut} />,
 	},
 	adjust: {
-		dock: ({ tools: { adjust }, adjustments }) => (
-			<AdjustPanel controller={adjust} adjustments={adjustments} />
-		),
-		inspector: ({ tools: { adjust }, adjustments }, layers) => (
-			<AdjustInspector controller={adjust} adjustments={adjustments}>
-				{layers}
-			</AdjustInspector>
+		dock: ({ tools: { adjust } }) => <AdjustPanel controller={adjust} />,
+		inspector: ({ tools: { adjust } }, layers) => (
+			<AdjustInspector controller={adjust}>{layers}</AdjustInspector>
 		),
 	},
 	text: {
-		dock: ({ tools: { text }, customColor, dispatchMode }) => {
+		dock: ({ tools: { text }, dispatchMode }) => {
 			const { styledText } = text;
 			return (
 				styledText && (
 					<TextStylePanel
 						layer={styledText}
-						customColor={customColor}
 						onChange={text.style}
 						onOpenPicker={(key) =>
 							dispatchMode({
@@ -297,23 +128,11 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 				)
 			);
 		},
-		bar: ({
-			tools: { text },
-			customColor,
-			onCustomColor,
-			colorTarget,
-			editingText,
-			restoreTextFocus,
-		}) =>
+		bar: ({ tools: { text }, editingText, restoreTextFocus }) =>
 			text.styledText && (
 				<TextBar
 					layer={text.styledText}
-					customColor={customColor}
 					onChange={text.style}
-					onPickCustom={onCustomColor}
-					onEyedropper={(key) =>
-						colorTarget((color) => text.style({ [key]: color })).onEyedropper()
-					}
 					restoreFocus={editingText ? restoreTextFocus : undefined}
 				/>
 			),
@@ -342,8 +161,6 @@ export function ToolTrays({
 	const {
 		tools: { text },
 		dispatchMode,
-		colorTarget,
-		bottomInset,
 	} = context;
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = text;
@@ -359,8 +176,7 @@ export function ToolTrays({
 				<TextColorPicker
 					layer={styledText}
 					colorKey={textPicker.key}
-					bottomInset={bottomInset}
-					{...colorTarget((color) => text.style({ [textPicker.key]: color }))}
+					onChange={text.style}
 					onClose={() => dispatchMode({ type: "closeTextPicker" })}
 				/>
 			)}

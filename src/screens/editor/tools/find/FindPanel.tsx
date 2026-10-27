@@ -14,11 +14,11 @@ import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
+import { useColorTarget, useEditorContext } from "../../editorContext";
 import { BarGroup, BarSections } from "../../shell/ContextBar";
-import type { RedactLook } from "../../shell/redactLook";
 import {
+	EffectGlyph,
 	RedactLookOptions,
-	type RedactLookProps,
 	redactLookItems,
 } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
@@ -37,15 +37,10 @@ const STACK_BELOW_WIDTH = 480;
  */
 export function FindPanel({
 	controller: { state, find },
-	styleGlyph,
-	optionsOpen,
-	onToggleOptions,
 }: {
 	controller: FindController;
-	styleGlyph: ReactNode;
-	optionsOpen: boolean;
-	onToggleOptions: () => void;
 }) {
+	const { redactLook, trayOpen, toggleTray } = useEditorContext();
 	const scanned = state.status === "idle" ? null : state.scope;
 	return (
 		<ToolRow>
@@ -62,9 +57,9 @@ export function FindPanel({
 			<ToolButton
 				label="Style"
 				icon="palette-outline"
-				glyph={styleGlyph}
-				open={optionsOpen}
-				onPress={onToggleOptions}
+				glyph={<EffectGlyph settings={redactLook} effect={redactLook.effect} />}
+				open={trayOpen}
+				onPress={toggleTray}
 			/>
 		</ToolRow>
 	);
@@ -81,10 +76,18 @@ const SCOPES = [
  * is drawn with, and its color when that's solid. Faces, text, and the
  * results sit in the inspector, above the layers they'll join.
  */
-export function FindBar<T extends RedactLook>(props: RedactLookProps<T>) {
+export function FindBar() {
+	const { redactLook, changeRedactLook } = useEditorContext();
+	const colorTarget = useColorTarget((color) => changeRedactLook({ color }));
 	return (
 		<BarSections>
-			<BarGroup>{redactLookItems(props)}</BarGroup>
+			<BarGroup>
+				{redactLookItems({
+					settings: redactLook,
+					onChange: changeRedactLook,
+					...colorTarget,
+				})}
+			</BarGroup>
 		</BarSections>
 	);
 }
@@ -93,15 +96,8 @@ export function FindBar<T extends RedactLook>(props: RedactLookProps<T>) {
  * How the scan is going, then what it found, to choose from and redact, in
  * a tray. It has no backdrop: taps on the canvas toggle the regions found.
  */
-export function FindTray({
-	controller,
-	bottomInset,
-	onCancel,
-}: {
-	controller: FindController;
-	bottomInset: number;
-	onCancel: () => void;
-}) {
+export function FindTray({ controller }: { controller: FindController }) {
+	const { bottomInset, cancel } = useEditorContext();
 	// The tray's own width, not the window's: the layers sidebar can narrow
 	// the canvas on web.
 	const [stacked, setStacked] = useState(false);
@@ -111,29 +107,29 @@ export function FindTray({
 				controller={controller}
 				stacked={stacked}
 				onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
-				onCancel={onCancel}
+				onCancel={cancel}
 			/>
 		</Tray>
 	);
 }
 
 /** The look Find redacts with, in a tray above the dock (see `ToolOptions`). */
-export function FindOptions({
-	bottomInset,
-	onClose,
-	...look
-}: RedactLookProps<RedactLook> & {
-	bottomInset: number;
-	onClose: () => void;
-}) {
+export function FindOptions() {
+	const { redactLook, changeRedactLook, bottomInset, closeTray } =
+		useEditorContext();
+	const colorTarget = useColorTarget((color) => changeRedactLook({ color }));
 	return (
 		<ToolOptions
 			closeLabel="Close redaction style"
 			bottomInset={bottomInset}
-			onClose={onClose}
+			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>
-			<RedactLookOptions {...look} />
+			<RedactLookOptions
+				settings={redactLook}
+				onChange={changeRedactLook}
+				{...colorTarget}
+			/>
 		</ToolOptions>
 	);
 }
@@ -144,13 +140,12 @@ export function FindOptions({
  */
 export function FindInspector({
 	controller,
-	onCancel,
 	children,
 }: {
 	controller: FindController;
-	onCancel: () => void;
 	children: ReactNode;
 }) {
+	const { cancel } = useEditorContext();
 	const { state, find } = controller;
 	const scanned = state.status === "idle" ? null : state.scope;
 	return (
@@ -168,7 +163,7 @@ export function FindInspector({
 						/>
 					))}
 				</View>
-				<FindBody controller={controller} stacked onCancel={onCancel} />
+				<FindBody controller={controller} stacked onCancel={cancel} />
 			</View>
 			{children}
 		</View>
