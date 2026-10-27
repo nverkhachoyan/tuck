@@ -4,6 +4,8 @@ A plan written October 27, 2026, to take the links between Redact, Find, and Cut
 
 Unlike the refactors before it, the first half changes what the user sees: Find gets a button of its own, and neither Find nor Cut out opens Redact any more.
 
+**Status, October 27, 2026:** the first half is built (`608877c` to `7199900`), and so are phases A to D of the second (`6fb597b` to `ce20692`, see [What was built](#what-was-built)). Phase E, the packages, waits until it's asked for. What phase C left central is listed under [Still central](#still-central).
+
 ## What happens today
 
 Paths are under `src/screens/editor/`, read at `71b4c95`.
@@ -101,43 +103,25 @@ Once no tool reaches into another, each tool can become one definition in its ow
 
 A tool's behavior is spread over the editor's root today, in files that each have a case for every tool: `editorMode.ts` (its mode), `useEditorTools.ts` (its hook, starter, Done, and Cancel), `EditorDock.tsx` (`TOOL_VIEWS`), `editorChrome.ts` (its title and Done label), `canvasInputFor.ts` (what the canvas does), `shell/toolList.ts` (its button), and `shortcuts.ts` (its key). The views get everything through `ToolViewContext`, a bag of 14 fields, and adapters like `cutOutProps` and `findResults` that only rename a hook's `change` to a panel's `onChange`.
 
-### Phase A: panels take their controller
+### What was built
 
-Each tool's panels take the tool's hook result as one `controller` prop, as `AdjustPanel` already does. `cutOutProps`, `findResults`, `drawColor`, and `redactColor` go, and `TOOL_VIEWS`' entries become a component and a controller each. One tool per commit, Draw first.
+* **Phase A** (`6fb597b`, `f560a12`, and in `fb8dd36`): every tool's panels take its controller. `cutOutProps`, `findResults`, `drawColor`, `redactColor`, and `findStyle` are gone.
+* **Phase B** (`fb8dd36`): `editorContext.ts` gives every tool view the custom color, the eyedropper (`useColorTarget`), the redaction look, the tray, the dock's inset, and Cancel. What's left of the old bag is `PanelContext`: the tools, and what text and a selected layer show. Adjust's controller carries its image's adjustments.
+* **Phase C** (`c1c4452`): `defineTool.ts`, and a definition in each tool's folder (`drawTool.ts`, `redactTool.ts`, `findTool.ts`, `cutOutTool.ts`, `adjustTool.ts`) holding its views, Done label, Done, whether Done deselects, and size step. `toolDefinitions.ts` lists them. `EditorDock.tsx` became `PanelViews.tsx`, which shows a tool's views from its definition and keeps only text's and a selected layer's. Find's Done (`redact`) and Cut out's Redact moved into their own hooks. `modeChrome` takes the tool's Done label. Cut out's `cutOutTool` setting became `cutToolInUse`.
+* **Phase D** (`ce20692`): `EditorHeader.tsx` (with the project's title), `LayerSelectionBar.tsx` (with `useArrangeSelected`), and `useEditorChrome.ts` (the panel, title, Cancel, and Done) came out of `EditorScreen.tsx`, which went from 798 lines to about 660.
 
-### Phase B: `EditorContext`
+### Still central
 
-What every tool view reads from the editor moves into a context with small hooks: the custom color and `useColorTarget(apply)` (the picker and the eyedropper), the redaction look, the mode's dispatch, the tray's open state and close, and the dock's bottom inset. Views call the hooks they need, so `ToolViewContext` and `toolViewContext` go. `TOOL_VIEWS`' fields become components (`<views.Bar />`) rather than functions of the context, which can call hooks of their own.
+Phase C moved what each tool shows and how it finishes. These still have a case per tool, each for a reason:
 
-### Phase C: `defineTool`
-
-Each tool folder exports one definition:
-
-```tsx
-export const drawTool = defineTool({
-	id: "draw",
-	label: "Draw",
-	icon: "draw",
-	key: "D",
-	target: "none", // or "image": the mode carries the image's layerId
-	useController: useDrawTool,
-	views: { Dock: DrawPanel, Bar: DrawBar, Tray: BrushOptions },
-	canvasInput: (draw) => ({ type: "tool", tool: drawCanvasTool(draw.settings) }),
-	stepSize: (draw, step) => draw.stepSize(step),
-	done: { deselect: true },
-});
-```
-
-* An ordered list of definitions replaces `TOOLS`, `TOOL_VIEWS`, `TOOL_KEYS`' tool entries, `SIZED_TOOLS`, `ToolStarters`' tool entries, and the per-tool cases in `modeChrome` and `canvasInputFor`.
-* `useEditorTools` calls every definition's `useController` in the list's order on every render. The list never changes, so that keeps to the rules of hooks, and settings that outlive a session stay in the controller, as now.
-* The mode union follows the definitions: `{ type: "tool"; tool: ToolId; optionsOpen; layerId? }`, with `target` saying whether `layerId` is there and `views.Tray` whether `optionsOpen` is used.
-* Converted one tool per commit, in order of how little they share: Draw, Adjust, Redact, Find, Cut out.
-* Text and Crop aren't tools in the mode today: text is edited in its own mode, and Crop covers the editor with its own canvas. They stay as they are until the five tools have settled the shape, then get a decision of their own.
-* Merging Find and Cut out, if wanted, is a design question here: two definitions that would become one, with one type for what they select.
-
-### Phase D: the editor screen
-
-With the tools owning their wiring, `ScreenContent` (`EditorScreen.tsx`, about 540 lines) splits into the editor's frame (header, rail, canvas, dock, inspector) and the session and services around it.
+* **The mode union and reducer** (`editorMode.ts`). It's plain TypeScript, tested in Node, so it can't read the definitions (`.tsx` views). A definition's `target` ("none" or "image") and tray would let the union become `{ type: "tool"; tool; optionsOpen; layerId? }`, with the reducer's tests rewritten around it.
+* **What the canvas does** (`canvasInputFor.ts`, `useCanvasInput.ts`). Also tested in Node, and memoized part by part so a canvas gesture isn't rebuilt each render. A `canvasInput` field per definition is the next step, once the memoization is kept per tool.
+* **Starting a tool** (`useEditorTools.ts`). Draw and Redact pick their sub-tool from the selection, and Cut out starts its cut from an effect that has to run after the undo session begins. A `start` field per definition needs that order kept.
+* **Calling the tool hooks** (`useEditorTools.ts`). Each hook takes different inputs, so they're called by name. A shared host object would let the list call them.
+* **The buttons and keys** (`shell/toolList.ts`, `shortcuts.ts`). They list Text, Sticker, Crop, and Add photo too, which aren't tools in the mode, so they stay one list of buttons.
+* **`SIZED_TOOLS`** (`editorMode.ts`), which `shortcutCommand` reads in Node. It must name the tools whose definitions have `stepSize`.
+* **Text and Crop** aren't tools in the mode: text is edited in its own mode, and Crop covers the editor with its own canvas.
+* **Merging Find and Cut out**, if wanted, is now a question of two definitions becoming one, with one type for what they select.
 
 ### Phase E: packages
 

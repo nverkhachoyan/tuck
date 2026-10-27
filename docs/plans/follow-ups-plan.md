@@ -26,7 +26,7 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 ## 3. Refactors
 
 * **`TextStylePanel`'s `ScrollRow`.** A simpler fade than the bar's, for the dock's font and swatch rows. It could share the bar's geometry in `shell/barFade.ts`.
-* **Small ones.** `EditorDock.tsx` holds `TOOL_VIEWS` and could be named for it. The wide window's `EyedropperHint` could move to an overlay both layouts share.
+* **Small ones.** The wide window's `EyedropperHint` could move to an overlay both layouts share.
 
 ## 4. Smart selection
 
