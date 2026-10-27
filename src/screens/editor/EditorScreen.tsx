@@ -1,5 +1,5 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import {
 	ActivityIndicator,
 	Platform,
@@ -13,6 +13,7 @@ import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
 import { type Point, toLayerSpace } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
+import type { Layer } from "@/model/layers/layer";
 import { usePreference } from "@/platform/usePreference";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
@@ -310,13 +311,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		const root = rootRef.current as unknown as HTMLElement | null;
 		root?.toggleAttribute("inert", !focused);
 	}, [focused]);
-	const projectTitle = useMemo(() => {
-		const name = projectId !== null ? openProjectName(projectId) : null;
-		if (name) return name;
-		const createdAt =
-			projectId !== null ? openProjectCreatedAt(projectId) : null;
-		return projectLabel(document, createdAt ?? Date.now());
-	}, [projectId, document]);
+	const title = useMemo(
+		() => projectTitle(projectId, document),
+		[projectId, document],
+	);
 
 	const selectedIndex = selectedLayer
 		? document.layers.indexOf(selectedLayer)
@@ -443,19 +441,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			));
 
 	const selectionBar = selectedLayer && (
-		<SelectionBar
-			canMoveForward={selectedIndex < topIndex}
-			canMoveBackward={selectedIndex > 0}
-			onEdit={selectedTextLayer ? () => tools.text.editSelected() : undefined}
-			stretched={selectedLayer.resizable === true}
-			onToggleStretch={
-				selectedLayer.type === "text" || selectedLayer.type === "image"
-					? () => setLayerResizable(selectedLayer.id, !selectedLayer.resizable)
-					: undefined
-			}
+		<LayerSelectionBar
+			layer={selectedLayer}
+			index={selectedIndex}
+			topIndex={topIndex}
+			onEdit={() => tools.text.editSelected()}
+			onSetResizable={setLayerResizable}
 			onArrange={arrangeSelected}
 			onDuplicate={duplicateSelectedLayer}
-			onDelete={() => editNotice.deleteLayer(selectedLayer.id)}
+			onDelete={editNotice.deleteLayer}
 		/>
 	);
 
@@ -487,23 +481,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	return (
 		<TrayHeight.Provider value={layout.setTrayHeight}>
 			<View ref={rootRef} style={styles.container}>
-				{/* Back and Export stay through every tool and while typing:
-					    leaving keeps the changes, as the browser's own Back does. */}
-				<ScreenHeader
-					backLabel="Back to projects"
-					// Over the rail's tools.
-					backColumn={wide ? RAIL_INSET : undefined}
+				<EditorHeader
+					wide={wide}
+					title={title}
+					saved={!saveProblem}
 					onBack={leave}
-					// Only a wide screen has room between Back and the actions,
-					// and a context bar takes that room while one is open.
-					title={wide && !inBar ? projectTitle : undefined}
-					subtitle={
-						wide && !inBar
-							? saveProblem
-								? "Not saved"
-								: "Saved on this device"
-							: undefined
-					}
 					bar={
 						inBar && modeActions ? (
 							<ContextBarContent
@@ -513,27 +495,26 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							/>
 						) : undefined
 					}
-					action={
-						<HeaderActions
-							onReset={resetEdit}
-							// A tall window's inspector already shows the layers.
-							layers={
-								!tool && !editingText && !inspectorPinned
-									? {
-											open: layersOpen,
-											onToggle: () => dispatchMode({ type: "toggleLayers" }),
-										}
-									: undefined
-							}
-							// While typing, undo and redo wait: the text isn't a step yet.
-							canUndo={canUndo && !editingText}
-							canRedo={canRedo && !editingText}
-							onUndo={undo}
-							onRedo={redo}
-							onExport={openExport}
-						/>
-					}
-				/>
+				>
+					<HeaderActions
+						onReset={resetEdit}
+						// A tall window's inspector already shows the layers.
+						layers={
+							!tool && !editingText && !inspectorPinned
+								? {
+										open: layersOpen,
+										onToggle: () => dispatchMode({ type: "toggleLayers" }),
+									}
+								: undefined
+						}
+						// While typing, undo and redo wait: the text isn't a step yet.
+						canUndo={canUndo && !editingText}
+						canRedo={canRedo && !editingText}
+						onUndo={undo}
+						onRedo={redo}
+						onExport={openExport}
+					/>
+				</EditorHeader>
 				{/* The dock covers the stage's bottom, which runs under it. On a
 					    wide screen the rail and inspector rest on it as cards. */}
 				<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
@@ -684,6 +665,94 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				)}
 			</View>
 		</TrayHeight.Provider>
+	);
+}
+
+/** What home lists the project as, for the wide header. */
+function projectTitle(projectId: string | null, document: EditorDocument) {
+	if (projectId === null) return projectLabel(document, Date.now());
+	return (
+		openProjectName(projectId) ||
+		projectLabel(document, openProjectCreatedAt(projectId) ?? Date.now())
+	);
+}
+
+/**
+ * The editor's header. Back and Export stay through every tool and while
+ * typing: leaving keeps the changes, as the browser's own Back does.
+ * - `bar`: the open tool's context bar, on a wide screen.
+ * - `title`, `saved`: the project and whether it's kept, shown only on a wide
+ *   screen with no bar, where there's room between Back and the actions.
+ */
+function EditorHeader({
+	wide,
+	title,
+	saved,
+	onBack,
+	bar,
+	children,
+}: {
+	wide: boolean;
+	title: string;
+	saved: boolean;
+	onBack: () => void;
+	bar?: ReactNode;
+	children: ReactNode;
+}) {
+	const titled = wide && !bar;
+	return (
+		<ScreenHeader
+			backLabel="Back to projects"
+			// Over the rail's tools.
+			backColumn={wide ? RAIL_INSET : undefined}
+			onBack={onBack}
+			title={titled ? title : undefined}
+			subtitle={
+				titled ? (saved ? "Saved on this device" : "Not saved") : undefined
+			}
+			bar={bar}
+			action={children}
+		/>
+	);
+}
+
+/**
+ * The selection bar for `layer`, at `index` in the stack: Edit for text and
+ * Free resize for text and images.
+ */
+function LayerSelectionBar({
+	layer,
+	index,
+	topIndex,
+	onEdit,
+	onSetResizable,
+	onArrange,
+	onDuplicate,
+	onDelete,
+}: {
+	layer: Layer;
+	index: number;
+	topIndex: number;
+	onEdit: () => void;
+	onSetResizable: (id: string, resizable: boolean) => void;
+	onArrange: (move: ArrangeMove) => void;
+	onDuplicate: () => void;
+	onDelete: (id: string) => void;
+}) {
+	const resizable = layer.type === "text" || layer.type === "image";
+	return (
+		<SelectionBar
+			canMoveForward={index < topIndex}
+			canMoveBackward={index > 0}
+			onEdit={layer.type === "text" ? onEdit : undefined}
+			stretched={layer.resizable === true}
+			onToggleStretch={
+				resizable ? () => onSetResizable(layer.id, !layer.resizable) : undefined
+			}
+			onArrange={onArrange}
+			onDuplicate={onDuplicate}
+			onDelete={() => onDelete(layer.id)}
+		/>
 	);
 }
 
