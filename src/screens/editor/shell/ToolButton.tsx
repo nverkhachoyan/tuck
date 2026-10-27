@@ -89,6 +89,14 @@ export function ToolButton({
 	);
 	const inactive = disabled || busy;
 	const danger = tone === "danger";
+	// The highlighter; a marked tool is chosen without it.
+	const highlighted = !!selected && !marked;
+	const chosen = !!selected || marked;
+	const ink = danger
+		? colors.danger
+		: highlighted
+			? colors.onHighlight
+			: colors.textPrimary;
 	return (
 		<>
 			<Pressable
@@ -107,11 +115,11 @@ export function ToolButton({
 				accessibilityState={{
 					disabled: inactive,
 					busy,
-					selected: selected || marked,
+					selected: chosen,
 					expanded: open,
 				}}
 				// React Native Web ignores accessibilityState.selected.
-				aria-selected={selected || marked || undefined}
+				aria-selected={chosen || undefined}
 				style={[
 					styles.container,
 					compact && styles.compact,
@@ -122,14 +130,9 @@ export function ToolButton({
 				{(state) => {
 					const { pressed, hovered } = interaction(state);
 					const lit = !inactive && (hovered || pressed);
-					const ink = danger
-						? colors.danger
-						: selected && !marked
-							? colors.onHighlight
-							: colors.textPrimary;
 					return (
 						<>
-							{selected && !marked && <Highlight style={styles.highlight} />}
+							{highlighted && <Highlight style={styles.highlight} />}
 							<View
 								style={[
 									styles.tile,
@@ -156,7 +159,7 @@ export function ToolButton({
 								style={[
 									styles.label,
 									small && styles.smallLabel,
-									selected && !marked && styles.labelSelected,
+									highlighted && styles.labelSelected,
 									(open || marked) && styles.labelOpen,
 								]}
 							>
