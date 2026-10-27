@@ -37,9 +37,9 @@ import {
 	TextColorPicker,
 	TextStylePanel,
 } from "./tools/text/TextStylePanel";
-import type { EditorTools } from "./useToolLifecycle";
+import type { EditorTools } from "./useEditorTools";
 
-export type { EditorTools } from "./useToolLifecycle";
+export type { EditorTools } from "./useEditorTools";
 
 /**
  * What every tool view reads, built once by the screen for the dock, the bar,

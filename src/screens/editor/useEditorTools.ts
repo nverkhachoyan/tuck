@@ -32,10 +32,10 @@ export type EditorTools = {
 
 /**
  * All of the editor's tools, their undo session, and their starters, Done,
- * and Cancel. `useToolSession` runs ahead of the tool hooks and
- * `useToolLifecycle`, so its effect begins the session before `useToolLifecycle`
- * starts Cut out's cut: calling it later would put a remembered cut in the
- * session's starting document, where Cancel can't take it back.
+ * and Cancel. The order below matters: `useToolSession` runs first, so its
+ * effect begins the session before the effect at the end starts Cut out's
+ * cut. Starting it earlier would put a remembered cut in the session's
+ * starting document, where Cancel can't take it back.
  */
 export function useEditorTools({
 	document,
@@ -58,9 +58,13 @@ export function useEditorTools({
 	visibleArea: () => Rect | undefined;
 	onRedacted: (count: number, feature: DetectionFeature | null) => void;
 }) {
-	const { cancelSession, addMaskedRedaction, setAdjustments } = useStore(
-		(state) => state.actions,
-	);
+	const {
+		cancelSession,
+		addMaskedRedaction,
+		setAdjustments,
+		selectLayer,
+		reframe,
+	} = useStore((state) => state.actions);
 	const tool = mode.type === "tool" ? mode.tool : null;
 
 	useToolSession(tool);
@@ -81,132 +85,42 @@ export function useEditorTools({
 	const redact = useRedactTool(documentSize);
 	const find = useFindTool(document, targetImage);
 
+	const startRedacting = () => {
+		redact.chooseTool();
+		dispatchMode({ type: "startTool", start: { tool: "redact" } });
+	};
+	// Two ways back into Redact, which pick its sub-tool differently. Find
+	// is one of Redact's tools, so its Cancel and Done go back to Redact as
+	// it would start, with the sub-tool for the selection or the one last
+	// used, to draw over anything Find missed.
+	const backToRedacting = () => {
+		find.reset();
+		startRedacting();
+	};
+	// Cut out's Redact ends its session, adds the masked redaction, and opens
+	// Redact's box on it. It sets the box itself: `startRedacting` would pick
+	// from the selection as it was before the redaction was added.
+	const redactCut = (layerId: string, mask: string, rect: Rect) => {
+		cancelSession();
+		addMaskedRedaction(
+			layerId,
+			mask,
+			rect,
+			redactionEffect(redact.chosen, documentSize),
+		);
+		redact.setChosen((current) => ({ ...current, tool: "box" }));
+		dispatchMode({ type: "startTool", start: { tool: "redact" } });
+	};
+
 	const cutImageId = toolImageId(mode, "cutOut");
 	const cutLayer = cutImageId
 		? visibleImageLayer(document, cutImageId)
 		: undefined;
-	const cut = useCutOutTool({
-		layer: cutLayer,
-		onRedact: (layerId, mask, rect) => {
-			cancelSession();
-			addMaskedRedaction(
-				layerId,
-				mask,
-				rect,
-				redactionEffect(redact.chosen, documentSize),
-			);
-			redact.setChosen((current) => ({ ...current, tool: "box" }));
-			dispatchMode({ type: "startTool", start: { tool: "redact" } });
-		},
-	});
-
-	const lifecycle = useToolLifecycle({
-		mode,
-		targetImage,
-		documentSize,
-		draw,
-		redact,
-		find,
-		cut,
-		textEditing: text,
-		pickPhoto,
-		openStickers,
-		dispatchMode,
-		visibleArea,
-		onRedacted,
-	});
-
-	// [ and ] step the open tool's brush, if it has one.
-	const stepToolSize = (step: 1 | -1) => {
-		if (!tool || !SIZED_TOOLS.includes(tool)) return;
-		const sized: Partial<
-			Record<EditorTool, { stepSize: (step: 1 | -1) => void }>
-		> = { draw, redact, cutOut: cut };
-		sized[tool]?.stepSize(step);
-	};
-
-	const tools: EditorTools = {
-		draw,
-		redact,
-		find,
-		cut,
-		adjust,
-		text,
-	};
-
-	return {
-		tools,
-		startTool: lifecycle.startTool,
-		done: lifecycle.done,
-		cancel: lifecycle.cancel,
-		finishTool: lifecycle.finishTool,
-		closeCrop: lifecycle.closeCrop,
-		finishCrop: lifecycle.finishCrop,
-		stepToolSize,
-		adjustedLayer,
-		cutLayer,
-	};
-}
-
-/**
- * A tool's changes as one session: one undo step, or none if canceled.
- * Closing the tool any way, leaving the editor included, keeps them.
- */
-export function useToolSession(tool: EditorTool | null) {
-	const { beginSession, commitSession } = useStore((state) => state.actions);
-	useEffect(() => {
-		if (!tool) return;
-		beginSession();
-		return commitSession;
-	}, [tool, beginSession, commitSession]);
-}
-
-/**
- * How the editor's tools open and close: their starters, Done, and Cancel.
- * Called by `useEditorTools` after `useToolSession`, whose effect must run
- * before the one here that starts Cut out's cut.
- */
-export function useToolLifecycle({
-	mode,
-	targetImage,
-	documentSize,
-	draw,
-	redact,
-	find,
-	cut,
-	textEditing,
-	pickPhoto,
-	openStickers,
-	dispatchMode,
-	visibleArea,
-	onRedacted,
-}: {
-	mode: EditorMode;
-	targetImage: ImageLayer | null;
-	documentSize: Size;
-	draw: ReturnType<typeof useDrawTool>;
-	redact: ReturnType<typeof useRedactTool>;
-	find: ReturnType<typeof useFindTool>;
-	cut: ReturnType<typeof useCutOutTool>;
-	textEditing: ReturnType<typeof useTextEditing>;
-	pickPhoto: () => void;
-	openStickers: () => void;
-	dispatchMode: (action: EditorModeAction) => void;
-	visibleArea: () => Rect | undefined;
-	onRedacted: (count: number, feature: DetectionFeature | null) => void;
-}) {
-	const { cancelSession, selectLayer, reframe } = useStore(
-		(state) => state.actions,
-	);
-	const tool = mode.type === "tool" ? mode.tool : null;
+	const cut = useCutOutTool({ layer: cutLayer, onRedact: redactCut });
 
 	const startDrawing = () => {
 		draw.chooseTool();
 		dispatchMode({ type: "startTool", start: { tool: "draw" } });
-	};
-	const startRedacting = () => {
-		redact.chooseTool();
-		dispatchMode({ type: "startTool", start: { tool: "redact" } });
 	};
 	const startAdjusting = () => {
 		if (!targetImage) return;
@@ -234,11 +148,9 @@ export function useToolLifecycle({
 	// mask lands at once, and would otherwise be part of the document the
 	// session started with.
 	const pendingCut = useRef<ImageLayer | null>(null);
-	const cutOutLayerId =
-		mode.type === "tool" && mode.tool === "cutOut" ? mode.layerId : null;
 	const startCutOut = () => {
 		if (!targetImage) return;
-		if (cutOutLayerId === targetImage.id) {
+		if (cutImageId === targetImage.id) {
 			cut.start(targetImage);
 			return;
 		}
@@ -250,23 +162,17 @@ export function useToolLifecycle({
 	};
 	useEffect(() => {
 		const image = pendingCut.current;
-		if (!image || image.id !== cutOutLayerId) return;
+		if (!image || image.id !== cutImageId) return;
 		pendingCut.current = null;
 		cut.start(image);
-	}, [cutOutLayerId, cut.start]);
+	}, [cutImageId, cut.start]);
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
 		if (!targetImage) return;
 		dispatchMode({ type: "startTool", start: { tool: "find" } });
 	};
-	// Find is one of Redact's tools, so Cancel and Done both go back to
-	// Redact, with the tool it last used, to draw over anything Find missed.
-	// Done first redacts the regions chosen, in the style last picked rather
-	// than a selected redaction's, and says how many, with Undo.
-	const backToRedacting = () => {
-		find.reset();
-		startRedacting();
-	};
+	// Find's Done first redacts the regions chosen, in the style last picked
+	// rather than a selected redaction's, and says how many, with Undo.
 	const finishFinding = () => {
 		const result = find.redactChosen(
 			redactionEffect(redact.chosen, documentSize),
@@ -278,7 +184,7 @@ export function useToolLifecycle({
 	const done = tool === "find" ? finishFinding : finishTool;
 	const cancel = tool === "find" ? backToRedacting : cancelTool;
 
-	const startNewText = () => textEditing.startNew(visibleArea());
+	const startNewText = () => text.startNew(visibleArea());
 	const startCrop = () => dispatchMode({ type: "startCrop" });
 	const closeCrop = useCallback(
 		() => dispatchMode({ type: "endCrop" }),
@@ -303,5 +209,49 @@ export function useToolLifecycle({
 		cutOut: startCutOut,
 	};
 
-	return { startTool, done, cancel, finishTool, closeCrop, finishCrop };
+	// [ and ] step the open tool's brush, if it has one.
+	const stepToolSize = (step: 1 | -1) => {
+		if (!tool || !SIZED_TOOLS.includes(tool)) return;
+		const sized: Partial<
+			Record<EditorTool, { stepSize: (step: 1 | -1) => void }>
+		> = { draw, redact, cutOut: cut };
+		sized[tool]?.stepSize(step);
+	};
+
+	const tools: EditorTools = {
+		draw,
+		redact,
+		find,
+		cut,
+		adjust,
+		text,
+	};
+
+	return {
+		tools,
+		startTool,
+		done,
+		cancel,
+		finishTool,
+		closeCrop,
+		finishCrop,
+		stepToolSize,
+		adjustedLayer,
+		cutLayer,
+	};
+}
+
+/**
+ * A tool's changes as one session: one undo step, or none if canceled.
+ * Closing the tool any way, leaving the editor included, keeps them. Called
+ * ahead of the tool hooks, so the session has begun before a tool's own
+ * effects change the document.
+ */
+export function useToolSession(tool: EditorTool | null) {
+	const { beginSession, commitSession } = useStore((state) => state.actions);
+	useEffect(() => {
+		if (!tool) return;
+		beginSession();
+		return commitSession;
+	}, [tool, beginSession, commitSession]);
 }

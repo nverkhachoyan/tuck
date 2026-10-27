@@ -73,7 +73,7 @@ import { useEditNotice } from "./useEditNotice";
 import { RAIL_INSET, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
-import { useEditorTools } from "./useToolLifecycle";
+import { useEditorTools } from "./useEditorTools";
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
