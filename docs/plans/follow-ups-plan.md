@@ -27,7 +27,8 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 
 * **The bar's fade geometry.** `rowEdges`, `leafEdges`, `fadeCut`, and `fadeCutLeft` in `shell/ContextBar.tsx` are pure and untested. Move them to `shell/barFade.ts`, with tests.
 * **`TextStylePanel`'s `ScrollRow`.** A simpler fade than the bar's, for the dock's font and swatch rows. Once the bar's geometry has its own file, the row can share it.
-* **Small ones.** Crop's straighten dial has its props written out twice, in `CropTool` and `DialStrip`; tidy that when Crop next changes. `EditorDock.tsx` holds `TOOL_VIEWS` and could be named for it. The wide window's `EyedropperHint` could move to an overlay both layouts share.
+* **Crop's UI.** Planned in [crop-ui-plan.md](crop-ui-plan.md): its options listed once for both layouts, its rules in a tested `cropOptions.ts`, a swatch chip shared with `ColorChip`, and three small fixes.
+* **Small ones.** `EditorDock.tsx` holds `TOOL_VIEWS` and could be named for it. The wide window's `EyedropperHint` could move to an overlay both layouts share.
 
 ## 4. Smart selection
 
