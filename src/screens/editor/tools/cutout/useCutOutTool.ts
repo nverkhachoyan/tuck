@@ -1,35 +1,45 @@
 import { useRef } from "react";
 import { imagePointAt, isCutOut } from "@/model/cutout";
 import { visibleImageLayer } from "@/model/framing";
-import type { Point, Rect } from "@/model/geometry";
+import type { Point } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
+import type { RedactionEffect } from "@/model/layers/redaction";
 import { usePreference } from "@/platform/usePreference";
 import { addImage } from "@/projects/projectService";
 import { useStore } from "@/store";
-import { cutOutTool, parseCutOutSettings, stepCutSize } from "./cutOutSettings";
+import {
+	cutToolInUse,
+	parseCutOutSettings,
+	stepCutSize,
+} from "./cutOutSettings";
 import { useCutOut } from "./useCutOut";
 import { useCutRedaction } from "./useCutRedaction";
+
+export type CutOutController = ReturnType<typeof useCutOutTool>;
 
 /**
  * Cut out, on the image `layer` while it's open: its settings, kept between
  * sessions, the tool they and the device give, and finding, picking,
  * inverting, resetting, and redacting the cut, each undefined where it
  * can't be done. A mask found after Cut out was put down, or moved to
- * another image, isn't wanted any more. Redacting the cut's selection
- * hands `onRedact` a mask file of what the cut keeps and the part of the
- * image it covers. `stepSize` steps the brush's size for `[` and `]`.
+ * another image, isn't wanted any more. Redacting the cut's selection takes
+ * back the cut, adds a redaction in its shape with `redactionEffect`, which
+ * is selected, and closes Cut out (`onClose`). `stepSize` steps the brush's
+ * size for `[` and `]`.
  */
-export type CutOutController = ReturnType<typeof useCutOutTool>;
-
 export function useCutOutTool({
 	layer,
-	onRedact,
+	redactionEffect,
+	onClose,
 }: {
 	layer: ImageLayer | undefined;
-	onRedact: (layerId: string, mask: string, rect: Rect) => void;
+	redactionEffect: RedactionEffect;
+	onClose: () => void;
 }) {
 	const projectId = useStore((state) => state.projectId);
-	const { setMask, invertMask } = useStore((state) => state.actions);
+	const { setMask, invertMask, cancelSession, addMaskedRedaction } = useStore(
+		(state) => state.actions,
+	);
 	const layerId = useRef<string | null>(null);
 	layerId.current = layer?.id ?? null;
 	const [settings, change] = usePreference("cutOut", parseCutOutSettings);
@@ -55,11 +65,14 @@ export function useCutOutTool({
 	const redaction = useCutRedaction({
 		keep,
 		onRedact: (id, mask, rect) => {
-			if (layerId.current === id) onRedact(id, mask, rect);
+			if (layerId.current !== id) return;
+			cancelSession();
+			addMaskedRedaction(id, mask, rect, redactionEffect);
+			onClose();
 		},
 	});
 	const cut = layer && isCutOut(layer) ? layer : undefined;
-	const tool = cutOutTool(settings, cutOut.canFind);
+	const tool = cutToolInUse(settings, cutOut.canFind);
 
 	return {
 		layer,

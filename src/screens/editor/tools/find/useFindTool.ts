@@ -39,17 +39,24 @@ export type ReviewView = {
 	fit: () => void;
 };
 
+export type FindController = ReturnType<typeof useFindTool>;
+
 /**
  * Find: faces and text found in `image`, placed in the document, to choose
  * from and redact, and to review one at a time. What's found goes stale when
  * the image or the document changes shape.
  */
-export type FindController = ReturnType<typeof useFindTool>;
-
-export function useFindTool(
-	document: EditorDocument,
-	image: ImageLayer | null,
-) {
+export function useFindTool({
+	document,
+	image,
+	redactionEffect,
+	onRedacted,
+}: {
+	document: EditorDocument;
+	image: ImageLayer | null;
+	redactionEffect: RedactionEffect;
+	onRedacted: (count: number, feature: DetectionFeature | null) => void;
+}) {
 	const { addRedactionBoxes } = useStore((state) => state.actions);
 	const detection = useImageDetection(detectionTargetKey(document, image));
 	const documentSize = useMemo(
@@ -148,13 +155,13 @@ export function useFindTool(
 			setReviewed(null);
 			detection.reset();
 		},
-		// The regions chosen, redacted with `effect` together in one group.
-		// Gives how many, and what they are (null for both kinds), if any.
-		redactChosen: (effect: RedactionEffect) => {
+		// The regions chosen, redacted together in one group, saying how many
+		// and what they are (null for both kinds).
+		redact: () => {
 			const result = found && chosenBoxes(regions, found.selected);
-			if (!result) return null;
-			addRedactionBoxes(result.boxes, effect, result.groupName);
-			return { count: result.boxes.length, feature: result.feature };
+			if (!result) return;
+			addRedactionBoxes(result.boxes, redactionEffect, result.groupName);
+			onRedacted(result.boxes.length, result.feature);
 		},
 	};
 }

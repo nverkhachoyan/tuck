@@ -14,7 +14,7 @@ const nothing: ModeChromeInput = {
 	editingText: false,
 	styledText: false,
 	layerName: null,
-	findChosen: 0,
+	toolDoneLabel: undefined,
 	wide: false,
 };
 
@@ -57,22 +57,18 @@ describe("modeChrome", () => {
 		assert.equal(chrome.actions?.title, "Draw");
 	});
 
-	test("Find's Done names the regions it redacts once some are chosen", () => {
+	test("a tool's Done says the label the tool gives", () => {
 		assert.equal(
-			modeChrome({ ...nothing, tool: "find" }).actions?.doneLabel,
-			undefined,
-		);
-		assert.equal(
-			modeChrome({ ...nothing, tool: "find", findChosen: 3 }).actions
-				?.doneLabel,
+			modeChrome({ ...nothing, tool: "find", toolDoneLabel: "Redact 3 chosen" })
+				.actions?.doneLabel,
 			"Redact 3 chosen",
 		);
 	});
 
-	test("only Find's Done takes a label", () => {
+	test("only a tool's Done takes its label", () => {
 		assert.equal(
-			modeChrome({ ...nothing, tool: "redact", findChosen: 3 }).actions
-				?.doneLabel,
+			modeChrome({ ...nothing, editingText: true, toolDoneLabel: "Redact" })
+				.actions?.doneLabel,
 			undefined,
 		);
 	});

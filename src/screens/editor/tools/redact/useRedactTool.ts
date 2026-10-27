@@ -9,14 +9,14 @@ import {
 } from "../../shell/redactLook";
 import { type RedactSettings, stepRedactSize } from "./redactSettings";
 
+export type RedactController = ReturnType<typeof useRedactTool>;
+
 /**
  * Redact's settings, from the saved ones (`chosen`), whose look Find and Cut
  * out redact with too. They show the selected redaction's style, which new
  * ones then share, so a redaction can be picked to match. Changing them
  * restyles that one. `stepSize` steps the brush's size for `[` and `]`.
  */
-export type RedactController = ReturnType<typeof useRedactTool>;
-
 export function useRedactTool(
 	documentSize: Size,
 	chosen: RedactSettings,

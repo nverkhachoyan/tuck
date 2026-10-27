@@ -40,20 +40,19 @@ export type ModeChromeInput = {
 	editingText: boolean;
 	styledText: boolean;
 	layerName: string | null;
-	findChosen: number;
+	toolDoneLabel: string | undefined;
 	wide: boolean;
 };
 
 /**
  * The editor's chrome for the mode, the same for the dock and the bar.
  * - `tool`: the open tool, which comes first. Its Cancel and Done are the
- *   tool's, and Find's Done names how many regions it redacts.
+ *   tool's, and Done says `toolDoneLabel` when the tool gives one.
  * - `editingText`: text being typed, whose Cancel and Done are the text's.
  * - `styledText`: text styled but not typed (a selected text layer), which
  *   shows text's panel with no Cancel, and Done lets go of it.
  * - `layerName`: the selected layer's name (`layerKindName`), for its title.
  *   Done lets go of it, and there's no Cancel.
- * - `findChosen`: how many of Find's regions are chosen.
  * - `wide`: a wide window, where every panel but `"idle"` is in the bar.
  */
 export function modeChrome({
@@ -61,7 +60,7 @@ export function modeChrome({
 	editingText,
 	styledText,
 	layerName,
-	findChosen,
+	toolDoneLabel,
 	wide,
 }: ModeChromeInput): ModeChrome {
 	const chrome = (
@@ -74,10 +73,7 @@ export function modeChrome({
 			title: toolLabel(tool),
 			cancel: "tool",
 			done: "tool",
-			doneLabel:
-				tool === "find" && findChosen > 0
-					? `Redact ${findChosen} chosen`
-					: undefined,
+			doneLabel: toolDoneLabel,
 		});
 	}
 	if (editingText) {

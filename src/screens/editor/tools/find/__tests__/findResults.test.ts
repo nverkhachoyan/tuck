@@ -8,6 +8,7 @@ import {
 	detectionAt,
 	detectionTargetKey,
 	type FoundRegion,
+	findDoneLabel,
 	readingOrder,
 } from "../findResults.ts";
 
@@ -175,5 +176,12 @@ describe("detectionAt", () => {
 		};
 		assert.equal(detectionAt([turned], { x: 0, y: 40 }, 0)?.id, "long");
 		assert.equal(detectionAt([turned], { x: 40, y: 0 }, 0), null);
+	});
+});
+
+describe("findDoneLabel", () => {
+	test("names the regions Done redacts once some are chosen", () => {
+		assert.equal(findDoneLabel(0), undefined);
+		assert.equal(findDoneLabel(3), "Redact 3 chosen");
 	});
 });

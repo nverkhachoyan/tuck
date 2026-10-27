@@ -75,7 +75,7 @@ const SIZE_KEYS = { keep: "keepSize", erase: "eraseSize" } as const;
  * The size of `tool`, an index into `CUT_BRUSH_SIZES`. Null for Pick, which
  * has none. Each of these takes the tool in use rather than reading
  * `settings.tool`, which may be a Pick the eraser stands in for (see
- * `cutOutTool`).
+ * `cutToolInUse`).
  */
 export function cutSizeIndex(
 	settings: CutOutSettings,
@@ -123,7 +123,7 @@ export function stepCutSize(
  * The tool in use: Pick needs this device to find subjects, so without it,
  * the eraser takes its place.
  */
-export function cutOutTool(
+export function cutToolInUse(
 	settings: CutOutSettings,
 	canPick: boolean,
 ): CutOutTool {

@@ -5,8 +5,8 @@ import {
 	CUT_BRUSH_SIZES,
 	cutBrush,
 	cutCanvasTool,
-	cutOutTool,
 	cutSizeIndex,
+	cutToolInUse,
 	defaultCutOutSettings,
 	isCutBrush,
 	parseCutOutSettings,
@@ -40,13 +40,13 @@ describe("parseCutOutSettings", () => {
 	});
 });
 
-describe("cutOutTool", () => {
+describe("cutToolInUse", () => {
 	test("erases in place of picking where subjects can't be found", () => {
 		const picking = { ...defaultCutOutSettings, tool: "pick" } as const;
-		assert.equal(cutOutTool(picking, true), "pick");
-		assert.equal(cutOutTool(picking, false), "erase");
+		assert.equal(cutToolInUse(picking, true), "pick");
+		assert.equal(cutToolInUse(picking, false), "erase");
 		const keeping = { ...defaultCutOutSettings, tool: "keep" } as const;
-		assert.equal(cutOutTool(keeping, false), "keep");
+		assert.equal(cutToolInUse(keeping, false), "keep");
 	});
 });
 
@@ -77,7 +77,7 @@ describe("cutSizeIndex", () => {
 
 	test("reads the eraser's size when it stands in for a saved Pick", () => {
 		const picking = { ...settings, tool: "pick" as const };
-		assert.equal(cutSizeIndex(picking, cutOutTool(picking, false)), 4);
+		assert.equal(cutSizeIndex(picking, cutToolInUse(picking, false)), 4);
 	});
 });
 
@@ -101,7 +101,7 @@ describe("withCutSize", () => {
 
 	test("writes the eraser's size when it stands in for a saved Pick", () => {
 		const picking = { ...settings, tool: "pick" as const };
-		assert.deepEqual(withCutSize(picking, cutOutTool(picking, false), 1), {
+		assert.deepEqual(withCutSize(picking, cutToolInUse(picking, false), 1), {
 			...picking,
 			eraseSize: 1,
 		});
@@ -153,7 +153,7 @@ describe("stepCutSize", () => {
 
 	test("steps the eraser's size when it stands in for a saved Pick", () => {
 		const picking = { ...defaultCutOutSettings, tool: "pick" as const };
-		const stepped = stepCutSize(picking, cutOutTool(picking, false), 1);
+		const stepped = stepCutSize(picking, cutToolInUse(picking, false), 1);
 		assert.deepEqual(stepped, {
 			...picking,
 			eraseSize: picking.eraseSize + 1,

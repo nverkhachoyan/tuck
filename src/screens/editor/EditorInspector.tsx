@@ -1,5 +1,5 @@
-import { TOOL_VIEWS, type ToolViewContext } from "./EditorDock";
 import type { DockPanel } from "./editorChrome";
+import { InspectorContent, type PanelContext } from "./PanelViews";
 import { Inspector } from "./shell/Dock";
 import { LayersPanel, type layerListProps } from "./tools/layers/LayersPanel";
 
@@ -13,16 +13,14 @@ export function EditorInspector({
 	panel,
 	layerList,
 }: {
-	context: ToolViewContext;
+	context: PanelContext;
 	panel: DockPanel;
 	layerList: ReturnType<typeof layerListProps>;
 }) {
 	const layers = <LayersPanel {...layerList} layout="inspector" open />;
 	return (
 		<Inspector>
-			{panel === "idle"
-				? layers
-				: (TOOL_VIEWS[panel].inspector?.(context, layers) ?? layers)}
+			<InspectorContent context={context} panel={panel} layers={layers} />
 		</Inspector>
 	);
 }

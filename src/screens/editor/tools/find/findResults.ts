@@ -124,3 +124,8 @@ export function detectionAt<
 	}
 	return hit;
 }
+
+/** What Find's Done says once `chosen` regions are chosen: none leaves "Done". */
+export function findDoneLabel(chosen: number): string | undefined {
+	return chosen > 0 ? `Redact ${chosen} chosen` : undefined;
+}

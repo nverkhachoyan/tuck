@@ -10,11 +10,11 @@ import {
 	type EditorMode,
 	type EditorModeAction,
 	type EditorTool,
-	SIZED_TOOLS,
 	toolImageId,
 } from "./editorMode";
 import { type RedactLook, redactionEffect } from "./shell/redactLook";
 import type { ToolStarters } from "./shell/ToolsPanel";
+import { toolWithController } from "./toolDefinitions";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { useDrawTool } from "./tools/draw/useDrawTool";
@@ -27,7 +27,7 @@ export type EditorTools = {
 	draw: ReturnType<typeof useDrawTool>;
 	redact: ReturnType<typeof useRedactTool>;
 	find: ReturnType<typeof useFindTool>;
-	cut: ReturnType<typeof useCutOutTool>;
+	cutOut: ReturnType<typeof useCutOutTool>;
 	adjust: ReturnType<typeof useAdjustTool>;
 	text: ReturnType<typeof useTextEditing>;
 };
@@ -60,13 +60,9 @@ export function useEditorTools({
 	visibleArea: () => Rect | undefined;
 	onRedacted: (count: number, feature: DetectionFeature | null) => void;
 }) {
-	const {
-		cancelSession,
-		addMaskedRedaction,
-		setAdjustments,
-		selectLayer,
-		reframe,
-	} = useStore((state) => state.actions);
+	const { cancelSession, setAdjustments, selectLayer, reframe } = useStore(
+		(state) => state.actions,
+	);
 	const tool = mode.type === "tool" ? mode.tool : null;
 
 	useToolSession(tool);
@@ -93,33 +89,31 @@ export function useEditorTools({
 	const redactLook: RedactLook = { effect, color, strength };
 	const changeRedactLook = (change: Partial<RedactLook>) =>
 		setRedactSettings((current) => ({ ...current, ...change }));
+	const redactEffect = redactionEffect(redactLook, documentSize);
 
 	const draw = useDrawTool(tool === "draw", documentSize);
 	const redact = useRedactTool(documentSize, redactSettings, setRedactSettings);
-	const find = useFindTool(document, targetImage);
+	const find = useFindTool({
+		document,
+		image: targetImage,
+		redactionEffect: redactEffect,
+		onRedacted,
+	});
 
 	const startRedacting = () => {
 		redact.chooseTool();
 		dispatchMode({ type: "startTool", start: { tool: "redact" } });
 	};
-	// Cut out's Redact takes back the cut, adds a redaction in its shape,
-	// which is selected, and closes Cut out.
-	const redactCut = (layerId: string, mask: string, rect: Rect) => {
-		cancelSession();
-		addMaskedRedaction(
-			layerId,
-			mask,
-			rect,
-			redactionEffect(redactLook, documentSize),
-		);
-		dispatchMode({ type: "endTool" });
-	};
-
 	const cutImageId = toolImageId(mode, "cutOut");
 	const cutLayer = cutImageId
 		? visibleImageLayer(document, cutImageId)
 		: undefined;
-	const cut = useCutOutTool({ layer: cutLayer, onRedact: redactCut });
+	const cutOut = useCutOutTool({
+		layer: cutLayer,
+		redactionEffect: redactEffect,
+		onClose: () => dispatchMode({ type: "endTool" }),
+	});
+	const tools: EditorTools = { draw, redact, find, cutOut, adjust, text };
 
 	const startDrawing = () => {
 		draw.chooseTool();
@@ -136,11 +130,14 @@ export function useEditorTools({
 		dispatchMode({ type: "endTool" });
 		find.reset();
 	};
-	// Done with Draw or Redact goes back to the tools, not to the last stroke
-	// or box, still selected, where a stray drag would move it.
+	// Done does what the tool's own Done does, then closes it, and lets go of
+	// the selection if the tool asks.
 	const finishTool = () => {
+		if (!tool) return;
+		const { definition, controller } = toolWithController(tool, tools);
+		definition.done?.(controller);
 		closeTool();
-		if (tool === "draw" || tool === "redact") selectLayer(null);
+		if (definition.deselectOnDone) selectLayer(null);
 	};
 	const cancelTool = () => {
 		cancelSession();
@@ -154,7 +151,7 @@ export function useEditorTools({
 	const startCutOut = () => {
 		if (!targetImage) return;
 		if (cutImageId === targetImage.id) {
-			cut.start(targetImage);
+			cutOut.start(targetImage);
 			return;
 		}
 		pendingCut.current = targetImage;
@@ -167,23 +164,13 @@ export function useEditorTools({
 		const image = pendingCut.current;
 		if (!image || image.id !== cutImageId) return;
 		pendingCut.current = null;
-		cut.start(image);
-	}, [cutImageId, cut.start]);
+		cutOut.start(image);
+	}, [cutImageId, cutOut.start]);
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
 		if (!targetImage) return;
 		dispatchMode({ type: "startTool", start: { tool: "find" } });
 	};
-	// Find's Done redacts the regions chosen, in the look rather than a
-	// selected redaction's, and says how many, with Undo.
-	const finishFinding = () => {
-		const result = find.redactChosen(redactionEffect(redactLook, documentSize));
-		closeTool();
-		selectLayer(null);
-		if (result) onRedacted(result.count, result.feature);
-	};
-	const done = tool === "find" ? finishFinding : finishTool;
-	const cancel = cancelTool;
 
 	const startNewText = () => text.startNew(visibleArea());
 	const startCrop = () => dispatchMode({ type: "startCrop" });
@@ -212,27 +199,16 @@ export function useEditorTools({
 
 	// [ and ] step the open tool's brush, if it has one.
 	const stepToolSize = (step: 1 | -1) => {
-		if (!tool || !SIZED_TOOLS.includes(tool)) return;
-		const sized: Partial<
-			Record<EditorTool, { stepSize: (step: 1 | -1) => void }>
-		> = { draw, redact, cutOut: cut };
-		sized[tool]?.stepSize(step);
-	};
-
-	const tools: EditorTools = {
-		draw,
-		redact,
-		find,
-		cut,
-		adjust,
-		text,
+		if (!tool) return;
+		const { definition, controller } = toolWithController(tool, tools);
+		definition.stepSize?.(controller, step);
 	};
 
 	return {
 		tools,
 		startTool,
-		done,
-		cancel,
+		done: finishTool,
+		cancel: cancelTool,
 		finishTool,
 		closeCrop,
 		finishCrop,

@@ -12,6 +12,8 @@ import {
 	withShape,
 } from "./brushSettings";
 
+export type DrawController = ReturnType<typeof useDrawTool>;
+
 /**
  * Draw's settings, kept between sessions. While Draw is `active` with the
  * shape tool, they show the selected shape's style, and changing them
@@ -19,8 +21,6 @@ import {
  * a box, starts a new shape instead. `stepSize` steps the brush's size for
  * `[` and `]`.
  */
-export type DrawController = ReturnType<typeof useDrawTool>;
-
 export function useDrawTool(active: boolean, documentSize: Size) {
 	const selectedShape = useStore(selectSelectedShape);
 	const selectedType = useStore((state) => selectSelectedLayer(state)?.type);

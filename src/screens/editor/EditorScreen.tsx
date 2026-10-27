@@ -38,18 +38,18 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
-import {
-	ContextBarContent,
-	DockContent,
-	hasInspectorSection,
-	ToolTrays,
-	type ToolViewContext,
-} from "./EditorDock";
 import { EditorInspector } from "./EditorInspector";
 import { EditorRail } from "./EditorRail";
 import { modeChrome, railChosenTool } from "./editorChrome";
 import { EditorContext, type EditorContextValue } from "./editorContext";
 import { openTray, takesKeys } from "./editorMode";
+import {
+	ContextBarContent,
+	DockContent,
+	hasInspectorSection,
+	type PanelContext,
+	ToolTrays,
+} from "./PanelViews";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
@@ -60,6 +60,7 @@ import { HeaderActions } from "./shell/HeaderActions";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
+import { toolDoneLabel } from "./toolDefinitions";
 import { CropTool } from "./tools/crop/CropTool";
 import { useReviewZoom } from "./tools/find/useFindTool";
 import { layerKindName } from "./tools/layers/LayerRow";
@@ -284,7 +285,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		editingText,
 		draw: tools.draw.settings,
 		redact: tools.redact.settings,
-		cut: tools.cut,
+		cut: tools.cutOut,
 		find: targetImage && {
 			imageId: targetImage.id,
 			regions: tools.find.overlay,
@@ -353,7 +354,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		editingText,
 		styledText: styledText !== undefined,
 		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
-		findChosen: tools.find.selectedCount,
+		toolDoneLabel: tool ? toolDoneLabel(tool, tools) : undefined,
 		wide,
 	});
 	const { panel, inBar } = chrome;
@@ -425,7 +426,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		bottomInset: dockInset,
 		cancel,
 	};
-	const toolViews: ToolViewContext = {
+	const panels: PanelContext = {
 		tools,
 		dispatchMode,
 		layerActions: layerActions || undefined,
@@ -437,7 +438,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	// or Cut out's cut.
 	const resetEdit = adjustedLayer?.adjustments
 		? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
-		: tools.cut.reset;
+		: tools.cutOut.reset;
 
 	// A tap on selected text edits it, with the caret where it landed.
 	const editSelectedTextAt =
@@ -500,7 +501,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 						bar={
 							inBar && modeActions ? (
 								<ContextBarContent
-									context={toolViews}
+									context={panels}
 									panel={panel}
 									chrome={modeActions}
 								/>
@@ -553,18 +554,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 							selectionBar={selectionBar}
 						/>
 						{!wide && (
-							<ToolTrays
-								context={toolViews}
-								modeState={modeState}
-								panel={panel}
-							/>
+							<ToolTrays context={panels} modeState={modeState} panel={panel} />
 						)}
 						{wide && eyedropper && (
 							<EyedropperHint
 								onCancel={() => dispatchMode({ type: "stopEyedropper" })}
 							/>
 						)}
-						<Announcement message={tools.cut.news} />
+						<Announcement message={tools.cutOut.news} />
 						{saveProblem && (
 							<SaveErrorBanner
 								message={saveProblem}
@@ -597,7 +594,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				    has it open, is the layers, with Find or Adjust above them. */}
 						{inspector ? (
 							<EditorInspector
-								context={toolViews}
+								context={panels}
 								panel={panel}
 								layerList={layerList}
 							/>
@@ -610,7 +607,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 								keyboardOverlap={layout.keyboardOverlap}
 							>
 								<DockContent
-									context={toolViews}
+									context={panels}
 									panel={panel}
 									idle={
 										<ToolsPanel
