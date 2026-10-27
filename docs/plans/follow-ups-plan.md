@@ -6,7 +6,7 @@ Each section stands alone, so they can go in any order.
 
 ## 1. Checks only a device can make
 
-The October 24 critique work and the refactors after it (October 25 and 26) were checked on web, at 390, 1024, and 1440 points wide. The tool options refactor (`bdb2805`) and the move of tool code out of `canvas/` (`703fddf` to `7afc71a`) weren't run on a simulator, and the `canvas/` move's web check isn't recorded either.
+The October 24 critique work and the refactors after it (October 25 and 26) were checked on web, at 390, 1024, and 1440 points wide. The tool options refactor (`bdb2805`) and the move of tool code out of `canvas/` (`703fddf` to `7afc71a`) weren't run on a simulator, and the `canvas/` move's web check isn't recorded either. The tool lifecycle refactor ([tool-lifecycle-plan.md](tool-lifecycle-plan.md), `2e5c184` to `9294a2f`) was checked on web at 390 and 1440 points wide, but not on a simulator.
 
 * **The editor on iPhone and iPad, after the refactors.** On the iOS simulator and the iPad Pro 13-inch simulator: open every tool, then Cancel and Done it; type text and tap the canvas while typing (the caret moves and the keyboard stays); double-tap a text layer; run Find, choose and unchoose a region, and step through Review; drag sideways on the photo in Adjust; draw a stroke; crop.
 * **The context bar on iPad.** Touch on the bar's chips and their popovers, Dynamic Type at larger sizes, and 1133 and 1180-point windows. Check on the iPad mini simulator too.
