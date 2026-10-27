@@ -100,6 +100,33 @@ export function usePaintGesture({
 			setTimeout(onStill, STILL_MS, token);
 		};
 
+		// Adds a point once the finger is far enough from the last.
+		const extendStroke = (x: number, y: number) => {
+			"worklet";
+			const gap = MIN_POINT_GAP_PX / viewport.scale;
+			points.modify((line) => {
+				const dx = x - line[line.length - 2];
+				const dy = y - line[line.length - 1];
+				// Empty when it began before its first finger's touch-down reset it.
+				if (line.length === 0 || dx * dx + dy * dy >= gap * gap) {
+					line.push(x, y);
+				}
+				return line;
+			});
+		};
+
+		// Waits for stillness afresh once the finger strays from where it last
+		// started waiting.
+		const restartStillness = (screenX: number, screenY: number) => {
+			"worklet";
+			const dx = screenX - anchorX.value;
+			const dy = screenY - anchorY.value;
+			if (dx * dx + dy * dy <= STILL_PX * STILL_PX) return;
+			anchorX.value = screenX;
+			anchorY.value = screenY;
+			armStillness();
+		};
+
 		// On web, it activates at touch-down. Only touch-downs decide whether
 		// it's cancelled: the first finger starts afresh, and fingers that land
 		// together arrive as one touch-down, before the pan begins.
@@ -134,24 +161,8 @@ export function usePaintGesture({
 					points.value = straightStroke([line[0], line[1], x, y]);
 					return;
 				}
-				const gap = MIN_POINT_GAP_PX / viewport.scale;
-				points.modify((line) => {
-					const dx = x - line[line.length - 2];
-					const dy = y - line[line.length - 1];
-					// Empty when it began before its first finger's touch-down reset it.
-					if (line.length === 0 || dx * dx + dy * dy >= gap * gap) {
-						line.push(x, y);
-					}
-					return line;
-				});
-				if (!straighten) return;
-				const dx = event.x - anchorX.value;
-				const dy = event.y - anchorY.value;
-				if (dx * dx + dy * dy > STILL_PX * STILL_PX) {
-					anchorX.value = event.x;
-					anchorY.value = event.y;
-					armStillness();
-				}
+				extendStroke(x, y);
+				if (straighten) restartStillness(event.x, event.y);
 			})
 			.onFinalize(() => {
 				generation.value += 1;
