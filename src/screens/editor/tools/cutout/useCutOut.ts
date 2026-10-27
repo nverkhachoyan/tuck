@@ -131,9 +131,8 @@ export function useCutOut({
 			next = { ...last, index: nextMask(last.index, last.masks.length) };
 		} else {
 			forgetPick();
-			const objects = await findObjectMasks(layer.uri, at);
-			const masks = await decodeMasks(objects.masks.map(({ uri }) => uri));
-			if (masks.length === 0) {
+			const found = await newPick(current, at);
+			if (!found) {
 				setNews(null);
 				showAlert(
 					"Nothing to cut out",
@@ -141,25 +140,7 @@ export function useCutOut({
 				);
 				return;
 			}
-			next = {
-				layerId: layer.id,
-				at,
-				mask: "",
-				masks,
-				index: objects.likeliest,
-				base: current.mask,
-				add: null,
-			};
-			try {
-				if (current.mask !== undefined) {
-					next.add = !(await withMask(current.mask, (mask) =>
-						cutShowsAt(current, mask, at),
-					));
-				}
-			} catch (error) {
-				for (const mask of masks) mask.dispose();
-				throw error;
-			}
+			next = found;
 		}
 		const grown = next.masks === last?.masks;
 		let kept: string;
@@ -176,17 +157,7 @@ export function useCutOut({
 		}
 		onMask(layer.id, kept, true);
 		lastPick.current = { ...next, mask: kept };
-		setNews(
-			grown
-				? next.index === 0
-					? "Selection back to the smallest part"
-					: "Selection grown"
-				: next.add === null
-					? "Subject picked"
-					: next.add
-						? "Subject added"
-						: "Subject removed",
-		);
+		setNews(pickNews(next, grown));
 	};
 
 	const find = async (layer: ImageLayer, at?: ImagePoint) => {
@@ -258,6 +229,50 @@ export function useCutOut({
 }
 
 class PickOvertaken extends Error {}
+
+/**
+ * A first pick at `at` on `image`, as it is now: the objects found there,
+ * and whether it adds to the image's mask or takes out of it. Null when
+ * nothing was found.
+ */
+async function newPick(
+	image: ImageLayer,
+	at: ImagePoint,
+): Promise<Pick | null> {
+	const objects = await findObjectMasks(image.uri, at);
+	const masks = await decodeMasks(objects.masks.map(({ uri }) => uri));
+	if (masks.length === 0) return null;
+	const { mask } = image;
+	try {
+		const add =
+			mask === undefined
+				? null
+				: !(await withMask(mask, (decoded) => cutShowsAt(image, decoded, at)));
+		return {
+			layerId: image.id,
+			at,
+			mask: "",
+			masks,
+			index: objects.likeliest,
+			base: mask,
+			add,
+		};
+	} catch (error) {
+		for (const decoded of masks) decoded.dispose();
+		throw error;
+	}
+}
+
+/** What a pick did, for a screen reader: `grown` from the same tap's last. */
+function pickNews({ index, add }: Pick, grown: boolean): string {
+	if (grown) {
+		return index === 0
+			? "Selection back to the smallest part"
+			: "Selection grown";
+	}
+	if (add === null) return "Subject picked";
+	return add ? "Subject added" : "Subject removed";
+}
 
 /** Decodes found masks' files, deleting each once it's read. */
 async function decodeMasks(uris: string[]): Promise<SkImage[]> {
