@@ -84,9 +84,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		exportFormatFor(document),
 	);
 	const { state, retry } = useRenderedDocument(document, exportSize.scale);
-	const [busy, setBusy] = useState<Busy | null>(null);
-	const [saved, setSaved] = useState(false);
-	const [copied, setCopied] = useState(false);
 	const [canShare] = useState(canShareImages);
 	const close = useCallback(() => router.back(), [router]);
 	useEffect(() => {
@@ -98,13 +95,150 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [close]);
 
+	const { busy, saved, copied, changed, handleSave, handleShare, handleCopy } =
+		useExportActions(state, format);
+
+	const ready = state.status === "ready";
+	const sheet = useSheetFit();
+
+	return (
+		<View
+			ref={sheet.containerRef}
+			accessibilityViewIsModal
+			style={[styles.container, { height: sheet.height }]}
+			onLayout={sheet.measure}
+		>
+			{/* Behind the sheet, not around it: on web, a click on the sheet
+			    would bubble up to it and close the sheet. */}
+			<Pressable
+				style={[StyleSheet.absoluteFill, styles.scrim]}
+				onPress={close}
+				accessibilityLabel="Close export"
+			/>
+			{sheet.measured && (
+				<View style={styles.column}>
+					<BottomSheet title="Export" closeLabel="Close" onClose={close}>
+						<ExportPreview
+							state={state}
+							aspect={document.width / document.height}
+							height={sheet.previewHeight}
+							onHeaderHeight={sheet.setHeaderHeight}
+							onBlack={format === "jpeg" && transparent}
+							checkered={format === "png" && transparent}
+							onRetry={retry}
+						/>
+						<View
+							style={styles.content}
+							onLayout={(event) =>
+								sheet.setOptionsHeight(event.nativeEvent.layout.height)
+							}
+						>
+							{sizes.length > 1 && (
+								<Segmented
+									label="Size"
+									disabled={busy !== null}
+									options={sizes.map(({ width, height }, index) => ({
+										title: sizeName(index, sizes),
+										detail: `${width} × ${height}`,
+										accessibilityLabel: `${sizeName(index, sizes)}, ${width} by ${height} pixels`,
+									}))}
+									selected={Math.min(sizeIndex, sizes.length - 1)}
+									onSelect={(index) => {
+										setSizeIndex(index);
+										changed();
+									}}
+								/>
+							)}
+							<Segmented
+								label="Format"
+								disabled={busy !== null}
+								options={(["jpeg", "png"] as const).map((value) => ({
+									title: exportFormats[value].label,
+									detail:
+										value === "png"
+											? "Keeps transparency"
+											: transparent
+												? "Fills transparency black"
+												: "Smaller file",
+								}))}
+								selected={format === "jpeg" ? 0 : 1}
+								onSelect={(index) => {
+									setFormat(index === 0 ? "jpeg" : "png");
+									changed();
+								}}
+							/>
+							{saved ? (
+								<DoneLabel label={saveLabels.done} />
+							) : (
+								<Button
+									label={busy === "saving" ? saveLabels.busy : saveLabels.idle}
+									icon="download-outline"
+									variant="primary"
+									size="large"
+									disabled={!ready || busy !== null}
+									onPress={handleSave}
+								/>
+							)}
+							<View style={styles.secondaryActions}>
+								{/* Most desktop browsers can't share files. */}
+								{canShare && (
+									<View style={styles.secondaryAction}>
+										<Button
+											label={busy === "sharing" ? "Opening…" : "Share"}
+											icon="share-outline"
+											size="large"
+											disabled={!ready || busy !== null}
+											onPress={handleShare}
+										/>
+									</View>
+								)}
+								<View style={styles.secondaryAction}>
+									{copied ? (
+										<DoneLabel label="Copied" />
+									) : (
+										<Button
+											label={busy === "copying" ? "Copying…" : "Copy"}
+											icon="copy-outline"
+											size="large"
+											disabled={!ready || busy !== null}
+											onPress={handleCopy}
+										/>
+									)}
+								</View>
+							</View>
+							{/* Saved, the edit is finished: straight back to the projects,
+						    which ends the session, rather than through the editor. */}
+							{saved && (
+								<Button
+									label="Back to projects"
+									size="large"
+									onPress={() => router.dismissTo("/")}
+								/>
+							)}
+						</View>
+					</BottomSheet>
+				</View>
+			)}
+		</View>
+	);
+}
+
+/**
+ * Save, Share, and Copy for the render in `state`. Each runs alone, with the
+ * others off until it's done (`busy`), and alerts if it throws. `saved` and
+ * `copied` say a save or copy landed, until `changed` says an option moved.
+ */
+function useExportActions(state: RenderState, format: ExportFormat) {
+	const [busy, setBusy] = useState<Busy | null>(null);
+	const [saved, setSaved] = useState(false);
+	const [copied, setCopied] = useState(false);
+
 	const changed = () => {
 		setSaved(false);
 		setCopied(false);
 	};
 
-	// Save, Share, and Copy each run alone, with the others off until it's
-	// done, and alert under `failureTitle` if it throws.
+	// Alerts under `failureTitle` if `run` throws.
 	const runAction = async (
 		action: Busy,
 		failureTitle: string,
@@ -151,7 +285,11 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			setCopied(true);
 		});
 
-	const ready = state.status === "ready";
+	return { busy, saved, copied, changed, handleSave, handleShare, handleCopy };
+}
+
+/** The sheet's container and preview strip, fitted to the window. */
+function useSheetFit() {
 	// On iOS the modal's frame starts below the window's top but is laid out
 	// as tall as the stack, which leaves a gap under the sheet. Measured from
 	// where the screen starts, which its own height doesn't move, the
@@ -183,140 +321,23 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 					Math.min(nominalPreview, Math.max(MIN_PREVIEW_HEIGHT, room)),
 				);
 
+	return {
+		containerRef,
+		height: screenSize.height - originY,
+		measured: measuredOriginY !== null,
+		measure: () =>
+			containerRef.current?.measureInWindow((_x, y) => setOriginY(y)),
+		previewHeight,
+		setHeaderHeight,
+		setOptionsHeight,
+	};
+}
+
+function DoneLabel({ label }: { label: string }) {
 	return (
-		<View
-			ref={containerRef}
-			accessibilityViewIsModal
-			style={[styles.container, { height: screenSize.height - originY }]}
-			onLayout={() =>
-				containerRef.current?.measureInWindow((_x, y) => setOriginY(y))
-			}
-		>
-			{/* Behind the sheet, not around it: on web, a click on the sheet
-			    would bubble up to it and close the sheet. */}
-			<Pressable
-				style={[StyleSheet.absoluteFill, styles.scrim]}
-				onPress={close}
-				accessibilityLabel="Close export"
-			/>
-			{measuredOriginY !== null && (
-				<View style={styles.column}>
-					<BottomSheet title="Export" closeLabel="Close" onClose={close}>
-						<ExportPreview
-							state={state}
-							aspect={document.width / document.height}
-							height={previewHeight}
-							onHeaderHeight={setHeaderHeight}
-							onBlack={format === "jpeg" && transparent}
-							checkered={format === "png" && transparent}
-							onRetry={retry}
-						/>
-						<View
-							style={styles.content}
-							onLayout={(event) =>
-								setOptionsHeight(event.nativeEvent.layout.height)
-							}
-						>
-							{sizes.length > 1 && (
-								<Segmented
-									label="Size"
-									disabled={busy !== null}
-									options={sizes.map(({ width, height }, index) => ({
-										title: sizeName(index, sizes),
-										detail: `${width} × ${height}`,
-										accessibilityLabel: `${sizeName(index, sizes)}, ${width} by ${height} pixels`,
-									}))}
-									selected={Math.min(sizeIndex, sizes.length - 1)}
-									onSelect={(index) => {
-										setSizeIndex(index);
-										changed();
-									}}
-								/>
-							)}
-							<Segmented
-								label="Format"
-								disabled={busy !== null}
-								options={(["jpeg", "png"] as const).map((value) => ({
-									title: exportFormats[value].label,
-									detail:
-										value === "png"
-											? "Keeps transparency"
-											: transparent
-												? "Fills transparency black"
-												: "Smaller file",
-								}))}
-								selected={format === "jpeg" ? 0 : 1}
-								onSelect={(index) => {
-									setFormat(index === 0 ? "jpeg" : "png");
-									changed();
-								}}
-							/>
-							{saved ? (
-								<View style={styles.done} accessibilityLiveRegion="polite">
-									<Ionicons
-										name="checkmark-circle"
-										size={22}
-										color={colors.textPrimary}
-									/>
-									<Text style={styles.doneLabel}>{saveLabels.done}</Text>
-								</View>
-							) : (
-								<Button
-									label={busy === "saving" ? saveLabels.busy : saveLabels.idle}
-									icon="download-outline"
-									variant="primary"
-									size="large"
-									disabled={!ready || busy !== null}
-									onPress={handleSave}
-								/>
-							)}
-							<View style={styles.secondaryActions}>
-								{/* Most desktop browsers can't share files. */}
-								{canShare && (
-									<View style={styles.secondaryAction}>
-										<Button
-											label={busy === "sharing" ? "Opening…" : "Share"}
-											icon="share-outline"
-											size="large"
-											disabled={!ready || busy !== null}
-											onPress={handleShare}
-										/>
-									</View>
-								)}
-								<View style={styles.secondaryAction}>
-									{copied ? (
-										<View style={styles.done} accessibilityLiveRegion="polite">
-											<Ionicons
-												name="checkmark-circle"
-												size={22}
-												color={colors.textPrimary}
-											/>
-											<Text style={styles.doneLabel}>Copied</Text>
-										</View>
-									) : (
-										<Button
-											label={busy === "copying" ? "Copying…" : "Copy"}
-											icon="copy-outline"
-											size="large"
-											disabled={!ready || busy !== null}
-											onPress={handleCopy}
-										/>
-									)}
-								</View>
-							</View>
-							{/* Saved, the edit is finished: straight back to the projects,
-						    which ends the session, rather than through the editor. */}
-							{saved && (
-								<Button
-									label="Back to projects"
-									size="large"
-									onPress={() => router.dismissTo("/")}
-								/>
-							)}
-						</View>
-					</BottomSheet>
-				</View>
-			)}
+		<View style={styles.done} accessibilityLiveRegion="polite">
+			<Ionicons name="checkmark-circle" size={22} color={colors.textPrimary} />
+			<Text style={styles.doneLabel}>{label}</Text>
 		</View>
 	);
 }
