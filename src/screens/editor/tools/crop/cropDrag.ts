@@ -154,6 +154,31 @@ function moveBox(
 	return { box, snapped };
 }
 
+/** Which way `handle` moves along an axis: toward `low` (-1), `high` (1), or neither. */
+function handleDirection(handle: CropHandle, low: Edge, high: Edge): number {
+	"worklet";
+	if (handle.includes(low)) return -1;
+	return handle.includes(high) ? 1 : 0;
+}
+
+/**
+ * What a resize in `direction` keeps put along an axis the box spans from
+ * `low` to `high`: the side across from the moving one, or the middle when
+ * it grows both ways.
+ */
+function fixedPoint(direction: number, low: number, high: number): number {
+	"worklet";
+	if (direction > 0) return low;
+	if (direction < 0) return high;
+	return (low + high) / 2;
+}
+
+/** Where a span `size` long starts, keeping `fixed` put (see `fixedPoint`). */
+function spanStart(fixed: number, direction: number, size: number): number {
+	"worklet";
+	return fixed - (size * (1 - direction)) / 2;
+}
+
 /**
  * Resizing with the ratio kept. A corner scales the box from the opposite
  * corner, following the pointer along the box's diagonal; an edge moves out
@@ -170,29 +195,18 @@ function resizeLocked(
 ): { box: Rect; snapped: number } {
 	"worklet";
 	const { minSize, bounds, tolerance } = limits;
-	const horizontal = handle.includes("left")
-		? -1
-		: handle.includes("right")
-			? 1
-			: 0;
-	const vertical = handle.includes("top")
-		? -1
-		: handle.includes("bottom")
-			? 1
-			: 0;
+	const horizontal = handleDirection(handle, "left", "right");
+	const vertical = handleDirection(handle, "top", "bottom");
 	const { width, height } = start;
-	const right = start.x + width;
-	const bottom = start.y + height;
-	const middleX = start.x + width / 2;
-	const middleY = start.y + height / 2;
+	const fixedX = fixedPoint(horizontal, start.x, start.x + width);
+	const fixedY = fixedPoint(vertical, start.y, start.y + height);
 
 	const boxAt = (scale: number): Rect => {
 		const w = width * scale;
 		const h = height * scale;
 		return {
-			x:
-				horizontal > 0 ? start.x : horizontal < 0 ? right - w : middleX - w / 2,
-			y: vertical > 0 ? start.y : vertical < 0 ? bottom - h : middleY - h / 2,
+			x: spanStart(fixedX, horizontal, w),
+			y: spanStart(fixedY, vertical, h),
 			width: w,
 			height: h,
 		};
@@ -220,8 +234,6 @@ function resizeLocked(
 		if (direction < 0) return fixed - low;
 		return 2 * Math.min(fixed - low, high - fixed);
 	};
-	const fixedX = horizontal > 0 ? start.x : horizontal < 0 ? right : middleX;
-	const fixedY = vertical > 0 ? start.y : vertical < 0 ? bottom : middleY;
 	const maxScale = Math.min(
 		maxSide / Math.max(width, height),
 		room(fixedX, horizontal, bounds.x, bounds.x + bounds.width) / width,
