@@ -1,12 +1,14 @@
 # Follow-ups
 
-What's left from the plans in `docs/plans/`, gathered October 26, 2026, when the finished plans were removed. Every step those plans listed has landed. What remains is checks only a device can make, a few changes the plans set aside, and smart selection's later stages. The removed plans are in git history, as of `7afc71a`: the context bar and its refinement, Crop and Stickers on wide windows, redaction trust, the export sheet, polish and copy, the Draw highlighter, the editor screen refactor, the tool views registry, tool options, tool code out of `canvas/`, smart selection, and its spike.
+What's left from the plans in `docs/plans/`, gathered October 26, 2026, when the finished plans were removed. Every step those plans listed has landed. What remains is checks only a device can make, a few changes the plans set aside, and smart selection's later stages. The removed plans are in git history, as of `7afc71a`: the context bar and its refinement, Crop and Stickers on wide windows, redaction trust, the export sheet, polish and copy, the Draw highlighter, the editor screen refactor, the tool views registry, tool options, tool code out of `canvas/`, smart selection, and its spike. Each tool's canvas input was planned and built after that, and its plan removed as of `b87e7f6`.
 
 Each section stands alone, so they can go in any order.
 
 ## 1. Checks only a device can make
 
-The October 24 critique work and the refactors after it (October 25 and 26) were checked on web, at 390, 1024, and 1440 points wide. The tool options refactor (`bdb2805`) and the move of tool code out of `canvas/` (`703fddf` to `7afc71a`) weren't run on a simulator, and the `canvas/` move's web check isn't recorded either.
+The October 24 critique work and the refactors after it (October 25 and 26) were checked on web, at 390, 1024, and 1440 points wide. The tool options refactor (`bdb2805`) and the move of tool code out of `canvas/` (`703fddf` to `7afc71a`) weren't run on a simulator, and the `canvas/` move's web check isn't recorded either. Nor is either check recorded for each tool's canvas input (`eb0e554` to `b87e7f6`), which changed what every canvas gesture calls, though not the gestures themselves.
+
+* **Every canvas tool kind, after the canvas input refactor.** In the web editor at 390 and 1440 points wide, and on the iOS simulator: a pen, highlighter (it joins only a highlighter layer), and eraser stroke; a dragged rectangle and arrow, a tap that selects a shape, and a drag that moves the selected one; a Redact box, a brushed redaction that joins the selected one, and a tap that selects a box; a Cut out brush stroke and a Pick tap; the eyedropper from Draw's color, from text's color while typing (the text keeps drawing), and from Find's redaction style (the found regions hide while it picks); a Find region chosen and unchosen, and a tap off the image that puts Find down; a sideways drag in Adjust; and a tap off the document while painting that puts the tool down.
 
 * **The editor on iPhone and iPad, after the refactors.** On the iOS simulator and the iPad Pro 13-inch simulator: open every tool, then Cancel and Done it; type text and tap the canvas while typing (the caret moves and the keyboard stays); double-tap a text layer; run Find, choose and unchoose a region, and step through Review; drag sideways on the photo in Adjust; draw a stroke; crop.
 * **The context bar on iPad.** Touch on the bar's chips and their popovers, Dynamic Type at larger sizes, and 1133 and 1180-point windows. Check on the iPad mini simulator too.
@@ -25,7 +27,6 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 
 * **The bar's fade geometry.** `rowEdges`, `leafEdges`, `fadeCut`, and `fadeCutLeft` in `shell/ContextBar.tsx` are pure and untested. Move them to `shell/barFade.ts`, with tests.
 * **`TextStylePanel`'s `ScrollRow`.** A simpler fade than the bar's, for the dock's font and swatch rows. Once the bar's geometry has its own file, the row can share it.
-* **Each tool's canvas input.** `canvasInput.ts`'s `inputRules` and `outlinedLayerFor` switch over every mode, and `EditorCanvas` calls each tool's gesture hook by name. Each tool could export its own rules and gesture, as `TOOL_VIEWS` does for its views. Tools can import `canvas/` now, so their types are in reach. Planned in [canvas-input-plan.md](canvas-input-plan.md).
 * **Small ones.** Crop's straighten dial has its props written out twice, in `CropTool` and `DialStrip`; tidy that when Crop next changes. `EditorDock.tsx` holds `TOOL_VIEWS` and could be named for it. The wide window's `EyedropperHint` could move to an overlay both layouts share.
 
 ## 4. Smart selection
@@ -38,7 +39,7 @@ Cut out's Subjects, Pick (MobileSAM on every platform), Keep and Erase, Invert, 
 * **WebAssembly threads.** Where WebGPU isn't available, web encodes on one thread in about 3 seconds. Cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` in `vercel.json`) would allow threads, likely about 1 second. Everything the site loads is its own, but check the share target and file handlers first.
 * **Pick without Vision or ML Kit.** Segment Anything needs neither, so Pick could show on iOS 16 and on Android without Play services, where Cut out offers only the brushes.
 * **Edges.** SAM's masks come out at 256×256 and are scaled up, so hair and fur come out soft and blocky. Refine the mask against the photo (a guided filter), or run the decoder again on a crop around the object.
-* **Gestures.** A second mode or a long press for points that subtract, and a drag for a box, which `strokeIntent` already tells from a tap.
+* **Gestures.** A second mode or a long press for points that subtract, and a drag for a box, which `strokeIntent` already tells from a tap. Each is a new `CanvasTool` kind: its union member and `ToolStroke` member, its row in `CANVAS_TOOLS` (`canvas/canvasTool.ts`), its builder in `cutOutSettings.ts`, its case in `useCanvasInput`'s `finishStroke`, and its live drawing in `LiveStrokeOverlay`.
 * **Memory in browsers.** Not measured with MobileSAM alone in its worker. With all three models loaded, the page held about 130 MB of JavaScript heap.
 * **Copy a cut to a new layer**, the cut-out image with its mask applied, beside keeping it as a sticker.
 * **Adjust only the selection.**
