@@ -4,19 +4,11 @@
 // turns the actions into handlers once and gives both layouts the result.
 
 import type { EditorTool } from "./editorMode.ts";
+import { type MarkedTool, toolLabel } from "./shell/toolList.ts";
 
 // What the dock shows: a tool's panel, text's style, the selected layer's
 // actions, or, with nothing selected, the tools or the layers.
 export type DockPanel = EditorTool | "text" | "layer" | "idle";
-
-// What a tool's footer and bar call it.
-export const TOOL_TITLES: Record<EditorTool, string> = {
-	draw: "Draw",
-	redact: "Redact",
-	find: "Find",
-	adjust: "Adjust",
-	cutOut: "Cut out",
-};
 
 // What Cancel and Done apply to: the open tool, the text being typed, or the
 // selection, which Done lets go of.
@@ -79,7 +71,7 @@ export function modeChrome({
 
 	if (tool) {
 		return chrome(tool, {
-			title: TOOL_TITLES[tool],
+			title: toolLabel(tool),
 			cancel: "tool",
 			done: "tool",
 			doneLabel:
@@ -99,9 +91,6 @@ export function modeChrome({
 	}
 	return chrome("idle", null);
 }
-
-// A tool the wide editor's rail highlights as chosen.
-export type RailTool = EditorTool | "text" | "crop" | "sticker";
 
 export type RailChosenToolInput = {
 	tool: EditorTool | null;
@@ -123,7 +112,7 @@ export function railChosenTool({
 	editingText,
 	cropping,
 	stickersOpen,
-}: RailChosenToolInput): RailTool | null {
+}: RailChosenToolInput): MarkedTool | null {
 	if (editingText) return "text";
 	if (cropping) return "crop";
 	if (stickersOpen) return "sticker";

@@ -1,10 +1,10 @@
 import type { RefObject } from "react";
 import { StyleSheet, View } from "react-native";
 import { Surface } from "@/ui/Surface";
-import type { RailTool } from "./editorChrome";
 import type { EditorTool } from "./editorMode";
 import { PANEL_GAP, PANEL_RADIUS } from "./shell/Dock";
 import { mapStarters, type ToolStarters, ToolsPanel } from "./shell/ToolsPanel";
+import type { MarkedTool } from "./shell/toolList";
 import { RAIL_WIDTH } from "./useEditorLayout";
 
 /**
@@ -21,7 +21,7 @@ export function EditorRail({
 	finishText,
 	stickerAnchor,
 }: {
-	chosen: RailTool | null;
+	chosen: MarkedTool | null;
 	addBusy: boolean;
 	hasImage: boolean;
 	startTool: ToolStarters;
