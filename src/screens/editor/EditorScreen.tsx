@@ -1,5 +1,5 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
 	ActivityIndicator,
 	Platform,
@@ -13,15 +13,9 @@ import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
 import { type Point, toLayerSpace } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
-import type { Layer } from "@/model/layers/layer";
 import { usePreference } from "@/platform/usePreference";
-import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
-import {
-	addImage,
-	openProjectCreatedAt,
-	openProjectName,
-} from "@/projects/projectService";
+import { addImage } from "@/projects/projectService";
 import { textIndexAt } from "@/render/textLayerLayout";
 import { useStore } from "@/store";
 import {
@@ -38,11 +32,13 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { Toast } from "@/ui/Toast";
 import { colors, space, typography } from "@/ui/theme";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
+import { EditorHeader } from "./EditorHeader";
 import { EditorInspector } from "./EditorInspector";
 import { EditorRail } from "./EditorRail";
-import { modeChrome, railChosenTool } from "./editorChrome";
+import { railChosenTool } from "./editorChrome";
 import { EditorContext, type EditorContextValue } from "./editorContext";
 import { openTray, takesKeys } from "./editorMode";
+import { LayerSelectionBar, useArrangeSelected } from "./LayerSelectionBar";
 import {
 	ContextBarContent,
 	DockContent,
@@ -55,15 +51,12 @@ import { SaveErrorBanner } from "./session/SaveErrorBanner";
 import { useAutosave } from "./session/useAutosave";
 import { useProjectSession } from "./session/useProjectSession";
 import { EyedropperHint } from "./shell/ColorPicker";
-import { Dock, DockFooter, type ModeActionProps } from "./shell/Dock";
+import { Dock, DockFooter } from "./shell/Dock";
 import { HeaderActions } from "./shell/HeaderActions";
-import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { TrayHeight } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
-import { toolDoneLabel } from "./toolDefinitions";
 import { CropTool } from "./tools/crop/CropTool";
 import { useReviewZoom } from "./tools/find/useFindTool";
-import { layerKindName } from "./tools/layers/LayerRow";
 import { LayersPanel, layerListProps } from "./tools/layers/LayersPanel";
 import { StickerPopover, StickerSheet } from "./tools/stickers/StickerSheet";
 import { useSavedStickers } from "./tools/stickers/useSavedStickers";
@@ -73,7 +66,8 @@ import { TextEditor } from "./tools/text/TextEditor";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
-import { RAIL_INSET, useEditorLayout } from "./useEditorLayout";
+import { useEditorChrome } from "./useEditorChrome";
+import { useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
 import { useEditorTools } from "./useEditorTools";
@@ -145,7 +139,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		transformLayer,
 		resizeBox,
 		nudgeLayer,
-		moveLayer,
 		setLayerResizable,
 		selectLayer,
 		undo,
@@ -249,7 +242,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	});
 
 	const editingText = tools.text.edit !== null;
-	const { styledText } = tools.text;
 	const savedStickers = useSavedStickers();
 	const stickerSave = useStickerSave(savedStickers.save);
 	// Find and Adjust live in the inspector, so they open it even though
@@ -307,33 +299,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 			? "This project couldn't be saved, so your edits won't be kept."
 			: autosaveError;
 
-	// Web-only and display-only details: inert takes the editor out of the tab
-	// order and accessibility tree under the export sheet on web, and what home
-	// lists the project as for the wide header.
+	// On web, inert takes the editor out of the tab order and accessibility
+	// tree under the export sheet.
 	useEffect(() => {
 		if (Platform.OS !== "web") return;
 		const root = rootRef.current as unknown as HTMLElement | null;
 		root?.toggleAttribute("inert", !focused);
 	}, [focused]);
-	const title = useMemo(
-		() => projectTitle(projectId, document),
-		[projectId, document],
-	);
 
-	const selectedIndex = selectedLayer
-		? document.layers.indexOf(selectedLayer)
-		: -1;
-	const topIndex = document.layers.length - 1;
-	const arrangeSelected = (move: ArrangeMove) => {
-		if (!selectedLayer) return;
-		const to = {
-			front: topIndex,
-			forward: selectedIndex + 1,
-			backward: selectedIndex - 1,
-			back: 0,
-		};
-		moveLayer(selectedLayer.id, to[move]);
-	};
+	const selectedPlace = useArrangeSelected(document, selectedLayer);
 
 	// Text being typed is finished first, so it goes where the editor does.
 	const openExport = () => {
@@ -345,19 +319,14 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		leaveEditor(router);
 	};
 
-	// The dock's panel, and its Cancel, Done, and title, chosen once for both
-	// layouts. A wide screen's open tool, or a selected layer, lives in the
-	// header. Find's results and Adjust's dial sit in the inspector, above the
-	// layers.
-	const chrome = modeChrome({
+	const { panel, inBar, modeActions } = useEditorChrome({
 		tool,
-		editingText,
-		styledText: styledText !== undefined,
-		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
-		toolDoneLabel: tool ? toolDoneLabel(tool, tools) : undefined,
+		tools,
+		selectedLayer,
 		wide,
+		done,
+		cancel,
 	});
-	const { panel, inBar } = chrome;
 
 	useEditorShortcuts({
 		enabled: !keysTaken,
@@ -376,7 +345,7 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		},
 		deselect: () => selectLayer(null),
 		duplicate: duplicateSelectedLayer,
-		arrange: arrangeSelected,
+		arrange: selectedPlace.arrange,
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
 	});
@@ -454,32 +423,15 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const selectionBar = selectedLayer && (
 		<LayerSelectionBar
 			layer={selectedLayer}
-			index={selectedIndex}
-			topIndex={topIndex}
+			index={selectedPlace.index}
+			topIndex={selectedPlace.topIndex}
 			onEdit={() => tools.text.editSelected()}
 			onSetResizable={setLayerResizable}
-			onArrange={arrangeSelected}
+			onArrange={selectedPlace.arrange}
 			onDuplicate={duplicateSelectedLayer}
 			onDelete={editNotice.deleteLayer}
 		/>
 	);
-
-	// The dock's footer and the context bar's title, Cancel, and Done, for
-	// the open tool, the text being typed or styled, or the selected layer.
-	const onCancel = { tool: cancel, text: tools.text.cancel };
-	const onDone = {
-		tool: done,
-		text: tools.text.finish,
-		deselect: () => selectLayer(null),
-	};
-	const modeActions: ({ title: string } & ModeActionProps) | null =
-		chrome.actions && {
-			title: chrome.actions.title,
-			onCancel: chrome.actions.cancel && onCancel[chrome.actions.cancel],
-			onDone: onDone[chrome.actions.done],
-			doneLabel: chrome.actions.doneLabel,
-			doneShortcut: "Escape",
-		};
 
 	const stickerActions = useStickerActions({
 		savedStickers,
@@ -495,7 +447,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				<View ref={rootRef} style={styles.container}>
 					<EditorHeader
 						wide={wide}
-						title={title}
+						projectId={projectId}
+						document={document}
 						saved={!saveProblem}
 						onBack={leave}
 						bar={
@@ -676,94 +629,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 				</View>
 			</EditorContext.Provider>
 		</TrayHeight.Provider>
-	);
-}
-
-/** What home lists the project as, for the wide header. */
-function projectTitle(projectId: string | null, document: EditorDocument) {
-	if (projectId === null) return projectLabel(document, Date.now());
-	return (
-		openProjectName(projectId) ||
-		projectLabel(document, openProjectCreatedAt(projectId) ?? Date.now())
-	);
-}
-
-/**
- * The editor's header. Back and Export stay through every tool and while
- * typing: leaving keeps the changes, as the browser's own Back does.
- * - `bar`: the open tool's context bar, on a wide screen.
- * - `title`, `saved`: the project and whether it's kept, shown only on a wide
- *   screen with no bar, where there's room between Back and the actions.
- */
-function EditorHeader({
-	wide,
-	title,
-	saved,
-	onBack,
-	bar,
-	children,
-}: {
-	wide: boolean;
-	title: string;
-	saved: boolean;
-	onBack: () => void;
-	bar?: ReactNode;
-	children: ReactNode;
-}) {
-	const titled = wide && !bar;
-	return (
-		<ScreenHeader
-			backLabel="Back to projects"
-			// Over the rail's tools.
-			backColumn={wide ? RAIL_INSET : undefined}
-			onBack={onBack}
-			title={titled ? title : undefined}
-			subtitle={
-				titled ? (saved ? "Saved on this device" : "Not saved") : undefined
-			}
-			bar={bar}
-			action={children}
-		/>
-	);
-}
-
-/**
- * The selection bar for `layer`, at `index` in the stack: Edit for text and
- * Free resize for text and images.
- */
-function LayerSelectionBar({
-	layer,
-	index,
-	topIndex,
-	onEdit,
-	onSetResizable,
-	onArrange,
-	onDuplicate,
-	onDelete,
-}: {
-	layer: Layer;
-	index: number;
-	topIndex: number;
-	onEdit: () => void;
-	onSetResizable: (id: string, resizable: boolean) => void;
-	onArrange: (move: ArrangeMove) => void;
-	onDuplicate: () => void;
-	onDelete: (id: string) => void;
-}) {
-	const resizable = layer.type === "text" || layer.type === "image";
-	return (
-		<SelectionBar
-			canMoveForward={index < topIndex}
-			canMoveBackward={index > 0}
-			onEdit={layer.type === "text" ? onEdit : undefined}
-			stretched={layer.resizable === true}
-			onToggleStretch={
-				resizable ? () => onSetResizable(layer.id, !layer.resizable) : undefined
-			}
-			onArrange={onArrange}
-			onDuplicate={onDuplicate}
-			onDelete={() => onDelete(layer.id)}
-		/>
 	);
 }
 
