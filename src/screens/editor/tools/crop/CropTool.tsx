@@ -599,6 +599,7 @@ function ActionButton({
 			accessibilityState={
 				selected === undefined ? undefined : { checked: selected }
 			}
+			aria-checked={selected}
 			style={styles.action}
 		>
 			{(state) => {
