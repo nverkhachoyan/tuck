@@ -1,6 +1,6 @@
 # Follow-ups
 
-What's left from the plans in `docs/plans/`, gathered October 26, 2026, when the finished plans were removed. Every step those plans listed has landed. What remains is checks only a device can make, a few changes the plans set aside, and smart selection's later stages. The removed plans are in git history, as of `7afc71a`: the context bar and its refinement, Crop and Stickers on wide windows, redaction trust, the export sheet, polish and copy, the Draw highlighter, the editor screen refactor, the tool views registry, tool options, tool code out of `canvas/`, smart selection, and its spike. Each tool's canvas input was planned and built after that, and its plan removed as of `b87e7f6`.
+What's left from the plans in `docs/plans/`, gathered October 26, 2026, when the finished plans were removed. Every step those plans listed has landed. What remains is checks only a device can make, a few changes the plans set aside, and smart selection's later stages. The removed plans are in git history, as of `7afc71a`: the context bar and its refinement, Crop and Stickers on wide windows, redaction trust, the export sheet, polish and copy, the Draw highlighter, the editor screen refactor, the tool views registry, tool options, tool code out of `canvas/`, smart selection, and its spike. Each tool's canvas input was planned and built after that, and its plan removed as of `b87e7f6`; so was Crop's UI, as of `3bbc0d8`.
 
 Each section stands alone, so they can go in any order.
 
@@ -12,7 +12,7 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 
 * **The editor on iPhone and iPad, after the refactors.** On the iOS simulator and the iPad Pro 13-inch simulator: open every tool, then Cancel and Done it; type text and tap the canvas while typing (the caret moves and the keyboard stays); double-tap a text layer; run Find, choose and unchoose a region, and step through Review; drag sideways on the photo in Adjust; draw a stroke; crop.
 * **The context bar on iPad.** Touch on the bar's chips and their popovers, Dynamic Type at larger sizes, and 1133 and 1180-point windows. Check on the iPad mini simulator too.
-* **Crop and Stickers on iPad.** Crop's options in the header, the straighten dial by finger, and the sticker popover's touch and long-press delete. When Crop's header was built, the iPad still showed the phone's Crop. It now gets the same `wide` as the rest of the editor, so check whether that's still true.
+* **Crop and Stickers on iPad.** Crop's UI refactor (`77e25c1` to `3bbc0d8`) moved its options into `CropPanel` and its fill into shell's `SwatchChip`. On the iPad Pro 13-inch simulator, Crop now shows the wide header: the ratio menu, Rotate's actions and its switch, the straighten dial by finger, and the background chip all worked by touch. Still to check on an iPad: the same by hand, and the sticker popover's touch and long-press delete.
 * **The phone's trays.** The bar's chips share `SizeChoices`, `ColorChip`, and `AlignPicker` with the phone's trays. Look at each tray on the iPhone simulator for anything that moved.
 * **Find on native.** Vision and ML Kit find different faces than MediaPipe. Run Find on the Solvay photo on the iOS simulator and the Android emulator, and check that the tray's words ("28 found", "26 of 28 chosen", "No faces found") fit what they find.
 * **Screen readers.** The iOS Simulator has no VoiceOver, so these wait for a device. With VoiceOver on an iPhone, check Find's Review row as one adjustable control, and swipe through the export sheet to check that it never reaches the editor behind it. Do the same with TalkBack on an Android phone.
@@ -27,7 +27,6 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 
 * **The bar's fade geometry.** `rowEdges`, `leafEdges`, `fadeCut`, and `fadeCutLeft` in `shell/ContextBar.tsx` are pure and untested. Move them to `shell/barFade.ts`, with tests.
 * **`TextStylePanel`'s `ScrollRow`.** A simpler fade than the bar's, for the dock's font and swatch rows. Once the bar's geometry has its own file, the row can share it.
-* **Crop's UI.** Planned in [crop-ui-plan.md](crop-ui-plan.md): its options listed once for both layouts, its rules in a tested `cropOptions.ts`, a swatch chip shared with `ColorChip`, and three small fixes.
 * **Small ones.** `EditorDock.tsx` holds `TOOL_VIEWS` and could be named for it. The wide window's `EyedropperHint` could move to an overlay both layouts share.
 
 ## 4. Smart selection
