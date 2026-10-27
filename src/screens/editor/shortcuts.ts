@@ -15,7 +15,7 @@ export type ToolKey =
 
 // A letter picks up a tool, and L shows or hides the layers. Each tool's
 // button shows its key on hover. A opens the stickers (it was Add's), P the
-// photo picker, and F Redact's Find. E adjusts, since A is taken, and B cuts
+// photo picker, and F Find. E adjusts, since A is taken, and B cuts
 // out the subject, taking its background away.
 export const TOOL_KEYS: Record<ToolKey, string> = {
 	text: "T",

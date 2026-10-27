@@ -64,8 +64,6 @@ export type ToolViewContext = {
 	toggleOptions: () => void;
 	closeTray: () => void;
 	bottomInset: number;
-	// Redact's way into Find, when there's an image to search.
-	onFind: (() => void) | undefined;
 	// The open tool's Cancel, which Find's tray also offers when it found
 	// nothing.
 	onCancel: () => void;
@@ -226,13 +224,12 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 		),
 	},
 	redact: {
-		dock: ({ tools: { redact }, optionsOpen, toggleOptions, onFind }) => (
+		dock: ({ tools: { redact }, optionsOpen, toggleOptions }) => (
 			<RedactPanel
 				settings={redact.settings}
 				optionsOpen={optionsOpen}
 				onChange={redact.change}
 				onToggleOptions={toggleOptions}
-				onFind={onFind}
 			/>
 		),
 		tray: (context) => (
@@ -248,7 +245,6 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 			<RedactBar
 				settings={context.tools.redact.settings}
 				onChange={context.tools.redact.change}
-				onFind={context.onFind}
 				{...redactColor(context)}
 			/>
 		),

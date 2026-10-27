@@ -104,7 +104,7 @@ export type RailChosenToolInput = {
  * - `editingText`: text being typed, which marks Text.
  * - `cropping`: the crop screen, which marks Crop.
  * - `stickersOpen`: the sticker popover, which marks Sticker.
- * - `tool`: the open tool (Find marks Redact through its entry).
+ * - `tool`: the open tool.
  * When none is active, no tool is marked.
  */
 export function railChosenTool({

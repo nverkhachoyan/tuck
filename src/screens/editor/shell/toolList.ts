@@ -8,8 +8,7 @@ import type { ToolKey } from "../shortcuts";
 
 type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-// A tool a button can mark as open. Find is one of Redact's, so it marks
-// Redact rather than a button of its own.
+// A tool a button can mark as open.
 export type MarkedTool =
 	| "text"
 	| "draw"
@@ -26,23 +25,19 @@ export type ToolEntry = {
 	icon: ToolIcon;
 	// Hidden until the document has an image to work on.
 	needsImage?: boolean;
-	// Find is a layer action, not a button in the dock or the rail.
-	dock?: false;
-	// Which open tools mark this button. Redact stays marked while Find is open.
-	markedWhile?: readonly MarkedTool[];
 };
 
 // The order the dock and the rail show them.
 export const TOOLS: readonly ToolEntry[] = [
 	{ key: "text", label: "Text", icon: "format-text" },
 	{ key: "draw", label: "Draw", icon: "draw" },
+	{ key: "redact", label: "Redact", icon: "blur" },
 	{
-		key: "redact",
-		label: "Redact",
-		icon: "blur",
-		markedWhile: ["redact", "find"],
+		key: "find",
+		label: "Find",
+		icon: "image-search-outline",
+		needsImage: true,
 	},
-	{ key: "find", label: "Find", icon: "image-search-outline", dock: false },
 	{ key: "sticker", label: "Sticker", icon: "sticker-emoji" },
 	{ key: "crop", label: "Crop", icon: "crop-rotate" },
 	{ key: "adjust", label: "Adjust", icon: "tune-variant", needsImage: true },

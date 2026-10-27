@@ -175,12 +175,13 @@ export function ToolButton({
 }
 
 /**
- * The main tools in two rows, balanced (four over three, three over three),
- * so all of them show on a phone at once. Its `ToolButton`s are `compact`.
+ * The main tools in two rows, balanced (five over four, four over three,
+ * three over three), so all of them show on a phone at once. Its
+ * `ToolButton`s are `compact`.
  */
 export function ToolGrid({ children }: { children: ReactNode }) {
 	const tools = Children.toArray(children);
-	const columns = Math.min(4, Math.ceil(tools.length / 2));
+	const columns = Math.min(5, Math.ceil(tools.length / 2));
 	return (
 		<View style={styles.grid}>
 			{tools.map((tool) => (

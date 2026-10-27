@@ -231,7 +231,7 @@ The fonts available for captions (Anton, Montserrat ExtraBold, Playfair Display 
 
 ## Layout
 
-The phone screen has three bands: a 56pt paper header (Back, Layers, Undo, Redo, Export; from 1024pt also the project's name, with "Saved on this device" under it), the light table with the canvas inset 12pt from its edges, and the paper dock along the bottom. The dock's content area is 100pt tall, plus a 44pt footer (✕ · mode name · ✓) while a tool or a selected layer is open. It's at most 520pt wide and centered. With nothing open, the eight main tools fill the dock in two balanced rows of four (three over three on a blank canvas), each in an equal-width column with 6pt between the rows. Inside a tool, a row of tools centers while it fits, shrinks its 12pt gaps on a narrow screen, and scrolls sideways only once the gaps reach zero.
+The phone screen has three bands: a 56pt paper header (Back, Layers, Undo, Redo, Export; from 1024pt also the project's name, with "Saved on this device" under it), the light table with the canvas inset 12pt from its edges, and the paper dock along the bottom. The dock's content area is 100pt tall, plus a 44pt footer (✕ · mode name · ✓) while a tool or a selected layer is open. It's at most 520pt wide and centered. With nothing open, the nine main tools fill the dock in two balanced rows, five over four (three over three on a blank canvas), each in an equal-width column with 6pt between the rows. Inside a tool, a row of tools centers while it fits, shrinks its 12pt gaps on a narrow screen, and scrolls sideways only once the gaps reach zero.
 
 Bars and sheets reach the screen's bottom edge, and each pads its own content by the bottom safe-area inset. Nothing sits under the home indicator.
 

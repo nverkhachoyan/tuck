@@ -417,7 +417,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		onCustomColor: setCustomColor,
 		optionsOpen: toolOptionsOpen,
 		bottomInset: dockInset,
-		onFind: targetImage ? startTool.find : undefined,
 		onCancel: cancel,
 		redactLook,
 		changeRedactLook,

@@ -1,12 +1,7 @@
 import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
 import { colors } from "@/ui/theme";
-import {
-	BarButton,
-	BarGroup,
-	BarSections,
-	OptionSegments,
-} from "../../shell/ContextBar";
+import { BarGroup, BarSections, OptionSegments } from "../../shell/ContextBar";
 import {
 	EffectGlyph,
 	RedactLookOptions,
@@ -19,7 +14,6 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
-import { TOOL_KEYS } from "../../shortcuts";
 import {
 	type RedactSettings,
 	type RedactTool,
@@ -27,8 +21,7 @@ import {
 	withRedactSize,
 } from "./redactSettings";
 
-// Redact's sub-tools, in the order the dock and the bar show them, with
-// Find after them.
+// Redact's sub-tools, in the order the dock and the bar show them.
 const REDACT_TOOLS = [
 	{ tool: "box", title: "Box", icon: "rectangle-outline" },
 	{ tool: "brush", title: "Brush", icon: "brush" },
@@ -41,8 +34,8 @@ const REDACT_TOOLS = [
 
 /**
  * The redact tools, in place of the toolbar while redacting: a box to drag
- * out, a brush, the brush's eraser, Find (with a photo to look in, for faces
- * and text), and their style, which opens over the canvas. The same order as
+ * out, a brush, the brush's eraser, and their style, which opens over the
+ * canvas. The same order as
  * the wide bar. Tapping the tool that's in use opens the style too.
  */
 export function RedactPanel({
@@ -50,13 +43,11 @@ export function RedactPanel({
 	optionsOpen,
 	onChange,
 	onToggleOptions,
-	onFind,
 }: {
 	settings: RedactSettings;
 	optionsOpen: boolean;
 	onChange: (settings: RedactSettings) => void;
 	onToggleOptions: () => void;
-	onFind?: () => void;
 }) {
 	const pickTool = (tool: RedactTool) => {
 		if (tool === settings.tool) onToggleOptions();
@@ -73,14 +64,6 @@ export function RedactPanel({
 					onPress={() => pickTool(tool)}
 				/>
 			))}
-			{onFind && (
-				<ToolButton
-					label="Find"
-					icon="image-search-outline"
-					shortcut={TOOL_KEYS.find}
-					onPress={onFind}
-				/>
-			)}
 			<ToolButton
 				label="Style"
 				icon="palette-outline"
@@ -93,9 +76,8 @@ export function RedactPanel({
 }
 
 /**
- * Redact's options in the wide editor's header: Box, Brush, and Eraser, Find
- * when there's a photo to look in, then the effect and, for a solid one, its
- * color, and a size for the brush and eraser. Choosing the sub-tool already
+ * Redact's options in the wide editor's header: Box, Brush, and Eraser, then
+ * the effect and, for a solid one, its color, and a size for the brush and eraser. Choosing the sub-tool already
  * in use leaves it, since the options stay in view.
  */
 export function RedactBar({
@@ -104,14 +86,12 @@ export function RedactBar({
 	onChange,
 	onPickCustom,
 	onEyedropper,
-	onFind,
 }: {
 	settings: RedactSettings;
 	customColor: string | null;
 	onChange: (settings: RedactSettings) => void;
 	onPickCustom: (color: string) => void;
 	onEyedropper: () => void;
-	onFind?: () => void;
 }) {
 	const { tool } = settings;
 	const selected = REDACT_TOOLS.findIndex((choice) => choice.tool === tool);
@@ -129,14 +109,6 @@ export function RedactBar({
 						onChange({ ...settings, tool: next });
 					}}
 				/>
-				{onFind && (
-					<BarButton
-						label="Find"
-						icon="image-search-outline"
-						shortcut={TOOL_KEYS.find}
-						onPress={onFind}
-					/>
-				)}
 			</BarGroup>
 			<BarGroup>
 				{tool !== "eraser" &&
