@@ -1,18 +1,13 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Highlight } from "@/ui/Highlight";
 import { RingChoice } from "@/ui/RingChoice";
-import { colors, space } from "@/ui/theme";
-import { ColorChip } from "./ColorPicker";
+import { colors, radii, space, typography } from "@/ui/theme";
+import { ColorChip, ColorOptions } from "./ColorPicker";
 import { BarChip, OptionSegments } from "./ContextBar";
-import { ToolChoices } from "./ToolOptions";
-
-// The part of a redaction's settings the bars show. Declared here so shell
-// doesn't import the redact tool: both Redact and Find hand their settings over.
-export type RedactLookSettings = {
-	effect: "solid" | "blur" | "pixelate";
-	color: string;
-	strength: number;
-};
+import type { RedactLook } from "./redactLook";
+import { ToolChoices, ToolOption } from "./ToolOptions";
 
 // The redaction effects, in the order the bars and Redact's tray list them:
 // each one's name and the bar's icon for it.
@@ -27,7 +22,7 @@ const STRENGTH_NAMES = {
 	pixelate: ["Small pixels", "Medium pixels", "Large pixels"],
 } as const;
 
-export type RedactLookProps<T extends RedactLookSettings> = {
+export type RedactLookProps<T extends RedactLook> = {
 	settings: T;
 	customColor: string | null;
 	onChange: (settings: T) => void;
@@ -40,7 +35,7 @@ export type RedactLookProps<T extends RedactLookSettings> = {
  * a chip for Solid, Blur, or Pixelate, then the color when the effect is
  * solid. The chip's popover holds the effect's strength, never the color.
  */
-export function redactLookItems<T extends RedactLookSettings>({
+export function redactLookItems<T extends RedactLook>({
 	settings,
 	customColor,
 	onChange,
@@ -103,6 +98,61 @@ export function redactLookItems<T extends RedactLookSettings>({
 }
 
 /**
+ * How the redaction looks, as rows of a tray (see `ToolOptions`): the
+ * effect, then the color for Solid or the strength for Blur and Pixelate.
+ */
+export function RedactLookOptions<T extends RedactLook>({
+	settings,
+	customColor,
+	onChange,
+	onPickCustom,
+	onEyedropper,
+}: RedactLookProps<T>) {
+	const { effect } = settings;
+	return (
+		<>
+			<ToolOption label="Effect">
+				<ToolChoices>
+					{EFFECTS.map(({ effect: choice, title }) => (
+						<EffectChoice
+							key={choice}
+							label={title}
+							selected={effect === choice}
+							onPress={() => onChange({ ...settings, effect: choice })}
+						>
+							<EffectGlyph
+								settings={settings}
+								effect={choice}
+								color={effect === choice ? colors.onHighlight : undefined}
+							/>
+						</EffectChoice>
+					))}
+				</ToolChoices>
+			</ToolOption>
+			{effect === "solid" ? (
+				<ToolOption label="Color">
+					<ColorOptions
+						value={settings.color}
+						customColor={customColor}
+						onPick={(color) => color && onChange({ ...settings, color })}
+						onPickCustom={onPickCustom}
+						onEyedropper={onEyedropper}
+					/>
+				</ToolOption>
+			) : (
+				<ToolOption label="Strength">
+					<StrengthChoices
+						effect={effect}
+						strength={settings.strength}
+						onPick={(strength) => onChange({ ...settings, strength })}
+					/>
+				</ToolOption>
+			)}
+		</>
+	);
+}
+
+/**
  * Blur's or pixelation's strengths, ringed when chosen, in Redact's tray and
  * in the effect chip's popover. `nowrap` keeps them on one line.
  */
@@ -112,7 +162,7 @@ export function StrengthChoices({
 	nowrap = false,
 	onPick,
 }: {
-	effect: Exclude<RedactLookSettings["effect"], "solid">;
+	effect: Exclude<RedactLook["effect"], "solid">;
 	strength: number;
 	nowrap?: boolean;
 	onPick: (strength: number) => void;
@@ -165,9 +215,89 @@ function PixelSquare({ strength }: { strength: number }) {
 	);
 }
 
+/**
+ * A solid effect's color as a tile, or blur's or pixelation's mark, drawn in
+ * `color`.
+ */
+export function EffectGlyph({
+	settings,
+	effect,
+	color = colors.textPrimary,
+}: {
+	settings: RedactLook;
+	effect: RedactLook["effect"];
+	color?: string;
+}) {
+	if (effect !== "solid") {
+		return (
+			<MaterialCommunityIcons
+				name={effect === "blur" ? "blur" : "checkerboard"}
+				size={24}
+				color={color}
+			/>
+		);
+	}
+	return (
+		<View style={[styles.solidTile, { backgroundColor: settings.color }]} />
+	);
+}
+
+/** An effect icon and its visible name, compact enough to leave the tray room. */
+function EffectChoice({
+	label,
+	selected,
+	onPress,
+	children,
+}: {
+	label: string;
+	selected: boolean;
+	onPress: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<Pressable
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			accessibilityState={{ selected }}
+			style={styles.effectChoice}
+		>
+			{selected && <Highlight />}
+			{children}
+			<Text
+				style={[styles.effectLabel, selected && styles.effectLabelSelected]}
+			>
+				{label}
+			</Text>
+		</Pressable>
+	);
+}
+
 const styles = StyleSheet.create({
+	solidTile: {
+		width: 22,
+		height: 22,
+		borderRadius: 6,
+		borderWidth: 1,
+		borderColor: colors.swatchRing,
+	},
 	effectChoices: {
 		gap: space.sm,
+	},
+	effectChoice: {
+		width: 56,
+		height: 52,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 3,
+		borderRadius: radii.small,
+	},
+	effectLabel: {
+		...typography.caption,
+		color: colors.textPrimary,
+	},
+	effectLabelSelected: {
+		color: colors.onHighlight,
 	},
 	halo: {
 		alignItems: "center",

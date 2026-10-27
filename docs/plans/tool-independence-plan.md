@@ -27,7 +27,7 @@ Redact's settings (`RedactSettings`: `tool`, `effect`, `color`, `strength`, `bru
 * **The redaction look is the editor's, not Redact's.** `RedactLook` (`effect`, `color`, `strength`) and what turns it into a `RedactionEffect` (`BLUR_STRENGTHS`, `PIXEL_SIZES`, `redactionEffect`) move from `tools/redact/redactSettings.ts` to a new pure `shell/redactLook.ts`, which every tool may import. Today only `useEditorTools` turns the look into an effect for Find and Cut out, but once their Done moves into their own folders (phase C) they can't import Redact's. `EffectGlyph` moves from `RedactPanel.tsx` to `shell/redactStyle.tsx`. `RedactSettings` becomes `RedactLook & { tool, brushSize, eraserSize }`.
 * **The preference keeps its key and format, owned in one place.** `usePreference` doesn't sync between two callers, so `useEditorTools` owns `redactSettings` and hands Redact all of it, and Find and Cut out its look. The saved format doesn't change, so a user's chosen style carries over. When `EditorContext` arrives (phase B below), the look moves there.
 * **Find's Done redacts and closes Find.** It adds the chosen regions in the look, as one undo step (`addRedactionBoxes`, which selects nothing), shows the notice with Undo (`onRedacted`), and ends Find. Its ✕, including the tray's when nothing was found, is Cancel, which ends Find like any tool's.
-* **Find shows only the look.** Its tray is a look-only `RedactLookOptions`, the Effect, Strength, and Color rows of `RedactOptions` taken out into `shell/redactStyle.tsx`, which `RedactOptions` then uses too. Its bar already builds from `redactLookItems`. `findStyle`'s box-tool trick goes.
+* **Find shows only the look.** Its tray shows `RedactLookOptions`, the Effect, Strength, and Color rows of `RedactOptions` taken out into `shell/redactStyle.tsx`, which `RedactOptions` then uses too. Its bar already builds from `redactLookItems`. `findStyle`'s box-tool trick goes.
 * **Cut out's Redact redacts and closes Cut out.** It cancels Cut out's session (so the photo is whole again, as today), adds the masked redaction in the look (`addMaskedRedaction`, which selects it), and ends Cut out. The user lands on the new redaction, selected, whose layer actions offer Redact to restyle it. The undo steps are the same as today: the cut is gone, and the redaction is one step.
 * **Find and Cut out stay two tools.** They share detection (`detection/`), but Find picks many regions and Cut out refines one mask. Merging them is a design question for after `defineTool`, where it would mean combining two definitions.
 
@@ -39,9 +39,10 @@ Each step is its own commit and passes `npm run check`, `npm run typecheck`, and
 
 No behavior changes.
 
-* Add `shell/redactLook.ts` with `RedactLook`, `parseRedactLook` (the look's part of `parseRedactSettings`), `BLUR_STRENGTHS`, `PIXEL_SIZES`, and `redactionEffect(look, documentSize)`. Move their tests from `tools/redact/__tests__/` to `shell/__tests__/`. `redactSettings.ts` imports them, and `RedactLookSettings` in `shell/redactStyle.tsx` becomes `RedactLook`.
+* Add `shell/redactLook.ts` with `RedactLook`, `parseRedactLook` (the look's part of `parseRedactSettings`), `BLUR_STRENGTHS`, `PIXEL_SIZES`, `redactionEffect(look, documentSize)`, and the look's `withEffect` and `sameEffect`. Move their tests from `tools/redact/__tests__/` to `shell/__tests__/`. `redactSettings.ts` imports them, and `RedactLookSettings` in `shell/redactStyle.tsx` becomes `RedactLook`.
 * Move `EffectGlyph` to `shell/redactStyle.tsx`. Find's dock panel renders it from the look.
-* `useEditorTools` owns the `redactSettings` preference. `useRedactTool(documentSize, saved, setSaved)` takes it in place of calling `usePreference`, and stops returning `chosen` and `setChosen`. `useEditorTools` returns `redactLook` and `setRedactLook` for the views, and `findStyle`, `finishFinding`, and `redactCut` read those.
+* Take the look's rows (Effect, then Color or Strength) out of `RedactOptions` into `RedactLookOptions` in `shell/redactStyle.tsx`. Find's tray becomes `FindOptions`, which shows only those rows, so `findStyle`'s box-tool trick goes. With the box chosen, `RedactOptions` showed only those rows anyway.
+* `useEditorTools` owns the `redactSettings` preference. `useRedactTool(documentSize, saved, setSaved)` takes it in place of calling `usePreference`, and stops returning `chosen` and `setChosen`. `useEditorTools` returns `redactLook` and `changeRedactLook` (which merges a change into the saved settings) for the views, and `findStyle`, `finishFinding`, and `redactCut` read those.
 
 `refactor: share the redaction look between Redact, Find, and Cut out`
 
@@ -49,8 +50,6 @@ No behavior changes.
 
 * `useEditorTools`: `finishFinding` redacts, closes the tool, and calls `onRedacted`. `done` and `cancel` lose their Find branches, and `backToRedacting` goes.
 * `ToolViewContext`: `onBackToRedact` becomes `onCancel`, the open tool's Cancel (`cancel` from `useEditorTools`). `FindTray`'s and `FindInspector`'s `onBack` becomes `onCancel` too.
-* Add `RedactLookOptions` and use it for Find's tray. `findStyle` returns the look, with no `tool`.
-
 `feat: close Find when it's done, instead of returning to Redact`
 
 ### 3. Give Find its own button

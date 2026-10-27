@@ -10,6 +10,8 @@ import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
 import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
+import type { RedactLook } from "./shell/redactLook";
+import { EffectGlyph } from "./shell/redactStyle";
 import { AdjustInspector, AdjustPanel } from "./tools/adjust/AdjustPanel";
 import {
 	CutOutBar,
@@ -22,16 +24,15 @@ import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import {
 	FindBar,
 	FindInspector,
+	FindOptions,
 	FindPanel,
 	FindTray,
 } from "./tools/find/FindPanel";
 import {
-	EffectGlyph,
 	RedactBar,
 	RedactOptions,
 	RedactPanel,
 } from "./tools/redact/RedactPanel";
-import type { RedactSettings } from "./tools/redact/redactSettings";
 import {
 	TextBar,
 	TextColorPicker,
@@ -67,6 +68,9 @@ export type ToolViewContext = {
 	onFind: (() => void) | undefined;
 	// Find's way out when it found nothing: what its ✕ does.
 	onBackToRedact: () => void;
+	// How new redactions look, whichever tool adds them.
+	redactLook: RedactLook;
+	changeRedactLook: (change: Partial<RedactLook>) => void;
 	adjustments: Adjustments | undefined;
 	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
 	editingText: boolean;
@@ -119,23 +123,18 @@ function redactColor({
 	};
 }
 
-/**
- * The style Find redacts with, Redact's `chosen`, in Find's tray and bar. It
- * shows as the box tool, and a change leaves `chosen`'s own tool alone.
- */
+/** The look Find redacts with, in its tray and bar. */
 function findStyle({
-	tools: { redact },
+	redactLook,
+	changeRedactLook,
 	customColor,
 	colorTarget,
 }: ToolViewContext) {
 	return {
-		settings: { ...redact.chosen, tool: "box" as const },
+		settings: redactLook,
 		customColor,
-		onChange: ({ tool: _, ...style }: RedactSettings) =>
-			redact.setChosen((settings) => ({ ...settings, ...style })),
-		...colorTarget((color) =>
-			redact.setChosen((settings) => ({ ...settings, color })),
-		),
+		onChange: changeRedactLook,
+		...colorTarget((color) => changeRedactLook({ color })),
 	};
 }
 
@@ -177,9 +176,7 @@ function cutOutProps({ tools: { cut } }: ToolViewContext) {
  * - `bar`: the wide header's options, inside the shared `ContextBar`; without
  *   it, the bar has the title, ✕, and ✓ only.
  * - `keepBarFocus`: whether a press in the bar keeps the text's caret.
- * - `tray`: the phone's tray of options, while `optionsOpen`. Redact's and
- *   Find's are both `RedactOptions`, but React never carries one's state to
- *   the other: starting a tool always closes the tray.
+ * - `tray`: the phone's tray of options, while `optionsOpen`.
  * - `results`: what sits over the canvas while no tray is open and the
  *   eyedropper isn't running.
  * - `inspector`: a section above the wide inspector's layers, given them as
@@ -256,11 +253,11 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 		),
 	},
 	find: {
-		dock: ({ tools: { find, redact }, optionsOpen, toggleOptions }) => (
+		dock: ({ tools: { find }, redactLook, optionsOpen, toggleOptions }) => (
 			<FindPanel
 				state={find.state}
 				styleGlyph={
-					<EffectGlyph settings={redact.chosen} effect={redact.chosen.effect} />
+					<EffectGlyph settings={redactLook} effect={redactLook.effect} />
 				}
 				optionsOpen={optionsOpen}
 				onFind={find.find}
@@ -268,7 +265,7 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 			/>
 		),
 		tray: (context) => (
-			<RedactOptions
+			<FindOptions
 				{...findStyle(context)}
 				bottomInset={context.bottomInset}
 				onClose={context.closeTray}

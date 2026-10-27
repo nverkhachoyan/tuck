@@ -3,6 +3,7 @@ import type { EditorDocument } from "@/model/document";
 import { type Framing, visibleImageLayer } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
+import { usePreference } from "@/platform/usePreference";
 import { useStore } from "@/store";
 import type { DetectionFeature } from "./detection/imageDetection";
 import {
@@ -12,12 +13,13 @@ import {
 	SIZED_TOOLS,
 	toolImageId,
 } from "./editorMode";
+import { type RedactLook, redactionEffect } from "./shell/redactLook";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
-import { redactionEffect } from "./tools/redact/redactSettings";
+import { parseRedactSettings } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
 import { useTextEditing } from "./tools/text/useTextEditing";
 
@@ -81,8 +83,19 @@ export function useEditorTools({
 		: undefined;
 	const adjust = useAdjustTool(adjustedLayer, setAdjustments);
 
+	// Redact's settings, saved between sessions. Their look is what Find and
+	// Cut out redact with too.
+	const [redactSettings, setRedactSettings] = usePreference(
+		"redactSettings",
+		parseRedactSettings,
+	);
+	const { effect, color, strength } = redactSettings;
+	const redactLook: RedactLook = { effect, color, strength };
+	const changeRedactLook = (change: Partial<RedactLook>) =>
+		setRedactSettings((current) => ({ ...current, ...change }));
+
 	const draw = useDrawTool(tool === "draw", documentSize);
-	const redact = useRedactTool(documentSize);
+	const redact = useRedactTool(documentSize, redactSettings, setRedactSettings);
 	const find = useFindTool(document, targetImage);
 
 	const startRedacting = () => {
@@ -106,9 +119,9 @@ export function useEditorTools({
 			layerId,
 			mask,
 			rect,
-			redactionEffect(redact.chosen, documentSize),
+			redactionEffect(redactLook, documentSize),
 		);
-		redact.setChosen((current) => ({ ...current, tool: "box" }));
+		setRedactSettings((current) => ({ ...current, tool: "box" }));
 		dispatchMode({ type: "startTool", start: { tool: "redact" } });
 	};
 
@@ -174,9 +187,7 @@ export function useEditorTools({
 	// Find's Done first redacts the regions chosen, in the style last picked
 	// rather than a selected redaction's, and says how many, with Undo.
 	const finishFinding = () => {
-		const result = find.redactChosen(
-			redactionEffect(redact.chosen, documentSize),
-		);
+		const result = find.redactChosen(redactionEffect(redactLook, documentSize));
 		backToRedacting();
 		selectLayer(null);
 		if (result) onRedacted(result.count, result.feature);
@@ -238,6 +249,8 @@ export function useEditorTools({
 		stepToolSize,
 		adjustedLayer,
 		cutLayer,
+		redactLook,
+		changeRedactLook,
 	};
 }
 

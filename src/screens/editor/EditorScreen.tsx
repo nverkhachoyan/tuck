@@ -227,6 +227,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		finishCrop,
 		stepToolSize,
 		adjustedLayer,
+		redactLook,
+		changeRedactLook,
 	} = useEditorTools({
 		document,
 		mode,
@@ -417,6 +419,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		bottomInset: dockInset,
 		onFind: targetImage ? startTool.find : undefined,
 		onBackToRedact: cancel,
+		redactLook,
+		changeRedactLook,
 		adjustments: adjustedLayer?.adjustments,
 		layerActions: layerActions || undefined,
 		editingText,

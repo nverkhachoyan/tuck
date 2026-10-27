@@ -1,9 +1,6 @@
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { ComponentProps, ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Highlight } from "@/ui/Highlight";
-import { colors, radii, typography } from "@/ui/theme";
-import { ColorOptions } from "../../shell/ColorPicker";
+import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import type { ComponentProps } from "react";
+import { colors } from "@/ui/theme";
 import {
 	BarButton,
 	BarGroup,
@@ -11,15 +8,14 @@ import {
 	OptionSegments,
 } from "../../shell/ContextBar";
 import {
-	EFFECTS,
+	EffectGlyph,
+	RedactLookOptions,
 	redactLookItems,
-	StrengthChoices,
 } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
 	SizeChip,
 	SizeChoices,
-	ToolChoices,
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
@@ -186,7 +182,7 @@ export function RedactOptions({
 	onEyedropper: () => void;
 	onClose: () => void;
 }) {
-	const { tool, effect } = settings;
+	const { tool } = settings;
 	const size = redactSizeIndex(settings);
 	return (
 		<ToolOptions
@@ -196,45 +192,13 @@ export function RedactOptions({
 			dismissOnOutsidePress={false}
 		>
 			{tool !== "eraser" && (
-				<>
-					<ToolOption label="Effect">
-						<ToolChoices>
-							{EFFECTS.map(({ effect: choice, title }) => (
-								<EffectChoice
-									key={choice}
-									label={title}
-									selected={effect === choice}
-									onPress={() => onChange({ ...settings, effect: choice })}
-								>
-									<EffectGlyph
-										settings={settings}
-										effect={choice}
-										color={effect === choice ? colors.onHighlight : undefined}
-									/>
-								</EffectChoice>
-							))}
-						</ToolChoices>
-					</ToolOption>
-					{effect === "solid" ? (
-						<ToolOption label="Color">
-							<ColorOptions
-								value={settings.color}
-								customColor={customColor}
-								onPick={(color) => color && onChange({ ...settings, color })}
-								onPickCustom={onPickCustom}
-								onEyedropper={onEyedropper}
-							/>
-						</ToolOption>
-					) : (
-						<ToolOption label="Strength">
-							<StrengthChoices
-								effect={effect}
-								strength={settings.strength}
-								onPick={(strength) => onChange({ ...settings, strength })}
-							/>
-						</ToolOption>
-					)}
-				</>
+				<RedactLookOptions
+					settings={settings}
+					customColor={customColor}
+					onChange={onChange}
+					onPickCustom={onPickCustom}
+					onEyedropper={onEyedropper}
+				/>
 			)}
 			{size !== null && (
 				<ToolOption label="Size">
@@ -248,86 +212,3 @@ export function RedactOptions({
 		</ToolOptions>
 	);
 }
-
-/** An effect icon and its visible name, compact enough to leave the tray room. */
-function EffectChoice({
-	label,
-	selected,
-	onPress,
-	children,
-}: {
-	label: string;
-	selected: boolean;
-	onPress: () => void;
-	children: ReactNode;
-}) {
-	return (
-		<Pressable
-			onPress={onPress}
-			accessibilityRole="button"
-			accessibilityLabel={label}
-			accessibilityState={{ selected }}
-			style={styles.effectChoice}
-		>
-			{selected && <Highlight />}
-			{children}
-			<Text
-				style={[styles.effectLabel, selected && styles.effectLabelSelected]}
-			>
-				{label}
-			</Text>
-		</Pressable>
-	);
-}
-
-/**
- * A solid effect's color as a tile, or blur's or pixelation's mark, drawn in
- * `color`.
- */
-export function EffectGlyph({
-	settings,
-	effect,
-	color = colors.textPrimary,
-}: {
-	settings: RedactSettings;
-	effect: RedactSettings["effect"];
-	color?: string;
-}) {
-	if (effect !== "solid") {
-		return (
-			<MaterialCommunityIcons
-				name={effect === "blur" ? "blur" : "checkerboard"}
-				size={24}
-				color={color}
-			/>
-		);
-	}
-	return (
-		<View style={[styles.solidTile, { backgroundColor: settings.color }]} />
-	);
-}
-
-const styles = StyleSheet.create({
-	solidTile: {
-		width: 22,
-		height: 22,
-		borderRadius: 6,
-		borderWidth: 1,
-		borderColor: colors.swatchRing,
-	},
-	effectChoice: {
-		width: 56,
-		height: 52,
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 3,
-		borderRadius: radii.small,
-	},
-	effectLabel: {
-		...typography.caption,
-		color: colors.textPrimary,
-	},
-	effectLabelSelected: {
-		color: colors.onHighlight,
-	},
-});

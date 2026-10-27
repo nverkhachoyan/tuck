@@ -1,30 +1,27 @@
-import { useMemo } from "react";
+import { type Dispatch, type SetStateAction, useMemo } from "react";
 import type { Size } from "@/model/geometry";
-import { usePreference } from "@/platform/usePreference";
 import { useStore } from "@/store";
 import { selectSelectedRedaction } from "@/store/editorSlice";
 import {
-	parseRedactSettings,
-	type RedactSettings,
 	redactionEffect,
 	sameEffect,
-	stepRedactSize,
 	withEffect,
-} from "./redactSettings";
+} from "../../shell/redactLook";
+import { type RedactSettings, stepRedactSize } from "./redactSettings";
 
 /**
- * Redact's settings, kept between sessions as `chosen`, which Find uses
- * too. They show the selected redaction's style, which new ones then share,
- * so a redaction can be picked to match. Changing them restyles that one.
- * `stepSize` steps the brush's size for `[` and `]`.
+ * Redact's settings, from the saved ones (`chosen`), whose look Find and Cut
+ * out redact with too. They show the selected redaction's style, which new
+ * ones then share, so a redaction can be picked to match. Changing them
+ * restyles that one. `stepSize` steps the brush's size for `[` and `]`.
  */
-export function useRedactTool(documentSize: Size) {
+export function useRedactTool(
+	documentSize: Size,
+	chosen: RedactSettings,
+	setChosen: Dispatch<SetStateAction<RedactSettings>>,
+) {
 	const selectedRedaction = useStore(selectSelectedRedaction);
 	const { setRedactionEffect } = useStore((state) => state.actions);
-	const [chosen, setChosen] = usePreference(
-		"redactSettings",
-		parseRedactSettings,
-	);
 	const settings = useMemo(
 		() =>
 			selectedRedaction
@@ -61,5 +58,5 @@ export function useRedactTool(documentSize: Size) {
 		if (next !== settings) change(next);
 	};
 
-	return { settings, change, chooseTool, stepSize, chosen, setChosen };
+	return { settings, change, chooseTool, stepSize };
 }

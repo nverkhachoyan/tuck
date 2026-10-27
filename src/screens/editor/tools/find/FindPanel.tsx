@@ -15,13 +15,14 @@ import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { BarGroup, BarSections } from "../../shell/ContextBar";
+import type { RedactLook } from "../../shell/redactLook";
 import {
+	RedactLookOptions,
 	type RedactLookProps,
-	type RedactLookSettings,
 	redactLookItems,
 } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
-import { Tray } from "../../shell/ToolOptions";
+import { ToolOptions, Tray } from "../../shell/ToolOptions";
 import type { FindReview } from "./useFindTool";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
 
@@ -82,9 +83,7 @@ const SCOPES = [
  * is drawn with, and its color when that's solid. Faces, text, and the
  * results sit in the inspector, above the layers they'll join.
  */
-export function FindBar<T extends RedactLookSettings>(
-	props: RedactLookProps<T>,
-) {
+export function FindBar<T extends RedactLook>(props: RedactLookProps<T>) {
 	return (
 		<BarSections>
 			<BarGroup>{redactLookItems(props)}</BarGroup>
@@ -138,6 +137,27 @@ export function FindTray({
 				onClear={onClear}
 			/>
 		</Tray>
+	);
+}
+
+/** The look Find redacts with, in a tray above the dock (see `ToolOptions`). */
+export function FindOptions({
+	bottomInset,
+	onClose,
+	...look
+}: RedactLookProps<RedactLook> & {
+	bottomInset: number;
+	onClose: () => void;
+}) {
+	return (
+		<ToolOptions
+			closeLabel="Close redaction style"
+			bottomInset={bottomInset}
+			onClose={onClose}
+			dismissOnOutsidePress={false}
+		>
+			<RedactLookOptions {...look} />
+		</ToolOptions>
 	);
 }
 
