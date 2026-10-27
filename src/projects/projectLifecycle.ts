@@ -677,40 +677,56 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 			if (!saved) return null;
 			const { updatedAt } = saved;
 			if (saved.thumbnail?.updatedAt === updatedAt) return null;
-			const urls = await imageUrls(id, imageFiles(saved.document));
-			let url: string;
-			try {
-				url = await render(
-					mapImageUris(saved.document, (file) => urls.get(file) ?? file),
-				);
-			} finally {
-				for (const imageUrl of urls.values()) storage.releaseImage(imageUrl);
-			}
-			// With the other writes to closed projects, so one opening meanwhile
-			// waits for this rather than finding it claimed.
-			const written = await afterClosing(async () => {
-				if (openProjects.has(id) || !(await storage.claimProject(id))) {
-					return false;
-				}
-				try {
-					const latest = await storage.readProjectFile(id);
-					const current = latest === null ? null : parseSavedProject(latest);
-					if (!current || current.updatedAt !== updatedAt) return false;
-					const file: SavedProject = {
-						...current,
-						thumbnail: { url, updatedAt },
-					};
-					await storage.writeProjectFile(id, JSON.stringify(file));
-					return true;
-				} finally {
-					await storage.releaseProject(id);
-				}
-			});
+			const url = await renderSaved(id, saved.document, render);
+			const written = await writeClosedThumbnail(id, { url, updatedAt });
 			return written ? url : null;
 		} catch (error) {
 			console.warn("Couldn't update the project's thumbnail", error);
 			return null;
 		}
+	}
+
+	/** Renders a closed project's saved document, holding its images meanwhile. */
+	async function renderSaved(
+		id: string,
+		document: EditorDocument,
+		render: RenderThumbnail,
+	): Promise<string> {
+		const urls = await imageUrls(id, imageFiles(document));
+		try {
+			return await render(
+				mapImageUris(document, (file) => urls.get(file) ?? file),
+			);
+		} finally {
+			for (const url of urls.values()) storage.releaseImage(url);
+		}
+	}
+
+	/**
+	 * Gives a closed project `thumbnail`, if its file is still the save it was
+	 * rendered from. With the other writes to closed projects, so one opening
+	 * meanwhile waits for this rather than finding it claimed. False when the
+	 * project is open, here or in another tab, or has changed.
+	 */
+	function writeClosedThumbnail(
+		id: string,
+		thumbnail: ProjectThumbnail,
+	): Promise<boolean> {
+		return afterClosing(async () => {
+			if (openProjects.has(id) || !(await storage.claimProject(id))) {
+				return false;
+			}
+			try {
+				const latest = await storage.readProjectFile(id);
+				const current = latest === null ? null : parseSavedProject(latest);
+				if (!current || current.updatedAt !== thumbnail.updatedAt) return false;
+				const file: SavedProject = { ...current, thumbnail };
+				await storage.writeProjectFile(id, JSON.stringify(file));
+				return true;
+			} finally {
+				await storage.releaseProject(id);
+			}
+		});
 	}
 
 	return {
