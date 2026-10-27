@@ -19,13 +19,12 @@ import {
 	ToolOptions,
 } from "../../shell/ToolOptions";
 import {
-	type CutBrushTool,
-	type CutOutSettings,
 	type CutOutTool,
 	cutSizeIndex,
 	isCutBrush,
 	withCutSize,
 } from "./cutOutSettings";
+import type { CutOutController } from "./useCutOutTool";
 
 type Icon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -52,63 +51,47 @@ const BRUSH_EDGES = [
  * Subjects cuts out every subject again, Pick the one under a tap, and Keep
  * and Erase paint the cut by hand, with their size in a tray over the
  * canvas. Tapping the brush in use opens its size too. Subjects and Pick
- * show only where this device can find subjects (`onFindAll`), and spin
+ * show only where this device can find subjects (`findAll`), and spin
  * while they're finding one (`finding`). Once there's a cut, Invert keeps
- * what it removes instead and removes what it keeps (`onInvert`), and
- * Redact hides what it keeps under a redaction (`onRedact`): inverted
- * first, that blurs only the background. Each spins while it works.
+ * what it removes instead and removes what it keeps (`invert`), and Redact
+ * hides what it keeps under a redaction (`redact`): inverted first, that
+ * blurs only the background. Each spins while it works.
  */
 export function CutOutPanel({
-	settings,
-	tool,
-	finding,
+	controller,
 	optionsOpen,
-	onChange,
 	onToggleOptions,
-	onFindAll,
-	inverting,
-	onInvert,
-	redacting,
-	onRedact,
 }: {
-	settings: CutOutSettings;
-	tool: CutOutTool;
-	finding: "all" | "one" | null;
+	controller: CutOutController;
 	optionsOpen: boolean;
-	onChange: (settings: CutOutSettings) => void;
 	onToggleOptions: () => void;
-	onFindAll?: () => void;
-	inverting: boolean;
-	onInvert?: () => void;
-	redacting: boolean;
-	onRedact?: () => void;
 }) {
+	const { settings, tool, finding, findAll, inverting, invert } = controller;
+	const { redacting, redact, change } = controller;
 	const pickTool = (choice: CutOutTool) => {
 		if (choice === tool && choice !== "pick") onToggleOptions();
-		else onChange({ ...settings, tool: choice });
+		else change({ ...settings, tool: choice });
 	};
 	return (
 		<ToolRow>
-			{onFindAll && (
+			{findAll && (
 				<ToolButton
 					label="Subjects"
 					icon="auto-fix"
 					busy={finding === "all"}
-					onPress={onFindAll}
+					onPress={findAll}
 				/>
 			)}
-			{cutTools(onFindAll !== undefined).map(
-				({ tool: choice, title, icon }) => (
-					<ToolButton
-						key={choice}
-						label={title}
-						icon={icon}
-						selected={tool === choice}
-						busy={choice === "pick" && finding === "one"}
-						onPress={() => pickTool(choice)}
-					/>
-				),
-			)}
+			{cutTools(findAll !== undefined).map(({ tool: choice, title, icon }) => (
+				<ToolButton
+					key={choice}
+					label={title}
+					icon={icon}
+					selected={tool === choice}
+					busy={choice === "pick" && finding === "one"}
+					onPress={() => pickTool(choice)}
+				/>
+			))}
 			{isCutBrush(tool) && (
 				<ToolButton
 					label="Size"
@@ -123,20 +106,20 @@ export function CutOutPanel({
 					onPress={onToggleOptions}
 				/>
 			)}
-			{onInvert && (
+			{invert && (
 				<ToolButton
 					label="Invert"
 					icon="select-inverse"
 					busy={inverting}
-					onPress={onInvert}
+					onPress={invert}
 				/>
 			)}
-			{onRedact && (
+			{redact && (
 				<ToolButton
 					label="Redact"
 					icon="blur"
 					busy={redacting}
-					onPress={onRedact}
+					onPress={redact}
 				/>
 			)}
 		</ToolRow>
@@ -149,28 +132,10 @@ export function CutOutPanel({
  * the size chip. Choosing the sub-tool already in use leaves it, since the
  * options stay in view. The canvas wash is unchanged.
  */
-export function CutOutBar({
-	settings,
-	tool,
-	finding,
-	onChange,
-	onFindAll,
-	inverting,
-	onInvert,
-	redacting,
-	onRedact,
-}: {
-	settings: CutOutSettings;
-	tool: CutOutTool;
-	finding: "all" | "one" | null;
-	onChange: (settings: CutOutSettings) => void;
-	onFindAll?: () => void;
-	inverting: boolean;
-	onInvert?: () => void;
-	redacting: boolean;
-	onRedact?: () => void;
-}) {
-	const options = cutTools(onFindAll !== undefined).map((option) => ({
+export function CutOutBar({ controller }: { controller: CutOutController }) {
+	const { settings, tool, finding, findAll, inverting, invert } = controller;
+	const { redacting, redact, change: onChange } = controller;
+	const options = cutTools(findAll !== undefined).map((option) => ({
 		...option,
 		busy: option.tool === "pick" && finding === "one",
 	}));
@@ -221,30 +186,30 @@ export function CutOutBar({
 					</SizeChip>
 				</BarGroup>
 			)}
-			{(onFindAll || onInvert || onRedact) && (
+			{(findAll || invert || redact) && (
 				<BarGroup>
-					{onFindAll && (
+					{findAll && (
 						<BarButton
 							label="Subjects"
 							icon="auto-fix"
 							busy={finding === "all"}
-							onPress={onFindAll}
+							onPress={findAll}
 						/>
 					)}
-					{onInvert && (
+					{invert && (
 						<BarButton
 							label="Invert"
 							icon="select-inverse"
 							busy={inverting}
-							onPress={onInvert}
+							onPress={invert}
 						/>
 					)}
-					{onRedact && (
+					{redact && (
 						<BarButton
 							label="Redact"
 							icon="blur"
 							busy={redacting}
-							onPress={onRedact}
+							onPress={redact}
 						/>
 					)}
 				</BarGroup>
@@ -255,21 +220,19 @@ export function CutOutBar({
 
 /**
  * The size of the brush in use, and whether both brushes' edges are soft,
- * in a tray above the dock.
+ * in a tray above the dock. Pick has no options, so none show for it.
  */
 export function CutOutOptions({
-	settings,
-	tool,
+	controller,
 	bottomInset,
-	onChange,
 	onClose,
 }: {
-	settings: CutOutSettings;
-	tool: CutBrushTool;
+	controller: CutOutController;
 	bottomInset: number;
-	onChange: (settings: CutOutSettings) => void;
 	onClose: () => void;
 }) {
+	const { settings, tool, change: onChange } = controller;
+	if (!isCutBrush(tool)) return null;
 	return (
 		<ToolOptions
 			closeLabel="Close brush options"

@@ -18,7 +18,6 @@ import {
 	CutOutOptions,
 	CutOutPanel,
 } from "./tools/cutout/CutOutPanel";
-import { isCutBrush } from "./tools/cutout/cutOutSettings";
 import { withBrushColor } from "./tools/draw/brushSettings";
 import { BrushOptions, DrawBar, DrawPanel } from "./tools/draw/DrawPanel";
 import {
@@ -152,21 +151,6 @@ function findResults({ tools: { find }, onCancel }: ToolViewContext) {
 	};
 }
 
-/** What Cut out's dock panel and bar both take. */
-function cutOutProps({ tools: { cut } }: ToolViewContext) {
-	return {
-		settings: cut.settings,
-		tool: cut.tool,
-		finding: cut.finding,
-		onChange: cut.change,
-		onFindAll: cut.findAll,
-		inverting: cut.inverting,
-		onInvert: cut.invert,
-		redacting: cut.redacting,
-		onRedact: cut.redact,
-	};
-}
-
 /**
  * What one panel shows, wherever the editor shows it. Each field renders
  * elements from the context and calls no hooks, so React keeps each view as
@@ -279,25 +263,21 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 		),
 	},
 	cutOut: {
-		dock: (context) => (
+		dock: ({ tools: { cut }, optionsOpen, toggleOptions }) => (
 			<CutOutPanel
-				{...cutOutProps(context)}
-				optionsOpen={context.optionsOpen}
-				onToggleOptions={context.toggleOptions}
+				controller={cut}
+				optionsOpen={optionsOpen}
+				onToggleOptions={toggleOptions}
 			/>
 		),
-		// The pick tool has no options.
-		tray: ({ tools: { cut }, bottomInset, closeTray }) =>
-			isCutBrush(cut.tool) && (
-				<CutOutOptions
-					settings={cut.settings}
-					tool={cut.tool}
-					bottomInset={bottomInset}
-					onChange={cut.change}
-					onClose={closeTray}
-				/>
-			),
-		bar: (context) => <CutOutBar {...cutOutProps(context)} />,
+		tray: ({ tools: { cut }, bottomInset, closeTray }) => (
+			<CutOutOptions
+				controller={cut}
+				bottomInset={bottomInset}
+				onClose={closeTray}
+			/>
+		),
+		bar: ({ tools: { cut } }) => <CutOutBar controller={cut} />,
 	},
 	adjust: {
 		dock: ({ tools: { adjust }, adjustments }) => (

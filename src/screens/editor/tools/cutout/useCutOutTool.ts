@@ -19,6 +19,8 @@ import { useCutRedaction } from "./useCutRedaction";
  * hands `onRedact` a mask file of what the cut keeps and the part of the
  * image it covers. `stepSize` steps the brush's size for `[` and `]`.
  */
+export type CutOutController = ReturnType<typeof useCutOutTool>;
+
 export function useCutOutTool({
 	layer,
 	onRedact,
