@@ -27,7 +27,7 @@ export type CropTab = "crop" | "rotate" | "canvas";
 type CropController = ReturnType<typeof useCropController>;
 
 // A degree a step, a long tick every 15, settling level from a degree away.
-export const DEGREES: DialScale = {
+const DEGREES: DialScale = {
 	step: Math.PI / 180,
 	pxPerStep: 8,
 	tickEvery: 1,
@@ -43,6 +43,77 @@ export const CROP_TABS: { tab: CropTab; label: string; icon: IconName }[] = [
 
 const TAB_IN = FadeIn.duration(160);
 
+type RotateAction = {
+	key: string;
+	icon: IconName;
+	label: string;
+	// Set for a switch, which each layout draws its own way.
+	checked?: boolean;
+	onPress: () => void;
+};
+
+/**
+ * Rotate's actions, in order: Rotate 90°, Flip, and the switch to turn other
+ * layers with the photo, only while `turnLabel` names it.
+ */
+function rotateActions(
+	controller: CropController,
+	turnLabel: string | null,
+): RotateAction[] {
+	const actions: RotateAction[] = [
+		{
+			key: "rotate",
+			icon: "rotate-left",
+			label: "Rotate 90°",
+			onPress: controller.rotate,
+		},
+		{
+			key: "flip",
+			icon: "flip-horizontal",
+			label: "Flip",
+			onPress: controller.flip,
+		},
+	];
+	if (turnLabel === null) return actions;
+	return [
+		...actions,
+		{
+			key: "turn",
+			icon: "format-text-rotation-angle-up",
+			label: turnLabel,
+			checked: controller.turnLayers,
+			onPress: controller.toggleTurnLayers,
+		},
+	];
+}
+
+/** The dial that levels a tilted photo, a degree a step. */
+export function StraightenDial({
+	value,
+	onBegin,
+	onChange,
+	onEnd,
+}: Pick<
+	ComponentProps<typeof Dial>,
+	"value" | "onBegin" | "onChange" | "onEnd"
+>) {
+	return (
+		<Dial
+			value={value}
+			max={MAX_STRAIGHTEN}
+			scale={DEGREES}
+			label="Straighten"
+			increaseLabel="Increase angle"
+			decreaseLabel="Decrease angle"
+			readout={(degrees) => `${degrees}°`}
+			valueText={(degrees) => `${degrees} degrees`}
+			onBegin={onBegin}
+			onChange={onChange}
+			onEnd={onEnd}
+		/>
+	);
+}
+
 /**
  * The phone's controls for the chosen tab, fading in as it changes: the
  * ratios in a row, Rotate's dial over its actions, or the backgrounds.
@@ -57,7 +128,7 @@ export function CropControls({
 	// What the switch to turn other layers is called; null hides it.
 	turnLabel: string | null;
 }) {
-	const { anchor, aspect, background, turnLayers } = controller;
+	const { anchor, aspect, background } = controller;
 	return (
 		<Animated.View key={tab} entering={TAB_IN} style={styles.tab}>
 			{tab === "crop" ? (
@@ -79,38 +150,24 @@ export function CropControls({
 				<>
 					{/* Levels a tilted photo; a canvas alone has nothing to level. */}
 					{anchor.layer && (
-						<Dial
+						<StraightenDial
 							value={controller.straighten}
-							max={MAX_STRAIGHTEN}
-							scale={DEGREES}
-							label="Straighten"
-							increaseLabel="Increase angle"
-							decreaseLabel="Decrease angle"
-							readout={(degrees) => `${degrees}°`}
-							valueText={(degrees) => `${degrees} degrees`}
 							onBegin={controller.straightenBegin}
 							onChange={controller.straightenChange}
 							onEnd={controller.straightenEnd}
 						/>
 					)}
 					<View style={styles.actions}>
-						<ActionButton
-							icon="rotate-left"
-							label="Rotate 90°"
-							onPress={controller.rotate}
-						/>
-						<ActionButton
-							icon="flip-horizontal"
-							label="Flip"
-							onPress={controller.flip}
-						/>
-						{turnLabel && (
-							<ActionButton
-								icon="format-text-rotation-angle-up"
-								label={turnLabel}
-								selected={turnLayers}
-								onPress={controller.toggleTurnLayers}
-							/>
+						{rotateActions(controller, turnLabel).map(
+							({ key, icon, label, checked, onPress }) => (
+								<ActionButton
+									key={key}
+									icon={icon}
+									label={label}
+									selected={checked}
+									onPress={onPress}
+								/>
+							),
 						)}
 					</View>
 				</>
@@ -130,30 +187,17 @@ export function CropControls({
 /** The wide header's modes, then the options for the one that's chosen. */
 export function CropBar({
 	tab,
-	aspect,
-	background,
-	turnLayers,
+	controller,
 	turnLabel,
 	onTab,
-	onAspect,
-	onRotate,
-	onFlip,
-	onTurnLayers,
-	onBackground,
 }: {
 	tab: CropTab;
-	aspect: AspectId;
-	background: string | null;
-	turnLayers: boolean;
+	controller: CropController;
 	// What the switch to turn other layers is called; null hides it.
 	turnLabel: string | null;
 	onTab: (tab: CropTab) => void;
-	onAspect: (id: AspectId) => void;
-	onRotate: () => void;
-	onFlip: () => void;
-	onTurnLayers: () => void;
-	onBackground: (background: string | null) => void;
 }) {
+	const { aspect, background } = controller;
 	const current = ASPECTS.find((option) => option.id === aspect);
 	return (
 		<BarSections>
@@ -175,25 +219,32 @@ export function CropBar({
 					<AspectMenu
 						label={current?.label ?? "Free"}
 						selected={aspect}
-						onPick={onAspect}
+						onPick={controller.pickAspect}
 					/>
 				)}
-				{tab === "rotate" && (
-					<BarButton icon="rotate-left" label="Rotate 90°" onPress={onRotate} />
-				)}
-				{tab === "rotate" && (
-					<BarButton icon="flip-horizontal" label="Flip" onPress={onFlip} />
-				)}
-				{tab === "rotate" && turnLabel && (
-					<BarButton
-						icon={turnLayers ? "checkbox-marked" : "checkbox-blank-outline"}
-						label={turnLabel}
-						checked={turnLayers}
-						onPress={onTurnLayers}
-					/>
-				)}
+				{tab === "rotate" &&
+					rotateActions(controller, turnLabel).map(
+						({ key, icon, label, checked, onPress }) => (
+							<BarButton
+								key={key}
+								icon={
+									checked === undefined
+										? icon
+										: checked
+											? "checkbox-marked"
+											: "checkbox-blank-outline"
+								}
+								label={label}
+								checked={checked}
+								onPress={onPress}
+							/>
+						),
+					)}
 				{tab === "canvas" && (
-					<BackgroundChip value={background} onPick={onBackground} />
+					<BackgroundChip
+						value={background}
+						onPick={controller.setBackground}
+					/>
 				)}
 			</BarGroup>
 		</BarSections>

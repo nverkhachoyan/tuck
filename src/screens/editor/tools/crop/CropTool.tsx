@@ -8,7 +8,6 @@ import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
 import { colors } from "@/ui/theme";
 import { ContextBar } from "../../shell/ContextBar";
-import { Dial } from "../../shell/Dial";
 import { Dock, DockFooter, useDockInset } from "../../shell/Dock";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { CropCanvas } from "./CropCanvas";
@@ -17,9 +16,8 @@ import {
 	CropBar,
 	CropControls,
 	type CropTab,
-	DEGREES,
+	StraightenDial,
 } from "./CropPanel";
-import { MAX_STRAIGHTEN } from "./cropGeometry";
 import { turnLayersLabel } from "./cropOptions";
 import { useCropController } from "./useCropController";
 
@@ -61,7 +59,7 @@ export function CropTool({
 	onDone,
 }: CropToolProps) {
 	const controller = useCropController(document, onDone);
-	const { anchor, aspect, background, turnLayers } = controller;
+	const { anchor, background, turnLayers } = controller;
 	const dockInset = useDockInset();
 	const [tab, setTab] = useState<CropTab>("crop");
 	const turnLabel = turnLayersLabel(document.layers, anchor.layer);
@@ -115,16 +113,9 @@ export function CropTool({
 						>
 							<CropBar
 								tab={tab}
-								aspect={aspect}
-								background={background}
-								turnLayers={turnLayers}
+								controller={controller}
 								turnLabel={turnLabel}
 								onTab={setTab}
-								onAspect={controller.pickAspect}
-								onRotate={controller.rotate}
-								onFlip={controller.flip}
-								onTurnLayers={controller.toggleTurnLayers}
-								onBackground={controller.setBackground}
 							/>
 						</ContextBar>
 					}
@@ -133,10 +124,12 @@ export function CropTool({
 				{stage}
 				<DialStrip
 					show={tab === "rotate" && anchor.layer !== null}
-					straighten={controller.straighten}
-					onBegin={controller.straightenBegin}
-					onChange={controller.straightenChange}
-					onEnd={controller.straightenEnd}
+					dial={{
+						value: controller.straighten,
+						onBegin: controller.straightenBegin,
+						onChange: controller.straightenChange,
+						onEnd: controller.straightenEnd,
+					}}
 				/>
 			</View>
 		);
@@ -192,16 +185,10 @@ export function CropTool({
  */
 function DialStrip({
 	show,
-	straighten,
-	onBegin,
-	onChange,
-	onEnd,
+	dial,
 }: {
 	show: boolean;
-	straighten: ComponentProps<typeof Dial>["value"];
-	onBegin: ComponentProps<typeof Dial>["onBegin"];
-	onChange: ComponentProps<typeof Dial>["onChange"];
-	onEnd: ComponentProps<typeof Dial>["onEnd"];
+	dial: ComponentProps<typeof StraightenDial>;
 }) {
 	const { bottom } = useSafeAreaInsets();
 	return (
@@ -213,19 +200,7 @@ function DialStrip({
 		>
 			{show && (
 				<View style={styles.dial}>
-					<Dial
-						value={straighten}
-						max={MAX_STRAIGHTEN}
-						scale={DEGREES}
-						label="Straighten"
-						increaseLabel="Increase angle"
-						decreaseLabel="Decrease angle"
-						readout={(degrees) => `${degrees}°`}
-						valueText={(degrees) => `${degrees} degrees`}
-						onBegin={onBegin}
-						onChange={onChange}
-						onEnd={onEnd}
-					/>
+					<StraightenDial {...dial} />
 				</View>
 			)}
 		</View>
