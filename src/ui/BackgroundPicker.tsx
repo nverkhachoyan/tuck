@@ -11,6 +11,14 @@ const BACKGROUNDS = [
 	{ color: "#000000", label: "Black background" },
 ];
 
+/** What a screen reader calls the background `value`. */
+export function backgroundLabel(value: string | null): string {
+	return (
+		BACKGROUNDS.find(({ color }) => color === value)?.label ??
+		"Transparent background"
+	);
+}
+
 export function BackgroundPicker({
 	value,
 	onPick,

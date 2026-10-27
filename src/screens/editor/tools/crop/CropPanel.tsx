@@ -1,15 +1,13 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, useRef, useState } from "react";
+import type { ComponentProps } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { BackgroundPicker } from "@/ui/BackgroundPicker";
-import { CheckerFill } from "@/ui/CheckerFill";
+import { BackgroundPicker, backgroundLabel } from "@/ui/BackgroundPicker";
 import { Chip } from "@/ui/Chip";
-import { compactControls } from "@/ui/density";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
-import { Popover } from "@/ui/Popover";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
+import { SwatchChip } from "../../shell/ColorPicker";
 import {
 	BarButton,
 	BarChip,
@@ -324,58 +322,23 @@ function BackgroundChip({
 	value: string | null;
 	onPick: (background: string | null) => void;
 }) {
-	const anchor = useRef<View>(null);
-	const [open, setOpen] = useState(false);
-	const label =
-		value === "#FFFFFF"
-			? "White background"
-			: value === "#000000"
-				? "Black background"
-				: "Transparent background";
 	return (
-		<>
-			<Pressable
-				ref={anchor}
-				accessibilityRole="button"
-				accessibilityLabel={label}
-				accessibilityState={{ expanded: open }}
-				aria-expanded={open}
-				onPress={() => setOpen((shown) => !shown)}
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.backgroundChip,
-						webTransition,
-						hovered && styles.backgroundChipHovered,
-						pressed && styles.backgroundChipPressed,
-					];
-				}}
-			>
-				<Text style={styles.backgroundLabel}>Background</Text>
-				<View
-					style={[
-						styles.backgroundSwatch,
-						value !== null && { backgroundColor: value },
-					]}
-				>
-					{value === null && <CheckerFill width={20} height={20} cell={10} />}
-				</View>
-			</Pressable>
-			<Popover
-				anchor={anchor}
-				open={open}
-				onClose={() => setOpen(false)}
-				label={label}
-			>
+		<SwatchChip
+			label={backgroundLabel(value)}
+			title="Background"
+			value={value}
+			empty="transparent"
+		>
+			{(close) => (
 				<BackgroundPicker
 					value={value}
 					onPick={(background) => {
 						onPick(background);
-						setOpen(false);
+						close();
 					}}
 				/>
-			</Popover>
-		</>
+			)}
+		</SwatchChip>
 	);
 }
 
@@ -506,32 +469,5 @@ const styles = StyleSheet.create({
 	aspectRow: {
 		flexDirection: "row",
 		gap: 8,
-	},
-	backgroundChip: {
-		height: compactControls ? 36 : 44,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 12,
-		borderRadius: radii.small,
-	},
-	backgroundChipHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	backgroundChipPressed: {
-		backgroundColor: colors.pressedOverlay,
-		transform: [{ scale: 0.92 }],
-	},
-	backgroundLabel: {
-		...typography.labelStrong,
-		color: colors.textPrimary,
-	},
-	backgroundSwatch: {
-		width: 20,
-		height: 20,
-		borderRadius: 10,
-		borderWidth: 1,
-		borderColor: colors.swatchRing,
-		overflow: "hidden",
 	},
 });

@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
@@ -13,6 +13,7 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
 import { Button } from "@/ui/Button";
+import { CheckerFill } from "@/ui/CheckerFill";
 import { compactControls } from "@/ui/density";
 import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
 import { IconButton } from "@/ui/IconButton";
@@ -133,6 +134,59 @@ export function ColorChip({
 	// Where focus goes when the palette closes, instead of back here.
 	restoreFocus?: () => void;
 }) {
+	return (
+		<SwatchChip
+			label={label}
+			title={title}
+			value={value}
+			empty="none"
+			restoreFocus={restoreFocus}
+		>
+			{(close) => (
+				<ColorOptions
+					value={value}
+					customColor={customColor}
+					noneLabel={noneLabel}
+					onPick={onPick}
+					onSwatch={close}
+					onPickCustom={onPickCustom}
+					onEyedropper={
+						onEyedropper &&
+						(() => {
+							close();
+							onEyedropper();
+						})
+					}
+				/>
+			)}
+		</SwatchChip>
+	);
+}
+
+/**
+ * A color as a round swatch, with an optional word beside it, that opens its
+ * choices in a popover, for the context bar.
+ * - `value` null draws as a slash for no color (`empty: "none"`) or as the
+ *   checkerboard for transparent (`empty: "transparent"`).
+ * - `children` gets `close`, as `BarChip`'s do, to close once a choice is made.
+ * - `label` is what a screen reader hears, for the chip and its popover.
+ */
+export function SwatchChip({
+	label,
+	title,
+	value,
+	empty,
+	restoreFocus,
+	children,
+}: {
+	label: string;
+	title?: string;
+	value: string | null;
+	empty: "none" | "transparent";
+	// Where focus goes when the popover closes, instead of back here.
+	restoreFocus?: () => void;
+	children: (close: () => void) => ReactNode;
+}) {
 	const anchor = useRef<View>(null);
 	const [open, setOpen] = useState(false);
 	const close = () => setOpen(false);
@@ -160,10 +214,21 @@ export function ColorChip({
 				<View
 					style={[
 						styles.chipSwatch,
-						value === null ? styles.chipEmpty : { backgroundColor: value },
+						value !== null
+							? { backgroundColor: value }
+							: empty === "none" && styles.chipEmpty,
 					]}
 				>
-					{value === null && <View style={styles.chipSlash} />}
+					{value === null &&
+						(empty === "none" ? (
+							<View style={styles.chipSlash} />
+						) : (
+							<CheckerFill
+								width={CHIP_SWATCH}
+								height={CHIP_SWATCH}
+								cell={CHIP_SWATCH / 2}
+							/>
+						))}
 				</View>
 			</Pressable>
 			<Popover
@@ -173,21 +238,7 @@ export function ColorChip({
 				label={label}
 				restoreFocus={restoreFocus}
 			>
-				<ColorOptions
-					value={value}
-					customColor={customColor}
-					noneLabel={noneLabel}
-					onPick={onPick}
-					onSwatch={close}
-					onPickCustom={onPickCustom}
-					onEyedropper={
-						onEyedropper &&
-						(() => {
-							close();
-							onEyedropper();
-						})
-					}
-				/>
+				{children(close)}
 			</Popover>
 		</>
 	);
