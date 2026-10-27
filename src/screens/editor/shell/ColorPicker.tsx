@@ -143,6 +143,7 @@ export function ColorChip({
 				accessibilityRole="button"
 				accessibilityLabel={label}
 				accessibilityState={{ expanded: open }}
+				aria-expanded={open}
 				onPress={() => setOpen((shown) => !shown)}
 				style={(state) => {
 					const { pressed, hovered } = interaction(state);
