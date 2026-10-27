@@ -70,31 +70,29 @@ export function useTextEditGesture({
 		onText: boolean;
 	} | null>(null);
 	const [taps] = useState(createDoubleTap);
-	const handlePress = useCallback(
-		(phase: TextPressPhase, screenX: number, screenY: number) => {
-			if (!edit) return;
-			// A second finger landed, to zoom.
-			if (phase === "cancel") {
-				textPress.current = null;
-				return;
-			}
-			if (phase === "begin") {
-				const index = textIndexUnder(screenX, screenY);
-				const double = index !== null && taps.tap({ x: screenX, y: screenY });
-				textPress.current = {
-					x: screenX,
-					y: screenY,
-					anchor: double ? null : index,
-					onText: index !== null,
-				};
-				if (index === null) return;
-				onSelect?.(
-					double
-						? wordRange(edit.layer.text, index)
-						: { start: index, end: index },
-				);
-				return;
-			}
+	// A press landing: on the text it places the caret, or on a double tap
+	// selects the word, and either way is remembered for the drag that follows.
+	const beginPress = useCallback(
+		(text: string, screenX: number, screenY: number) => {
+			const index = textIndexUnder(screenX, screenY);
+			const double = index !== null && taps.tap({ x: screenX, y: screenY });
+			textPress.current = {
+				x: screenX,
+				y: screenY,
+				anchor: double ? null : index,
+				onText: index !== null,
+			};
+			if (index === null) return;
+			onSelect?.(
+				double ? wordRange(text, index) : { start: index, end: index },
+			);
+		},
+		[textIndexUnder, taps, onSelect],
+	);
+	// A press moving or lifting: a drag from the text selects; a tap off the
+	// text finishes, and a drag there does nothing.
+	const followPress = useCallback(
+		(phase: "move" | "end", screenX: number, screenY: number) => {
 			const press = textPress.current;
 			if (!press) return;
 			if (phase === "end") textPress.current = null;
@@ -106,13 +104,22 @@ export function useTextEditGesture({
 				});
 				return;
 			}
-			// A tap off the text finishes; a drag there does nothing.
 			const travel = Math.hypot(screenX - press.x, screenY - press.y);
 			if (phase === "end" && !press.onText && travel < TAP_SLOP_PX) {
 				onDone?.();
 			}
 		},
-		[edit, textIndexUnder, taps, onSelect, onDone],
+		[textIndexUnder, onSelect, onDone],
+	);
+	const handlePress = useCallback(
+		(phase: TextPressPhase, screenX: number, screenY: number) => {
+			if (!edit) return;
+			// A second finger landed, to zoom.
+			if (phase === "cancel") textPress.current = null;
+			else if (phase === "begin") beginPress(edit.layer.text, screenX, screenY);
+			else followPress(phase, screenX, screenY);
+		},
+		[edit, beginPress, followPress],
 	);
 	const handleHover = useCallback(
 		(screenX: number, screenY: number) =>
