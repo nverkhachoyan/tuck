@@ -23,35 +23,12 @@ import {
 	straightenTo,
 	turnedSize,
 } from "./cropGeometry";
+import { type AspectId, aspectRatio, turnedAspect } from "./cropOptions";
 
 const REFIT = { duration: 220 };
 // Room around the photo and box when fitting them to the view, in screen
 // pixels. The crop gesture lets the box be dragged out into it.
 const CROP_INSET_PX = 20;
-
-// Width / height, or "original" for the photo's own. Each fixed ratio's
-// turned counterpart is listed too, so turning the photo keeps one selected.
-export const ASPECTS = [
-	{ id: "free", label: "Free", ratio: null },
-	{ id: "original", label: "Original", ratio: "original" },
-	{ id: "1:1", label: "Square", ratio: 1 },
-	{ id: "4:5", label: "4:5", ratio: 4 / 5 },
-	{ id: "5:4", label: "5:4", ratio: 5 / 4 },
-	{ id: "3:4", label: "3:4", ratio: 3 / 4 },
-	{ id: "4:3", label: "4:3", ratio: 4 / 3 },
-	{ id: "9:16", label: "9:16", ratio: 9 / 16 },
-	{ id: "16:9", label: "16:9", ratio: 16 / 9 },
-] as const;
-type AspectId = (typeof ASPECTS)[number]["id"];
-
-const TURNED: Partial<Record<AspectId, AspectId>> = {
-	"4:5": "5:4",
-	"5:4": "4:5",
-	"3:4": "4:3",
-	"4:3": "3:4",
-	"9:16": "16:9",
-	"16:9": "9:16",
-};
 
 /**
  * The crop tool's state and actions: the crop, shared with its gestures on
@@ -128,11 +105,10 @@ export function useCropController(
 	};
 
 	const pickAspect = (id: AspectId) => {
-		const choice = ASPECTS.find((option) => option.id === id);
-		if (!choice) return;
-		const turned = turnedSize(photoSize, crop.value.quarterTurns);
-		const value =
-			choice.ratio === "original" ? turned.width / turned.height : choice.ratio;
+		const value = aspectRatio(
+			id,
+			turnedSize(photoSize, crop.value.quarterTurns),
+		);
 		setAspect(id);
 		ratio.value = value;
 		if (value !== null) {
@@ -142,7 +118,7 @@ export function useCropController(
 
 	const rotate = () => {
 		update(rotateLeft(crop.value));
-		const turned = TURNED[aspect];
+		const turned = turnedAspect(aspect);
 		if (turned) setAspect(turned);
 		if (ratio.value !== null) ratio.value = 1 / ratio.value;
 	};

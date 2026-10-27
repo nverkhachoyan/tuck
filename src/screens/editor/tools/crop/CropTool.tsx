@@ -38,7 +38,13 @@ import type { DialScale } from "../../shell/dialDrag";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { CropCanvas } from "./CropCanvas";
 import { MAX_STRAIGHTEN } from "./cropGeometry";
-import { ASPECTS, useCropController } from "./useCropController";
+import {
+	ASPECT_ROWS,
+	ASPECTS,
+	type AspectId,
+	turnLayersLabel,
+} from "./cropOptions";
+import { useCropController } from "./useCropController";
 
 type CropTab = "crop" | "rotate" | "canvas";
 
@@ -67,14 +73,6 @@ const CONTROLS_WITHOUT_DIAL = 64;
 const DIAL_STRIP = 100;
 const DIAL_WIDTH = 360;
 const TAB_IN = FadeIn.duration(160);
-// The ratio chip's rows: free shapes, then portrait, then landscape.
-type AspectId = (typeof ASPECTS)[number]["id"];
-const ASPECT_GROUPS: readonly AspectId[][] = [
-	["free", "original", "1:1"],
-	["4:5", "3:4", "9:16"],
-	["5:4", "4:3", "16:9"],
-];
-
 type CropToolProps = {
 	document: EditorDocument;
 	// A wide window puts the options in the header. A phone keeps the dock.
@@ -106,13 +104,7 @@ export function CropTool({
 	const { anchor, aspect, background, turnLayers } = controller;
 	const dockInset = useDockInset();
 	const [tab, setTab] = useState<CropTab>("crop");
-	// Redactions always turn with the photo (see `turnsWithPhoto`), so they
-	// have no say in whether the choice shows, or what it's called.
-	const choosable = document.layers.filter(
-		(layer) => layer !== anchor.layer && layer.type !== "redaction",
-	);
-	const hasOtherLayers = choosable.some((layer) => !layer.hidden);
-	const onlyText = choosable.every((layer) => layer.type === "text");
+	const turnLabel = turnLayersLabel(document.layers, anchor.layer);
 
 	// Android's back button applies the crop, as Done does.
 	useEffect(() => {
@@ -185,8 +177,7 @@ export function CropTool({
 								aspect={aspect}
 								background={background}
 								turnLayers={turnLayers}
-								hasOtherLayers={hasOtherLayers}
-								onlyText={onlyText}
+								turnLabel={turnLabel}
 								onTab={setTab}
 								onAspect={controller.pickAspect}
 								onRotate={controller.rotate}
@@ -269,10 +260,10 @@ export function CropTool({
 									label="Flip"
 									onPress={controller.flip}
 								/>
-								{hasOtherLayers && (
+								{turnLabel && (
 									<ActionButton
 										icon="format-text-rotation-angle-up"
-										label={onlyText ? "Turn text" : "Turn layers"}
+										label={turnLabel}
 										selected={turnLayers}
 										onPress={controller.toggleTurnLayers}
 									/>
@@ -324,8 +315,7 @@ function CropBar({
 	aspect,
 	background,
 	turnLayers,
-	hasOtherLayers,
-	onlyText,
+	turnLabel,
 	onTab,
 	onAspect,
 	onRotate,
@@ -337,8 +327,8 @@ function CropBar({
 	aspect: AspectId;
 	background: string | null;
 	turnLayers: boolean;
-	hasOtherLayers: boolean;
-	onlyText: boolean;
+	// What the switch to turn other layers is called; null hides it.
+	turnLabel: string | null;
 	onTab: (tab: CropTab) => void;
 	onAspect: (id: AspectId) => void;
 	onRotate: () => void;
@@ -376,10 +366,10 @@ function CropBar({
 				{tab === "rotate" && (
 					<BarButton icon="flip-horizontal" label="Flip" onPress={onFlip} />
 				)}
-				{tab === "rotate" && hasOtherLayers && (
+				{tab === "rotate" && turnLabel && (
 					<BarButton
 						icon={turnLayers ? "checkbox-marked" : "checkbox-blank-outline"}
-						label={onlyText ? "Turn text" : "Turn layers"}
+						label={turnLabel}
 						checked={turnLayers}
 						onPress={onTurnLayers}
 					/>
@@ -406,7 +396,7 @@ function AspectMenu({
 		<BarChip label={`Aspect ratio ${label}`} icon="aspect-ratio" text={label}>
 			{(close) => (
 				<View style={styles.aspectMenu}>
-					{ASPECT_GROUPS.map((group) => (
+					{ASPECT_ROWS.map((group) => (
 						<View key={group.join()} style={styles.aspectRow}>
 							{group.map((id) => {
 								const choice = ASPECTS.find((option) => option.id === id);
