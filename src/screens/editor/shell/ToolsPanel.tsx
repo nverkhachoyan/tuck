@@ -69,15 +69,7 @@ export function mapStarters(
 	starters: ToolStarters,
 	wrap: (start: () => void) => () => void,
 ): ToolStarters {
-	return {
-		text: wrap(starters.text),
-		draw: wrap(starters.draw),
-		redact: wrap(starters.redact),
-		find: wrap(starters.find),
-		sticker: wrap(starters.sticker),
-		photo: wrap(starters.photo),
-		crop: wrap(starters.crop),
-		adjust: wrap(starters.adjust),
-		cutOut: wrap(starters.cutOut),
-	};
+	return Object.fromEntries(
+		Object.entries(starters).map(([key, start]) => [key, wrap(start)]),
+	) as ToolStarters;
 }
