@@ -28,6 +28,36 @@ export type ImageDetectionState =
 	  }
 	| { status: "empty"; scope: DetectionScope; issues: DetectionIssue[] };
 
+const FEATURE_NAMES: Record<DetectionFeature, string> = {
+	faces: "Face",
+	text: "Text",
+};
+
+/** What finding `feature` in the image at `uri` found, or why it couldn't. */
+async function detectFeature(
+	feature: DetectionFeature,
+	uri: string,
+): Promise<DetectedRegion[] | DetectionIssue> {
+	const name = FEATURE_NAMES[feature];
+	if (!isDetectionAvailable(feature)) {
+		return {
+			feature,
+			message: `${name} finding isn't available on this device.`,
+		};
+	}
+	try {
+		const found = await detectImageRegions(feature, uri);
+		return found.map((region) => ({ ...region, feature }));
+	} catch (error) {
+		return {
+			feature,
+			message: isDetectionModelDownloading(error)
+				? `${name} finding is still downloading.`
+				: `${name} finding failed: ${errorMessage(error)}`,
+		};
+	}
+}
+
 export function useImageDetection(targetKey: string) {
 	const [state, setState] = useState<ImageDetectionState>({ status: "idle" });
 	const request = useRef(0);
@@ -52,24 +82,9 @@ export function useImageDetection(targetKey: string) {
 		const features: DetectionFeature[] =
 			scope === "both" ? ["faces", "text"] : [scope];
 		for (const feature of features) {
-			if (!isDetectionAvailable(feature)) {
-				issues.push({
-					feature,
-					message: `${feature === "faces" ? "Face" : "Text"} finding isn't available on this device.`,
-				});
-				continue;
-			}
-			try {
-				const found = await detectImageRegions(feature, uri);
-				regions.push(...found.map((region) => ({ ...region, feature })));
-			} catch (error) {
-				issues.push({
-					feature,
-					message: isDetectionModelDownloading(error)
-						? `${feature === "faces" ? "Face" : "Text"} finding is still downloading.`
-						: `${feature === "faces" ? "Face" : "Text"} finding failed: ${errorMessage(error)}`,
-				});
-			}
+			const result = await detectFeature(feature, uri);
+			if ("message" in result) issues.push(result);
+			else regions.push(...result);
 		}
 		if (request.current !== current) return;
 		setState(
