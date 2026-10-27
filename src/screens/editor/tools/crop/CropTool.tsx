@@ -508,7 +508,13 @@ function BackgroundChip({
 				onClose={() => setOpen(false)}
 				label={label}
 			>
-				<BackgroundPicker value={value} onPick={onPick} />
+				<BackgroundPicker
+					value={value}
+					onPick={(background) => {
+						onPick(background);
+						setOpen(false);
+					}}
+				/>
 			</Popover>
 		</>
 	);
