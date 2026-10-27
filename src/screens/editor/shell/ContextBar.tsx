@@ -31,6 +31,13 @@ import { interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
+import {
+	fadeCut,
+	fadeCutLeft,
+	type ItemBox,
+	leafEdges,
+	rowEdges,
+} from "./barFade";
 import { ModeActions } from "./Dock";
 
 // How wide the fade is. On either side it ends on the first option that
@@ -42,8 +49,6 @@ const FADE_SETTLE_MS = 120;
 // A segment's, an action's, and a chip's height: a touch target, or less
 // where controls are sized for a mouse.
 const ITEM_HEIGHT = compactControls ? 36 : 44;
-
-type ItemBox = { parent: string; x: number; width: number };
 
 // Item positions, in a group's coordinates or a parent item's, so the fade
 // can add them up to a position in the scrolling row.
@@ -555,76 +560,6 @@ function ScrollFade({ children }: { children: ReactNode }) {
 			</View>
 		</BarMetrics.Provider>
 	);
-}
-
-// An option's left and right in the row: its ancestors' x added to its own.
-function rowEdges(
-	groups: Record<string, number>,
-	items: Record<string, ItemBox>,
-) {
-	const origin = (parent: string, depth: number): number | null => {
-		if (depth > 8) return null;
-		const groupX = groups[parent];
-		if (groupX != null) return groupX;
-		const above = items[parent];
-		if (!above) return null;
-		const base = origin(above.parent, depth + 1);
-		return base == null ? null : base + above.x;
-	};
-	const edges: { left: number; right: number }[] = [];
-	for (const item of Object.values(items)) {
-		const base = origin(item.parent, 0);
-		if (base == null || item.width <= 0) continue;
-		const left = base + item.x;
-		edges.push({ left, right: left + item.width });
-	}
-	return edges;
-}
-
-// Drop a box that only exists to hold smaller options, such as the view
-// around a whole segmented control. The fade stops on the options inside.
-function leafEdges(edges: { left: number; right: number }[]) {
-	return edges.filter((edge) => {
-		const width = edge.right - edge.left;
-		return !edges.some((other) => {
-			if (other === edge) return false;
-			return (
-				other.left >= edge.left - 0.5 &&
-				other.right <= edge.right + 0.5 &&
-				other.right - other.left < width - 0.5
-			);
-		});
-	});
-}
-
-// The left edge of the first option that doesn't fit in the row, or null
-// when the visible row already ends between options.
-function fadeCut(
-	edges: readonly { left: number; right: number }[],
-	visibleRight: number,
-) {
-	let cut: number | null = null;
-	for (const edge of edges) {
-		if (edge.right <= visibleRight + 1) continue;
-		if (cut == null || edge.left < cut) cut = edge.left;
-	}
-	if (cut == null || cut >= visibleRight) return null;
-	return cut;
-}
-
-// The right edge of the last option that runs in from the left, so scrolling
-// back doesn't slice a label either.
-function fadeCutLeft(
-	edges: readonly { left: number; right: number }[],
-	offset: number,
-) {
-	let cut: number | null = null;
-	for (const edge of edges) {
-		if (edge.left >= offset - 1) continue;
-		if (cut == null || edge.right > cut) cut = edge.right;
-	}
-	if (cut == null || cut <= offset) return null;
-	return cut;
 }
 
 const styles = StyleSheet.create({
