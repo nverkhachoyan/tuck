@@ -102,9 +102,8 @@ export function useEditorTools({
 		redact.chooseTool();
 		dispatchMode({ type: "startTool", start: { tool: "redact" } });
 	};
-	// Cut out's Redact ends its session, adds the masked redaction, and opens
-	// Redact's box on it. It sets the box itself: `startRedacting` would pick
-	// from the selection as it was before the redaction was added.
+	// Cut out's Redact takes back the cut, adds a redaction in its shape,
+	// which is selected, and closes Cut out.
 	const redactCut = (layerId: string, mask: string, rect: Rect) => {
 		cancelSession();
 		addMaskedRedaction(
@@ -113,8 +112,7 @@ export function useEditorTools({
 			rect,
 			redactionEffect(redactLook, documentSize),
 		);
-		setRedactSettings((current) => ({ ...current, tool: "box" }));
-		dispatchMode({ type: "startTool", start: { tool: "redact" } });
+		dispatchMode({ type: "endTool" });
 	};
 
 	const cutImageId = toolImageId(mode, "cutOut");
