@@ -72,32 +72,7 @@ const ARROWS: Record<string, [number, number]> = {
  */
 export function shortcutFor(press: KeyPress): Shortcut | null {
 	if (press.altKey) return null;
-	if (press.metaKey || press.ctrlKey) {
-		switch (press.key.toLowerCase()) {
-			case "z":
-				return press.shiftKey ? { type: "redo" } : { type: "undo" };
-			case "y":
-				return { type: "redo" };
-			case "d":
-				return { type: "duplicate" };
-			case "e":
-				return { type: "export" };
-			case "]":
-				return { type: "reorder", step: 1 };
-			case "[":
-				return { type: "reorder", step: -1 };
-			// Plus is Shift and = on most layouts, and on the number pad.
-			case "=":
-			case "+":
-				return { type: "zoom", to: "in" };
-			case "-":
-				return { type: "zoom", to: "out" };
-			case "0":
-				return { type: "zoom", to: "fit" };
-			default:
-				return null;
-		}
-	}
+	if (press.metaKey || press.ctrlKey) return modifiedShortcut(press);
 	const arrow = ARROWS[press.key];
 	if (arrow) {
 		const distance = press.shiftKey ? NUDGE_FAR_PX : NUDGE_PX;
@@ -125,6 +100,34 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 	if (letter === LAYERS_KEY) return { type: "layers" };
 	const tool = TOOLS_BY_KEY.get(letter);
 	return tool ? { type: "tool", tool } : null;
+}
+
+/** The command for a key pressed with ⌘ or Ctrl, or null. */
+function modifiedShortcut(press: KeyPress): Shortcut | null {
+	switch (press.key.toLowerCase()) {
+		case "z":
+			return press.shiftKey ? { type: "redo" } : { type: "undo" };
+		case "y":
+			return { type: "redo" };
+		case "d":
+			return { type: "duplicate" };
+		case "e":
+			return { type: "export" };
+		case "]":
+			return { type: "reorder", step: 1 };
+		case "[":
+			return { type: "reorder", step: -1 };
+		// Plus is Shift and = on most layouts, and on the number pad.
+		case "=":
+		case "+":
+			return { type: "zoom", to: "in" };
+		case "-":
+			return { type: "zoom", to: "out" };
+		case "0":
+			return { type: "zoom", to: "fit" };
+		default:
+			return null;
+	}
 }
 
 /**
