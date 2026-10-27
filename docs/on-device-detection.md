@@ -72,7 +72,7 @@ Return a mask, not a cutout. Skia applies the mask to the image layer, so the or
 
 ### Selecting objects
 
-Added after this research (October 2026): Cut out's Pick selects the object at a tap with MobileSAM, run with ONNX Runtime on every platform (Core ML on iOS, the CPU on Android, and a module worker with WebGPU or WebAssembly on web), alongside the subject masks above. `modules/image-analysis/src/objectSelection.ts` and its `.web.ts` are its entry points; `AGENTS.md` records how the models were prepared and what each platform needs.
+Added after this research (October 2026): Cut out's Pick selects the object at a tap with MobileSAM, run with ONNX Runtime on every platform (Core ML on iOS, the CPU on Android, and a module worker with WebGPU or WebAssembly on web), alongside the subject masks above. `modules/image-analysis/src/objectSelection.ts` and its `.web.ts` are its entry points; [Implementation notes](#implementation-notes) records how the models were prepared and what each platform needs.
 
 ## The simulator
 
@@ -124,13 +124,25 @@ ML Kit is worse off: its iOS binaries have no arm64 simulator slice, and Xcode 2
 
 * **iOS 16.** Expo SDK 57's minimum iOS is 16.4, but subject masks need iOS 17. Hide subject detection on 16.x (the module reports whether it's available) rather than raise the whole app's minimum.
 * **Android without Google Play services** (Huawei phones, for example) can't run any of the ML Kit features, and on other phones the models download after install. The module reports what's available, and the UI hides what isn't. Declare the models in the manifest's `com.google.mlkit.vision.DEPENDENCIES` so they download at install rather than on first use.
-* **Development build.** The app runs in `expo-dev-client` rather than Expo Go (`AGENTS.md` records how to build and reload it on the simulator and emulator).
+* **Development build.** The app runs in `expo-dev-client` rather than Expo Go ([development.md](./development.md) records how to build and reload it on the simulator and emulator).
 
 ## How it fits the editor
 
 Faces and text come back as rectangles, which become ordinary redaction boxes: movable, resizable, and undoable like one drawn by hand. The background comes back as a mask, which becomes a property of the image layer that the editor, export, and thumbnails all apply. Detection only proposes layers and properties the document already describes; the only new drawing is the mask.
 
 The web versions sit in the same module's `.web.ts` file, with the same three functions, as `projects/projectStorage.web.ts` does for storage. The editor doesn't know which implementation answered.
+
+## Implementation notes
+
+What building the module taught, for anyone changing it.
+
+* **Face tiles.** `detectFaces` has Vision and MediaPipe look at overlapping tiles as well as the whole image, planned and merged in `modules/image-analysis/src/faceTiles.ts` (tested with `npm test`). ML Kit searches every scale down to its `minFaceSize` itself, so Android gets only the whole image.
+* **ML Kit's manifest entry.** `com.google.mlkit.vision.DEPENDENCIES` is one comma-separated value, and `expo-dev-launcher` sets it too (`barcode_ui`), so the manifest merger fails if a library declares it. `modules/image-analysis/app.plugin.js` sets it in the app's manifest with `tools:replace`: add a new model to its `MODELS`, not to the module's `AndroidManifest.xml`.
+* **Loading MediaPipe on web.** Metro rejects an `import()` with a computed path, even inside `node_modules`, and every build of `@mediapipe/tasks-vision` has one. The web module loads the library's script build (`vision_bundle.js`, which defines a global `Vision`) from `public/mediapipe/` with a `<script>` tag, and imports only its types. MagicTouch version 1 runs only through `InteractiveSegmenterLegacy`. MediaPipe's `detect` fails ("ROI width and height must be > 0") on a canvas resized since the call before, so each tile gets its own canvas.
+* **MobileSAM on web** runs with `onnxruntime-web` in a module worker that isn't bundled: `modules/image-analysis/src/mobileSamWorker.js` is plain JavaScript, copied to `public/` by `copy-web-assets.mjs` like the runtime and models, so rerun that script after editing it. The runtime's package `exports` none of its `dist/` files (its folder is resolved from the package's main file). Its `.bundle` build already holds its WebAssembly glue: `env.wasm.wasmPaths` takes the `.wasm` file's URL as `{ wasm }`, since a folder prefix makes it fetch the glue anyway. WebGPU sessions must be created one after another ("another WebGPU EP inference session is being created"), and a session's first run on WebGPU takes about a second to set up, so the worker runs the decoder once after encoding.
+* **MobileSAM's encoder on Core ML.** ONNX Runtime's Core ML execution provider only takes nodes whose shapes are fixed: with the encoder taking any height and width, it split the model into dozens of partitions and ran several times slower than the CPU. The encoder file is fixed at 1024×1024 (`onnxruntime.tools.make_dynamic_shape_fixed`, then `onnxsim`), and every platform pads the image to that square with ImageNet's mean, which the encoder normalizes to zero, as its own padding did: the embeddings come out identical. Core ML also takes at most five dimensions, so TinyViT's six-dimensional window reshapes (whose first dimension is 1) were rewritten to five, leaving one Core ML model instead of 21 (a gigabyte of buffers between them).
+* **Core ML's compiled model.** Core ML compiles the model when a session first loads it, which takes seconds. `ModelCacheDirectory` keeps the compiled model under the file's `COREML_CACHE_KEY` metadata (otherwise a hash of its path, which changes with every install), so change that key when the model changes. The decoder's output size follows its `orig_im_size` input, so it stays on the CPU.
+* **ONNX Runtime on Android.** The CPU arena kept half a gigabyte after the encoder ran, so sessions turn it off. Version 1.31 ships telemetry, which `ObjectSelector` turns off.
 
 ## Sources
 

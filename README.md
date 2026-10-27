@@ -7,6 +7,7 @@ subjects.
 - Product vision, positioning, and principles: [PRODUCT.md](./PRODUCT.md)
 - Design system: [DESIGN.md](./DESIGN.md)
 - Codebase architecture: [docs/architecture.md](./docs/architecture.md)
+- Building, running, and testing: [docs/development.md](./docs/development.md)
 - What's left to do: [docs/plans/follow-ups-plan.md](./docs/plans/follow-ups-plan.md)
 
 ## Getting started
