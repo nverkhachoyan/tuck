@@ -411,6 +411,11 @@ export function ToolTrays({
 	);
 }
 
+/** Whether `panel` has a section in the wide inspector, which opening it opens. */
+export function hasInspectorSection(panel: DockPanel): boolean {
+	return panel !== "idle" && TOOL_VIEWS[panel].inspector !== undefined;
+}
+
 /**
  * What the wide editor's header holds instead of the project's title: the
  * open tool's options, or a selected layer's actions. Phones have no bar;

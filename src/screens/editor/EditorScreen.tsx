@@ -40,6 +40,7 @@ import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import {
 	ContextBarContent,
 	DockContent,
+	hasInspectorSection,
 	ToolTrays,
 	toolViewContext,
 } from "./EditorDock";
@@ -251,7 +252,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const layout = useEditorLayout({
 		typing: editingText,
 		layersOpen,
-		inspectorRequested: layersOpen || tool === "find" || tool === "adjust",
+		inspectorRequested:
+			layersOpen || (tool !== null && hasInspectorSection(tool)),
 	});
 	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
 	const toolOptionsOpen = openTray(mode) !== null;
