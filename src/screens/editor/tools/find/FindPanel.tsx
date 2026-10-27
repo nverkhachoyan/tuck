@@ -23,7 +23,7 @@ import {
 } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { ToolOptions, Tray } from "../../shell/ToolOptions";
-import type { FindReview } from "./useFindTool";
+import type { FindController, FindReview } from "./useFindTool";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
 
 // Narrower than this, the tray's text goes above its buttons rather than beside
@@ -36,16 +36,14 @@ const STACK_BELOW_WIDTH = 480;
  * in, which opens over the canvas.
  */
 export function FindPanel({
-	state,
+	controller: { state, find },
 	styleGlyph,
 	optionsOpen,
-	onFind,
 	onToggleOptions,
 }: {
-	state: ImageDetectionState;
+	controller: FindController;
 	styleGlyph: ReactNode;
 	optionsOpen: boolean;
-	onFind: (scope: DetectionScope) => void;
 	onToggleOptions: () => void;
 }) {
 	const scanned = state.status === "idle" ? null : state.scope;
@@ -58,7 +56,7 @@ export function FindPanel({
 					icon={icon}
 					selected={scanned === scope}
 					busy={state.status === "working" && scanned === scope}
-					onPress={() => onFind(scope)}
+					onPress={() => find(scope)}
 				/>
 			))}
 			<ToolButton
@@ -96,27 +94,13 @@ export function FindBar<T extends RedactLook>(props: RedactLookProps<T>) {
  * a tray. It has no backdrop: taps on the canvas toggle the regions found.
  */
 export function FindTray({
-	state,
-	visibleIndices,
-	selectedCount,
-	review,
+	controller,
 	bottomInset,
-	onRetry,
 	onCancel,
-	onStop,
-	onSelectAll,
-	onClear,
 }: {
-	state: ImageDetectionState;
-	visibleIndices: readonly number[];
-	selectedCount: number;
-	review: FindReview;
+	controller: FindController;
 	bottomInset: number;
-	onRetry: () => void;
 	onCancel: () => void;
-	onStop: () => void;
-	onSelectAll: () => void;
-	onClear: () => void;
 }) {
 	// The tray's own width, not the window's: the layers sidebar can narrow
 	// the canvas on web.
@@ -124,17 +108,10 @@ export function FindTray({
 	return (
 		<Tray bottomInset={bottomInset}>
 			<FindBody
-				state={state}
-				visibleIndices={visibleIndices}
-				selectedCount={selectedCount}
-				review={review}
+				controller={controller}
 				stacked={stacked}
 				onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
-				onRetry={onRetry}
 				onCancel={onCancel}
-				onStop={onStop}
-				onSelectAll={onSelectAll}
-				onClear={onClear}
 			/>
 		</Tray>
 	);
@@ -166,30 +143,15 @@ export function FindOptions({
  * layers. The bar holds the style, so this section has no Style button.
  */
 export function FindInspector({
-	state,
-	visibleIndices,
-	selectedCount,
-	review,
-	onFind,
-	onRetry,
+	controller,
 	onCancel,
-	onStop,
-	onSelectAll,
-	onClear,
 	children,
 }: {
-	state: ImageDetectionState;
-	visibleIndices: readonly number[];
-	selectedCount: number;
-	review: FindReview;
-	onFind: (scope: DetectionScope) => void;
-	onRetry: () => void;
+	controller: FindController;
 	onCancel: () => void;
-	onStop: () => void;
-	onSelectAll: () => void;
-	onClear: () => void;
 	children: ReactNode;
 }) {
+	const { state, find } = controller;
 	const scanned = state.status === "idle" ? null : state.scope;
 	return (
 		<View style={styles.inspectorStack}>
@@ -202,22 +164,11 @@ export function FindInspector({
 							icon={icon}
 							selected={scanned === scope}
 							busy={state.status === "working" && scanned === scope}
-							onPress={() => onFind(scope)}
+							onPress={() => find(scope)}
 						/>
 					))}
 				</View>
-				<FindBody
-					state={state}
-					visibleIndices={visibleIndices}
-					selectedCount={selectedCount}
-					review={review}
-					stacked
-					onRetry={onRetry}
-					onCancel={onCancel}
-					onStop={onStop}
-					onSelectAll={onSelectAll}
-					onClear={onClear}
-				/>
+				<FindBody controller={controller} stacked onCancel={onCancel} />
 			</View>
 			{children}
 		</View>
@@ -225,30 +176,18 @@ export function FindInspector({
 }
 
 function FindBody({
-	state,
-	visibleIndices,
-	selectedCount,
-	review,
+	controller,
 	stacked,
 	onMeasure,
-	onRetry,
 	onCancel,
-	onStop,
-	onSelectAll,
-	onClear,
 }: {
-	state: ImageDetectionState;
-	visibleIndices: readonly number[];
-	selectedCount: number;
-	review: FindReview;
+	controller: FindController;
 	stacked: boolean;
 	onMeasure?: (width: number) => void;
-	onRetry: () => void;
 	onCancel: () => void;
-	onStop: () => void;
-	onSelectAll: () => void;
-	onClear: () => void;
 }) {
+	const { state, visibleIndices, selectedCount, review } = controller;
+	const { retry, reset, selectAll, clear } = controller;
 	return (
 		<>
 			<Announcement
@@ -278,7 +217,7 @@ function FindBody({
 						title={`Finding ${scopeName(state.scope)}…`}
 						message="This can take a moment the first time."
 						action="Stop"
-						onAction={onStop}
+						onAction={reset}
 					/>
 				)}
 				{state.status === "found" && (
@@ -286,8 +225,8 @@ function FindBody({
 						count={visibleIndices.length}
 						selected={selectedCount}
 						review={review}
-						onSelectAll={onSelectAll}
-						onClear={onClear}
+						onSelectAll={selectAll}
+						onClear={clear}
 						issue={state.issues[0]?.message}
 					/>
 				)}
@@ -299,7 +238,7 @@ function FindBody({
 							title={`No ${scopeName(state.scope)} found`}
 							message={state.issues[0].message}
 							action="Try again"
-							onAction={onRetry}
+							onAction={retry}
 						/>
 					) : (
 						<Status

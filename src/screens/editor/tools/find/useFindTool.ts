@@ -44,6 +44,8 @@ export type ReviewView = {
  * from and redact, and to review one at a time. What's found goes stale when
  * the image or the document changes shape.
  */
+export type FindController = ReturnType<typeof useFindTool>;
+
 export function useFindTool(
 	document: EditorDocument,
 	image: ImageLayer | null,

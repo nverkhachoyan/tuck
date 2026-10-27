@@ -136,21 +136,6 @@ function findStyle({
 	};
 }
 
-/** What Find's results take, in the phone's tray and the inspector. */
-function findResults({ tools: { find }, onCancel }: ToolViewContext) {
-	return {
-		state: find.state,
-		visibleIndices: find.visibleIndices,
-		selectedCount: find.selectedCount,
-		review: find.review,
-		onRetry: find.retry,
-		onCancel,
-		onStop: find.reset,
-		onSelectAll: find.selectAll,
-		onClear: find.clear,
-	};
-}
-
 /**
  * What one panel shows, wherever the editor shows it. Each field renders
  * elements from the context and calls no hooks, so React keeps each view as
@@ -236,12 +221,11 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 	find: {
 		dock: ({ tools: { find }, redactLook, optionsOpen, toggleOptions }) => (
 			<FindPanel
-				state={find.state}
+				controller={find}
 				styleGlyph={
 					<EffectGlyph settings={redactLook} effect={redactLook.effect} />
 				}
 				optionsOpen={optionsOpen}
-				onFind={find.find}
 				onToggleOptions={toggleOptions}
 			/>
 		),
@@ -252,12 +236,16 @@ export const TOOL_VIEWS: Record<Exclude<DockPanel, "idle">, ToolViews> = {
 				onClose={context.closeTray}
 			/>
 		),
-		results: (context) => (
-			<FindTray {...findResults(context)} bottomInset={context.bottomInset} />
+		results: ({ tools: { find }, bottomInset, onCancel }) => (
+			<FindTray
+				controller={find}
+				bottomInset={bottomInset}
+				onCancel={onCancel}
+			/>
 		),
 		bar: (context) => <FindBar {...findStyle(context)} />,
-		inspector: (context, layers) => (
-			<FindInspector {...findResults(context)} onFind={context.tools.find.find}>
+		inspector: ({ tools: { find }, onCancel }, layers) => (
+			<FindInspector controller={find} onCancel={onCancel}>
 				{layers}
 			</FindInspector>
 		),
