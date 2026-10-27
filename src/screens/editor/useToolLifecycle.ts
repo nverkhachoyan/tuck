@@ -97,7 +97,7 @@ export function useEditorTools({
 				redactionEffect(redact.chosen, documentSize),
 			);
 			redact.setChosen((current) => ({ ...current, tool: "box" }));
-			dispatchMode({ type: "startTool", tool: "redact" });
+			dispatchMode({ type: "startTool", start: { tool: "redact" } });
 		},
 	});
 
@@ -207,15 +207,18 @@ export function useToolLifecycle({
 
 	const startDrawing = () => {
 		draw.chooseTool();
-		dispatchMode({ type: "startTool", tool: "draw" });
+		dispatchMode({ type: "startTool", start: { tool: "draw" } });
 	};
 	const startRedacting = () => {
 		redact.chooseTool();
-		dispatchMode({ type: "startTool", tool: "redact" });
+		dispatchMode({ type: "startTool", start: { tool: "redact" } });
 	};
 	const startAdjusting = () => {
 		if (!targetImage) return;
-		dispatchMode({ type: "startAdjust", layerId: targetImage.id });
+		dispatchMode({
+			type: "startTool",
+			start: { tool: "adjust", layerId: targetImage.id },
+		});
 	};
 	const closeTool = () => {
 		dispatchMode({ type: "endTool" });
@@ -245,7 +248,10 @@ export function useToolLifecycle({
 			return;
 		}
 		pendingCut.current = targetImage;
-		dispatchMode({ type: "startCutOut", layerId: targetImage.id });
+		dispatchMode({
+			type: "startTool",
+			start: { tool: "cutOut", layerId: targetImage.id },
+		});
 	};
 	useEffect(() => {
 		const image = pendingCut.current;
@@ -256,7 +262,7 @@ export function useToolLifecycle({
 	// In the selected photo, or else the main one.
 	const startFinding = () => {
 		if (!targetImage) return;
-		dispatchMode({ type: "startTool", tool: "find" });
+		dispatchMode({ type: "startTool", start: { tool: "find" } });
 	};
 	// Find is one of Redact's tools, so Cancel and Done both go back to
 	// Redact, with the tool it last used, to draw over anything Find missed.

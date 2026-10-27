@@ -50,6 +50,11 @@ export type EditorTool = Extract<EditorMode, { type: "tool" }>["tool"];
 
 type TrayTool = Extract<EditorMode, { optionsOpen: boolean }>;
 
+/** A tool to start, with the image it works on when it needs one. */
+export type ToolStart =
+	| { tool: "draw" | "redact" | "find" }
+	| { tool: "adjust" | "cutOut"; layerId: string };
+
 /**
  * The mode, and what sits over it. A text color picker belongs to a layer,
  * and closes when that text isn't the one styled. The eyedropper waits for a
@@ -85,9 +90,7 @@ export type ModeTargets = {
 };
 
 export type EditorModeAction =
-	| { type: "startTool"; tool: "draw" | "redact" | "find" }
-	| { type: "startAdjust"; layerId: string }
-	| { type: "startCutOut"; layerId: string }
+	| { type: "startTool"; start: ToolStart }
 	| { type: "endTool" }
 	| { type: "toggleToolOptions" }
 	| { type: "closeToolOptions" }
@@ -125,28 +128,7 @@ export function editorModeReducer(
 		case "startTool":
 			return {
 				...state,
-				mode: { type: "tool", tool: action.tool, optionsOpen: false },
-				textPicker: null,
-				eyedropper: null,
-				sheet: withoutLayers(state.sheet),
-			};
-		case "startAdjust":
-			return {
-				...state,
-				mode: { type: "tool", tool: "adjust", layerId: action.layerId },
-				textPicker: null,
-				eyedropper: null,
-				sheet: withoutLayers(state.sheet),
-			};
-		case "startCutOut":
-			return {
-				...state,
-				mode: {
-					type: "tool",
-					tool: "cutOut",
-					layerId: action.layerId,
-					optionsOpen: false,
-				},
+				mode: toolMode(action.start),
 				textPicker: null,
 				eyedropper: null,
 				sheet: withoutLayers(state.sheet),
@@ -237,7 +219,7 @@ export function settle(
 	const { mode, textPicker } = state;
 	const toolGone =
 		mode.type === "tool" &&
-		(mode.tool === "adjust" || mode.tool === "cutOut"
+		("layerId" in mode
 			? !targets.isAdjustable(mode.layerId)
 			: mode.tool === "find" && !targets.canFind);
 	const styledTextId =
@@ -322,8 +304,24 @@ export function shortcutCommand(
 	return shortcut;
 }
 
+// The mode a tool starts in. A tool with a tray starts with it closed.
+function toolMode(start: ToolStart): Extract<EditorMode, { type: "tool" }> {
+	if (start.tool === "adjust") {
+		return { type: "tool", tool: "adjust", layerId: start.layerId };
+	}
+	if (start.tool === "cutOut") {
+		return {
+			type: "tool",
+			tool: "cutOut",
+			layerId: start.layerId,
+			optionsOpen: false,
+		};
+	}
+	return { type: "tool", tool: start.tool, optionsOpen: false };
+}
+
 function hasTray(mode: EditorMode): mode is TrayTool {
-	return mode.type === "tool" && mode.tool !== "adjust";
+	return mode.type === "tool" && "optionsOpen" in mode;
 }
 
 /** The tool whose tray is open, or null when none is. */
