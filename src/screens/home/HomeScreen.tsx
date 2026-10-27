@@ -113,45 +113,14 @@ export default function HomeScreen() {
 	useFocusEffect(useCallback(() => () => setEditing(false), []));
 
 	const start = (
-		<View
-			style={[
-				styles.start,
-				startOnTop && styles.startRow,
-				// With projects, the row shares the column's left edge with the
-				// wordmark and the prints. On an empty home it stays centered
-				// under the wordmark.
-				startOnTop && hasProjects && styles.startAligned,
-			]}
-		>
-			<Button
-				label={openPhotoLabels[status]}
-				// The label changes while busy; a screen reader needs the verb.
-				accessibilityLabel={blocked ? undefined : "Open a photo"}
-				icon="images-outline"
-				variant="primary"
-				size={startOnTop ? "medium" : "large"}
-				disabled={blocked}
-				onPress={choosePhoto}
-			/>
-			<View style={styles.startSecondary}>
-				<View style={startOnTop ? undefined : styles.flex}>
-					<Button
-						label="Paste"
-						icon="clipboard-outline"
-						disabled={blocked}
-						onPress={pasteImage}
-					/>
-				</View>
-				<View style={startOnTop ? undefined : styles.flex}>
-					<Button
-						label="Blank canvas"
-						icon="add"
-						disabled={blocked}
-						onPress={() => router.push("/create")}
-					/>
-				</View>
-			</View>
-		</View>
+		<StartActions
+			status={status}
+			row={startOnTop}
+			aligned={startOnTop && hasProjects}
+			onChoosePhoto={choosePhoto}
+			onPaste={pasteImage}
+			onBlankCanvas={() => router.push("/create")}
+		/>
 	);
 
 	return (
@@ -164,57 +133,23 @@ export default function HomeScreen() {
 		>
 			<PageHead path="/" />
 			{hasProjects ? (
-				<View style={styles.header}>
-					<View style={[styles.column, styles.headerColumn]}>
-						<View style={styles.headerRow}>
-							<Wordmark size={34} />
-							<View style={styles.headerActions}>
-								<TextButton
-									label={editing ? "Done" : "Edit"}
-									tone={editing ? "strong" : "default"}
-									onPress={() => setEditing((on) => !on)}
-								/>
-								<IconButton
-									icon="settings-outline"
-									label="Settings"
-									onPress={() => router.push("/settings")}
-								/>
-							</View>
-						</View>
-						{startOnTop && start}
-					</View>
-				</View>
+				<HomeHeader
+					editing={editing}
+					onToggleEditing={() => setEditing((on) => !on)}
+					onSettings={() => router.push("/settings")}
+				>
+					{startOnTop && start}
+				</HomeHeader>
 			) : (
-				<View style={styles.hero}>
-					{/* In the app, only once the list is known to be empty, so a
-						returning user's projects don't replace a flash of it. */}
-					{(listed || prerendering) && (
-						<>
-							<Wordmark size={72} />
-							<Animated.Text
-								// Reanimated hides a view until it enters.
-								entering={
-									prerendering ? undefined : FadeIn.delay(160).duration(400)
-								}
-								style={styles.tagline}
-							>
-								The last touch for photos and screenshots.{"\n"}No account, no
-								waiting.
-							</Animated.Text>
-						</>
-					)}
+				<HomeHero showWordmark={listed || prerendering}>
 					{startOnTop && (
 						<View style={styles.heroActions}>
 							{start}
-							{Platform.OS === "web" && (
-								<Text style={styles.hint}>
-									Or paste a screenshot, or drop an image anywhere.
-								</Text>
-							)}
+							{Platform.OS === "web" && <PasteHint />}
 							<AboutLinks withSettings />
 						</View>
 					)}
-				</View>
+				</HomeHero>
 			)}
 
 			{hasProjects && (
@@ -267,11 +202,7 @@ export default function HomeScreen() {
 				>
 					<View style={[styles.column, styles.bottomColumn]}>
 						{start}
-						{!hasProjects && Platform.OS === "web" && wide && (
-							<Text style={styles.hint}>
-								Or paste a screenshot, or drop an image anywhere.
-							</Text>
-						)}
+						{!hasProjects && Platform.OS === "web" && wide && <PasteHint />}
 						{!hasProjects && <AboutLinks withSettings />}
 					</View>
 				</View>
@@ -309,6 +240,149 @@ function useSharedPhotos({
 	useEffect(
 		() => listenForLaunchedPhotos((name) => router.setParams({ shared: name })),
 		[router],
+	);
+}
+
+/**
+ * The ways to start a project: open a photo, paste one, or a blank canvas.
+ * - `row`: side by side, at the top of a wide screen, rather than stacked in
+ *   the bottom bar, the secondary two sharing a row under the first.
+ * - `aligned`: with projects, the row shares the column's left edge with the
+ *   wordmark and the prints. On an empty home it stays centered under the
+ *   wordmark.
+ */
+function StartActions({
+	status,
+	row,
+	aligned,
+	onChoosePhoto,
+	onPaste,
+	onBlankCanvas,
+}: {
+	status: HomeStatus;
+	row: boolean;
+	aligned: boolean;
+	onChoosePhoto: () => void;
+	onPaste: () => void;
+	onBlankCanvas: () => void;
+}) {
+	const blocked = status !== "idle";
+	const slot = row ? undefined : styles.flex;
+	return (
+		<View
+			style={[
+				styles.start,
+				row && styles.startRow,
+				aligned && styles.startAligned,
+			]}
+		>
+			<Button
+				label={openPhotoLabels[status]}
+				// The label changes while busy; a screen reader needs the verb.
+				accessibilityLabel={blocked ? undefined : "Open a photo"}
+				icon="images-outline"
+				variant="primary"
+				size={row ? "medium" : "large"}
+				disabled={blocked}
+				onPress={onChoosePhoto}
+			/>
+			<View style={styles.startSecondary}>
+				<View style={slot}>
+					<Button
+						label="Paste"
+						icon="clipboard-outline"
+						disabled={blocked}
+						onPress={onPaste}
+					/>
+				</View>
+				<View style={slot}>
+					<Button
+						label="Blank canvas"
+						icon="add"
+						disabled={blocked}
+						onPress={onBlankCanvas}
+					/>
+				</View>
+			</View>
+		</View>
+	);
+}
+
+/** Home's header over its projects: the wordmark, Edit, and Settings. */
+function HomeHeader({
+	editing,
+	onToggleEditing,
+	onSettings,
+	children,
+}: {
+	editing: boolean;
+	onToggleEditing: () => void;
+	onSettings: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<View style={styles.header}>
+			<View style={[styles.column, styles.headerColumn]}>
+				<View style={styles.headerRow}>
+					<Wordmark size={34} />
+					<View style={styles.headerActions}>
+						<TextButton
+							label={editing ? "Done" : "Edit"}
+							tone={editing ? "strong" : "default"}
+							onPress={onToggleEditing}
+						/>
+						<IconButton
+							icon="settings-outline"
+							label="Settings"
+							onPress={onSettings}
+						/>
+					</View>
+				</View>
+				{children}
+			</View>
+		</View>
+	);
+}
+
+/**
+ * An empty home's hero: the wordmark and the tagline, once `showWordmark`.
+ * In the app, that's once the list is known to be empty, so a returning
+ * user's projects don't replace a flash of it.
+ */
+function HomeHero({
+	showWordmark,
+	children,
+}: {
+	showWordmark: boolean;
+	children: ReactNode;
+}) {
+	return (
+		<View style={styles.hero}>
+			{showWordmark && (
+				<>
+					<Wordmark size={72} />
+					<Animated.Text
+						// Reanimated hides a view until it enters.
+						entering={
+							prerendering ? undefined : FadeIn.delay(160).duration(400)
+						}
+						style={styles.tagline}
+					>
+						The last touch for photos and screenshots.{"\n"}No account, no
+						waiting.
+					</Animated.Text>
+				</>
+			)}
+			{children}
+		</View>
+	);
+}
+
+function PasteHint() {
+	return (
+		<Text style={styles.hint}>
+			Or paste a screenshot, or drop an image anywhere.
+		</Text>
 	);
 }
 
