@@ -48,6 +48,9 @@ export type EditorMode =
 
 export type EditorTool = Extract<EditorMode, { type: "tool" }>["tool"];
 
+// The tools whose brush `[` and `]` step.
+export const SIZED_TOOLS: readonly EditorTool[] = ["draw", "redact", "cutOut"];
+
 type TrayTool = Extract<EditorMode, { optionsOpen: boolean }>;
 
 /** A tool to start, with the image it works on when it needs one. */
@@ -289,9 +292,7 @@ export function shortcutCommand(
 		// sub-tool with no size, like a box, leaves the size where it is.
 		if (
 			shortcut.type === "brushSize" &&
-			(state.mode.tool === "draw" ||
-				state.mode.tool === "redact" ||
-				state.mode.tool === "cutOut")
+			SIZED_TOOLS.includes(state.mode.tool)
 		) {
 			return shortcut;
 		}

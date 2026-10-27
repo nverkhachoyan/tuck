@@ -6,7 +6,7 @@ import type { ImageLayer } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import { addImage } from "@/projects/projectService";
 import { useStore } from "@/store";
-import { cutOutTool, parseCutOutSettings } from "./cutOutSettings";
+import { cutOutTool, parseCutOutSettings, stepCutSize } from "./cutOutSettings";
 import { useCutOut } from "./useCutOut";
 import { useCutRedaction } from "./useCutRedaction";
 
@@ -17,7 +17,7 @@ import { useCutRedaction } from "./useCutRedaction";
  * can't be done. A mask found after Cut out was put down, or moved to
  * another image, isn't wanted any more. Redacting the cut's selection
  * hands `onRedact` a mask file of what the cut keeps and the part of the
- * image it covers.
+ * image it covers. `stepSize` steps the brush's size for `[` and `]`.
  */
 export function useCutOutTool({
 	layer,
@@ -57,12 +57,18 @@ export function useCutOutTool({
 		},
 	});
 	const cut = layer && isCutOut(layer) ? layer : undefined;
+	const tool = cutOutTool(settings, cutOut.canFind);
 
 	return {
 		layer,
 		settings,
 		change,
-		tool: cutOutTool(settings, cutOut.canFind),
+		tool,
+		// A sub-tool with no size, like Pick, leaves the settings alone.
+		stepSize: (step: 1 | -1) => {
+			const next = stepCutSize(settings, tool, step);
+			if (next !== settings) change(next);
+		},
 		news: cutOut.news,
 		finding: cutOut.finding,
 		inverting: cutOut.inverting,

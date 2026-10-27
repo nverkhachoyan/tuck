@@ -9,16 +9,15 @@ import {
 	type EditorMode,
 	type EditorModeAction,
 	type EditorTool,
+	SIZED_TOOLS,
 	toolImageId,
 } from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useAdjustTool } from "./tools/adjust/useAdjustTool";
-import { stepCutSize } from "./tools/cutout/cutOutSettings";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
-import { stepBrushSize } from "./tools/draw/brushSettings";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
-import { redactionEffect, stepRedactSize } from "./tools/redact/redactSettings";
+import { redactionEffect } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
 import { useTextEditing } from "./tools/text/useTextEditing";
 
@@ -117,17 +116,13 @@ export function useEditorTools({
 		onRedacted,
 	});
 
+	// [ and ] step the open tool's brush, if it has one.
 	const stepToolSize = (step: 1 | -1) => {
-		if (tool === "draw") {
-			const next = stepBrushSize(draw.settings, step);
-			if (next !== draw.settings) draw.change(next);
-		} else if (tool === "redact") {
-			const next = stepRedactSize(redact.settings, step);
-			if (next !== redact.settings) redact.change(next);
-		} else if (tool === "cutOut") {
-			const next = stepCutSize(cut.settings, cut.tool, step);
-			if (next !== cut.settings) cut.change(next);
-		}
+		if (!tool || !SIZED_TOOLS.includes(tool)) return;
+		const sized: Partial<
+			Record<EditorTool, { stepSize: (step: 1 | -1) => void }>
+		> = { draw, redact, cutOut: cut };
+		sized[tool]?.stepSize(step);
 	};
 
 	const tools: EditorTools = {

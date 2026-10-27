@@ -8,6 +8,7 @@ import {
 	type RedactSettings,
 	redactionEffect,
 	sameEffect,
+	stepRedactSize,
 	withEffect,
 } from "./redactSettings";
 
@@ -15,6 +16,7 @@ import {
  * Redact's settings, kept between sessions as `chosen`, which Find uses
  * too. They show the selected redaction's style, which new ones then share,
  * so a redaction can be picked to match. Changing them restyles that one.
+ * `stepSize` steps the brush's size for `[` and `]`.
  */
 export function useRedactTool(documentSize: Size) {
 	const selectedRedaction = useStore(selectSelectedRedaction);
@@ -54,5 +56,10 @@ export function useRedactTool(documentSize: Size) {
 					: current.tool,
 		}));
 
-	return { settings, change, chooseTool, chosen, setChosen };
+	const stepSize = (step: 1 | -1) => {
+		const next = stepRedactSize(settings, step);
+		if (next !== settings) change(next);
+	};
+
+	return { settings, change, chooseTool, stepSize, chosen, setChosen };
 }
