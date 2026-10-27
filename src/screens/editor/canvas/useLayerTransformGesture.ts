@@ -40,7 +40,7 @@ import {
 	ROTATION_SNAP,
 	snapAngle,
 	snapLinesFor,
-	snapSide,
+	snapSides,
 	snapSpan,
 } from "./snapping";
 import { type DocumentViewport, viewPointToDocument } from "./viewport";
@@ -224,30 +224,15 @@ export function useLayerTransformGesture({
 				MIN_BOX_PX / (viewport.scale * Math.min(start.scaleX, start.scaleY));
 			const a = toLayerSpace(start, from);
 			const b = toLayerSpace(start, to);
-			const offset = { x: b.x - a.x, y: b.y - a.y };
-			const sides = handleSides(handle);
-			const tolerance = SNAP_PX / viewport.scale;
-			let guideX: number | null = null;
-			let guideY: number | null = null;
-			for (const axis of ["x", "y"] as const) {
-				const side = sides[axis];
-				if (side === 0) continue;
-				const half = axis === "x" ? box.halfWidth : box.halfHeight;
-				const position = side * half + offset[axis];
-				const snap = snapSide(
-					start,
-					axis,
-					position,
-					snapLines.value,
-					tolerance,
-				);
-				if (!snap) continue;
-				// Unless that takes the box under its minimum (see `resizeByDrag`).
-				if (side * snap.position + half < Math.min(minSize, half * 2)) continue;
-				offset[axis] += snap.position - position;
-				if (snap.guide === "x") guideX = snap.line;
-				else guideY = snap.line;
-			}
+			const { offset, guideX, guideY } = snapSides(
+				start,
+				box,
+				handleSides(handle),
+				{ x: b.x - a.x, y: b.y - a.y },
+				snapLines.value,
+				SNAP_PX / viewport.scale,
+				minSize,
+			);
 			if (
 				(guideX !== null && guideX !== live.guideX.value) ||
 				(guideY !== null && guideY !== live.guideY.value)
@@ -292,6 +277,29 @@ export function useLayerTransformGesture({
 			resizedBox.value = true;
 		};
 
+		// Drags `handle` by the pan's travel: the knob rotates, a line's end
+		// moves, a box with a resize mode resizes, and anything else scales.
+		const dragHandleBy = (handle: Handle, dx: number, dy: number) => {
+			"worklet";
+			const start = panStart.value.transform;
+			const center = { x: start.x, y: start.y };
+			const from = toDocument(downX.value, downY.value);
+			const to = toDocument(downX.value + dx, downY.value + dy);
+			if (handle === "rotate") {
+				rotateTo(rotateByDrag(center, from, to, start.rotation));
+			} else if (live.resizeMode.value === "endpoints") {
+				dragEndTo(handle, from, to);
+			} else if (live.resizeMode.value !== "none") {
+				resizeTo(handle, from, to);
+			} else {
+				scaleTo(
+					scaleByDrag(center, from, to, start.scaleX),
+					start.scaleX,
+					start.scaleY,
+				);
+			}
+		};
+
 		// The first gesture to start holds the selected layer, if there is one.
 		const gestureStarted = () => {
 			"worklet";
@@ -330,6 +338,26 @@ export function useLayerTransformGesture({
 			live.heldId.value = null;
 		};
 
+		// Picks up the layer under the pan's touch-down point, or, off the
+		// selection, pins an anchored one where it is.
+		const pickUp = () => {
+			"worklet";
+			const target = findLayerAt(
+				layers.value,
+				toDocument(downX.value, downY.value),
+			);
+			const activeId = live.activeId.value;
+			if (target?.id === activeId) return;
+			if (onSelect && !dragOnly && target) {
+				holdLayer(live, target.id, target);
+				scheduleOnRN(onSelect, target.id);
+			} else {
+				pinned.value =
+					layers.value.find((layer) => layer.id === activeId)?.anchored ??
+					false;
+			}
+		};
+
 		const tap = Gesture.Tap()
 			.maxDistance(10)
 			.onEnd((event, success) => {
@@ -362,26 +390,13 @@ export function useLayerTransformGesture({
 				if (aside.value) return;
 				gestureStarted();
 				pinned.value = false;
-				// Picks up the layer under the touch-down point, unless it grabbed a
-				// handle or more than one finger is at work.
+				// Unless it grabbed a handle or more than one finger is at work.
 				if (
 					dragHandle.value === null &&
 					activeCount.value === 1 &&
 					event.numberOfPointers === 1
 				) {
-					const target = findLayerAt(
-						layers.value,
-						toDocument(downX.value, downY.value),
-					);
-					const activeId = live.activeId.value;
-					if (onSelect && !dragOnly && target && target.id !== activeId) {
-						holdLayer(live, target.id, target);
-						scheduleOnRN(onSelect, target.id);
-					} else if (target?.id !== activeId) {
-						pinned.value =
-							layers.value.find((layer) => layer.id === activeId)?.anchored ??
-							false;
-					}
+					pickUp();
 				}
 				panStart.value = {
 					transform: readLiveTransform(live),
@@ -397,31 +412,15 @@ export function useLayerTransformGesture({
 				const { dx, dy } = travel.value;
 				if (aside.value || !holding()) return;
 
-				const start = panStart.value.transform;
 				const handle = dragHandle.value;
 				if (handle !== null) {
-					const center = { x: start.x, y: start.y };
-					const from = toDocument(downX.value, downY.value);
-					const to = toDocument(downX.value + dx, downY.value + dy);
-					if (handle === "rotate") {
-						rotateTo(rotateByDrag(center, from, to, start.rotation));
-					} else if (live.resizeMode.value === "endpoints") {
-						dragEndTo(handle, from, to);
-					} else if (live.resizeMode.value !== "none") {
-						resizeTo(handle, from, to);
-					} else {
-						scaleTo(
-							scaleByDrag(center, from, to, start.scaleX),
-							start.scaleX,
-							start.scaleY,
-						);
-					}
-					moved.value = true;
+					dragHandleBy(handle, dx, dy);
+				} else if (pinned.value) {
 					return;
+				} else {
+					const start = panStart.value.transform;
+					moveTo(start.x + dx / viewport.scale, start.y + dy / viewport.scale);
 				}
-
-				if (pinned.value) return;
-				moveTo(start.x + dx / viewport.scale, start.y + dy / viewport.scale);
 				moved.value = true;
 			})
 			.onEnd(() => {

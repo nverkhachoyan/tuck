@@ -6,6 +6,7 @@ import {
 	snapAngle,
 	snapLinesFor,
 	snapSide,
+	snapSides,
 	snapSpan,
 	snapTo,
 } from "../snapping.ts";
@@ -176,5 +177,50 @@ describe("snapSide", () => {
 	test("leaves a slanted side alone, and one out of reach", () => {
 		assert.equal(snapSide(at(0.3), "x", 19, lines, 5), null);
 		assert.equal(snapSide(at(0), "x", 10, lines, 5), null);
+	});
+});
+
+describe("snapSides", () => {
+	const lines = {
+		x: { edges: [0, 200], centers: [100] },
+		y: { edges: [0, 100], centers: [50] },
+	};
+	const upright: Transform = {
+		x: 60,
+		y: 40,
+		scaleX: 2,
+		scaleY: 2,
+		rotation: 0,
+	};
+	const box = { halfWidth: 10, halfHeight: 10 };
+
+	test("snaps each side the handle moves, and names the lines", () => {
+		// The right side goes to 10 + 9 units, x = 98; the bottom to 10 + 4, y = 68.
+		assert.deepEqual(
+			snapSides(upright, box, { x: 1, y: 1 }, { x: 9, y: 4 }, lines, 5, 1),
+			{ offset: { x: 10, y: 4 }, guideX: 100, guideY: null },
+		);
+	});
+
+	test("leaves a side the handle doesn't move alone", () => {
+		assert.deepEqual(
+			snapSides(upright, box, { x: 0, y: 1 }, { x: 9, y: 0 }, lines, 5, 1),
+			{ offset: { x: 9, y: 0 }, guideX: null, guideY: null },
+		);
+	});
+
+	test("skips a snap that would take the box under its minimum", () => {
+		// The left side dragged to 1 unit from the right; the snap onto x = 0
+		// is far, but onto 100 would cross it.
+		const result = snapSides(
+			upright,
+			box,
+			{ x: -1, y: 0 },
+			{ x: 19, y: 0 },
+			lines,
+			100,
+			4,
+		);
+		assert.deepEqual(result.offset, { x: 19, y: 0 });
 	});
 });

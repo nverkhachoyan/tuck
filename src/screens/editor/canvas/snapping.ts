@@ -133,6 +133,47 @@ export function snapSide(
 }
 
 /**
+ * Snaps each side a resize moves onto `lines` (see `snapSide`).
+ * - `transform`, `box`: the layer when the resize began.
+ * - `sides`: which side moves along each axis, -1, 1, or 0 for neither.
+ * - `offset`: the drag, in the layer's own units.
+ * - `minSize`: a snap that would take the box under it is skipped.
+ * Returns the offset with each snap applied, and the lines snapped onto.
+ */
+export function snapSides(
+	transform: Transform,
+	box: Box,
+	sides: { x: -1 | 0 | 1; y: -1 | 0 | 1 },
+	offset: { x: number; y: number },
+	lines: { x: AxisLines; y: AxisLines },
+	tolerance: number,
+	minSize: number,
+): {
+	offset: { x: number; y: number };
+	guideX: number | null;
+	guideY: number | null;
+} {
+	"worklet";
+	const snapped = { ...offset };
+	let guideX: number | null = null;
+	let guideY: number | null = null;
+	for (const axis of ["x", "y"] as const) {
+		const side = sides[axis];
+		if (side === 0) continue;
+		const half = axis === "x" ? box.halfWidth : box.halfHeight;
+		const position = side * half + offset[axis];
+		const snap = snapSide(transform, axis, position, lines, tolerance);
+		if (!snap) continue;
+		// Unless that takes the box under its minimum (see `resizeByDrag`).
+		if (side * snap.position + half < Math.min(minSize, half * 2)) continue;
+		snapped[axis] += snap.position - position;
+		if (snap.guide === "x") guideX = snap.line;
+		else guideY = snap.line;
+	}
+	return { offset: snapped, guideX, guideY };
+}
+
+/**
  * Along one axis of a canvas `length` long: its edges and center, then the
  * ends and middle of each span. Lines off the canvas are left out, since
  * nothing past its edges is exported.
