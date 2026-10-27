@@ -5,7 +5,8 @@ import { TOOL_KEYS } from "../shortcuts";
 import { BarButton } from "./ContextBar";
 import { layerActionsFor } from "./layerActions";
 import { ToolButton, ToolRow } from "./ToolButton";
-import { TOOLS, type ToolStarters } from "./ToolsPanel";
+import type { ToolStarters } from "./ToolsPanel";
+import { TOOLS } from "./toolList";
 
 /**
  * What only the selected photo, drawing, shape, or redaction can do, in

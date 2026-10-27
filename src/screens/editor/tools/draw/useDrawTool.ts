@@ -8,6 +8,7 @@ import {
 	type BrushSettings,
 	parseBrushSettings,
 	shapeEdit,
+	stepBrushSize,
 	withShape,
 } from "./brushSettings";
 
@@ -15,7 +16,8 @@ import {
  * Draw's settings, kept between sessions. While Draw is `active` with the
  * shape tool, they show the selected shape's style, and changing them
  * restyles that one. A kind it can't become, a box for a line or a line for
- * a box, starts a new shape instead.
+ * a box, starts a new shape instead. `stepSize` steps the brush's size for
+ * `[` and `]`.
  */
 export function useDrawTool(active: boolean, documentSize: Size) {
 	const selectedShape = useStore(selectSelectedShape);
@@ -62,5 +64,10 @@ export function useDrawTool(active: boolean, documentSize: Size) {
 				: current;
 		});
 
-	return { settings, change, chooseTool };
+	const stepSize = (step: 1 | -1) => {
+		const next = stepBrushSize(settings, step);
+		if (next !== settings) change(next);
+	};
+
+	return { settings, change, chooseTool, stepSize };
 }

@@ -40,6 +40,7 @@ import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import {
 	ContextBarContent,
 	DockContent,
+	hasInspectorSection,
 	ToolTrays,
 	toolViewContext,
 } from "./EditorDock";
@@ -72,7 +73,7 @@ import { useEditNotice } from "./useEditNotice";
 import { RAIL_INSET, useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import { useEditorShortcuts } from "./useEditorShortcuts";
-import { useEditorTools } from "./useToolLifecycle";
+import { useEditorTools } from "./useEditorTools";
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
@@ -251,7 +252,8 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const layout = useEditorLayout({
 		typing: editingText,
 		layersOpen,
-		inspectorRequested: layersOpen || tool === "find" || tool === "adjust",
+		inspectorRequested:
+			layersOpen || (tool !== null && hasInspectorSection(tool)),
 	});
 	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
 	const toolOptionsOpen = openTray(mode) !== null;

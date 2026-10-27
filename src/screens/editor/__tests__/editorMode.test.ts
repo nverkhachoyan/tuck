@@ -41,7 +41,10 @@ const targets = (overrides: Partial<ModeTargets> = {}): ModeTargets => ({
 	...overrides,
 });
 
-const drawing = run(initialEditorMode, { type: "startTool", tool: "draw" });
+const drawing = run(initialEditorMode, {
+	type: "startTool",
+	start: { tool: "draw" },
+});
 
 describe("editorModeReducer", () => {
 	test("starting a tool closes the layers sheet and a text color picker", () => {
@@ -49,7 +52,7 @@ describe("editorModeReducer", () => {
 			initialEditorMode,
 			{ type: "toggleLayers" },
 			{ type: "openTextPicker", layerId: "text", key: "color" },
-			{ type: "startTool", tool: "redact" },
+			{ type: "startTool", start: { tool: "redact" } },
 		);
 		assert.deepEqual(state.mode, {
 			type: "tool",
@@ -62,7 +65,7 @@ describe("editorModeReducer", () => {
 		const adjusting = run(
 			initialEditorMode,
 			{ type: "toggleLayers" },
-			{ type: "startAdjust", layerId: "photo" },
+			{ type: "startTool", start: { tool: "adjust", layerId: "photo" } },
 		);
 		assert.deepEqual(adjusting.mode, {
 			type: "tool",
@@ -74,7 +77,7 @@ describe("editorModeReducer", () => {
 		const cutting = run(
 			initialEditorMode,
 			{ type: "toggleLayers" },
-			{ type: "startCutOut", layerId: "photo" },
+			{ type: "startTool", start: { tool: "cutOut", layerId: "photo" } },
 			{ type: "toggleToolOptions" },
 		);
 		assert.deepEqual(cutting.mode, {
@@ -127,8 +130,8 @@ describe("editorModeReducer", () => {
 		assert.deepEqual(run(open, { type: "toggleToolOptions" }), drawing);
 
 		const adjusting = run(initialEditorMode, {
-			type: "startAdjust",
-			layerId: "photo",
+			type: "startTool",
+			start: { tool: "adjust", layerId: "photo" },
 		});
 		assert.equal(run(adjusting, { type: "toggleToolOptions" }), adjusting);
 	});
@@ -200,8 +203,8 @@ describe("editorModeReducer", () => {
 			eyedropper: eyedropper(),
 		});
 		for (const action of [
-			{ type: "startTool", tool: "draw" },
-			{ type: "startAdjust", layerId: "photo" },
+			{ type: "startTool", start: { tool: "draw" } },
+			{ type: "startTool", start: { tool: "adjust", layerId: "photo" } },
 			{ type: "startText", edit: edit("text") },
 			{ type: "startCrop" },
 			{ type: "openStickers" },
@@ -242,7 +245,7 @@ describe("editorModeReducer", () => {
 		assert.equal(stickers.sheet, "stickers");
 		assert.equal(run(stickers, { type: "closeLayers" }), stickers);
 		assert.equal(
-			run(stickers, { type: "startTool", tool: "draw" }).sheet,
+			run(stickers, { type: "startTool", start: { tool: "draw" } }).sheet,
 			"stickers",
 		);
 		assert.equal(run(stickers, { type: "closeStickers" }).sheet, null);
@@ -271,8 +274,8 @@ describe("editorModeReducer", () => {
 
 describe("settle", () => {
 	const adjusting = run(initialEditorMode, {
-		type: "startAdjust",
-		layerId: "photo",
+		type: "startTool",
+		start: { tool: "adjust", layerId: "photo" },
 	});
 
 	test("puts Adjust down when its image is gone or hidden", () => {
@@ -286,8 +289,8 @@ describe("settle", () => {
 
 	test("puts Cut out down when its image is gone or hidden", () => {
 		const cutting = run(initialEditorMode, {
-			type: "startCutOut",
-			layerId: "photo",
+			type: "startTool",
+			start: { tool: "cutOut", layerId: "photo" },
 		});
 		assert.equal(settle(cutting, targets()), cutting);
 		const settled = settle(
@@ -300,17 +303,20 @@ describe("settle", () => {
 	test("puts Find down with no photo left, and its tray with it", () => {
 		const finding = run(
 			initialEditorMode,
-			{ type: "startTool", tool: "find" },
+			{ type: "startTool", start: { tool: "find" } },
 			{ type: "toggleToolOptions" },
 		);
 		assert.equal(settle(finding, targets()), finding);
 		const settled = settle(finding, targets({ canFind: false }));
 		assert.deepEqual(settled.mode, { type: "idle" });
-		assert.deepEqual(run(settled, { type: "startTool", tool: "draw" }).mode, {
-			type: "tool",
-			tool: "draw",
-			optionsOpen: false,
-		});
+		assert.deepEqual(
+			run(settled, { type: "startTool", start: { tool: "draw" } }).mode,
+			{
+				type: "tool",
+				tool: "draw",
+				optionsOpen: false,
+			},
+		);
 		assert.equal(settle(drawing, targets({ canFind: false })), drawing);
 	});
 
@@ -511,7 +517,10 @@ describe("shortcutCommand", () => {
 		assert.deepEqual(shortcutCommand(drawing, null, smaller), smaller);
 		assert.deepEqual(
 			shortcutCommand(
-				run(initialEditorMode, { type: "startTool", tool: "redact" }),
+				run(initialEditorMode, {
+					type: "startTool",
+					start: { tool: "redact" },
+				}),
 				null,
 				larger,
 			),
@@ -520,8 +529,8 @@ describe("shortcutCommand", () => {
 		assert.deepEqual(
 			shortcutCommand(
 				run(initialEditorMode, {
-					type: "startCutOut",
-					layerId: "image",
+					type: "startTool",
+					start: { tool: "cutOut", layerId: "image" },
 				}),
 				null,
 				smaller,
@@ -530,7 +539,7 @@ describe("shortcutCommand", () => {
 		);
 		assert.equal(
 			shortcutCommand(
-				run(initialEditorMode, { type: "startTool", tool: "find" }),
+				run(initialEditorMode, { type: "startTool", start: { tool: "find" } }),
 				null,
 				smaller,
 			),

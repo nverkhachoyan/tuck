@@ -6,7 +6,7 @@ Each section stands alone, so they can go in any order.
 
 ## 1. Checks only a device can make
 
-The October 24 critique work and the refactors after it (October 25 and 26) were checked on web, at 390, 1024, and 1440 points wide. The tool options refactor (`bdb2805`) and the move of tool code out of `canvas/` (`703fddf` to `7afc71a`) weren't run on a simulator, and the `canvas/` move's web check isn't recorded either. Nor is either check recorded for each tool's canvas input (`eb0e554` to `b87e7f6`), which changed what every canvas gesture calls, though not the gestures themselves.
+The October 24 critique work and the refactors after it (October 25 and 26) were checked on web, at 390, 1024, and 1440 points wide. The tool options refactor (`bdb2805`) and the move of tool code out of `canvas/` (`703fddf` to `7afc71a`) weren't run on a simulator, and the `canvas/` move's web check isn't recorded either. Nor is either check recorded for each tool's canvas input (`eb0e554` to `b87e7f6`), which changed what every canvas gesture calls, though not the gestures themselves. The tool lifecycle refactor ([tool-lifecycle-plan.md](tool-lifecycle-plan.md), `2e5c184` to `9294a2f`) was checked on web at 390 and 1440 points wide, but not on a simulator.
 
 * **Every canvas tool kind, after the canvas input refactor.** In the web editor at 390 and 1440 points wide, and on the iOS simulator: a pen, highlighter (it joins only a highlighter layer), and eraser stroke; a dragged rectangle and arrow, a tap that selects a shape, and a drag that moves the selected one; a Redact box, a brushed redaction that joins the selected one, and a tap that selects a box; a Cut out brush stroke and a Pick tap; the eyedropper from Draw's color, from text's color while typing (the text keeps drawing), and from Find's redaction style (the found regions hide while it picks); a Find region chosen and unchosen, and a tap off the image that puts Find down; a sideways drag in Adjust; and a tap off the document while painting that puts the tool down.
 
@@ -27,6 +27,7 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 
 * **The bar's fade geometry.** `rowEdges`, `leafEdges`, `fadeCut`, and `fadeCutLeft` in `shell/ContextBar.tsx` are pure and untested. Move them to `shell/barFade.ts`, with tests.
 * **`TextStylePanel`'s `ScrollRow`.** A simpler fade than the bar's, for the dock's font and swatch rows. Once the bar's geometry has its own file, the row can share it.
+* **How tools open and close.** Each tool's label, starting mode, tray, size step, and inspector section are still written in more than one place, across `useToolLifecycle.ts`, `editorMode.ts`, `editorChrome.ts`, `shell/ToolsPanel.tsx`, and `EditorScreen.tsx`. Planned in [tool-lifecycle-plan.md](tool-lifecycle-plan.md).
 * **Small ones.** `EditorDock.tsx` holds `TOOL_VIEWS` and could be named for it. The wide window's `EyedropperHint` could move to an overlay both layouts share.
 
 ## 4. Smart selection
