@@ -1,67 +1,27 @@
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
-import {
-	BackHandler,
-	Platform,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import { BackHandler, Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { EditorDocument } from "@/model/document";
 import type { Framing } from "@/model/framing";
-import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { CanvasStage } from "@/ui/CanvasStage";
-import { CheckerFill } from "@/ui/CheckerFill";
-import { Chip } from "@/ui/Chip";
-import { compactControls } from "@/ui/density";
-import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
-import { Popover } from "@/ui/Popover";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { TextButton } from "@/ui/TextButton";
-import { colors, radii, typography, webTransition } from "@/ui/theme";
-import {
-	BarButton,
-	BarChip,
-	BarGroup,
-	BarSections,
-	ContextBar,
-	OptionSegments,
-} from "../../shell/ContextBar";
+import { colors } from "@/ui/theme";
+import { ContextBar } from "../../shell/ContextBar";
 import { Dial } from "../../shell/Dial";
 import { Dock, DockFooter, useDockInset } from "../../shell/Dock";
-import type { DialScale } from "../../shell/dialDrag";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { CropCanvas } from "./CropCanvas";
-import { MAX_STRAIGHTEN } from "./cropGeometry";
 import {
-	ASPECT_ROWS,
-	ASPECTS,
-	type AspectId,
-	turnLayersLabel,
-} from "./cropOptions";
+	CROP_TABS,
+	CropBar,
+	CropControls,
+	type CropTab,
+	DEGREES,
+} from "./CropPanel";
+import { MAX_STRAIGHTEN } from "./cropGeometry";
+import { turnLayersLabel } from "./cropOptions";
 import { useCropController } from "./useCropController";
-
-type CropTab = "crop" | "rotate" | "canvas";
-
-// A degree a step, a long tick every 15, settling level from a degree away.
-const DEGREES: DialScale = {
-	step: Math.PI / 180,
-	pxPerStep: 8,
-	tickEvery: 1,
-	majorEvery: 15,
-	snap: 1,
-};
-
-const TABS: { tab: CropTab; label: string; icon: IconName }[] = [
-	{ tab: "crop", label: "Crop", icon: "crop" },
-	{ tab: "rotate", label: "Rotate", icon: "format-rotate-90" },
-	{ tab: "canvas", label: "Fill", icon: "checkerboard" },
-];
 
 // Room for the tallest tab's controls, so the canvas holds still as tabs
 // change: Rotate's dial over its actions, or the actions alone when there's
@@ -72,7 +32,7 @@ const CONTROLS_WITHOUT_DIAL = 64;
 // photo holds still when Rotate is chosen. The dial sits in it, centered.
 const DIAL_STRIP = 100;
 const DIAL_WIDTH = 360;
-const TAB_IN = FadeIn.duration(160);
+
 type CropToolProps = {
 	document: EditorDocument;
 	// A wide window puts the options in the header. A phone keeps the dock.
@@ -118,26 +78,7 @@ export function CropTool({
 		return () => subscription.remove();
 	}, [controller.done]);
 
-	// Return applies from the canvas, while controls keep their normal keyboard
-	// behavior. Escape applies from anywhere in the tool, as it's Done in the
-	// other tools; the crop is one undo step.
-	useEffect(() => {
-		if (Platform.OS !== "web") return;
-		const handleKeyDown = (event: KeyboardEvent) => {
-			// A popover takes Escape first, in the capture phase, and marks it
-			// handled. Applying here too would finish the crop as the menu closed.
-			if (event.defaultPrevented) return;
-			if (
-				event.key === "Escape" ||
-				(event.key === "Enter" && !isInteractiveElement(event.target))
-			) {
-				controller.done();
-			} else return;
-			event.preventDefault();
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	});
+	useCropKeys(controller.done);
 
 	const reset = controller.changed && (
 		<TextButton label="Reset" onPress={controller.reset} />
@@ -215,71 +156,7 @@ export function CropTool({
 					},
 				]}
 			>
-				<Animated.View key={tab} entering={TAB_IN} style={styles.tab}>
-					{tab === "crop" ? (
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							contentContainerStyle={styles.aspects}
-						>
-							{ASPECTS.map(({ id, label }) => (
-								<AspectChoice
-									key={id}
-									label={label}
-									selected={id === aspect}
-									onPress={() => controller.pickAspect(id)}
-								/>
-							))}
-						</ScrollView>
-					) : tab === "rotate" ? (
-						<>
-							{/* Levels a tilted photo; a canvas alone has nothing to level. */}
-							{anchor.layer && (
-								<Dial
-									value={controller.straighten}
-									max={MAX_STRAIGHTEN}
-									scale={DEGREES}
-									label="Straighten"
-									increaseLabel="Increase angle"
-									decreaseLabel="Decrease angle"
-									readout={(degrees) => `${degrees}°`}
-									valueText={(degrees) => `${degrees} degrees`}
-									onBegin={controller.straightenBegin}
-									onChange={controller.straightenChange}
-									onEnd={controller.straightenEnd}
-								/>
-							)}
-							<View style={styles.actions}>
-								<ActionButton
-									icon="rotate-left"
-									label="Rotate 90°"
-									onPress={controller.rotate}
-								/>
-								<ActionButton
-									icon="flip-horizontal"
-									label="Flip"
-									onPress={controller.flip}
-								/>
-								{turnLabel && (
-									<ActionButton
-										icon="format-text-rotation-angle-up"
-										label={turnLabel}
-										selected={turnLayers}
-										onPress={controller.toggleTurnLayers}
-									/>
-								)}
-							</View>
-						</>
-					) : (
-						<View style={styles.fill}>
-							<Text style={styles.fillLabel}>Background</Text>
-							<BackgroundPicker
-								value={background}
-								onPick={controller.setBackground}
-							/>
-						</View>
-					)}
-				</Animated.View>
+				<CropControls tab={tab} controller={controller} turnLabel={turnLabel} />
 			</View>
 
 			<Dock
@@ -294,7 +171,7 @@ export function CropTool({
 				}
 			>
 				<ToolRow>
-					{TABS.map(({ tab: value, label, icon }) => (
+					{CROP_TABS.map(({ tab: value, label, icon }) => (
 						<ToolButton
 							key={value}
 							label={label}
@@ -306,207 +183,6 @@ export function CropTool({
 				</ToolRow>
 			</Dock>
 		</View>
-	);
-}
-
-/** The wide header's modes, then the options for the one that's chosen. */
-function CropBar({
-	tab,
-	aspect,
-	background,
-	turnLayers,
-	turnLabel,
-	onTab,
-	onAspect,
-	onRotate,
-	onFlip,
-	onTurnLayers,
-	onBackground,
-}: {
-	tab: CropTab;
-	aspect: AspectId;
-	background: string | null;
-	turnLayers: boolean;
-	// What the switch to turn other layers is called; null hides it.
-	turnLabel: string | null;
-	onTab: (tab: CropTab) => void;
-	onAspect: (id: AspectId) => void;
-	onRotate: () => void;
-	onFlip: () => void;
-	onTurnLayers: () => void;
-	onBackground: (background: string | null) => void;
-}) {
-	const current = ASPECTS.find((option) => option.id === aspect);
-	return (
-		<BarSections>
-			<BarGroup>
-				<OptionSegments
-					label="Crop"
-					options={TABS.map(({ label, icon }) => ({ title: label, icon }))}
-					selected={TABS.findIndex((item) => item.tab === tab)}
-					onSelect={(index) => {
-						const next = TABS[index];
-						if (next) onTab(next.tab);
-					}}
-				/>
-			</BarGroup>
-			{/* Each option is its own child. A fragment would be one slot, and
-			    the buttons would stack in it. */}
-			<BarGroup>
-				{tab === "crop" && (
-					<AspectMenu
-						label={current?.label ?? "Free"}
-						selected={aspect}
-						onPick={onAspect}
-					/>
-				)}
-				{tab === "rotate" && (
-					<BarButton icon="rotate-left" label="Rotate 90°" onPress={onRotate} />
-				)}
-				{tab === "rotate" && (
-					<BarButton icon="flip-horizontal" label="Flip" onPress={onFlip} />
-				)}
-				{tab === "rotate" && turnLabel && (
-					<BarButton
-						icon={turnLayers ? "checkbox-marked" : "checkbox-blank-outline"}
-						label={turnLabel}
-						checked={turnLayers}
-						onPress={onTurnLayers}
-					/>
-				)}
-				{tab === "canvas" && (
-					<BackgroundChip value={background} onPick={onBackground} />
-				)}
-			</BarGroup>
-		</BarSections>
-	);
-}
-
-/** The current ratio, opening the three rows of choices. */
-function AspectMenu({
-	label,
-	selected,
-	onPick,
-}: {
-	label: string;
-	selected: AspectId;
-	onPick: (id: AspectId) => void;
-}) {
-	return (
-		<BarChip label={`Aspect ratio ${label}`} icon="aspect-ratio" text={label}>
-			{(close) => (
-				<View style={styles.aspectMenu}>
-					{ASPECT_ROWS.map((group) => (
-						<View key={group.join()} style={styles.aspectRow}>
-							{group.map((id) => {
-								const choice = ASPECTS.find((option) => option.id === id);
-								if (!choice) return null;
-								return (
-									<AspectChoice
-										key={id}
-										label={choice.label}
-										selected={id === selected}
-										onPress={() => {
-											onPick(id);
-											close();
-										}}
-									/>
-								);
-							})}
-						</View>
-					))}
-				</View>
-			)}
-		</BarChip>
-	);
-}
-
-/** One ratio, highlighted while it's the crop's. */
-function AspectChoice({
-	label,
-	selected,
-	onPress,
-}: {
-	label: string;
-	selected: boolean;
-	onPress: () => void;
-}) {
-	return (
-		<Chip
-			selected={selected}
-			onPress={onPress}
-			accessibilityLabel={`Aspect ratio ${label}`}
-			hitSlop={4}
-			style={styles.target}
-			frameStyle={styles.chip}
-		>
-			<Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
-				{label}
-			</Text>
-		</Chip>
-	);
-}
-
-/** The canvas fill, as a swatch that opens the three backgrounds. */
-function BackgroundChip({
-	value,
-	onPick,
-}: {
-	value: string | null;
-	onPick: (background: string | null) => void;
-}) {
-	const anchor = useRef<View>(null);
-	const [open, setOpen] = useState(false);
-	const label =
-		value === "#FFFFFF"
-			? "White background"
-			: value === "#000000"
-				? "Black background"
-				: "Transparent background";
-	return (
-		<>
-			<Pressable
-				ref={anchor}
-				accessibilityRole="button"
-				accessibilityLabel={label}
-				accessibilityState={{ expanded: open }}
-				aria-expanded={open}
-				onPress={() => setOpen((shown) => !shown)}
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.backgroundChip,
-						webTransition,
-						hovered && styles.backgroundChipHovered,
-						pressed && styles.backgroundChipPressed,
-					];
-				}}
-			>
-				<Text style={styles.backgroundLabel}>Background</Text>
-				<View
-					style={[
-						styles.backgroundSwatch,
-						value !== null && { backgroundColor: value },
-					]}
-				>
-					{value === null && <CheckerFill width={20} height={20} cell={10} />}
-				</View>
-			</Pressable>
-			<Popover
-				anchor={anchor}
-				open={open}
-				onClose={() => setOpen(false)}
-				label={label}
-			>
-				<BackgroundPicker
-					value={value}
-					onPick={(background) => {
-						onPick(background);
-						setOpen(false);
-					}}
-				/>
-			</Popover>
-		</>
 	);
 }
 
@@ -556,6 +232,33 @@ function DialStrip({
 	);
 }
 
+/**
+ * Crop's keys on web: Escape applies from anywhere in the tool, as it's Done
+ * in the other tools, and Enter applies from the canvas, while controls keep
+ * their own. The crop is one undo step.
+ */
+function useCropKeys(done: () => void) {
+	const latest = useRef(done);
+	latest.current = done;
+	useEffect(() => {
+		if (Platform.OS !== "web") return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			// A popover takes Escape first, in the capture phase, and marks it
+			// handled. Applying here too would finish the crop as the menu closed.
+			if (event.defaultPrevented) return;
+			if (
+				event.key === "Escape" ||
+				(event.key === "Enter" && !isInteractiveElement(event.target))
+			) {
+				latest.current();
+			} else return;
+			event.preventDefault();
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
+}
+
 /** Whether a web key event belongs to a control that handles Enter itself. */
 function isInteractiveElement(target: EventTarget | null): boolean {
 	return (
@@ -563,59 +266,6 @@ function isInteractiveElement(target: EventTarget | null): boolean {
 		target.closest(
 			'button, a, input, select, textarea, [role="button"], [role="slider"], [role="switch"], [contenteditable="true"]',
 		) !== null
-	);
-}
-
-type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
-
-/** An icon over a small label; `selected` highlights a toggle that's on. */
-function ActionButton({
-	icon,
-	label,
-	selected,
-	onPress,
-}: {
-	icon: IconName;
-	label: string;
-	selected?: boolean;
-	onPress: () => void;
-}) {
-	return (
-		<Pressable
-			hitSlop={6}
-			onPress={onPress}
-			accessibilityRole={selected === undefined ? "button" : "switch"}
-			accessibilityLabel={label}
-			accessibilityState={
-				selected === undefined ? undefined : { checked: selected }
-			}
-			aria-checked={selected}
-			style={styles.action}
-		>
-			{(state) => {
-				const { pressed, hovered } = interaction(state);
-				return (
-					<>
-						<View
-							style={[
-								styles.actionIcon,
-								webTransition,
-								hovered && styles.actionIconHovered,
-								pressed && styles.actionIconPressed,
-							]}
-						>
-							{selected && <Highlight />}
-							<MaterialCommunityIcons
-								name={icon}
-								size={22}
-								color={selected ? colors.onHighlight : colors.textPrimary}
-							/>
-						</View>
-						<Text style={styles.actionLabel}>{label}</Text>
-					</>
-				);
-			}}
-		</Pressable>
 	);
 }
 
@@ -629,107 +279,6 @@ const styles = StyleSheet.create({
 	controls: {
 		justifyContent: "flex-end",
 		paddingBottom: 8,
-	},
-	tab: {
-		gap: 4,
-	},
-	aspects: {
-		gap: 8,
-		paddingHorizontal: 16,
-	},
-	target: {
-		height: 44,
-		justifyContent: "center",
-	},
-	chip: {
-		height: 32,
-	},
-	chipLabel: {
-		...typography.label,
-		fontVariant: ["tabular-nums"],
-		color: colors.textPrimary,
-	},
-	chipLabelSelected: {
-		color: colors.onHighlight,
-	},
-	actions: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 20,
-		paddingHorizontal: 20,
-	},
-	action: {
-		minWidth: 56,
-		minHeight: 44,
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 2,
-	},
-	actionIcon: {
-		width: 36,
-		height: 36,
-		borderRadius: radii.small,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	actionIconHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	actionIconPressed: {
-		backgroundColor: colors.pressedOverlay,
-		transform: [{ scale: 0.92 }],
-	},
-	actionLabel: {
-		...typography.caption,
-		color: colors.textPrimary,
-	},
-	// Its own row keeps the picker reachable beside all three actions on a
-	// narrow phone.
-	fill: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 4,
-		paddingHorizontal: 20,
-	},
-	fillLabel: {
-		...typography.label,
-		color: colors.textSecondary,
-	},
-	aspectMenu: {
-		gap: 4,
-	},
-	aspectRow: {
-		flexDirection: "row",
-		gap: 8,
-	},
-	backgroundChip: {
-		height: compactControls ? 36 : 44,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 12,
-		borderRadius: radii.small,
-	},
-	backgroundChipHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	backgroundChipPressed: {
-		backgroundColor: colors.pressedOverlay,
-		transform: [{ scale: 0.92 }],
-	},
-	backgroundLabel: {
-		...typography.labelStrong,
-		color: colors.textPrimary,
-	},
-	backgroundSwatch: {
-		width: 20,
-		height: 20,
-		borderRadius: 10,
-		borderWidth: 1,
-		borderColor: colors.swatchRing,
-		overflow: "hidden",
 	},
 	dialStrip: {
 		alignItems: "center",
