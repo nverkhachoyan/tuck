@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import type { CanvasInput } from "./canvasInputFor";
 import type { ToolSpec } from "./toolSpec";
 
 type ToolView<C> = ComponentType<{ controller: C }>;
@@ -16,6 +17,8 @@ type ToolView<C> = ComponentType<{ controller: C }>;
  *   eyedropper isn't running.
  * - `views.Inspector`: a section above the wide inspector's layers, given
  *   them as children. A tool with one opens the inspector.
+ * - `canvasInput`: what input on the canvas does while it's open, or null
+ *   to leave the canvas to typing or selecting.
  * - `doneLabel`: what Done says, when it isn't "Done".
  * - `done`: what Done does before the tool closes.
  * - `deselectOnDone`: whether Done lets go of the selected layer, so a
@@ -31,6 +34,7 @@ export type ToolDefinition<C> = {
 		Results?: ToolView<C>;
 		Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
 	};
+	canvasInput?: (controller: C) => CanvasInput | null;
 	doneLabel?: (controller: C) => string | undefined;
 	done?: (controller: C) => void;
 	deselectOnDone?: boolean;

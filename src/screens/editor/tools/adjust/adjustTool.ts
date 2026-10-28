@@ -6,4 +6,5 @@ import type { AdjustController } from "./useAdjustTool";
 export const adjustTool = defineTool<AdjustController>({
 	spec: adjustSpec,
 	views: { Dock: AdjustPanel, Inspector: AdjustInspector },
+	canvasInput: (adjust) => adjust.canvasInput,
 });

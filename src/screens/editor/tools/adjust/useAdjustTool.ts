@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import {
 	type DerivedValue,
@@ -15,6 +15,7 @@ import {
 	neutralAdjustments,
 } from "@/model/adjustments";
 import type { ImageLayer } from "@/model/layers/image";
+import type { CanvasInput } from "../../canvasInputFor";
 import type { DialScale } from "../../shell/dialDrag";
 
 // The dial counts in percent: -100 to 100 for -1 to 1.
@@ -54,6 +55,8 @@ export type AdjustController = {
 	change: (percent: number) => void;
 	end: () => void;
 	changing: SharedValue<boolean>;
+	// A sideways drag over the photo turns the dial, as the dial does.
+	canvasInput: CanvasInput;
 };
 
 function syncAdjustments(
@@ -117,6 +120,21 @@ export function useAdjustTool(
 		scheduleOnRN(commit, values.value);
 	}, [held, values, commit]);
 
+	const canvasInput = useMemo(
+		(): CanvasInput => ({
+			type: "adjust",
+			drag: {
+				value: dialValue,
+				scale: ADJUST_DIAL_SCALE,
+				max: ADJUST_DIAL_MAX,
+				onBegin: begin,
+				onChange: change,
+				onEnd: end,
+			},
+		}),
+		[dialValue, begin, change, end],
+	);
+
 	return {
 		adjustments: layer?.adjustments,
 		matrix,
@@ -127,5 +145,6 @@ export function useAdjustTool(
 		change,
 		end,
 		changing: held,
+		canvasInput,
 	};
 }

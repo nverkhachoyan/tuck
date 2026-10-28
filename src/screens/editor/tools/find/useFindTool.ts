@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditorDocument } from "@/model/document";
 import { boundingBox, type Rect } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
@@ -7,6 +7,7 @@ import type {
 	RedactionEffect,
 } from "@/model/layers/redaction";
 import { useStore } from "@/store";
+import type { CanvasInput } from "../../canvasInputFor";
 import type { DetectionFeature } from "../../detection/imageDetection";
 import { chosenBoxes, detectionTargetKey, readingOrder } from "./findResults";
 import { mapDetectionRects } from "./mapDetectionRects";
@@ -44,7 +45,8 @@ export type FindController = ReturnType<typeof useFindTool>;
 /**
  * Find: faces and text found in `image`, placed in the document, to choose
  * from and redact, and to review one at a time. What's found goes stale when
- * the image or the document changes shape.
+ * the image or the document changes shape. `canvasInput` toggles a region
+ * tapped on the canvas, while there's an image to search.
  */
 export function useFindTool({
 	document,
@@ -133,6 +135,24 @@ export function useFindTool({
 		stop: () => setReviewed(null),
 	};
 
+	// A tap on a region toggles it, and moves a review there.
+	const { toggle: toggleDetection } = detection;
+	const toggle = useCallback(
+		(index: number) => {
+			toggleDetection(index);
+			setReviewed((current) => (current === null ? null : index));
+		},
+		[toggleDetection],
+	);
+	const imageId = image?.id;
+	const canvasInput = useMemo(
+		(): CanvasInput | null =>
+			imageId === undefined
+				? null
+				: { type: "find", imageId, regions: overlay, onToggle: toggle },
+		[imageId, overlay, toggle],
+	);
+
 	return {
 		state: detection.state,
 		overlay,
@@ -144,11 +164,8 @@ export function useFindTool({
 			if (state.status !== "idle") find(state.scope);
 		},
 		review,
-		// A tap on a region toggles it, and moves a review there.
-		toggle: (index: number) => {
-			detection.toggle(index);
-			if (reviewed !== null) setReviewed(index);
-		},
+		toggle,
+		canvasInput,
 		selectAll: () => detection.select(visibleIndices),
 		clear: () => detection.select([]),
 		reset: () => {

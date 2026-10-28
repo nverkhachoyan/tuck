@@ -4,8 +4,10 @@ import { isLine, isLineShape } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
 import { useStore } from "@/store";
 import { selectSelectedLayer, selectSelectedShape } from "@/store/editorSlice";
+import type { CanvasInput } from "../../canvasInputFor";
 import {
 	type BrushSettings,
+	drawCanvasTool,
 	parseBrushSettings,
 	shapeEdit,
 	stepBrushSize,
@@ -19,7 +21,7 @@ export type DrawController = ReturnType<typeof useDrawTool>;
  * shape tool, they show the selected shape's style, and changing them
  * restyles that one. A kind it can't become, a box for a line or a line for
  * a box, starts a new shape instead. `stepSize` steps the brush's size for
- * `[` and `]`.
+ * `[` and `]`, and `canvasInput` paints or drags out shapes with them.
  */
 export function useDrawTool(active: boolean, documentSize: Size) {
 	const selectedShape = useStore(selectSelectedShape);
@@ -71,5 +73,13 @@ export function useDrawTool(active: boolean, documentSize: Size) {
 		if (next !== settings) change(next);
 	};
 
-	return { settings, change, chooseTool, stepSize };
+	const canvasInput = useMemo(
+		(): CanvasInput => ({
+			type: "tool",
+			tool: drawCanvasTool(settings, documentSize),
+		}),
+		[settings, documentSize],
+	);
+
+	return { settings, change, chooseTool, stepSize, canvasInput };
 }

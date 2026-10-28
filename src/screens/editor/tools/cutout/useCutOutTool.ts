@@ -1,13 +1,15 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { imagePointAt, isCutOut } from "@/model/cutout";
 import { visibleImageLayer } from "@/model/framing";
-import type { Point } from "@/model/geometry";
+import type { Point, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import type { RedactionEffect } from "@/model/layers/redaction";
 import { usePreference } from "@/platform/usePreference";
 import { addImage } from "@/projects/projectService";
 import { useStore } from "@/store";
+import type { CanvasInput } from "../../canvasInputFor";
 import {
+	cutCanvasTool,
 	cutToolInUse,
 	parseCutOutSettings,
 	stepCutSize,
@@ -25,14 +27,17 @@ export type CutOutController = ReturnType<typeof useCutOutTool>;
  * another image, isn't wanted any more. Redacting the cut's selection takes
  * back the cut, adds a redaction in its shape with `redactionEffect`, which
  * is selected, and closes Cut out (`onClose`). `stepSize` steps the brush's
- * size for `[` and `]`.
+ * size for `[` and `]`, and `canvasInput` paints or picks on a document of
+ * `documentSize`, while there's an image shown to cut out.
  */
 export function useCutOutTool({
 	layer,
+	documentSize,
 	redactionEffect,
 	onClose,
 }: {
 	layer: ImageLayer | undefined;
+	documentSize: Size;
 	redactionEffect: RedactionEffect;
 	onClose: () => void;
 }) {
@@ -73,12 +78,24 @@ export function useCutOutTool({
 	});
 	const cut = layer && isCutOut(layer) ? layer : undefined;
 	const tool = cutToolInUse(settings, cutOut.canFind);
+	const cutLayerId = layer?.id;
+	const canvasInput = useMemo(
+		(): CanvasInput | null =>
+			cutLayerId === undefined
+				? null
+				: {
+						type: "tool",
+						tool: cutCanvasTool(cutLayerId, settings, tool, documentSize),
+					},
+		[cutLayerId, settings, tool, documentSize],
+	);
 
 	return {
 		layer,
 		settings,
 		change,
 		tool,
+		canvasInput,
 		// A sub-tool with no size, like Pick, leaves the settings alone.
 		stepSize: (step: 1 | -1) => {
 			const next = stepCutSize(settings, tool, step);

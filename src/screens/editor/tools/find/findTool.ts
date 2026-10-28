@@ -20,6 +20,7 @@ export const findTool = defineTool<FindController>({
 		Results: FindTray,
 		Inspector: FindInspector,
 	},
+	canvasInput: (find) => find.canvasInput,
 	doneLabel: (find) => findDoneLabel(find.selectedCount),
 	done: (find) => find.redact(),
 	deselectOnDone: true,

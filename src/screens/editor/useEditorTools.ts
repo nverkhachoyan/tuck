@@ -110,6 +110,7 @@ export function useEditorTools({
 		: undefined;
 	const cutOut = useCutOutTool({
 		layer: cutLayer,
+		documentSize,
 		redactionEffect: redactEffect,
 		onClose: () => dispatchMode({ type: "endTool" }),
 	});

@@ -271,19 +271,10 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 
 	const canvasInput = useCanvasInput({
 		document,
-		size: documentSize,
 		tool,
+		tools,
 		eyedropper,
 		editingText,
-		draw: tools.draw.settings,
-		redact: tools.redact.settings,
-		cut: tools.cutOut,
-		find: targetImage && {
-			imageId: targetImage.id,
-			regions: tools.find.overlay,
-			onToggle: tools.find.toggle,
-		},
-		adjustController: tools.adjust,
 		actions,
 		dispatchMode,
 		onCustomColor: setCustomColor,

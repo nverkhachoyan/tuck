@@ -2,12 +2,17 @@ import { type Dispatch, type SetStateAction, useMemo } from "react";
 import type { Size } from "@/model/geometry";
 import { useStore } from "@/store";
 import { selectSelectedRedaction } from "@/store/editorSlice";
+import type { CanvasInput } from "../../canvasInputFor";
 import {
 	redactionEffect,
 	sameEffect,
 	withEffect,
 } from "../../shell/redactLook";
-import { type RedactSettings, stepRedactSize } from "./redactSettings";
+import {
+	type RedactSettings,
+	redactCanvasTool,
+	stepRedactSize,
+} from "./redactSettings";
 
 export type RedactController = ReturnType<typeof useRedactTool>;
 
@@ -15,7 +20,8 @@ export type RedactController = ReturnType<typeof useRedactTool>;
  * Redact's settings, from the saved ones (`chosen`), whose look Find and Cut
  * out redact with too. They show the selected redaction's style, which new
  * ones then share, so a redaction can be picked to match. Changing them
- * restyles that one. `stepSize` steps the brush's size for `[` and `]`.
+ * restyles that one. `stepSize` steps the brush's size for `[` and `]`, and
+ * `canvasInput` brushes or drags out redactions with them.
  */
 export function useRedactTool(
 	documentSize: Size,
@@ -60,5 +66,13 @@ export function useRedactTool(
 		if (next !== settings) change(next);
 	};
 
-	return { settings, change, chooseTool, stepSize };
+	const canvasInput = useMemo(
+		(): CanvasInput => ({
+			type: "tool",
+			tool: redactCanvasTool(settings, documentSize),
+		}),
+		[settings, documentSize],
+	);
+
+	return { settings, change, chooseTool, stepSize, canvasInput };
 }

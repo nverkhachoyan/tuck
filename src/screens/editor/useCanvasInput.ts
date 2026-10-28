@@ -1,64 +1,36 @@
-import { useMemo } from "react";
 import type { EditorDocument } from "@/model/document";
-import type { Point, Size } from "@/model/geometry";
-import type { ImageLayer } from "@/model/layers/image";
+import type { Point } from "@/model/geometry";
 import { sampleColor } from "@/render/renderDocument";
 import type { EditorStoreActions } from "@/store/editorSlice";
 import type { ToolStroke } from "./canvas/canvasTool";
-import { canvasInputFor, canvasToolFor } from "./canvasInputFor";
+import { canvasInputFor } from "./canvasInputFor";
 import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
 import { isCustomColor } from "./shell/ColorSwatches";
-import type { DialDrag } from "./shell/dialDrag";
-import {
-	ADJUST_DIAL_MAX,
-	ADJUST_DIAL_SCALE,
-	type useAdjustTool,
-} from "./tools/adjust/useAdjustTool";
-import type { CutOutSettings, CutOutTool } from "./tools/cutout/cutOutSettings";
-import type { BrushSettings } from "./tools/draw/brushSettings";
-import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline";
-import type { RedactSettings } from "./tools/redact/redactSettings";
+import { toolWithController } from "./toolDefinitions";
+import type { EditorTools } from "./useEditorTools";
 
 /**
- * What input on the canvas does for the editor's state (see `canvasToolFor`
- * and `canvasInputFor`), and where what it makes goes: strokes, boxes, and
- * shapes into the document, a picked color to the eyedropper's target, and
- * a tap on the image being cut out to Cut out. Spread onto `EditorCanvas`.
+ * What input on the canvas does for the editor's state (see
+ * `canvasInputFor`), with the open `tool`'s input from its definition, and
+ * where what it makes goes: strokes, boxes, and shapes into the document, a
+ * picked color to the eyedropper's target, and a tap on the image being cut
+ * out to Cut out. Spread onto `EditorCanvas`.
  */
 export function useCanvasInput({
 	document,
-	size,
 	tool,
+	tools,
 	eyedropper,
 	editingText,
-	draw,
-	redact,
-	cut,
-	find,
-	adjustController,
 	actions,
 	dispatchMode,
 	onCustomColor,
 }: {
 	document: EditorDocument;
-	size: Size;
 	tool: EditorTool | null;
+	tools: EditorTools;
 	eyedropper: Eyedropper | null;
 	editingText: boolean;
-	draw: BrushSettings;
-	redact: RedactSettings;
-	cut: {
-		layer: ImageLayer | undefined;
-		settings: CutOutSettings;
-		tool: CutOutTool;
-		pickSubject: (point: Point) => void;
-	};
-	find: {
-		imageId: string;
-		regions: readonly DetectionOverlayRegion[];
-		onToggle: (sourceIndex: number) => void;
-	} | null;
-	adjustController: ReturnType<typeof useAdjustTool>;
 	actions: Pick<
 		EditorStoreActions,
 		| "drawStroke"
@@ -70,68 +42,13 @@ export function useCanvasInput({
 	dispatchMode: (action: EditorModeAction) => void;
 	onCustomColor: (color: string) => void;
 }) {
-	const picking = eyedropper !== null;
-	const cutLayerId = cut.layer?.id ?? null;
-	const { settings: cutSettings, tool: cutTool } = cut;
-	const canvasTool = useMemo(
-		() =>
-			canvasToolFor({
-				eyedropper: picking,
-				tool,
-				cut:
-					cutLayerId === null
-						? null
-						: { layerId: cutLayerId, settings: cutSettings, tool: cutTool },
-				draw,
-				redact,
-				size,
-			}),
-		[picking, tool, cutLayerId, cutSettings, cutTool, draw, redact, size],
-	);
-	// A sideways drag over the photo turns Adjust's dial, as the dial does.
-	const { dialValue, begin, change, end } = adjustController;
-	const adjustDrag = useMemo(
-		(): DialDrag => ({
-			value: dialValue,
-			scale: ADJUST_DIAL_SCALE,
-			max: ADJUST_DIAL_MAX,
-			onBegin: begin,
-			onChange: change,
-			onEnd: end,
-		}),
-		[dialValue, begin, change, end],
-	);
-	// A new `find` each render, the same regions: the input changes only
-	// with its parts.
-	const findImageId = find?.imageId ?? null;
-	const findRegions = find?.regions;
-	const onFindToggle = find?.onToggle;
-	const input = useMemo(
-		() =>
-			canvasInputFor({
-				canvasTool,
-				tool,
-				find:
-					findImageId === null || !findRegions || !onFindToggle
-						? null
-						: {
-								imageId: findImageId,
-								regions: findRegions,
-								onToggle: onFindToggle,
-							},
-				adjustDrag,
-				editingText,
-			}),
-		[
-			canvasTool,
-			tool,
-			findImageId,
-			findRegions,
-			onFindToggle,
-			adjustDrag,
-			editingText,
-		],
-	);
+	const open = tool && toolWithController(tool, tools);
+	// Each tool memoizes its own input, so this one changes only with it.
+	const input = canvasInputFor({
+		eyedropper: eyedropper !== null,
+		toolInput: open?.definition.canvasInput?.(open.controller) ?? null,
+		editingText,
+	});
 
 	// A picked color becomes the custom color too, unless a swatch already
 	// has it. Where the canvas shows nothing, it keeps waiting for a tap.
@@ -171,7 +88,7 @@ export function useCanvasInput({
 				void pickColor(stroke.point);
 				break;
 			case "pickSubject":
-				cut.pickSubject(stroke.point);
+				tools.cutOut.pickSubject(stroke.point);
 				break;
 		}
 	};
