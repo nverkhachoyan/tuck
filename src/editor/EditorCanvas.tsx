@@ -32,11 +32,14 @@ import {
 	syncLiveTransform,
 	useLiveTransform,
 } from "./canvas/liveTransform";
+import type { CanvasRegion } from "./canvas/RegionOutline";
 import { SelectionBarFrame } from "./canvas/SelectionBarFrame";
 import { useCanvasCursor } from "./canvas/useCanvasCursor";
 import { useCanvasTap } from "./canvas/useCanvasTap";
 import { useCanvasZoom } from "./canvas/useCanvasZoom";
+import { useDialDrag } from "./canvas/useDialDrag";
 import { useLayerTransformGesture } from "./canvas/useLayerTransformGesture";
+import { useRegionTap } from "./canvas/useRegionTap";
 import { useShiftHeld } from "./canvas/useShiftHeld";
 import { useToolStroke } from "./canvas/useToolStroke";
 import { useViewGesture } from "./canvas/useViewGesture";
@@ -54,10 +57,6 @@ import { EditorScene } from "./EditorScene";
 import type { TextEditState } from "./editorMode";
 import { useKeepTextFocus } from "./text/useKeepTextFocus";
 import { useTextEditGesture } from "./text/useTextEditGesture";
-import type { LiveAdjustment } from "./tools/adjust/useAdjustTool";
-import { useDialDragGesture } from "./tools/adjust/useDialDragGesture";
-import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline";
-import { useFindTap } from "./tools/find/useFindTap";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
@@ -80,7 +79,7 @@ function liveHandleAt(
 		viewport.scale,
 	);
 }
-const NO_DETECTIONS: readonly DetectionOverlayRegion[] = [];
+const NO_REGIONS: readonly CanvasRegion[] = [];
 
 type EditorCanvasProps = {
 	ref?: Ref<EditorCanvasHandle>;
@@ -120,9 +119,6 @@ type EditorCanvasProps = {
 	// adjusting. The editor puts the tool down, and the tap then selects what's
 	// under it, as it would without a tool.
 	onTapAway?: () => void;
-	// While set, this image's adjustments are being changed, drawn live. With
-	// a `dial` input, it's outlined when there are other images.
-	adjusting?: LiveAdjustment | null;
 	// How much of the view's bottom is covered by panels floating over it,
 	// and by the keyboard they ride on. The document fits above them, and
 	// what's past its edges shows under.
@@ -174,8 +170,9 @@ export type EditorCanvasHandle = {
  * changes. Dragging out a box or a shape, a tap picks the one to change, or
  * none, and the one picked, or just drawn, shows its handles: a drag from on
  * it or them moves or resizes it, and one from anywhere else draws another.
- * While adjusting, a sideways drag anywhere turns the adjustment's dial
- * (`input.drag`).
+ * With a `dial` input, a sideways drag anywhere turns the dial
+ * (`input.drag`), and the image it changes is drawn live, outlined when
+ * there are other images (`input.adjusting`).
  *
  * A tap away from what a tool works on calls `onTapAway`: off the document
  * while painting, off the searched image while finding, and anywhere while
@@ -200,7 +197,6 @@ export function EditorCanvas({
 	onToolStroke,
 	onToolInteractionEnd,
 	onTapAway,
-	adjusting = null,
 	bottomInset = 0,
 	leftInset = 0,
 	rightInset = 0,
@@ -489,7 +485,6 @@ export function EditorCanvas({
 		layers: document.layers,
 		selectedLayer,
 		editedLayer,
-		adjustedId: adjusting?.layerId,
 	});
 	const handleIdleTap = useCallback(
 		(screenX: number, screenY: number) => {
@@ -499,14 +494,14 @@ export function EditorCanvas({
 		[lookups, scale],
 	);
 	const idleGesture = useCanvasTap(handleIdleTap);
-	// While adjusting, a sideways drag turns the dial, and a tap still puts
-	// the tool down.
-	const adjustGesture = useDialDragGesture(
+	// With a dial, a sideways drag turns it, and a tap still puts the tool
+	// down.
+	const dialGesture = useDialDrag(
 		input.type === "dial" ? input.drag : null,
 		idleGesture,
 	);
-	const detectionGesture = useFindTap({
-		find: input.type === "regions" ? input : null,
+	const regionGesture = useRegionTap({
+		input: input.type === "regions" ? input : null,
 		scale,
 		lookups,
 		targets,
@@ -519,8 +514,8 @@ export function EditorCanvas({
 		select: gesture,
 		tool: paintGesture,
 		editText: textGesture,
-		regions: detectionGesture,
-		dial: adjustGesture,
+		regions: regionGesture,
+		dial: dialGesture,
 	}[input.type];
 	// The view's gestures join at the top, one by one: a `Simultaneous` nested
 	// in another drops the outer one's relations, so the mode's gestures and
@@ -568,10 +563,10 @@ export function EditorCanvas({
 									live={live}
 									stroke={liveStroke}
 									outlinedLayer={outlinedLayer}
-									adjusting={adjusting}
+									adjusting={input.type === "dial" ? input.adjusting : null}
 									cuttingOutId={cuttingOutId}
-									detections={
-										input.type === "regions" ? input.regions : NO_DETECTIONS
+									regions={
+										input.type === "regions" ? input.regions : NO_REGIONS
 									}
 									onImageError={handleImageError}
 								/>

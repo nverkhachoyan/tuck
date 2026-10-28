@@ -37,11 +37,6 @@ export type FindReview = {
 	stop: () => void;
 };
 
-export type ReviewView = {
-	zoomToArea: (rect: Rect) => void;
-	fit: () => void;
-};
-
 export type FindController = ReturnType<typeof useFindTool>;
 
 /**
@@ -49,14 +44,16 @@ export type FindController = ReturnType<typeof useFindTool>;
  * from and redact, and to review one at a time. What's found goes stale when
  * the image or the document changes shape, and is let go once Find closes.
  * `canvasInput` toggles a region tapped on the canvas, while there's an
- * image to search. Redacting says how many regions it redacted (`notify`).
+ * image to search. Reviewing zooms the canvas to each region (`view`).
+ * Redacting says how many regions it redacted (`notify`).
  */
 export function useFindTool({
 	document,
 	image,
 	open,
 	notify,
-}: Pick<ToolEnv, "document" | "image" | "open" | "notify">) {
+	view,
+}: Pick<ToolEnv, "document" | "image" | "open" | "notify" | "view">) {
 	const { addRedactionBoxes } = useStore((state) => state.actions);
 	const { effectFor } = useRedactLook();
 	const detection = useImageDetection(detectionTargetKey(document, image));
@@ -133,6 +130,7 @@ export function useFindTool({
 		},
 		stop: () => setReviewed(null),
 	};
+	useReviewZoom(review, view);
 
 	// A tap on a region toggles it, and moves a review there.
 	const { toggle: toggleDetection } = detection;
@@ -197,9 +195,11 @@ export function useFindTool({
 /**
  * Reviewing what Find found zooms to each region it steps to, and back to
  * the fit once it stops (finishing or leaving Find included). Keyed on
- * the region, so other renders don't undo a pan.
+ * the region, so other renders don't undo a pan. In Find's hook rather
+ * than a view, which the tray and the layout mount and unmount: a remount
+ * mid-review would forget it zoomed in, and leaving wouldn't fit again.
  */
-export function useReviewZoom(review: FindReview, view: ReviewView) {
+function useReviewZoom(review: FindReview, view: ToolEnv["view"]) {
 	const reviewedRegion = review.current?.sourceIndex ?? null;
 	const reviewBounds = useRef<Rect | null>(null);
 	reviewBounds.current = review.current?.bounds ?? null;

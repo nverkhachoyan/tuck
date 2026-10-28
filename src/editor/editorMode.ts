@@ -347,11 +347,6 @@ export function openTray(mode: EditorMode) {
 	return hasTray(mode) && mode.optionsOpen ? mode.tool : null;
 }
 
-/** The image `tool` works on, or null when that tool isn't open. */
-export function toolImageId(mode: EditorMode, tool: ImageTool): string | null {
-	return mode.type === "tool" && mode.tool === tool ? mode.layerId : null;
-}
-
 function withoutLayers(
 	sheet: EditorModeState["sheet"],
 ): EditorModeState["sheet"] {

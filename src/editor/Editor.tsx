@@ -49,8 +49,6 @@ import {
 	selectSelectedTextLayer,
 } from "./store/editorSlice";
 import { TextEditor } from "./text/TextEditor";
-import type { AdjustController } from "./tools/adjust/useAdjustTool";
-import { type FindController, useReviewZoom } from "./tools/find/useFindTool";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
@@ -168,7 +166,6 @@ export function Editor({
 		stepToolSize,
 		resetEdit,
 		announcements,
-		adjustedLayer,
 	} = useEditorTools({
 		document,
 		mode,
@@ -186,15 +183,6 @@ export function Editor({
 		notify: editNotice.notify,
 	});
 
-	// Find's review zoom and Adjust's live preview, until the canvas takes
-	// them from the tools' input.
-	const find = controllers.find as FindController;
-	const adjust = controllers.adjust as AdjustController;
-	useReviewZoom(find.review, {
-		zoomToArea: (area) => canvasRef.current?.zoomToArea(area),
-		fit: () => canvasRef.current?.zoom("fit"),
-	});
-
 	const editingText = text.edit !== null;
 	const savedStickers = useSavedStickers();
 	const stickerSave = useStickerSave(savedStickers.save, host.importPhoto);
@@ -208,13 +196,6 @@ export function Editor({
 	});
 	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
 	const toolOptionsOpen = openTray(mode) !== null;
-	const adjusting = useMemo(
-		() =>
-			adjustedLayer
-				? { layerId: adjustedLayer.id, matrix: adjust.matrix }
-				: null,
-		[adjustedLayer, adjust.matrix],
-	);
 	// The last color picked from a color picker, which every custom swatch
 	// keeps while a preset is in use. Null until there's one. Like the tools'
 	// settings, it's kept between sessions.
@@ -427,7 +408,6 @@ export function Editor({
 								dispatchMode({ type: "closeToolOptions" })
 							}
 							onTapAway={done}
-							adjusting={adjusting}
 							bottomInset={layout.canvasInset.bottom}
 							leftInset={layout.canvasInset.left}
 							rightInset={layout.canvasInset.right}

@@ -5,12 +5,11 @@ import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import type { ToolDefinition, ToolEnv } from "./defineTool";
 import type { EditorHost } from "./editorHost";
-import {
-	type EditorMode,
-	type EditorModeAction,
-	type EditorTool,
-	type ToolStart,
-	toolImageId,
+import type {
+	EditorMode,
+	EditorModeAction,
+	EditorTool,
+	ToolStart,
 } from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useStore } from "./store";
@@ -200,12 +199,6 @@ export function useEditorTools({
 			[id, definition.announcement?.(controllers[id]) ?? null] as const,
 	);
 
-	// Adjust's live preview, until the canvas takes it from Adjust's input.
-	const adjustImageId = toolImageId(mode, "adjust");
-	const adjustedLayer = adjustImageId
-		? visibleImageLayer(document, adjustImageId)
-		: undefined;
-
 	return {
 		controllers,
 		text,
@@ -218,7 +211,6 @@ export function useEditorTools({
 		stepToolSize,
 		resetEdit,
 		announcements,
-		adjustedLayer,
 	};
 }
 

@@ -14,7 +14,6 @@ import {
 	shortcutCommand,
 	type TextEditState,
 	takesKeys,
-	toolImageId,
 } from "../editorMode.ts";
 import type { Shortcut } from "../shortcuts.ts";
 
@@ -380,32 +379,6 @@ describe("openTray", () => {
 			}),
 			"cutOut",
 		);
-	});
-});
-
-describe("toolImageId", () => {
-	const adjusting = {
-		type: "tool",
-		tool: "adjust",
-		layerId: "photo",
-	} as const;
-	const cutting = {
-		type: "tool",
-		tool: "cutOut",
-		layerId: "photo",
-		optionsOpen: false,
-	} as const;
-
-	test("is the image Adjust or Cut out works on", () => {
-		assert.equal(toolImageId(adjusting, "adjust"), "photo");
-		assert.equal(toolImageId(adjusting, "cutOut"), null);
-		assert.equal(toolImageId(cutting, "cutOut"), "photo");
-		assert.equal(toolImageId(cutting, "adjust"), null);
-		assert.equal(
-			toolImageId({ type: "tool", tool: "draw", optionsOpen: false }, "adjust"),
-			null,
-		);
-		assert.equal(toolImageId({ type: "idle" }, "cutOut"), null);
 	});
 });
 

@@ -10,12 +10,17 @@ import {
 	type CanvasInput,
 	canvasInputFor,
 	inputRules,
+	type LiveAdjustment,
 	outlinedLayerFor,
 } from "../canvasInputFor.ts";
 import type { DialDrag } from "../shell/dialDrag.ts";
 
 describe("canvasInputFor", () => {
-	const toolInput: CanvasInput = { type: "dial", drag: {} as DialDrag };
+	const toolInput: CanvasInput = {
+		type: "dial",
+		drag: {} as DialDrag,
+		adjusting: null,
+	};
 	const inputs = { eyedropper: false, toolInput: null, editingText: false };
 
 	test("selects with nothing else going on", () => {
@@ -93,7 +98,15 @@ const drawing = createDrawingLayer({
 	points: [0, 0, 20, 20],
 });
 // Only its type matters to the rules.
-const dial: CanvasInput = { type: "dial", drag: {} as DialDrag };
+const dial: CanvasInput = {
+	type: "dial",
+	drag: {} as DialDrag,
+	adjusting: null,
+};
+const adjusting = (layerId: string): CanvasInput => ({
+	...dial,
+	adjusting: { layerId, matrix: {} as LiveAdjustment["matrix"] },
+});
 const regions: CanvasInput = {
 	type: "regions",
 	imageId: "photo",
@@ -195,22 +208,17 @@ describe("outlinedLayerFor", () => {
 		layers: [photo, other],
 		selectedLayer: undefined,
 		editedLayer: null,
-		adjustedId: undefined,
 	};
 
 	test("cutting out or adjusting outlines the image, when there's another", () => {
 		const cut: CanvasInput = { type: "tool", tool: cutBrush };
 		assert.equal(outlinedLayerFor(cut, none), photo);
 		assert.equal(outlinedLayerFor(cut, { ...none, layers: [photo] }), null);
+		assert.equal(outlinedLayerFor(adjusting("other"), none), other);
 		assert.equal(
-			outlinedLayerFor(dial, { ...none, adjustedId: "other" }),
-			other,
-		);
-		assert.equal(
-			outlinedLayerFor(dial, {
+			outlinedLayerFor(adjusting("photo"), {
 				...none,
 				layers: [photo, drawing],
-				adjustedId: "photo",
 			}),
 			null,
 		);

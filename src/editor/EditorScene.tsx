@@ -12,19 +12,16 @@ import {
 	StrokeTarget,
 } from "./canvas/LiveStrokeOverlay";
 import type { LiveTransform } from "./canvas/liveTransform";
+import { type CanvasRegion, RegionOutline } from "./canvas/RegionOutline";
 import {
 	SelectionHandles,
 	SelectionOutline,
 	SnapGuides,
 	useScreenPixels,
 } from "./canvas/SelectionOverlay";
+import type { LiveAdjustment } from "./canvasInputFor";
 import type { TextEditState } from "./editorMode";
 import { EditedTextView } from "./text/EditedTextView";
-import type { LiveAdjustment } from "./tools/adjust/useAdjustTool";
-import {
-	DetectionOutline,
-	type DetectionOverlayRegion,
-} from "./tools/find/DetectionOutline";
 
 // The canvas's shadows on the table around it, as a print's: a tight one
 // where it touches and a soft one that lifts it, in screen pixels. At night,
@@ -52,7 +49,8 @@ type EditorSceneProps = {
 	adjusting: LiveAdjustment | null;
 	// The image being cut out, which shows what it cuts away faintly.
 	cuttingOutId: string | null;
-	detections: readonly DetectionOverlayRegion[];
+	// What a `regions` input shows over the canvas.
+	regions: readonly CanvasRegion[];
 	// An image layer's file couldn't be read or decoded. Must be stable.
 	onImageError: (error: unknown) => void;
 };
@@ -81,7 +79,7 @@ export function EditorScene({
 	outlinedLayer,
 	adjusting,
 	cuttingOutId,
-	detections,
+	regions,
 	onImageError,
 }: EditorSceneProps) {
 	const editedId = textEdit && !textEdit.isNew ? textEdit.layer.id : null;
@@ -168,10 +166,10 @@ export function EditorScene({
 					/>
 				)}
 			</Group>
-			{detections.length > 0 && (
+			{regions.length > 0 && (
 				<Group clip={canvas}>
-					{detections.map((region) => (
-						<DetectionOutline
+					{regions.map((region) => (
+						<RegionOutline
 							key={region.sourceIndex}
 							region={region}
 							viewScale={viewScale}

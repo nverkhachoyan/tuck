@@ -33,15 +33,6 @@ export const ADJUST_DIAL_SCALE: DialScale = {
 	wholeSteps: true,
 };
 
-/**
- * An image layer whose adjustments a control is changing: `matrix` colors
- * it meanwhile, following the control without rendering React.
- */
-export type LiveAdjustment = {
-	layerId: string;
-	matrix: DerivedValue<ColorMatrix>;
-};
-
 export type AdjustController = {
 	// The image's saved adjustments, which the dial's changes commit to.
 	adjustments: Adjustments | undefined;
@@ -56,7 +47,8 @@ export type AdjustController = {
 	change: (percent: number) => void;
 	end: () => void;
 	changing: SharedValue<boolean>;
-	// A sideways drag over the photo turns the dial, as the dial does.
+	// A sideways drag over the photo turns the dial, as the dial does, and
+	// the canvas draws the photo with the dial's changes meanwhile.
 	canvasInput: CanvasInput;
 	// Takes the image back to neutral, while it has adjustments.
 	reset: (() => void) | undefined;
@@ -134,8 +126,9 @@ export function useAdjustTool({
 				onChange: change,
 				onEnd: end,
 			},
+			adjusting: layerId === undefined ? null : { layerId, matrix },
 		}),
-		[dialValue, begin, change, end],
+		[dialValue, begin, change, end, layerId, matrix],
 	);
 
 	return {

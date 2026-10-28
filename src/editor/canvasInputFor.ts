@@ -1,3 +1,5 @@
+import type { DerivedValue } from "react-native-reanimated";
+import type { ColorMatrix } from "../model/adjustments.ts";
 import type { Layer } from "../model/layers/layer.ts";
 import {
 	type CanvasTool,
@@ -5,8 +7,8 @@ import {
 	drags,
 	restyles,
 } from "./canvas/canvasTool.ts";
+import type { CanvasRegion } from "./canvas/RegionOutline.tsx";
 import type { DialDrag } from "./shell/dialDrag.ts";
-import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline.tsx";
 
 /**
  * What input on the canvas does, one at a time: select and transform
@@ -14,7 +16,7 @@ import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline.tsx";
  * place the caret in, or select, the text being edited; toggle the
  * `regions` shown over the image `imageId` with taps, as Find does; or hold
  * the layers still and turn a dial with a sideways drag (`drag`), as Adjust
- * does.
+ * does, drawing the image it changes live (`adjusting`).
  */
 export type CanvasInput =
 	| { type: "select" }
@@ -23,10 +25,19 @@ export type CanvasInput =
 	| {
 			type: "regions";
 			imageId: string;
-			regions: readonly DetectionOverlayRegion[];
+			regions: readonly CanvasRegion[];
 			onToggle: (sourceIndex: number) => void;
 	  }
-	| { type: "dial"; drag: DialDrag };
+	| { type: "dial"; drag: DialDrag; adjusting: LiveAdjustment | null };
+
+/**
+ * An image layer whose adjustments a dial is changing: `matrix` colors it
+ * meanwhile, following the dial without rendering React.
+ */
+export type LiveAdjustment = {
+	layerId: string;
+	matrix: DerivedValue<ColorMatrix>;
+};
 
 export type InputRules = {
 	// What the selection does: holds still, without handles; transforms with
@@ -96,7 +107,7 @@ export function canvasInputFor({
 
 /**
  * The layer outlined for `input`: the image being cut out or adjusted
- * (`adjustedId`) where it could be mistaken for another, the text being
+ * where it could be mistaken for another, the text being
  * edited, or a redaction or shape whose style the tool changes, unless its
  * handles already show it.
  */
@@ -106,12 +117,10 @@ export function outlinedLayerFor(
 		layers,
 		selectedLayer,
 		editedLayer,
-		adjustedId,
 	}: {
 		layers: readonly Layer[];
 		selectedLayer: Layer | undefined;
 		editedLayer: Layer | null;
-		adjustedId: string | undefined;
 	},
 ): Layer | null {
 	switch (input.type) {
@@ -126,9 +135,7 @@ export function outlinedLayerFor(
 		case "editText":
 			return editedLayer;
 		case "dial":
-			return adjustedId === undefined
-				? null
-				: outlinedImage(layers, adjustedId);
+			return input.adjusting && outlinedImage(layers, input.adjusting.layerId);
 		case "select":
 		case "regions":
 			return null;

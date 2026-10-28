@@ -4,7 +4,12 @@ import { describe, test } from "node:test";
 import type { Transform } from "../../../model/geometry.ts";
 import type { DrawingLayer } from "../../../model/layers/drawing.ts";
 import type { RedactionStrokes } from "../../../model/layers/redaction.ts";
-import { findLayerAt, hitsLayer, type LayerTarget } from "../hitTest.ts";
+import {
+	findLayerAt,
+	hitsLayer,
+	type LayerTarget,
+	regionAt,
+} from "../hitTest.ts";
 
 const at = (x: number, y: number): Transform => ({
 	x,
@@ -102,5 +107,38 @@ describe("hitsLayer", () => {
 		const targets = [target("locked", 0, 0, { locked: true })];
 		assert.equal(hitsLayer(targets, "locked", { x: 0, y: 0 }), false);
 		assert.equal(hitsLayer(targets, "gone", { x: 0, y: 0 }), false);
+	});
+});
+
+describe("regionAt", () => {
+	const region = (id: string, x: number, width: number, height = width) => ({
+		id,
+		width,
+		height,
+		transform: { x, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+	});
+
+	test("finds the region under a point, padded", () => {
+		const regions = [region("a", 0, 20)];
+		assert.equal(regionAt(regions, { x: 9, y: 0 }, 0)?.id, "a");
+		assert.equal(regionAt(regions, { x: 12, y: 0 }, 0), null);
+		assert.equal(regionAt(regions, { x: 12, y: 0 }, 5)?.id, "a");
+	});
+
+	test("prefers the smallest of overlapping regions, in any order", () => {
+		const big = region("big", 0, 100);
+		const small = region("small", 5, 10);
+		assert.equal(regionAt([big, small], { x: 5, y: 0 }, 0)?.id, "small");
+		assert.equal(regionAt([small, big], { x: 5, y: 0 }, 0)?.id, "small");
+		assert.equal(regionAt([big, small], { x: 40, y: 0 }, 0)?.id, "big");
+	});
+
+	test("follows a region's turn", () => {
+		const turned = {
+			...region("long", 0, 100, 10),
+			transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: Math.PI / 2 },
+		};
+		assert.equal(regionAt([turned], { x: 0, y: 40 }, 0)?.id, "long");
+		assert.equal(regionAt([turned], { x: 40, y: 0 }, 0), null);
 	});
 });

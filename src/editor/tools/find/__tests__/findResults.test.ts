@@ -5,7 +5,6 @@ import type { EditorDocument } from "../../../../model/document.ts";
 import type { ImageLayer } from "../../../../model/layers/image.ts";
 import {
 	chosenBoxes,
-	detectionAt,
 	detectionTargetKey,
 	type FoundRegion,
 	findDoneLabel,
@@ -144,39 +143,6 @@ describe("readingOrder", () => {
 
 	test("is empty for no regions", () => {
 		assert.deepEqual(readingOrder([]), []);
-	});
-});
-
-describe("detectionAt", () => {
-	const region = (id: string, x: number, width: number, height = width) => ({
-		id,
-		width,
-		height,
-		transform: { x, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
-	});
-
-	test("finds the region under a point, padded", () => {
-		const regions = [region("a", 0, 20)];
-		assert.equal(detectionAt(regions, { x: 9, y: 0 }, 0)?.id, "a");
-		assert.equal(detectionAt(regions, { x: 12, y: 0 }, 0), null);
-		assert.equal(detectionAt(regions, { x: 12, y: 0 }, 5)?.id, "a");
-	});
-
-	test("prefers the smallest of overlapping regions, in any order", () => {
-		const big = region("big", 0, 100);
-		const small = region("small", 5, 10);
-		assert.equal(detectionAt([big, small], { x: 5, y: 0 }, 0)?.id, "small");
-		assert.equal(detectionAt([small, big], { x: 5, y: 0 }, 0)?.id, "small");
-		assert.equal(detectionAt([big, small], { x: 40, y: 0 }, 0)?.id, "big");
-	});
-
-	test("follows a region's turn", () => {
-		const turned = {
-			...region("long", 0, 100, 10),
-			transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: Math.PI / 2 },
-		};
-		assert.equal(detectionAt([turned], { x: 0, y: 40 }, 0)?.id, "long");
-		assert.equal(detectionAt([turned], { x: 40, y: 0 }, 0), null);
 	});
 });
 

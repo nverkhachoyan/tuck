@@ -3,9 +3,9 @@ import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import type { RedactionBoxPlacement } from "@/model/layers/redaction";
 import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";
-import { useScreenPixels } from "../../canvas/SelectionOverlay";
+import { useScreenPixels } from "./SelectionOverlay";
 
-// A detected region's check mark's radius, in screen pixels: a share of the
+// A region's check mark's radius, in screen pixels: a share of the
 // region's shorter side on screen, within these bounds, so marks on small
 // faces don't cover them or each other. A region narrower than
 // `MARKER_HIDDEN_BELOW_PX` gets none: its fill and outline show its state.
@@ -14,20 +14,22 @@ const MARKER_MAX_PX = 8;
 const MARKER_SHARE = 0.2;
 const MARKER_HIDDEN_BELOW_PX = 12;
 
-export type DetectionOverlayRegion = RedactionBoxPlacement & {
+// A region a `regions` input shows over the canvas, chosen or not, by its
+// index in what the tool found.
+export type CanvasRegion = RedactionBoxPlacement & {
 	sourceIndex: number;
 	selected: boolean;
 };
 
 /**
- * A temporary detector proposal, outlined until the user applies it, with a
- * mark in its corner that's checked while it's chosen.
+ * A region a tool proposes, as Find's detections, outlined until the user
+ * applies it, with a mark in its corner that's checked while it's chosen.
  */
-export function DetectionOutline({
+export function RegionOutline({
 	region,
 	viewScale,
 }: {
-	region: DetectionOverlayRegion;
+	region: CanvasRegion;
 	viewScale: DerivedValue<number>;
 }) {
 	const { width, height, transform, selected } = region;
