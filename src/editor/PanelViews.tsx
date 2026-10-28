@@ -18,7 +18,6 @@ import {
 	type EditorModeState,
 	openTray,
 } from "./editorMode";
-import { EyedropperHint } from "./shell/ColorPicker";
 import { ContextBar } from "./shell/ContextBar";
 import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
@@ -113,7 +112,7 @@ function openToolIn(
 
 /**
  * What opens over the canvas, above the dock: the tool's tray, its results,
- * a text color picker, and the eyedropper's hint.
+ * and a text color picker.
  */
 export function ToolTrays({
 	context,
@@ -139,11 +138,6 @@ export function ToolTrays({
 					colorKey={textPicker.key}
 					onChange={text.style}
 					onClose={() => dispatchMode({ type: "closeTextPicker" })}
-				/>
-			)}
-			{eyedropper && (
-				<EyedropperHint
-					onCancel={() => dispatchMode({ type: "stopEyedropper" })}
 				/>
 			)}
 		</>

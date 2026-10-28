@@ -467,7 +467,7 @@ export function Editor({
 						{!wide && (
 							<ToolTrays context={panels} modeState={modeState} panel={panel} />
 						)}
-						{wide && eyedropper && (
+						{eyedropper && (
 							<EyedropperHint
 								onCancel={() => dispatchMode({ type: "stopEyedropper" })}
 							/>
