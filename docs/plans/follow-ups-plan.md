@@ -1,6 +1,6 @@
 # Follow-ups
 
-What's left from the plans in `docs/plans/`, gathered October 26, 2026, when the finished plans were removed. Every step those plans listed has landed. What remains is checks only a device can make, a few changes the plans set aside, and smart selection's later stages. The removed plans are in git history, as of `7afc71a`: the context bar and its refinement, Crop and Stickers on wide windows, redaction trust, the export sheet, polish and copy, the Draw highlighter, the editor screen refactor, the tool views registry, tool options, tool code out of `canvas/`, smart selection, and its spike. Each tool's canvas input was planned and built after that, and its plan removed as of `b87e7f6`; so were Crop's UI, as of `3bbc0d8`, and how the tools open and close, as of `c5a2a23`. Tools that stand alone and each tool's spec and definition were removed as of `737ebdb`, and the plan that gave each folder clear edges (the editor's store, host, and tool list, Crop and Stickers as tools), with the debate over Crop that led to step 8d, as of `aaed202`.
+What's left from the plans in `docs/plans/`, gathered October 26, 2026, when the finished plans were removed. Every step those plans listed has landed. What remains is checks only a device can make, smart selection's later stages, and a few bugs and ideas. The removed plans are in git history, as of `7afc71a`: the context bar and its refinement, Crop and Stickers on wide windows, redaction trust, the export sheet, polish and copy, the Draw highlighter, the editor screen refactor, the tool views registry, tool options, tool code out of `canvas/`, smart selection, and its spike. Each tool's canvas input was planned and built after that, and its plan removed as of `b87e7f6`; so were Crop's UI, as of `3bbc0d8`, and how the tools open and close, as of `c5a2a23`. Tools that stand alone and each tool's spec and definition were removed as of `737ebdb`, and the plan that gave each folder clear edges (the editor's store, host, and tool list, Crop and Stickers as tools), with the debate over Crop that led to step 8d, as of `aaed202`.
 
 Each section stands alone, so they can go in any order.
 
@@ -17,18 +17,7 @@ The October 24 critique work and the refactors after it (October 25 and 26) were
 * **Find on native.** Vision and ML Kit find different faces than MediaPipe. Run Find on the Solvay photo on the iOS simulator and the Android emulator, and check that the tray's words ("28 found", "26 of 28 chosen", "No faces found") fit what they find.
 * **Screen readers.** The iOS Simulator has no VoiceOver, so these wait for a device. With VoiceOver on an iPhone, check Find's Review row as one adjustable control, and swipe through the export sheet to check that it never reaches the editor behind it. Do the same with TalkBack on an Android phone.
 
-## 2. Selection state on web
-
-`RingChoice`, `Chip`, and Redact's `EffectChoice` mark the chosen option only with `accessibilityState.selected`, which React Native Web ignores. So on web a screen reader isn't told which tray choice, aspect ratio, or font is chosen. Choose between `aria-pressed` and `aria-selected` for a button, set it on each, and check `ToolButton`'s `aria-selected` against the same choice.
-
-`fix: tell screen readers on web which option is chosen`
-
-## 3. Refactors
-
-* **`TextStylePanel`'s `ScrollRow`.** A simpler fade than the bar's, for the dock's font and swatch rows. It could share the bar's geometry in `shell/barFade.ts`.
-* **Small ones.** The wide window's `EyedropperHint` could move to an overlay both layouts share.
-
-## 4. Smart selection
+## 2. Smart selection
 
 Cut out's Subjects, Pick (MobileSAM on every platform), Keep and Erase, Invert, Redact, and keeping a cut as a sticker are built. What's open:
 
@@ -44,7 +33,7 @@ Cut out's Subjects, Pick (MobileSAM on every platform), Keep and Erase, Invert, 
 * **Adjust only the selection.**
 * **Remove an object.** Fill the hole a selection leaves with an inpainting model: MI-GAN (MIT, made for phones, about 30 MB) or LaMa (Apache 2.0, about 200 MB). It's the biggest piece here, so research it first.
 
-## 5. Bugs to look into
+## 3. Bugs to look into
 
 Seen while checking other work, recorded October 27, 2026. Each was also seen on `main` before the change being checked, so none comes from it.
 
@@ -66,11 +55,11 @@ Seen in the browser pane on a wide window, in the same smoke run.
 * **Expected:** the photo lands in the visible area, or the middle of the document while there's no view yet.
 * **Unknown:** the drop was a synthetic `DragEvent`, sent from a script, so check with a real drag too. The likely cause is `useAddImage`'s `onImage` in `Editor.tsx`, which places the image in `canvasRef.current?.visibleArea()`: before the canvas has its size or its view, that area may be empty or at the wrong place, rather than undefined (which would place it in the middle). Look at what `visibleArea()` returns before the first layout.
 
-## 6. Release
+## 4. Release
 
 The iPad store screenshots come from a Release build (see `docs/store-listing/listing.md`). The wide editor now shows a tool's options in the header, so retake them if the listing shows the editor with a tool open.
 
-## 7. Later
+## 5. Later
 
 Ideas carried over from the roadmap that VISION.md held, not yet planned. Weigh each on its own before starting one.
 
