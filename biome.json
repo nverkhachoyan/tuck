@@ -786,14 +786,13 @@
 											"../*",
 											"../tools/**",
 											"../layers/**",
-											"../stickers/**",
 											"../text/**",
 											"../detection/**",
 											"../../screens/**",
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Layers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -826,14 +825,13 @@
 											"../../*",
 											"../../tools/**",
 											"../../layers/**",
-											"../../stickers/**",
 											"../../text/**",
 											"../../detection/**",
 											"../../../screens/**",
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Layers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -869,8 +867,8 @@
 											"../draw/**",
 											"../find/**",
 											"../redact/**",
+											"../stickers/**",
 											"../../layers/**",
-											"../../stickers/**",
 											"../../text/**",
 											"../../adjust/**",
 											"../../crop/**",
@@ -878,8 +876,8 @@
 											"../../draw/**",
 											"../../find/**",
 											"../../redact/**",
+											"../../stickers/**",
 											"../../../layers/**",
-											"../../../stickers/**",
 											"../../../text/**",
 											"../../../screens/**",
 											"../../../app/**",
@@ -888,7 +886,7 @@
 											"../../../../app/**",
 											"../../../../site/**"
 										],
-										"message": "The editor's tools, and Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools, Layers, and Text don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -920,11 +918,9 @@
 											"@/editor/**",
 											"../tools/**",
 											"../layers/**",
-											"../stickers/**",
 											"../text/**",
 											"../../tools/**",
 											"../../layers/**",
-											"../../stickers/**",
 											"../../text/**",
 											"../../screens/**",
 											"../../app/**",
@@ -933,7 +929,7 @@
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "The editor's tools, and Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools, Layers, and Text don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -1011,89 +1007,6 @@
 											"../../../site/**"
 										],
 										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/editor/stickers/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"@/site/**",
-											"@/projects/**",
-											"@/photos/**",
-											"expo-router",
-											"expo-router/**",
-											"@/editor",
-											"@/editor/**",
-											"../**",
-											"!../shortcuts",
-											"!../store",
-											"!../store/*",
-											"!../editorHost",
-											"!../../**",
-											"../../editor/**",
-											"../../screens/**",
-											"../../app/**",
-											"../../site/**"
-										],
-										"message": "Stickers imports nothing else from the editor but shortcuts.ts, editorHost.ts, and store/, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/editor/stickers/__tests__/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"@/site/**",
-											"@/projects/**",
-											"@/photos/**",
-											"expo-router",
-											"expo-router/**",
-											"@/editor",
-											"@/editor/**",
-											"../**",
-											"!../*",
-											"!../../shortcuts",
-											"!../../store",
-											"!../../store/*",
-											"!../../editorHost",
-											"!../../../**",
-											"../../../editor/**",
-											"../../../screens/**",
-											"../../../app/**",
-											"../../../site/**"
-										],
-										"message": "Stickers imports nothing else from the editor but shortcuts.ts, editorHost.ts, and store/, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}

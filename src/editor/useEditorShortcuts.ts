@@ -75,7 +75,6 @@ export function useEditorShortcuts({
 		switch (command.type) {
 			case "openShortcuts":
 			case "closeShortcuts":
-			case "closeStickers":
 			case "stopEyedropper":
 				dispatchMode({ type: command.type });
 				break;

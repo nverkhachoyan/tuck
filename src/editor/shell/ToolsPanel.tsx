@@ -8,9 +8,9 @@ import type { ToolEntry } from "./toolList";
  * is selected: two rows on a phone (see `ToolGrid`), or with `vertical`, a
  * column for a wide screen's rail, where they stay while a tool is in use,
  * marking it. The tool's options are in the header's context bar, not here.
- * On web, each shows the letter that picks it up on hover. Sticker opens the
- * sheet of stickers on a phone, or a popover beside the rail's button
- * (`stickerAnchor`) on a wide window. Add photo picks a photo to add, and
+ * On web, each shows the letter that picks it up on hover. A tool with a
+ * sheet opens it beside its rail button on a wide window, which `anchors`
+ * gives by the tool's id. Add photo picks a photo to add, and
  * spins while one is on its way. A tool that needs an image shows only with
  * one to work on.
  */
@@ -21,7 +21,7 @@ export function ToolsPanel({
 	addBusy,
 	hasImage,
 	startTool,
-	stickerAnchor,
+	anchors,
 }: {
 	tools: readonly ToolEntry[];
 	vertical?: boolean;
@@ -29,7 +29,7 @@ export function ToolsPanel({
 	addBusy: boolean;
 	hasImage: boolean;
 	startTool: ToolStarters;
-	stickerAnchor?: RefObject<View | null>;
+	anchors?: Readonly<Record<string, RefObject<View | null>>>;
 }) {
 	const compact = !vertical;
 	const tools = entries
@@ -48,7 +48,7 @@ export function ToolsPanel({
 					selected={vertical ? undefined : open}
 					marked={vertical ? open : undefined}
 					busy={entry.id === "photo" && addBusy}
-					buttonRef={entry.id === "sticker" ? stickerAnchor : undefined}
+					buttonRef={anchors?.[entry.id]}
 					onPress={startTool[entry.id]}
 				/>
 			);

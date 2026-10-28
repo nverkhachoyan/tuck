@@ -126,22 +126,16 @@ export function modeChrome({
 export type RailChosenToolInput = {
 	tool: ToolId | null;
 	editingText: boolean;
-	stickersOpen: boolean;
 };
 
 /**
- * Which tool the wide rail highlights as chosen:
- * - `editingText`: text being typed, which marks Text.
- * - `stickersOpen`: the sticker popover, which marks Sticker.
- * - `tool`: the open tool.
- * When none is active, no tool is marked.
+ * Which tool the wide rail highlights as chosen: Text while text is typed
+ * (`editingText`), or else the open tool. When none is active, no tool is
+ * marked.
  */
 export function railChosenTool({
 	tool,
 	editingText,
-	stickersOpen,
 }: RailChosenToolInput): string | null {
-	if (editingText) return "text";
-	if (stickersOpen) return "sticker";
-	return tool;
+	return editingText ? "text" : tool;
 }

@@ -1,30 +1,41 @@
 import { StyleSheet, View } from "react-native";
 import { space } from "@/ui/theme";
-import { TOOL_KEYS } from "../shortcuts";
 import { BarButton } from "./ContextBar";
 import { ToolButton, ToolRow } from "./ToolButton";
 import type { ToolStarters } from "./ToolsPanel";
-import type { ToolEntry } from "./toolList";
+import type { ToolEntry, ToolIcon } from "./toolList";
+
+/**
+ * A button a tool adds to the selected layer's actions, like keeping a
+ * photo as a sticker. `busy` spins while its work runs.
+ */
+export type LayerAction = {
+	label: string;
+	icon: ToolIcon;
+	busy?: boolean;
+	disabled?: boolean;
+	onPress: () => void;
+};
+
+type LayerActionsProps = {
+	tools: readonly ToolEntry[];
+	startTool: ToolStarters;
+	actions: readonly LayerAction[];
+};
 
 /**
  * What only the selected photo, drawing, shape, or redaction can do, in
  * place of the tools, as the text panel is for text; the actions every
  * layer shares float by it (see `SelectionBar`). It's moved and sized on
  * the canvas, and tapping the canvas off it deselects it. `tools` are the
- * tools the layer offers (see `layerActionsFor`). Keeping a photo as a
- * sticker stays its own row: Saved, or Sticker.
+ * tools the layer offers (see `layerActionsFor`), then the buttons tools add
+ * for it (`actions`).
  */
 export function LayerActionsPanel({
 	tools,
 	startTool,
-	sticker,
-	onSaveSticker,
-}: {
-	tools: readonly ToolEntry[];
-	startTool: ToolStarters;
-	sticker: "saving" | "saved" | undefined;
-	onSaveSticker: (() => void) | undefined;
-}) {
+	actions,
+}: LayerActionsProps) {
 	return (
 		<ToolRow>
 			{tools.map((entry) => (
@@ -35,19 +46,16 @@ export function LayerActionsPanel({
 					onPress={startTool[entry.id]}
 				/>
 			))}
-			{onSaveSticker && (
+			{actions.map((action) => (
 				<ToolButton
-					label={sticker === "saved" ? "Saved" : "Sticker"}
-					icon={
-						sticker === "saved"
-							? "sticker-check-outline"
-							: "sticker-plus-outline"
-					}
-					busy={sticker === "saving"}
-					disabled={sticker === "saved"}
-					onPress={onSaveSticker}
+					key={action.label}
+					label={action.label}
+					icon={action.icon}
+					busy={action.busy}
+					disabled={action.disabled}
+					onPress={action.onPress}
 				/>
-			)}
+			))}
 		</ToolRow>
 	);
 }
@@ -57,17 +65,7 @@ export function LayerActionsPanel({
  * the layer's kind as the bar's name and ✓ to deselect it. `SelectionBar`,
  * floating by the layer, is unchanged.
  */
-export function LayerBar({
-	tools,
-	startTool,
-	sticker,
-	onSaveSticker,
-}: {
-	tools: readonly ToolEntry[];
-	startTool: ToolStarters;
-	sticker: "saving" | "saved" | undefined;
-	onSaveSticker: (() => void) | undefined;
-}) {
+export function LayerBar({ tools, startTool, actions }: LayerActionsProps) {
 	return (
 		<View style={styles.actions}>
 			{tools.map((entry) => (
@@ -79,20 +77,16 @@ export function LayerBar({
 					onPress={startTool[entry.id]}
 				/>
 			))}
-			{onSaveSticker && (
+			{actions.map((action) => (
 				<BarButton
-					label={sticker === "saved" ? "Saved" : "Sticker"}
-					icon={
-						sticker === "saved"
-							? "sticker-check-outline"
-							: "sticker-plus-outline"
-					}
-					busy={sticker === "saving"}
-					disabled={sticker === "saved"}
-					shortcut={TOOL_KEYS.sticker}
-					onPress={onSaveSticker}
+					key={action.label}
+					label={action.label}
+					icon={action.icon}
+					busy={action.busy}
+					disabled={action.disabled}
+					onPress={action.onPress}
 				/>
-			)}
+			))}
 		</View>
 	);
 }

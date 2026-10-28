@@ -2,21 +2,24 @@ import type { ComponentType, ReactNode } from "react";
 import type { EditorDocument } from "@/model/document";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
+import type { Layer } from "@/model/layers/layer";
 import type { ToolStroke } from "./canvas/canvasTool";
 import type { CanvasInput } from "./canvasInputFor";
-import type { EditorHost } from "./editorHost";
+import type { EditorHost, PickedImage } from "./editorHost";
+import type { LayerAction } from "./shell/LayerActionsPanel";
 import type { OwnTool } from "./shell/toolList";
 import type { ToolId, ToolSpec } from "./toolSpec";
 
 type ToolView<C> = ComponentType<{ controller: C }>;
 
 type ToolViews<C> = {
-	Dock: ToolView<C>;
+	Dock?: ToolView<C>;
 	Bar?: ToolView<C>;
 	Tray?: ToolView<C>;
 	Results?: ToolView<C>;
 	Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
 	Controls?: ToolView<C>;
+	Sheet?: ToolView<C>;
 };
 
 /**
@@ -30,6 +33,10 @@ type ToolViews<C> = {
  * - `notify`: shows `message` in the edit notice, with Undo.
  * - `view`: zooms the canvas to an area of the document, or back to the fit.
  * - `addImage`: keeps an image the tool made, as the host does.
+ * - `addLayerImage`: adds the image `load` gives as a photo or a sticker,
+ *   placed in view; one image is added at a time, Add photo's included, and
+ *   an alert shows if it fails. Null from `load` adds nothing.
+ * - `pickPhoto`, `importPhoto`: read a photo as the host does.
  */
 export type ToolEnv = {
 	document: EditorDocument;
@@ -40,6 +47,12 @@ export type ToolEnv = {
 	notify: (message: string) => void;
 	view: { zoomToArea: (area: Rect) => void; fit: () => void };
 	addImage: EditorHost["addImage"];
+	addLayerImage: (
+		load: () => Promise<PickedImage | null>,
+		kind: "image" | "sticker",
+	) => void;
+	pickPhoto: EditorHost["pickPhoto"];
+	importPhoto: EditorHost["importPhoto"];
 };
 
 /**
@@ -49,7 +62,8 @@ export type ToolEnv = {
  * - `spec`: what the mode, the chrome, and the shortcuts know of it (see
  *   `ToolSpec`).
  * - `useController`: its hook, given what the editor gives it (`ToolEnv`).
- * - `views.Dock`: the phone dock's panel.
+ * - `views.Dock`: the phone dock's panel; without it, the dock holds only
+ *   the title, ✕, and ✓.
  * - `views.Bar`: the wide header's options, inside the shared `ContextBar`;
  *   without it, the bar has the title, ✕, and ✓ only.
  * - `views.Tray`: the phone's tray of options, while it's open.
@@ -61,6 +75,11 @@ export type ToolEnv = {
  *   open. A tool with one has no `canvasInput` or `finishStroke`.
  * - `views.Controls`: a strip under the canvas while it's open, above the
  *   phone's dock or along the bottom of a wide stage.
+ * - `views.Sheet`: shown while it's open, in a bottom sheet on a phone and
+ *   in a popover beside its rail button on a wide window. Dismissing it
+ *   closes the tool.
+ * - `sheetTitle`: what its sheet is called, when that isn't its label.
+ * - `sheetDismissed`: what it does once its sheet has finished closing.
  * - `prepare`: readies it before it opens, as by picking the sub-tool that
  *   fits the selection.
  * - `started`: what it does with the photo it opened on, once its undo
@@ -76,6 +95,8 @@ export type ToolEnv = {
  * - `reset`: what the header's Reset does while it's open, or undefined to
  *   hide Reset.
  * - `announcement`: what the editor announces for it.
+ * - `layerAction`: a button it adds to the selected `layer`'s actions, or
+ *   null.
  * - `stepSize`: steps its brush for `[` and `]`, exactly when its spec is
  *   `sized`.
  */
@@ -88,6 +109,9 @@ export type ToolDefinition<C> = {
 	deselectOnDone?: boolean;
 	reset?: (controller: C) => (() => void) | undefined;
 	announcement?: (controller: C) => string | null;
+	sheetTitle?: string;
+	sheetDismissed?: (controller: C) => void;
+	layerAction?: (controller: C, layer: Layer) => LayerAction | null;
 } & (
 	| {
 			views: ToolViews<C> & { Stage?: never };

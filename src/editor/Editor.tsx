@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	createRef,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { isHexColor } from "@/model/color";
 import type { EditorDocument } from "@/model/document";
@@ -14,7 +21,7 @@ import { Toast } from "@/ui/Toast";
 import { space } from "@/ui/theme";
 import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
 import { BUILT_IN_TOOLS } from "./builtInTools";
-import type { ToolList } from "./defineTool";
+import { definitionOf, type ToolList } from "./defineTool";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import { EditorHeader } from "./EditorHeader";
 import { EditorInspector } from "./EditorInspector";
@@ -34,6 +41,7 @@ import {
 	DockContent,
 	hasInspectorSection,
 	type PanelContext,
+	ToolSheet,
 	ToolStage,
 	ToolTrays,
 } from "./PanelViews";
@@ -45,10 +53,6 @@ import { SaveErrorBanner } from "./shell/SaveErrorBanner";
 import { TrayHeight } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
 import { shortcutGroups, toolsByKey } from "./shortcuts";
-import { StickerPopover, StickerSheet } from "./stickers/StickerSheet";
-import { useSavedStickers } from "./stickers/useSavedStickers";
-import { useStickerActions } from "./stickers/useStickerActions";
-import { useStickerSave } from "./stickers/useStickerSave";
 import { useStore } from "./store";
 import {
 	selectCanRedo,
@@ -95,11 +99,19 @@ export function Editor({
 			Object.entries(tools).map(([id, tool]) => [id, tool.spec]),
 		);
 		const entries = toolbarEntries(specs, toolbar);
+		// Where each tool with a sheet opens it on a wide window: beside its
+		// rail button.
+		const sheetAnchors = Object.fromEntries(
+			Object.entries(tools)
+				.filter(([, tool]) => definitionOf(tool).views.Sheet)
+				.map(([id]) => [id, createRef<View>()]),
+		);
 		return {
 			tools,
 			specs,
 			toolbar,
 			entries,
+			sheetAnchors,
 			toolsByKey: toolsByKey(entries),
 			shortcutGroups: shortcutGroups(entries, specs),
 		};
@@ -125,7 +137,6 @@ export function Editor({
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
 	const rootRef = useRef<View>(null);
-	const stickerAnchor = useRef<View>(null);
 
 	// What the editor is doing, and what's open over it. A tool puts itself
 	// down if its image goes away, or its photo does, and a text color picker
@@ -152,7 +163,6 @@ export function Editor({
 	// edit to the layers would change the document under it.
 	const draftOpen = tool !== null && specs[tool]?.takesKeys === true;
 	const layersOpen = modeState.sheet === "layers";
-	const stickersOpen = modeState.sheet === "stickers";
 
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
@@ -162,20 +172,19 @@ export function Editor({
 	const {
 		busy: addBusy,
 		dragging,
-		pick: pickPhoto,
-		addSticker,
-		pickSticker,
+		pick: addPhoto,
+		addLayerImage,
 	} = useAddImage({
 		host,
 		// On web, an image pasted or dropped onto the editor joins the canvas,
 		// unless another screen or tool is in front of it.
 		enabled: focused && !keysTaken,
 		maxShortSide: maxNewImageShortSide(document),
-		onImage: async ({ uri, width, height, opaque, sticker }) => {
+		onImage: async ({ uri, width, height, opaque }, kind) => {
 			const url = await host.addImage(uri, opaque);
 			const area = canvasRef.current?.visibleArea();
-			if (sticker) addStickerLayer(url, width, height, opaque, area);
-			else addImageLayer(url, width, height, opaque, area);
+			const add = kind === "sticker" ? addStickerLayer : addImageLayer;
+			add(url, width, height, opaque, area);
 		},
 	});
 
@@ -186,11 +195,6 @@ export function Editor({
 		() => dispatchMode({ type: "closeLayers" }),
 		[dispatchMode],
 	);
-	const closeStickers = useCallback(
-		() => dispatchMode({ type: "closeStickers" }),
-		[dispatchMode],
-	);
-	const openStickers = () => dispatchMode({ type: "openStickers" });
 
 	const {
 		controllers,
@@ -209,9 +213,9 @@ export function Editor({
 		dispatchMode,
 		targetImage,
 		documentSize,
-		pickPhoto,
-		addImage: host.addImage,
-		openStickers,
+		host,
+		addLayerImage,
+		addPhoto,
 		view: {
 			zoomToArea: (area) => canvasRef.current?.zoomToArea(area),
 			fit: () => canvasRef.current?.zoom("fit"),
@@ -222,8 +226,6 @@ export function Editor({
 
 	const editingText = text.edit !== null;
 	const openTool = tool ? controllers[tool] : undefined;
-	const savedStickers = useSavedStickers();
-	const stickerSave = useStickerSave(savedStickers.save, host.importPhoto);
 	// Find and Adjust live in the inspector, so they open it even though
 	// starting a tool closes the layers sheet. A tall window has it open anyway.
 	const layout = useEditorLayout({
@@ -332,14 +334,21 @@ export function Editor({
 	);
 
 	const hasImage = targetImage !== null;
-	// What the dock offers for the selected layer: the tools that act on it.
+	// What the dock offers for the selected layer: the tools that act on it,
+	// and the buttons tools add for it, each in the toolbar's order.
 	const layerTools =
 		selectedLayer && layerActionsFor(selectedLayer, specs, toolbox.toolbar);
 	const layerActions = layerTools && {
 		tools: toolbox.entries.filter((entry) => layerTools.includes(entry.id)),
 		startTool,
-		sticker: stickerSave.status,
-		onSaveSticker: stickerSave.save,
+		actions: toolbox.toolbar.flatMap((id) => {
+			const listed = controllers[id];
+			const action = listed?.definition.layerAction?.(
+				listed.controller,
+				selectedLayer,
+			);
+			return action ? [action] : [];
+		}),
 	};
 
 	// What every tool's views read from the editor around them, and what the
@@ -388,14 +397,6 @@ export function Editor({
 			onDelete={editNotice.deleteLayer}
 		/>
 	);
-
-	const stickerActions = useStickerActions({
-		savedStickers,
-		addSticker,
-		pickSticker,
-		closeStickers,
-		waitForDismiss: wide,
-	});
 
 	return (
 		<TrayHeight.Provider value={layout.setTrayHeight}>
@@ -488,7 +489,6 @@ export function Editor({
 								chosen={railChosenTool({
 									tool,
 									editingText,
-									stickersOpen,
 								})}
 								addBusy={addBusy}
 								hasImage={hasImage}
@@ -496,7 +496,7 @@ export function Editor({
 								tool={tool}
 								finishTool={finishTool}
 								finishText={text.finish}
-								stickerAnchor={stickerAnchor}
+								sheetAnchors={toolbox.sheetAnchors}
 							/>
 						)}
 
@@ -547,20 +547,15 @@ export function Editor({
 							}}
 						/>
 					)}
-					{wide ? (
-						<StickerPopover
-							anchor={stickerAnchor}
-							open={stickersOpen}
-							onClose={closeStickers}
-							{...stickerActions}
+					{Object.entries(toolbox.sheetAnchors).map(([id, anchor]) => (
+						<ToolSheet
+							key={id}
+							tool={controllers[id]}
+							open={tool === id}
+							anchor={wide ? anchor : undefined}
+							onClose={finishTool}
 						/>
-					) : (
-						<StickerSheet
-							open={stickersOpen}
-							onClose={closeStickers}
-							{...stickerActions}
-						/>
-					)}
+					))}
 
 					{dragging && <DropOverlay label="Drop to add to the canvas" />}
 					{text.edit && (

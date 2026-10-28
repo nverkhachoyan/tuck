@@ -5,12 +5,14 @@ import { cutOutSpec } from "./tools/cutout/cutOutSpec.ts";
 import { drawSpec } from "./tools/draw/drawSpec.ts";
 import { findSpec } from "./tools/find/findSpec.ts";
 import { redactSpec } from "./tools/redact/redactSpec.ts";
+import { stickersSpec } from "./tools/stickers/stickersSpec.ts";
 
 /** The built-in tools' specs, from their own folders, by id. */
 export const BUILT_IN_SPECS = {
 	draw: drawSpec,
 	redact: redactSpec,
 	find: findSpec,
+	sticker: stickersSpec,
 	cutOut: cutOutSpec,
 	crop: cropSpec,
 	adjust: adjustSpec,

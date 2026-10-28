@@ -35,9 +35,9 @@ export function useEditorTools({
 	dispatchMode,
 	targetImage,
 	documentSize,
-	pickPhoto,
-	addImage,
-	openStickers,
+	host,
+	addLayerImage,
+	addPhoto,
 	view,
 	visibleArea,
 	notify,
@@ -48,9 +48,9 @@ export function useEditorTools({
 	dispatchMode: (action: EditorModeAction) => void;
 	targetImage: ImageLayer | null;
 	documentSize: Size;
-	pickPhoto: () => void;
-	addImage: EditorHost["addImage"];
-	openStickers: () => void;
+	host: Pick<EditorHost, "addImage" | "pickPhoto" | "importPhoto">;
+	addLayerImage: ToolEnv["addLayerImage"];
+	addPhoto: () => void;
 	view: ToolEnv["view"];
 	visibleArea: () => Rect | undefined;
 	notify: (message: string) => void;
@@ -91,7 +91,10 @@ export function useEditorTools({
 			close: closeTool,
 			notify,
 			view,
-			addImage,
+			addImage: host.addImage,
+			addLayerImage,
+			pickPhoto: host.pickPhoto,
+			importPhoto: host.importPhoto,
 		});
 		controllers[id] = { definition, controller };
 	}
@@ -162,8 +165,7 @@ export function useEditorTools({
 			Object.keys(tools).map((next) => [next, () => startTool(next)]),
 		),
 		text: startNewText,
-		sticker: openStickers,
-		photo: pickPhoto,
+		photo: addPhoto,
 	};
 
 	// [ and ] step the open tool's brush, if it has one.

@@ -20,7 +20,7 @@ export function EditorRail({
 	tool,
 	finishTool,
 	finishText,
-	stickerAnchor,
+	sheetAnchors,
 }: {
 	tools: readonly ToolEntry[];
 	chosen: string | null;
@@ -30,7 +30,7 @@ export function EditorRail({
 	tool: ToolId | null;
 	finishTool: () => void;
 	finishText: () => void;
-	stickerAnchor?: RefObject<View | null>;
+	sheetAnchors?: Readonly<Record<string, RefObject<View | null>>>;
 }) {
 	// A tool picked from the rail while another is open finishes that one.
 	const fromRail = (start: () => void) => () => {
@@ -48,7 +48,7 @@ export function EditorRail({
 					addBusy={addBusy}
 					hasImage={hasImage}
 					startTool={mapStarters(startTool, fromRail)}
-					stickerAnchor={stickerAnchor}
+					anchors={sheetAnchors}
 				/>
 			</Surface>
 		</View>

@@ -1,5 +1,15 @@
-import type { ComponentProps, ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import {
+	type ComponentProps,
+	type ReactNode,
+	type RefObject,
+	useCallback,
+	useEffect,
+	useRef,
+} from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import { BottomSheet } from "@/ui/BottomSheet";
+import { Popover } from "@/ui/Popover";
 import { colors } from "@/ui/theme";
 import type { OpenTool, ToolControllers } from "./defineTool";
 import type { DockPanel } from "./editorChrome";
@@ -87,7 +97,7 @@ const OTHER_PANELS: Record<
 /** `tool`'s view in `slot`, given its controller, or null without one. */
 function toolView(
 	{ definition, controller }: OpenTool,
-	slot: "Dock" | "Bar" | "Tray" | "Results" | "Stage" | "Controls",
+	slot: "Dock" | "Bar" | "Tray" | "Results" | "Stage" | "Controls" | "Sheet",
 ) {
 	const View = definition.views[slot];
 	return View ? <View controller={controller} /> : null;
@@ -165,6 +175,83 @@ export function ToolStage({
 		>
 			<View style={styles.canvas}>{toolView(tool, "Stage")}</View>
 			{toolView(tool, "Controls")}
+		</View>
+	);
+}
+
+/**
+ * A tool's `Sheet` while it's `open`: in a popover beside its rail button
+ * (`anchor`) on a wide window, or else in a bottom sheet over a scrim, which
+ * stays mounted while closed so the sheet can animate out. A tap outside,
+ * a swipe down, or Escape calls `onClose`. Once it has gone, the tool's
+ * `sheetDismissed` runs.
+ */
+export function ToolSheet({
+	tool,
+	open,
+	anchor,
+	onClose,
+}: {
+	tool: OpenTool;
+	open: boolean;
+	anchor: RefObject<View | null> | undefined;
+	onClose: () => void;
+}) {
+	const { definition, controller } = tool;
+	const title = definition.sheetTitle ?? definition.spec.label;
+	// Stable, so the sheet's swipe isn't rebuilt on every render.
+	const latestClose = useRef(onClose);
+	latestClose.current = onClose;
+	const close = useCallback(() => latestClose.current(), []);
+	const dismissed = () => definition.sheetDismissed?.(controller);
+
+	// A phone's sheet needs nothing to finish closing first.
+	const wasOpen = useRef(open);
+	const onDismiss = useRef(dismissed);
+	onDismiss.current = dismissed;
+	useEffect(() => {
+		if (wasOpen.current && !open && !anchor) onDismiss.current();
+		wasOpen.current = open;
+	}, [open, anchor]);
+
+	if (anchor) {
+		return (
+			<Popover
+				anchor={anchor}
+				label={title}
+				open={open}
+				placement="beside"
+				onClose={close}
+				onDismiss={dismissed}
+			>
+				{toolView(tool, "Sheet")}
+			</Popover>
+		);
+	}
+	return (
+		<View style={styles.sheetArea}>
+			{open && (
+				<Animated.View
+					entering={FadeIn.duration(200)}
+					exiting={FadeOut.duration(150)}
+					style={StyleSheet.absoluteFill}
+				>
+					{/* Behind the sheet, not around it: on web, a click on the
+					    sheet would bubble up to it and close the sheet. */}
+					<Pressable
+						style={[StyleSheet.absoluteFill, styles.scrim]}
+						onPress={close}
+						accessibilityLabel="Close"
+					/>
+				</Animated.View>
+			)}
+			<View style={styles.sheetColumn}>
+				{open && (
+					<BottomSheet title={title} closeLabel="Close" onClose={close}>
+						{toolView(tool, "Sheet")}
+					</BottomSheet>
+				)}
+			</View>
 		</View>
 	);
 }
@@ -256,5 +343,22 @@ const styles = StyleSheet.create({
 	},
 	canvas: {
 		flex: 1,
+	},
+	// Over the whole screen, dock and all.
+	sheetArea: {
+		...StyleSheet.absoluteFill,
+		justifyContent: "flex-end",
+		alignItems: "center",
+		pointerEvents: "box-none",
+	},
+	scrim: {
+		backgroundColor: colors.sheetScrim,
+	},
+	// A phone's width, and no wider on a large screen.
+	sheetColumn: {
+		width: "100%",
+		maxWidth: 560,
+		maxHeight: "75%",
+		pointerEvents: "box-none",
 	},
 });

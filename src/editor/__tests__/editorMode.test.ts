@@ -229,7 +229,6 @@ describe("editorModeReducer", () => {
 			{ type: "startTool", start: { tool: "draw", layerId: null } },
 			{ type: "startTool", start: { tool: "adjust", layerId: "photo" } },
 			{ type: "startText", edit: edit("text") },
-			{ type: "openStickers" },
 		] satisfies EditorModeAction[]) {
 			assert.equal(run(waiting, action).eyedropper, null, action.type);
 		}
@@ -258,22 +257,19 @@ describe("editorModeReducer", () => {
 		assert.deepEqual(run(typing, { type: "endText" }).mode, { type: "idle" });
 	});
 
-	test("Stickers replaces the layers sheet, and closing one leaves the other", () => {
+	test("Stickers opens as a tool, closing the layers sheet and the tool before it", () => {
 		const stickers = run(
-			initialEditorMode,
+			drawing,
 			{ type: "toggleLayers" },
-			{ type: "openStickers" },
+			{ type: "startTool", start: { tool: "sticker", layerId: "photo" } },
 		);
-		assert.equal(stickers.sheet, "stickers");
-		assert.equal(run(stickers, { type: "closeLayers" }), stickers);
-		assert.equal(
-			run(stickers, {
-				type: "startTool",
-				start: { tool: "draw", layerId: null },
-			}).sheet,
-			"stickers",
-		);
-		assert.equal(run(stickers, { type: "closeStickers" }).sheet, null);
+		assert.deepEqual(stickers.mode, {
+			type: "tool",
+			tool: "sticker",
+			layerId: null,
+			optionsOpen: false,
+		});
+		assert.equal(stickers.sheet, null);
 	});
 
 	test("closing what's already closed changes nothing", () => {
@@ -282,7 +278,6 @@ describe("editorModeReducer", () => {
 			"closeTextPicker",
 			"stopEyedropper",
 			"closeLayers",
-			"closeStickers",
 			"closeShortcuts",
 			"endText",
 		] as const) {
@@ -521,7 +516,10 @@ describe("shortcutCommand", () => {
 	const remove: Shortcut = { type: "delete" };
 	const nudge: Shortcut = { type: "nudge", dx: 1, dy: 0 };
 	const listOpen = run(initialEditorMode, { type: "openShortcuts" });
-	const stickers = run(initialEditorMode, { type: "openStickers" });
+	const stickers = run(initialEditorMode, {
+		type: "startTool",
+		start: { tool: "sticker", layerId: null },
+	});
 	const picking = run(initialEditorMode, {
 		type: "startEyedropper",
 		eyedropper: eyedropper(),
@@ -547,29 +545,23 @@ describe("shortcutCommand", () => {
 		}
 	});
 
-	test("undo and redo run over a tool, the Stickers sheet, and the eyedropper", () => {
+	test("undo and redo run over a tool and the eyedropper", () => {
 		for (const state of [drawing, stickers, picking]) {
 			assert.equal(command(state, null, undo), undo);
 			assert.equal(command(state, null, redo), redo);
 		}
 	});
 
-	test("Export runs over a tool and the eyedropper, but not the Stickers sheet", () => {
+	test("Export runs over a tool and the eyedropper", () => {
 		const exporting: Shortcut = { type: "export" };
-		for (const state of [initialEditorMode, drawing, picking]) {
+		for (const state of [initialEditorMode, drawing, stickers, picking]) {
 			assert.equal(command(state, null, exporting), exporting);
 		}
-		assert.equal(command(stickers, null, exporting), null);
 	});
 
-	test("the Stickers sheet closes with Escape or A, and lets other keys pass", () => {
-		assert.deepEqual(command(stickers, null, esc), {
-			type: "closeStickers",
-		});
-		assert.deepEqual(command(stickers, null, sticker), {
-			type: "closeStickers",
-		});
-		for (const key of [draw, zoom, layers, remove]) {
+	test("Escape puts Stickers down, as any tool, and A or the other keys wait", () => {
+		assert.deepEqual(command(stickers, null, esc), { type: "doneWithTool" });
+		for (const key of [sticker, draw, layers, remove]) {
 			assert.equal(command(stickers, "layer", key), null);
 		}
 	});

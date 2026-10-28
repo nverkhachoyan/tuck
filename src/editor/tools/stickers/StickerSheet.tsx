@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type RefObject, useState } from "react";
+import { useState } from "react";
 import {
 	ActivityIndicator,
 	Image,
@@ -11,14 +11,13 @@ import {
 	Text,
 	View,
 } from "react-native";
-import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
+import Animated, { ZoomIn } from "react-native-reanimated";
 import { usePreference } from "@/platform/usePreference";
-import { BottomSheet } from "@/ui/BottomSheet";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
-import { Popover } from "@/ui/Popover";
 import { showAlert } from "@/ui/showAlert";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
+import { useEditorContext } from "../../editorContext";
 import {
 	STICKER_CATEGORY_LABELS,
 	STICKERS,
@@ -27,6 +26,7 @@ import {
 	stickerCategories,
 } from "./bundledStickers";
 import type { ShownSticker } from "./useSavedStickers";
+import type { StickersController } from "./useStickersTool";
 
 const TILE = 56;
 const GRID_GAP = 4;
@@ -64,82 +64,19 @@ type StickerContentProps = SavedStickerProps & {
 };
 
 /**
- * The phone's sticker sheet.
- * - The same tabs and grid as `StickerPopover`, which a wide window opens
- *   beside the rail instead.
- * - A tap outside, or swiping it down, closes it.
- * - Stays mounted while closed, so the sheet can animate out.
+ * Stickers' sheet: the stickers by category, which the editor shows in a
+ * bottom sheet on a phone, or in a popover beside the rail's Sticker button
+ * on a wide window. There the grid is wide enough for six tiles, and tall
+ * enough for five rows.
  */
 export function StickerSheet({
-	open,
-	onClose,
-	onDismiss: _onDismiss,
-	...content
-}: StickerContentProps & {
-	open: boolean;
-	onClose: () => void;
-	onDismiss?: () => void;
+	controller,
+}: {
+	controller: StickersController;
 }) {
-	return (
-		<View style={styles.area}>
-			{open && (
-				<Animated.View
-					entering={FadeIn.duration(200)}
-					exiting={FadeOut.duration(150)}
-					style={StyleSheet.absoluteFill}
-				>
-					{/* Behind the sheet, not around it: on web, a click on the
-					    sheet would bubble up to it and close the sheet. */}
-					<Pressable
-						style={[StyleSheet.absoluteFill, styles.scrim]}
-						onPress={onClose}
-						accessibilityLabel="Close"
-					/>
-				</Animated.View>
-			)}
-			<View style={styles.column}>
-				{open && (
-					<BottomSheet title="Stickers" closeLabel="Close" onClose={onClose}>
-						<StickerContent {...content} />
-					</BottomSheet>
-				)}
-			</View>
-		</View>
-	);
-}
-
-/**
- * Stickers beside the rail's Sticker button on a wide window.
- * - The same tabs and grid as the phone's sheet. The grid is wide enough for
- *   six tiles, and tall enough for five rows.
- * - Escape, or a press outside, closes it. The photo is not dimmed.
- */
-export function StickerPopover({
-	anchor,
-	open,
-	onClose,
-	onDismiss,
-	...content
-}: StickerContentProps & {
-	anchor: RefObject<View | null>;
-	open: boolean;
-	onClose: () => void;
-	onDismiss: () => void;
-}) {
-	return (
-		<Popover
-			anchor={anchor}
-			label="Stickers"
-			open={open}
-			placement="beside"
-			onClose={onClose}
-			onDismiss={onDismiss}
-		>
-			<View style={styles.popoverBody}>
-				<StickerContent {...content} />
-			</View>
-		</Popover>
-	);
+	const { wide } = useEditorContext();
+	const content = <StickerContent {...controller} />;
+	return wide ? <View style={styles.popoverBody}>{content}</View> : content;
 }
 
 /**
@@ -390,32 +327,11 @@ function StickerTile({
 }
 
 const styles = StyleSheet.create({
-	// Over the whole screen, dock and all.
-	area: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		justifyContent: "flex-end",
-		alignItems: "center",
-		pointerEvents: "box-none",
-	},
-	scrim: {
-		backgroundColor: colors.sheetScrim,
-	},
 	// Six tiles of `TILE`, plus the grid's padding and a scrollbar. The
 	// popover's card pads too, so it is wider than 360: a card of 360 would
 	// measure five tiles.
 	popoverBody: {
 		width: 6 * TILE + 5 * GRID_GAP + GRID_PADDING * 2 + SCROLLBAR,
-	},
-	// A phone's width, and no wider on a large screen.
-	column: {
-		width: "100%",
-		maxWidth: 560,
-		maxHeight: "75%",
-		pointerEvents: "box-none",
 	},
 	hovered: {
 		backgroundColor: colors.surfacePressed,

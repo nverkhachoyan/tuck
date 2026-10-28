@@ -268,7 +268,6 @@ describe("railChosenTool", () => {
 	const idle = {
 		tool: null,
 		editingText: false,
-		stickersOpen: false,
 	};
 
 	test("with nothing active, no tool is chosen", () => {
@@ -285,29 +284,7 @@ describe("railChosenTool", () => {
 		assert.equal(railChosenTool({ ...idle, editingText: true }), "text");
 	});
 
-	test("stickers open marks Sticker", () => {
-		assert.equal(railChosenTool({ ...idle, stickersOpen: true }), "sticker");
-	});
-
-	test("text being typed comes before stickers and tools", () => {
-		assert.equal(
-			railChosenTool({
-				tool: "draw",
-				editingText: true,
-				stickersOpen: true,
-			}),
-			"text",
-		);
-	});
-
-	test("stickers come before tools", () => {
-		assert.equal(
-			railChosenTool({
-				tool: "draw",
-				editingText: false,
-				stickersOpen: true,
-			}),
-			"sticker",
-		);
+	test("text being typed comes before the open tool", () => {
+		assert.equal(railChosenTool({ tool: "draw", editingText: true }), "text");
 	});
 });

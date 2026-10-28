@@ -7,10 +7,9 @@ const NUDGE_FAR_PX = 10;
 
 // A letter picks up a tool, and L shows or hides the layers. Each tool's
 // button shows its key on hover. A tool's key is its spec's; these are the
-// editor's own entries'. A opens the stickers, and P the photo picker.
+// editor's own entries'. P opens the photo picker.
 export const TOOL_KEYS: Record<OwnTool, string> = {
 	text: "T",
-	sticker: "A",
 	photo: "P",
 };
 export const LAYERS_KEY = "L";

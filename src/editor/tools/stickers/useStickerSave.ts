@@ -6,9 +6,9 @@ import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { renderCutOut } from "@/render/renderDocument";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
-import type { EditorHost } from "../editorHost";
-import { useStore } from "../store";
-import { selectSelectedLayer } from "../store/editorSlice";
+import type { EditorHost } from "../../editorHost";
+import { useStore } from "../../store";
+import { selectSelectedLayer } from "../../store/editorSlice";
 import { SAVED_STICKER_MAX_SIDE, type StickerImage } from "./savedStickers";
 import type { useSavedStickers } from "./useSavedStickers";
 

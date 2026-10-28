@@ -61,14 +61,13 @@ export type ToolStart = { tool: ToolId; layerId: string | null };
  * The mode, and what sits over it. A text color picker belongs to a layer,
  * and closes when that text isn't the one styled. The eyedropper waits for a
  * tap on the canvas over any mode, and either can be open with a tool's
- * tray. The layers or Stickers sheet, and the list of shortcuts, open over
- * everything.
+ * tray. The layers sheet, and the list of shortcuts, open over everything.
  */
 export type EditorModeState = {
 	mode: EditorMode;
 	textPicker: { layerId: string; key: TextColorKey } | null;
 	eyedropper: Eyedropper | null;
-	sheet: "layers" | "stickers" | null;
+	sheet: "layers" | null;
 	shortcutsOpen: boolean;
 };
 
@@ -104,8 +103,6 @@ export type EditorModeAction =
 	| { type: "stopEyedropper"; eyedropper?: Eyedropper }
 	| { type: "toggleLayers" }
 	| { type: "closeLayers" }
-	| { type: "openStickers" }
-	| { type: "closeStickers" }
 	| { type: "openShortcuts" }
 	| { type: "closeShortcuts" }
 	| { type: "settle"; targets: ModeTargets };
@@ -131,7 +128,7 @@ export function editorModeReducer(
 				mode: toolMode(action.start, specs),
 				textPicker: null,
 				eyedropper: null,
-				sheet: withoutLayers(state.sheet),
+				sheet: null,
 			};
 		case "endTool":
 			return {
@@ -152,7 +149,7 @@ export function editorModeReducer(
 				...state,
 				mode: { type: "text", edit: action.edit },
 				eyedropper: null,
-				sheet: withoutLayers(state.sheet),
+				sheet: null,
 			};
 		case "changeText":
 			return mode.type === "text"
@@ -190,10 +187,6 @@ export function editorModeReducer(
 			return { ...state, sheet: state.sheet === "layers" ? null : "layers" };
 		case "closeLayers":
 			return state.sheet === "layers" ? { ...state, sheet: null } : state;
-		case "openStickers":
-			return { ...state, sheet: "stickers", eyedropper: null };
-		case "closeStickers":
-			return state.sheet === "stickers" ? { ...state, sheet: null } : state;
 		case "openShortcuts":
 			return { ...state, shortcutsOpen: true };
 		case "closeShortcuts":
@@ -241,7 +234,6 @@ export type ShortcutCommand =
 	| Exclude<Shortcut, { type: "help" }>
 	| { type: "openShortcuts" }
 	| { type: "closeShortcuts" }
-	| { type: "closeStickers" }
 	| { type: "stopEyedropper" }
 	| { type: "doneWithTool" };
 
@@ -267,13 +259,6 @@ export function shortcutCommand(
 	}
 	if (shortcut.type === "help") return { type: "openShortcuts" };
 	if (shortcut.type === "undo" || shortcut.type === "redo") return shortcut;
-	// The Stickers sheet's own key, or Escape, closes it; the rest wait.
-	if (state.sheet === "stickers") {
-		const closes =
-			shortcut.type === "deselect" ||
-			(shortcut.type === "tool" && shortcut.tool === "sticker");
-		return closes ? { type: "closeStickers" } : null;
-	}
 	// The view zooms whatever's in use, and Export takes it as it is, as the
 	// header's button does.
 	if (shortcut.type === "zoom" || shortcut.type === "export") return shortcut;
@@ -329,10 +314,4 @@ function targetGone(
 /** The tool whose tray is open, or null when none is. */
 export function openTray(mode: EditorMode) {
 	return mode.type === "tool" && mode.optionsOpen ? mode.tool : null;
-}
-
-function withoutLayers(
-	sheet: EditorModeState["sheet"],
-): EditorModeState["sheet"] {
-	return sheet === "layers" ? null : sheet;
 }
