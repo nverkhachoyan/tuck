@@ -1,303 +1,240 @@
-# Architectural Evaluation: Crop as an Editor Mode vs. First-Class Tool
+# Crop as a Stage Tool
 
-**Topic:** Determining whether `crop` should remain an independent editor mode under `src/editor/crop/` or be refactored into `src/editor/tools/` as a first-class tool definition.
+**Topic:** whether Crop stays an editor mode in `src/editor/crop/` or becomes a tool in `src/editor/tools/`, and if so, how.
 
----
-
-## Executive Summary of the Architectural Debate
-
-An architectural debate was conducted between two specialized subagents:
-- **Subagent A ("Status-Quo Architect")**: Defended keeping Crop as an independent editor mode under `src/editor/crop/`, arguing from framing vs. layer mutation boundaries, dedicated Skia canvas requirements, and preserving a lean `ToolDefinition`.
-- **Subagent B ("Pluggable Systems Engineer")**: Advocated unifying Crop into `src/editor/tools/`, arguing from user mental models, consumer pluggability (`<Editor tools={...} />`), eliminating 265 lines of duplicate UI chrome, and fixing active UI drift bugs.
-
-### Key Discoveries During Debate
-1. **The Duplication in `CropTool.tsx` Has Already Caused Active Bugs:**
-   - In [`src/editor/crop/CropTool.tsx` (line 155)](file:///Users/nverk/Dev/tuck/src/editor/crop/CropTool.tsx#L155), the duplicated `<Dock>` omitted `keyboardOverlap={layout.keyboardOverlap}`, breaking soft-keyboard avoidance on mobile.
-   - `CropTool.tsx` renders a full-screen opaque blanket (`...StyleSheet.absoluteFill, backgroundColor: colors.background`), which completely occludes [`SaveErrorBanner`](file:///Users/nverk/Dev/tuck/src/editor/Editor.tsx#L470) and undo [`Toast`](file:///Users/nverk/Dev/tuck/src/editor/Editor.tsx#L531).
-   - On desktop screens, opening Crop completely destroys the [`EditorRail`](file:///Users/nverk/Dev/tuck/src/editor/Editor.tsx#L478), causing a jarring layout shift.
-2. **`useToolSession` Natively Supports Atomic Single-Step Edits:**
-   - In [`src/editor/store/editorSlice.ts` (lines 506–512)](file:///Users/nverk/Dev/tuck/src/editor/store/editorSlice.ts#L506-L512), `commitSession` checks `if (document === session.document) { set({ session: null }); return; }`. 
-   - Because of this snapshot comparison, intermediate scratch gestures in a local controller do *not* generate store actions or undo history. When `done` executes `reframe`, `commitSession` commits exactly one atomic undo snapshot. The claim that Crop's transactional model is incompatible with `useToolSession` is factually incorrect.
-3. **Unmounting `EditorCanvas` is Dangerous; Scoped Stage Overlays are Safe:**
-   - Unmounting `EditorCanvas` whenever Crop opens destroys Skia WebGL surfaces, risks browser context drops, and thrashes viewport state.
-   - However, Crop does not need to replace `EditorCanvas` in the DOM tree. Rendering `CropCanvas` as an overlay **scoped strictly within `<CanvasStage>`** keeps `EditorCanvas` warm while allowing the shared `ScreenHeader`, `ContextBar`, `Dock`, `DockFooter`, `EditorRail`, and error banners to remain active and un-occluded.
-4. **Interface Segregation Must Be Maintained:**
-   - Blithely adding `reframe` to the generic `ToolEnv` violates Interface Segregation and pollutes standard layer tools (`draw`, `redact`, `find`, `cutout`, `adjust`).
-   - A discriminated union between **`LayerToolDefinition`** and **`StageToolDefinition`** preserves 100% type purity and Node testability.
-
-### Consensus Verdict
-Both agents converged on a **Hybrid Architecture**: Crop is refactored into `src/editor/tools/crop/` as a built-in tool conforming to a new `StageToolDefinition` archetype.
+**Status:** revised after a review of the first draft against the code. The first draft's direction holds: Crop becomes a built-in tool, defined like the others and replaceable through `<Editor tools>`. Its premises, type design, layout code, and phase plan are corrected below.
 
 ---
 
-## Detailed Summary of Debate Rounds
+## Background: the debate
 
-### Round 1: Opening Arguments & Code Citations
+Two positions were argued:
 
-#### Subagent A (Defending Separation):
-- **Framing Mutations vs. Layer Edits:** Layer tools mutate layers within existing document bounds and run continuous undo sessions on the store; Crop completely changes document framing ([`src/model/framing.ts` lines 89–102, 162–192](file:///Users/nverk/Dev/tuck/src/model/framing.ts#L89-L102)), recalculating bounds and rebasing every layer via `rebaseTransform`.
-- **Canvas Staging:** Standard tools cleanly share `EditorCanvas` via generalized input pipelines (`canvasInputFor.ts`). Crop requires its own dedicated Skia canvas (`CropCanvas.tsx`) with specialized 8-handle box dragging (`cropDrag.ts`), inverted scrim clip, aspect-ratio snapping, and straighten dials.
-- **`composition-plan.md` Intent:** The plan specifically warned: *"Giving ToolDefinition a case for each would make it describe the editor rather than a tool, so they stay the editor's own."*
+- **Keep Crop separate** (`src/editor/crop/`). Crop rewrites the document's framing rather than editing layers, it draws on its own canvas (`CropCanvas`), and `docs/plans/composition-plan.md:151` decided that "giving `ToolDefinition` a case for each would make it describe the editor rather than a tool".
+- **Make Crop a tool** (`src/editor/tools/`). It already looks like one to the user (a toolbar button, key `C`, Done and Cancel). It's special-cased in `editorMode.ts`, `shell/toolList.ts`, `editorChrome.ts`, `useEditorTools.ts`, and `Editor.tsx`. Hosts can't replace or remove it, because `TakenId` reserves `"crop"`. And `CropTool.tsx` repeats the editor's header, context bar, dock, and footer.
 
-#### Subagent B (Advocating Unification):
-- **User Mental Model:** Crop is in `BUILT_IN_TOOLBAR` right between Stickers and Adjust, has an icon (`crop-rotate`), label ("Crop"), shortcut key (`C`), and standard Done/Cancel footer. Segregating it leaks internal storage mechanics into top-level architecture.
-- **Pervasive Code Sprawl:** Quarantining Crop forces special-casing across 5 core files:
-  - `editorMode.ts`: `{ type: "crop" }`, `{ type: "startCrop" }`, `{ type: "endCrop" }`.
-  - `shell/toolList.ts`: `OwnTool = "text" | "sticker" | "crop" | "photo"`.
-  - `editorChrome.ts`: `railChosenTool` has `if (cropping) return "crop"`.
-  - `useEditorTools.ts`: Bespoke `startCrop`, `closeCrop`, and `finishCrop`.
-  - `Editor.tsx`: `{cropping && <CropTool ... />}`.
-- **Layout Chrome Duplication:** `CropTool.tsx` duplicates 265 lines of layout chrome (`ScreenHeader`, `ContextBar`, `Dock`, `DockFooter`, and manual key listeners).
-- **Pluggability Lock-out:** Consumers of `<Editor tools={...} toolbar={...} />` cannot customize, wrap, disable, or replace Crop (e.g. with a perspective cropper or auto-scan cropper) because `editorTools` explicitly bans `"crop"` via `TakenId`.
+Both sides settled on a middle path: Crop becomes a tool, of a second kind that shows its own canvas inside the editor's stage. This revision keeps that outcome and changes how it's built.
 
----
+This reverses the composition plan's decision for Crop only. Text, Layers, and Stickers stay the editor's own.
 
-### Round 2: Rebuttal & Stress-Testing
+## What the first draft got wrong
 
-#### Subagent A's Counter-Attack:
-- **WebGL Context Thrashing:** If `EditorCanvas` is unmounted when `CropCanvas` mounts, WebGL contexts are repeatedly destroyed and recreated, risking context loss and blanking on web (`AGENTS.md`).
-- **Loss of Viewport State:** Unmounting `EditorCanvas` wipes ephemeral pan/zoom and viewport scale.
-- **Interface Pollution:** Adding `reframe` to `ToolEnv` hands whole-document framing mechanics to tools like `draw` and `redact`, complicating pure Node unit tests.
-- **Layout Incompatibilities:** Crop has unique layout requirements:
-  - Wide screens require a 100pt `<DialStrip>` underneath the canvas stage.
-  - Mobile screens require dynamic-height controls (`CONTROLS_WITH_DIAL` 120pt vs `CONTROLS_WITHOUT_DIAL` 64pt) above the dock.
-  - Crop binds Android `BackHandler` and window key listeners for Escape and Enter.
+| First draft's claim | What the code shows |
+| :-- | :-- |
+| Crop's `<Dock>` lacks `keyboardOverlap`, so keyboard avoidance is broken. | Not a bug. `keyboardOverlap` is non-zero only while text is being typed (`useEditorLayout.ts:42`), and Crop has no text input. |
+| The opaque cover hides `SaveErrorBanner` and the undo `Toast`. | True. It's a small issue, and Phase 2 fixes it. |
+| Crop "destroys" the wide rail. | It covers it, on purpose ("Its header covers the editor's"). The cover is also what stops the editor changing the document mid-crop, which the new design has to handle explicitly (see "Modal tools"). |
+| `CropTool.tsx` duplicates 265 lines of chrome. | Most of the file is Crop's own: the dial strip, keys, back handler, tab state, and controls sizing. About 50 lines repeat the editor's wiring. |
+| Keeping `EditorCanvas` mounted avoids WebGL context thrashing. | `EditorCanvas` already stays mounted under today's `CropTool`, so both designs run the same two canvases. This doesn't separate them. |
+| `useToolSession` already handles Crop. | Only for undo: Done → `reframe` → `commitSession` makes one undo step, and Cancel makes none. But a session also promises that closing a tool any way keeps its changes. Crop keeps a draft outside the store until Done, so any exit that skips `definition.done` (Back, Export) would silently lose it. |
+| `LayerToolEnv` / `StageToolEnv` keep `reframe` away from layer tools. | Nothing enforces it. `archetype` is self-declared, and every tool already reads store actions through `useStore` (`useAdjustTool.ts:75`), which biome allows. Tool hooks also take `Pick<ToolEnv, …>`, so a new field touches none of them. |
+| Existing code typechecks unchanged after Phase 1. | Five tool hooks and `useEditorTools.ts` import `ToolEnv` by name, and `useCanvasInput.ts:38,56` reads `canvasInput`/`finishStroke`, which don't exist on that union (TS2339). The draft's types also accepted a stage tool with `sized: true` and no `stepSize`, and silently ignored `views.Stage` on a definition without `archetype`. |
+| `views.Controls` and `views.StageFooter` render after `</CanvasStage>`. | The dock is positioned absolutely inside `CanvasStage`, so this puts the phone's controls below the dock, under the home indicator. A footer outside the stage makes the stage shorter, so the wide rail and inspector cards move when Crop opens. |
 
-#### Subagent B's Rebuttal:
-- **The Duplication is Already Rotting:** Pointed out that `CropTool.tsx` has already drifted from `Editor.tsx`:
-  - Soft-keyboard avoidance is broken in Crop because `keyboardOverlap` was omitted from its `<Dock>`.
-  - Auto-save error banners and undo toasts are completely occluded by `CropTool`'s full-screen background.
-  - The wide desktop `EditorRail` vanishes when Crop is opened, disrupting the desktop UI.
-- **`useToolSession` Coalescing:** Proved that `useToolSession` naturally supports local controller drafts. Because `commitSession` compares document references, intermediate gestures never pollute the store, and `reframe` commits as exactly one undo step.
-- **Scoped CanvasStage Overlay:** Proved that `EditorCanvas` does not need to be unmounted. Mounting `CropCanvas` as an overlay inside `<CanvasStage>` preserves WebGL context warmth while keeping the outer shell unified.
+## Design
 
----
+### 1. One `ToolEnv`, and a `stage` part on the definition
 
-### Round 3: Convergence & Hybrid Design
-
-Both agents agreed that neither the pure status quo nor naive unification is optimal. They converged on a **Two-Archetype Tool Architecture**:
-
-1. **Typed Tool Archetypes (`LayerToolDefinition` vs. `StageToolDefinition`):**
-   - `LayerToolEnv` stays 100% pure (no `reframe`, identical to current `ToolEnv`).
-   - `StageToolEnv` extends `LayerToolEnv` with `reframe`.
-   - Node tests for layer tools remain completely insulated.
-2. **Non-Destructive In-Stage Viewport Staging:**
-   - `EditorCanvas` remains mounted inside `<CanvasStage>`.
-   - `views.Stage` mounts as a scoped overlay *inside* `<CanvasStage>`, leaving `EditorHeader`, `Dock`, `EditorRail`, and error banners fully visible.
-3. **Formalized Slots for Asymmetric Controls:**
-   - Desktop straighten dial mounts via `views.StageFooter` under `<CanvasStage>`.
-   - Dynamic mobile controls mount via `views.Controls` above `<Dock>`.
-   - Mobile dock tab row mounts inside the unified `<Dock>`, inheriting `keyboardOverlap`.
-4. **Shell-Level Event Centralization:**
-   - Android `BackHandler` and Enter/Escape shortcuts are handled centrally by `useEditorTools` and `useEditorShortcuts`.
-
----
-
-## Direct Comparison of Trade-Offs
-
-| Evaluation Dimension | Status Quo (`src/editor/crop/`) | Naive Unification (`ToolDefinition`) | Converged Hybrid Architecture |
-| :--- | :--- | :--- | :--- |
-| **`ToolEnv` Purity** | High (Crop excluded from tools) | Low (`reframe` leaked to all tools) | **High** (`LayerToolEnv` vs `StageToolEnv`) |
-| **Node Testability** | Simple for layer tools | Polluted with mock framing calls | **Simple & Pure** (Layer tools see no framing) |
-| **Layout Duplication** | 265 lines duplicated in `CropTool.tsx` | None, but cramped controls | **Zero Duplication** (Shared shell with typed slots) |
-| **UI Consistency & Bugs** | ⚠️ Broken keyboard avoidance; banner occlusion; rail disappears | Clean UI composition | **Fully Fixed** (Inherits `keyboardOverlap`, rail persists) |
-| **Skia WebGL Lifecycle** | Two active canvases simultaneously | Thrashing WebGL contexts if unmounted | **Scoped in-stage overlay** (Canvas stays warm) |
-| **Store Undo Session** | Custom `finishCrop` wrapper | Risk of empty session if unhandled | **Native** (`commitSession` coalesces 1 step) |
-| **Pluggability & Extensibility** | ❌ Hardcoded in `Editor.tsx`; banned in `TakenId` | ✅ Pluggable | **✅ Fully Pluggable** via `<Editor tools={...} />` |
-| **Code Sprawl in Editor Core** | High (Branches in 5 core modules) | Low | **Low** (Unified under standard tool loop) |
-
----
-
-## Concrete Architectural Specification
-
-### 1. Updated `src/editor/defineTool.ts`
+`ToolEnv` stays as it is. Crop takes `reframe` from the store, as other tools take their own actions. A stage tool differs in what it shows and how much of the editor it takes over, so that is what the type describes.
 
 ```ts
-import type { ComponentType, ReactNode } from "react";
-import type { EditorDocument } from "@/model/document";
-import type { Framing } from "@/model/framing";
-import type { Rect, Size } from "@/model/geometry";
-import type { ImageLayer } from "@/model/layers/image";
-import type { ToolStroke } from "./canvas/canvasTool";
-import type { CanvasInput } from "./canvasInputFor";
-import type { EditorHost } from "./editorHost";
-import type { OwnTool } from "./shell/toolList";
-import type { ToolId, ToolSpec } from "./toolSpec";
+// src/editor/defineTool.ts (sketch)
 
-export type ToolView<C> = ComponentType<{ controller: C }>;
+/** What covers the stage's edges: the dock and its controls, the rail, the inspector. */
+export type StageInset = { left: number; right: number; bottom: number };
 
-/** Base environment common to all tools. */
-export type LayerToolEnv = {
-	document: EditorDocument;
-	documentSize: Size;
-	open: boolean;
-	image: ImageLayer | null;
-	close: () => void;
-	notify: (message: string) => void;
-	view: { zoomToArea: (area: Rect) => void; fit: () => void };
-	addImage: EditorHost["addImage"];
+/**
+ * What a stage tool shows in place of the editor's canvas.
+ * - `Stage`: its canvas, over the editor's, inside `CanvasStage`. It keeps
+ *   what it draws and drags clear of `inset`.
+ * - `Footer`: a strip along the stage's bottom on a wide screen, between the
+ *   rail and the inspector (Crop's straighten dial).
+ * - `Controls`: a row over the phone's dock (Crop's tab controls).
+ */
+export type StageViews<C> = {
+	Stage: ComponentType<{ controller: C; inset: StageInset }>;
+	Footer?: ToolView<C>;
+	Controls?: ToolView<C>;
 };
 
-/** Specialized environment for tools that mutate document framing/canvas bounds. */
-export type StageToolEnv = LayerToolEnv & {
-	reframe: (framing: Framing, turnLayers: boolean) => void;
-};
-
-export type BaseToolViews<C> = {
-	Dock: ToolView<C>;
-	Bar?: ToolView<C>;
-	Tray?: ToolView<C>;
-	Results?: ToolView<C>;
-	Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
-};
-
-type CommonToolDefinition<C, E> = {
-	spec: ToolSpec;
-	useController: (env: E) => C;
-	prepare?: (controller: C) => void;
-	started?: (controller: C, image: ImageLayer) => void;
-	doneLabel?: (controller: C) => string | undefined;
-	done?: (controller: C) => void;
-	deselectOnDone?: boolean;
-	reset?: (controller: C) => (() => void) | undefined;
-	announcement?: (controller: C) => string | null;
-};
-
-/** Standard layer-mutating tool (draw, redact, find, cutout, adjust). */
-export type LayerToolDefinition<C> = CommonToolDefinition<C, LayerToolEnv> & {
-	archetype?: "layer";
-	views: BaseToolViews<C>;
-	canvasInput?: (controller: C) => CanvasInput | null;
-	finishStroke?: (controller: C, stroke: ToolStroke) => void;
+export type ToolDefinition<C> = {
+	useController: (env: ToolEnv) => C;
+	views: { Dock; Bar?; Tray?; Results?; Inspector? }; // unchanged
+	prepare?; started?; doneLabel?; done?; deselectOnDone?; reset?; announcement?; // unchanged
 } & (
-	| { spec: ToolSpec & { sized: true }; stepSize: (controller: C, step: 1 | -1) => void }
-	| { spec: ToolSpec & { sized: false }; stepSize?: never }
+	| ({
+			stage?: never;
+			canvasInput?: (controller: C) => CanvasInput | null;
+			finishStroke?: (controller: C, stroke: ToolStroke) => void;
+	  } & (
+			| { spec: ToolSpec & { sized: true; modal?: false }; stepSize: (controller: C, step: 1 | -1) => void }
+			| { spec: ToolSpec & { sized: false; modal?: false }; stepSize?: never }
+	  ))
+	| {
+			stage: StageViews<C>;
+			spec: ToolSpec & { sized: false; modal: true };
+			stepSize?: never;
+			canvasInput?: never;
+			finishStroke?: never;
+	  }
 );
-
-/** Stage-level tool providing custom viewport staging (crop, perspective warp). */
-export type StageToolDefinition<C> = CommonToolDefinition<C, StageToolEnv> & {
-	archetype: "stage";
-	views: BaseToolViews<C> & {
-		/** Canvas replacement mounted strictly inside CanvasStage */
-		Stage: ToolView<C>;
-		/** Optional desktop bottom strip (e.g. Rotate dial strip) */
-		StageFooter?: ToolView<C>;
-		/** Optional controls row mounted above the mobile dock */
-		Controls?: ToolView<C>;
-	};
-	stepSize?: never;
-};
-
-export type ToolDefinition<C> = LayerToolDefinition<C> | StageToolDefinition<C>;
-
-export function defineTool<C>(definition: ToolDefinition<C>): ToolDefinition<C> {
-	return definition;
-}
 ```
 
-### 2. Definition of `cropTool` (`src/editor/tools/crop/cropTool.ts`)
+`ToolSpec` gains `modal?: boolean` (see "Modal tools"). It's optional, so existing specs, including hosts' own, still compile.
+
+How this compares with the first draft:
+
+- The views sit under `stage` rather than beside the dock views, so a definition can't have a stage canvas without being a stage tool. The draft's `views.Stage` without `archetype` compiled and was never drawn.
+- The stage member types `canvasInput` and `finishStroke` as `never` instead of leaving them out, so the editor reads them on any definition without narrowing.
+- Checked with `tsc` against probe definitions. Rejected: a stage tool that's `sized`, that has `canvasInput`, that lacks `Stage`, that isn't `modal`, and a `modal` spec without `stage`. Accepted: ordinary layer and stage tools, and `definition.canvasInput` / `.finishStroke` / `.stepSize` / `.stage` read on the union.
+- `Tool`, `ToolList`, `definitionOf`, `OpenTool`, `ToolControllers`, `TakenId`, and `editorTools` stay. `TakenId` loses `"crop"` only because `OwnTool` does.
+
+### 2. Modal tools
+
+Today the cover and `takesKeys` stop the editor changing the document mid-crop. A stage tool shares the editor's chrome, so the editor has to stop those changes itself. A tool whose spec is `modal`:
+
+- **Keys.** `shortcutCommand` gets a branch for modal tools: Escape and Enter (`deselect`, and `edit`, which only fires with focus on the page body) give `doneWithTool`; `?` opens the shortcuts list; everything else is `"held"`. That includes zoom, which would otherwise zoom the hidden `EditorCanvas`, and Export. `takesKeys` stays as it is (text only), so the shortcut hook stays on.
+- **Paste and drop.** `useAddImage` is disabled while a modal tool is open. Add an `isModal(mode, specs)` helper in `editorMode.ts` and use it next to `keysTaken` (`Editor.tsx:170`).
+- **Back and Export.** `leave` and `openExport` call `finishTool()` first when the open tool is modal, as they already call `text.finish()`. Android's back button applies a modal tool, as Crop's does today. Other tools keep their current back behavior.
+- **Inspector.** On a wide screen it stays where it is, so the photo doesn't move, but it becomes inert: `pointerEvents="none"`, `inert` on web (set from a ref, see AGENTS.md), `accessibilityElementsHidden` on native. Its layer list can't hide, delete, or reorder the photo the crop is anchored to.
+- **Rail.** It stays usable. It already calls `finishTool` before switching, so choosing another tool applies the crop, as Escape does.
+- **Undo and redo.** Nothing new: `selectCanUndo` and `selectCanRedo` already stop at the session's start.
+
+### 3. A controller that starts fresh each time it opens
+
+`useEditorTools` runs every tool's `useController` on every render, from the moment the editor mounts. `useCropController` is written to start fresh on each mount, so as a tool hook it would carry state from one crop to the next:
+
+- `startCrop(document)` and `document.background` would be captured once, when the editor opens.
+- `viewSize` would carry over between crops, so:
+  - the first-fit check (`viewport.value.scale === 0`) fails and the view eases in from the last crop's viewport;
+  - `viewScale > 0` is already true on the first render, so the Skia scene mounts before its surface has a size. On web that can leave it blank (AGENTS.md, Skia).
+
+`useCropTool` resets when `open` turns on:
+
+- The crop, aspect, background, turn-layers flag, and tab reset to their starting values, set while rendering (React's "adjust state when a prop changes" pattern), so no render shows the last crop's state.
+- `viewSize` resets to zero, so `CropStage` draws nothing until its own `onLayout`. By then the shared values written by the reset have reached the UI thread, so the last crop's box can't flash.
+- Whether the next fit is the first is a flag reset on open, not `viewport.value.scale === 0`.
+- While closed, it does no work beyond its hooks' bookkeeping.
+
+The tab (Crop, Rotate, Size, …) moves from `CropTool`'s local state into the controller, since the bar, dock, controls, and footer become separate views.
+
+### 4. Layout inside `CanvasStage`
+
+```tsx
+<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
+	<EditorCanvas … />
+	{stageTool && (
+		<stageTool.definition.stage.Stage
+			controller={stageTool.controller}
+			inset={layout.canvasInset}
+		/>
+	)}
+	{!wide && <ToolTrays … />}
+	{/* banner, announcements, rail, unchanged */}
+	{stageTool && <StageChrome tool={stageTool} wide={wide} layout={layout} />}
+	{/* inspector or dock, unchanged */}
+</CanvasStage>
+```
+
+- **`Stage`** is absolute-fill and opaque (`colors.canvasWell`), drawn after `EditorCanvas`. The banner, rail, trays, and dock come after it, so they stay on top and get touches first. `CropCanvas` takes `inset`: its fit and its drag limits (`useCropGesture.ts:103`, now the whole view) use the part of the view nothing covers, so no handle can end up under the dock, rail, or inspector. It stays full-bleed rather than inset, so the editor's photo can't show through the gaps around the wide cards.
+- **`StageChrome`** places `Controls` (phone) absolutely at `bottom: layout.dockInset`, over the dock, which already pads the safe area. It places `Footer` (wide) along the stage's bottom between `canvasInset.left` and `canvasInset.right`, padded by the bottom safe area itself, as `DialStrip` is today. Neither is in the column outside the stage, so the rail and inspector don't move.
+- **Their heights** go into `useEditorLayout` like an open tray's: added to `canvasInset.bottom` on both layouts and to `coveredBottom`, so the Toast sits above them. Crop keeps them fixed while it's open (120 or 64 points for the phone's controls, 100 for the wide strip, which holds the dial only on Rotate) so its canvas holds still as tabs change.
+- **Resizing.** Crossing the wide breakpoint swaps `Footer` and `Controls`, and the dock and inspector, without remounting `Stage`, which keeps its place among the stage's children. Opening the inspector or resizing changes `inset`, and Crop refits with its existing ease. A resize during a drag rebuilds `useCropGesture` (as `onLayout` does today), so test that `dragging` doesn't stay set.
+
+### 5. Crop's definition
 
 ```ts
-import { defineTool } from "../../defineTool";
-import { cropSpec } from "./cropSpec";
-import { CropBar, CropControls, CropDock, CropStage, CropStageFooter } from "./CropViews";
-import { type CropController, useCropTool } from "./useCropTool";
+// src/editor/tools/crop/cropSpec.ts
+export const cropSpec = {
+	target: "none", // with no locked photo, Crop crops and turns the canvas itself
+	tray: false,
+	sized: false,
+	modal: true,
+	label: "Crop",
+	icon: "crop-rotate",
+	key: "C",
+	shortcut: "Crop",
+	actsOn: () => false,
+} satisfies ToolSpec;
 
+// src/editor/tools/crop/cropTool.ts
 export const cropTool = defineTool<CropController>({
-	archetype: "stage",
 	spec: cropSpec,
 	useController: useCropTool,
-	views: {
-		Dock: CropDock,
-		Bar: CropBar,
-		Stage: CropStage,
-		StageFooter: CropStageFooter,
-		Controls: CropControls,
-	},
-	done: (controller) => controller.commit(),
-	reset: (controller) => (controller.changed ? controller.reset : undefined),
+	views: { Dock: CropDock, Bar: CropBar },
+	stage: { Stage: CropStage, Footer: CropFooter, Controls: CropControls },
+	done: (crop) => crop.done(),
+	reset: (crop) => (crop.changed ? crop.reset : undefined),
 });
 ```
 
-### 3. Layout Integration in `src/editor/Editor.tsx`
+What Done gives `reframe` (the current framing when the crop is untouched, otherwise `cropFraming`) moves into `cropGeometry.ts` as a plain function, so Node can test it.
 
-```tsx
-{/* Inside CanvasStage */}
-<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
-    <EditorCanvas
-        ref={canvasRef}
-        document={document}
-        selectedLayer={selectedLayer}
-        // ... standard props
-    />
-    {activeStageTool && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-            <activeStageTool.definition.views.Stage
-                controller={activeStageTool.controller}
-            />
-        </View>
-    )}
-    {!wide && (
-        <ToolTrays context={panels} modeState={modeState} panel={panel} />
-    )}
-</CanvasStage>
+## Plan
 
-{/* Desktop StageFooter (e.g. Straighten Dial) */}
-{wide && activeStageTool?.definition.views.StageFooter && (
-    <activeStageTool.definition.views.StageFooter
-        controller={activeStageTool.controller}
-    />
-)}
+Each phase leaves `main` working and passes `npm run check`, `npm run typecheck`, and `npm test`. Phase 3 also runs `npm run build:web` and the interactive docs' build.
 
-{/* Mobile Dynamic Controls row above Dock */}
-{!wide && activeStageTool?.definition.views.Controls && (
-    <activeStageTool.definition.views.Controls
-        controller={activeStageTool.controller}
-    />
-)}
-```
+### Phase 1: types and modal rules (nothing visible changes)
 
----
+- `defineTool.ts`: `StageInset`, `StageViews`, and the `stage` member above. `ToolEnv` is unchanged.
+- `toolSpec.ts`: `modal?: boolean`, documented.
+- `editorMode.ts`: `isModal(mode, specs)`, and the modal branch in `shortcutCommand`.
+- Tests:
+  - `defineTool.test.ts`: `@ts-expect-error` cases for a stage tool that's `sized`, has `canvasInput`, lacks `Stage`, or isn't `modal`, and a `modal` spec without `stage`; a ruler stage tool that passes `editorTools`.
+  - `editorMode.test.ts`: with a modal tool open, Escape and Enter give `doneWithTool`, `?` opens the list, and zoom, export, undo, tool keys, and `[` / `]` are held.
+- No tool uses any of it yet.
 
-## Phased Implementation Plan
+### Phase 2: Crop becomes a stage tool, files in place
 
-Refactoring Crop into a first-class tool touches both the tool registry and layout chrome. A 4-phase rollout ensures that every step is verifiable and zero regressions occur.
+One change, so Crop works before and after it.
 
-### Phase 1: Type Foundation & Archetype Definitions
-- **Files:** `src/editor/defineTool.ts`, `src/editor/toolSpec.ts`.
-- **Changes:**
-  - Introduce `LayerToolEnv`, `StageToolEnv`, `LayerToolDefinition`, and `StageToolDefinition`.
-  - Update `ToolDefinition` union.
-  - Verify that existing built-in tools (`draw`, `redact`, `find`, `cutout`, `adjust`) typecheck without modifications.
-- **Verification:** `npm run typecheck` and `npm test`.
+- **Editor.** Render `Stage` and `StageChrome` as in "Layout inside `CanvasStage`", and feed their heights into `useEditorLayout`. Add the modal rules: paste gate, inert inspector, `leave` and `openExport` finishing a modal tool, and Android back for modal tools.
+- **Crop** (still in `src/editor/crop/`):
+  - `cropSpec.ts` and `cropTool.ts`.
+  - `useCropController` becomes `useCropTool(env)`, with the reset on open and the tab state.
+  - `CropPanel.tsx` exports `CropDock` (the tab row), `CropBar`, `CropControls`, and `CropFooter` (the dial), each taking only `controller`.
+  - `CropCanvas` takes `inset`.
+  - Done's framing moves into `cropGeometry.ts`, with tests.
+- **Registry.** `crop` joins `BUILT_IN_SPECS` and `BUILT_IN_TOOLS`. `BUILT_IN_TOOLBAR` keeps its order. `src/editor/index.ts` exports `cropTool`.
+- **Removed:**
+  - `CropTool.tsx`;
+  - `{ type: "crop" }`, `startCrop`, and `endCrop` in `editorMode.ts`;
+  - `"crop"` in `OwnTool`, `TOOLS`, and `TOOL_KEYS`;
+  - `cropping` in `railChosenTool`;
+  - `startCrop`, `closeCrop`, and `finishCrop` in `useEditorTools.ts`;
+  - the shortcuts list's Crop group, whose rows join the tools' group ("Enter: Apply a crop").
+- **Tests updated:** `editorMode.test.ts` (the crop cases, and `takesKeys` back to text only), `editorChrome.test.ts` (Crop's entry now comes from its spec; `railChosenTool` without `cropping`), and `shortcuts.test.ts`.
+- **Behavior changes,** for the change's description:
+  - Starting Crop closes the layers sheet, as every tool does. Today it leaves it open (`editorMode.test.ts:106`).
+  - The editor's header, rail, banner, and Toast stay visible during a crop.
+  - Back and Export apply the crop first.
+  - `?` works during a crop.
+- **Host migration.** A host passing its own `tools` must add `cropTool` to keep Crop. Without it, a `toolbar` naming `"crop"` fails `editorTools`, and at runtime `toolbarEntries` would throw on the missing spec. Put this in the change's description, and consider having `toolbarEntries` skip ids it has no spec for.
+- **Check by hand** on a phone (simulator or emulator), a wide window, and web:
+  - The box fits and drags clear of the dock, controls, rail, and inspector.
+  - The rail and inspector don't move as Crop opens and closes.
+  - A second crop starts from the document, not from the last crop, and no stale box flashes.
+  - Paste, drop, zoom keys, and the inspector do nothing mid-crop.
+  - Back and Export apply the crop.
+  - Escape and Enter apply; Cancel leaves no undo step; Done leaves one.
+  - A save error shows its banner during a crop.
+  - Resizing across the wide breakpoint keeps the crop and tab.
 
-### Phase 2: Views Extraction & Controller Adaptation
-- **Files:** Move files from `src/editor/crop/` to `src/editor/tools/crop/`.
-- **Changes:**
-  - Create `cropSpec.ts` with label, icon (`crop-rotate`), and shortcut key (`C`).
-  - Adapt `useCropController` into `useCropTool(env: StageToolEnv)`. Connect `env.reframe` to `commit()`.
-  - Split `CropTool.tsx` into modular views: `CropDock`, `CropBar`, `CropStage`, `CropStageFooter` (the desktop dial strip), and `CropControls` (mobile sub-controls).
-  - Delete `CropTool.tsx`'s duplicate `ScreenHeader`, `ContextBar`, `Dock`, and `DockFooter`.
-- **Verification:** Unit test `cropSpec.ts` and controller commit behavior.
+### Phase 3: move to `src/editor/tools/crop/`
 
-### Phase 3: Shell Integration & Core Cleanup
-- **Files:** `src/editor/Editor.tsx`, `src/editor/useEditorTools.ts`, `src/editor/editorMode.ts`, `src/editor/editorChrome.ts`, `src/editor/shell/toolList.ts`, `src/editor/builtInTools.ts`.
-- **Changes:**
-  - Register `cropTool` in `builtInTools.ts` and `builtInSpecs.ts`.
-  - Remove `"crop"` from `OwnTool` in `toolList.ts` and `TakenId` in `defineTool.ts`.
-  - Excised `{ type: "crop" }` and `{ type: "startCrop" } | { type: "endCrop" }` from `EditorMode`. Crop now activates via standard `{ type: "tool", tool: "crop" }`.
-  - Wire `views.Stage`, `views.StageFooter`, and `views.Controls` into `Editor.tsx`.
-  - Remove `{cropping && <CropTool ... />}` and custom `startCrop`/`closeCrop`/`finishCrop` in `useEditorTools.ts`.
-  - Add centralized Android hardware back handling for active tools.
-- **Verification:** `npm run check`, `npm run typecheck`, `npm test`.
+A move, with no change in behavior.
 
-### Phase 4: Regression Testing & Interactive Docs
-- **Files:** `src/editor/store/__tests__/editorSlice.test.ts`, `docs/interactive/`.
-- **Tests & Smoke Checks:**
-  1. **Undo Coalescing:** Verify that adjusting crop box and canceling results in zero undo entries; committing results in exactly 1 undo entry.
-  2. **Soft Keyboard Avoidance:** Verify mobile dock with `keyboardOverlap` properly offsets when changing crop ratios or typing.
-  3. **Banner Visibility:** Trigger save error during crop; confirm `SaveErrorBanner` is visible.
-  4. **Desktop Rail:** Confirm `EditorRail` remains steady on wide screens when entering and exiting Crop.
-  5. **WebGL Stability:** Verify canvas does not flash or re-render unexpectedly on web when toggling Crop.
-  6. **Interactive Docs:** Update any lesson import paths pointing to `crop/cropGeometry.ts` to `tools/crop/cropGeometry.ts`.
-- **Final Checks:** `npm run check`, `npm run typecheck`, `npm test`, `npm run build:web`, and `npm run build --prefix docs/interactive`.
+- `git mv src/editor/crop src/editor/tools/crop`, tests included. Update the imports in `builtInSpecs.ts`, `builtInTools.ts`, and the moved files, which then reach the editor through `../../`.
+- `biome.json`:
+  - remove `src/editor/crop/**` from the override it shares with `layers/` and `text/`;
+  - add `../crop/**` to `tools/**`'s sibling bans;
+  - drop the `crop` patterns that no longer match anything, including `canvas/**`'s `../crop/**`.
+- `docs/architecture.md`: line 29 (Crop's folder and what it holds), line 38 (stage tools, `stage`, `modal`), line 62 (the import rules).
+- `docs/plans/composition-plan.md:151`: note that Crop has since become a stage tool, with a link here.
+- `docs/interactive`: `src/source/sources.ts` (the `?raw` import on line 3 and the path key on line 67) and `src/lessons/model/FramingLesson.tsx` (the import on line 26 and the `file:` paths on lines 271–286).
+- Run `npm run build:web` and `npm run build --prefix docs/interactive`.
+
+## Open questions
+
+- Should Android back apply every tool, not only modal ones? That's a separate decision; this plan leaves other tools as they are.
+- Should `toolbarEntries` skip toolbar ids with no spec, so a host that forgets `cropTool` loses the button rather than crashing?
