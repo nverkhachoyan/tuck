@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import type { EditorTool } from "./editorMode";
+import type { ToolSpec } from "./toolSpec";
 
 type ToolView<C> = ComponentType<{ controller: C }>;
 
@@ -7,6 +7,7 @@ type ToolView<C> = ComponentType<{ controller: C }>;
  * One of the editor's tools, as its own folder describes it, given its
  * controller `C` (what its hook returns). The editor reads it wherever it
  * shows or finishes the tool.
+ * - `spec`: what the mode and the shortcuts know of it (see `ToolSpec`).
  * - `views.Dock`: the phone dock's panel.
  * - `views.Bar`: the wide header's options, inside the shared `ContextBar`;
  *   without it, the bar has the title, ✕, and ✓ only.
@@ -19,11 +20,10 @@ type ToolView<C> = ComponentType<{ controller: C }>;
  * - `done`: what Done does before the tool closes.
  * - `deselectOnDone`: whether Done lets go of the selected layer, so a
  *   stray drag can't move what the tool just made.
- * - `stepSize`: steps its brush for `[` and `]`, for the tools in
- *   `SIZED_TOOLS`.
+ * - `stepSize`: steps its brush for `[` and `]`, exactly when its spec is
+ *   `sized`.
  */
 export type ToolDefinition<C> = {
-	id: EditorTool;
 	views: {
 		Dock: ToolView<C>;
 		Bar?: ToolView<C>;
@@ -34,8 +34,13 @@ export type ToolDefinition<C> = {
 	doneLabel?: (controller: C) => string | undefined;
 	done?: (controller: C) => void;
 	deselectOnDone?: boolean;
-	stepSize?: (controller: C, step: 1 | -1) => void;
-};
+} & (
+	| {
+			spec: ToolSpec & { sized: true };
+			stepSize: (controller: C, step: 1 | -1) => void;
+	  }
+	| { spec: ToolSpec & { sized: false }; stepSize?: never }
+);
 
 /** A tool's definition, with its controller's type checked against it. */
 export function defineTool<C>(

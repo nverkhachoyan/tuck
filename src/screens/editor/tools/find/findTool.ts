@@ -7,11 +7,12 @@ import {
 	FindTray,
 } from "./FindPanel";
 import { findDoneLabel } from "./findResults";
+import { findSpec } from "./findSpec";
 import type { FindController } from "./useFindTool";
 
 // Done redacts the regions chosen, in the editor's redaction look.
 export const findTool = defineTool<FindController>({
-	id: "find",
+	spec: findSpec,
 	views: {
 		Dock: FindPanel,
 		Bar: FindBar,

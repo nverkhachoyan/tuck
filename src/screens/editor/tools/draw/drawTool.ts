@@ -1,9 +1,10 @@
 import { defineTool } from "../../defineTool";
 import { BrushOptions, DrawBar, DrawPanel } from "./DrawPanel";
+import { drawSpec } from "./drawSpec";
 import type { DrawController } from "./useDrawTool";
 
 export const drawTool = defineTool<DrawController>({
-	id: "draw",
+	spec: drawSpec,
 	views: { Dock: DrawPanel, Bar: DrawBar, Tray: BrushOptions },
 	deselectOnDone: true,
 	stepSize: (draw, step) => draw.stepSize(step),
