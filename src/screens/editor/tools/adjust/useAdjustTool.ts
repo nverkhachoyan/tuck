@@ -122,7 +122,7 @@ export function useAdjustTool(
 
 	const canvasInput = useMemo(
 		(): CanvasInput => ({
-			type: "adjust",
+			type: "dial",
 			drag: {
 				value: dialValue,
 				scale: ADJUST_DIAL_SCALE,

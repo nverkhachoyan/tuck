@@ -24,7 +24,7 @@ export function useFindTap({
 	documentSize,
 	tapOnNothing,
 }: {
-	find: Extract<CanvasInput, { type: "find" }> | null;
+	find: Extract<CanvasInput, { type: "regions" }> | null;
 	scale: number;
 	lookups: CanvasLookups;
 	targets: readonly LayerTarget[];

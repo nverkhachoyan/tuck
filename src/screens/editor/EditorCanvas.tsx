@@ -121,7 +121,7 @@ type EditorCanvasProps = {
 	// under it, as it would without a tool.
 	onTapAway?: () => void;
 	// While set, this image's adjustments are being changed, drawn live. With
-	// an `adjust` input, it's outlined when there are other images.
+	// a `dial` input, it's outlined when there are other images.
 	adjusting?: LiveAdjustment | null;
 	// How much of the view's bottom is covered by panels floating over it,
 	// and by the keyboard they ride on. The document fits above them, and
@@ -502,11 +502,11 @@ export function EditorCanvas({
 	// While adjusting, a sideways drag turns the dial, and a tap still puts
 	// the tool down.
 	const adjustGesture = useDialDragGesture(
-		input.type === "adjust" ? input.drag : null,
+		input.type === "dial" ? input.drag : null,
 		idleGesture,
 	);
 	const detectionGesture = useFindTap({
-		find: input.type === "find" ? input : null,
+		find: input.type === "regions" ? input : null,
 		scale,
 		lookups,
 		targets,
@@ -519,8 +519,8 @@ export function EditorCanvas({
 		select: gesture,
 		tool: paintGesture,
 		editText: textGesture,
-		find: detectionGesture,
-		adjust: adjustGesture,
+		regions: detectionGesture,
+		dial: adjustGesture,
 	}[input.type];
 	// The view's gestures join at the top, one by one: a `Simultaneous` nested
 	// in another drops the outer one's relations, so the mode's gestures and
@@ -571,7 +571,7 @@ export function EditorCanvas({
 									adjusting={adjusting}
 									cuttingOutId={cuttingOutId}
 									detections={
-										input.type === "find" ? input.regions : NO_DETECTIONS
+										input.type === "regions" ? input.regions : NO_DETECTIONS
 									}
 									onImageError={handleImageError}
 								/>

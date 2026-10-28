@@ -149,7 +149,7 @@ export function useFindTool({
 		(): CanvasInput | null =>
 			imageId === undefined
 				? null
-				: { type: "find", imageId, regions: overlay, onToggle: toggle },
+				: { type: "regions", imageId, regions: overlay, onToggle: toggle },
 		[imageId, overlay, toggle],
 	);
 

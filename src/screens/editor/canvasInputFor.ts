@@ -12,20 +12,21 @@ import type { DetectionOverlayRegion } from "./tools/find/DetectionOutline.tsx";
  * What input on the canvas does, one at a time: select and transform
  * layers; paint, drag out a box or a shape, or pick a color with a `tool`;
  * place the caret in, or select, the text being edited; toggle the
- * `regions` Find found in the image `imageId`; or, while adjusting, hold the layers still
- * and turn the dial with a sideways drag (`drag`).
+ * `regions` shown over the image `imageId` with taps, as Find does; or hold
+ * the layers still and turn a dial with a sideways drag (`drag`), as Adjust
+ * does.
  */
 export type CanvasInput =
 	| { type: "select" }
 	| { type: "tool"; tool: CanvasTool }
 	| { type: "editText" }
 	| {
-			type: "find";
+			type: "regions";
 			imageId: string;
 			regions: readonly DetectionOverlayRegion[];
 			onToggle: (sourceIndex: number) => void;
 	  }
-	| { type: "adjust"; drag: DialDrag };
+	| { type: "dial"; drag: DialDrag };
 
 export type InputRules = {
 	// What the selection does: holds still, without handles; transforms with
@@ -62,10 +63,10 @@ export function inputRules(
 				: { selection: "still", oneFinger: null, cursor: "crosshair" };
 		case "editText":
 			return { selection: "still", oneFinger: null, cursor: "hover" };
-		case "find":
+		case "regions":
 			return { selection: "still", oneFinger: "anywhere", cursor: "pointer" };
 		// One finger turns the dial, so two move the view.
-		case "adjust":
+		case "dial":
 			return { selection: "still", oneFinger: null, cursor: "ew-resize" };
 	}
 }
@@ -124,12 +125,12 @@ export function outlinedLayerFor(
 		}
 		case "editText":
 			return editedLayer;
-		case "adjust":
+		case "dial":
 			return adjustedId === undefined
 				? null
 				: outlinedImage(layers, adjustedId);
 		case "select":
-		case "find":
+		case "regions":
 			return null;
 	}
 }

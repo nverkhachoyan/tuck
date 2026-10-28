@@ -15,7 +15,7 @@ import {
 import type { DialDrag } from "../shell/dialDrag.ts";
 
 describe("canvasInputFor", () => {
-	const dial: CanvasInput = { type: "adjust", drag: {} as DialDrag };
+	const toolInput: CanvasInput = { type: "dial", drag: {} as DialDrag };
 	const inputs = { eyedropper: false, toolInput: null, editingText: false };
 
 	test("selects with nothing else going on", () => {
@@ -24,15 +24,15 @@ describe("canvasInputFor", () => {
 
 	test("picks a color over the tool's input and typing", () => {
 		assert.deepEqual(
-			canvasInputFor({ eyedropper: true, toolInput: dial, editingText: true }),
+			canvasInputFor({ eyedropper: true, toolInput, editingText: true }),
 			{ type: "tool", tool: { type: "pickColor" } },
 		);
 	});
 
 	test("gives the tool's input over typing", () => {
 		assert.equal(
-			canvasInputFor({ ...inputs, toolInput: dial, editingText: true }),
-			dial,
+			canvasInputFor({ ...inputs, toolInput, editingText: true }),
+			toolInput,
 		);
 	});
 
@@ -93,9 +93,9 @@ const drawing = createDrawingLayer({
 	points: [0, 0, 20, 20],
 });
 // Only its type matters to the rules.
-const adjust: CanvasInput = { type: "adjust", drag: {} as DialDrag };
-const find: CanvasInput = {
-	type: "find",
+const dial: CanvasInput = { type: "dial", drag: {} as DialDrag };
+const regions: CanvasInput = {
+	type: "regions",
 	imageId: "photo",
 	regions: [],
 	onToggle: () => {},
@@ -162,17 +162,17 @@ describe("inputRules", () => {
 		});
 	});
 
-	test("finding pans with one finger anywhere", () => {
-		assert.deepEqual(inputRules(find, false), {
+	test("toggling regions pans with one finger anywhere", () => {
+		assert.deepEqual(inputRules(regions, false), {
 			selection: "still",
 			oneFinger: "anywhere",
 			cursor: "pointer",
 		});
 	});
 
-	test("adjusting keeps one finger for the dial, zoomed or not", () => {
+	test("turning a dial keeps one finger for it, zoomed or not", () => {
 		for (const zoomed of [false, true]) {
-			assert.deepEqual(inputRules(adjust, zoomed), {
+			assert.deepEqual(inputRules(dial, zoomed), {
 				selection: "still",
 				oneFinger: null,
 				cursor: "ew-resize",
@@ -203,18 +203,18 @@ describe("outlinedLayerFor", () => {
 		assert.equal(outlinedLayerFor(cut, none), photo);
 		assert.equal(outlinedLayerFor(cut, { ...none, layers: [photo] }), null);
 		assert.equal(
-			outlinedLayerFor(adjust, { ...none, adjustedId: "other" }),
+			outlinedLayerFor(dial, { ...none, adjustedId: "other" }),
 			other,
 		);
 		assert.equal(
-			outlinedLayerFor(adjust, {
+			outlinedLayerFor(dial, {
 				...none,
 				layers: [photo, drawing],
 				adjustedId: "photo",
 			}),
 			null,
 		);
-		assert.equal(outlinedLayerFor(adjust, none), null);
+		assert.equal(outlinedLayerFor(dial, none), null);
 	});
 
 	test("a tool outlines the layer whose style it changes, unless that layer drags", () => {
@@ -244,6 +244,6 @@ describe("outlinedLayerFor", () => {
 			drawing,
 		);
 		assert.equal(outlinedLayerFor({ type: "select" }, none), null);
-		assert.equal(outlinedLayerFor(find, none), null);
+		assert.equal(outlinedLayerFor(regions, none), null);
 	});
 });
