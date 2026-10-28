@@ -15,7 +15,13 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"preset": "recommended"
+			"preset": "recommended",
+			"correctness": {
+				"noReactNativeRawText": {
+					"level": "error",
+					"options": { "skip": ["Paragraph", "Item", "InlineLink"] }
+				}
+			}
 		}
 	},
 	"assist": {
@@ -32,12 +38,23 @@
 			"trailingCommas": "all"
 		}
 	},
+	"markdown": {
+		"formatter": {
+			"enabled": false
+		}
+	},
 	"overrides": [
 		{
 			"includes": ["**/package.json", "**/package-lock.json"],
 			"formatter": {
 				"indentStyle": "space",
 				"indentWidth": 2
+			}
+		},
+		{
+			"includes": ["src/app/+html.tsx", "docs/interactive/**"],
+			"linter": {
+				"rules": { "correctness": { "noReactNativeRawText": "off" } }
 			}
 		}
 	]

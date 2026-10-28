@@ -14,11 +14,10 @@ const spec = {
 	actsOn: () => false,
 } as const;
 
-const ruler = defineTool({
-	spec,
-	useController: () => null,
-	views: { Dock: () => null },
-});
+const useController = () => null;
+const views = { Dock: () => null, Stage: () => null };
+
+const ruler = defineTool({ spec, useController, views: { Dock: views.Dock } });
 
 describe("editorTools", () => {
 	test("hands over the tools and the toolbar as they are", () => {
@@ -38,8 +37,6 @@ describe("editorTools", () => {
 
 describe("defineTool", () => {
 	test("gives a tool with a stage of its own no canvas input", () => {
-		const useController = () => null;
-		const views = { Dock: () => null, Stage: () => null };
 		const staged = defineTool({ spec, useController, views });
 		assert.equal(staged.views.Stage, views.Stage);
 		// @ts-expect-error: the stage covers the canvas, so nothing reaches its input.

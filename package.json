@@ -22,7 +22,7 @@
     "@expo-google-fonts/permanent-marker": "^0.4.0",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
-    "@mediapipe/tasks-vision": "^1.0.1",
+    "@mediapipe/tasks-vision": "^1.2.0",
     "@shopify/react-native-skia": "2.6.2",
     "@tesseract.js-data/eng": "^1.0.0",
     "expo": "~57.0.31",
@@ -40,7 +40,7 @@
     "expo-router": "~57.0.29",
     "expo-sharing": "~57.0.24",
     "expo-system-ui": "~57.0.4",
-    "onnxruntime-web": "1.30.0",
+    "onnxruntime-web": "1.31.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -51,14 +51,14 @@
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.10.1",
     "tesseract.js": "^7.0.0",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.16"
   },
   "version": "1.0.0",
   "private": true,
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
+    "@biomejs/biome": "^2.6.3",
     "@types/node": "^24.13.6",
-    "@types/react-dom": "~19.2.3",
+    "@types/react-dom": "~19.3.0",
     "typescript": "~6.0.3"
   }
 }
