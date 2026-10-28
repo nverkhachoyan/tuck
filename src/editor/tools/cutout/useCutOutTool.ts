@@ -5,10 +5,10 @@ import type { Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import { addImage } from "@/projects/projectService";
-import { useStore } from "@/store";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import { useRedactLook } from "../../shell/useRedactLook";
+import { useStore } from "../../store";
 import {
 	cutCanvasTool,
 	cutToolInUse,
@@ -41,7 +41,8 @@ export function useCutOutTool({
 	documentSize: Size;
 	onClose: () => void;
 }) {
-	const projectId = useStore((state) => state.projectId);
+	// Until the host takes over, the session's key is the project's id.
+	const projectId = useStore((state) => state.key);
 	const { setMask, invertMask, cancelSession, addMaskedRedaction, paintMask } =
 		useStore((state) => state.actions);
 	const layerId = useRef<string | null>(null);
@@ -52,7 +53,7 @@ export function useCutOutTool({
 	const keep = async (uri: string) =>
 		projectId === null ? uri : addImage(projectId, uri, false);
 	const cutOut = useCutOut({
-		projectId,
+		key: projectId,
 		image: layer,
 		picking: settings.tool === "pick",
 		latest: (id) => {

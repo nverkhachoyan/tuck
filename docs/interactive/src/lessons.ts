@@ -71,7 +71,7 @@ export const chapters: Chapter[] = [
 	{
 		id: "store",
 		title: "The store",
-		folder: "src/store",
+		folder: "src/editor/store",
 		lessons: [
 			{
 				id: "history",

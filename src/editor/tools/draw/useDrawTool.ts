@@ -2,10 +2,13 @@ import { useMemo } from "react";
 import type { Size } from "@/model/geometry";
 import { isLine, isLineShape } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
-import { useStore } from "@/store";
-import { selectSelectedLayer, selectSelectedShape } from "@/store/editorSlice";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
+import { useStore } from "../../store";
+import {
+	selectSelectedLayer,
+	selectSelectedShape,
+} from "../../store/editorSlice";
 import {
 	type BrushSettings,
 	drawCanvasTool,

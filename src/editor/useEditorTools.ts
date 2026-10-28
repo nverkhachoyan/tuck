@@ -3,7 +3,6 @@ import type { EditorDocument } from "@/model/document";
 import { type Framing, visibleImageLayer } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
-import { useStore } from "@/store";
 import type { DetectionFeature } from "./detection/imageDetection";
 import {
 	type EditorMode,
@@ -13,6 +12,7 @@ import {
 	toolImageId,
 } from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
+import { useStore } from "./store";
 import { useTextEditing } from "./text/useTextEditing";
 import { toolWithController } from "./toolDefinitions";
 import { TOOL_SPECS } from "./toolSpecs";

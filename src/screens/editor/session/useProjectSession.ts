@@ -1,5 +1,6 @@
 import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { closeDocument, getSession, openDocument, useSession } from "@/editor";
 import type { EditorDocument } from "@/model/document";
 import {
 	isProjectOpenElsewhere,
@@ -8,7 +9,6 @@ import {
 import { projectRouteId, UNSAVED_PROJECT } from "@/projects/projectRoute";
 import { closeProject, openProject } from "@/projects/projectService";
 import { renderThumbnail } from "@/render/renderDocument";
-import { useStore } from "@/store";
 import { errorMessage } from "@/ui/errorMessage";
 
 type ProjectSession =
@@ -24,14 +24,14 @@ type ProjectSession =
 /**
  * The editing session a project route shows. Usually the screen that led here
  * opened it already; otherwise, as for a link, a reload, or the browser's
- * Forward, this opens the project, first ending any other session the store
+ * Forward, this opens the project, first ending any other session the editor
  * holds. Only while the route is in front: one left behind in the stack for
  * another project waits until the user comes back to it.
  */
 export function useProjectSession(routeId: string): ProjectSession {
-	const document = useStore((state) =>
-		state.document !== null && projectRouteId(state.projectId) === routeId
-			? state.document
+	const document = useSession((session) =>
+		session.document !== null && projectRouteId(session.key) === routeId
+			? session.document
 			: null,
 	);
 	const focused = useIsFocused();
@@ -88,14 +88,14 @@ async function switchToProject(routeId: string, stillWanted: () => boolean) {
 		throw new Error("This photo couldn't be saved, so it can't be reopened.");
 	}
 
-	const { document, projectId } = useStore.getState();
+	const { document, key: projectId } = getSession();
 	if (document) {
 		if (projectId !== null) {
 			await closeProject(projectId, document, renderThumbnail);
 		}
 		// The home screen may have ended the same session meanwhile.
-		if (useStore.getState().document === document) {
-			useStore.getState().actions.closeDocument();
+		if (getSession().document === document) {
+			closeDocument();
 		}
 	}
 
@@ -105,9 +105,9 @@ async function switchToProject(routeId: string, stillWanted: () => boolean) {
 	}
 	// Left before it opened: close it again, rather than leave it open
 	// behind the screen the user went to.
-	if (!stillWanted() || useStore.getState().document) {
+	if (!stillWanted() || getSession().document) {
 		await closeProject(routeId, opened);
 		return;
 	}
-	useStore.getState().actions.openDocument(opened, routeId);
+	openDocument(opened, routeId);
 }

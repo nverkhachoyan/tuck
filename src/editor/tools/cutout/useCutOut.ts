@@ -51,8 +51,8 @@ type Pick = LastPick & {
  * - `onMask` decides whether the image still wants it.
  * - `finding` says which is being found, while one is. A second find
  *   meanwhile does nothing.
- * - Every subject found once is used again this session, whose project
- *   keeps its file until it closes.
+ * - Every subject found once is used again while the session's `key` stays
+ *   the same, since its project keeps the file until it closes.
  * - `invert` turns the cut inside out, keeping what it removed and removing
  *   what it kept, and hands `onInvert` the inverted mask's file,
  *   `inverting` meanwhile. It waits for a find, and a find for it.
@@ -61,7 +61,7 @@ type Pick = LastPick & {
  *   brushes cut.
  */
 export function useCutOut({
-	projectId,
+	key,
 	image,
 	picking,
 	latest,
@@ -69,7 +69,7 @@ export function useCutOut({
 	onMask,
 	onInvert,
 }: {
-	projectId: string | null;
+	key: string | null;
 	image: ImageLayer | undefined;
 	picking: boolean;
 	latest: (layerId: string) => ImageLayer | undefined;
@@ -81,10 +81,10 @@ export function useCutOut({
 	const [inverting, setInverting] = useState(false);
 	const [news, setNews] = useState<string | null>(null);
 	const busy = useRef(false);
-	// The mask of every subject found for each image file in this project.
-	const found = useRef({ projectId, masks: new Map<string, string>() });
-	if (found.current.projectId !== projectId) {
-		found.current = { projectId, masks: new Map() };
+	// The mask of every subject found for each image file in this session.
+	const found = useRef({ key, masks: new Map<string, string>() });
+	if (found.current.key !== key) {
+		found.current = { key, masks: new Map() };
 	}
 	const lastPick = useRef<Pick | null>(null);
 	const forgetPick = () => {

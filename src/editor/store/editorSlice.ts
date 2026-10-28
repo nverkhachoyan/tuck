@@ -1,16 +1,16 @@
 import type { StateCreator } from "zustand";
 // Registers the "zustand/devtools" mutator that `SliceCreator` names.
 import type {} from "zustand/middleware";
-import type { Adjustments } from "../model/adjustments.ts";
+import type { Adjustments } from "../../model/adjustments.ts";
 import {
 	addLayerOnTop,
 	type EditorDocument,
 	findLayer,
-} from "../model/document.ts";
-import { setAdjustments } from "../model/edits/adjust.ts";
-import { reframe, setBackground } from "../model/edits/crop.ts";
-import { invertMask, paintMask, setMask } from "../model/edits/cutout.ts";
-import { addShape, drawStroke, setShapeStyle } from "../model/edits/draw.ts";
+} from "../../model/document.ts";
+import { setAdjustments } from "../../model/edits/adjust.ts";
+import { reframe, setBackground } from "../../model/edits/crop.ts";
+import { invertMask, paintMask, setMask } from "../../model/edits/cutout.ts";
+import { addShape, drawStroke, setShapeStyle } from "../../model/edits/draw.ts";
 import {
 	deleteLayer,
 	deleteLayerGroup,
@@ -21,45 +21,45 @@ import {
 	setLayerGroupFlag,
 	setLayerResizable,
 	transformLayer,
-} from "../model/edits/layers.ts";
+} from "../../model/edits/layers.ts";
 import {
 	addMaskedRedaction,
 	addRedactionBox,
 	addRedactionBoxes,
 	paintRedaction,
 	setRedactionEffect,
-} from "../model/edits/redact.ts";
+} from "../../model/edits/redact.ts";
 import {
 	updateTextLayer as editTextLayer,
 	addTextLayer as placeTextLayer,
-} from "../model/edits/text.ts";
-import type { Framing } from "../model/framing.ts";
-import type { Rect, Transform } from "../model/geometry.ts";
-import type { Stroke } from "../model/layers/drawing.ts";
+} from "../../model/edits/text.ts";
+import type { Framing } from "../../model/framing.ts";
+import type { Rect, Transform } from "../../model/geometry.ts";
+import type { Stroke } from "../../model/layers/drawing.ts";
 import {
 	type CutStroke,
 	createImageLayer,
 	createStickerLayer,
-} from "../model/layers/image.ts";
-import { duplicateLayer, type Layer } from "../model/layers/layer.ts";
+} from "../../model/layers/image.ts";
+import { duplicateLayer, type Layer } from "../../model/layers/layer.ts";
 import type {
 	RedactionBoxPlacement,
 	RedactionEffect,
 	RedactionLayer,
-} from "../model/layers/redaction.ts";
+} from "../../model/layers/redaction.ts";
 import type {
 	ShapeEdit,
 	ShapeKind,
 	ShapeLayer,
 	ShapePlacement,
 	ShapeStyle,
-} from "../model/layers/shape.ts";
+} from "../../model/layers/shape.ts";
 import type {
 	TextLayer,
 	TextLayerEdit,
 	TextLayerStyle,
-} from "../model/layers/text.ts";
-import type { MaskStroke } from "../model/strokes.ts";
+} from "../../model/layers/text.ts";
+import type { MaskStroke } from "../../model/strokes.ts";
 
 // Undo steps kept; the oldest are dropped beyond this.
 export const MAX_HISTORY = 100;
@@ -78,8 +78,9 @@ export type EditorSession = EditorSnapshot & {
 
 export type EditorState = {
 	document: EditorDocument | null;
-	// The saved project the document belongs to; null if it couldn't be saved.
-	projectId: string | null;
+	// What the app calls this session (a project, say), or null; the editor
+	// uses it only to key what it caches for the document.
+	key: string | null;
 	selectedLayerId: string | null;
 	past: EditorSnapshot[];
 	future: EditorSnapshot[];
@@ -192,11 +193,11 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		);
 
 	return {
-		openDocument: (document: EditorDocument, projectId: string | null) =>
+		openDocument: (document: EditorDocument, key: string | null) =>
 			set(
 				{
 					document,
-					projectId,
+					key,
 					selectedLayerId: null,
 					past: [],
 					future: [],
@@ -210,7 +211,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			set(
 				{
 					document: null,
-					projectId: null,
+					key: null,
 					selectedLayerId: null,
 					past: [],
 					future: [],
@@ -561,7 +562,7 @@ type SliceCreator<Slice> = StateCreator<
 
 export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => ({
 	document: null,
-	projectId: null,
+	key: null,
 	selectedLayerId: null,
 	past: [],
 	future: [],

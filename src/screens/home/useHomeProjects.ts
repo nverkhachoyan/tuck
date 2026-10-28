@@ -1,5 +1,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
+import { closeDocument, getSession, openDocument } from "@/editor";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
@@ -19,7 +20,6 @@ import {
 	updateThumbnail,
 } from "@/projects/projectService";
 import { renderThumbnail } from "@/render/renderDocument";
-import { useStore } from "@/store";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 
@@ -39,7 +39,6 @@ export type HomeStatus =
  * are rendered again.
  */
 export function useHomeProjects() {
-	const { openDocument, closeDocument } = useStore((state) => state.actions);
 	const router = useRouter();
 	const [status, setStatus] = useState<HomeStatus>("loading");
 	const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -104,7 +103,7 @@ export function useHomeProjects() {
 	// Coming back here, however the editor was left, ends that session: its
 	// last edits are saved, and the list shows them.
 	const finishSession = useCallback(() => {
-		const { document, projectId } = useStore.getState();
+		const { document, key: projectId } = getSession();
 		return run(document && projectId ? "saving" : "loading", async () => {
 			if (document && projectId) {
 				try {
@@ -115,12 +114,12 @@ export function useHomeProjects() {
 				}
 			}
 			// Unless a link to another project ended it first.
-			if (document && useStore.getState().document === document) {
+			if (document && getSession().document === document) {
 				closeDocument();
 			}
 			await refreshProjects();
 		});
-	}, [run, closeDocument, refreshProjects]);
+	}, [run, refreshProjects]);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -132,7 +131,7 @@ export function useHomeProjects() {
 	);
 
 	const open = (failure: string, load: () => Promise<Opened>) => {
-		if (useStore.getState().document) return;
+		if (getSession().document) return;
 		return run("opening", async () => {
 			try {
 				const opened = await load();

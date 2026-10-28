@@ -1,4 +1,7 @@
-import type { EditorSlice, EditorSnapshot } from "@src/store/editorSlice.ts";
+import type {
+	EditorSlice,
+	EditorSnapshot,
+} from "@src/editor/store/editorSlice.ts";
 import { DocumentScene, Selection } from "../model/layerViews.tsx";
 
 // Past steps shown before they're summed up as "and N more".

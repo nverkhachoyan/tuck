@@ -76,7 +76,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 4a. Share a preference between its callers (October 27, 2026)
 - [x] 4b. Give the redaction look a preference of its own (October 27, 2026)
 - [x] 5. Move the editor out of `screens/` (October 27, 2026)
-- [ ] 6. Give the editor its store
+- [x] 6. Give the editor its store (October 27, 2026)
 - [ ] 7. Give the editor its host
 - [ ] 8a. Build every tool's controller the same way
 - [ ] 8b. Give the canvas's input kinds their own gestures and drawing

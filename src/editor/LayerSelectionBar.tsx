@@ -1,7 +1,7 @@
 import type { EditorDocument } from "@/model/document";
 import type { Layer } from "@/model/layers/layer";
-import { useStore } from "@/store";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
+import { useStore } from "./store";
 
 /**
  * Moving the selected layer in the stack (`arrange`), and where it stands:

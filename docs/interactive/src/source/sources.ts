@@ -1,6 +1,8 @@
 import hitTest from "@src/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/editor/canvas/layerBounds.ts?raw";
 import cropGeometry from "@src/editor/crop/cropGeometry.ts?raw";
+import editorSlice from "@src/editor/store/editorSlice.ts?raw";
+import storeIndex from "@src/editor/store/index.ts?raw";
 import adjustments from "@src/model/adjustments.ts?raw";
 import cutout from "@src/model/cutout.ts?raw";
 import documentFile from "@src/model/document.ts?raw";
@@ -30,8 +32,6 @@ import layerTransform from "@src/render/layerTransform.ts?raw";
 import renderDocument from "@src/render/renderDocument.tsx?raw";
 import exportFormat from "@src/screens/export/exportFormat.ts?raw";
 import exportSizes from "@src/screens/export/exportSizes.ts?raw";
-import editorSlice from "@src/store/editorSlice.ts?raw";
-import storeIndex from "@src/store/index.ts?raw";
 
 // The app's files as text, so lessons quote the code as it is today.
 export const sources = {
@@ -67,8 +67,8 @@ export const sources = {
 	"src/editor/crop/cropGeometry.ts": cropGeometry,
 	"src/screens/export/exportFormat.ts": exportFormat,
 	"src/screens/export/exportSizes.ts": exportSizes,
-	"src/store/editorSlice.ts": editorSlice,
-	"src/store/index.ts": storeIndex,
+	"src/editor/store/editorSlice.ts": editorSlice,
+	"src/editor/store/index.ts": storeIndex,
 };
 
 export type SourceFile = keyof typeof sources;

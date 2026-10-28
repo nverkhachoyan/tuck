@@ -10,12 +10,12 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getSession, openDocument } from "@/editor";
 import { createBlankDocument } from "@/model/document";
 import type { Size } from "@/model/geometry";
 import { usePreference } from "@/platform/usePreference";
 import { editorHref } from "@/projects/projectRoute";
 import { createBlankProject } from "@/projects/projectService";
-import { useStore } from "@/store";
 import { Announcement } from "@/ui/Announcement";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { Button } from "@/ui/Button";
@@ -50,7 +50,6 @@ const PREVIEW_SIZE = 88;
 const SIDE_HEIGHT = 40;
 
 export default function CreateScreen() {
-	const { openDocument } = useStore((state) => state.actions);
 	const router = useRouter();
 	const [background, setBackground] = useState<string | null>("#FFFFFF");
 	const { bottom } = useSafeAreaInsets();
@@ -64,7 +63,7 @@ export default function CreateScreen() {
 	const handleCreate = async ({ width, height }: Size) => {
 		// An editor whose save failed is still open until the welcome screen
 		// closes it.
-		if (creating.current || useStore.getState().document) return;
+		if (creating.current || getSession().document) return;
 		creating.current = true;
 		setBusy(true);
 		try {

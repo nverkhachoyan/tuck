@@ -11,13 +11,6 @@ import { usePreference } from "@/platform/usePreference";
 import { exportHref } from "@/projects/projectRoute";
 import { addImage } from "@/projects/projectService";
 import { textIndexAt } from "@/render/textLayerLayout";
-import { useStore } from "@/store";
-import {
-	selectCanRedo,
-	selectCanUndo,
-	selectSelectedLayer,
-	selectSelectedTextLayer,
-} from "@/store/editorSlice";
 import { Announcement } from "@/ui/Announcement";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
@@ -51,6 +44,13 @@ import { StickerPopover, StickerSheet } from "./stickers/StickerSheet";
 import { useSavedStickers } from "./stickers/useSavedStickers";
 import { useStickerActions } from "./stickers/useStickerActions";
 import { useStickerSave } from "./stickers/useStickerSave";
+import { useStore } from "./store";
+import {
+	selectCanRedo,
+	selectCanUndo,
+	selectSelectedLayer,
+	selectSelectedTextLayer,
+} from "./store/editorSlice";
 import { TextEditor } from "./text/TextEditor";
 import { useReviewZoom } from "./tools/find/useFindTool";
 import { useAddImage } from "./useAddImage";
@@ -82,7 +82,8 @@ export function Editor({
 	onLeave: () => void;
 }) {
 	const router = useRouter();
-	const projectId = useStore((state) => state.projectId);
+	// Until the host takes over, the session's key is the project's id.
+	const projectId = useStore((state) => state.key);
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const canUndo = useStore(selectCanUndo);

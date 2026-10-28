@@ -3,18 +3,18 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { devtools } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
-import { neutralAdjustments } from "../../model/adjustments.ts";
+import { neutralAdjustments } from "../../../model/adjustments.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-} from "../../model/document.ts";
-import { documentFraming } from "../../model/framing.ts";
-import type { DrawingLayer, Stroke } from "../../model/layers/drawing.ts";
-import type { ImageLayer } from "../../model/layers/image.ts";
-import type { RedactionLayer } from "../../model/layers/redaction.ts";
-import type { ShapeLayer } from "../../model/layers/shape.ts";
-import type { TextLayer } from "../../model/layers/text.ts";
-import type { MaskStroke } from "../../model/strokes.ts";
+} from "../../../model/document.ts";
+import { documentFraming } from "../../../model/framing.ts";
+import type { DrawingLayer, Stroke } from "../../../model/layers/drawing.ts";
+import type { ImageLayer } from "../../../model/layers/image.ts";
+import type { RedactionLayer } from "../../../model/layers/redaction.ts";
+import type { ShapeLayer } from "../../../model/layers/shape.ts";
+import type { TextLayer } from "../../../model/layers/text.ts";
+import type { MaskStroke } from "../../../model/strokes.ts";
 import {
 	createEditorSlice,
 	type EditorSlice,
@@ -63,16 +63,16 @@ describe("editorSlice", () => {
 		const next = photo();
 		actions.openDocument(next, "project-2");
 		assert.equal(store.getState().document, next);
-		assert.equal(store.getState().projectId, "project-2");
+		assert.equal(store.getState().key, "project-2");
 		assert.equal(store.getState().selectedLayerId, null);
 	});
 
-	test("closing clears the document, its project, and selection", () => {
+	test("closing clears the document, its key, and selection", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		actions.closeDocument();
 		assert.equal(store.getState().document, null);
-		assert.equal(store.getState().projectId, null);
+		assert.equal(store.getState().key, null);
 		assert.equal(store.getState().selectedLayerId, null);
 	});
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { EditorDocument } from "@/model/document";
-import { useStore } from "@/store";
 import type { DetectionFeature } from "./detection/imageDetection";
 import { layerKindName } from "./layers/LayerRow";
+import { useStore } from "./store";
 
 // Long enough to read it and reach Undo, short enough not to linger.
 const SHOWN_MS = 5000;

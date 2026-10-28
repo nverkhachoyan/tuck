@@ -5,7 +5,7 @@ import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
-} from "@src/store/editorSlice.ts";
+} from "@src/editor/store/editorSlice.ts";
 import { useState } from "react";
 import { useStore } from "zustand";
 import { SourceView } from "../../source/SourceView.tsx";
@@ -160,33 +160,37 @@ export function HistoryLesson() {
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
 			label: "setDocument",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "setDocument",
 		},
-		{ label: "addOnTop", file: "src/store/editorSlice.ts", name: "addOnTop" },
+		{
+			label: "addOnTop",
+			file: "src/editor/store/editorSlice.ts",
+			name: "addOnTop",
+		},
 		{
 			label: "selectLayer",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "selectLayer",
 		},
 		{
 			label: "nudgeLayer",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "nudgeLayer",
 		},
-		{ label: "undo", file: "src/store/editorSlice.ts", name: "undo" },
-		{ label: "redo", file: "src/store/editorSlice.ts", name: "redo" },
+		{ label: "undo", file: "src/editor/store/editorSlice.ts", name: "undo" },
+		{ label: "redo", file: "src/editor/store/editorSlice.ts", name: "redo" },
 		{
 			label: "selectionAfter",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "selectionAfter",
 		},
 		{
 			label: "EditorSnapshot",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "EditorSnapshot",
 		},
-		{ label: "useStore", file: "src/store/index.ts", name: "useStore" },
+		{ label: "useStore", file: "src/editor/store/index.ts", name: "useStore" },
 	];
 	const tab = tabs.find((candidate) => candidate.label === tabName) ?? tabs[0];
 	const topFirst = [...document.layers].reverse();
@@ -416,8 +420,8 @@ export function HistoryLesson() {
 			<section className="read-the-code">
 				<h2>Read the code</h2>
 				<p>
-					The store's history in <code>src/store/editorSlice.ts</code>, and the
-					one place it's combined into <code>useStore</code>.
+					The store's history in <code>src/editor/store/editorSlice.ts</code>,
+					and the one place it's combined into <code>useStore</code>.
 				</p>
 				<div className="tabs" role="tablist">
 					{tabs.map((candidate) => (

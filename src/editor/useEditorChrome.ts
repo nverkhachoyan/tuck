@@ -1,9 +1,9 @@
 import type { Layer } from "@/model/layers/layer";
-import { useStore } from "@/store";
 import { modeChrome } from "./editorChrome";
 import type { EditorTool } from "./editorMode";
 import { layerKindName } from "./layers/LayerRow";
 import type { ModeActionProps } from "./shell/Dock";
+import { useStore } from "./store";
 import { toolDoneLabel } from "./toolDefinitions";
 import type { EditorTools } from "./useEditorTools";
 

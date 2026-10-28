@@ -19,9 +19,9 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSession } from "@/editor";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
-import { useStore } from "@/store";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
 import { CheckerFill } from "@/ui/CheckerFill";
@@ -60,8 +60,8 @@ const SHEET_MAX_SHARE = 0.9;
 /** Export, as a sheet over the editor. */
 export default function ExportScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const document = useStore((state) =>
-		projectRouteId(state.projectId) === id ? state.document : null,
+	const document = useSession((session) =>
+		projectRouteId(session.key) === id ? session.document : null,
 	);
 	const focused = useIsFocused();
 

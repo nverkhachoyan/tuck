@@ -387,7 +387,7 @@ export function IdentityLesson() {
 		},
 		{
 			label: "store: setDocument",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "setDocument",
 		},
 	];

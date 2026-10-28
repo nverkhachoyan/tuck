@@ -281,59 +281,6 @@
 			}
 		},
 		{
-			"includes": ["src/store/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/**",
-											"../**",
-											"!@/model/**",
-											"!../model/**"
-										],
-										"message": "store/ imports only model/. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/store/__tests__/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/**",
-											"../**",
-											"!../*",
-											"!@/model/**",
-											"!../../model/**"
-										],
-										"message": "store/ imports only model/. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
 			"includes": ["src/photos/**", "src/projects/**"],
 			"linter": {
 				"rules": {
@@ -350,7 +297,7 @@
 											"!@/model/**",
 											"!../model/**"
 										],
-										"message": "photos/ and projects/ import only model/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
+										"message": "photos/ and projects/ import only model/: not each other, ui/, render/, the editor, or any screen. See AGENTS.md."
 									}
 								]
 							}
@@ -377,7 +324,7 @@
 											"!@/model/**",
 											"!../../model/**"
 										],
-										"message": "photos/ and projects/ import only model/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
+										"message": "photos/ and projects/ import only model/: not each other, ui/, render/, the editor, or any screen. See AGENTS.md."
 									}
 								]
 							}
@@ -403,7 +350,7 @@
 											"!@/model/**",
 											"!../model/**"
 										],
-										"message": "render/ imports only model/: no ui, store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/: no ui, editor, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -430,7 +377,7 @@
 											"!@/model/**",
 											"!../../model/**"
 										],
-										"message": "render/ imports only model/: no ui, store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/: no ui, editor, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -457,7 +404,7 @@
 											"!@/model/**",
 											"!../../model/**"
 										],
-										"message": "render/ imports only model/: no ui, store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/: no ui, editor, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -1035,13 +982,15 @@
 											"@/editor/**",
 											"../**",
 											"!../shortcuts",
+											"!../store",
+											"!../store/*",
 											"!../../**",
 											"../../editor/**",
 											"../../screens/**",
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "Stickers imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+										"message": "Stickers imports nothing else from the editor but shortcuts.ts and store/, and no route, screen, or site/. See AGENTS.md."
 									}
 								]
 							}
@@ -1070,13 +1019,15 @@
 											"../**",
 											"!../*",
 											"!../../shortcuts",
+											"!../../store",
+											"!../../store/*",
 											"!../../../**",
 											"../../../editor/**",
 											"../../../screens/**",
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "Stickers imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+										"message": "Stickers imports nothing else from the editor but shortcuts.ts and store/, and no route, screen, or site/. See AGENTS.md."
 									}
 								]
 							}
@@ -1105,6 +1056,59 @@
 											"!../../model/**"
 										],
 										"message": "detection/ is the editor's bridge to image-analysis: it imports nothing else from the editor, and no route, screen, or site/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/store/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!@/model/**",
+											"!../../model/**"
+										],
+										"message": "The editor's store/ imports only model/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/store/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/**",
+											"../**",
+											"!../*",
+											"!@/model/**",
+											"!../../../model/**"
+										],
+										"message": "The editor's store/ imports only model/. See AGENTS.md."
 									}
 								]
 							}
@@ -1158,11 +1162,10 @@
 											"image-analysis",
 											"@/app/**",
 											"@/screens/**",
-											"@/editor",
 											"../**",
 											"!../../../model/**"
 										],
-										"message": "session/ imports nothing from the editor or the rest of its route, and no other route or screen. See AGENTS.md."
+										"message": "session/ imports nothing from the rest of its route, or from the editor but its entry file, and no other route or screen. See AGENTS.md."
 									},
 									{
 										"group": ["@/editor/**"],

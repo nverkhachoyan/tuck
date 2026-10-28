@@ -1,8 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Editor } from "@/editor";
+import { Editor, getSession, useSession } from "@/editor";
 import type { EditorDocument } from "@/model/document";
-import { useStore } from "@/store";
 import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { colors, space, typography } from "@/ui/theme";
@@ -56,12 +55,12 @@ function leaveEditor(router: ReturnType<typeof useRouter>) {
 
 // For a save as the app leaves the foreground, or a pick finished, before
 // React has rendered.
-const latestDocument = () => useStore.getState().document;
+const latestDocument = () => getSession().document;
 
 // The open project, saved as it's edited.
 function OpenProject({ document }: { document: EditorDocument }) {
 	const router = useRouter();
-	const projectId = useStore((state) => state.projectId);
+	const projectId = useSession((session) => session.key);
 	const { error, retry } = useAutosave(projectId, document, latestDocument);
 	return (
 		<Editor

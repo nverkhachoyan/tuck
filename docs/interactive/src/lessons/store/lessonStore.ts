@@ -1,5 +1,8 @@
 import { createDocumentFromImage } from "@model/document.ts";
-import { createEditorSlice, type EditorSlice } from "@src/store/editorSlice.ts";
+import {
+	createEditorSlice,
+	type EditorSlice,
+} from "@src/editor/store/editorSlice.ts";
 import { devtools } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 

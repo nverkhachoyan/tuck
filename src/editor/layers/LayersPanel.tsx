@@ -9,12 +9,12 @@ import Animated, {
 } from "react-native-reanimated";
 import type { EditorDocument, LayerGroup } from "@/model/document";
 import type { Layer } from "@/model/layers/layer";
-import type { EditorStoreActions } from "@/store/editorSlice";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
 import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
 import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, typography } from "@/ui/theme";
+import type { EditorStoreActions } from "../store/editorSlice";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 import { layerListEntries } from "./layerListEntries";
 

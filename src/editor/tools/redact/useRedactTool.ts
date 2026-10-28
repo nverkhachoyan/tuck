@@ -1,8 +1,6 @@
 import { useMemo } from "react";
 import type { Size } from "@/model/geometry";
 import { usePreference } from "@/platform/usePreference";
-import { useStore } from "@/store";
-import { selectSelectedRedaction } from "@/store/editorSlice";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import {
@@ -11,6 +9,8 @@ import {
 	withEffect,
 } from "../../shell/redactLook";
 import { useRedactLook } from "../../shell/useRedactLook";
+import { useStore } from "../../store";
+import { selectSelectedRedaction } from "../../store/editorSlice";
 import {
 	parseRedactSettings,
 	type RedactChoices,

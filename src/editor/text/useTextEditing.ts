@@ -9,9 +9,9 @@ import {
 } from "@/model/layers/text";
 import type { TextSelection } from "@/model/textEditing";
 import { usePreference } from "@/platform/usePreference";
-import { useStore } from "@/store";
-import { selectSelectedTextLayer } from "@/store/editorSlice";
 import type { EditorModeAction, TextEditState } from "../editorMode";
+import { useStore } from "../store";
+import { selectSelectedTextLayer } from "../store/editorSlice";
 import type { TextEditorHandle } from "./TextEditor";
 import { parseTextStyle, withTextEdit } from "./textSettings";
 

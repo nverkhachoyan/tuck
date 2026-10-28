@@ -4,7 +4,7 @@ import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedRedaction,
-} from "@src/store/editorSlice.ts";
+} from "@src/editor/store/editorSlice.ts";
 import { useState } from "react";
 import { useStore } from "zustand";
 import { SourceView } from "../../source/SourceView.tsx";
@@ -168,37 +168,37 @@ export function SessionsLesson() {
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
 			label: "beginSession",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "beginSession",
 		},
 		{
 			label: "commitSession",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "commitSession",
 		},
 		{
 			label: "cancelSession",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "cancelSession",
 		},
 		{
 			label: "pastBefore",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "pastBefore",
 		},
 		{
 			label: "selectCanUndo",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "selectCanUndo",
 		},
 		{
 			label: "selectCanRedo",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "selectCanRedo",
 		},
 		{
 			label: "EditorSession",
-			file: "src/store/editorSlice.ts",
+			file: "src/editor/store/editorSlice.ts",
 			name: "EditorSession",
 		},
 	];
@@ -410,8 +410,8 @@ export function SessionsLesson() {
 			<section className="read-the-code">
 				<h2>Read the code</h2>
 				<p>
-					Sessions in <code>src/store/editorSlice.ts</code>. Every check is an
-					identity check on snapshots, as in the model chapter.
+					Sessions in <code>src/editor/store/editorSlice.ts</code>. Every check
+					is an identity check on snapshots, as in the model chapter.
 				</p>
 				<div className="tabs" role="tablist">
 					{tabs.map((candidate) => (
