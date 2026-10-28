@@ -110,3 +110,11 @@ doesn't require terms.
     of Tuck is ready", then Reload.
   - Sharing a photo to the installed app on Android, and opening one with
     it on the desktop ("Open with").
+
+## 6. Open source
+
+- [ ] Choose a license, and add `LICENSE` and the `license` field in
+      `package.json`.
+- [ ] Scan git history for secrets and private names (machine and device
+      names, local paths) before the repo goes public.
+- [ ] Check that nothing in `docs/` assumes a private repo.
