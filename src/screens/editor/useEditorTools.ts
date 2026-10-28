@@ -3,7 +3,6 @@ import type { EditorDocument } from "@/model/document";
 import { type Framing, visibleImageLayer } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
-import { usePreference } from "@/platform/usePreference";
 import { useStore } from "@/store";
 import type { DetectionFeature } from "./detection/imageDetection";
 import {
@@ -13,7 +12,6 @@ import {
 	type ToolStart,
 	toolImageId,
 } from "./editorMode";
-import { type RedactLook, redactionEffect } from "./shell/redactLook";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { toolWithController } from "./toolDefinitions";
 import { TOOL_SPECS } from "./toolSpecs";
@@ -21,7 +19,6 @@ import { useAdjustTool } from "./tools/adjust/useAdjustTool";
 import { useCutOutTool } from "./tools/cutout/useCutOutTool";
 import { useDrawTool } from "./tools/draw/useDrawTool";
 import { useFindTool } from "./tools/find/useFindTool";
-import { parseRedactSettings } from "./tools/redact/redactSettings";
 import { useRedactTool } from "./tools/redact/useRedactTool";
 import { useTextEditing } from "./tools/text/useTextEditing";
 
@@ -82,24 +79,11 @@ export function useEditorTools({
 		: undefined;
 	const adjust = useAdjustTool(adjustedLayer, setAdjustments);
 
-	// Redact's settings, saved between sessions. Their look is what Find and
-	// Cut out redact with too.
-	const [redactSettings, setRedactSettings] = usePreference(
-		"redactSettings",
-		parseRedactSettings,
-	);
-	const { effect, color, strength } = redactSettings;
-	const redactLook: RedactLook = { effect, color, strength };
-	const changeRedactLook = (change: Partial<RedactLook>) =>
-		setRedactSettings((current) => ({ ...current, ...change }));
-	const redactEffect = redactionEffect(redactLook, documentSize);
-
 	const draw = useDrawTool(tool === "draw", documentSize);
-	const redact = useRedactTool(documentSize, redactSettings, setRedactSettings);
+	const redact = useRedactTool(documentSize);
 	const find = useFindTool({
 		document,
 		image: targetImage,
-		redactionEffect: redactEffect,
 		onRedacted,
 	});
 
@@ -110,7 +94,6 @@ export function useEditorTools({
 	const cutOut = useCutOutTool({
 		layer: cutLayer,
 		documentSize,
-		redactionEffect: redactEffect,
 		onClose: () => dispatchMode({ type: "endTool" }),
 	});
 	const tools: EditorTools = { draw, redact, find, cutOut, adjust, text };
@@ -217,8 +200,6 @@ export function useEditorTools({
 		stepToolSize,
 		adjustedLayer,
 		cutLayer,
-		redactLook,
-		changeRedactLook,
 	};
 }
 

@@ -23,6 +23,7 @@ import {
 } from "../../shell/redactStyle";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { ToolOptions, Tray } from "../../shell/ToolOptions";
+import { useRedactLook } from "../../shell/useRedactLook";
 import type { FindController, FindReview } from "./useFindTool";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
 
@@ -40,7 +41,8 @@ export function FindPanel({
 }: {
 	controller: FindController;
 }) {
-	const { redactLook, trayOpen, toggleTray } = useEditorContext();
+	const { trayOpen, toggleTray } = useEditorContext();
+	const { look } = useRedactLook();
 	const scanned = state.status === "idle" ? null : state.scope;
 	return (
 		<ToolRow>
@@ -57,7 +59,7 @@ export function FindPanel({
 			<ToolButton
 				label="Style"
 				icon="palette-outline"
-				glyph={<EffectGlyph settings={redactLook} effect={redactLook.effect} />}
+				glyph={<EffectGlyph settings={look} effect={look.effect} />}
 				open={trayOpen}
 				onPress={toggleTray}
 			/>
@@ -77,14 +79,14 @@ const SCOPES = [
  * results sit in the inspector, above the layers they'll join.
  */
 export function FindBar() {
-	const { redactLook, changeRedactLook } = useEditorContext();
-	const colorTarget = useColorTarget((color) => changeRedactLook({ color }));
+	const { look, changeLook } = useRedactLook();
+	const colorTarget = useColorTarget((color) => changeLook({ color }));
 	return (
 		<BarSections>
 			<BarGroup>
 				{redactLookItems({
-					settings: redactLook,
-					onChange: changeRedactLook,
+					settings: look,
+					onChange: changeLook,
 					...colorTarget,
 				})}
 			</BarGroup>
@@ -115,9 +117,9 @@ export function FindTray({ controller }: { controller: FindController }) {
 
 /** The look Find redacts with, in a tray above the dock (see `ToolOptions`). */
 export function FindOptions() {
-	const { redactLook, changeRedactLook, bottomInset, closeTray } =
-		useEditorContext();
-	const colorTarget = useColorTarget((color) => changeRedactLook({ color }));
+	const { bottomInset, closeTray } = useEditorContext();
+	const { look, changeLook } = useRedactLook();
+	const colorTarget = useColorTarget((color) => changeLook({ color }));
 	return (
 		<ToolOptions
 			closeLabel="Close redaction style"
@@ -126,8 +128,8 @@ export function FindOptions() {
 			dismissOnOutsidePress={false}
 		>
 			<RedactLookOptions
-				settings={redactLook}
-				onChange={changeRedactLook}
+				settings={look}
+				onChange={changeLook}
 				{...colorTarget}
 			/>
 		</ToolOptions>

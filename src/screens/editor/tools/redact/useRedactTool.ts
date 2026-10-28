@@ -1,5 +1,6 @@
-import { type Dispatch, type SetStateAction, useMemo } from "react";
+import { useMemo } from "react";
 import type { Size } from "@/model/geometry";
+import { usePreference } from "@/platform/usePreference";
 import { useStore } from "@/store";
 import { selectSelectedRedaction } from "@/store/editorSlice";
 import type { ToolStroke } from "../../canvas/canvasTool";
@@ -9,8 +10,10 @@ import {
 	sameEffect,
 	withEffect,
 } from "../../shell/redactLook";
+import { useRedactLook } from "../../shell/useRedactLook";
 import {
-	type RedactSettings,
+	parseRedactSettings,
+	type RedactChoices,
 	redactCanvasTool,
 	stepRedactSize,
 } from "./redactSettings";
@@ -18,31 +21,34 @@ import {
 export type RedactController = ReturnType<typeof useRedactTool>;
 
 /**
- * Redact's settings, from the saved ones (`chosen`), whose look Find and Cut
- * out redact with too. They show the selected redaction's style, which new
- * ones then share, so a redaction can be picked to match. Changing them
- * restyles that one. `stepSize` steps the brush's size for `[` and `]`,
- * `canvasInput` brushes or drags out redactions with them, and
- * `finishStroke` adds what's brushed or dragged out to the document.
+ * Redact's settings, kept between sessions, with the editor's redaction
+ * look, which Find and Cut out redact with too. They show the selected
+ * redaction's style, which new ones then share, so a redaction can be
+ * picked to match. Changing them restyles that one. `stepSize` steps the
+ * brush's size for `[` and `]`, `canvasInput` brushes or drags out
+ * redactions with them, and `finishStroke` adds what's brushed or dragged
+ * out to the document.
  */
-export function useRedactTool(
-	documentSize: Size,
-	chosen: RedactSettings,
-	setChosen: Dispatch<SetStateAction<RedactSettings>>,
-) {
+export function useRedactTool(documentSize: Size) {
+	const [chosen, setChosen] = usePreference(
+		"redactSettings",
+		parseRedactSettings,
+	);
+	const { look, changeLook } = useRedactLook();
 	const selectedRedaction = useStore(selectSelectedRedaction);
 	const { setRedactionEffect, paintRedaction, addRedactionBox } = useStore(
 		(state) => state.actions,
 	);
-	const settings = useMemo(
-		() =>
-			selectedRedaction
-				? withEffect(chosen, selectedRedaction.effect, documentSize)
-				: chosen,
-		[chosen, selectedRedaction, documentSize],
-	);
-	const change = (next: RedactSettings) => {
-		setChosen(next);
+	const settings = useMemo(() => {
+		const choices: RedactChoices = { ...look, ...chosen };
+		return selectedRedaction
+			? withEffect(choices, selectedRedaction.effect, documentSize)
+			: choices;
+	}, [look, chosen, selectedRedaction, documentSize]);
+	const change = (next: RedactChoices) => {
+		const { effect, color, strength, tool, brushSize, eraserSize } = next;
+		changeLook({ effect, color, strength });
+		setChosen({ tool, brushSize, eraserSize });
 		if (selectedRedaction && !sameEffect(settings, next)) {
 			setRedactionEffect(
 				selectedRedaction.id,

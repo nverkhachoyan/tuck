@@ -1,7 +1,10 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { BLUR_STRENGTHS, redactionEffect } from "../../../shell/redactLook.ts";
+import {
+	defaultRedactLook,
+	redactionEffect,
+} from "../../../shell/redactLook.ts";
 import {
 	defaultRedactSettings,
 	maskBrush,
@@ -64,16 +67,17 @@ describe("withRedactSize", () => {
 
 describe("parseRedactSettings", () => {
 	test("reads back settings saved as they are", () => {
-		const settings = {
-			tool: "brush" as const,
-			effect: "blur" as const,
-			color: "#6B2FA0",
-			strength: 2,
-			brushSize: 4,
-			eraserSize: 0,
-		};
+		const settings = { tool: "brush" as const, brushSize: 4, eraserSize: 0 };
 		assert.deepEqual(
 			parseRedactSettings(JSON.parse(JSON.stringify(settings))),
+			settings,
+		);
+	});
+
+	test("leaves out the look an earlier build saved with them", () => {
+		const settings = { tool: "brush" as const, brushSize: 4, eraserSize: 0 };
+		assert.deepEqual(
+			parseRedactSettings({ ...settings, effect: "blur", strength: 2 }),
 			settings,
 		);
 	});
@@ -88,9 +92,6 @@ describe("parseRedactSettings", () => {
 		assert.deepEqual(
 			parseRedactSettings({
 				tool: "lasso",
-				effect: "mosaic",
-				color: "red",
-				strength: BLUR_STRENGTHS.length,
 				brushSize: 1.5,
 				eraserSize: 3,
 			}),
@@ -112,7 +113,11 @@ describe("stepRedactSize", () => {
 
 describe("redactCanvasTool", () => {
 	test("drags out the box", () => {
-		const boxes = { ...defaultRedactSettings, tool: "box" as const };
+		const boxes = {
+			...defaultRedactLook,
+			...defaultRedactSettings,
+			tool: "box" as const,
+		};
 		assert.deepEqual(redactCanvasTool(boxes, photo), {
 			type: "redactBox",
 			effect: redactionEffect(boxes, photo),
@@ -120,7 +125,11 @@ describe("redactCanvasTool", () => {
 	});
 
 	test("paints with the brush", () => {
-		const brushes = { ...defaultRedactSettings, tool: "brush" as const };
+		const brushes = {
+			...defaultRedactLook,
+			...defaultRedactSettings,
+			tool: "brush" as const,
+		};
 		assert.deepEqual(redactCanvasTool(brushes, photo), {
 			type: "redactBrush",
 			brush: maskBrush(brushes, photo),

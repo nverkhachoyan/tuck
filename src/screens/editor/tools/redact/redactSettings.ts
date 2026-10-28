@@ -2,9 +2,7 @@ import type { Size } from "../../../../model/geometry.ts";
 import type { MaskStroke } from "../../../../model/strokes.ts";
 import type { CanvasTool } from "../../canvas/canvasTool.ts";
 import {
-	defaultRedactLook,
 	isIndex,
-	parseRedactLook,
 	type RedactLook,
 	redactionEffect,
 	shortSide,
@@ -12,16 +10,19 @@ import {
 
 export type RedactTool = "box" | "brush" | "eraser";
 
-// The look, and what Redact paints with: `brushSize` and `eraserSize` index
-// into `REDACT_BRUSH_SIZES`, so the brush and eraser each keep their own.
-export type RedactSettings = RedactLook & {
+// What Redact paints with: `brushSize` and `eraserSize` index into
+// `REDACT_BRUSH_SIZES`, so the brush and eraser each keep their own. The look
+// is the editor's (`useRedactLook`).
+export type RedactSettings = {
 	tool: RedactTool;
 	brushSize: number;
 	eraserSize: number;
 };
 
+// Redact's settings with the look, as its controls show them.
+export type RedactChoices = RedactLook & RedactSettings;
+
 export const defaultRedactSettings: RedactSettings = {
-	...defaultRedactLook,
 	tool: "box",
 	brushSize: 2,
 	eraserSize: 2,
@@ -49,7 +50,6 @@ export function parseRedactSettings(saved: unknown): RedactSettings {
 			: defaultRedactSettings[key];
 	};
 	return {
-		...parseRedactLook(saved),
 		tool: REDACT_TOOLS.find((tool) => tool === fields.tool) ?? "box",
 		brushSize: sizeOf("brushSize"),
 		eraserSize: sizeOf("eraserSize"),
@@ -71,20 +71,20 @@ export function redactSizeIndex(settings: RedactSettings): number | null {
  * Settings with the brush or eraser in use at size `index`; the other keeps
  * its own. The box has no size, so its settings stay as they are.
  */
-export function withRedactSize(
-	settings: RedactSettings,
+export function withRedactSize<T extends RedactSettings>(
+	settings: T,
 	index: number,
-): RedactSettings {
+): T {
 	return settings.tool === "box"
 		? settings
 		: { ...settings, [SIZE_KEYS[settings.tool]]: index };
 }
 
 /** The brush or eraser, one size dot up or down. A box has no size. */
-export function stepRedactSize(
-	settings: RedactSettings,
+export function stepRedactSize<T extends RedactSettings>(
+	settings: T,
 	step: 1 | -1,
-): RedactSettings {
+): T {
 	const index = redactSizeIndex(settings);
 	if (index === null) return settings;
 	const next = Math.min(
@@ -116,7 +116,7 @@ export function maskBrush(
  * brush or eraser, or drags out its box.
  */
 export function redactCanvasTool(
-	settings: RedactSettings,
+	settings: RedactChoices,
 	size: Size,
 ): CanvasTool {
 	const effect = redactionEffect(settings, size);

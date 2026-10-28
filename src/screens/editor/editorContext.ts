@@ -1,5 +1,4 @@
 import { createContext, useContext } from "react";
-import type { RedactLook } from "./shell/redactLook";
 
 /**
  * What a tool's views read from the editor around them, rather than from
@@ -7,7 +6,6 @@ import type { RedactLook } from "./shell/redactLook";
  * - `customColor`: the last color picked from a picker, which every custom
  *   swatch keeps.
  * - `startEyedropper`: picks a color from the canvas, handing it to `apply`.
- * - `redactLook`: how new redactions look, whichever tool adds them.
  * - `trayOpen`: whether the phone's tray of tool options is open.
  * - `bottomInset`: what a tray over the dock clears.
  * - `cancel`: the open tool's Cancel.
@@ -16,8 +14,6 @@ export type EditorContextValue = {
 	customColor: string | null;
 	setCustomColor: (color: string) => void;
 	startEyedropper: (apply: (color: string) => void) => void;
-	redactLook: RedactLook;
-	changeRedactLook: (change: Partial<RedactLook>) => void;
 	trayOpen: boolean;
 	toggleTray: () => void;
 	closeTray: () => void;

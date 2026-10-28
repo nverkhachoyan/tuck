@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditorDocument } from "@/model/document";
 import { boundingBox, type Rect } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
-import type {
-	RedactionBoxPlacement,
-	RedactionEffect,
-} from "@/model/layers/redaction";
+import type { RedactionBoxPlacement } from "@/model/layers/redaction";
 import { useStore } from "@/store";
 import type { CanvasInput } from "../../canvasInputFor";
 import type { DetectionFeature } from "../../detection/imageDetection";
+import { useRedactLook } from "../../shell/useRedactLook";
 import { chosenBoxes, detectionTargetKey, readingOrder } from "./findResults";
 import { mapDetectionRects } from "./mapDetectionRects";
 import { type DetectionScope, useImageDetection } from "./useImageDetection";
@@ -51,15 +49,14 @@ export type FindController = ReturnType<typeof useFindTool>;
 export function useFindTool({
 	document,
 	image,
-	redactionEffect,
 	onRedacted,
 }: {
 	document: EditorDocument;
 	image: ImageLayer | null;
-	redactionEffect: RedactionEffect;
 	onRedacted: (count: number, feature: DetectionFeature | null) => void;
 }) {
 	const { addRedactionBoxes } = useStore((state) => state.actions);
+	const { effectFor } = useRedactLook();
 	const detection = useImageDetection(detectionTargetKey(document, image));
 	const documentSize = useMemo(
 		() => ({ width: document.width, height: document.height }),
@@ -177,7 +174,11 @@ export function useFindTool({
 		redact: () => {
 			const result = found && chosenBoxes(regions, found.selected);
 			if (!result) return;
-			addRedactionBoxes(result.boxes, redactionEffect, result.groupName);
+			addRedactionBoxes(
+				result.boxes,
+				effectFor(documentSize),
+				result.groupName,
+			);
 			onRedacted(result.boxes.length, result.feature);
 		},
 	};

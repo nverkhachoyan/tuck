@@ -222,8 +222,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		finishCrop,
 		stepToolSize,
 		adjustedLayer,
-		redactLook,
-		changeRedactLook,
 	} = useEditorTools({
 		document,
 		mode,
@@ -377,8 +375,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		setCustomColor,
 		startEyedropper: (apply) =>
 			dispatchMode({ type: "startEyedropper", eyedropper: { apply } }),
-		redactLook,
-		changeRedactLook,
 		trayOpen: toolOptionsOpen,
 		toggleTray: () => dispatchMode({ type: "toggleToolOptions" }),
 		closeTray: () => dispatchMode({ type: "closeToolOptions" }),
