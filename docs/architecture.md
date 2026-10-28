@@ -88,8 +88,10 @@ and `platform/` beneath them and `ui/`. `model/` stays plain TypeScript, so its 
 - Outside `src/editor/`, the app imports the editor only from `@/editor`, and nothing inside the editor imports `@/editor`: its files reach each other by relative path. The editor imports no route, screen, `photos/`, `projects/`, or `expo-router`: what it needs from the app comes through its host. The route's `session/` imports only the editor's entry file.
 - In the editor, tools, Layers, and Text don't import each other. A tool reaches the rest of the editor only through `defineTool.ts`, `toolSpec.ts`, `editorContext.ts`, the canvas's input types (`canvasInputFor.ts`), the host's types (`editorHost.ts`), the store, `canvas/`, `shell/`, and `detection/`; Layers and Text through `editorContext.ts`, the store, `canvas/`, and `shell/`, and Text through its mode (`editorMode.ts`) too. What reaches a tool at runtime splits the same way: its hook runs in `Editor`'s body, above the context `Editor` provides, so it gets `ToolEnv`, the store, and shared preferences, and only its views read `editorContext.ts`. `shell/` imports nothing else from the editor (except `shortcuts.ts` for the editor's own keys); `detection/` imports nothing else from it; `canvas/` imports nothing else from the editor but `shell/`, and tools may import `canvas/`.
 
-`biome.json`'s `noRestrictedImports` overrides enforce these boundaries, and
-change when the structure does.
+No tool enforces these boundaries: this list is the rule, and changes when
+the structure does. That's on purpose. Encoding them in `biome.json` took over
+a thousand lines, so `biome.json` stays small and nothing checks imports. If a
+boundary ever truly needs a check, it gets a few lines, not a rule set.
 
 Adding a layer type means a file in `model/layers/` for its type and factory,
 a case in the `Layer` union (`model/layers/layer.ts`), a view in

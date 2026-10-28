@@ -75,11 +75,11 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 ### Tooling
 
 - Projects in the simulators, the emulator, and the local web app are test data: edit them freely while checking a change, and don't restore or report them.
-- Biome's `noRestrictedImports` matches an import's text, not its resolved file, and reads a `group` like `.gitignore` (the last matching pattern wins). A relative ban needs a pattern per depth, and a negation like `!../../../**` allows everything under it. Only the last matching override in `biome.json` applies to a file, so each repeats the bans it needs.
 
 ## Conventions
 
-- Keep imports flowing one way (`app` → `screens` → `editor` → `photos` / `projects` / `render` → `model`, with `ui/` and `platform/` beneath); `biome.json` enforces it, and docs/architecture.md lists the rules. Update both when the structure changes.
+- Keep imports flowing one way (`app` → `screens` → `editor` → `photos` / `projects` / `render` → `model`, with `ui/` and `platform/` beneath); docs/architecture.md lists the rules, and nothing checks them: read it before adding an import across folders, and update it when the structure changes.
+- Keep `biome.json` small: formatting and the recommended lint rules, and add to it only when something can't be caught any other way. Don't add import-boundary overrides or an import-checking script; if a boundary truly needs a check, keep it to a few lines.
 - Only routes go in `src/app/`; screens live in `src/screens/` and don't import each other. `model/` stays plain TypeScript (no React, React Native, or Skia), and `render/` never reads the editor's store.
 - Take colors from `colors` in `ui/theme.ts`, never literals that assume one palette (day or night is picked at launch and never switches while running). Draw over the photo in `colors.selection`; fade to a palette color with `fadeTo`.
 - Take text sizes and weights from `typography`, corners from `radii`, and gaps from `space`; a one-off gap off the scale may stay literal. Literal font sizes only for Anton display text, font previews, and the text editor's 16px hidden input. Circles keep half their size as a radius.
