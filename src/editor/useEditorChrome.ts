@@ -4,8 +4,8 @@ import type { EditorTool } from "./editorMode";
 import { layerKindName } from "./layers/LayerRow";
 import type { ModeActionProps } from "./shell/Dock";
 import { useStore } from "./store";
-import { toolDoneLabel } from "./toolDefinitions";
-import type { EditorTools } from "./useEditorTools";
+import type { TextController } from "./text/useTextEditing";
+import { type ToolControllers, toolDoneLabel } from "./toolDefinitions";
 
 /**
  * The dock's panel, and its title, Cancel, and Done (`modeActions`), chosen
@@ -15,27 +15,28 @@ import type { EditorTools } from "./useEditorTools";
  */
 export function useEditorChrome({
 	tool,
-	tools,
+	controllers,
+	text,
 	selectedLayer,
 	wide,
 	done,
 	cancel,
 }: {
 	tool: EditorTool | null;
-	tools: EditorTools;
+	controllers: ToolControllers;
+	text: TextController;
 	selectedLayer: Layer | undefined;
 	wide: boolean;
 	done: () => void;
 	cancel: () => void;
 }) {
 	const { selectLayer } = useStore((state) => state.actions);
-	const { text } = tools;
 	const chrome = modeChrome({
 		tool,
 		editingText: text.edit !== null,
 		styledText: text.styledText !== undefined,
 		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
-		toolDoneLabel: tool ? toolDoneLabel(tool, tools) : undefined,
+		toolDoneLabel: tool ? toolDoneLabel(tool, controllers) : undefined,
 		wide,
 	});
 	const onCancel = { tool: cancel, text: text.cancel };

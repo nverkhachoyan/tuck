@@ -78,7 +78,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 5. Move the editor out of `screens/` (October 27, 2026)
 - [x] 6. Give the editor its store (October 27, 2026)
 - [x] 7. Give the editor its host (October 27, 2026)
-- [ ] 8a. Build every tool's controller the same way
+- [x] 8a. Build every tool's controller the same way (October 27, 2026)
 - [ ] 8b. Give the canvas's input kinds their own gestures and drawing
 - [ ] 8c. Take the tool list as a prop
 - [ ] 9. Docs
@@ -182,7 +182,7 @@ When the last part is done, no type outside `tools/` lists a built-in tool's nam
 
 #### 8a. Build every tool's controller the same way
 
-* A definition gives its hook as `useController(env)`, where `env` is what the editor gives the tool: `document`, `documentSize`, whether it's `open`, the `image` its spec's target gives (the target photo, or the image it started on), `close`, `notify(message)` (the edit notice, with Undo), and the canvas's `view` (`zoomToArea` and `fit`).
+* A definition gives its hook as `useController(env)`, where `env` is what the editor gives the tool: `document`, `documentSize`, whether it's `open`, the `image` its spec's target gives (the target photo, or the image it started on), `close`, `notify(message)` (the edit notice, with Undo), the canvas's `view` (`zoomToArea` and `fit`), and `addImage` (the host's, which Cut out keeps its masks with).
 * A hook reads nothing from `editorContext.ts`: it runs in the editor's body, above the provider (see [Decisions](#decisions)).
 * What only one or two tools were handed goes where it belongs: the redaction effect already comes from `useRedactLook` (step 4b); Find's notice goes through `env.notify`, its wording (`regionsName`) moving into Find, so `useEditNotice` loses `redacted` and its import of `DetectionFeature`; and Adjust's `setAdjustments` and Cut out's store actions are read from the store by the tools themselves.
 * Find resets itself when `env.open` turns false, so `closeTool` stops calling `find.reset()`.

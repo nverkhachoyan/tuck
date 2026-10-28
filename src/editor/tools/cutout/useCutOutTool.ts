@@ -1,12 +1,11 @@
 import { useMemo, useRef } from "react";
 import { imagePointAt, isCutOut } from "@/model/cutout";
 import { visibleImageLayer } from "@/model/framing";
-import type { Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
-import type { EditorHost } from "../../editorHost";
+import type { ToolEnv } from "../../defineTool";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
 import {
@@ -21,29 +20,25 @@ import { useCutRedaction } from "./useCutRedaction";
 export type CutOutController = ReturnType<typeof useCutOutTool>;
 
 /**
- * Cut out, on the image `layer` while it's open: its settings, kept between
+ * Cut out, on its `image` while it's open: its settings, kept between
  * sessions, the tool they and the device give, and finding, picking,
  * inverting, resetting, and redacting the cut, each undefined where it
  * can't be done. A mask found after Cut out was put down, or moved to
  * another image, isn't wanted any more. Redacting the cut's selection takes
  * back the cut, adds a redaction in its shape, in the editor's redaction
- * look, which is selected, and closes Cut out (`onClose`). Masks are kept
+ * look, which is selected, and closes Cut out (`close`). Masks are kept
  * through the host's `addImage`. `stepSize` steps the brush's
  * size for `[` and `]`, `canvasInput` paints or picks on a document of
  * `documentSize`, while there's an image shown to cut out, and
  * `finishStroke` paints the cut, or cuts out only the subject tapped.
  */
 export function useCutOutTool({
-	layer,
+	image,
 	documentSize,
 	addImage,
-	onClose,
-}: {
-	layer: ImageLayer | undefined;
-	documentSize: Size;
-	addImage: EditorHost["addImage"];
-	onClose: () => void;
-}) {
+	close,
+}: Pick<ToolEnv, "image" | "documentSize" | "addImage" | "close">) {
+	const layer = image ?? undefined;
 	const key = useStore((state) => state.key);
 	const { setMask, invertMask, cancelSession, addMaskedRedaction, paintMask } =
 		useStore((state) => state.actions);
@@ -74,7 +69,7 @@ export function useCutOutTool({
 			if (layerId.current !== id) return;
 			cancelSession();
 			addMaskedRedaction(id, mask, rect, effectFor(documentSize));
-			onClose();
+			close();
 		},
 	});
 	const cut = layer && isCutOut(layer) ? layer : undefined;

@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import type { Size } from "@/model/geometry";
 import { isLine, isLineShape } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
+import type { ToolEnv } from "../../defineTool";
 import { useStore } from "../../store";
 import {
 	selectSelectedLayer,
@@ -21,14 +21,17 @@ import {
 export type DrawController = ReturnType<typeof useDrawTool>;
 
 /**
- * Draw's settings, kept between sessions. While Draw is `active` with the
+ * Draw's settings, kept between sessions. While Draw is `open` with the
  * shape tool, they show the selected shape's style, and changing them
  * restyles that one. A kind it can't become, a box for a line or a line for
  * a box, starts a new shape instead. `stepSize` steps the brush's size for
  * `[` and `]`, `canvasInput` paints or drags out shapes with them, and
  * `finishStroke` adds what's painted or dragged out to the document.
  */
-export function useDrawTool(active: boolean, documentSize: Size) {
+export function useDrawTool({
+	open,
+	documentSize,
+}: Pick<ToolEnv, "open" | "documentSize">) {
 	const selectedShape = useStore(selectSelectedShape);
 	const selectedType = useStore((state) => selectSelectedLayer(state)?.type);
 	const { setShapeStyle, selectLayer, drawStroke, addShape } = useStore(
@@ -39,7 +42,7 @@ export function useDrawTool(active: boolean, documentSize: Size) {
 		parseBrushSettings,
 	);
 	const restyledShape =
-		active && brushSettings.tool === "shape" ? selectedShape : undefined;
+		open && brushSettings.tool === "shape" ? selectedShape : undefined;
 	const settings = useMemo(
 		() =>
 			restyledShape

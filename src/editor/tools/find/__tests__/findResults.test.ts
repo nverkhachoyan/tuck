@@ -10,6 +10,7 @@ import {
 	type FoundRegion,
 	findDoneLabel,
 	readingOrder,
+	redactedNotice,
 } from "../findResults.ts";
 
 const region = (
@@ -183,5 +184,13 @@ describe("findDoneLabel", () => {
 	test("names the regions Done redacts once some are chosen", () => {
 		assert.equal(findDoneLabel(0), undefined);
 		assert.equal(findDoneLabel(3), "Redact 3 chosen");
+	});
+});
+
+describe("redactedNotice", () => {
+	test("names how many regions were redacted, and what they are", () => {
+		assert.equal(redactedNotice(1, "faces"), "1 face redacted");
+		assert.equal(redactedNotice(2, "text"), "2 text regions redacted");
+		assert.equal(redactedNotice(3, null), "3 regions redacted");
 	});
 });

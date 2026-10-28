@@ -15,6 +15,8 @@ import { selectSelectedTextLayer } from "../store/editorSlice";
 import type { TextEditorHandle } from "./TextEditor";
 import { parseTextStyle, withTextEdit } from "./textSettings";
 
+export type TextController = ReturnType<typeof useTextEditing>;
+
 /**
  * Typing on the canvas. The edit is the editor mode's (`edit`, changed
  * through `dispatchMode`); this starts it, for new text or the selected

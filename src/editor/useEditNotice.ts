@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { EditorDocument } from "@/model/document";
-import type { DetectionFeature } from "./detection/imageDetection";
 import { layerKindName } from "./layers/LayerRow";
 import { useStore } from "./store";
 
@@ -10,8 +9,8 @@ const SHOWN_MS = 5000;
 type Notice = { message: string; after: EditorDocument | null };
 
 /**
- * Deleting a layer or a group of layers, and redacting what Find found, say
- * so, with Undo. The note goes once anything else changes the document,
+ * Deleting a layer or a group of layers, and what a tool notifies (Find's
+ * redaction), say so, with Undo. The note goes once anything else changes the document,
  * since Undo would then take back that change instead, or after a few
  * seconds.
  */
@@ -50,13 +49,9 @@ export function useEditNotice(document: EditorDocument) {
 			if (!group) return;
 			deleted(`${group.name} deleted`, () => deleteLayerGroup(id));
 		},
-		// Called once `count` regions are redacted, `feature` saying what they
-		// are (null for both kinds).
-		redacted: (count: number, feature: DetectionFeature | null) =>
-			setNotice({
-				message: `${count} ${regionsName(count, feature)} redacted`,
-				after: useStore.getState().document,
-			}),
+		// Shows `message`, once a tool has changed the document.
+		notify: (message: string) =>
+			setNotice({ message, after: useStore.getState().document }),
 		// A change made just before a tool opened (Find's redaction, as Redact
 		// opens) sits before the new session's start, where Undo doesn't
 		// reach. The session has no changes of its own while the note shows,
@@ -73,11 +68,4 @@ export function useEditNotice(document: EditorDocument) {
 			setNotice(null);
 		},
 	};
-}
-
-function regionsName(count: number, feature: DetectionFeature | null) {
-	const one = count === 1;
-	if (feature === "faces") return one ? "face" : "faces";
-	if (feature === "text") return one ? "text region" : "text regions";
-	return one ? "region" : "regions";
 }

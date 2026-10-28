@@ -15,22 +15,22 @@ import {
 	TextColorPicker,
 	TextStylePanel,
 } from "./text/TextStylePanel";
+import type { TextController } from "./text/useTextEditing";
 import {
 	isTool,
 	TOOL_DEFINITIONS,
+	type ToolControllers,
 	toolWithController,
 } from "./toolDefinitions";
-import type { EditorTools } from "./useEditorTools";
-
-export type { EditorTools } from "./useEditorTools";
 
 /**
  * What the panels read besides the editor's context (see
- * `editorContext.ts`): the tools, whose definitions give their views, and
- * what text and a selected layer show.
+ * `editorContext.ts`): the tools' controllers, which their definitions'
+ * views are given, and what text and a selected layer show.
  */
 export type PanelContext = {
-	tools: EditorTools;
+	controllers: ToolControllers;
+	text: TextController;
 	dispatchMode: (action: EditorModeAction) => void;
 	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
 	editingText: boolean;
@@ -53,7 +53,7 @@ const OTHER_PANELS: Record<
 	}
 > = {
 	text: {
-		dock: ({ tools: { text }, dispatchMode }) => {
+		dock: ({ text, dispatchMode }) => {
 			const { styledText } = text;
 			return (
 				styledText && (
@@ -71,7 +71,7 @@ const OTHER_PANELS: Record<
 				)
 			);
 		},
-		bar: ({ tools: { text }, editingText, restoreTextFocus }) =>
+		bar: ({ text, editingText, restoreTextFocus }) =>
 			text.styledText && (
 				<TextBar
 					layer={text.styledText}
@@ -91,10 +91,10 @@ const OTHER_PANELS: Record<
 /** `tool`'s view in `slot`, given its controller, or null without one. */
 function toolView(
 	tool: EditorTool,
-	tools: EditorTools,
+	controllers: ToolControllers,
 	slot: "Dock" | "Bar" | "Tray" | "Results",
 ) {
-	const { definition, controller } = toolWithController(tool, tools);
+	const { definition, controller } = toolWithController(tool, controllers);
 	const View = definition.views[slot];
 	return View ? <View controller={controller} /> : null;
 }
@@ -112,18 +112,17 @@ export function ToolTrays({
 	modeState: EditorModeState;
 	panel: DockPanel;
 }) {
-	const { tools, dispatchMode } = context;
-	const { text } = tools;
+	const { controllers, text, dispatchMode } = context;
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = text;
 	const tray = openTray(mode);
 	return (
 		<>
-			{tray && toolView(tray, tools, "Tray")}
+			{tray && toolView(tray, controllers, "Tray")}
 			{!tray &&
 				!eyedropper &&
 				isTool(panel) &&
-				toolView(panel, tools, "Results")}
+				toolView(panel, controllers, "Results")}
 			{textPicker && styledText && (
 				<TextColorPicker
 					layer={styledText}
@@ -157,7 +156,10 @@ export function InspectorContent({
 	layers: ReactNode;
 }) {
 	if (!isTool(panel)) return layers;
-	const { definition, controller } = toolWithController(panel, context.tools);
+	const { definition, controller } = toolWithController(
+		panel,
+		context.controllers,
+	);
 	const Section = definition.views.Inspector;
 	return Section ? <Section controller={controller}>{layers}</Section> : layers;
 }
@@ -183,7 +185,7 @@ export function ContextBarContent({
 	if (isTool(panel)) {
 		return (
 			<ContextBar {...chrome} keepFocus={false}>
-				{toolView(panel, context.tools, "Bar")}
+				{toolView(panel, context.controllers, "Bar")}
 			</ContextBar>
 		);
 	}
@@ -209,6 +211,6 @@ export function DockContent({
 	idle: ReactNode;
 }) {
 	if (panel === "idle") return idle;
-	if (isTool(panel)) return toolView(panel, context.tools, "Dock");
+	if (isTool(panel)) return toolView(panel, context.controllers, "Dock");
 	return OTHER_PANELS[panel].dock(context);
 }

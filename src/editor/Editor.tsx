@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { neutralAdjustments } from "@/model/adjustments";
 import { isHexColor } from "@/model/color";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
@@ -50,7 +49,8 @@ import {
 	selectSelectedTextLayer,
 } from "./store/editorSlice";
 import { TextEditor } from "./text/TextEditor";
-import { useReviewZoom } from "./tools/find/useFindTool";
+import type { AdjustController } from "./tools/adjust/useAdjustTool";
+import { type FindController, useReviewZoom } from "./tools/find/useFindTool";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
@@ -83,7 +83,6 @@ export function Editor({
 		addImageLayer,
 		addStickerLayer,
 		duplicateSelectedLayer,
-		setAdjustments,
 		transformLayer,
 		resizeBox,
 		nudgeLayer,
@@ -158,7 +157,8 @@ export function Editor({
 	const openStickers = () => dispatchMode({ type: "openStickers" });
 
 	const {
-		tools,
+		controllers,
+		text,
 		startTool,
 		done,
 		cancel,
@@ -166,6 +166,8 @@ export function Editor({
 		closeCrop,
 		finishCrop,
 		stepToolSize,
+		resetEdit,
+		announcements,
 		adjustedLayer,
 	} = useEditorTools({
 		document,
@@ -176,16 +178,24 @@ export function Editor({
 		pickPhoto,
 		addImage: host.addImage,
 		openStickers,
+		view: {
+			zoomToArea: (area) => canvasRef.current?.zoomToArea(area),
+			fit: () => canvasRef.current?.zoom("fit"),
+		},
 		visibleArea: () => canvasRef.current?.visibleArea(),
-		onRedacted: editNotice.redacted,
+		notify: editNotice.notify,
 	});
 
-	useReviewZoom(tools.find.review, {
+	// Find's review zoom and Adjust's live preview, until the canvas takes
+	// them from the tools' input.
+	const find = controllers.find as FindController;
+	const adjust = controllers.adjust as AdjustController;
+	useReviewZoom(find.review, {
 		zoomToArea: (area) => canvasRef.current?.zoomToArea(area),
 		fit: () => canvasRef.current?.zoom("fit"),
 	});
 
-	const editingText = tools.text.edit !== null;
+	const editingText = text.edit !== null;
 	const savedStickers = useSavedStickers();
 	const stickerSave = useStickerSave(savedStickers.save, host.importPhoto);
 	// Find and Adjust live in the inspector, so they open it even though
@@ -201,9 +211,9 @@ export function Editor({
 	const adjusting = useMemo(
 		() =>
 			adjustedLayer
-				? { layerId: adjustedLayer.id, matrix: tools.adjust.matrix }
+				? { layerId: adjustedLayer.id, matrix: adjust.matrix }
 				: null,
-		[adjustedLayer, tools.adjust.matrix],
+		[adjustedLayer, adjust.matrix],
 	);
 	// The last color picked from a color picker, which every custom swatch
 	// keeps while a preset is in use. Null until there's one. Like the tools'
@@ -216,7 +226,7 @@ export function Editor({
 	const canvasInput = useCanvasInput({
 		document,
 		tool,
-		tools,
+		controllers,
 		eyedropper,
 		editingText,
 		dispatchMode,
@@ -235,17 +245,18 @@ export function Editor({
 
 	// Text being typed is finished first, so it goes where the editor does.
 	const openExport = () => {
-		tools.text.finish();
+		text.finish();
 		host.openExport();
 	};
 	const leave = () => {
-		tools.text.finish();
+		text.finish();
 		host.leave();
 	};
 
 	const { panel, inBar, modeActions } = useEditorChrome({
 		tool,
-		tools,
+		controllers,
+		text,
 		selectedLayer,
 		wide,
 		done,
@@ -263,7 +274,7 @@ export function Editor({
 		zoom: (to) => canvasRef.current?.zoom(to),
 		done,
 		startTool,
-		editSelected: () => tools.text.editSelected(),
+		editSelected: () => text.editSelected(),
 		deleteSelected: () => {
 			if (selectedLayer) editNotice.deleteLayer(selectedLayer.id);
 		},
@@ -282,7 +293,7 @@ export function Editor({
 			deleteLayer: editNotice.deleteLayer,
 			deleteLayerGroup: editNotice.deleteGroup,
 		},
-		onFinishText: tools.text.finish,
+		onFinishText: text.finish,
 		onClose: closeLayers,
 		bottomInset: dockInset,
 	});
@@ -318,24 +329,19 @@ export function Editor({
 		cancel,
 	};
 	const panels: PanelContext = {
-		tools,
+		controllers,
+		text,
 		dispatchMode,
 		layerActions: layerActions || undefined,
 		editingText,
-		restoreTextFocus: () => tools.text.editorRef.current?.focus(),
+		restoreTextFocus: () => text.editorRef.current?.focus(),
 	};
-
-	// Takes back the open tool's changes to its image: Adjust's adjustments,
-	// or Cut out's cut.
-	const resetEdit = adjustedLayer?.adjustments
-		? () => setAdjustments(adjustedLayer.id, neutralAdjustments)
-		: tools.cutOut.reset;
 
 	// A tap on selected text edits it, with the caret where it landed.
 	const editSelectedTextAt =
 		selectedTextLayer &&
 		((point: Point) =>
-			tools.text.editSelected(
+			text.editSelected(
 				textIndexAt(
 					selectedTextLayer,
 					toLayerSpace(selectedTextLayer.transform, point),
@@ -347,7 +353,7 @@ export function Editor({
 			layer={selectedLayer}
 			index={selectedPlace.index}
 			topIndex={selectedPlace.topIndex}
-			onEdit={() => tools.text.editSelected()}
+			onEdit={() => text.editSelected()}
 			onSetResizable={setLayerResizable}
 			onArrange={selectedPlace.arrange}
 			onDuplicate={duplicateSelectedLayer}
@@ -408,9 +414,9 @@ export function Editor({
 							ref={canvasRef}
 							document={document}
 							selectedLayer={selectedLayer}
-							textEdit={tools.text.edit}
-							onTextSelect={tools.text.select}
-							onTextEditDone={tools.text.finish}
+							textEdit={text.edit}
+							onTextSelect={text.select}
+							onTextEditDone={text.finish}
 							onSelectLayer={selectLayer}
 							onTapSelectedLayer={editSelectedTextAt}
 							onCommitTransform={transformLayer}
@@ -435,7 +441,9 @@ export function Editor({
 								onCancel={() => dispatchMode({ type: "stopEyedropper" })}
 							/>
 						)}
-						<Announcement message={tools.cutOut.news} />
+						{announcements.map(([id, message]) => (
+							<Announcement key={id} message={message} />
+						))}
 						{saveProblem && (
 							<SaveErrorBanner
 								message={saveProblem}
@@ -457,7 +465,7 @@ export function Editor({
 								startTool={startTool}
 								tool={tool}
 								finishTool={finishTool}
-								finishText={tools.text.finish}
+								finishText={text.finish}
 								stickerAnchor={stickerAnchor}
 							/>
 						)}
@@ -531,15 +539,15 @@ export function Editor({
 							onDone={finishCrop}
 						/>
 					)}
-					{tools.text.edit && (
+					{text.edit && (
 						<TextEditor
-							ref={tools.text.editorRef}
-							text={tools.text.edit.layer.text}
-							initialSelection={tools.text.edit.initialSelection}
-							onChangeText={tools.text.changeText}
-							onSelectionChange={tools.text.changeSelection}
-							onFocusChange={tools.text.changeFocus}
-							onDone={tools.text.finish}
+							ref={text.editorRef}
+							text={text.edit.layer.text}
+							initialSelection={text.edit.initialSelection}
+							onChangeText={text.changeText}
+							onSelectionChange={text.changeSelection}
+							onFocusChange={text.changeFocus}
+							onDone={text.finish}
 						/>
 					)}
 					{modeState.shortcutsOpen && (

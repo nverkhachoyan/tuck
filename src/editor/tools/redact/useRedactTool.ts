@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import type { Size } from "@/model/geometry";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
+import type { ToolEnv } from "../../defineTool";
 import {
 	redactionEffect,
 	sameEffect,
@@ -29,7 +29,7 @@ export type RedactController = ReturnType<typeof useRedactTool>;
  * redactions with them, and `finishStroke` adds what's brushed or dragged
  * out to the document.
  */
-export function useRedactTool(documentSize: Size) {
+export function useRedactTool({ documentSize }: Pick<ToolEnv, "documentSize">) {
 	const [chosen, setChosen] = usePreference(
 		"redactSettings",
 		parseRedactSettings,

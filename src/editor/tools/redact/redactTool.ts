@@ -1,10 +1,11 @@
 import { defineTool } from "../../defineTool";
 import { RedactBar, RedactOptions, RedactPanel } from "./RedactPanel";
 import { redactSpec } from "./redactSpec";
-import type { RedactController } from "./useRedactTool";
+import { type RedactController, useRedactTool } from "./useRedactTool";
 
 export const redactTool = defineTool<RedactController>({
 	spec: redactSpec,
+	useController: useRedactTool,
 	views: { Dock: RedactPanel, Bar: RedactBar, Tray: RedactOptions },
 	prepare: (redact) => redact.chooseTool(),
 	canvasInput: (redact) => redact.canvasInput,

@@ -125,6 +125,30 @@ export function detectionAt<
 	return hit;
 }
 
+/**
+ * What the edit notice says once Find redacted `count` regions, `feature`
+ * saying what they are (null for both kinds).
+ */
+export function redactedNotice(
+	count: number,
+	feature: DetectionFeature | null,
+): string {
+	const one = count === 1;
+	const name =
+		feature === "faces"
+			? one
+				? "face"
+				: "faces"
+			: feature === "text"
+				? one
+					? "text region"
+					: "text regions"
+				: one
+					? "region"
+					: "regions";
+	return `${count} ${name} redacted`;
+}
+
 /** What Find's Done says once `chosen` regions are chosen: none leaves "Done". */
 export function findDoneLabel(chosen: number): string | undefined {
 	return chosen > 0 ? `Redact ${chosen} chosen` : undefined;

@@ -14,9 +14,10 @@ import {
 	type ColorMatrix,
 	neutralAdjustments,
 } from "@/model/adjustments";
-import type { ImageLayer } from "@/model/layers/image";
 import type { CanvasInput } from "../../canvasInputFor";
+import type { ToolEnv } from "../../defineTool";
 import type { DialScale } from "../../shell/dialDrag";
+import { useStore } from "../../store";
 
 // The dial counts in percent: -100 to 100 for -1 to 1.
 export const ADJUST_DIAL_MAX = 100;
@@ -57,6 +58,8 @@ export type AdjustController = {
 	changing: SharedValue<boolean>;
 	// A sideways drag over the photo turns the dial, as the dial does.
 	canvasInput: CanvasInput;
+	// Takes the image back to neutral, while it has adjustments.
+	reset: (() => void) | undefined;
 };
 
 function syncAdjustments(
@@ -69,15 +72,15 @@ function syncAdjustments(
 }
 
 /**
- * Live adjustments for `layer`, which a dial changes on the UI thread and
+ * Live adjustments for `image`, which a dial changes on the UI thread and
  * `matrix` follows, with no React render along the way. A change reaches
  * the document once it ends, as one undo step. Otherwise they follow the
  * document, through undo and redo.
  */
-export function useAdjustTool(
-	layer: ImageLayer | undefined,
-	setAdjustments: (id: string, adjustments: Adjustments) => void,
-): AdjustController {
+export function useAdjustTool({
+	image: layer,
+}: Pick<ToolEnv, "image">): AdjustController {
+	const { setAdjustments } = useStore((state) => state.actions);
 	const saved = layer?.adjustments ?? neutralAdjustments;
 	const values = useSharedValue(saved);
 	const held = useSharedValue(false);
@@ -146,5 +149,9 @@ export function useAdjustTool(
 		end,
 		changing: held,
 		canvasInput,
+		reset:
+			layer?.adjustments && layerId !== undefined
+				? () => setAdjustments(layerId, neutralAdjustments)
+				: undefined,
 	};
 }

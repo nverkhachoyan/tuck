@@ -5,27 +5,30 @@ import { cutOutTool } from "./tools/cutout/cutOutTool";
 import { drawTool } from "./tools/draw/drawTool";
 import { findTool } from "./tools/find/findTool";
 import { redactTool } from "./tools/redact/redactTool";
-import type { EditorTools } from "./useEditorTools";
 
 /** Each tool's definition, from its own folder, by its name in the mode. */
-export const TOOL_DEFINITIONS: {
-	[Tool in EditorTool]: ToolDefinition<EditorTools[Tool]>;
-} = {
+export const TOOL_DEFINITIONS = {
 	draw: drawTool,
 	redact: redactTool,
 	find: findTool,
 	cutOut: cutOutTool,
 	adjust: adjustTool,
-};
+} satisfies Record<EditorTool, unknown>;
+
+/** Each tool's controller, as its definition's `useController` built it. */
+export type ToolControllers = Record<EditorTool, unknown>;
 
 /**
- * `tool`'s definition and its controller from `tools`. TypeScript can't
- * follow one tool's name to both, so they meet here as one pair.
+ * `tool`'s definition and its controller from `controllers`. A list of
+ * tools can't carry each controller's type, so they meet here as one pair.
  */
-export function toolWithController(tool: EditorTool, tools: EditorTools) {
+export function toolWithController(
+	tool: EditorTool,
+	controllers: ToolControllers,
+) {
 	return {
 		definition: TOOL_DEFINITIONS[tool] as ToolDefinition<unknown>,
-		controller: tools[tool] as unknown,
+		controller: controllers[tool],
 	};
 }
 
@@ -34,7 +37,7 @@ export function isTool(panel: string): panel is EditorTool {
 }
 
 /** What `tool`'s Done says, when it isn't "Done". */
-export function toolDoneLabel(tool: EditorTool, tools: EditorTools) {
-	const { definition, controller } = toolWithController(tool, tools);
+export function toolDoneLabel(tool: EditorTool, controllers: ToolControllers) {
+	const { definition, controller } = toolWithController(tool, controllers);
 	return definition.doneLabel?.(controller);
 }

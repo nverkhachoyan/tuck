@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { EditorDocument } from "@/model/document";
 import { boundingBox, type Rect } from "@/model/geometry";
-import type { ImageLayer } from "@/model/layers/image";
 import type { RedactionBoxPlacement } from "@/model/layers/redaction";
 import type { CanvasInput } from "../../canvasInputFor";
+import type { ToolEnv } from "../../defineTool";
 import type { DetectionFeature } from "../../detection/imageDetection";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
-import { chosenBoxes, detectionTargetKey, readingOrder } from "./findResults";
+import {
+	chosenBoxes,
+	detectionTargetKey,
+	readingOrder,
+	redactedNotice,
+} from "./findResults";
 import { mapDetectionRects } from "./mapDetectionRects";
 import { type DetectionScope, useImageDetection } from "./useImageDetection";
 
@@ -43,18 +47,16 @@ export type FindController = ReturnType<typeof useFindTool>;
 /**
  * Find: faces and text found in `image`, placed in the document, to choose
  * from and redact, and to review one at a time. What's found goes stale when
- * the image or the document changes shape. `canvasInput` toggles a region
- * tapped on the canvas, while there's an image to search.
+ * the image or the document changes shape, and is let go once Find closes.
+ * `canvasInput` toggles a region tapped on the canvas, while there's an
+ * image to search. Redacting says how many regions it redacted (`notify`).
  */
 export function useFindTool({
 	document,
 	image,
-	onRedacted,
-}: {
-	document: EditorDocument;
-	image: ImageLayer | null;
-	onRedacted: (count: number, feature: DetectionFeature | null) => void;
-}) {
+	open,
+	notify,
+}: Pick<ToolEnv, "document" | "image" | "open" | "notify">) {
 	const { addRedactionBoxes } = useStore((state) => state.actions);
 	const { effectFor } = useRedactLook();
 	const detection = useImageDetection(detectionTargetKey(document, image));
@@ -141,6 +143,17 @@ export function useFindTool({
 		},
 		[toggleDetection],
 	);
+	const { reset: resetDetection } = detection;
+	const reset = useCallback(() => {
+		setReviewed(null);
+		resetDetection();
+	}, [resetDetection]);
+	const wasOpen = useRef(open);
+	useEffect(() => {
+		if (wasOpen.current && !open) reset();
+		wasOpen.current = open;
+	}, [open, reset]);
+
 	const imageId = image?.id;
 	const canvasInput = useMemo(
 		(): CanvasInput | null =>
@@ -165,10 +178,7 @@ export function useFindTool({
 		canvasInput,
 		selectAll: () => detection.select(visibleIndices),
 		clear: () => detection.select([]),
-		reset: () => {
-			setReviewed(null);
-			detection.reset();
-		},
+		reset,
 		// The regions chosen, redacted together in one group, saying how many
 		// and what they are (null for both kinds).
 		redact: () => {
@@ -179,7 +189,7 @@ export function useFindTool({
 				effectFor(documentSize),
 				result.groupName,
 			);
-			onRedacted(result.boxes.length, result.feature);
+			notify(redactedNotice(result.boxes.length, result.feature));
 		},
 	};
 }

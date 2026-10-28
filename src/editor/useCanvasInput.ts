@@ -5,8 +5,7 @@ import type { ToolStroke } from "./canvas/canvasTool";
 import { canvasInputFor } from "./canvasInputFor";
 import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
 import { isCustomColor } from "./shell/ColorSwatches";
-import { toolWithController } from "./toolDefinitions";
-import type { EditorTools } from "./useEditorTools";
+import { type ToolControllers, toolWithController } from "./toolDefinitions";
 
 /**
  * What input on the canvas does for the editor's state (see
@@ -17,7 +16,7 @@ import type { EditorTools } from "./useEditorTools";
 export function useCanvasInput({
 	document,
 	tool,
-	tools,
+	controllers,
 	eyedropper,
 	editingText,
 	dispatchMode,
@@ -25,13 +24,13 @@ export function useCanvasInput({
 }: {
 	document: EditorDocument;
 	tool: EditorTool | null;
-	tools: EditorTools;
+	controllers: ToolControllers;
 	eyedropper: Eyedropper | null;
 	editingText: boolean;
 	dispatchMode: (action: EditorModeAction) => void;
 	onCustomColor: (color: string) => void;
 }) {
-	const open = tool && toolWithController(tool, tools);
+	const open = tool && toolWithController(tool, controllers);
 	// Each tool memoizes its own input, so this one changes only with it.
 	const input = canvasInputFor({
 		eyedropper: eyedropper !== null,
