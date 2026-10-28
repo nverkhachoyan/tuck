@@ -1,7 +1,16 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Editor, getSession, useSession } from "@/editor";
+import { Editor, type EditorHost, getSession, useSession } from "@/editor";
 import type { EditorDocument } from "@/model/document";
+import { importPhoto, pickPhoto } from "@/photos/photoImport";
+import { projectLabel } from "@/projects/projectFile";
+import { exportHref } from "@/projects/projectRoute";
+import {
+	addImage,
+	openProjectCreatedAt,
+	openProjectName,
+} from "@/projects/projectService";
 import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { colors, space, typography } from "@/ui/theme";
@@ -60,19 +69,39 @@ const latestDocument = () => getSession().document;
 // The open project, saved as it's edited.
 function OpenProject({ document }: { document: EditorDocument }) {
 	const router = useRouter();
+	const focused = useIsFocused();
 	const projectId = useSession((session) => session.key);
 	const { error, retry } = useAutosave(projectId, document, latestDocument);
+	const title = useMemo(
+		() => projectTitle(projectId, document),
+		[projectId, document],
+	);
+	const host: EditorHost = {
+		pickPhoto,
+		importPhoto,
+		// The image moves into the project, so autosave knows its file.
+		// Without a project, it's used where the picker left it.
+		addImage: async (uri, opaque) =>
+			projectId === null ? uri : addImage(projectId, uri, opaque),
+		title,
+		saveProblem:
+			projectId === null
+				? "This project couldn't be saved, so your edits won't be kept."
+				: error,
+		retrySave: projectId !== null ? retry : undefined,
+		focused,
+		leave: () => leaveEditor(router),
+		openExport: () => router.push(exportHref(projectId)),
+	};
+	return <Editor document={document} host={host} />;
+}
+
+/** What home lists the project as. */
+function projectTitle(projectId: string | null, document: EditorDocument) {
+	if (projectId === null) return projectLabel(document, Date.now());
 	return (
-		<Editor
-			document={document}
-			saveProblem={
-				projectId === null
-					? "This project couldn't be saved, so your edits won't be kept."
-					: error
-			}
-			onRetrySave={projectId !== null ? retry : undefined}
-			onLeave={() => leaveEditor(router)}
-		/>
+		openProjectName(projectId) ||
+		projectLabel(document, openProjectCreatedAt(projectId) ?? Date.now())
 	);
 }
 

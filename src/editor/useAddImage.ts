@@ -1,27 +1,30 @@
 import { useRef, useState } from "react";
-import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
-import { usePhotoDrop } from "@/photos/usePhotoDrop";
+import { usePhotoDrop } from "@/platform/usePhotoDrop";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
+import type { EditorHost, PickedImage } from "./editorHost";
 import {
 	SAVED_STICKER_MAX_SIDE,
 	type StickerImage,
 } from "./stickers/savedStickers";
 
-export type AddedImage = PickedPhoto & { sticker: boolean };
+export type AddedImage = PickedImage & { sticker: boolean };
 
 /**
  * Adds photos from the picker, or, on web while `enabled`, pasted or dropped
- * onto the page, each shrunk to `maxShortSide`, and stickers, from whatever
- * `addSticker` is given to load one. `onImage` puts the image where it goes;
- * an alert shows if that or loading the image fails. `busy` is set while an
- * image is on its way, and adding another meanwhile does nothing.
+ * onto the page, each read by the `host` and shrunk to `maxShortSide`, and
+ * stickers, from whatever `addSticker` is given to load one. `onImage` puts
+ * the image where it goes; an alert shows if that or loading the image
+ * fails. `busy` is set while an image is on its way, and adding another
+ * meanwhile does nothing.
  */
 export function useAddImage({
+	host,
 	enabled,
 	maxShortSide,
 	onImage,
 }: {
+	host: Pick<EditorHost, "pickPhoto" | "importPhoto">;
 	enabled: boolean;
 	maxShortSide: number;
 	onImage: (image: AddedImage) => Promise<void>;
@@ -48,7 +51,7 @@ export function useAddImage({
 			setBusy(false);
 		}
 	};
-	const addPhoto = (load: () => Promise<PickedPhoto | null>) =>
+	const addPhoto = (load: () => Promise<PickedImage | null>) =>
 		addImage(async () => {
 			const photo = await load();
 			return photo && { ...photo, sticker: false };
@@ -56,12 +59,12 @@ export function useAddImage({
 
 	const { dragging } = usePhotoDrop({
 		enabled,
-		onPhoto: (uri) => addPhoto(() => importPhoto(uri, { maxShortSide })),
+		onPhoto: (uri) => addPhoto(() => host.importPhoto(uri, { maxShortSide })),
 	});
 
 	const pick = () => {
 		void addPhoto(async () => {
-			const result = await pickPhoto({ maxShortSide });
+			const result = await host.pickPhoto({ maxShortSide });
 			return result.status === "canceled" ? null : result.photo;
 		});
 	};
@@ -78,9 +81,11 @@ export function useAddImage({
 	 * Picks an image to make a sticker of, shrunk as saved stickers are, and
 	 * adds the image `keep` returns once it has kept it.
 	 */
-	const pickSticker = (keep: (image: PickedPhoto) => Promise<StickerImage>) =>
+	const pickSticker = (keep: (image: PickedImage) => Promise<StickerImage>) =>
 		addSticker(async () => {
-			const result = await pickPhoto({ maxLongSide: SAVED_STICKER_MAX_SIDE });
+			const result = await host.pickPhoto({
+				maxLongSide: SAVED_STICKER_MAX_SIDE,
+			});
 			return result.status === "canceled" ? null : keep(result.photo);
 		});
 

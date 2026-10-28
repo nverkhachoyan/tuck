@@ -4,9 +4,9 @@ import { visibleImageLayer } from "@/model/framing";
 import type { Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
-import { addImage } from "@/projects/projectService";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
+import type { EditorHost } from "../../editorHost";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
 import {
@@ -27,7 +27,8 @@ export type CutOutController = ReturnType<typeof useCutOutTool>;
  * can't be done. A mask found after Cut out was put down, or moved to
  * another image, isn't wanted any more. Redacting the cut's selection takes
  * back the cut, adds a redaction in its shape, in the editor's redaction
- * look, which is selected, and closes Cut out (`onClose`). `stepSize` steps the brush's
+ * look, which is selected, and closes Cut out (`onClose`). Masks are kept
+ * through the host's `addImage`. `stepSize` steps the brush's
  * size for `[` and `]`, `canvasInput` paints or picks on a document of
  * `documentSize`, while there's an image shown to cut out, and
  * `finishStroke` paints the cut, or cuts out only the subject tapped.
@@ -35,25 +36,24 @@ export type CutOutController = ReturnType<typeof useCutOutTool>;
 export function useCutOutTool({
 	layer,
 	documentSize,
+	addImage,
 	onClose,
 }: {
 	layer: ImageLayer | undefined;
 	documentSize: Size;
+	addImage: EditorHost["addImage"];
 	onClose: () => void;
 }) {
-	// Until the host takes over, the session's key is the project's id.
-	const projectId = useStore((state) => state.key);
+	const key = useStore((state) => state.key);
 	const { setMask, invertMask, cancelSession, addMaskedRedaction, paintMask } =
 		useStore((state) => state.actions);
 	const layerId = useRef<string | null>(null);
 	layerId.current = layer?.id ?? null;
 	const [settings, change] = usePreference("cutOut", parseCutOutSettings);
 	const { effectFor } = useRedactLook();
-	// The mask moves into the project, so autosave knows its file.
-	const keep = async (uri: string) =>
-		projectId === null ? uri : addImage(projectId, uri, false);
+	const keep = (uri: string) => addImage(uri, false);
 	const cutOut = useCutOut({
-		key: projectId,
+		key,
 		image: layer,
 		picking: settings.tool === "pick",
 		latest: (id) => {

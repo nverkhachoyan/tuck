@@ -2,11 +2,11 @@ import { ImageFormat } from "@shopify/react-native-skia";
 import { useState } from "react";
 import { isCutOut } from "@/model/cutout";
 import type { ImageLayer } from "@/model/layers/image";
-import { importPhoto } from "@/photos/photoImport";
 import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { renderCutOut } from "@/render/renderDocument";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
+import type { EditorHost } from "../editorHost";
 import { useStore } from "../store";
 import { selectSelectedLayer } from "../store/editorSlice";
 import { SAVED_STICKER_MAX_SIDE, type StickerImage } from "./savedStickers";
@@ -17,10 +17,12 @@ import type { useSavedStickers } from "./useSavedStickers";
  * is, so a large photo doesn't make one. A cut-out keeps only what its cut
  * shows, trimmed to it, on a transparent background. `status` is the
  * selection's: being kept, or kept already this session. `save` is left
- * out when the selection can't be kept: a sticker already is one.
+ * out when the selection can't be kept: a sticker already is one. A photo
+ * is read through the host's `importPhoto`.
  */
 export function useStickerSave(
 	keep: ReturnType<typeof useSavedStickers>["save"],
+	importPhoto: EditorHost["importPhoto"],
 ) {
 	const selectedLayer = useStore(selectSelectedLayer);
 	const [saving, setSaving] = useState<{

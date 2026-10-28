@@ -1,4 +1,3 @@
-import { useIsFocused, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { neutralAdjustments } from "@/model/adjustments";
@@ -8,8 +7,6 @@ import { targetImageLayer, visibleImageLayer } from "@/model/framing";
 import { type Point, toLayerSpace } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
-import { exportHref } from "@/projects/projectRoute";
-import { addImage } from "@/projects/projectService";
 import { textIndexAt } from "@/render/textLayerLayout";
 import { Announcement } from "@/ui/Announcement";
 import { CanvasStage } from "@/ui/CanvasStage";
@@ -23,6 +20,7 @@ import { EditorInspector } from "./EditorInspector";
 import { EditorRail } from "./EditorRail";
 import { railChosenTool } from "./editorChrome";
 import { EditorContext, type EditorContextValue } from "./editorContext";
+import type { EditorHost } from "./editorHost";
 import { openTray, takesKeys } from "./editorMode";
 import { LayerSelectionBar, useArrangeSelected } from "./LayerSelectionBar";
 import { LayersPanel, layerListProps } from "./layers/LayersPanel";
@@ -65,25 +63,17 @@ import { useEditorTools } from "./useEditorTools";
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
 /**
- * The editor for the session's document.
- * - `saveProblem`: why edits aren't being kept, shown in the header and over
- *   the canvas, with a Retry button when there's `onRetrySave`.
- * - `onLeave`: goes back, called once any text being typed is finished.
+ * The editor for the session's document, in the app that `host` gives it.
+ * Its save problem shows in the header and over the canvas.
  */
 export function Editor({
 	document,
-	saveProblem,
-	onRetrySave,
-	onLeave,
+	host,
 }: {
 	document: EditorDocument;
-	saveProblem: string | null;
-	onRetrySave?: () => void;
-	onLeave: () => void;
+	host: EditorHost;
 }) {
-	const router = useRouter();
-	// Until the host takes over, the session's key is the project's id.
-	const projectId = useStore((state) => state.key);
+	const { focused, saveProblem } = host;
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const canUndo = useStore(selectCanUndo);
@@ -134,7 +124,6 @@ export function Editor({
 		[document.width, document.height],
 	);
 
-	const focused = useIsFocused();
 	const {
 		busy: addBusy,
 		dragging,
@@ -142,15 +131,13 @@ export function Editor({
 		addSticker,
 		pickSticker,
 	} = useAddImage({
+		host,
 		// On web, an image pasted or dropped onto the editor joins the canvas,
 		// unless another screen or tool is in front of it.
 		enabled: focused && !keysTaken,
 		maxShortSide: maxNewImageShortSide(document),
-		// The image moves into the project, so autosave knows its file.
-		// Without a project, it's used where the picker left it.
 		onImage: async ({ uri, width, height, opaque, sticker }) => {
-			const url =
-				projectId === null ? uri : await addImage(projectId, uri, opaque);
+			const url = await host.addImage(uri, opaque);
 			const area = canvasRef.current?.visibleArea();
 			if (sticker) addStickerLayer(url, width, height, opaque, area);
 			else addImageLayer(url, width, height, opaque, area);
@@ -187,6 +174,7 @@ export function Editor({
 		targetImage,
 		documentSize,
 		pickPhoto,
+		addImage: host.addImage,
 		openStickers,
 		visibleArea: () => canvasRef.current?.visibleArea(),
 		onRedacted: editNotice.redacted,
@@ -199,7 +187,7 @@ export function Editor({
 
 	const editingText = tools.text.edit !== null;
 	const savedStickers = useSavedStickers();
-	const stickerSave = useStickerSave(savedStickers.save);
+	const stickerSave = useStickerSave(savedStickers.save, host.importPhoto);
 	// Find and Adjust live in the inspector, so they open it even though
 	// starting a tool closes the layers sheet. A tall window has it open anyway.
 	const layout = useEditorLayout({
@@ -248,11 +236,11 @@ export function Editor({
 	// Text being typed is finished first, so it goes where the editor does.
 	const openExport = () => {
 		tools.text.finish();
-		router.push(exportHref(projectId));
+		host.openExport();
 	};
 	const leave = () => {
 		tools.text.finish();
-		onLeave();
+		host.leave();
 	};
 
 	const { panel, inBar, modeActions } = useEditorChrome({
@@ -265,7 +253,7 @@ export function Editor({
 	});
 
 	useEditorShortcuts({
-		enabled: !keysTaken,
+		enabled: focused && !keysTaken,
 		modeState,
 		selection: selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
 		dispatchMode,
@@ -381,8 +369,7 @@ export function Editor({
 				<View ref={rootRef} style={styles.container}>
 					<EditorHeader
 						wide={wide}
-						projectId={projectId}
-						document={document}
+						title={host.title}
 						saved={!saveProblem}
 						onBack={leave}
 						bar={
@@ -452,7 +439,7 @@ export function Editor({
 						{saveProblem && (
 							<SaveErrorBanner
 								message={saveProblem}
-								onRetry={onRetrySave}
+								onRetry={host.retrySave}
 								rightInset={layout.coveredRight}
 							/>
 						)}

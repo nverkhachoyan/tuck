@@ -1,4 +1,5 @@
 export { Editor } from "./Editor";
+export type { EditorHost } from "./editorHost";
 export {
 	closeDocument,
 	getSession,

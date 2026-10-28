@@ -704,6 +704,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../screens/**",
@@ -713,7 +717,7 @@
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "The editor doesn't import a route, a screen, or site/, imports itself by relative path, and only detection/ imports image-analysis. See AGENTS.md."
+										"message": "The editor doesn't import a route, a screen, site/, projects/, photos/, or expo-router (the app reaches it through its host), imports itself by relative path, and only detection/ imports image-analysis. See AGENTS.md."
 									}
 								]
 							}
@@ -737,6 +741,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../*",
@@ -750,7 +758,7 @@
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, or site/. See AGENTS.md."
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -774,6 +782,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../../*",
@@ -787,7 +799,7 @@
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, or site/. See AGENTS.md."
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -811,6 +823,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../adjust/**",
@@ -838,7 +854,7 @@
 											"../../../../app/**",
 											"../../../../site/**"
 										],
-										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, or site/: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -866,6 +882,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../tools/**",
@@ -885,7 +905,7 @@
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, or site/: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -909,6 +929,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../**",
@@ -919,7 +943,7 @@
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -943,6 +967,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../**",
@@ -954,7 +982,7 @@
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -978,19 +1006,24 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../**",
 											"!../shortcuts",
 											"!../store",
 											"!../store/*",
+											"!../editorHost",
 											"!../../**",
 											"../../editor/**",
 											"../../screens/**",
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "Stickers imports nothing else from the editor but shortcuts.ts and store/, and no route, screen, or site/. See AGENTS.md."
+										"message": "Stickers imports nothing else from the editor but shortcuts.ts, editorHost.ts, and store/, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -1014,6 +1047,10 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../**",
@@ -1021,13 +1058,14 @@
 											"!../../shortcuts",
 											"!../../store",
 											"!../../store/*",
+											"!../../editorHost",
 											"!../../../**",
 											"../../../editor/**",
 											"../../../screens/**",
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "Stickers imports nothing else from the editor but shortcuts.ts and store/, and no route, screen, or site/. See AGENTS.md."
+										"message": "Stickers imports nothing else from the editor but shortcuts.ts, editorHost.ts, and store/, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -1050,12 +1088,16 @@
 											"@/app/**",
 											"@/screens/**",
 											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
 											"../**",
 											"!../../model/**"
 										],
-										"message": "detection/ is the editor's bridge to image-analysis: it imports nothing else from the editor, and no route, screen, or site/. See AGENTS.md."
+										"message": "detection/ is the editor's bridge to image-analysis: it imports nothing else from the editor, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}

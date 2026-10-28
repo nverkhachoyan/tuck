@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
-import type { PickedPhoto } from "@/photos/photoImport";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
+import type { PickedImage } from "../editorHost";
 import type { Sticker } from "./bundledStickers";
 import type { StickerImage } from "./savedStickers";
 import { bundledStickerImage } from "./stickerFile";
@@ -10,7 +10,7 @@ import type { ShownSticker, useSavedStickers } from "./useSavedStickers";
 export type UseStickerActionsInput = {
 	savedStickers: ReturnType<typeof useSavedStickers>;
 	addSticker: (load: () => Promise<StickerImage | null>) => void;
-	pickSticker: (keep: (image: PickedPhoto) => Promise<StickerImage>) => void;
+	pickSticker: (keep: (image: PickedImage) => Promise<StickerImage>) => void;
 	closeStickers: () => void;
 	waitForDismiss: boolean;
 };

@@ -1,5 +1,4 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback, useEffectEvent } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { Platform } from "react-native";
 import { assertNever } from "@/model/assertNever";
 import {
@@ -13,9 +12,9 @@ import type { ToolStarters } from "./shell/ToolsPanel";
 import { type Shortcut, shortcutFor } from "./shortcuts";
 
 /**
- * The editor's keyboard shortcuts on web (see `shortcutFor`). Only while
- * the screen is focused, so they can't change the document from Export, and
- * only while `enabled`, so a text input keeps its own keys. Keys typed into
+ * The editor's keyboard shortcuts on web (see `shortcutFor`), only while
+ * `enabled`: while the editor is focused, so they can't change the document
+ * from Export, and not while a text input keeps its own keys. Keys typed into
  * any other field, like an alert's, are that field's too.
  *
  * Which shortcut does what, given what's open, is `shortcutCommand`'s. A
@@ -122,25 +121,23 @@ export function useEditorShortcuts({
 		}
 	};
 	const onShortcut = useEffectEvent(handleShortcut);
-	useFocusEffect(
-		useCallback(() => {
-			if (Platform.OS !== "web" || !enabled) return;
-			const handleKeyDown = (event: KeyboardEvent) => {
-				if (event.isComposing || isEditable(event.target)) return;
-				const shortcut = shortcutFor(event);
-				if (!shortcut) return;
-				// Enter on a focused button presses it.
-				if (shortcut.type === "edit" && event.target !== window.document.body) {
-					return;
-				}
-				if (onShortcut(shortcut) || event.metaKey || event.ctrlKey) {
-					event.preventDefault();
-				}
-			};
-			window.addEventListener("keydown", handleKeyDown);
-			return () => window.removeEventListener("keydown", handleKeyDown);
-		}, [enabled]),
-	);
+	useEffect(() => {
+		if (Platform.OS !== "web" || !enabled) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.isComposing || isEditable(event.target)) return;
+			const shortcut = shortcutFor(event);
+			if (!shortcut) return;
+			// Enter on a focused button presses it.
+			if (shortcut.type === "edit" && event.target !== window.document.body) {
+				return;
+			}
+			if (onShortcut(shortcut) || event.metaKey || event.ctrlKey) {
+				event.preventDefault();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [enabled]);
 }
 
 function isEditable(target: EventTarget | null) {

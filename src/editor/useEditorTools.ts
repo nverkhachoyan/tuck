@@ -4,6 +4,7 @@ import { type Framing, visibleImageLayer } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import type { DetectionFeature } from "./detection/imageDetection";
+import type { EditorHost } from "./editorHost";
 import {
 	type EditorMode,
 	type EditorModeAction,
@@ -46,6 +47,7 @@ export function useEditorTools({
 	targetImage,
 	documentSize,
 	pickPhoto,
+	addImage,
 	openStickers,
 	visibleArea,
 	onRedacted,
@@ -56,6 +58,7 @@ export function useEditorTools({
 	targetImage: ImageLayer | null;
 	documentSize: Size;
 	pickPhoto: () => void;
+	addImage: EditorHost["addImage"];
 	openStickers: () => void;
 	visibleArea: () => Rect | undefined;
 	onRedacted: (count: number, feature: DetectionFeature | null) => void;
@@ -94,6 +97,7 @@ export function useEditorTools({
 	const cutOut = useCutOutTool({
 		layer: cutLayer,
 		documentSize,
+		addImage,
 		onClose: () => dispatchMode({ type: "endTool" }),
 	});
 	const tools: EditorTools = { draw, redact, find, cutOut, adjust, text };
