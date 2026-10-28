@@ -7,6 +7,7 @@ export const redactTool = defineTool<RedactController>({
 	spec: redactSpec,
 	views: { Dock: RedactPanel, Bar: RedactBar, Tray: RedactOptions },
 	canvasInput: (redact) => redact.canvasInput,
+	finishStroke: (redact, stroke) => redact.finishStroke(stroke),
 	deselectOnDone: true,
 	stepSize: (redact, step) => redact.stepSize(step),
 });

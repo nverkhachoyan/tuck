@@ -4,6 +4,7 @@ import { isLine, isLineShape } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
 import { useStore } from "@/store";
 import { selectSelectedLayer, selectSelectedShape } from "@/store/editorSlice";
+import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import {
 	type BrushSettings,
@@ -21,12 +22,15 @@ export type DrawController = ReturnType<typeof useDrawTool>;
  * shape tool, they show the selected shape's style, and changing them
  * restyles that one. A kind it can't become, a box for a line or a line for
  * a box, starts a new shape instead. `stepSize` steps the brush's size for
- * `[` and `]`, and `canvasInput` paints or drags out shapes with them.
+ * `[` and `]`, `canvasInput` paints or drags out shapes with them, and
+ * `finishStroke` adds what's painted or dragged out to the document.
  */
 export function useDrawTool(active: boolean, documentSize: Size) {
 	const selectedShape = useStore(selectSelectedShape);
 	const selectedType = useStore((state) => selectSelectedLayer(state)?.type);
-	const { setShapeStyle, selectLayer } = useStore((state) => state.actions);
+	const { setShapeStyle, selectLayer, drawStroke, addShape } = useStore(
+		(state) => state.actions,
+	);
 	const [brushSettings, setBrushSettings] = usePreference(
 		"brushSettings",
 		parseBrushSettings,
@@ -81,5 +85,16 @@ export function useDrawTool(active: boolean, documentSize: Size) {
 		[settings, documentSize],
 	);
 
-	return { settings, change, chooseTool, stepSize, canvasInput };
+	const finishStroke = (stroke: ToolStroke) => {
+		switch (stroke.type) {
+			case "draw":
+				drawStroke({ ...stroke.brush, points: stroke.points });
+				break;
+			case "drawShape":
+				addShape(stroke.shape, stroke.placement, stroke.style);
+				break;
+		}
+	};
+
+	return { settings, change, chooseTool, stepSize, canvasInput, finishStroke };
 }

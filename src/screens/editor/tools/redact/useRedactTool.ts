@@ -2,6 +2,7 @@ import { type Dispatch, type SetStateAction, useMemo } from "react";
 import type { Size } from "@/model/geometry";
 import { useStore } from "@/store";
 import { selectSelectedRedaction } from "@/store/editorSlice";
+import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import {
 	redactionEffect,
@@ -20,8 +21,9 @@ export type RedactController = ReturnType<typeof useRedactTool>;
  * Redact's settings, from the saved ones (`chosen`), whose look Find and Cut
  * out redact with too. They show the selected redaction's style, which new
  * ones then share, so a redaction can be picked to match. Changing them
- * restyles that one. `stepSize` steps the brush's size for `[` and `]`, and
- * `canvasInput` brushes or drags out redactions with them.
+ * restyles that one. `stepSize` steps the brush's size for `[` and `]`,
+ * `canvasInput` brushes or drags out redactions with them, and
+ * `finishStroke` adds what's brushed or dragged out to the document.
  */
 export function useRedactTool(
 	documentSize: Size,
@@ -29,7 +31,9 @@ export function useRedactTool(
 	setChosen: Dispatch<SetStateAction<RedactSettings>>,
 ) {
 	const selectedRedaction = useStore(selectSelectedRedaction);
-	const { setRedactionEffect } = useStore((state) => state.actions);
+	const { setRedactionEffect, paintRedaction, addRedactionBox } = useStore(
+		(state) => state.actions,
+	);
 	const settings = useMemo(
 		() =>
 			selectedRedaction
@@ -74,5 +78,19 @@ export function useRedactTool(
 		[settings, documentSize],
 	);
 
-	return { settings, change, chooseTool, stepSize, canvasInput };
+	const finishStroke = (stroke: ToolStroke) => {
+		switch (stroke.type) {
+			case "redactBrush":
+				paintRedaction(
+					{ ...stroke.brush, points: stroke.points },
+					stroke.effect,
+				);
+				break;
+			case "redactBox":
+				addRedactionBox(stroke.rect, stroke.effect);
+				break;
+		}
+	};
+
+	return { settings, change, chooseTool, stepSize, canvasInput, finishStroke };
 }

@@ -1,12 +1,13 @@
 import { useMemo, useRef } from "react";
 import { imagePointAt, isCutOut } from "@/model/cutout";
 import { visibleImageLayer } from "@/model/framing";
-import type { Point, Size } from "@/model/geometry";
+import type { Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import type { RedactionEffect } from "@/model/layers/redaction";
 import { usePreference } from "@/platform/usePreference";
 import { addImage } from "@/projects/projectService";
 import { useStore } from "@/store";
+import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import {
 	cutCanvasTool,
@@ -27,8 +28,9 @@ export type CutOutController = ReturnType<typeof useCutOutTool>;
  * another image, isn't wanted any more. Redacting the cut's selection takes
  * back the cut, adds a redaction in its shape with `redactionEffect`, which
  * is selected, and closes Cut out (`onClose`). `stepSize` steps the brush's
- * size for `[` and `]`, and `canvasInput` paints or picks on a document of
- * `documentSize`, while there's an image shown to cut out.
+ * size for `[` and `]`, `canvasInput` paints or picks on a document of
+ * `documentSize`, while there's an image shown to cut out, and
+ * `finishStroke` paints the cut, or cuts out only the subject tapped.
  */
 export function useCutOutTool({
 	layer,
@@ -42,9 +44,8 @@ export function useCutOutTool({
 	onClose: () => void;
 }) {
 	const projectId = useStore((state) => state.projectId);
-	const { setMask, invertMask, cancelSession, addMaskedRedaction } = useStore(
-		(state) => state.actions,
-	);
+	const { setMask, invertMask, cancelSession, addMaskedRedaction, paintMask } =
+		useStore((state) => state.actions);
 	const layerId = useRef<string | null>(null);
 	layerId.current = layer?.id ?? null;
 	const [settings, change] = usePreference("cutOut", parseCutOutSettings);
@@ -118,10 +119,18 @@ export function useCutOutTool({
 			layerId.current = image.id;
 			void cutOut.find(image);
 		},
-		// A tap on the image being cut out cuts out only the subject there.
-		pickSubject: (point: Point) => {
-			const at = layer && imagePointAt(layer, point);
-			if (layer && at) void cutOut.find(layer, at);
+		finishStroke: (stroke: ToolStroke) => {
+			switch (stroke.type) {
+				case "cutBrush":
+					paintMask(stroke.layerId, { ...stroke.brush, points: stroke.points });
+					break;
+				// A tap on the image being cut out cuts out only the subject there.
+				case "pickSubject": {
+					const at = layer && imagePointAt(layer, stroke.point);
+					if (layer && at) void cutOut.find(layer, at);
+					break;
+				}
+			}
 		},
 	};
 }

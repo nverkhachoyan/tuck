@@ -275,7 +275,6 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 		tools,
 		eyedropper,
 		editingText,
-		actions,
 		dispatchMode,
 		onCustomColor: setCustomColor,
 	});

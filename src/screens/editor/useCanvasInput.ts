@@ -1,7 +1,6 @@
 import type { EditorDocument } from "@/model/document";
 import type { Point } from "@/model/geometry";
 import { sampleColor } from "@/render/renderDocument";
-import type { EditorStoreActions } from "@/store/editorSlice";
 import type { ToolStroke } from "./canvas/canvasTool";
 import { canvasInputFor } from "./canvasInputFor";
 import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
@@ -12,9 +11,8 @@ import type { EditorTools } from "./useEditorTools";
 /**
  * What input on the canvas does for the editor's state (see
  * `canvasInputFor`), with the open `tool`'s input from its definition, and
- * where what it makes goes: strokes, boxes, and shapes into the document, a
- * picked color to the eyedropper's target, and a tap on the image being cut
- * out to Cut out. Spread onto `EditorCanvas`.
+ * where what it makes goes: a picked color to the eyedropper's target, and
+ * the rest to the open tool. Spread onto `EditorCanvas`.
  */
 export function useCanvasInput({
 	document,
@@ -22,7 +20,6 @@ export function useCanvasInput({
 	tools,
 	eyedropper,
 	editingText,
-	actions,
 	dispatchMode,
 	onCustomColor,
 }: {
@@ -31,14 +28,6 @@ export function useCanvasInput({
 	tools: EditorTools;
 	eyedropper: Eyedropper | null;
 	editingText: boolean;
-	actions: Pick<
-		EditorStoreActions,
-		| "drawStroke"
-		| "paintRedaction"
-		| "paintMask"
-		| "addRedactionBox"
-		| "addShape"
-	>;
 	dispatchMode: (action: EditorModeAction) => void;
 	onCustomColor: (color: string) => void;
 }) {
@@ -61,36 +50,10 @@ export function useCanvasInput({
 		if (isCustomColor(color)) onCustomColor(color);
 		dispatchMode({ type: "stopEyedropper", eyedropper: target });
 	};
+	// The eyedropper's pick is the editor's; the rest are the open tool's.
 	const finishStroke = (stroke: ToolStroke) => {
-		switch (stroke.type) {
-			case "draw":
-				actions.drawStroke({ ...stroke.brush, points: stroke.points });
-				break;
-			case "redactBrush":
-				actions.paintRedaction(
-					{ ...stroke.brush, points: stroke.points },
-					stroke.effect,
-				);
-				break;
-			case "cutBrush":
-				actions.paintMask(stroke.layerId, {
-					...stroke.brush,
-					points: stroke.points,
-				});
-				break;
-			case "redactBox":
-				actions.addRedactionBox(stroke.rect, stroke.effect);
-				break;
-			case "drawShape":
-				actions.addShape(stroke.shape, stroke.placement, stroke.style);
-				break;
-			case "pickColor":
-				void pickColor(stroke.point);
-				break;
-			case "pickSubject":
-				tools.cutOut.pickSubject(stroke.point);
-				break;
-		}
+		if (stroke.type === "pickColor") void pickColor(stroke.point);
+		else open?.definition.finishStroke?.(open.controller, stroke);
 	};
 
 	return { input, onToolStroke: finishStroke };

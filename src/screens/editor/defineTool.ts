@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import type { ToolStroke } from "./canvas/canvasTool";
 import type { CanvasInput } from "./canvasInputFor";
 import type { ToolSpec } from "./toolSpec";
 
@@ -19,6 +20,8 @@ type ToolView<C> = ComponentType<{ controller: C }>;
  *   them as children. A tool with one opens the inspector.
  * - `canvasInput`: what input on the canvas does while it's open, or null
  *   to leave the canvas to typing or selecting.
+ * - `finishStroke`: what a stroke made with its canvas input does, once the
+ *   finger lifts.
  * - `doneLabel`: what Done says, when it isn't "Done".
  * - `done`: what Done does before the tool closes.
  * - `deselectOnDone`: whether Done lets go of the selected layer, so a
@@ -35,6 +38,7 @@ export type ToolDefinition<C> = {
 		Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
 	};
 	canvasInput?: (controller: C) => CanvasInput | null;
+	finishStroke?: (controller: C, stroke: ToolStroke) => void;
 	doneLabel?: (controller: C) => string | undefined;
 	done?: (controller: C) => void;
 	deselectOnDone?: boolean;

@@ -7,6 +7,7 @@ export const drawTool = defineTool<DrawController>({
 	spec: drawSpec,
 	views: { Dock: DrawPanel, Bar: DrawBar, Tray: BrushOptions },
 	canvasInput: (draw) => draw.canvasInput,
+	finishStroke: (draw, stroke) => draw.finishStroke(stroke),
 	deselectOnDone: true,
 	stepSize: (draw, step) => draw.stepSize(step),
 });
