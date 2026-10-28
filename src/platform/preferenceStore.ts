@@ -1,4 +1,5 @@
 import { File, Paths } from "expo-file-system";
+import { preferenceChanged } from "./preferenceChanges";
 
 // `preferenceStore.web.ts` keeps them in the browser's localStorage. On
 // native, they're one small JSON file, read once and then kept in memory.
@@ -40,4 +41,5 @@ export function writePreference(key: string, value: unknown) {
 	} catch {
 		// Kept in memory for this session anyway.
 	}
+	preferenceChanged(key);
 }

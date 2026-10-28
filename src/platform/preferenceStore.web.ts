@@ -3,6 +3,8 @@
 // server render) or throw (storage that's full or turned off), and then
 // preferences just aren't kept.
 
+import { preferenceChanged } from "./preferenceChanges";
+
 const PREFIX = "tuck:";
 
 /**
@@ -25,4 +27,5 @@ export function writePreference(key: string, value: unknown) {
 	} catch {
 		// Not kept, but nothing else depends on it.
 	}
+	preferenceChanged(key);
 }
