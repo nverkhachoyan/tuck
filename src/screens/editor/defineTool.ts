@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import type { ImageLayer } from "@/model/layers/image";
 import type { ToolStroke } from "./canvas/canvasTool";
 import type { CanvasInput } from "./canvasInputFor";
 import type { ToolSpec } from "./toolSpec";
@@ -18,6 +19,10 @@ type ToolView<C> = ComponentType<{ controller: C }>;
  *   eyedropper isn't running.
  * - `views.Inspector`: a section above the wide inspector's layers, given
  *   them as children. A tool with one opens the inspector.
+ * - `prepare`: readies it before it opens, as by picking the sub-tool that
+ *   fits the selection.
+ * - `started`: what it does with the photo it opened on, once its undo
+ *   session has begun.
  * - `canvasInput`: what input on the canvas does while it's open, or null
  *   to leave the canvas to typing or selecting.
  * - `finishStroke`: what a stroke made with its canvas input does, once the
@@ -37,6 +42,8 @@ export type ToolDefinition<C> = {
 		Results?: ToolView<C>;
 		Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
 	};
+	prepare?: (controller: C) => void;
+	started?: (controller: C, image: ImageLayer) => void;
 	canvasInput?: (controller: C) => CanvasInput | null;
 	finishStroke?: (controller: C, stroke: ToolStroke) => void;
 	doneLabel?: (controller: C) => string | undefined;
