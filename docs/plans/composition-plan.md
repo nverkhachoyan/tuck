@@ -63,7 +63,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 * **A tool's hook reaches the editor through `env`.** Hooks run in the editor's body, above the `EditorContext` it provides, so a hook reads nothing from the context: what it needs comes through `env`, from the store, or from a shared preference. The context stays for tools' views.
 * **The site gets a folder of its own.** `site.ts` and `PageHead` move to `src/site/`, since the routes (`_layout.tsx`, `+html.tsx`), Home, and the info screens all use them, and `src/app/` may hold only routes.
 * **No package names.** The app keeps its `@/` alias and tests keep relative `.ts` paths (Node's tests can't read `tsconfig` paths), so moves within `src/` are a mechanical rewrite of `@/` paths. `model/` keeps its name: in an app it's the name readers expect, and docs/architecture.md says what's in it.
-* **Tools are an input.** `<Editor>` takes its list of tools and builds every controller the same way, and the built-in tools are only the default list. A tool carries everything the editor does for it by name today: its definition gives the header's Reset and what it announces, and its spec, plain TypeScript for the Node tests that read it, gives which layers it acts on, its button, its key, and its line in the shortcuts list. Text, Crop, Layers, and Stickers stay the editor's own modes and sheets, not definitions, and leave `tools/`.
+* **Tools are an input.** `<Editor>` takes its list of tools and builds every controller the same way, and the built-in tools are only the default list. A tool carries everything the editor does for it by name today: its definition gives the header's Reset and what it announces, and its spec, plain TypeScript for the Node tests that read it, gives which layers it acts on, its button, its key, and its line in the shortcuts list. Crop and Stickers become tools too, in steps 8d and 8e (see [crop-tool-architecture.md](../brainstorming/crop-tool-architecture.md)), since each fits `ToolDefinition` with views other tools could use as well. Text, Layers, and Add photo stay the editor's own: Text is how the editor edits a text layer, started by a double-tap with no tool open and drawn by the canvas as it's typed, so as a tool it would need scene and canvas hooks only it uses; Layers is a view of the document beside every tool; and Add photo is one call to the host, with no panel or session.
 * **A tool's id is a plain string inside the editor.** Once no code outside `tools/` names a built-in tool, literal ids would buy the mode, the chrome, and the shortcuts nothing but a type parameter to thread: they take `string` ids, and a tool's mode fields (`layerId`, `optionsOpen`) follow its spec at runtime, as the reducer's tests check. A tool's id is its key in the list (the spec loses `id`). One generic helper, where the app hands the editor its tools and toolbar, checks that the toolbar names only tools in the list.
 
 ## Steps
@@ -81,6 +81,8 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 8a. Build every tool's controller the same way (October 27, 2026)
 - [x] 8b. Give the canvas's input kinds their own gestures and drawing (October 27, 2026)
 - [x] 8c. Take the tool list as a prop (October 27, 2026)
+- [ ] 8d. Make Crop a tool
+- [ ] 8e. Make Stickers a tool
 - [ ] 9. Docs
 - [ ] 10. Give readers a map
 
@@ -213,6 +215,30 @@ When the last part is done, no type outside `tools/` lists a built-in tool's nam
 * `biome.json`: nothing in the editor imports `tools/` except `builtInSpecs.ts` and `builtInTools.ts`, and tools still import only `defineTool.ts`, `toolSpec.ts`, `editorContext.ts`, `canvasInputFor.ts`'s types, `canvas/`, and `shell/`.
 
 `refactor: take the editor's tools as a prop`
+
+#### 8d. Make Crop a tool
+
+* As settled in [crop-tool-architecture.md](../brainstorming/crop-tool-architecture.md#decisions-october-28-2026): Crop moves to `tools/crop/` and is built with `defineTool`; `ToolSpec` gains `takesKeys`, and `ToolDefinition`'s views gain `Stage` and `Controls`. `ToolEnv` is unchanged: Crop reads `reframe` from the store.
+* `"crop"` leaves `OwnTool`, `TOOLS`, and `TakenId`; `EditorMode` loses its crop mode, and `CropTool.tsx` goes.
+* Every close but Cancel runs the open tool's `done`, and one `BackHandler` in the editor serves any open tool.
+* `biome.json`'s bans on `crop/` go, since `tools/` covers it; the interactive docs' `cropGeometry.ts` imports move.
+
+`refactor: make Crop a tool`
+
+#### 8e. Make Stickers a tool
+
+After 8d, which this leans on: every close but Cancel runs `done`, and the views have slots beyond the dock's.
+
+* Stickers moves to `tools/stickers/` and is built with `defineTool`, its spec's target `"none"`. Its storage (`stickerStorage`, `stickerFile`, and their `.web` files), `bundledStickers`, `useSavedStickers`, `useStickerSave`, and `useStickerActions` move with it, so a toolbar without Stickers leaves all of it out.
+* `ToolDefinition`'s views gain `Sheet`: the editor shows it in a bottom sheet on a phone and in a popover beside the tool's own rail button on a wide window, while the tool is open. Dismissing it closes the tool. The rail's `stickerAnchor` becomes the anchor of whichever tool has a `Sheet`, and the iPad's wait for the popover to close before the photo picker opens (`waitForDismiss`) stays Stickers' own, given the sheet's `onDismiss`.
+* Opening Stickers is opening a tool: it closes the tool that was open, as any tool does, where the sheet used to open over it. Adding a sticker closes it; its layer is one undo step.
+* `ToolEnv` gains what Stickers took from `Editor`, in terms any tool could use: `addLayerImage(load, kind)`, which runs `useAddImage`'s guard, busy state, and alert, and places an `"image"` or `"sticker"` layer in the visible area, so Add photo and Stickers stay one at a time; and the host's `pickPhoto` and `importPhoto`, as `addImage` already is. `useAddImage` loses `addSticker`, `pickSticker`, and `AddedImage`'s `sticker` flag.
+* A definition gains `layerAction(controller, layer)`: a button the tool adds to the selected layer's actions, or null. Stickers' is Save as sticker, so `LayerActionsPanel` loses `sticker` and `onSaveSticker` and draws what the tools give, in the toolbar's order.
+* `"sticker"` leaves `OwnTool`, `TOOLS`, and `TakenId` (leaving Text and Add photo); `EditorModeState.sheet` becomes `"layers" | null`, and `openStickers`, `closeStickers`, and `railChosenTool`'s `stickersOpen` go.
+* `biome.json`'s bans on `stickers/` go, since `tools/` covers it. It moves `.web` files and static asset imports, so it also runs `npm run build:web`.
+* In the browser pane and the iOS and iPad simulators: add a bundled and a saved sticker, save a layer as a sticker and delete it, pick a new one from Photos on the iPad (the popover closes first), Undo a sticker, and open Stickers while Draw is open. `<Editor tools>` without Stickers shows no button, key, shortcut line, or Save as sticker.
+
+`refactor: make Stickers a tool`
 
 ### 9. Docs
 
