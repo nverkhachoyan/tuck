@@ -61,7 +61,8 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - A vertical `ScrollView`'s `onLayout` width includes its scrollbar on web: measure a `View` inside it.
 - React Native Web's `Image` `onLoad` has no `nativeEvent.source`: read sizes with `Image.getSize`.
 - `ui/Popover` stops Escape in the window's capture phase; another window listener still runs and must honor `defaultPrevented`. Its `restoreFocus` runs from the unmount cleanup through a ref, since an effect listing the callback re-runs on each new identity.
-- `Children.toArray` doesn't enter a component, and an `onLayout` x is relative to the parent, not the scrolled viewport (both matter in the context bar).
+- `Children.toArray` doesn't enter a component, and an `onLayout` x is relative to the parent, not the scrolled viewport (both matter in `FadeRow`).
+- React Native Web runs `onLayout` from a `ResizeObserver`, so it fires when a view changes size, not when it only moves. To measure again a view that a sibling pushed along, remount it (a `key`).
 
 ### Gestures and worklets
 

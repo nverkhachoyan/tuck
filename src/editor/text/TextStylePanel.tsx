@@ -1,14 +1,6 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ReactNode, useState } from "react";
-import {
-	Pressable,
-	ScrollView,
-	type StyleProp,
-	StyleSheet,
-	Text,
-	View,
-	type ViewStyle,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
 	type TextAlign,
 	type TextFont,
@@ -18,7 +10,6 @@ import {
 } from "@/model/layers/text";
 import { TEXT_FONTS } from "@/render/fonts";
 import { Chip } from "@/ui/Chip";
-import { fadeTo } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { colors, typography, webTransition } from "@/ui/theme";
@@ -32,6 +23,7 @@ import {
 	BarSections,
 	OptionSegments,
 } from "../shell/ContextBar";
+import { FadeRow, MeasuredItem } from "../shell/FadeRow";
 import { ToolOption, ToolOptions } from "../shell/ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
@@ -71,10 +63,6 @@ type AlignIcon =
 	| "format-align-left"
 	| "format-align-center"
 	| "format-align-right";
-
-// Where a scrolling row fades out, hinting there's more past the edge: to
-// the dock's color (`colors.background`), so a chip under it clearly runs on.
-const FADE_WIDTH = 56;
 
 const COLOR_NAMES: Record<TextColorKey, string> = {
 	color: "Text color",
@@ -163,7 +151,10 @@ export function TextStylePanel({
 			</View>
 
 			<View style={styles.content}>
+				{/* A fresh row for each tab: on web, a swatch that only moves
+				    doesn't report its new place to the fade. */}
 				<TabContent
+					key={tab}
 					tab={tab}
 					layer={layer}
 					customColor={customColor}
@@ -348,40 +339,10 @@ function TabContent({
  * can't fit them all: with "none" and the custom one, there are eight.
  */
 function SwatchRow({ children }: { children: ReactNode }) {
-	return <ScrollRow contentStyle={styles.swatches}>{children}</ScrollRow>;
-}
-
-/**
- * A row that scrolls edge to edge, past the panel's padding, when it's
- * wider than the panel. While more of it is past the right edge, that edge
- * fades out, so the row reads as one that scrolls.
- */
-function ScrollRow({
-	contentStyle,
-	children,
-}: {
-	contentStyle: StyleProp<ViewStyle>;
-	children: ReactNode;
-}) {
-	const [width, setWidth] = useState(0);
-	const [contentWidth, setContentWidth] = useState(0);
-	const [offset, setOffset] = useState(0);
-	const more = contentWidth - offset - width > 1;
 	return (
-		<View style={styles.bleed}>
-			<ScrollView
-				horizontal
-				showsHorizontalScrollIndicator={false}
-				contentContainerStyle={contentStyle}
-				scrollEventThrottle={32}
-				onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-				onContentSizeChange={(contentWidth) => setContentWidth(contentWidth)}
-				onScroll={(event) => setOffset(event.nativeEvent.contentOffset.x)}
-			>
-				{children}
-			</ScrollView>
-			{more && <View style={styles.fade} />}
-		</View>
+		<FadeRow style={styles.bleed} contentStyle={styles.swatches}>
+			{children}
+		</FadeRow>
 	);
 }
 
@@ -459,33 +420,34 @@ function FontPicker({
 	onPick: (font: TextFont) => void;
 }) {
 	return (
-		<ScrollRow contentStyle={styles.fonts}>
+		<FadeRow style={styles.bleed} contentStyle={styles.fonts}>
 			{textFonts.map((font) => {
 				const selected = font === value;
 				return (
-					<Chip
-						key={font}
-						selected={selected}
-						onPress={() => onPick(font)}
-						accessibilityLabel={FONT_LABELS[font]}
-						// Half the gap between chips, so neighbors' targets meet.
-						hitSlop={4}
-						style={styles.target}
-						frameStyle={styles.fontChip}
-					>
-						<Text
-							style={[
-								styles.fontLabel,
-								selected && styles.fontLabelSelected,
-								{ fontFamily: TEXT_FONTS[font].family },
-							]}
+					<MeasuredItem key={font}>
+						<Chip
+							selected={selected}
+							onPress={() => onPick(font)}
+							accessibilityLabel={FONT_LABELS[font]}
+							// Half the gap between chips, so neighbors' targets meet.
+							hitSlop={4}
+							style={styles.target}
+							frameStyle={styles.fontChip}
 						>
-							{FONT_LABELS[font]}
-						</Text>
-					</Chip>
+							<Text
+								style={[
+									styles.fontLabel,
+									selected && styles.fontLabelSelected,
+									{ fontFamily: TEXT_FONTS[font].family },
+								]}
+							>
+								{FONT_LABELS[font]}
+							</Text>
+						</Chip>
+					</MeasuredItem>
 				);
 			})}
-		</ScrollRow>
+		</FadeRow>
 	);
 }
 
@@ -541,15 +503,6 @@ const styles = StyleSheet.create({
 	},
 	swatches: {
 		paddingHorizontal: PADDING,
-	},
-	fade: {
-		position: "absolute",
-		top: 0,
-		bottom: 0,
-		right: 0,
-		width: FADE_WIDTH,
-		pointerEvents: "none",
-		...fadeTo("right", colors.background),
 	},
 	aligns: {
 		flexDirection: "row",

@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { gradientBackground } from "@/ui/gradient";
 import { RING_TARGET, RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
+import { FadeGroup } from "./FadeRow";
 
 const SWATCH_SIZE = 26;
 // The custom color's dot, inside the custom swatch's rainbow.
@@ -50,7 +51,8 @@ export function customSwatch(
 
 /**
  * The color swatches, led by a "none" swatch when `noneLabel` is given, and
- * followed by a custom one when `custom` is.
+ * followed by a custom one when `custom` is. In a `FadeRow`, each is an
+ * option the fade stops between.
  */
 export function ColorSwatches({
 	value,
@@ -64,7 +66,7 @@ export function ColorSwatches({
 	onPick: (color: string | null) => void;
 }) {
 	return (
-		<View style={styles.swatches}>
+		<FadeGroup style={styles.swatches}>
 			{noneLabel && (
 				<RingChoice
 					label={noneLabel}
@@ -101,7 +103,7 @@ export function ColorSwatches({
 					</View>
 				</RingChoice>
 			)}
-		</View>
+		</FadeGroup>
 	);
 }
 

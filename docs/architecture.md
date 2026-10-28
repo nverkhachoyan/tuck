@@ -124,7 +124,7 @@ A tool returns its options as `BarGroup`s and the bar (`BarSections`) inserts
 the rules between them: `Children.toArray` doesn't enter a component, so the
 bar can't find groups inside one. A fragment is one child of a group, so the
 buttons inside it stack in that slot. The row scrolls, and its fade covers
-from the first option that doesn't fit whole (`barFade.ts`); `onLayout` x is
+from the first option that doesn't fit whole (`FadeRow.tsx`, its geometry in `rowFade.ts`); `onLayout` x is
 relative to the parent, not the scrolled viewport, and a chip's popover sits
 outside that measurement parent so its choices don't count as options.
 

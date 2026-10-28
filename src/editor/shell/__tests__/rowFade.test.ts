@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { fadeCut, fadeCutLeft, leafEdges, rowEdges } from "../barFade.ts";
+import { fadeCut, fadeCutLeft, leafEdges, rowEdges } from "../rowFade.ts";
 
 describe("rowEdges", () => {
 	test("adds each option's x to its group's and its parents'", () => {
