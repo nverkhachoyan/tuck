@@ -238,7 +238,7 @@ export function StrokesLesson() {
 		},
 		{
 			label: "findLayerAt",
-			file: "src/screens/editor/canvas/hitTest.ts",
+			file: "src/editor/canvas/hitTest.ts",
 			name: "findLayerAt",
 		},
 	];

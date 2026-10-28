@@ -478,6 +478,10 @@
 									{
 										"group": ["image-analysis"],
 										"message": "Only the editor's detection/ imports the image-analysis bridge. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -505,6 +509,10 @@
 											"!../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -533,6 +541,10 @@
 											"!../../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -560,6 +572,10 @@
 											"!../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -588,6 +604,10 @@
 											"!../../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -615,6 +635,10 @@
 											"!../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -643,6 +667,10 @@
 											"!../../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -670,6 +698,10 @@
 											"!../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -698,6 +730,381 @@
 											"!../../../model/**"
 										],
 										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
+									{
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../screens/**",
+											"../app/**",
+											"../site/**",
+											"../../screens/**",
+											"../../app/**",
+											"../../site/**"
+										],
+										"message": "The editor doesn't import a route, a screen, or site/, imports itself by relative path, and only detection/ imports image-analysis. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/canvas/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../*",
+											"../tools/**",
+											"../crop/**",
+											"../layers/**",
+											"../stickers/**",
+											"../text/**",
+											"../detection/**",
+											"../../screens/**",
+											"../../app/**",
+											"../../site/**"
+										],
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, or site/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/canvas/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../../*",
+											"../../tools/**",
+											"../../crop/**",
+											"../../layers/**",
+											"../../stickers/**",
+											"../../text/**",
+											"../../detection/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../site/**"
+										],
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, or site/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/tools/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../adjust/**",
+											"../cutout/**",
+											"../draw/**",
+											"../find/**",
+											"../redact/**",
+											"../../crop/**",
+											"../../layers/**",
+											"../../stickers/**",
+											"../../text/**",
+											"../../adjust/**",
+											"../../cutout/**",
+											"../../draw/**",
+											"../../find/**",
+											"../../redact/**",
+											"../../../crop/**",
+											"../../../layers/**",
+											"../../../stickers/**",
+											"../../../text/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../site/**",
+											"../../../../screens/**",
+											"../../../../app/**",
+											"../../../../site/**"
+										],
+										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, or site/: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/editor/crop/**",
+				"src/editor/layers/**",
+				"src/editor/text/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../tools/**",
+											"../crop/**",
+											"../layers/**",
+											"../stickers/**",
+											"../text/**",
+											"../../tools/**",
+											"../../crop/**",
+											"../../layers/**",
+											"../../stickers/**",
+											"../../text/**",
+											"../../screens/**",
+											"../../app/**",
+											"../../site/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../site/**"
+										],
+										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, or site/: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/shell/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../**",
+											"!../shortcuts",
+											"!../../**",
+											"../../editor/**",
+											"../../screens/**",
+											"../../app/**",
+											"../../site/**"
+										],
+										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/shell/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../**",
+											"!../*",
+											"!../../shortcuts",
+											"!../../../**",
+											"../../../editor/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../site/**"
+										],
+										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/stickers/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../**",
+											"!../shortcuts",
+											"!../../**",
+											"../../editor/**",
+											"../../screens/**",
+											"../../app/**",
+											"../../site/**"
+										],
+										"message": "Stickers imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/stickers/__tests__/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../**",
+											"!../*",
+											"!../../shortcuts",
+											"!../../../**",
+											"../../../editor/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../site/**"
+										],
+										"message": "Stickers imports nothing else from the editor but shortcuts.ts, and no route, screen, or site/. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/detection/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/editor",
+											"@/editor/**",
+											"../**",
+											"!../../model/**"
+										],
+										"message": "detection/ is the editor's bridge to image-analysis: it imports nothing else from the editor, and no route, screen, or site/. See AGENTS.md."
 									}
 								]
 							}
@@ -721,369 +1128,14 @@
 											"@/app/**",
 											"@/screens/**",
 											"!@/screens/editor/**",
-											"../create/**",
-											"../export/**",
-											"../home/**",
-											"../info/**",
-											"../../create/**",
-											"../../export/**",
-											"../../home/**",
-											"../../info/**",
-											"../../../create/**",
-											"../../../export/**",
-											"../../../home/**",
-											"../../../info/**",
-											"../../screens/**",
-											"../../app/**",
-											"../../../screens/**",
-											"../../../app/**",
-											"../../../../screens/**",
-											"../../../../app/**"
-										],
-										"message": "The editor doesn't import routes or another screen, and only detection/ imports image-analysis. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/canvas/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"!@/screens/editor/**",
-											"@/screens/editor/*",
-											"../*",
-											"../tools/adjust/**",
-											"../../tools/adjust/**",
-											"@/screens/editor/tools/adjust/**",
-											"../tools/crop/**",
-											"../../tools/crop/**",
-											"@/screens/editor/tools/crop/**",
-											"../tools/cutout/**",
-											"../../tools/cutout/**",
-											"@/screens/editor/tools/cutout/**",
-											"../tools/draw/**",
-											"../../tools/draw/**",
-											"@/screens/editor/tools/draw/**",
-											"../tools/find/**",
-											"../../tools/find/**",
-											"@/screens/editor/tools/find/**",
-											"../tools/layers/**",
-											"../../tools/layers/**",
-											"@/screens/editor/tools/layers/**",
-											"../tools/redact/**",
-											"../../tools/redact/**",
-											"@/screens/editor/tools/redact/**",
-											"../tools/stickers/**",
-											"../../tools/stickers/**",
-											"@/screens/editor/tools/stickers/**",
-											"../tools/text/**",
-											"../../tools/text/**",
-											"@/screens/editor/tools/text/**",
-											"../session/**",
-											"../../session/**",
-											"@/screens/editor/session/**",
-											"../detection/**",
-											"../../detection/**",
-											"@/screens/editor/detection/**",
-											"../../create/**",
-											"../../export/**",
-											"../../home/**",
-											"../../info/**",
-											"../../../create/**",
-											"../../../export/**",
-											"../../../home/**",
-											"../../../info/**",
-											"../../../screens/**",
-											"../../../app/**",
-											"../../../../screens/**",
-											"../../../../app/**"
-										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, session/, detection/, a route, or another screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/canvas/__tests__/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"!@/screens/editor/**",
-											"@/screens/editor/*",
-											"../../*",
-											"../tools/adjust/**",
-											"../../tools/adjust/**",
-											"@/screens/editor/tools/adjust/**",
-											"../tools/crop/**",
-											"../../tools/crop/**",
-											"@/screens/editor/tools/crop/**",
-											"../tools/cutout/**",
-											"../../tools/cutout/**",
-											"@/screens/editor/tools/cutout/**",
-											"../tools/draw/**",
-											"../../tools/draw/**",
-											"@/screens/editor/tools/draw/**",
-											"../tools/find/**",
-											"../../tools/find/**",
-											"@/screens/editor/tools/find/**",
-											"../tools/layers/**",
-											"../../tools/layers/**",
-											"@/screens/editor/tools/layers/**",
-											"../tools/redact/**",
-											"../../tools/redact/**",
-											"@/screens/editor/tools/redact/**",
-											"../tools/stickers/**",
-											"../../tools/stickers/**",
-											"@/screens/editor/tools/stickers/**",
-											"../tools/text/**",
-											"../../tools/text/**",
-											"@/screens/editor/tools/text/**",
-											"../session/**",
-											"../../session/**",
-											"@/screens/editor/session/**",
-											"../detection/**",
-											"../../detection/**",
-											"@/screens/editor/detection/**",
-											"../../create/**",
-											"../../export/**",
-											"../../home/**",
-											"../../info/**",
-											"../../../create/**",
-											"../../../export/**",
-											"../../../home/**",
-											"../../../info/**",
-											"../../../screens/**",
-											"../../../app/**",
-											"../../../../screens/**",
-											"../../../../app/**"
-										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, session/, detection/, a route, or another screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": [
-				"src/screens/editor/tools/adjust/**",
-				"src/screens/editor/tools/crop/**",
-				"src/screens/editor/tools/cutout/**",
-				"src/screens/editor/tools/draw/**",
-				"src/screens/editor/tools/find/**",
-				"src/screens/editor/tools/layers/**",
-				"src/screens/editor/tools/redact/**",
-				"src/screens/editor/tools/stickers/**",
-				"src/screens/editor/tools/text/**"
-			],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"!@/screens/editor/**",
-											"../adjust/**",
-											"../../adjust/**",
-											"@/screens/editor/tools/adjust/**",
-											"../crop/**",
-											"../../crop/**",
-											"@/screens/editor/tools/crop/**",
-											"../cutout/**",
-											"../../cutout/**",
-											"@/screens/editor/tools/cutout/**",
-											"../draw/**",
-											"../../draw/**",
-											"@/screens/editor/tools/draw/**",
-											"../find/**",
-											"../../find/**",
-											"@/screens/editor/tools/find/**",
-											"../layers/**",
-											"../../layers/**",
-											"@/screens/editor/tools/layers/**",
-											"../redact/**",
-											"../../redact/**",
-											"@/screens/editor/tools/redact/**",
-											"../stickers/**",
-											"../../stickers/**",
-											"@/screens/editor/tools/stickers/**",
-											"../text/**",
-											"../../text/**",
-											"@/screens/editor/tools/text/**",
-											"../../session/**",
-											"../../../session/**",
-											"@/screens/editor/session/**",
-											"../../../create/**",
-											"../../../export/**",
-											"../../../home/**",
-											"../../../info/**",
-											"../../../../create/**",
-											"../../../../export/**",
-											"../../../../home/**",
-											"../../../../info/**",
-											"../../../../screens/**",
-											"../../../../app/**",
-											"../../../../../screens/**",
-											"../../../../../app/**"
-										],
-										"message": "The editor's tools don't import each other, session/, a route, or another screen: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/shell/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
 											"../**",
-											"!../shortcuts",
-											"!@/screens/editor/shortcuts",
-											"!../../../**",
-											"../../../screens/**",
-											"../../../app/**"
+											"!../../model/**"
 										],
-										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/shell/__tests__/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
+										"message": "A screen doesn't import routes or another screen. See AGENTS.md."
+									},
 									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"../**",
-											"!../*",
-											"!../../shortcuts",
-											"!@/screens/editor/shortcuts",
-											"!../../../../**",
-											"../../../../screens/**",
-											"../../../../app/**"
-										],
-										"message": "The editor's shell/ imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/tools/stickers/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"../**",
-											"!../../shortcuts",
-											"!@/screens/editor/shortcuts",
-											"!../../../../**",
-											"../../../../screens/**",
-											"../../../../app/**"
-										],
-										"message": "The stickers tool imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/tools/stickers/__tests__/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/app/**",
-											"@/screens/**",
-											"../**",
-											"!../*",
-											"!../../../shortcuts",
-											"!@/screens/editor/shortcuts",
-											"!../../../../../**",
-											"../../../../../screens/**",
-											"../../../../../app/**"
-										],
-										"message": "The stickers tool imports nothing else from the editor but shortcuts.ts. See AGENTS.md."
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}
@@ -1106,35 +1158,15 @@
 											"image-analysis",
 											"@/app/**",
 											"@/screens/**",
+											"@/editor",
 											"../**",
 											"!../../../model/**"
 										],
-										"message": "session/ imports nothing else from the editor, and no route or other screen. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/screens/editor/detection/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
+										"message": "session/ imports nothing from the editor or the rest of its route, and no other route or screen. See AGENTS.md."
+									},
 									{
-										"group": [
-											"@/app/**",
-											"@/screens/**",
-											"../**",
-											"!../../../model/**"
-										],
-										"message": "detection/ is the editor's bridge to image-analysis: it imports nothing else from the editor, and no route or other screen. See AGENTS.md."
+										"group": ["@/editor/**"],
+										"message": "Outside the editor, import it from @/editor, its entry file, and nothing deeper. See AGENTS.md."
 									}
 								]
 							}

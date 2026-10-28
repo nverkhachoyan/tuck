@@ -421,7 +421,7 @@ export function AnatomyLesson() {
 		},
 		{
 			label: "layerBounds",
-			file: "src/screens/editor/canvas/layerBounds.ts",
+			file: "src/editor/canvas/layerBounds.ts",
 			name: "layerBounds",
 		},
 		{

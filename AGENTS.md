@@ -78,7 +78,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ## Conventions
 
-- Keep imports flowing one way (`app` → `screens` → `photos` / `projects` / `render` / `store` → `model`, with `ui/` and `platform/` beneath); `biome.json` enforces it, and docs/architecture.md lists the rules. Update both when the structure changes.
+- Keep imports flowing one way (`app` → `screens` → `editor` → `photos` / `projects` / `render` / `store` → `model`, with `ui/` and `platform/` beneath); `biome.json` enforces it, and docs/architecture.md lists the rules. Update both when the structure changes.
 - Only routes go in `src/app/`; screens live in `src/screens/` and don't import each other. `model/` stays plain TypeScript (no React, React Native, or Skia), and `render/` never reads the store.
 - Take colors from `colors` in `ui/theme.ts`, never literals that assume one palette (day or night is picked at launch and never switches while running). Draw over the photo in `colors.selection`; fade to a palette color with `fadeTo`.
 - Take text sizes and weights from `typography`, corners from `radii`, and gaps from `space`; a one-off gap off the scale may stay literal. Literal font sizes only for Anton display text, font previews, and the text editor's 16px hidden input. Circles keep half their size as a radius.

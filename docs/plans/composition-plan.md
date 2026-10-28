@@ -75,7 +75,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 3. Give the checkerboard to the editor (October 27, 2026)
 - [x] 4a. Share a preference between its callers (October 27, 2026)
 - [x] 4b. Give the redaction look a preference of its own (October 27, 2026)
-- [ ] 5. Move the editor out of `screens/`
+- [x] 5. Move the editor out of `screens/` (October 27, 2026)
 - [ ] 6. Give the editor its store
 - [ ] 7. Give the editor its host
 - [ ] 8a. Build every tool's controller the same way
@@ -147,7 +147,7 @@ Paths here are under `src/screens/editor/`, before step 5 moves them. It depends
 
 * Move the editor to `src/editor/`, leaving `src/screens/editor/` with the route component, `session/`, and the export link. It still imports `projects/`, `photos/`, `expo-router`, and `store/` until steps 6 and 7.
 * `EditorScreen.tsx` splits: its default export (params, `useProjectSession`, the opening and failed states, `leaveEditor`) stays as the route, and `ScreenContent` becomes `src/editor/Editor.tsx`.
-* The route's open state, a component of its own as `ScreenContent` is today, calls `useAutosave` and works out the save problem, and hands `<Editor>` the problem and its retry as props until step 7 gathers them into the host. `SaveErrorBanner` moves into the editor's `shell/`. Otherwise the moved editor would import `session/` back from `screens/`.
+* The route's open state, a component of its own as `ScreenContent` is today, calls `useAutosave` and works out the save problem, and hands `<Editor>` the problem and its retry as props, with Back (`onLeave`, since `leaveEditor` stays in the route for its failed state), until step 7 gathers them into the host. `SaveErrorBanner` moves into the editor's `shell/`. Otherwise the moved editor would import `session/` back from `screens/`.
 * Text, Crop, Layers, and Stickers go straight to `text/`, `crop/`, `layers/`, and `stickers/` beside `shell/`, so each file moves once, and `tools/` holds only the list tools. They aren't list tools: Text's edit state lives in the mode and takes the keyboard, Crop replaces the canvas and takes keys, and Layers and Stickers are sheets over everything. Giving `ToolDefinition` a case for each would make it describe the editor rather than a tool, so they stay the editor's own.
 * Add `src/editor/index.ts` with what the route uses, and have the route import only it.
 * `biome.json` gives `src/editor/` the rules `screens/editor/` has today, each moved folder keeping its rule at its new path with its relative patterns rewritten for one folder less of depth; lets the rest of the app import `@/editor` and nothing deeper; bans `@/editor` inside `src/editor/`; and adds `src/editor/` to the folders that may not import `site/`.
@@ -165,7 +165,7 @@ Paths here are under `src/screens/editor/`, before step 5 moves them. It depends
 
 ### 7. Give the editor its host
 
-* Add `EditorHost`, a prop of `<Editor>` that the route passes and the editor provides to its parts as a context, and replace the editor's imports of `projects/`, `photos/`, and `expo-router`, and the save props step 5 gave `<Editor>`, with it. It carries `pickPhoto` and `importPhoto`; `addImage`; the project's `title`, its `saveProblem`, and `retrySave`; `focused`; and `leave` and `openExport`, which the editor calls once it has finished any text being typed. Its types come from today's call sites, declared by the editor: the picked image (today's `PickedPhoto`, which `useAddImage` and `useStickerActions` import) and the photo options. `photos/` and `projects/` meet them.
+* Add `EditorHost`, a prop of `<Editor>` that the route passes and the editor provides to its parts as a context, and replace the editor's imports of `projects/`, `photos/`, and `expo-router`, and the save and Back props step 5 gave `<Editor>`, with it. It carries `pickPhoto` and `importPhoto`; `addImage`; the project's `title`, its `saveProblem`, and `retrySave`; `focused`; and `leave` and `openExport`, which the editor calls once it has finished any text being typed. Its types come from today's call sites, declared by the editor: the picked image (today's `PickedPhoto`, which `useAddImage` and `useStickerActions` import) and the photo options. `photos/` and `projects/` meet them.
 * `EditorHeader` takes the host's title and whether the project is saved; `projectTitle` moves to the route.
 * Move `usePhotoDrop` (and its `.web.ts`) to `platform/`. Home and the editor import it from there.
 * The route turns expo-router's focus into the host's `focused`, and `useEditorShortcuts`' `useFocusEffect` becomes an effect on it.
