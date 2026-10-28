@@ -1,7 +1,7 @@
 import { Rect, type SkRect } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
-import { assertNever } from "@/lib/assertNever";
 import type { ColorMatrix } from "@/model/adjustments";
+import { assertNever } from "@/model/assertNever";
 import type { ImageLayer } from "@/model/layers/image";
 import type { Layer } from "@/model/layers/layer";
 import type { RedactionMask } from "@/model/layers/redaction";

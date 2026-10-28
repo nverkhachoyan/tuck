@@ -19,13 +19,13 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { errorMessage } from "@/lib/errorMessage";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { useStore } from "@/store";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
 import { CheckerFill } from "@/ui/CheckerFill";
+import { errorMessage } from "@/ui/errorMessage";
 import { Segmented } from "@/ui/Segmented";
 import { showAlert } from "@/ui/showAlert";
 import {

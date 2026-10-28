@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { formatCreatedAt } from "../../lib/formatCreatedAt.ts";
 import { withMask } from "../../model/cutout.ts";
 import {
 	createBlankDocument,
@@ -22,6 +21,7 @@ import {
 import { createShapeLayer } from "../../model/layers/shape.ts";
 import { createTextLayer } from "../../model/layers/text.ts";
 import type { MaskStroke } from "../../model/strokes.ts";
+import { formatCreatedAt } from "../formatCreatedAt.ts";
 import {
 	copyName,
 	imageFiles,

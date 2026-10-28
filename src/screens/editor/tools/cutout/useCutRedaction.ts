@@ -1,10 +1,10 @@
 import { ImageFormat } from "@shopify/react-native-skia";
 import { useRef, useState } from "react";
-import { errorMessage } from "@/lib/errorMessage";
 import type { Rect } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { renderCutShape } from "@/render/renderDocument";
+import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 
 // A selection's mask is stretched over what it covers, so it needn't have

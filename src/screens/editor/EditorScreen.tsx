@@ -7,8 +7,8 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { isHexColor } from "@/lib/color";
 import { neutralAdjustments } from "@/model/adjustments";
+import { isHexColor } from "@/model/color";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
 import { type Point, toLayerSpace } from "@/model/geometry";

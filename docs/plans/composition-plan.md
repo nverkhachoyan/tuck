@@ -71,7 +71,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 ### Progress
 
 - [x] 1. Give the site its own folder (October 27, 2026)
-- [ ] 2. Fold `lib/` into `model/`, `ui/`, and `projects/`
+- [x] 2. Fold `lib/` into `model/`, `ui/`, and `projects/` (October 27, 2026)
 - [ ] 3. Give the checkerboard to the editor
 - [ ] 4a. Share a preference between its callers
 - [ ] 4b. Give the redaction look a preference of its own

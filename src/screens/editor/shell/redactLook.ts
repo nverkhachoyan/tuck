@@ -1,4 +1,4 @@
-import { isHexColor } from "../../../lib/color.ts";
+import { isHexColor } from "../../../model/color.ts";
 import type { Size } from "../../../model/geometry.ts";
 import type { RedactionEffect } from "../../../model/layers/redaction.ts";
 

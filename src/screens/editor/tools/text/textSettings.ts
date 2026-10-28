@@ -1,4 +1,4 @@
-import { isHexColor } from "../../../../lib/color.ts";
+import { isHexColor } from "../../../../model/color.ts";
 import {
 	defaultTextStyle,
 	type TextAlign,

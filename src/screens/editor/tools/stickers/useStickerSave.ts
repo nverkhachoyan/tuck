@@ -1,6 +1,5 @@
 import { ImageFormat } from "@shopify/react-native-skia";
 import { useState } from "react";
-import { errorMessage } from "@/lib/errorMessage";
 import { isCutOut } from "@/model/cutout";
 import type { ImageLayer } from "@/model/layers/image";
 import { importPhoto } from "@/photos/photoImport";
@@ -8,6 +7,7 @@ import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { renderCutOut } from "@/render/renderDocument";
 import { useStore } from "@/store";
 import { selectSelectedLayer } from "@/store/editorSlice";
+import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import { SAVED_STICKER_MAX_SIDE, type StickerImage } from "./savedStickers";
 import type { useSavedStickers } from "./useSavedStickers";

@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
-import { errorMessage } from "@/lib/errorMessage";
 import type { PickedPhoto } from "@/photos/photoImport";
+import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import type { Sticker } from "./bundledStickers";
 import type { StickerImage } from "./savedStickers";

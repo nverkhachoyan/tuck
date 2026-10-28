@@ -1,4 +1,4 @@
-import { assertNever } from "@/lib/assertNever";
+import { assertNever } from "@/model/assertNever";
 import type { Box } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
 import { shapeBox } from "@/model/shapes";

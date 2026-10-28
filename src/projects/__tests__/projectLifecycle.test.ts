@@ -1,11 +1,11 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { formatCreatedAt } from "../../lib/formatCreatedAt.ts";
 import { withMask } from "../../model/cutout.ts";
 import type { EditorDocument } from "../../model/document.ts";
 import { createImageLayer, type ImageLayer } from "../../model/layers/image.ts";
 import { createTextLayer } from "../../model/layers/text.ts";
+import { formatCreatedAt } from "../formatCreatedAt.ts";
 import {
 	isImageFile,
 	PHOTO_FILE,

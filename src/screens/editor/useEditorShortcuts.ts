@@ -1,7 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffectEvent } from "react";
 import { Platform } from "react-native";
-import { assertNever } from "@/lib/assertNever";
+import { assertNever } from "@/model/assertNever";
 import {
 	type EditorModeAction,
 	type EditorModeState,

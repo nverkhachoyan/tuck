@@ -1,6 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { errorMessage } from "@/lib/errorMessage";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
@@ -21,6 +20,7 @@ import {
 } from "@/projects/projectService";
 import { renderThumbnail } from "@/render/renderDocument";
 import { useStore } from "@/store";
+import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 
 // A null id edits a photo that couldn't be saved.

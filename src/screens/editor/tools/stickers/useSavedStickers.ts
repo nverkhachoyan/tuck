@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { errorMessage } from "@/lib/errorMessage";
+import { errorMessage } from "@/ui/errorMessage";
 import {
 	newStickerId,
 	type SavedSticker,

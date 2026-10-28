@@ -7,7 +7,7 @@ import {
 	type SkPath,
 } from "@shopify/react-native-skia";
 import type { ComponentProps, ReactNode } from "react";
-import { mixColors } from "@/lib/color";
+import { mixColors } from "@/model/color";
 import {
 	type Brush,
 	type DrawingLayer,

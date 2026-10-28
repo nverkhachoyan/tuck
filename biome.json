@@ -181,52 +181,6 @@
 			}
 		},
 		{
-			"includes": ["src/lib/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": ["image-analysis", "@/**", "../**", "!@/lib/**"],
-										"message": "lib/ holds plain helpers: it imports only other lib/ files. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
-			"includes": ["src/lib/__tests__/**"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noRestrictedImports": {
-							"level": "error",
-							"options": {
-								"patterns": [
-									{
-										"group": [
-											"image-analysis",
-											"@/**",
-											"../**",
-											"!../*",
-											"!@/lib/**"
-										],
-										"message": "lib/ holds plain helpers: it imports only other lib/ files. See AGENTS.md."
-									}
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		{
 			"includes": ["src/site/**"],
 			"linter": {
 				"rules": {
@@ -285,13 +239,11 @@
 											"image-analysis",
 											"@/**",
 											"../**",
-											"!@/lib/**",
-											"!../lib/**",
 											"!@/platform/preferenceStore",
 											"!@/ui/**",
 											"!../ui/**"
 										],
-										"message": "ui/ imports only itself, lib/, and platform/preferenceStore, never app code. See AGENTS.md."
+										"message": "ui/ imports only itself and platform/preferenceStore, never app code. See AGENTS.md."
 									}
 								]
 							}
@@ -315,13 +267,11 @@
 											"@/**",
 											"../**",
 											"!../*",
-											"!@/lib/**",
-											"!../../lib/**",
 											"!@/platform/preferenceStore",
 											"!@/ui/**",
 											"!../../ui/**"
 										],
-										"message": "ui/ imports only itself, lib/, and platform/preferenceStore, never app code. See AGENTS.md."
+										"message": "ui/ imports only itself and platform/preferenceStore, never app code. See AGENTS.md."
 									}
 								]
 							}
@@ -345,11 +295,9 @@
 											"@/**",
 											"../**",
 											"!@/model/**",
-											"!../model/**",
-											"!@/lib/**",
-											"!../lib/**"
+											"!../model/**"
 										],
-										"message": "store/ imports only model/ and lib/. See AGENTS.md."
+										"message": "store/ imports only model/. See AGENTS.md."
 									}
 								]
 							}
@@ -374,11 +322,9 @@
 											"../**",
 											"!../*",
 											"!@/model/**",
-											"!../../model/**",
-											"!@/lib/**",
-											"!../../lib/**"
+											"!../../model/**"
 										],
-										"message": "store/ imports only model/ and lib/. See AGENTS.md."
+										"message": "store/ imports only model/. See AGENTS.md."
 									}
 								]
 							}
@@ -402,11 +348,9 @@
 											"@/**",
 											"../**",
 											"!@/model/**",
-											"!../model/**",
-											"!@/lib/**",
-											"!../lib/**"
+											"!../model/**"
 										],
-										"message": "photos/ and projects/ import only model/ and lib/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
+										"message": "photos/ and projects/ import only model/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
 									}
 								]
 							}
@@ -431,11 +375,9 @@
 											"../**",
 											"!../*",
 											"!@/model/**",
-											"!../../model/**",
-											"!@/lib/**",
-											"!../../lib/**"
+											"!../../model/**"
 										],
-										"message": "photos/ and projects/ import only model/ and lib/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
+										"message": "photos/ and projects/ import only model/: not each other, store/, ui/, render/, or any screen. See AGENTS.md."
 									}
 								]
 							}
@@ -460,11 +402,9 @@
 											"../**",
 											"!@/model/**",
 											"!../model/**",
-											"!@/lib/**",
-											"!../lib/**",
 											"!@/ui/**"
 										],
-										"message": "render/ imports only model/, lib/, and ui/: no store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/ and ui/: no store, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -490,11 +430,9 @@
 											"!../*",
 											"!@/model/**",
 											"!../../model/**",
-											"!@/lib/**",
-											"!../../lib/**",
 											"!@/ui/**"
 										],
-										"message": "render/ imports only model/, lib/, and ui/: no store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/ and ui/: no store, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -520,12 +458,10 @@
 											"!../*",
 											"!@/model/**",
 											"!../../model/**",
-											"!@/lib/**",
-											"!../../lib/**",
 											"!@/ui/**",
 											"!../../ui/**"
 										],
-										"message": "render/ imports only model/, lib/, and ui/: no store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/ and ui/: no store, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}

@@ -1,7 +1,7 @@
-import { formatCreatedAt } from "../lib/formatCreatedAt.ts";
 import type { EditorDocument } from "../model/document.ts";
 import { isLayer, layerFiles } from "../model/layers/layer.ts";
 import { isColorOrNull, isFields, isPositive } from "../model/values.ts";
+import { formatCreatedAt } from "./formatCreatedAt.ts";
 
 // Bump when the saved format changes, and teach `parseSavedProject` to read
 // the older one. 2 added the canvas's background, layers' `locked`, and

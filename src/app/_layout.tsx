@@ -5,11 +5,11 @@ import { Suspense, useState } from "react";
 import { Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { errorMessage } from "@/lib/errorMessage";
 import { LoadFonts, resetFailedFonts } from "@/render/fonts";
 import { PageHead } from "@/site/PageHead";
 import { SUPPORT_EMAIL } from "@/site/site";
 import { Button } from "@/ui/Button";
+import { errorMessage } from "@/ui/errorMessage";
 import { colorScheme, colors, space, typography } from "@/ui/theme";
 
 const barStyle = colorScheme === "dark" ? "light-content" : "dark-content";

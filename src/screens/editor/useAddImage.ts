@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { errorMessage } from "@/lib/errorMessage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
 import { usePhotoDrop } from "@/photos/usePhotoDrop";
+import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import {
 	SAVED_STICKER_MAX_SIDE,

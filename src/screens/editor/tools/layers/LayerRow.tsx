@@ -23,7 +23,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { assertNever } from "@/lib/assertNever";
+import { assertNever } from "@/model/assertNever";
 import type { Layer } from "@/model/layers/layer";
 import type { RedactionEffect } from "@/model/layers/redaction";
 import { hapticTick } from "@/platform/haptics";

@@ -1,6 +1,5 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import { useEffect, useRef, useState } from "react";
-import { errorMessage } from "@/lib/errorMessage";
 import { isCutOut } from "@/model/cutout";
 import type { ImageLayer } from "@/model/layers/image";
 import {
@@ -8,6 +7,7 @@ import {
 	writeTemporaryPng,
 } from "@/platform/temporaryFile";
 import { decodedImages, decodeImage } from "@/render/decodedImages";
+import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import {
 	findObjectMasks,

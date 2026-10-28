@@ -11,7 +11,6 @@ import {
 	View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "@/lib/color";
 import { Button } from "@/ui/Button";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { compactControls } from "@/ui/density";
@@ -22,6 +21,7 @@ import { Popover } from "@/ui/Popover";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { ColorSwatches, customSwatch } from "./ColorSwatches";
+import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "./hsv";
 
 // As wide as a row of seven swatches, so a picker on its own in a card is
 // the size of one under them.
