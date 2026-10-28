@@ -36,7 +36,7 @@ const edit = (id: string): TextEditState => ({
 const eyedropper = (): Eyedropper => ({ apply: () => {} });
 const targets = (overrides: Partial<ModeTargets> = {}): ModeTargets => ({
 	isAdjustable: () => true,
-	canFind: true,
+	hasPhoto: true,
 	selectedTextId: null,
 	...overrides,
 });
@@ -307,7 +307,7 @@ describe("settle", () => {
 			{ type: "toggleToolOptions" },
 		);
 		assert.equal(settle(finding, targets()), finding);
-		const settled = settle(finding, targets({ canFind: false }));
+		const settled = settle(finding, targets({ hasPhoto: false }));
 		assert.deepEqual(settled.mode, { type: "idle" });
 		assert.deepEqual(
 			run(settled, { type: "startTool", start: { tool: "draw" } }).mode,
@@ -317,7 +317,7 @@ describe("settle", () => {
 				optionsOpen: false,
 			},
 		);
-		assert.equal(settle(drawing, targets({ canFind: false })), drawing);
+		assert.equal(settle(drawing, targets({ hasPhoto: false })), drawing);
 	});
 
 	test("closes a text color picker when other text is styled", () => {

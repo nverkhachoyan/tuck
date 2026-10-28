@@ -6,6 +6,7 @@ import type { Rect } from "../../model/geometry.ts";
 import type { TextLayer } from "../../model/layers/text.ts";
 import type { TextSelection } from "../../model/textEditing.ts";
 import type { Shortcut } from "./shortcuts.ts";
+import { TOOL_SPECS } from "./toolSpecs.ts";
 
 /** A text layer's colors, which its Color, Outline, and Box tabs pick. */
 export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
@@ -32,31 +33,51 @@ export type TextEditState = {
 	area?: Rect;
 };
 
+type Specs = typeof TOOL_SPECS;
+
+export type EditorTool = keyof Specs;
+
+// The tools that work on the image they started on.
+type ImageTool = {
+	[Tool in EditorTool]: Specs[Tool]["target"] extends "image" ? Tool : never;
+}[EditorTool];
+
+// The image a tool works on, when it works on one.
+type ImageOf<Tool extends EditorTool> = Tool extends ImageTool
+	? { layerId: string }
+	: unknown;
+
+// One object type, so hovers show plain objects rather than intersections.
+type Flat<T> = { [Key in keyof T]: T[Key] };
+
+/**
+ * Each tool's mode, from its spec: `layerId` when it works on the image it
+ * started on, and `optionsOpen` when it has a tray.
+ */
+type ToolMode = {
+	[Tool in EditorTool]: Flat<
+		{ type: "tool"; tool: Tool } & ImageOf<Tool> &
+			(Specs[Tool]["tray"] extends true ? { optionsOpen: boolean } : unknown)
+	>;
+}[EditorTool];
+
 /**
  * What the canvas and the dock are given over to, one at a time: nothing, a
- * tool in the dock (Draw, Redact, and Find with their trays, Adjust with the
- * image it started on, and Cut out with both), text being typed on the
- * canvas, or the crop screen.
+ * tool in the dock (see `ToolMode`), text being typed on the canvas, or the
+ * crop screen.
  */
 export type EditorMode =
 	| { type: "idle" }
-	| { type: "tool"; tool: "draw" | "redact" | "find"; optionsOpen: boolean }
-	| { type: "tool"; tool: "adjust"; layerId: string }
-	| { type: "tool"; tool: "cutOut"; layerId: string; optionsOpen: boolean }
+	| ToolMode
 	| { type: "text"; edit: TextEditState }
 	| { type: "crop" };
-
-export type EditorTool = Extract<EditorMode, { type: "tool" }>["tool"];
-
-// The tools whose brush `[` and `]` step.
-export const SIZED_TOOLS: readonly EditorTool[] = ["draw", "redact", "cutOut"];
 
 type TrayTool = Extract<EditorMode, { optionsOpen: boolean }>;
 
 /** A tool to start, with the image it works on when it needs one. */
-export type ToolStart =
-	| { tool: "draw" | "redact" | "find" }
-	| { tool: "adjust" | "cutOut"; layerId: string };
+export type ToolStart = {
+	[Tool in EditorTool]: Flat<{ tool: Tool } & ImageOf<Tool>>;
+}[EditorTool];
 
 /**
  * The mode, and what sits over it. A text color picker belongs to a layer,
@@ -83,11 +104,10 @@ export const initialEditorMode: EditorModeState = {
 
 // What `settle` checks the mode against.
 export type ModeTargets = {
-	// Whether an image can still be adjusted or cut out: it's there, and
-	// shown.
+	// Whether an image can still be worked on: it's there, and shown.
 	isAdjustable: (layerId: string) => boolean;
-	// Whether there's a photo for Find to search.
-	canFind: boolean;
+	// Whether there's a photo to work in.
+	hasPhoto: boolean;
 	// The selected text, which the dock styles while nothing is typed.
 	selectedTextId: string | null;
 };
@@ -210,21 +230,17 @@ export function editorModeReducer(
 }
 
 /**
- * `state` with what's gone put away: Adjust or Cut out whose image is gone
- * or hidden, Find with no photo left to search, and a text color picker
- * whose text isn't the one styled any more. The same `state` when nothing
- * is.
+ * `state` with what's gone put away: a tool whose image is gone or hidden,
+ * or that works in a photo when none is left (see `ToolSpec`'s `target`),
+ * and a text color picker whose text isn't the one styled any more. The
+ * same `state` when nothing is.
  */
 export function settle(
 	state: EditorModeState,
 	targets: ModeTargets,
 ): EditorModeState {
 	const { mode, textPicker } = state;
-	const toolGone =
-		mode.type === "tool" &&
-		("layerId" in mode
-			? !targets.isAdjustable(mode.layerId)
-			: mode.tool === "find" && !targets.canFind);
+	const toolGone = mode.type === "tool" && targetGone(mode, targets);
 	const styledTextId =
 		mode.type === "text" ? mode.edit.layer.id : targets.selectedTextId;
 	const pickerGone = textPicker !== null && textPicker.layerId !== styledTextId;
@@ -290,10 +306,7 @@ export function shortcutCommand(
 		if (shortcut.type === "deselect") return { type: "doneWithTool" };
 		// [ and ] step a brush while Draw, Redact, or Cut out is open. A
 		// sub-tool with no size, like a box, leaves the size where it is.
-		if (
-			shortcut.type === "brushSize" &&
-			SIZED_TOOLS.includes(state.mode.tool)
-		) {
+		if (shortcut.type === "brushSize" && TOOL_SPECS[state.mode.tool].sized) {
 			return shortcut;
 		}
 		return null;
@@ -306,23 +319,27 @@ export function shortcutCommand(
 }
 
 // The mode a tool starts in. A tool with a tray starts with it closed.
-function toolMode(start: ToolStart): Extract<EditorMode, { type: "tool" }> {
-	if (start.tool === "adjust") {
-		return { type: "tool", tool: "adjust", layerId: start.layerId };
+// TypeScript can't check a member of `ToolMode` built from any tool, so
+// it's cast; the tests cover each tool's.
+function toolMode(start: ToolStart): ToolMode {
+	const tray = TOOL_SPECS[start.tool].tray ? { optionsOpen: false } : {};
+	return { type: "tool", ...start, ...tray } as ToolMode;
+}
+
+// Whether what `mode` works on is gone.
+function targetGone(mode: ToolMode, targets: ModeTargets): boolean {
+	switch (TOOL_SPECS[mode.tool].target) {
+		case "image":
+			return "layerId" in mode && !targets.isAdjustable(mode.layerId);
+		case "photo":
+			return !targets.hasPhoto;
+		case "none":
+			return false;
 	}
-	if (start.tool === "cutOut") {
-		return {
-			type: "tool",
-			tool: "cutOut",
-			layerId: start.layerId,
-			optionsOpen: false,
-		};
-	}
-	return { type: "tool", tool: start.tool, optionsOpen: false };
 }
 
 function hasTray(mode: EditorMode): mode is TrayTool {
-	return mode.type === "tool" && "optionsOpen" in mode;
+	return mode.type === "tool" && TOOL_SPECS[mode.tool].tray;
 }
 
 /** The tool whose tray is open, or null when none is. */
@@ -330,11 +347,8 @@ export function openTray(mode: EditorMode) {
 	return hasTray(mode) && mode.optionsOpen ? mode.tool : null;
 }
 
-/** The image Adjust or Cut out works on, or null when that tool isn't open. */
-export function toolImageId(
-	mode: EditorMode,
-	tool: "adjust" | "cutOut",
-): string | null {
+/** The image `tool` works on, or null when that tool isn't open. */
+export function toolImageId(mode: EditorMode, tool: ImageTool): string | null {
 	return mode.type === "tool" && mode.tool === tool ? mode.layerId : null;
 }
 

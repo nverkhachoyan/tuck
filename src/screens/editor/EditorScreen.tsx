@@ -149,13 +149,13 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const rootRef = useRef<View>(null);
 	const stickerAnchor = useRef<View>(null);
 
-	// What the editor is doing, and what's open over it. Adjust puts itself
-	// down if its image goes away, Find if its photo does, and a text color
-	// picker closes if other text is styled.
+	// What the editor is doing, and what's open over it. A tool puts itself
+	// down if its image goes away, or its photo does, and a text color picker
+	// closes if other text is styled.
 	const targetImage = targetImageLayer(document, selectedLayer);
 	const [modeState, dispatchMode] = useEditorMode({
 		isAdjustable: (id) => visibleImageLayer(document, id) !== undefined,
-		canFind: targetImage !== null,
+		hasPhoto: targetImage !== null,
 		selectedTextId: selectedTextLayer?.id ?? null,
 	});
 	const { mode, eyedropper } = modeState;
