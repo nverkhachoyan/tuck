@@ -7,7 +7,7 @@ import {
 	type SkRect,
 } from "@shopify/react-native-skia";
 import { useMemo } from "react";
-import { colors } from "@/ui/theme";
+import { CHECKER_CELL, colors } from "@/ui/theme";
 
 // Past this many squares, they're drawn bigger instead.
 const MAX_CELLS = 20_000;
@@ -51,4 +51,23 @@ export function Checkerboard({
 			<Path path={squares} color={colors.checkerLight} />
 		</Group>
 	);
+}
+
+// What the editor's canvas and the crop tool's both draw.
+
+/** The canvas's fill, or a checkerboard where it's transparent. */
+export function CanvasBackground({
+	bounds,
+	background,
+	viewScale,
+}: {
+	bounds: SkRect;
+	background: string | null;
+	// Screen pixels per unit of `bounds`.
+	viewScale: number;
+}) {
+	if (background === null) {
+		return <Checkerboard bounds={bounds} cell={CHECKER_CELL / viewScale} />;
+	}
+	return <Rect rect={bounds} color={background} />;
 }

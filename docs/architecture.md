@@ -18,7 +18,7 @@ over any of the editor.
 - `src/app/` holds only thin Expo Router route files (every file there becomes a screen). A project's editor is at `/projects/[id]` and its export at `/projects/[id]/export`, so a link or a reload opens the project from storage (`useProjectSession`); `vercel.json` serves those routes from the static export.
 - `src/screens/` has a folder per screen: `home/`, `create/`, `editor/`, `export/`, and `info/` (`InfoPage`, Settings, the support, privacy, and licenses pages, which the stores link to, and the 404 page). The home screen starts from a photo, a pasted or dropped image, a photo shared from another app, or, through Create, an empty canvas at a preset or custom size. Screens compose the shared capabilities (home and the editor hand `renderThumbnail` from `render/` to `closeProject`) and don't import each other. A folder lives in the screen that uses it, or at `src/` when several screens do.
 - `src/screens/editor/` is the interactive editor, in a folder per part:
-  - `canvas/` holds the canvas pieces every mode shares: the viewport and zoom (which crop draws with too), live transforms (`LiveLayerContent`, `LiveStrokeOverlay`), the selection overlay, handles and cursors, hit-testing, snapping, touch metrics, and the stroke pipeline Draw, Redact, and Cut out share.
+  - `canvas/` holds the canvas pieces every mode shares: the viewport and zoom (which crop draws with too), live transforms (`LiveLayerContent`, `LiveStrokeOverlay`), the selection overlay, handles and cursors, hit-testing, snapping, touch metrics, and the stroke pipeline Draw, Redact, and Cut out share, and the checkerboard that stands for transparency (`CanvasBackground`), which no render of the document draws.
   - `tools/` has a folder per tool: `adjust/`, `crop/`, `cutout/`, `draw/`, `find/`, `layers/`, `redact/`, `stickers/`, and `text/`. A tool's own gestures and overlays on the canvas live in its folder too (Text's `useTextEditGesture`, Find's `useFindTap`).
     - `crop/` holds `CropTool`, the overlay that crops, turns, flips, and straightens the photo (the lowest locked one, or just the canvas without one) and expands the canvas around it, with its own canvas, header, and keys. `CropPanel` holds its options on both layouts. Its geometry is in `cropGeometry.ts` and its box dragging in `cropDrag.ts`.
     - `text/` holds the text panel, `TextEditor` (the hidden input that takes the keyboard), and text's pieces on the canvas: `EditedTextView`, which draws the draft with its caret and selection, and its edit gesture.
@@ -51,11 +51,11 @@ over any of the editor.
 ## Boundaries and Platform Files
 
 Imports flow one way: `app` → `screens` → `photos` / `projects` / `render` /
-`store` → `model`, with `ui/` beneath anything that draws and `platform/`
+`store` → `model`, with `ui/` beneath the screens and `platform/`
 beneath the screens and `ui/`. `model/` stays plain TypeScript, so its helpers
 (`assertNever`, the document's colors) serve any layer.
 
-- `store/`, `photos/`, and `projects/` import only `model/`; `render/` imports only `model/` and `ui/`.
+- `store/`, `photos/`, and `projects/` import only `model/`; `render/` imports only `model/`.
 - `ui/` never imports app code, except `platform/preferenceStore`, which `theme.ts` reads at launch. `platform/` and `site/` import only themselves, and only routes and screens import `site/`.
 - In the editor, tools don't import each other, and reach the editor through `defineTool.ts`, `toolSpec.ts`, and `editorContext.ts`, besides the types of the canvas's input (`canvasInputFor.ts`) and, for text, its mode (`editorMode.ts`). `shell/` and `tools/stickers/` import nothing else from the editor (except `shortcuts.ts` for tool key labels); `session/` and `detection/` import nothing else from it; `canvas/` imports nothing else from the editor but `shell/`, and tools may import `canvas/`.
 

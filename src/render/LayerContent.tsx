@@ -1,37 +1,15 @@
-import { Rect, type SkRect } from "@shopify/react-native-skia";
 import type { ReactNode } from "react";
 import type { ColorMatrix } from "@/model/adjustments";
 import { assertNever } from "@/model/assertNever";
 import type { ImageLayer } from "@/model/layers/image";
 import type { Layer } from "@/model/layers/layer";
 import type { RedactionMask } from "@/model/layers/redaction";
-import { CHECKER_CELL } from "@/ui/theme";
-import { Checkerboard } from "./Checkerboard";
 import { DrawingLayerView } from "./layers/DrawingLayerView";
 import { ImageLayerView } from "./layers/ImageLayerView";
 import { RedactionLayerView } from "./layers/RedactionLayerView";
 import { ShapeLayerView } from "./layers/ShapeLayerView";
 import { TextLayerView } from "./layers/TextLayerView";
 import { useDecodedImage } from "./useDecodedImage";
-
-// What the editor's canvas and the crop tool's both draw.
-
-/** The canvas's fill, or a checkerboard where it's transparent. */
-export function CanvasBackground({
-	bounds,
-	background,
-	viewScale,
-}: {
-	bounds: SkRect;
-	background: string | null;
-	// Screen pixels per unit of `bounds`.
-	viewScale: number;
-}) {
-	if (background === null) {
-		return <Checkerboard bounds={bounds} cell={CHECKER_CELL / viewScale} />;
-	}
-	return <Rect rect={bounds} color={background} />;
-}
 
 /**
  * A layer's content in its own space, loading images asynchronously.

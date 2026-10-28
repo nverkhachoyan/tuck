@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
 import type { Layer } from "@/model/layers/layer";
-import { CanvasBackground } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colorScheme, colors } from "@/ui/theme";
+import { CanvasBackground } from "./canvas/Checkerboard";
 import {
 	type LiveStroke,
 	NewLayerStroke,

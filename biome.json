@@ -401,10 +401,9 @@
 											"@/**",
 											"../**",
 											"!@/model/**",
-											"!../model/**",
-											"!@/ui/**"
+											"!../model/**"
 										],
-										"message": "render/ imports only model/ and ui/: no store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/: no ui, store, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -429,10 +428,9 @@
 											"../**",
 											"!../*",
 											"!@/model/**",
-											"!../../model/**",
-											"!@/ui/**"
+											"!../../model/**"
 										],
-										"message": "render/ imports only model/ and ui/: no store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/: no ui, store, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}
@@ -457,11 +455,9 @@
 											"../**",
 											"!../*",
 											"!@/model/**",
-											"!../../model/**",
-											"!@/ui/**",
-											"!../../ui/**"
+											"!../../model/**"
 										],
-										"message": "render/ imports only model/ and ui/: no store, projects, photos, or screen. See AGENTS.md."
+										"message": "render/ imports only model/: no ui, store, projects, photos, or screen. See AGENTS.md."
 									}
 								]
 							}

@@ -23,9 +23,10 @@ import {
 } from "@/model/framing";
 import type { Size } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
-import { CanvasBackground, LayerContent } from "@/render/LayerContent";
+import { LayerContent } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";
+import { CanvasBackground } from "../../canvas/Checkerboard";
 import { type CanvasCursor, cursorStyle } from "../../canvas/canvasCursor";
 import {
 	SELECTION_HALO,
