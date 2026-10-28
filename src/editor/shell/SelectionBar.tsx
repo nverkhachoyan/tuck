@@ -151,6 +151,7 @@ function BarButton({
 						? { disabled }
 						: { disabled, checked: selected }
 				}
+				aria-checked={selected}
 				style={(state) => {
 					const { pressed, hovered } = interaction(state);
 					return [

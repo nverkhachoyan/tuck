@@ -27,3 +27,18 @@ export function interaction(
 export const pressAtOnce = (
 	Platform.OS === "web" ? { delayPressIn: 0 } : {}
 ) as object;
+
+/**
+ * Spread on a button that's one of a row of choices, so a screen reader on
+ * web hears whether it's the chosen one; `undefined` for a button that isn't
+ * a choice. React Native Web ignores `accessibilityState.selected`, and
+ * `aria-selected` means nothing on a button. React Native's types leave out
+ * `aria-pressed`.
+ */
+export function chosenOnWeb(chosen: boolean | undefined) {
+	return (
+		Platform.OS === "web" && chosen !== undefined
+			? { "aria-pressed": chosen }
+			: {}
+	) as object;
+}

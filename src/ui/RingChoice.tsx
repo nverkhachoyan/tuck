@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Highlight } from "./Highlight";
-import { interaction } from "./interaction";
+import { chosenOnWeb, interaction } from "./interaction";
 import { colors, radii, webTransition } from "./theme";
 
 // The minimum comfortable touch target, and the ring that marks the chosen
@@ -37,6 +37,7 @@ export function RingChoice({
 			accessibilityRole="button"
 			accessibilityLabel={label}
 			accessibilityState={{ selected }}
+			{...chosenOnWeb(selected)}
 			style={styles.target}
 		>
 			{(state) => {

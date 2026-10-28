@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { compactControls } from "@/ui/density";
 import { Highlight } from "@/ui/Highlight";
-import { interaction, pressAtOnce } from "@/ui/interaction";
+import { chosenOnWeb, interaction, pressAtOnce } from "@/ui/interaction";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 
@@ -58,7 +58,7 @@ export function ToolButton({
 	tone = "default",
 	disabled = false,
 	selected,
-	marked = false,
+	marked,
 	open = false,
 	busy = false,
 	compact = false,
@@ -91,7 +91,7 @@ export function ToolButton({
 	const danger = tone === "danger";
 	// The highlighter; a marked tool is chosen without it.
 	const highlighted = !!selected && !marked;
-	const chosen = !!selected || marked;
+	const chosen = !!selected || !!marked;
 	const ink = danger
 		? colors.danger
 		: highlighted
@@ -118,8 +118,9 @@ export function ToolButton({
 					selected: chosen,
 					expanded: open,
 				}}
-				// React Native Web ignores accessibilityState.selected.
-				aria-selected={chosen || undefined}
+				{...chosenOnWeb(
+					selected === undefined && marked === undefined ? undefined : chosen,
+				)}
 				style={[
 					styles.container,
 					compact && styles.compact,

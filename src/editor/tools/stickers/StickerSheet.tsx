@@ -157,6 +157,7 @@ function CategoryChip({
 			onPress={onPress}
 			accessibilityRole="tab"
 			accessibilityState={{ selected }}
+			aria-selected={selected}
 			style={(state) => {
 				const { pressed, hovered } = interaction(state);
 				return [

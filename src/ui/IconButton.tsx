@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { Highlight } from "./Highlight";
-import { interaction } from "./interaction";
+import { chosenOnWeb, interaction } from "./interaction";
 import { useTooltip } from "./Tooltip";
 import { colors, webTransition } from "./theme";
 
@@ -28,7 +28,7 @@ export function IconButton({
 	shortcut,
 	tone = "default",
 	disabled = false,
-	selected = false,
+	selected,
 	onPress,
 }: {
 	icon: IconName;
@@ -57,6 +57,7 @@ export function IconButton({
 				accessibilityRole="button"
 				accessibilityLabel={label}
 				accessibilityState={{ disabled, selected }}
+				{...chosenOnWeb(selected)}
 				style={(state) => {
 					const { pressed, hovered } = interaction(state);
 					return [

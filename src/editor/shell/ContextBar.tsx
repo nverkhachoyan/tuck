@@ -203,6 +203,7 @@ export function OptionSegments({
 							accessibilityRole="radio"
 							accessibilityLabel={option.title}
 							accessibilityState={{ checked: chosen, busy, disabled: busy }}
+							aria-checked={chosen}
 							disabled={busy}
 							onPress={() => onSelect(index)}
 							style={(state) => {

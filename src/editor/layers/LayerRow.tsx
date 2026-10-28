@@ -28,6 +28,7 @@ import type { Layer } from "@/model/layers/layer";
 import type { RedactionEffect } from "@/model/layers/redaction";
 import { hapticTick } from "@/platform/haptics";
 import { IconButton } from "@/ui/IconButton";
+import { chosenOnWeb } from "@/ui/interaction";
 import { colors, radii, typography } from "@/ui/theme";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../shell/shapeIcons";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
@@ -162,6 +163,7 @@ export function LayerRow({
 				accessibilityRole="button"
 				accessibilityLabel={label}
 				accessibilityState={{ selected, disabled: hidden || locked }}
+				{...chosenOnWeb(selected)}
 				accessibilityActions={[
 					{ name: "moveUp", label: "Move up" },
 					{ name: "moveDown", label: "Move down" },

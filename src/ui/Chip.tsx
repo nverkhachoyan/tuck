@@ -8,7 +8,7 @@ import {
 	type ViewStyle,
 } from "react-native";
 import { Highlight } from "./Highlight";
-import { interaction } from "./interaction";
+import { chosenOnWeb, interaction } from "./interaction";
 import { colors, radii, webTransition } from "./theme";
 
 /**
@@ -42,6 +42,7 @@ export function Chip({
 			accessibilityRole="button"
 			accessibilityLabel={accessibilityLabel}
 			accessibilityState={{ selected }}
+			{...chosenOnWeb(selected)}
 			style={style}
 		>
 			{(state) => {

@@ -439,6 +439,7 @@ function IncludeSwitch({
 			accessibilityRole="switch"
 			accessibilityLabel="Include"
 			accessibilityState={{ checked: included }}
+			aria-checked={included}
 		>
 			{(state) => {
 				const { hovered, pressed } = interaction(state);

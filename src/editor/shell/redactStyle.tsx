@@ -2,6 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Highlight } from "@/ui/Highlight";
+import { chosenOnWeb } from "@/ui/interaction";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, space, typography } from "@/ui/theme";
 import { ColorChip, ColorOptions } from "./ColorPicker";
@@ -260,6 +261,7 @@ function EffectChoice({
 			accessibilityRole="button"
 			accessibilityLabel={label}
 			accessibilityState={{ selected }}
+			{...chosenOnWeb(selected)}
 			style={styles.effectChoice}
 		>
 			{selected && <Highlight />}

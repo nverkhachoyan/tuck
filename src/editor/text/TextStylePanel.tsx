@@ -434,6 +434,7 @@ function Tab({
 			onPress={onPress}
 			accessibilityRole="tab"
 			accessibilityState={{ selected: active }}
+			aria-selected={active}
 			style={(state) => [
 				styles.target,
 				styles.tab,
