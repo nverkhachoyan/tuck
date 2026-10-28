@@ -27,13 +27,13 @@ import { listenForLaunchedPhotos } from "@/photos/sharedPhoto";
 import { usePhotoDrop } from "@/photos/usePhotoDrop";
 import { useUpdateReady } from "@/platform/serviceWorker";
 import { editorHref } from "@/projects/projectRoute";
+import { PageHead } from "@/site/PageHead";
 import { useStore } from "@/store";
 import { Button } from "@/ui/Button";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Highlight } from "@/ui/Highlight";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
-import { PageHead } from "@/ui/PageHead";
 import { TextButton } from "@/ui/TextButton";
 import {
 	colors,

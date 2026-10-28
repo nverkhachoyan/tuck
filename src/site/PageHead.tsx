@@ -1,6 +1,6 @@
 import Head from "expo-router/head";
 import { Platform } from "react-native";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL } from "./site";
 
 const SITE_TITLE = "Tuck: Photo Markup";
 const SITE_DESCRIPTION =

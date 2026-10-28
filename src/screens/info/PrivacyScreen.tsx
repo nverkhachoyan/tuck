@@ -1,4 +1,4 @@
-import { SUPPORT_EMAIL } from "@/lib/site";
+import { SUPPORT_EMAIL } from "@/site/site";
 import { InfoPage, InlineLink, Item, Paragraph, Section } from "./InfoPage";
 
 const ML_KIT_DISCLOSURE =

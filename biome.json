@@ -227,6 +227,26 @@
 			}
 		},
 		{
+			"includes": ["src/site/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["image-analysis", "@/**", "../**", "!@/site/**"],
+										"message": "site/ holds the site's address and page head: it imports only other site/ files, and only routes and screens import it. See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
 			"includes": ["src/platform/**"],
 			"linter": {
 				"rules": {

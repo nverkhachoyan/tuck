@@ -2,7 +2,7 @@ import { type Href, Link, useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PageHead } from "@/ui/PageHead";
+import { PageHead } from "@/site/PageHead";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { colors, space, typography } from "@/ui/theme";
 

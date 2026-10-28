@@ -43,8 +43,9 @@ over any of the editor.
 - `src/projects/` keeps every editing session as a local project: its photos move into it, each as a file of its own, edits autosave, and the home screen lists projects to reopen, rename, duplicate, or delete, each with a thumbnail rendered when its editor closes. `projectFile.ts` is the saved format (versioned, with image layers naming their file in the project); `projectLifecycle.ts` opens, saves, and closes projects, removing files no layer uses once one closes, with storage passed in so Node can test it.
 - `src/render/` is how a document draws: a view for each layer type in document space (in `layers/`), `LayerContent` and `useDecodedImage` (which the editor's canvas and crop use too), the decoded-image cache, `fonts.ts` (which bundles the text fonts so text renders identically on iOS, Android, and web), and `DocumentRenderScene`, which renders offscreen for export and project thumbnails. It takes plain props and never reads the store, so export can render any document. `src/screens/export/` chooses output sizes and format, then saves the image to Photos, copies it, or shares it: as JPEG, or as PNG when some of the canvas is transparent.
 - `src/ui/` holds reusable controls, including `Popover`, and `theme.ts`.
+- `src/site/` holds what the site says about itself: its address and support email (`site.ts`) and each page's head (`PageHead`), which the routes, Home, and the info screens use.
 - `src/platform/` holds the OS ports any caller can use: haptics, preferences (`preferenceStore`, `usePreference`), temporary files, and the service worker, each with a `.web.ts` version where the web differs.
-- `src/lib/` holds small language helpers, and the site's address and support email (`site.ts`).
+- `src/lib/` holds small language helpers.
 - `modules/` holds local Expo modules with native code, autolinked without a `package.json` entry. `modules/image-analysis/` does on-device face, text, subject, and object detection (Apple Vision, Google ML Kit, MediaPipe, Tesseract, and MobileSAM with ONNX Runtime; see [on-device-detection.md](./on-device-detection.md)); the app imports it as `image-analysis` through a `tsconfig.json` path. `modules/share-target/` is the share extension on iOS and the share activity on Android.
 - `index.ts` / `index.web.ts` are the app entry. On web, it loads Skia's WASM build before any app code runs.
 
@@ -55,7 +56,7 @@ Imports flow one way: `app` → `screens` → `photos` / `projects` / `render` /
 the screens and `ui/`, and `lib/` beneath everything.
 
 - `store/`, `photos/`, and `projects/` import only `model/` and `lib/`; `render/` imports only `model/`, `lib/`, and `ui/`.
-- `ui/` never imports app code, except `platform/preferenceStore`, which `theme.ts` reads at launch. `platform/` and `lib/` import only themselves.
+- `ui/` never imports app code, except `platform/preferenceStore`, which `theme.ts` reads at launch. `platform/`, `site/`, and `lib/` import only themselves, and only routes and screens import `site/`.
 - In the editor, tools don't import each other, and reach the editor through `defineTool.ts`, `toolSpec.ts`, and `editorContext.ts`, besides the types of the canvas's input (`canvasInputFor.ts`) and, for text, its mode (`editorMode.ts`). `shell/` and `tools/stickers/` import nothing else from the editor (except `shortcuts.ts` for tool key labels); `session/` and `detection/` import nothing else from it; `canvas/` imports nothing else from the editor but `shell/`, and tools may import `canvas/`.
 
 `biome.json`'s `noRestrictedImports` overrides enforce these boundaries, and
