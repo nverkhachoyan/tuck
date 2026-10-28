@@ -2,6 +2,8 @@
 
 Researched October 28, 2026. This plan moves the app from Expo SDK 57 to SDK 58, then React Native Skia to its new package name, and later to Skia 3. It covers what changes, what in this code it touches, and the order to do it in.
 
+**To implement:** follow section 3, which is safe to do now. Section 4 (Skia 3) is blocked on an upstream issue, and section 5 (Gesture Handler's hooks) comes after SDK 58 settles.
+
 ## 1. Where things stand
 
 Expo SDK 58 came out on October 15, 2026 (`expo@58.0.21` is `latest`). Its `bundledNativeModules.json` pins `@shopify/react-native-skia` 2.14.0, which is the last release under that name. Skia 2.14 also needs `react-native-worklets` 0.7 or later and Reanimated 4, which SDK 58 pins too.
@@ -133,23 +135,37 @@ What changes even on the builders:
 
 ## 3. Steps
 
+These steps are safe to do now, in this order. None of them needs Skia 3, and each keeps the editor's sRGB preview:
+* Skia stays on 2.x throughout: `@shopify/react-native-skia` 2.14.0 under SDK 58, then `react-native-skia` 2.15.x.
+* 2.15.2 still has `Canvas`'s `colorSpace` prop and the 2.x API names (`MakeImageFromEncoded`, `makeNonTextureImage`, `Skia.Image.MakeImage`), checked in the published package.
+
+Rules for the whole upgrade:
+* Don't install `react-native-skia@3` or take `latest` for it. Pin an exact 2.x version of `react-native-skia` (its `release-2.x` tag).
+* Keep `colorSpace="srgb"` on `EditorCanvas` and `CropCanvas`.
+* Skia 3 waits for [wcandillon/react-native-skia#4355](https://github.com/wcandillon/react-native-skia/issues/4355) (section 4).
+
 Each step ends with `npm run check`, `npm run typecheck`, `npm test`, and `npm run build:web`, and is its own commit.
 
-1. **Small packages.** Bump `zustand`, `@biomejs/biome`, and `@types/react-dom`. Run `npm run format`.
-2. **Expo SDK 58.** On a branch:
+1. **Small packages.** Bump `zustand`, `@biomejs/biome`, and `@types/react-dom`. Run `npm run format`. The risk is a new Biome lint rule.
+2. **MediaPipe and ONNX Runtime web.** Do this together with step 1, as a warm-up before SDK 58. Bump `@mediapipe/tasks-vision` to 1.2.0 and `onnxruntime-web` to 1.31.1, and rerun `npm install` so `postinstall` copies the new assets. `build:web`'s CSP check and `copy-web-assets.mjs`'s file names are where it breaks. Then check Find's faces and Pick on web.
+3. **Expo SDK 58.** The largest step: do it on its own branch, and run the full verification (section 6) before merging it. Its risks are unrelated to Skia's color space (section 2): Gesture Handler 3, the async `File.write()`, strict TypeScript ref types, R8 in Android release builds, and Expo Router's async routes on web.
    1. `npx expo install expo@^58.0.0 --fix`, then `npx expo-doctor@latest`. Check that it pinned Skia to `2.14.0` exactly (the app pins Skia exactly today), and that `react-native-safe-area-context` came along (the release notes call it out). Run `npm run format` and check the lockfile with `git diff -w`, per AGENTS.md.
    2. Make `typecheck` pass: the `File.write` calls, ref types, Gesture Handler's renamed types, and anything from Skia's `SkPath` and font types.
    3. Remove `plugins/withSceneLifecycle.js`.
    4. Regenerate `ios/` and `android/` (`npx expo prebuild --clean`), with `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` for CocoaPods. Try precompiled modules first.
    5. Bump `react`, `react-dom`, and `@types/react` in `docs/interactive` to match, and build it: its lessons compile `render/` against the root's Skia.
-3. **Skia's new name.** `npm uninstall @shopify/react-native-skia`, then `npm install --save-exact react-native-skia@2.15.2`. Rewrite the imports, `index.web.ts`, `loadSkia.ts`, and `copy-web-assets.mjs`. Rerun `npm install` so `postinstall` copies `canvaskit.wasm` from the new path, and build `docs/interactive`.
-4. **MediaPipe and ONNX Runtime web.** Bump both, rerun `npm install` so `postinstall` copies the new assets, and check `build:web`'s CSP check.
-5. **Verify** (section 6).
-6. **Update the docs.** In AGENTS.md, the learnings that name "SDK 57" (`expo-image-manipulator`, `expo-media-library`, `expo-file-system`), and any learning this upgrade made untrue. In `docs/development.md`, the precompiled modules note. In `docs/architecture.md`, nothing unless a file moved.
+   6. Verify (section 6).
+4. **Skia's new name**, right after SDK 58.
+   * Why now: `@shopify/react-native-skia` gets no more releases, so fixes reach only the new name, and 2.15.1 fixes web assets on React Native 0.87 and later.
+   * `npm uninstall @shopify/react-native-skia`, then `npm install --save-exact react-native-skia@2.15.2` (or the latest 2.15.x). Check that `package.json` doesn't pick up a 3.x version.
+   * Rewrite the imports (about 50 files: `git grep -l "@shopify/react-native-skia" -- . ":!docs/plans" ":!package-lock.json" | xargs perl -pi -e 's#\@shopify/react-native-skia#react-native-skia#g'`), plus `index.web.ts`, `docs/interactive`'s `loadSkia.ts`, and `copy-web-assets.mjs`.
+   * Rerun `npm install` so `postinstall` copies `canvaskit.wasm` from the new path, and rerun `pod install`: Skia's podspec copies its iOS libraries into `node_modules` then, and a fresh `npm install` deletes them.
+   * Build `docs/interactive`, and smoke-test the editor on web and the iOS simulator.
+5. **Update the docs.** In AGENTS.md, the learnings that name "SDK 57" (`expo-image-manipulator`, `expo-media-library`, `expo-file-system`), and any learning this upgrade made untrue. In `docs/development.md`, the precompiled modules note. In `docs/architecture.md`, nothing unless a file moved.
 
 ## 4. Later: React Native Skia 3
 
-A separate change, after SDK 58 and the rename have settled. It's blocked on the color space (step 1), and should wait for the release pace to slow.
+**Blocked: don't start until [wcandillon/react-native-skia#4355](https://github.com/wcandillon/react-native-skia/issues/4355) gives a canvas a way to render in sRGB.** Then repeat the color-space test (step 1) on that release before anything else. It's a separate change, after SDK 58 and the rename have settled.
 
 1. **The color space: tested October 28, 2026, and it blocks.**
    * **Setup.** A test screen drew each operation onto a `Canvas` with `colorSpace="srgb"`, onto one without it, and offscreen with `drawAsImage` (the export's path). It ran once on 2.6.2 (SDK 57's build) and once on 3.8.1 (a development build of SDK 57 with `react-native-skia@3.8.1`).
