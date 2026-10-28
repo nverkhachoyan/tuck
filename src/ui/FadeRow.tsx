@@ -17,8 +17,7 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { fadeTo } from "@/ui/gradient";
-import { colors } from "@/ui/theme";
+import { fadeTo } from "./gradient";
 import {
 	fadeCut,
 	fadeCutLeft,
@@ -26,6 +25,7 @@ import {
 	leafEdges,
 	rowEdges,
 } from "./rowFade";
+import { colors } from "./theme";
 
 // How wide the fade is. On either side it ends on the first option that
 // doesn't fit whole, so the edge falls between options instead of across a label.

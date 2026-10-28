@@ -1,27 +1,17 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
 	Platform,
-	Pressable,
 	StyleSheet,
-	Text,
 	TextInput,
 	View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Button } from "@/ui/Button";
-import { CheckerFill } from "@/ui/CheckerFill";
-import { compactControls } from "@/ui/density";
-import { gradientBackground, HUE_GRADIENT } from "@/ui/gradient";
-import { IconButton } from "@/ui/IconButton";
-import { interaction } from "@/ui/interaction";
-import { Popover } from "@/ui/Popover";
-import { Surface } from "@/ui/Surface";
-import { colors, radii, typography, webTransition } from "@/ui/theme";
-import { ColorSwatches, customSwatch } from "./ColorSwatches";
+import { gradientBackground, HUE_GRADIENT } from "./gradient";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "./hsv";
+import { IconButton } from "./IconButton";
+import { colors, radii, typography } from "./theme";
 
 // As wide as a row of seven swatches, so a picker on its own in a card is
 // the size of one under them.
@@ -31,218 +21,6 @@ const BAR_HEIGHT = 24;
 const THUMB = 24;
 // How far one step of a screen reader's adjust moves the hue, in degrees.
 const HUE_STEP = 10;
-
-/**
- * The swatches, and under them a picker for any color, which the custom
- * swatch opens and closes, for a tool's options card. `customColor` is the
- * editor's custom color: the custom swatch shows it, and picks it again
- * when the value isn't custom. A color from the picker goes to
- * `onPickCustom`, which should make it the custom color too, and so should
- * one from the canvas, which `onEyedropper` sets out to pick.
- */
-export function ColorOptions({
-	value,
-	customColor,
-	noneLabel,
-	onPick,
-	onPickCustom,
-	onEyedropper,
-	onSwatch,
-}: {
-	value: string | null;
-	customColor: string | null;
-	noneLabel?: string;
-	onPick: (color: string | null) => void;
-	onPickCustom: (color: string) => void;
-	onEyedropper?: () => void;
-	// After a swatch's color is picked, not the custom color's.
-	onSwatch?: () => void;
-}) {
-	const [pickerOpen, setPickerOpen] = useState(false);
-	// The picker's color while it's dragged, before it's picked.
-	const [draft, setDraft] = useState<string | null>(null);
-	const shown = draft ?? value;
-	// Opens the picker, or closes it once it's open.
-	const custom = customSwatch(shown, customColor, onPick, () =>
-		setPickerOpen(true),
-	);
-	return (
-		<>
-			<ColorSwatches
-				value={shown}
-				noneLabel={noneLabel}
-				custom={
-					pickerOpen
-						? { ...custom, onPress: () => setPickerOpen(false) }
-						: custom
-				}
-				onPick={(color) => {
-					setPickerOpen(false);
-					onPick(color);
-					onSwatch?.();
-				}}
-			/>
-			{pickerOpen && (
-				<ColorPicker
-					value={shown ?? customColor ?? "#FFFFFF"}
-					onChange={setDraft}
-					onChangeEnd={(color) => {
-						setDraft(null);
-						onPickCustom(color);
-					}}
-					onEyedropper={onEyedropper}
-				/>
-			)}
-		</>
-	);
-}
-
-// As tall as the context bar's other options.
-const CHIP = compactControls ? 36 : 44;
-const CHIP_SWATCH = 20;
-
-/**
- * The current color, as a swatch that opens `ColorOptions` in a popover: the
- * swatches, the custom color, and the eyedropper. A swatch closes it (see
- * `BarChip`), while the custom color's picker keeps it open to drag. Starting
- * the eyedropper closes it too, as a tray does, so the canvas is in view. `title` is
- * the word beside the swatch when several chips sit together. `label` is
- * what a screen reader hears.
- */
-export function ColorChip({
-	label,
-	title,
-	value,
-	customColor,
-	noneLabel,
-	onPick,
-	onPickCustom,
-	onEyedropper,
-	restoreFocus,
-}: {
-	label: string;
-	// A word beside the swatch, when several chips sit together and the
-	// swatch alone doesn't say which color it is. `label` stays the name a
-	// screen reader hears.
-	title?: string;
-	value: string | null;
-	customColor: string | null;
-	noneLabel?: string;
-	onPick: (color: string | null) => void;
-	onPickCustom: (color: string) => void;
-	onEyedropper?: () => void;
-	// Where focus goes when the palette closes, instead of back here.
-	restoreFocus?: () => void;
-}) {
-	return (
-		<SwatchChip
-			label={label}
-			title={title}
-			value={value}
-			empty="none"
-			restoreFocus={restoreFocus}
-		>
-			{(close) => (
-				<ColorOptions
-					value={value}
-					customColor={customColor}
-					noneLabel={noneLabel}
-					onPick={onPick}
-					onSwatch={close}
-					onPickCustom={onPickCustom}
-					onEyedropper={
-						onEyedropper &&
-						(() => {
-							close();
-							onEyedropper();
-						})
-					}
-				/>
-			)}
-		</SwatchChip>
-	);
-}
-
-/**
- * A color as a round swatch, with an optional word beside it, that opens its
- * choices in a popover, for the context bar.
- * - `value` null draws as a slash for no color (`empty: "none"`) or as the
- *   checkerboard for transparent (`empty: "transparent"`).
- * - `children` gets `close`, as `BarChip`'s do, to close once a choice is made.
- * - `label` is what a screen reader hears, for the chip and its popover.
- */
-export function SwatchChip({
-	label,
-	title,
-	value,
-	empty,
-	restoreFocus,
-	children,
-}: {
-	label: string;
-	title?: string;
-	value: string | null;
-	empty: "none" | "transparent";
-	// Where focus goes when the popover closes, instead of back here.
-	restoreFocus?: () => void;
-	children: (close: () => void) => ReactNode;
-}) {
-	const anchor = useRef<View>(null);
-	const [open, setOpen] = useState(false);
-	const close = () => setOpen(false);
-	return (
-		<>
-			<Pressable
-				ref={anchor}
-				accessibilityRole="button"
-				accessibilityLabel={label}
-				accessibilityState={{ expanded: open }}
-				aria-expanded={open}
-				onPress={() => setOpen((shown) => !shown)}
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.chip,
-						title ? styles.chipTitled : styles.chipRound,
-						webTransition,
-						hovered && styles.chipHovered,
-						pressed && styles.chipPressed,
-					];
-				}}
-			>
-				{title && <Text style={styles.chipTitle}>{title}</Text>}
-				<View
-					style={[
-						styles.chipSwatch,
-						value !== null
-							? { backgroundColor: value }
-							: empty === "none" && styles.chipEmpty,
-					]}
-				>
-					{value === null &&
-						(empty === "none" ? (
-							<View style={styles.chipSlash} />
-						) : (
-							<CheckerFill
-								width={CHIP_SWATCH}
-								height={CHIP_SWATCH}
-								cell={CHIP_SWATCH / 2}
-							/>
-						))}
-				</View>
-			</Pressable>
-			<Popover
-				anchor={anchor}
-				open={open}
-				onClose={close}
-				label={label}
-				restoreFocus={restoreFocus}
-			>
-				{children(close)}
-			</Popover>
-		</>
-	);
-}
 
 /**
  * Any color, picked from a field of the hue's shades (saturation across,
@@ -409,22 +187,6 @@ function HexField({
 const RED: Hsv = { hue: 0, saturation: 1, value: 1 };
 
 /**
- * Says the canvas is waiting to be tapped for a color, across its top, with
- * a way out. It doesn't take the canvas's touches.
- */
-export function EyedropperHint({ onCancel }: { onCancel: () => void }) {
-	return (
-		<View style={styles.hintArea}>
-			<Surface style={styles.hint} contentStyle={styles.hintContent}>
-				<Ionicons name="eyedrop-outline" size={18} color={colors.textPrimary} />
-				<Text style={styles.hintText}>Tap the canvas to pick its color</Text>
-				<Button label="Cancel" size="small" onPress={onCancel} />
-			</Surface>
-		</View>
-	);
-}
-
-/**
  * A drag across a view, reported as where the finger is, each from 0 to 1
  * across and down the view, from touch-down to lift. A tap counts too. It
  * runs on the JS thread: it only moves the picker's own state.
@@ -481,29 +243,6 @@ const styles = StyleSheet.create({
 	blackDown: gradientBackground(
 		"linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000)",
 	),
-	hintArea: {
-		position: "absolute",
-		top: 12,
-		left: 12,
-		right: 12,
-		alignItems: "center",
-		pointerEvents: "box-none",
-	},
-	hint: {
-		borderRadius: radii.medium,
-	},
-	hintContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-		paddingLeft: 14,
-		paddingRight: 8,
-		paddingVertical: 8,
-	},
-	hintText: {
-		...typography.label,
-		color: colors.textPrimary,
-	},
 	row: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -539,50 +278,5 @@ const styles = StyleSheet.create({
 	},
 	barThumb: {
 		top: "50%",
-	},
-	chip: {
-		height: CHIP,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	chipRound: {
-		width: CHIP,
-		borderRadius: CHIP / 2,
-	},
-	chipHovered: {
-		backgroundColor: colors.hoverOverlay,
-	},
-	chipPressed: {
-		backgroundColor: colors.pressedOverlay,
-		transform: [{ scale: 0.92 }],
-	},
-	chipTitled: {
-		flexDirection: "row",
-		gap: 6,
-		paddingHorizontal: 12,
-		borderRadius: radii.small,
-	},
-	chipTitle: {
-		...typography.labelStrong,
-		color: colors.textPrimary,
-	},
-	chipSwatch: {
-		width: CHIP_SWATCH,
-		height: CHIP_SWATCH,
-		borderRadius: CHIP_SWATCH / 2,
-		borderWidth: 1,
-		borderColor: colors.swatchRing,
-		alignItems: "center",
-		justifyContent: "center",
-		overflow: "hidden",
-	},
-	chipEmpty: {
-		backgroundColor: colors.surface,
-	},
-	chipSlash: {
-		width: 28,
-		height: 2,
-		backgroundColor: colors.textSecondary,
-		transform: [{ rotate: "-45deg" }],
 	},
 });

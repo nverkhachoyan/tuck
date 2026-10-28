@@ -241,9 +241,10 @@
 											"../**",
 											"!@/platform/preferenceStore",
 											"!@/ui/**",
-											"!../ui/**"
+											"!../ui/**",
+											"!../model/color.ts"
 										],
-										"message": "ui/ imports only itself and platform/preferenceStore, never app code. See AGENTS.md."
+										"message": "ui/ imports only itself, platform/preferenceStore, and model/color, never app code. See AGENTS.md."
 									}
 								]
 							}

@@ -1,8 +1,8 @@
 import { StyleSheet, View } from "react-native";
+import { FadeGroup } from "@/ui/FadeRow";
 import { gradientBackground } from "@/ui/gradient";
 import { RING_TARGET, RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
-import { FadeGroup } from "./FadeRow";
 
 const SWATCH_SIZE = 26;
 // The custom color's dot, inside the custom swatch's rainbow.

@@ -5,7 +5,7 @@ import { shapeKinds } from "@/model/layers/shape";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../../editorContext";
-import { ColorChip, ColorOptions } from "../../shell/ColorPicker";
+import { ColorChip, ColorOptions } from "../../shell/ColorOptions";
 import {
 	BarChip,
 	BarGroup,

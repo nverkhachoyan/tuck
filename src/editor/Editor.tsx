@@ -46,7 +46,7 @@ import {
 	ToolTrays,
 } from "./PanelViews";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
-import { EyedropperHint } from "./shell/ColorPicker";
+import { EyedropperHint } from "./shell/ColorOptions";
 import { Dock, DockFooter } from "./shell/Dock";
 import { HeaderActions } from "./shell/HeaderActions";
 import { SaveErrorBanner } from "./shell/SaveErrorBanner";

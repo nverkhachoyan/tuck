@@ -10,12 +10,14 @@ import {
 } from "@/model/layers/text";
 import { TEXT_FONTS } from "@/render/fonts";
 import { Chip } from "@/ui/Chip";
+import { ColorPicker } from "@/ui/ColorPicker";
+import { FadeRow, MeasuredItem } from "@/ui/FadeRow";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { colors, typography, webTransition } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../editorContext";
 import type { TextColorKey } from "../editorMode";
-import { ColorChip, ColorPicker } from "../shell/ColorPicker";
+import { ColorChip } from "../shell/ColorOptions";
 import { ColorSwatches, customSwatch } from "../shell/ColorSwatches";
 import {
 	BarChip,
@@ -23,7 +25,6 @@ import {
 	BarSections,
 	OptionSegments,
 } from "../shell/ContextBar";
-import { FadeRow, MeasuredItem } from "../shell/FadeRow";
 import { ToolOption, ToolOptions } from "../shell/ToolOptions";
 
 // The minimum comfortable touch target. Controls here are boxes this big,

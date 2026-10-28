@@ -5,7 +5,7 @@ import { Highlight } from "@/ui/Highlight";
 import { chosenOnWeb } from "@/ui/interaction";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, space, typography } from "@/ui/theme";
-import { ColorChip, ColorOptions } from "./ColorPicker";
+import { ColorChip, ColorOptions } from "./ColorOptions";
 import { BarChip, OptionSegments } from "./ContextBar";
 import type { RedactLook } from "./redactLook";
 import { ToolChoices, ToolOption } from "./ToolOptions";

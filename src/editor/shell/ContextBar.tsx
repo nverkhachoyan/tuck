@@ -20,13 +20,13 @@ import {
 	View,
 } from "react-native";
 import { compactControls } from "@/ui/density";
+import { FadeGroup, FadeRow, MeasuredItem, Unmeasured } from "@/ui/FadeRow";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { ModeActions } from "./Dock";
-import { FadeGroup, FadeRow, MeasuredItem, Unmeasured } from "./FadeRow";
 
 // A segment's, an action's, and a chip's height: a touch target, or less
 // where controls are sized for a mouse.

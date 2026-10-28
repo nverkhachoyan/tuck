@@ -7,9 +7,9 @@ import { BackgroundPicker, backgroundLabel } from "@/ui/BackgroundPicker";
 import { Chip } from "@/ui/Chip";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
+import { SwatchChip } from "@/ui/SwatchChip";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { useEditorContext } from "../../editorContext";
-import { SwatchChip } from "../../shell/ColorPicker";
 import {
 	BarButton,
 	BarChip,
