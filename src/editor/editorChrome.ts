@@ -126,14 +126,12 @@ export function modeChrome({
 export type RailChosenToolInput = {
 	tool: ToolId | null;
 	editingText: boolean;
-	cropping: boolean;
 	stickersOpen: boolean;
 };
 
 /**
  * Which tool the wide rail highlights as chosen:
  * - `editingText`: text being typed, which marks Text.
- * - `cropping`: the crop screen, which marks Crop.
  * - `stickersOpen`: the sticker popover, which marks Sticker.
  * - `tool`: the open tool.
  * When none is active, no tool is marked.
@@ -141,11 +139,9 @@ export type RailChosenToolInput = {
 export function railChosenTool({
 	tool,
 	editingText,
-	cropping,
 	stickersOpen,
 }: RailChosenToolInput): string | null {
 	if (editingText) return "text";
-	if (cropping) return "crop";
 	if (stickersOpen) return "sticker";
 	return tool;
 }

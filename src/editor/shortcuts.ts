@@ -1,4 +1,5 @@
 import type { OwnTool, ToolEntry } from "./shell/toolList.ts";
+import type { ToolSpecs } from "./toolSpec.ts";
 
 // Nudge distances in screen pixels, so a nudge looks the same at any zoom.
 const NUDGE_PX = 1;
@@ -11,7 +12,6 @@ export const TOOL_KEYS: Record<OwnTool, string> = {
 	text: "T",
 	sticker: "A",
 	photo: "P",
-	crop: "C",
 };
 export const LAYERS_KEY = "L";
 
@@ -124,9 +124,15 @@ function modifiedShortcut(press: KeyPress): Shortcut | null {
 
 /**
  * Every shortcut, as the help overlay lists them, in the notation tooltips
- * take ("mod+shift+Z"), with a line for each of `tools` in their order.
+ * take ("mod+shift+Z"), with a line for each of `tools` in their order, and
+ * a group for each tool whose spec in `specs` takes the keys, which Enter and
+ * Escape apply.
  */
-export function shortcutGroups(tools: readonly ToolEntry[]): ShortcutGroup[] {
+export function shortcutGroups(
+	tools: readonly ToolEntry[],
+	specs: ToolSpecs,
+): ShortcutGroup[] {
+	const keyTakers = tools.filter((tool) => specs[tool.id]?.takesKeys);
 	return [
 		{
 			title: "Tools",
@@ -135,7 +141,15 @@ export function shortcutGroups(tools: readonly ToolEntry[]): ShortcutGroup[] {
 				{ keys: LAYERS_KEY, action: "Show or hide layers" },
 			],
 		},
-		...OTHER_GROUPS,
+		...EDITING_GROUPS,
+		...keyTakers.map((tool) => ({
+			title: tool.label,
+			items: [
+				{ keys: "Enter", action: "Apply" },
+				{ keys: "Escape", action: "Apply" },
+			],
+		})),
+		HELP_GROUP,
 	];
 }
 
@@ -144,7 +158,7 @@ export type ShortcutGroup = {
 	items: { keys: string; action: string }[];
 };
 
-const OTHER_GROUPS: ShortcutGroup[] = [
+const EDITING_GROUPS: ShortcutGroup[] = [
 	{
 		title: "Editing",
 		items: [
@@ -170,15 +184,9 @@ const OTHER_GROUPS: ShortcutGroup[] = [
 			{ keys: "mod+0", action: "Zoom to fit" },
 		],
 	},
-	{
-		title: "Crop",
-		items: [
-			{ keys: "Enter", action: "Apply" },
-			{ keys: "Escape", action: "Apply" },
-		],
-	},
-	{
-		title: "Help",
-		items: [{ keys: "?", action: "Show these shortcuts" }],
-	},
 ];
+
+const HELP_GROUP: ShortcutGroup = {
+	title: "Help",
+	items: [{ keys: "?", action: "Show these shortcuts" }],
+};

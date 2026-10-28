@@ -785,7 +785,6 @@
 											"@/editor/**",
 											"../*",
 											"../tools/**",
-											"../crop/**",
 											"../layers/**",
 											"../stickers/**",
 											"../text/**",
@@ -794,7 +793,7 @@
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -826,7 +825,6 @@
 											"@/editor/**",
 											"../../*",
 											"../../tools/**",
-											"../../crop/**",
 											"../../layers/**",
 											"../../stickers/**",
 											"../../text/**",
@@ -835,7 +833,7 @@
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Crop, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
+										"message": "canvas/ imports only shell/ from the editor: not the editor root, a tool, Layers, Stickers, Text, detection/, a route, a screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}
@@ -866,20 +864,20 @@
 											"@/editor",
 											"@/editor/**",
 											"../adjust/**",
+											"../crop/**",
 											"../cutout/**",
 											"../draw/**",
 											"../find/**",
 											"../redact/**",
-											"../../crop/**",
 											"../../layers/**",
 											"../../stickers/**",
 											"../../text/**",
 											"../../adjust/**",
+											"../../crop/**",
 											"../../cutout/**",
 											"../../draw/**",
 											"../../find/**",
 											"../../redact/**",
-											"../../../crop/**",
 											"../../../layers/**",
 											"../../../stickers/**",
 											"../../../text/**",
@@ -890,7 +888,7 @@
 											"../../../../app/**",
 											"../../../../site/**"
 										],
-										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools, and Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}
@@ -900,11 +898,7 @@
 			}
 		},
 		{
-			"includes": [
-				"src/editor/crop/**",
-				"src/editor/layers/**",
-				"src/editor/text/**"
-			],
+			"includes": ["src/editor/layers/**", "src/editor/text/**"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -925,12 +919,10 @@
 											"@/editor",
 											"@/editor/**",
 											"../tools/**",
-											"../crop/**",
 											"../layers/**",
 											"../stickers/**",
 											"../text/**",
 											"../../tools/**",
-											"../../crop/**",
 											"../../layers/**",
 											"../../stickers/**",
 											"../../text/**",
@@ -941,7 +933,7 @@
 											"../../../app/**",
 											"../../../site/**"
 										],
-										"message": "The editor's tools, and Crop, Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+										"message": "The editor's tools, and Layers, Stickers, and Text, don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
 									}
 								]
 							}

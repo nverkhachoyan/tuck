@@ -8,6 +8,8 @@ import { createContext, useContext } from "react";
  * - `startEyedropper`: picks a color from the canvas, handing it to `apply`.
  * - `trayOpen`: whether the phone's tray of tool options is open.
  * - `bottomInset`: what a tray over the dock clears.
+ * - `wide`: whether the window is wide, with a rail and a header bar in
+ *   place of the dock.
  * - `cancel`: the open tool's Cancel.
  */
 export type EditorContextValue = {
@@ -18,6 +20,7 @@ export type EditorContextValue = {
 	toggleTray: () => void;
 	closeTray: () => void;
 	bottomInset: number;
+	wide: boolean;
 	cancel: () => void;
 };
 

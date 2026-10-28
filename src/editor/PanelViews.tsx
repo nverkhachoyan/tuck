@@ -1,4 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
+import { StyleSheet, View } from "react-native";
+import { colors } from "@/ui/theme";
 import type { OpenTool, ToolControllers } from "./defineTool";
 import type { DockPanel } from "./editorChrome";
 import {
@@ -85,7 +87,7 @@ const OTHER_PANELS: Record<
 /** `tool`'s view in `slot`, given its controller, or null without one. */
 function toolView(
 	{ definition, controller }: OpenTool,
-	slot: "Dock" | "Bar" | "Tray" | "Results",
+	slot: "Dock" | "Bar" | "Tray" | "Results" | "Stage" | "Controls",
 ) {
 	const View = definition.views[slot];
 	return View ? <View controller={controller} /> : null;
@@ -135,6 +137,35 @@ export function ToolTrays({
 				/>
 			)}
 		</>
+	);
+}
+
+/**
+ * The open tool's `Stage`, opaque over the canvas and clear of what covers
+ * it (`inset`: the dock, the rail, the inspector), with its `Controls`
+ * under it.
+ */
+export function ToolStage({
+	tool,
+	inset,
+}: {
+	tool: OpenTool;
+	inset: { left: number; right: number; bottom: number };
+}) {
+	return (
+		<View
+			style={[
+				styles.stage,
+				{
+					paddingLeft: inset.left,
+					paddingRight: inset.right,
+					paddingBottom: inset.bottom,
+				},
+			]}
+		>
+			<View style={styles.canvas}>{toolView(tool, "Stage")}</View>
+			{toolView(tool, "Controls")}
+		</View>
 	);
 }
 
@@ -217,3 +248,13 @@ export function DockContent({
 	if (open) return toolView(open, "Dock");
 	return OTHER_PANELS[panel as "text" | "layer"].dock(context);
 }
+
+const styles = StyleSheet.create({
+	stage: {
+		...StyleSheet.absoluteFill,
+		backgroundColor: colors.canvasWell,
+	},
+	canvas: {
+		flex: 1,
+	},
+});

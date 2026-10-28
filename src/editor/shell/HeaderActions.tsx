@@ -7,7 +7,7 @@ import { LAYERS_KEY } from "../shortcuts";
 /**
  * The header's actions: Reset while the open tool has changes to take back,
  * the layers button when the inspector isn't already open, undo and redo,
- * and Export.
+ * and Export, unless it's hidden.
  */
 export function HeaderActions({
 	onReset,
@@ -24,7 +24,7 @@ export function HeaderActions({
 	canRedo: boolean;
 	onUndo: () => void;
 	onRedo: () => void;
-	onExport: () => void;
+	onExport?: () => void;
 }) {
 	return (
 		<View style={styles.actions}>
@@ -52,16 +52,18 @@ export function HeaderActions({
 				disabled={!canRedo}
 				onPress={onRedo}
 			/>
-			<View style={styles.export}>
-				<Button
-					label="Export"
-					icon="share-outline"
-					variant="primary"
-					size="small"
-					shortcut="mod+E"
-					onPress={onExport}
-				/>
-			</View>
+			{onExport && (
+				<View style={styles.export}>
+					<Button
+						label="Export"
+						icon="share-outline"
+						variant="primary"
+						size="small"
+						shortcut="mod+E"
+						onPress={onExport}
+					/>
+				</View>
+			)}
 		</View>
 	);
 }

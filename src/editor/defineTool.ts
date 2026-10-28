@@ -10,6 +10,15 @@ import type { ToolId, ToolSpec } from "./toolSpec";
 
 type ToolView<C> = ComponentType<{ controller: C }>;
 
+type ToolViews<C> = {
+	Dock: ToolView<C>;
+	Bar?: ToolView<C>;
+	Tray?: ToolView<C>;
+	Results?: ToolView<C>;
+	Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
+	Controls?: ToolView<C>;
+};
+
 /**
  * What the editor gives a tool's hook, which runs in the editor's body,
  * above the context its views read.
@@ -48,6 +57,10 @@ export type ToolEnv = {
  *   eyedropper isn't running.
  * - `views.Inspector`: a section above the wide inspector's layers, given
  *   them as children. A tool with one opens the inspector.
+ * - `views.Stage`: drawn in the canvas's place, opaque over it, while it's
+ *   open. A tool with one has no `canvasInput` or `finishStroke`.
+ * - `views.Controls`: a strip under the canvas while it's open, above the
+ *   phone's dock or along the bottom of a wide stage.
  * - `prepare`: readies it before it opens, as by picking the sub-tool that
  *   fits the selection.
  * - `started`: what it does with the photo it opened on, once its undo
@@ -68,17 +81,8 @@ export type ToolEnv = {
  */
 export type ToolDefinition<C> = {
 	useController: (env: ToolEnv) => C;
-	views: {
-		Dock: ToolView<C>;
-		Bar?: ToolView<C>;
-		Tray?: ToolView<C>;
-		Results?: ToolView<C>;
-		Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
-	};
 	prepare?: (controller: C) => void;
 	started?: (controller: C, image: ImageLayer) => void;
-	canvasInput?: (controller: C) => CanvasInput | null;
-	finishStroke?: (controller: C, stroke: ToolStroke) => void;
 	doneLabel?: (controller: C) => string | undefined;
 	done?: (controller: C) => void;
 	deselectOnDone?: boolean;
@@ -86,11 +90,23 @@ export type ToolDefinition<C> = {
 	announcement?: (controller: C) => string | null;
 } & (
 	| {
-			spec: ToolSpec & { sized: true };
-			stepSize: (controller: C, step: 1 | -1) => void;
+			views: ToolViews<C> & { Stage?: never };
+			canvasInput?: (controller: C) => CanvasInput | null;
+			finishStroke?: (controller: C, stroke: ToolStroke) => void;
 	  }
-	| { spec: ToolSpec & { sized: false }; stepSize?: never }
-);
+	| {
+			views: ToolViews<C> & { Stage: ToolView<C> };
+			canvasInput?: never;
+			finishStroke?: never;
+	  }
+) &
+	(
+		| {
+				spec: ToolSpec & { sized: true };
+				stepSize: (controller: C, step: 1 | -1) => void;
+		  }
+		| { spec: ToolSpec & { sized: false }; stepSize?: never }
+	);
 
 /** A tool's definition, with its controller's type checked against it. */
 export function defineTool<C>(

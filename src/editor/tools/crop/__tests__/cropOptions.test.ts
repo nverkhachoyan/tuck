@@ -4,12 +4,12 @@ import { describe, test } from "node:test";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-} from "../../../model/document.ts";
-import { framingAnchor } from "../../../model/framing.ts";
-import { createDrawingLayer } from "../../../model/layers/drawing.ts";
-import type { Layer } from "../../../model/layers/layer.ts";
-import { createRedactionBox } from "../../../model/layers/redaction.ts";
-import { createTextLayer } from "../../../model/layers/text.ts";
+} from "../../../../model/document.ts";
+import { framingAnchor } from "../../../../model/framing.ts";
+import { createDrawingLayer } from "../../../../model/layers/drawing.ts";
+import type { Layer } from "../../../../model/layers/layer.ts";
+import { createRedactionBox } from "../../../../model/layers/redaction.ts";
+import { createTextLayer } from "../../../../model/layers/text.ts";
 import { turnedSize } from "../cropGeometry.ts";
 import {
 	ASPECT_ROWS,

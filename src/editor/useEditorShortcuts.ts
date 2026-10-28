@@ -154,3 +154,46 @@ function isEditable(target: EventTarget | null) {
 			target.tagName === "SELECT")
 	);
 }
+
+/**
+ * Keys on web for an open tool that takes them (see `takesKeys`), only while
+ * `enabled`: Escape runs Done from anywhere, as it's Done in the other
+ * tools, and Enter from the canvas, while controls keep their own.
+ */
+export function useToolKeys({
+	enabled,
+	done,
+}: {
+	enabled: boolean;
+	done: () => void;
+}) {
+	const onDone = useEffectEvent(done);
+	useEffect(() => {
+		if (Platform.OS !== "web" || !enabled) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			// A popover takes Escape first, in the capture phase, and marks it
+			// handled. Running Done here too would close the tool as the menu
+			// closed.
+			if (event.defaultPrevented) return;
+			if (
+				event.key === "Escape" ||
+				(event.key === "Enter" && !isInteractiveElement(event.target))
+			) {
+				onDone();
+				event.preventDefault();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [enabled]);
+}
+
+/** Whether a web key event belongs to a control that handles Enter itself. */
+function isInteractiveElement(target: EventTarget | null): boolean {
+	return (
+		target instanceof Element &&
+		target.closest(
+			'button, a, input, select, textarea, [role="button"], [role="slider"], [role="switch"], [contenteditable="true"]',
+		) !== null
+	);
+}

@@ -8,8 +8,11 @@ import {
 import { scheduleOnRN } from "react-native-worklets";
 import type { Rect, Size } from "@/model/geometry";
 import { hapticTick } from "@/platform/haptics";
-import { handleMetrics, hasFinePointer } from "../canvas/handleMetrics";
-import { type DocumentViewport, viewRectToDocument } from "../canvas/viewport";
+import { handleMetrics, hasFinePointer } from "../../canvas/handleMetrics";
+import {
+	type DocumentViewport,
+	viewRectToDocument,
+} from "../../canvas/viewport";
 import { type CropHandle, cropHandleAt, dragCrop } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
 

@@ -268,7 +268,6 @@ describe("railChosenTool", () => {
 	const idle = {
 		tool: null,
 		editingText: false,
-		cropping: false,
 		stickersOpen: false,
 	};
 
@@ -286,35 +285,18 @@ describe("railChosenTool", () => {
 		assert.equal(railChosenTool({ ...idle, editingText: true }), "text");
 	});
 
-	test("cropping marks Crop", () => {
-		assert.equal(railChosenTool({ ...idle, cropping: true }), "crop");
-	});
-
 	test("stickers open marks Sticker", () => {
 		assert.equal(railChosenTool({ ...idle, stickersOpen: true }), "sticker");
 	});
 
-	test("text being typed comes before crop, stickers, and tools", () => {
+	test("text being typed comes before stickers and tools", () => {
 		assert.equal(
 			railChosenTool({
 				tool: "draw",
 				editingText: true,
-				cropping: true,
 				stickersOpen: true,
 			}),
 			"text",
-		);
-	});
-
-	test("crop comes before stickers and tools", () => {
-		assert.equal(
-			railChosenTool({
-				tool: "draw",
-				editingText: false,
-				cropping: true,
-				stickersOpen: true,
-			}),
-			"crop",
 		);
 	});
 
@@ -323,7 +305,6 @@ describe("railChosenTool", () => {
 			railChosenTool({
 				tool: "draw",
 				editingText: false,
-				cropping: false,
 				stickersOpen: true,
 			}),
 			"sticker",

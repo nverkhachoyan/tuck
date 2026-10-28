@@ -14,6 +14,9 @@ export type ToolId = string;
  *   gone. A tool with a target waits for an image before its button shows.
  * - `tray`: whether it has a tray of options on the phone.
  * - `sized`: whether `[` and `]` step its brush.
+ * - `takesKeys`: whether it keeps a draft of its own until Done. While it's
+ *   open the editor's shortcuts, paste, and drop are off, Escape and Enter
+ *   run Done, Export hides, and the layers can't be changed.
  * - `label`, `icon`: its button, and the title of its panel.
  * - `key`: the letter that picks it up.
  * - `shortcut`: its line in the list of shortcuts.
@@ -23,6 +26,7 @@ export type ToolSpec = {
 	target: "none" | "photo" | "image";
 	tray: boolean;
 	sized: boolean;
+	takesKeys?: true;
 	label: string;
 	icon: ToolIcon;
 	key: string;

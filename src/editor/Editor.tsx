@@ -14,7 +14,6 @@ import { Toast } from "@/ui/Toast";
 import { space } from "@/ui/theme";
 import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
 import { BUILT_IN_TOOLS } from "./builtInTools";
-import { CropTool } from "./crop/CropTool";
 import type { ToolList } from "./defineTool";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import { EditorHeader } from "./EditorHeader";
@@ -35,6 +34,7 @@ import {
 	DockContent,
 	hasInspectorSection,
 	type PanelContext,
+	ToolStage,
 	ToolTrays,
 } from "./PanelViews";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
@@ -63,7 +63,7 @@ import { useEditNotice } from "./useEditNotice";
 import { useEditorChrome } from "./useEditorChrome";
 import { useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
-import { useEditorShortcuts } from "./useEditorShortcuts";
+import { useEditorShortcuts, useToolKeys } from "./useEditorShortcuts";
 import { useEditorTools } from "./useEditorTools";
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
@@ -101,7 +101,7 @@ export function Editor({
 			toolbar,
 			entries,
 			toolsByKey: toolsByKey(entries),
-			shortcutGroups: shortcutGroups(entries),
+			shortcutGroups: shortcutGroups(entries, specs),
 		};
 	});
 	const { specs } = toolbox;
@@ -147,8 +147,10 @@ export function Editor({
 	// out, taps pick a subject, or strokes paint the cut. A tap away from what
 	// the tool works on puts it down, as Done does.
 	const tool = mode.type === "tool" ? mode.tool : null;
-	const cropping = mode.type === "crop";
-	const keysTaken = takesKeys(mode);
+	const keysTaken = takesKeys(mode, specs);
+	// A tool that keeps a draft until Done: Export would leave it out, and an
+	// edit to the layers would change the document under it.
+	const draftOpen = tool !== null && specs[tool]?.takesKeys === true;
 	const layersOpen = modeState.sheet === "layers";
 	const stickersOpen = modeState.sheet === "stickers";
 
@@ -197,8 +199,6 @@ export function Editor({
 		done,
 		cancel,
 		finishTool,
-		closeCrop,
-		finishCrop,
 		stepToolSize,
 		resetEdit,
 		announcements,
@@ -221,6 +221,7 @@ export function Editor({
 	});
 
 	const editingText = text.edit !== null;
+	const openTool = tool ? controllers[tool] : undefined;
 	const savedStickers = useSavedStickers();
 	const stickerSave = useStickerSave(savedStickers.save, host.importPhoto);
 	// Find and Adjust live in the inspector, so they open it even though
@@ -261,12 +262,14 @@ export function Editor({
 
 	const selectedPlace = useArrangeSelected(document, selectedLayer);
 
-	// Text being typed is finished first, so it goes where the editor does.
+	// Text being typed is finished first, so it goes where the editor does,
+	// and Back puts the open tool down as Done does.
 	const openExport = () => {
 		text.finish();
 		host.openExport();
 	};
 	const leave = () => {
+		finishTool();
 		text.finish();
 		host.leave();
 	};
@@ -305,6 +308,7 @@ export function Editor({
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
 	});
+	useToolKeys({ enabled: focused && draftOpen, done });
 
 	const layerList = layerListProps({
 		document,
@@ -349,6 +353,7 @@ export function Editor({
 		toggleTray: () => dispatchMode({ type: "toggleToolOptions" }),
 		closeTray: () => dispatchMode({ type: "closeToolOptions" }),
 		bottomInset: dockInset,
+		wide,
 		cancel,
 	};
 	const panels: PanelContext = {
@@ -427,7 +432,7 @@ export function Editor({
 							canRedo={canRedo && !editingText}
 							onUndo={undo}
 							onRedo={redo}
-							onExport={openExport}
+							onExport={draftOpen ? undefined : openExport}
 						/>
 					</EditorHeader>
 					{/* The dock covers the stage's bottom, which runs under it. On a
@@ -455,6 +460,9 @@ export function Editor({
 							rightInset={layout.canvasInset.right}
 							selectionBar={selectionBar}
 						/>
+						{openTool?.definition.views.Stage && (
+							<ToolStage tool={openTool} inset={layout.canvasInset} />
+						)}
 						{!wide && (
 							<ToolTrays context={panels} modeState={modeState} panel={panel} />
 						)}
@@ -480,7 +488,6 @@ export function Editor({
 								chosen={railChosenTool({
 									tool,
 									editingText,
-									cropping,
 									stickersOpen,
 								})}
 								addBusy={addBusy}
@@ -502,6 +509,7 @@ export function Editor({
 								context={panels}
 								panel={panel}
 								layerList={layerList}
+								layersInert={draftOpen}
 							/>
 						) : !wide ? (
 							<Dock
@@ -555,14 +563,6 @@ export function Editor({
 					)}
 
 					{dragging && <DropOverlay label="Drop to add to the canvas" />}
-					{cropping && (
-						<CropTool
-							document={document}
-							wide={wide}
-							onCancel={closeCrop}
-							onDone={finishCrop}
-						/>
-					)}
 					{text.edit && (
 						<TextEditor
 							ref={text.editorRef}

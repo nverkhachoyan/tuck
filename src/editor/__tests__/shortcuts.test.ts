@@ -9,6 +9,7 @@ import {
 	shortcutGroups,
 	toolsByKey,
 } from "../shortcuts.ts";
+import type { ToolSpecs } from "../toolSpec.ts";
 
 const entries = toolbarEntries(BUILT_IN_SPECS, BUILT_IN_TOOLBAR);
 const tools = toolsByKey(entries);
@@ -155,11 +156,33 @@ describe("shortcutFor", () => {
 
 describe("shortcutGroups", () => {
 	test("lists each tool's line in the toolbar's order, then the layers", () => {
-		const [toolGroup] = shortcutGroups(entries);
+		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
 			["T", "D", "R", "F", "A", "C", "E", "B", "P", "L"],
 		);
 		assert.equal(toolGroup.items[3].action, "Find faces or text to redact");
+	});
+
+	test("gives a tool that takes the keys a group of its own", () => {
+		const titles = (specs: ToolSpecs, toolbar: readonly string[]) =>
+			shortcutGroups(toolbarEntries(specs, toolbar), specs).map(
+				(group) => group.title,
+			);
+		assert.deepEqual(titles(BUILT_IN_SPECS, BUILT_IN_TOOLBAR), [
+			"Tools",
+			"Editing",
+			"View",
+			"Crop",
+			"Help",
+		]);
+		const { crop: _, ...withoutCrop } = BUILT_IN_SPECS;
+		const toolbar = BUILT_IN_TOOLBAR.filter((id) => id !== "crop");
+		assert.deepEqual(titles(withoutCrop, toolbar), [
+			"Tools",
+			"Editing",
+			"View",
+			"Help",
+		]);
 	});
 });

@@ -81,7 +81,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 8a. Build every tool's controller the same way (October 27, 2026)
 - [x] 8b. Give the canvas's input kinds their own gestures and drawing (October 27, 2026)
 - [x] 8c. Take the tool list as a prop (October 27, 2026)
-- [ ] 8d. Make Crop a tool
+- [x] 8d. Make Crop a tool (October 28, 2026)
 - [ ] 8e. Make Stickers a tool
 - [ ] 9. Docs
 - [ ] 10. Give readers a map

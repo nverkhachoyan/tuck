@@ -1,5 +1,13 @@
 import { rect } from "@shopify/react-native-skia";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useEffectEvent,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	useDerivedValue,
 	useSharedValue,
@@ -7,9 +15,11 @@ import {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import type { EditorDocument } from "@/model/document";
-import { documentFraming, type Framing, framingAnchor } from "@/model/framing";
+import { documentFraming, framingAnchor } from "@/model/framing";
 import type { Size } from "@/model/geometry";
-import { blendViewports, fitRectToView } from "../canvas/viewport";
+import { blendViewports, fitRectToView } from "../../canvas/viewport";
+import type { ToolEnv } from "../../defineTool";
+import { useStore } from "../../store";
 import {
 	boxWithRatio,
 	type CropState,
@@ -23,29 +33,43 @@ import {
 	straightenTo,
 	turnedSize,
 } from "./cropGeometry";
-import { type AspectId, aspectRatio, turnedAspect } from "./cropOptions";
+import {
+	type AspectId,
+	aspectRatio,
+	turnedAspect,
+	turnLayersLabel,
+} from "./cropOptions";
 
 const REFIT = { duration: 220 };
 // Room around the photo and box when fitting them to the view, in screen
 // pixels. The crop gesture lets the box be dragged out into it.
 const CROP_INSET_PX = 20;
 
+/** Crop's modes, each with its own controls. */
+export type CropTab = "crop" | "rotate" | "canvas";
+
+export type CropController = ReturnType<typeof useCropTool>;
+
 /**
- * The crop tool's state and actions: the crop, shared with its gestures on
- * the UI thread and settled into React after each change, the aspect, fill,
- * and whether other layers turn too, and the view fitted around the photo
- * and box. Nothing reaches the document until `done`.
+ * Crop's state and actions: the crop, shared with its gestures on the UI
+ * thread and settled into React after each change, the aspect, fill, and
+ * whether other layers turn too, the chosen tab, and the view fitted around
+ * the photo and box.
+ * - The draft starts from the document each time the tool opens, and again
+ *   if the document changes while it's open (Done, then opened again at
+ *   once from the rail).
+ * - Nothing reaches the document until `done`, which reframes it once
+ *   inside the tool's session, so the crop is one undo step and Cancel
+ *   leaves none.
  */
-export function useCropController(
-	document: EditorDocument,
-	onDone: (framing: Framing, turnLayers: boolean) => void,
-) {
+export function useCropTool({ document, open }: ToolEnv) {
+	const { reframe } = useStore((state) => state.actions);
 	const anchor = useMemo(() => framingAnchor(document), [document]);
 	const photoSize = useMemo(
 		() => ({ width: anchor.width, height: anchor.height }),
 		[anchor.width, anchor.height],
 	);
-	const [initial] = useState(() => startCrop(document));
+	const [initial, setInitial] = useState(() => startCrop(document));
 	const crop = useSharedValue<CropState>(initial);
 	// The crop as React last saw it: at the end of each drag, and each button.
 	const [settled, setSettled] = useState(initial);
@@ -53,9 +77,26 @@ export function useCropController(
 	const ratio = useSharedValue<number | null>(null);
 	const [background, setBackground] = useState(document.background);
 	const [turnLayers, setTurnLayers] = useState(false);
+	const [tab, setTab] = useState<CropTab>("crop");
 	const dragging = useSharedValue(false);
 	const straightenStart = useSharedValue<CropState>(initial);
 	const [viewSize, setViewSize] = useState<Size>({ width: 0, height: 0 });
+
+	// The document the draft started from, while it's open.
+	const [seeded, setSeeded] = useState<EditorDocument | null>(null);
+	const seedFrom = open ? document : null;
+	if (seeded !== seedFrom) {
+		setSeeded(seedFrom);
+		if (seedFrom) {
+			const start = startCrop(seedFrom);
+			setInitial(start);
+			setSettled(start);
+			setAspect("free");
+			setBackground(seedFrom.background);
+			setTurnLayers(false);
+			setTab("crop");
+		}
+	}
 
 	// Fits the photo and the box, easing there when the box grows past it.
 	const fit = useMemo(
@@ -73,7 +114,11 @@ export function useCropController(
 	const viewport = useDerivedValue(() =>
 		blendViewports(fitFrom.value, fitTo.value, fitProgress.value),
 	);
+	// The fit last eased to or jumped to.
+	const shownFit = useRef(fit);
 	useEffect(() => {
+		if (fit === shownFit.current) return;
+		shownFit.current = fit;
 		fitTo.value = fit;
 		// The first fit, once the view has a size, is where it starts.
 		if (viewport.value.scale === 0) {
@@ -85,6 +130,22 @@ export function useCropController(
 		fitProgress.value = 0;
 		fitProgress.value = withTiming(1, REFIT);
 	}, [fit, viewport, fitFrom, fitTo, fitProgress]);
+
+	// A new draft's view starts fitted to it, rather than easing from the
+	// last crop's.
+	const jumpToFit = useEffectEvent(() => {
+		shownFit.current = fit;
+		fitFrom.value = fit;
+		fitTo.value = fit;
+		fitProgress.value = 1;
+	});
+	useLayoutEffect(() => {
+		crop.value = initial;
+		straightenStart.value = initial;
+		ratio.value = null;
+		jumpToFit();
+	}, [initial, crop, straightenStart, ratio]);
+
 	const visible = useMemo(
 		() =>
 			fit.scale === 0
@@ -131,9 +192,10 @@ export function useCropController(
 		ratio.value = null;
 	};
 
+	// An untouched crop keeps the framing, with the fill that was picked.
 	const done = () => {
 		const final = crop.value;
-		onDone(
+		reframe(
 			cropsEqual(initial, final)
 				? { ...documentFraming(document), background }
 				: cropFraming(final, photoSize, anchor.transform.scaleX, background),
@@ -163,6 +225,7 @@ export function useCropController(
 	}, [dragging, settle]);
 
 	return {
+		document,
 		anchor,
 		crop,
 		ratio,
@@ -179,6 +242,10 @@ export function useCropController(
 		setBackground,
 		turnLayers,
 		toggleTurnLayers: () => setTurnLayers((turn) => !turn),
+		// What the switch to turn other layers is called; null hides it.
+		turnLabel: turnLayersLabel(document.layers, anchor.layer),
+		tab,
+		setTab,
 		rotate,
 		flip,
 		reset,

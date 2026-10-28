@@ -2,27 +2,27 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackgroundPicker, backgroundLabel } from "@/ui/BackgroundPicker";
 import { Chip } from "@/ui/Chip";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
-import { SwatchChip } from "../shell/ColorPicker";
+import { useEditorContext } from "../../editorContext";
+import { SwatchChip } from "../../shell/ColorPicker";
 import {
 	BarButton,
 	BarChip,
 	BarGroup,
 	BarSections,
 	OptionSegments,
-} from "../shell/ContextBar";
-import { Dial } from "../shell/Dial";
-import type { DialScale } from "../shell/dialDrag";
+} from "../../shell/ContextBar";
+import { Dial } from "../../shell/Dial";
+import type { DialScale } from "../../shell/dialDrag";
+import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { MAX_STRAIGHTEN } from "./cropGeometry";
 import { ASPECT_ROWS, ASPECTS, type AspectId } from "./cropOptions";
-import type { useCropController } from "./useCropController";
-
-export type CropTab = "crop" | "rotate" | "canvas";
-type CropController = ReturnType<typeof useCropController>;
+import type { CropController, CropTab } from "./useCropTool";
 
 // A degree a step, a long tick every 15, settling level from a degree away.
 const DEGREES: DialScale = {
@@ -41,6 +41,14 @@ export const CROP_TABS: { tab: CropTab; label: string; icon: IconName }[] = [
 
 const TAB_IN = FadeIn.duration(160);
 
+// Room for the tallest tab's controls on a phone: Rotate's dial over its
+// actions, or the actions alone when there's no photo to level.
+const CONTROLS_WITH_DIAL = 120;
+const CONTROLS_WITHOUT_DIAL = 64;
+// The wide layout's strip for the straighten dial.
+const DIAL_STRIP = 100;
+const DIAL_WIDTH = 360;
+
 type RotateAction = {
 	key: string;
 	icon: IconName;
@@ -54,10 +62,8 @@ type RotateAction = {
  * Rotate's actions, in order: Rotate 90°, Flip, and the switch to turn other
  * layers with the photo, only while `turnLabel` names it.
  */
-function rotateActions(
-	controller: CropController,
-	turnLabel: string | null,
-): RotateAction[] {
+function rotateActions(controller: CropController): RotateAction[] {
+	const { turnLabel } = controller;
 	const actions: RotateAction[] = [
 		{
 			key: "rotate",
@@ -86,7 +92,7 @@ function rotateActions(
 }
 
 /** The dial that levels a tilted photo, a degree a step. */
-export function StraightenDial({
+function StraightenDial({
 	value,
 	onBegin,
 	onChange,
@@ -112,21 +118,72 @@ export function StraightenDial({
 	);
 }
 
+/** The phone dock's tabs. */
+export function CropDock({ controller }: { controller: CropController }) {
+	return (
+		<ToolRow>
+			{CROP_TABS.map(({ tab, label, icon }) => (
+				<ToolButton
+					key={tab}
+					label={label}
+					icon={icon}
+					selected={controller.tab === tab}
+					onPress={() => controller.setTab(tab)}
+				/>
+			))}
+		</ToolRow>
+	);
+}
+
+/**
+ * The strip under the photo, as tall in every tab so the photo holds still
+ * as tabs change. A phone keeps the chosen tab's controls in it, over the
+ * dock; a wide window keeps the straighten dial there, centered, while
+ * Rotate is chosen.
+ */
+export function CropControls({ controller }: { controller: CropController }) {
+	const { wide } = useEditorContext();
+	const { bottom } = useSafeAreaInsets();
+	const { anchor } = controller;
+	if (wide) {
+		return (
+			<View
+				style={[
+					styles.dialStrip,
+					{ height: DIAL_STRIP + bottom, paddingBottom: bottom },
+				]}
+			>
+				{controller.tab === "rotate" && anchor.layer && (
+					<View style={styles.dial}>
+						<StraightenDial
+							value={controller.straighten}
+							onBegin={controller.straightenBegin}
+							onChange={controller.straightenChange}
+							onEnd={controller.straightenEnd}
+						/>
+					</View>
+				)}
+			</View>
+		);
+	}
+	return (
+		<View
+			style={[
+				styles.controls,
+				{ height: anchor.layer ? CONTROLS_WITH_DIAL : CONTROLS_WITHOUT_DIAL },
+			]}
+		>
+			<TabControls controller={controller} />
+		</View>
+	);
+}
+
 /**
  * The phone's controls for the chosen tab, fading in as it changes: the
  * ratios in a row, Rotate's dial over its actions, or the backgrounds.
  */
-export function CropControls({
-	tab,
-	controller,
-	turnLabel,
-}: {
-	tab: CropTab;
-	controller: CropController;
-	// What the switch to turn other layers is called; null hides it.
-	turnLabel: string | null;
-}) {
-	const { anchor, aspect, background } = controller;
+function TabControls({ controller }: { controller: CropController }) {
+	const { anchor, aspect, background, tab } = controller;
 	return (
 		<Animated.View key={tab} entering={TAB_IN} style={styles.tab}>
 			{tab === "crop" ? (
@@ -156,7 +213,7 @@ export function CropControls({
 						/>
 					)}
 					<View style={styles.actions}>
-						{rotateActions(controller, turnLabel).map(
+						{rotateActions(controller).map(
 							({ key, icon, label, checked, onPress }) => (
 								<ActionButton
 									key={key}
@@ -183,19 +240,8 @@ export function CropControls({
 }
 
 /** The wide header's modes, then the options for the one that's chosen. */
-export function CropBar({
-	tab,
-	controller,
-	turnLabel,
-	onTab,
-}: {
-	tab: CropTab;
-	controller: CropController;
-	// What the switch to turn other layers is called; null hides it.
-	turnLabel: string | null;
-	onTab: (tab: CropTab) => void;
-}) {
-	const { aspect, background } = controller;
+export function CropBar({ controller }: { controller: CropController }) {
+	const { aspect, background, tab } = controller;
 	const current = ASPECTS.find((option) => option.id === aspect);
 	return (
 		<BarSections>
@@ -206,7 +252,7 @@ export function CropBar({
 					selected={CROP_TABS.findIndex((item) => item.tab === tab)}
 					onSelect={(index) => {
 						const next = CROP_TABS[index];
-						if (next) onTab(next.tab);
+						if (next) controller.setTab(next.tab);
 					}}
 				/>
 			</BarGroup>
@@ -221,7 +267,7 @@ export function CropBar({
 					/>
 				)}
 				{tab === "rotate" &&
-					rotateActions(controller, turnLabel).map(
+					rotateActions(controller).map(
 						({ key, icon, label, checked, onPress }) => (
 							<BarButton
 								key={key}
@@ -396,6 +442,18 @@ function ActionButton({
 }
 
 const styles = StyleSheet.create({
+	// Each tab's controls sit on the dock, over any room they don't need.
+	controls: {
+		justifyContent: "flex-end",
+		paddingBottom: 8,
+	},
+	dialStrip: {
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	dial: {
+		width: DIAL_WIDTH,
+	},
 	tab: {
 		gap: 4,
 	},

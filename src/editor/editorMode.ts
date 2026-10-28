@@ -47,14 +47,12 @@ export type ToolMode = {
 
 /**
  * What the canvas and the dock are given over to, one at a time: nothing, a
- * tool in the dock (see `ToolMode`), text being typed on the canvas, or the
- * crop screen.
+ * tool in the dock (see `ToolMode`), or text being typed on the canvas.
  */
 export type EditorMode =
 	| { type: "idle" }
 	| ToolMode
-	| { type: "text"; edit: TextEditState }
-	| { type: "crop" };
+	| { type: "text"; edit: TextEditState };
 
 /** A tool to start, with the image it would work on, if any. */
 export type ToolStart = { tool: ToolId; layerId: string | null };
@@ -100,8 +98,6 @@ export type EditorModeAction =
 	| { type: "startText"; edit: TextEditState }
 	| { type: "changeText"; change: (edit: TextEditState) => TextEditState }
 	| { type: "endText" }
-	| { type: "startCrop" }
-	| { type: "endCrop" }
 	| { type: "openTextPicker"; layerId: string; key: TextColorKey }
 	| { type: "closeTextPicker" }
 	| { type: "startEyedropper"; eyedropper: Eyedropper }
@@ -117,8 +113,7 @@ export type EditorModeAction =
 const idle = { type: "idle" } as const;
 
 /**
- * Starting a tool or typing closes the layers sheet. Cropping leaves it: the
- * crop screen covers it, and it's open again after. A tool starts with its
+ * Starting a tool or typing closes the layers sheet. A tool starts with its
  * tray closed, and closes a text color picker. Starting anything, and
  * ending a tool, stops the eyedropper: what it was picking for has moved on.
  * What a tool's mode holds follows its spec in `specs`.
@@ -165,12 +160,6 @@ export function editorModeReducer(
 				: state;
 		case "endText":
 			return mode.type === "text" ? { ...state, mode: idle } : state;
-		case "startCrop":
-			return mode.type === "crop"
-				? state
-				: { ...state, mode: { type: "crop" }, eyedropper: null };
-		case "endCrop":
-			return mode.type === "crop" ? { ...state, mode: idle } : state;
 		case "openTextPicker":
 			return {
 				...state,
@@ -238,9 +227,13 @@ export function settle(
 	};
 }
 
-// Typing and cropping take the keyboard, and pasted photos, for themselves.
-export function takesKeys(mode: EditorMode): boolean {
-	return mode.type === "text" || mode.type === "crop";
+/**
+ * Whether typing, or an open tool whose spec in `specs` says so, takes the
+ * keyboard, and pasted and dropped photos, for itself.
+ */
+export function takesKeys(mode: EditorMode, specs: ToolSpecs): boolean {
+	if (mode.type === "text") return true;
+	return mode.type === "tool" && specs[mode.tool]?.takesKeys === true;
 }
 
 /** What a shortcut does, given what's open (see `shortcutCommand`). */
@@ -256,7 +249,7 @@ export type ShortcutCommand =
  * What `shortcut` does with `state` open and `selection` selected: a command
  * for the screen to carry out, "held" for a key used up doing nothing, or
  * null for a key left to the browser. The screen doesn't ask while typing or
- * cropping, which take their own keys (see `takesKeys`). Whether the open
+ * while a tool that takes its own keys is open (see `takesKeys`). Whether the open
  * tool has a brush is its spec's in `specs`.
  */
 export function shortcutCommand(

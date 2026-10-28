@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { BackHandler } from "react-native";
 import type { EditorDocument } from "@/model/document";
-import { type Framing, visibleImageLayer } from "@/model/framing";
+import { visibleImageLayer } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import {
@@ -18,7 +19,8 @@ import type { ToolId } from "./toolSpec";
 
 /**
  * All of the editor's tools (`tools`, which must not change while it's
- * mounted), their undo session, and their starters, Done, and Cancel. Each
+ * mounted), their undo session, and their starters, Done, and Cancel. Every
+ * close but Cancel runs the open tool's Done: Android's back button too. Each
  * tool's controller comes from its definition's `useController`, given what
  * `env` and the mode say of it. The order below
  * matters: `useToolSession` runs first, so its effect begins the session
@@ -53,12 +55,13 @@ export function useEditorTools({
 	visibleArea: () => Rect | undefined;
 	notify: (message: string) => void;
 }) {
-	const { cancelSession, selectLayer, reframe } = useStore(
-		(state) => state.actions,
-	);
+	const { cancelSession, selectLayer } = useStore((state) => state.actions);
 	const tool = mode.type === "tool" ? mode.tool : null;
+	// Counts the open tool being started again, as the rail does, which
+	// ends its session and begins another.
+	const [reopened, setReopened] = useState(0);
 
-	useToolSession(tool);
+	useToolSession(tool, reopened);
 
 	const text = useTextEditing({
 		document,
@@ -123,6 +126,7 @@ export function useEditorTools({
 			else pendingStart.current = { tool: next, image: targetImage };
 		}
 		const start = { tool: next, layerId: targetImage?.id ?? null };
+		if (next === tool) setReopened((count) => count + 1);
 		dispatchMode({ type: "startTool", start });
 	};
 	// After every render, so it runs once the tool is open on its photo.
@@ -135,16 +139,21 @@ export function useEditorTools({
 		definition.started?.(controller, pending.image);
 	});
 
+	// Android's back button puts the open tool down, as Done does.
+	const onBack = useEffectEvent(finishTool);
+	useEffect(() => {
+		if (!tool) return;
+		const subscription = BackHandler.addEventListener(
+			"hardwareBackPress",
+			() => {
+				onBack();
+				return true;
+			},
+		);
+		return () => subscription.remove();
+	}, [tool]);
+
 	const startNewText = () => text.startNew(visibleArea());
-	const startCrop = () => dispatchMode({ type: "startCrop" });
-	const closeCrop = useCallback(
-		() => dispatchMode({ type: "endCrop" }),
-		[dispatchMode],
-	);
-	const finishCrop = (framing: Framing, turnLayers: boolean) => {
-		reframe(framing, turnLayers);
-		closeCrop();
-	};
 
 	// What each tool's key, button, and layer action picks up. A selected
 	// drawing or redaction takes the strokes, as its own Draw or Redact does.
@@ -155,7 +164,6 @@ export function useEditorTools({
 		text: startNewText,
 		sticker: openStickers,
 		photo: pickPhoto,
-		crop: startCrop,
 	};
 
 	// [ and ] step the open tool's brush, if it has one.
@@ -183,8 +191,6 @@ export function useEditorTools({
 		done: finishTool,
 		cancel: cancelTool,
 		finishTool,
-		closeCrop,
-		finishCrop,
 		stepToolSize,
 		resetEdit,
 		announcements,
@@ -193,15 +199,17 @@ export function useEditorTools({
 
 /**
  * A tool's changes as one session: one undo step, or none if canceled.
- * Closing the tool any way, leaving the editor included, keeps them. Called
+ * Closing the tool any way, leaving the editor included, keeps them, and
+ * each change of `reopened` starts a new session for the same tool. Called
  * ahead of the tool hooks, so the session has begun before a tool's own
  * effects change the document.
  */
-export function useToolSession(tool: ToolId | null) {
+export function useToolSession(tool: ToolId | null, reopened: number) {
 	const { beginSession, commitSession } = useStore((state) => state.actions);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `reopened` ends the session and begins another.
 	useEffect(() => {
 		if (!tool) return;
 		beginSession();
 		return commitSession;
-	}, [tool, beginSession, commitSession]);
+	}, [tool, reopened, beginSession, commitSession]);
 }

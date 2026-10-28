@@ -1,8 +1,8 @@
 import hitTest from "@src/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/editor/canvas/layerBounds.ts?raw";
-import cropGeometry from "@src/editor/crop/cropGeometry.ts?raw";
 import editorSlice from "@src/editor/store/editorSlice.ts?raw";
 import storeIndex from "@src/editor/store/index.ts?raw";
+import cropGeometry from "@src/editor/tools/crop/cropGeometry.ts?raw";
 import adjustments from "@src/model/adjustments.ts?raw";
 import cutout from "@src/model/cutout.ts?raw";
 import documentFile from "@src/model/document.ts?raw";
@@ -64,7 +64,7 @@ export const sources = {
 	"src/render/layers/TextLayerView.tsx": textLayerView,
 	"src/editor/canvas/hitTest.ts": hitTest,
 	"src/editor/canvas/layerBounds.ts": layerBounds,
-	"src/editor/crop/cropGeometry.ts": cropGeometry,
+	"src/editor/tools/crop/cropGeometry.ts": cropGeometry,
 	"src/screens/export/exportFormat.ts": exportFormat,
 	"src/screens/export/exportSizes.ts": exportSizes,
 	"src/editor/store/editorSlice.ts": editorSlice,

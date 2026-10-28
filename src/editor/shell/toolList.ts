@@ -7,10 +7,10 @@ import type { ComponentProps } from "react";
 export type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /**
- * The editor's own entries among the tools' buttons: Text, Sticker, and
- * Crop are modes and sheets of the editor's, and Add photo picks a photo.
+ * The editor's own entries among the tools' buttons: Text and Sticker are
+ * a mode and a sheet of the editor's, and Add photo picks a photo.
  */
-export type OwnTool = "text" | "sticker" | "crop" | "photo";
+export type OwnTool = "text" | "sticker" | "photo";
 
 /**
  * A button for a tool or one of the editor's own entries.
@@ -39,7 +39,6 @@ export const TOOLS: Record<
 		icon: "sticker-emoji",
 		shortcut: "Add a sticker",
 	},
-	crop: { label: "Crop", icon: "crop-rotate", shortcut: "Crop" },
 	photo: {
 		label: "Add photo",
 		icon: "image-plus-outline",

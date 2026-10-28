@@ -1,5 +1,6 @@
 import type { OwnTool } from "./shell/toolList.ts";
 import { adjustSpec } from "./tools/adjust/adjustSpec.ts";
+import { cropSpec } from "./tools/crop/cropSpec.ts";
 import { cutOutSpec } from "./tools/cutout/cutOutSpec.ts";
 import { drawSpec } from "./tools/draw/drawSpec.ts";
 import { findSpec } from "./tools/find/findSpec.ts";
@@ -11,6 +12,7 @@ export const BUILT_IN_SPECS = {
 	redact: redactSpec,
 	find: findSpec,
 	cutOut: cutOutSpec,
+	crop: cropSpec,
 	adjust: adjustSpec,
 };
 

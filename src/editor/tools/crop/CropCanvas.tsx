@@ -1,11 +1,4 @@
-import {
-	Canvas,
-	Fill,
-	Group,
-	Path,
-	Skia,
-	type SkRect,
-} from "@shopify/react-native-skia";
+import { Canvas, Fill, Group, Path, Skia } from "@shopify/react-native-skia";
 import { useCallback, useMemo, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -14,29 +7,27 @@ import {
 	type SharedValue,
 	useDerivedValue,
 } from "react-native-reanimated";
-import type { EditorDocument } from "@/model/document";
 import {
-	type FramingAnchor,
 	type PhotoPlacement,
 	rebaseTransform,
 	turnsWithPhoto,
 } from "@/model/framing";
-import type { Size } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
 import { LayerContent } from "@/render/LayerContent";
 import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";
-import { CanvasBackground } from "../canvas/Checkerboard";
-import { type CanvasCursor, cursorStyle } from "../canvas/canvasCursor";
+import { CanvasBackground } from "../../canvas/Checkerboard";
+import { type CanvasCursor, cursorStyle } from "../../canvas/canvasCursor";
 import {
 	SELECTION_HALO,
 	SELECTION_HALO_PX,
 	SELECTION_STROKE_PX,
-} from "../canvas/SelectionOverlay";
-import type { DocumentViewport } from "../canvas/viewport";
+} from "../../canvas/SelectionOverlay";
+import type { DocumentViewport } from "../../canvas/viewport";
 import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
 import { useCropGesture } from "./useCropGesture";
+import type { CropController } from "./useCropTool";
 
 const FRAME_STROKE_PX = 1;
 const HANDLE_STROKE_PX = 3;
@@ -54,43 +45,29 @@ const CURSORS: Record<CropHandle, CanvasCursor> = {
 	move: "move",
 };
 
-type CropCanvasProps = {
-	document: EditorDocument;
-	anchor: FramingAnchor;
-	crop: SharedValue<CropState>;
-	viewport: DerivedValue<DocumentViewport>;
-	ratio: SharedValue<number | null>;
-	dragging: SharedValue<boolean>;
-	// What's on screen, in crop space, and screen pixels per crop unit, once
-	// the view has settled: the checkerboard is drawn for these.
-	visible: SkRect;
-	viewScale: number;
-	background: string | null;
-	turnLayers: boolean;
-	onLayout: (size: Size) => void;
-	onDragEnd: () => void;
-};
-
 /**
  * The crop tool's canvas: the photo in crop space, turned and flipped as
  * it'll be, with the document's other layers where they'll land. Outside the
  * box is dimmed; inside it shows the canvas's background where the photo
  * doesn't reach. With no locked photo, nothing is drawn for the anchor.
  */
-export function CropCanvas({
-	document,
-	anchor,
-	crop,
-	viewport,
-	ratio,
-	dragging,
-	visible,
-	viewScale,
-	background,
-	turnLayers,
-	onLayout,
-	onDragEnd,
-}: CropCanvasProps) {
+export function CropCanvas({ controller }: { controller: CropController }) {
+	const {
+		document,
+		anchor,
+		crop,
+		viewport,
+		ratio,
+		dragging,
+		// What's on screen, in crop space, and screen pixels per crop unit,
+		// once the view has settled: the checkerboard is drawn for these.
+		visible,
+		viewScale,
+		background,
+		turnLayers,
+		setViewSize: onLayout,
+		settle: onDragEnd,
+	} = controller;
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [cursor, setCursor] = useState<CanvasCursor>("default");
 	const photoSize = useMemo(

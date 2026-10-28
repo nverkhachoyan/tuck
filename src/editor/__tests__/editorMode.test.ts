@@ -103,14 +103,21 @@ describe("editorModeReducer", () => {
 		assert.equal(cutting.sheet, null);
 	});
 
-	test("typing closes the layers sheet, and cropping leaves it open", () => {
+	test("typing and cropping close the layers sheet", () => {
 		const layers = run(initialEditorMode, { type: "toggleLayers" });
 		const typing = run(layers, { type: "startText", edit: edit("text") });
 		assert.equal(typing.sheet, null);
-		const cropping = run(layers, { type: "startCrop" });
-		assert.deepEqual(cropping.mode, { type: "crop" });
-		assert.equal(cropping.sheet, "layers");
-		assert.equal(run(cropping, { type: "endCrop" }).sheet, "layers");
+		const cropping = run(layers, {
+			type: "startTool",
+			start: { tool: "crop", layerId: "photo" },
+		});
+		assert.deepEqual(cropping.mode, {
+			type: "tool",
+			tool: "crop",
+			layerId: null,
+			optionsOpen: false,
+		});
+		assert.equal(cropping.sheet, null);
 	});
 
 	test("ending a tool stops the eyedropper, and ends only a tool", () => {
@@ -222,7 +229,6 @@ describe("editorModeReducer", () => {
 			{ type: "startTool", start: { tool: "draw", layerId: null } },
 			{ type: "startTool", start: { tool: "adjust", layerId: "photo" } },
 			{ type: "startText", edit: edit("text") },
-			{ type: "startCrop" },
 			{ type: "openStickers" },
 		] satisfies EditorModeAction[]) {
 			assert.equal(run(waiting, action).eyedropper, null, action.type);
@@ -279,7 +285,6 @@ describe("editorModeReducer", () => {
 			"closeStickers",
 			"closeShortcuts",
 			"endText",
-			"endCrop",
 		] as const) {
 			assert.equal(
 				run(initialEditorMode, { type }),
@@ -448,7 +453,6 @@ describe("settle", () => {
 describe("openTray", () => {
 	test("is the tool whose tray is open", () => {
 		assert.equal(openTray({ type: "idle" }), null);
-		assert.equal(openTray({ type: "crop" }), null);
 		assert.equal(openTray({ type: "text", edit: edit("text") }), null);
 		assert.equal(
 			openTray({
@@ -490,11 +494,17 @@ describe("openTray", () => {
 });
 
 describe("takesKeys", () => {
-	test("typing and cropping take the keys", () => {
-		assert.equal(takesKeys({ type: "text", edit: edit("text") }), true);
-		assert.equal(takesKeys({ type: "crop" }), true);
-		assert.equal(takesKeys({ type: "idle" }), false);
-		assert.equal(takesKeys(drawing.mode), false);
+	test("typing and a tool whose spec says so take the keys", () => {
+		const cropping = run(initialEditorMode, {
+			type: "startTool",
+			start: { tool: "crop", layerId: null },
+		});
+		const keys = (mode: EditorModeState["mode"]) =>
+			takesKeys(mode, BUILT_IN_SPECS);
+		assert.equal(keys({ type: "text", edit: edit("text") }), true);
+		assert.equal(keys(cropping.mode), true);
+		assert.equal(keys({ type: "idle" }), false);
+		assert.equal(keys(drawing.mode), false);
 	});
 });
 
