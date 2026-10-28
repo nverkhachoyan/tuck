@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
+import { LegacyScrollView, ScrollView } from "react-native-gesture-handler";
 import Animated, {
 	Easing,
 	FadeInRight,
@@ -156,14 +156,14 @@ function FlatLayerList({
 	const rows = useMemo(() => layers.slice().reverse(), [layers]);
 	const order = useSharedValue(rows.map((layer) => layer.id));
 	const dragId = useSharedValue<string | null>(null);
-	const scrollRef = useRef<ScrollView>(null);
+	const scrollRef = useRef<LegacyScrollView>(null);
 
 	useLayoutEffect(() => {
 		order.value = rows.map((layer) => layer.id);
 	}, [order, rows]);
 
 	return (
-		<ScrollView
+		<LegacyScrollView
 			ref={scrollRef}
 			contentContainerStyle={[styles.column, styles.content]}
 		>
@@ -189,7 +189,7 @@ function FlatLayerList({
 				</Text>
 			)}
 			<BackgroundRow value={background} onPick={onSetBackground} />
-		</ScrollView>
+		</LegacyScrollView>
 	);
 }
 
@@ -291,7 +291,7 @@ function StaticLayerRow(
 ) {
 	const order = useSharedValue<string[]>([]);
 	const dragId = useSharedValue<string | null>(null);
-	const scrollRef = useRef<ScrollView>(null);
+	const scrollRef = useRef<LegacyScrollView>(null);
 	return (
 		<LayerRow
 			{...props}

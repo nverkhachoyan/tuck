@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	ActivityIndicator,
+	type KeyDownEvent,
 	Platform,
 	Pressable,
 	StyleSheet,
@@ -350,11 +351,11 @@ function ReviewRow({ review }: { review: FindReview }) {
 	const keys =
 		Platform.OS === "web"
 			? {
-					onKeyDown: (event: WebKeyEvent) => {
-						const delta = REVIEW_KEYS[event.key];
+					onKeyDown: (event: KeyDownEvent) => {
+						const { key } = event.nativeEvent;
+						const delta = REVIEW_KEYS[key];
 						// Space on one of the row's buttons presses that button.
-						const toggles =
-							event.key === " " && event.target === event.currentTarget;
+						const toggles = key === " " && event.target === event.currentTarget;
 						if (!delta && !toggles) return;
 						event.preventDefault();
 						event.stopPropagation();
@@ -402,14 +403,6 @@ function ReviewRow({ review }: { review: FindReview }) {
 		</View>
 	);
 }
-
-type WebKeyEvent = {
-	key: string;
-	target: unknown;
-	currentTarget: unknown;
-	preventDefault: () => void;
-	stopPropagation: () => void;
-};
 
 const REVIEW_KEYS: Record<string, 1 | -1 | undefined> = {
 	ArrowRight: 1,

@@ -90,7 +90,7 @@ export async function writeProjectFile(id: string, json: string) {
 	directory.create({ intermediates: true, idempotent: true });
 	const draft = new File(directory, PROJECT_DRAFT);
 	draft.create({ overwrite: true });
-	draft.write(json);
+	await draft.write(json);
 	draft.moveSync(new File(directory, PROJECT), { overwrite: true });
 }
 

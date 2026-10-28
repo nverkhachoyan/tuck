@@ -10,6 +10,7 @@ import {
 	StyleSheet,
 	Text,
 	TextInput,
+	type TextInputInstance,
 	type TextStyle,
 	View,
 } from "react-native";
@@ -296,7 +297,7 @@ function NameField({
 	disabled: boolean;
 	onRename: (name: string) => void;
 }) {
-	const input = useRef<TextInput>(null);
+	const input = useRef<TextInputInstance>(null);
 	// What's typed, while the field has focus.
 	const [draft, setDraft] = useState<string | null>(null);
 	const cancelled = useRef(false);

@@ -8,7 +8,13 @@ import {
 	useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { StyleSheet, Text, View, type ViewStyle } from "react-native";
+import {
+	StyleSheet,
+	Text,
+	View,
+	type ViewInstance,
+	type ViewStyle,
+} from "react-native";
 import type { TooltipAnchorProps, TooltipSide } from "./Tooltip";
 import { colors, floatingShadow, radii, space, typography } from "./theme";
 
@@ -37,7 +43,7 @@ export function useTooltip(
 	shortcut?: string,
 	side: TooltipSide = "below",
 ): { anchor: TooltipAnchorProps; tooltip: ReactNode } {
-	const ref = useRef<View>(null);
+	const ref = useRef<ViewInstance>(null);
 	const [shown, setShown] = useState(false);
 	const shownRef = useRef(false);
 	const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,12 +89,12 @@ function Bubble({
 	shortcut,
 	side,
 }: {
-	anchor: RefObject<View | null>;
+	anchor: RefObject<ViewInstance | null>;
 	text: string;
 	shortcut?: string;
 	side: TooltipSide;
 }) {
-	const bubbleRef = useRef<View>(null);
+	const bubbleRef = useRef<ViewInstance>(null);
 	const [position, setPosition] = useState<{ left: number; top: number }>();
 
 	// Measured once drawn, still invisible, then placed and faded in.

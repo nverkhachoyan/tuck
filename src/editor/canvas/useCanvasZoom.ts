@@ -6,7 +6,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 import type { Point, Rect, Size } from "@/model/geometry";
 import { createDoubleTap } from "./doubleTap";
 import { useShownViewport } from "./shownViewport";
@@ -38,7 +38,7 @@ const DOUBLE_TAP_ZOOM = 3;
  */
 export function useCanvasZoom(
 	frame: ViewFrame,
-	target: RefObject<View | null>,
+	target: RefObject<ViewInstance | null>,
 ) {
 	const { documentSize } = frame;
 	// Kept with the size it was zoomed at, so a crop drops it.

@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import type { View } from "react-native";
+import type { ViewInstance } from "react-native";
 import { ToolButton, ToolGrid, ToolRow } from "./ToolButton";
 import type { ToolEntry } from "./toolList";
 
@@ -29,7 +29,7 @@ export function ToolsPanel({
 	addBusy: boolean;
 	hasImage: boolean;
 	startTool: ToolStarters;
-	anchors?: Readonly<Record<string, RefObject<View | null>>>;
+	anchors?: Readonly<Record<string, RefObject<ViewInstance | null>>>;
 }) {
 	const compact = !vertical;
 	const tools = entries

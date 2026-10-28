@@ -6,6 +6,7 @@ import {
 	StyleSheet,
 	Text,
 	View,
+	type ViewInstance,
 	type ViewStyle,
 } from "react-native";
 import { Button } from "./Button";
@@ -68,7 +69,7 @@ function AlertDialog({
 	buttons: AlertButton[];
 	onClose: (button?: AlertButton) => void;
 }) {
-	const card = useRef<View>(null);
+	const card = useRef<ViewInstance>(null);
 	const cancel =
 		buttons.find((button) => button.style === "cancel") ??
 		(buttons.length === 1 ? buttons[0] : undefined);

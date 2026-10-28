@@ -18,6 +18,7 @@ import {
 	Text,
 	type TextStyle,
 	View,
+	type ViewInstance,
 } from "react-native";
 import { compactControls } from "@/ui/density";
 import { FadeGroup, FadeRow, MeasuredItem, Unmeasured } from "@/ui/FadeRow";
@@ -62,7 +63,7 @@ export function ContextBar({
 	keepFocus?: boolean;
 	children: ReactNode;
 }) {
-	const barRef = useRef<View>(null);
+	const barRef = useRef<ViewInstance>(null);
 	useEffect(() => {
 		if (!keepFocus || Platform.OS !== "web") return;
 		const node = barRef.current as unknown as HTMLElement | null;
@@ -315,7 +316,7 @@ export function BarChip({
 }) {
 	const [open, setOpen] = useState(false);
 	const close = () => setOpen(false);
-	const ownRef = useRef<View>(null);
+	const ownRef = useRef<ViewInstance>(null);
 	const { anchor, tooltip } = useTooltip(label, shortcut);
 	const ref = anchor.ref ?? ownRef;
 	return (

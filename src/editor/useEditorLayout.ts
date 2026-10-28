@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useWindowDimensions, type View } from "react-native";
+import { useWindowDimensions, type ViewInstance } from "react-native";
 import { compactControls } from "@/ui/density";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import { editorFrame } from "./editorFrame";
@@ -38,7 +38,7 @@ export function useEditorLayout({
 	// A short wide window (a 13-inch laptop) leaves the inspector closed, so
 	// the photo keeps the width the panel would have taken.
 	const inspector = wide && (inspectorPinned || inspectorRequested);
-	const stageRef = useRef<View>(null);
+	const stageRef = useRef<ViewInstance>(null);
 	const keyboardOverlap = useKeyboardOverlap(stageRef, typing);
 	const barInset = useDockInset(keyboardOverlap);
 	// As an inspector, the dock covers none of the canvas's bottom.

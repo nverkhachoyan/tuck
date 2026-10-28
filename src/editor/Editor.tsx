@@ -6,7 +6,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
 import { isHexColor } from "@/model/color";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
@@ -104,7 +104,7 @@ export function Editor({
 		const sheetAnchors = Object.fromEntries(
 			Object.entries(tools)
 				.filter(([, tool]) => definitionOf(tool).views.Sheet)
-				.map(([id]) => [id, createRef<View>()]),
+				.map(([id]) => [id, createRef<ViewInstance>()]),
 		);
 		return {
 			tools,
@@ -136,7 +136,7 @@ export function Editor({
 	} = actions;
 
 	const canvasRef = useRef<EditorCanvasHandle>(null);
-	const rootRef = useRef<View>(null);
+	const rootRef = useRef<ViewInstance>(null);
 
 	// What the editor is doing, and what's open over it. A tool puts itself
 	// down if its image goes away, or its photo does, and a text color picker

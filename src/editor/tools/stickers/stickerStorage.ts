@@ -33,7 +33,7 @@ function writeIndex(stickers: SavedSticker[]) {
 	const directory = stickersDirectory();
 	const draft = new File(directory, INDEX_DRAFT);
 	draft.create({ overwrite: true });
-	draft.write(serializeStickerIndex(stickers));
+	draft.writeSync(serializeStickerIndex(stickers));
 	draft.moveSync(new File(directory, INDEX), { overwrite: true });
 }
 

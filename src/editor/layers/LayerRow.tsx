@@ -14,7 +14,7 @@ import {
 import {
 	Gesture,
 	GestureDetector,
-	type ScrollView,
+	type LegacyScrollView,
 } from "react-native-gesture-handler";
 import Animated, {
 	type SharedValue,
@@ -65,7 +65,7 @@ export function LayerRow({
 	count: number;
 	order: SharedValue<string[]>;
 	dragId: SharedValue<string | null>;
-	scrollRef: RefObject<ScrollView | null>;
+	scrollRef: RefObject<LegacyScrollView | null>;
 	selected: boolean;
 	compact: boolean;
 	/** A group-expanded list keeps its rows in normal flow, not drag slots. */

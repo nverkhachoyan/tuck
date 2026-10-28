@@ -37,7 +37,7 @@ export function readPreference(key: string): unknown {
 export function writePreference(key: string, value: unknown) {
 	preferences = { ...loadPreferences(), [key]: value };
 	try {
-		preferencesFile().write(JSON.stringify(preferences));
+		preferencesFile().writeSync(JSON.stringify(preferences));
 	} catch {
 		// Kept in memory for this session anyway.
 	}

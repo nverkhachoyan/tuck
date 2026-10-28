@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
 import type { DockPanel } from "./editorChrome";
 import { LayersPanel, type layerListProps } from "./layers/LayersPanel";
 import { InspectorContent, type PanelContext } from "./PanelViews";
@@ -22,7 +22,7 @@ export function EditorInspector({
 	layerList: ReturnType<typeof layerListProps>;
 	layersInert?: boolean;
 }) {
-	const layersRef = useRef<View>(null);
+	const layersRef = useRef<ViewInstance>(null);
 	// React Native Web doesn't pass `inert` through.
 	useEffect(() => {
 		if (Platform.OS !== "web") return;

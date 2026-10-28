@@ -13,6 +13,7 @@ import {
 	StyleSheet,
 	useWindowDimensions,
 	View,
+	type ViewInstance,
 } from "react-native";
 import {
 	type PopoverPlacement,
@@ -23,7 +24,7 @@ import { colors, floatingShadow, radii, space } from "./theme";
 
 export type PopoverProps = {
 	/** The control the card hangs from. */
-	anchor: RefObject<View | null>;
+	anchor: RefObject<ViewInstance | null>;
 	open: boolean;
 	onClose: () => void;
 	/** Names the dialog for screen readers. */
@@ -109,7 +110,7 @@ function PopoverFrame({
 	restoreFocus,
 	children,
 }: {
-	anchor: RefObject<View | null>;
+	anchor: RefObject<ViewInstance | null>;
 	label: string;
 	onClose: () => void;
 	placement: PopoverPlacement;

@@ -7,7 +7,13 @@ import {
 	useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Pressable, StyleSheet, View, type ViewStyle } from "react-native";
+import {
+	Pressable,
+	StyleSheet,
+	View,
+	type ViewInstance,
+	type ViewStyle,
+} from "react-native";
 import type { PopoverProps } from "./Popover";
 import { type PopoverPlacement, placePopover } from "./popoverPlacement";
 import { colors, floatingShadow, radii, space } from "./theme";
@@ -77,15 +83,15 @@ function PopoverFrame({
 	restoreFocus,
 	children,
 }: {
-	anchor: RefObject<View | null>;
+	anchor: RefObject<ViewInstance | null>;
 	label: string;
 	onClose: () => void;
 	placement: PopoverPlacement;
 	restoreFocus?: () => void;
 	children: ReactNode;
 }) {
-	const layerRef = useRef<View>(null);
-	const cardRef = useRef<View>(null);
+	const layerRef = useRef<ViewInstance>(null);
+	const cardRef = useRef<ViewInstance>(null);
 	const onCloseRef = useRef(onClose);
 	onCloseRef.current = onClose;
 	const restoreRef = useRef(restoreFocus);

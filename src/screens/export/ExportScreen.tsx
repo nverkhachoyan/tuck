@@ -17,6 +17,7 @@ import {
 	Text,
 	useWindowDimensions,
 	View,
+	type ViewInstance,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "@/editor";
@@ -297,7 +298,7 @@ function useSheetFit() {
 	// that measurement: its entering slide settles where the container's
 	// bottom was when it began, which a later change of height leaves behind.
 	const screenSize = useWindowDimensions();
-	const containerRef = useRef<View>(null);
+	const containerRef = useRef<ViewInstance>(null);
 	const [measuredOriginY, setOriginY] = useState<number | null>(null);
 	const originY = measuredOriginY ?? 0;
 	// The preview strip's height: its own, or on a window too short for the

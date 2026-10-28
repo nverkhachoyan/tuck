@@ -6,7 +6,7 @@ import {
 	useEffect,
 	useRef,
 } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Popover } from "@/ui/Popover";
@@ -188,7 +188,7 @@ export function ToolSheet({
 }: {
 	tool: OpenTool;
 	open: boolean;
-	anchor: RefObject<View | null> | undefined;
+	anchor: RefObject<ViewInstance | null> | undefined;
 	onClose: () => void;
 }) {
 	const { definition, controller } = tool;

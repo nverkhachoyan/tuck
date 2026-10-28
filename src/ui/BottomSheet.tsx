@@ -3,7 +3,7 @@ import { Platform, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import {
 	Gesture,
 	GestureDetector,
-	type PanGesture,
+	type LegacyPanGesture,
 } from "react-native-gesture-handler";
 import Animated, {
 	Easing,
@@ -123,7 +123,7 @@ export function PanelHeader({
 	title: string;
 	closeLabel: string;
 	onClose: () => void;
-	swipe?: PanGesture;
+	swipe?: LegacyPanGesture;
 }) {
 	const header = (
 		<View style={[styles.header, swipe && handleCursor]}>

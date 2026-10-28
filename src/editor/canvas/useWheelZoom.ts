@@ -6,7 +6,7 @@ import {
 	useLayoutEffect,
 	useRef,
 } from "react";
-import { Platform, type View } from "react-native";
+import { Platform, type ViewInstance } from "react-native";
 import {
 	readShownViewport,
 	type ShownViewport,
@@ -47,7 +47,7 @@ export function useWheelZoom({
 	frame,
 	onCommit,
 }: {
-	target: RefObject<View | null>;
+	target: RefObject<ViewInstance | null>;
 	shown: ShownViewport;
 	frame: ViewFrame;
 	onCommit: (viewport: DocumentViewport) => void;

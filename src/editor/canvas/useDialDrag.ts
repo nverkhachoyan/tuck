@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Gesture, type TapGesture } from "react-native-gesture-handler";
+import { Gesture, type LegacyTapGesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { type DialDrag, draggedDialValue } from "../shell/dialDrag";
 
@@ -14,7 +14,7 @@ const FAIL_PX = 16;
  * A second finger holds the value, leaving the view's pinch to it. Without
  * a `drag`, just the tap.
  */
-export function useDialDrag(drag: DialDrag | null, tap: TapGesture) {
+export function useDialDrag(drag: DialDrag | null, tap: LegacyTapGesture) {
 	const start = useSharedValue(0);
 	const dragging = useSharedValue(false);
 	return useMemo(() => {

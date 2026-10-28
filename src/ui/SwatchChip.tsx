@@ -1,5 +1,11 @@
 import { type ReactNode, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+	type ViewInstance,
+} from "react-native";
 import { CheckerFill } from "./CheckerFill";
 import { compactControls } from "./density";
 import { interaction } from "./interaction";
@@ -34,7 +40,7 @@ export function SwatchChip({
 	restoreFocus?: () => void;
 	children: (close: () => void) => ReactNode;
 }) {
-	const anchor = useRef<View>(null);
+	const anchor = useRef<ViewInstance>(null);
 	const [open, setOpen] = useState(false);
 	const close = () => setOpen(false);
 	return (

@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type ViewInstance } from "react-native";
 import { Surface } from "@/ui/Surface";
 import { PANEL_GAP, PANEL_RADIUS } from "./shell/Dock";
 import { mapStarters, type ToolStarters, ToolsPanel } from "./shell/ToolsPanel";
@@ -30,7 +30,7 @@ export function EditorRail({
 	tool: ToolId | null;
 	finishTool: () => void;
 	finishText: () => void;
-	sheetAnchors?: Readonly<Record<string, RefObject<View | null>>>;
+	sheetAnchors?: Readonly<Record<string, RefObject<ViewInstance | null>>>;
 }) {
 	// A tool picked from the rail while another is open finishes that one.
 	const fromRail = (start: () => void) => () => {

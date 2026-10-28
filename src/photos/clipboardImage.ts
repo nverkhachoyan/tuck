@@ -9,7 +9,7 @@ export async function pasteClipboardImage(): Promise<string | null> {
 	const image = await Clipboard.getImageAsync({ format: "png" });
 	if (!image) return null;
 	const file = new File(Paths.cache, `clipboard-${Date.now()}.png`);
-	file.write(image.data.replace(/^data:image\/png;base64,/, ""), {
+	await file.write(image.data.replace(/^data:image\/png;base64,/, ""), {
 		encoding: "base64",
 	});
 	return file.uri;

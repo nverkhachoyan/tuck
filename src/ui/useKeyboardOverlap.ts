@@ -3,7 +3,7 @@ import {
 	Keyboard,
 	type KeyboardMetrics,
 	Platform,
-	type View,
+	type ViewInstance,
 } from "react-native";
 
 /**
@@ -14,13 +14,13 @@ import {
  * reports no keyboard, and with a hardware keyboard, which shows none.
  */
 export function useKeyboardOverlap(
-	ref: RefObject<View | null>,
+	ref: RefObject<ViewInstance | null>,
 	enabled: boolean,
 ): number {
 	const [overlap, setOverlap] = useState(0);
 	useEffect(() => {
 		if (!enabled || Platform.OS === "web") return;
-		const measure = (keyboard: KeyboardMetrics | undefined) => {
+		const measure = (keyboard: KeyboardMetrics | null | undefined) => {
 			if (!keyboard) {
 				setOverlap(0);
 				return;

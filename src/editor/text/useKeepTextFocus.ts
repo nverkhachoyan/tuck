@@ -1,5 +1,5 @@
 import { type RefObject, useEffect } from "react";
-import { Platform, type View } from "react-native";
+import { Platform, type ViewInstance } from "react-native";
 
 /**
  * On web, a press on the canvas would take the focus, and with it the
@@ -7,7 +7,7 @@ import { Platform, type View } from "react-native";
  * its caret instead.
  */
 export function useKeepTextFocus(
-	containerRef: RefObject<View | null>,
+	containerRef: RefObject<ViewInstance | null>,
 	editingText: boolean,
 ) {
 	useEffect(() => {

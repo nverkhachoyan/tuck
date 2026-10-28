@@ -65,7 +65,7 @@ function writeImage(image: SkImage, format: ExportFormat): File {
 	const { extension } = exportFormats[format];
 	const file = new File(Paths.cache, `export-${Date.now()}.${extension}`);
 	file.create({ overwrite: true });
-	file.write(encodeImage(image, format));
+	file.writeSync(encodeImage(image, format));
 	return file;
 }
 

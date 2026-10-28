@@ -12,7 +12,7 @@ export function writeTemporaryPng(bytes: Uint8Array): string {
 		`${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.png`,
 	);
 	file.create({ overwrite: true });
-	file.write(bytes);
+	file.writeSync(bytes);
 	return file.uri;
 }
 

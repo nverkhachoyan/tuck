@@ -4,6 +4,7 @@ import {
 	Platform,
 	StyleSheet,
 	TextInput,
+	type TextInputInstance,
 	type TextStyle,
 	View,
 } from "react-native";
@@ -43,7 +44,7 @@ export function TextEditor({
 	onFocusChange,
 	onDone,
 }: TextEditorProps) {
-	const input = useRef<TextInput>(null);
+	const input = useRef<TextInputInstance>(null);
 	// The first focus, as it opens, places the caret.
 	const placed = useRef(false);
 
@@ -115,7 +116,10 @@ export function TextEditor({
 }
 
 // React Native Web's input is the DOM's own, which has no `setSelection`.
-function setInputSelection(input: TextInput, { start, end }: TextSelection) {
+function setInputSelection(
+	input: TextInputInstance,
+	{ start, end }: TextSelection,
+) {
 	if (Platform.OS === "web") {
 		(input as unknown as HTMLTextAreaElement).setSelectionRange(start, end);
 	} else {

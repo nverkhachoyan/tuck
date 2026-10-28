@@ -16,6 +16,7 @@ import {
 	StyleSheet,
 	Text,
 	View,
+	type ViewInstance,
 } from "react-native";
 import { compactControls } from "@/ui/density";
 import { Highlight } from "@/ui/Highlight";
@@ -77,7 +78,7 @@ export function ToolButton({
 	busy?: boolean;
 	compact?: boolean;
 	// The pressable, when a popover hangs from this button.
-	buttonRef?: RefObject<View | null>;
+	buttonRef?: RefObject<ViewInstance | null>;
 	onPress: () => void;
 }) {
 	const inRail = useContext(InRail);
@@ -102,7 +103,7 @@ export function ToolButton({
 			<Pressable
 				{...(shortcut ? anchor : undefined)}
 				// The tooltip's anchor and a popover's share this pressable.
-				ref={(node: View | null) => {
+				ref={(node: ViewInstance | null) => {
 					if (shortcut && anchor.ref) anchor.ref.current = node;
 					if (buttonRef) buttonRef.current = node;
 				}}

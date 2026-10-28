@@ -9,7 +9,13 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { type LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
+import {
+	type LayoutChangeEvent,
+	StyleSheet,
+	Text,
+	View,
+	type ViewInstance,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
@@ -204,7 +210,7 @@ export function EditorCanvas({
 }: EditorCanvasProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
 	const [imageFailed, setImageFailed] = useState(false);
-	const containerRef = useRef<View>(null);
+	const containerRef = useRef<ViewInstance>(null);
 	const live = useLiveTransform();
 	const aspectLocked = useShiftHeld();
 	const editingText = textEdit !== null;

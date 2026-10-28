@@ -1,5 +1,10 @@
 import type { ReactNode, Ref } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+	StyleSheet,
+	useWindowDimensions,
+	View,
+	type ViewInstance,
+} from "react-native";
 import { colors } from "./theme";
 
 // Wide enough to spare a margin around the stage.
@@ -20,7 +25,7 @@ export function CanvasStage({
 	frameless = false,
 	children,
 }: {
-	ref?: Ref<View>;
+	ref?: Ref<ViewInstance>;
 	toBottom?: boolean;
 	frameless?: boolean;
 	children: ReactNode;
