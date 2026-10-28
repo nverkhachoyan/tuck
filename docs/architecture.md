@@ -13,6 +13,32 @@ dialogs). The editor is the project's own, with no commercial photo-editor SDK,
 and native code stays behind narrow modules (`modules/`) rather than taking
 over any of the editor.
 
+## The shape
+
+Each area of `src/` has one job, and imports flow from the top of this list
+down:
+
+- **Routes** (`app/`) name the URLs and hand each to a **screen** (`screens/`):
+  Home, Create, Export, the info pages, and the editor's route, which opens a
+  project and saves it.
+- The **editor** (`editor/`) is a component the app composes rather than a
+  screen. It knows nothing of projects, photos, or navigation: the app hands it
+  an `EditorHost` for those, and a list of tools, each a folder of its own.
+- **Photos** (`photos/`) and **projects** (`projects/`) are the app's concepts:
+  picking and importing images, and keeping each session as a project on the
+  device.
+- **Render** (`render/`) draws a document with Skia, for the editor's canvas,
+  export, and thumbnails alike.
+- The **model** (`model/`) is the document and every edit to it, in plain
+  TypeScript, which the rest builds on and Node's tests run directly.
+- Underneath, `site/` holds what the web site says about itself, `ui/`
+  the shared controls and theme, and `platform/` the OS ports (preferences,
+  haptics, files).
+
+[Modules](#modules) says what each folder holds, and
+[Boundaries](#boundaries-and-platform-files) the import rules that keep it
+that way.
+
 ## Modules
 
 - `src/app/` holds only thin Expo Router route files (every file there becomes a screen). A project's editor is at `/projects/[id]` and its export at `/projects/[id]/export`, so a link or a reload opens the project from storage (`useProjectSession`); `vercel.json` serves those routes from the static export.

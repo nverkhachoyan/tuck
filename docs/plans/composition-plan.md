@@ -4,7 +4,7 @@ A plan written October 27, 2026, the next step after the tool definition refacto
 
 Packages wait. Nothing outside this repo uses any part of it yet, and in an Expo app a workspace costs every contributor setup (Metro's package resolution, hoisting, autolinking) for boundaries that `biome.json` already enforces. The folders come out shaped so that one can become a package later with a file move, if something outside the repo comes to need it; [Later, if packages are needed](#later-if-packages-are-needed) says how.
 
-**Status, October 27, 2026:** settled, and revised four times: twice after reviews against the code (the second added the places the tool list missed, the session's key, the editor's entry file, and smoke runs), a third time to aim at open-sourcing rather than a workspace (packages deferred, step 10 added), and a fourth after another review against the code (a tool's hook reaches the editor only through `env`, the redaction look's own preference, what Node's tests read on the spec, the host's Back and save state, the checkerboard in the editor, and plain string ids inside the editor); in progress, see [Progress](#progress).
+**Status, October 27, 2026:** settled, and revised four times: twice after reviews against the code (the second added the places the tool list missed, the session's key, the editor's entry file, and smoke runs), a third time to aim at open-sourcing rather than a workspace (packages deferred, step 10 added), and a fourth after another review against the code (a tool's hook reaches the editor only through `env`, the redaction look's own preference, what Node's tests read on the spec, the host's Back and save state, the checkerboard in the editor, and plain string ids inside the editor); every step built by October 28, 2026 (see [Progress](#progress)).
 
 It changes structure, not behavior, with three exceptions on purpose: step 4a makes two callers of one preference share its value, step 4b moves the redaction look to a preference of its own (reading the old one when it's missing), and step 8c orders a photo's tool buttons as the dock does. Two earlier plans are in git history as of `737ebdb`: tools that stand alone (`608877c` to `ce20692`) and each tool's spec and definition (`ecb4fa8` to `28ae186`).
 
@@ -84,7 +84,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 8d. Make Crop a tool (October 28, 2026)
 - [x] 8e. Make Stickers a tool (October 28, 2026)
 - [x] 9. Docs (October 28, 2026)
-- [ ] 10. Give readers a map
+- [x] 10. Give readers a map (October 28, 2026)
 
 Each step is its own commit and passes `npm run check`, `npm run typecheck`, `npm test`, and `npm run build --prefix docs/interactive`; steps that move `.web` files or entry imports also run `npm run build:web`. The interactive docs import much of what moves (`render/`, `store/`, `canvas/hitTest.ts`, `canvas/layerBounds.ts`, Crop's `cropGeometry.ts`), so each step updates the lessons' imports and `sources.ts` in the same commit.
 
