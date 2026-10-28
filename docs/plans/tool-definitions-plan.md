@@ -2,6 +2,8 @@
 
 A refactoring plan written October 27, 2026, the next step after [tool-independence-plan.md](tool-independence-plan.md), which gave each tool a `defineTool` definition for its views and how it finishes (`c1c4452`). Three things still have a case per tool in the editor's root: the mode (`editorMode.ts`), what input on the canvas does (`canvasInputFor.ts`, `useCanvasInput.ts`), and starting a tool (`useEditorTools.ts`). This plan moves each into the tools.
 
+**Status, October 27, 2026:** built (`ecb4fa8` to `28ae186`).
+
 It changes APIs, not behavior, with one exception: picking Cut out again from the wide rail while it's open keeps it open, as every other tool does, instead of closing it (step 6).
 
 ## What happens today

@@ -4,7 +4,7 @@ A plan written October 27, 2026, to take the links between Redact, Find, and Cut
 
 Unlike the refactors before it, the first half changes what the user sees: Find gets a button of its own, and neither Find nor Cut out opens Redact any more.
 
-**Status, October 27, 2026:** the first half is built (`608877c` to `7199900`), and so are phases A to D of the second (`6fb597b` to `ce20692`, see [What was built](#what-was-built)). Phase E, the packages, waits until it's asked for. What phase C left central is listed under [Still central](#still-central).
+**Status, October 27, 2026:** the first half is built (`608877c` to `7199900`), and so are phases A to D of the second (`6fb597b` to `ce20692`, see [What was built](#what-was-built)). Phase E, the packages, waits until it's asked for. What phase C left central is listed under [Still central](#still-central); [tool-definitions-plan.md](tool-definitions-plan.md) then moved the mode, the canvas's input, and starting a tool into the tools.
 
 ## What happens today
 
@@ -112,14 +112,10 @@ A tool's behavior is spread over the editor's root today, in files that each hav
 
 ### Still central
 
-Phase C moved what each tool shows and how it finishes. These still have a case per tool, each for a reason:
+Phase C moved what each tool shows and how it finishes, and [tool-definitions-plan.md](tool-definitions-plan.md) the mode, what the canvas does, and starting a tool. These still have a case per tool, each for a reason:
 
-* **The mode union and reducer** (`editorMode.ts`). It's plain TypeScript, tested in Node, so it can't read the definitions (`.tsx` views). A definition's `target` ("none" or "image") and tray would let the union become `{ type: "tool"; tool; optionsOpen; layerId? }`, with the reducer's tests rewritten around it.
-* **What the canvas does** (`canvasInputFor.ts`, `useCanvasInput.ts`). Also tested in Node, and memoized part by part so a canvas gesture isn't rebuilt each render. A `canvasInput` field per definition is the next step, once the memoization is kept per tool.
-* **Starting a tool** (`useEditorTools.ts`). Draw and Redact pick their sub-tool from the selection, and Cut out starts its cut from an effect that has to run after the undo session begins. A `start` field per definition needs that order kept.
 * **Calling the tool hooks** (`useEditorTools.ts`). Each hook takes different inputs, so they're called by name. A shared host object would let the list call them.
 * **The buttons and keys** (`shell/toolList.ts`, `shortcuts.ts`). They list Text, Sticker, Crop, and Add photo too, which aren't tools in the mode, so they stay one list of buttons.
-* **`SIZED_TOOLS`** (`editorMode.ts`), which `shortcutCommand` reads in Node. It must name the tools whose definitions have `stepSize`.
 * **Text and Crop** aren't tools in the mode: text is edited in its own mode, and Crop covers the editor with its own canvas.
 * **Merging Find and Cut out**, if wanted, is now a question of two definitions becoming one, with one type for what they select.
 
