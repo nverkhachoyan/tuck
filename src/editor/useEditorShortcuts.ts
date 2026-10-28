@@ -10,6 +10,7 @@ import {
 import type { ArrangeMove } from "./shell/SelectionBar";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { type Shortcut, shortcutFor } from "./shortcuts";
+import type { ToolSpecs } from "./toolSpec";
 
 /**
  * The editor's keyboard shortcuts on web (see `shortcutFor`), only while
@@ -24,6 +25,8 @@ import { type Shortcut, shortcutFor } from "./shortcuts";
  * history.
  */
 export function useEditorShortcuts({
+	specs,
+	toolsByKey,
 	enabled,
 	modeState,
 	selection,
@@ -42,6 +45,8 @@ export function useEditorShortcuts({
 	nudge,
 	stepBrush,
 }: {
+	specs: ToolSpecs;
+	toolsByKey: ReadonlyMap<string, string>;
 	enabled: boolean;
 	modeState: EditorModeState;
 	selection: "text" | "layer" | null;
@@ -61,7 +66,7 @@ export function useEditorShortcuts({
 	stepBrush: (step: 1 | -1) => void;
 }) {
 	const handleShortcut = (shortcut: Shortcut): boolean => {
-		const command = shortcutCommand(modeState, selection, shortcut);
+		const command = shortcutCommand(modeState, selection, shortcut, specs);
 		if (command === null) return false;
 		if (command !== "held") runShortcut(command);
 		return true;
@@ -125,7 +130,7 @@ export function useEditorShortcuts({
 		if (Platform.OS !== "web" || !enabled) return;
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.isComposing || isEditable(event.target)) return;
-			const shortcut = shortcutFor(event);
+			const shortcut = shortcutFor(event, toolsByKey);
 			if (!shortcut) return;
 			// Enter on a focused button presses it.
 			if (shortcut.type === "edit" && event.target !== window.document.body) {
@@ -137,7 +142,7 @@ export function useEditorShortcuts({
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [enabled]);
+	}, [enabled, toolsByKey]);
 }
 
 function isEditable(target: EventTarget | null) {

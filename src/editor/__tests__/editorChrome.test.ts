@@ -1,15 +1,26 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { createDrawingLayer } from "../../model/layers/drawing.ts";
+import { createImageLayer } from "../../model/layers/image.ts";
+import { createRedactionBox } from "../../model/layers/redaction.ts";
+import { createShapeLayer } from "../../model/layers/shape.ts";
+import { createTextLayer } from "../../model/layers/text.ts";
+import { BUILT_IN_SPECS, BUILT_IN_TOOLBAR } from "../builtInSpecs.ts";
 import {
 	type DockPanel,
+	layerActionsFor,
 	type ModeChromeInput,
 	modeChrome,
 	railChosenTool,
+	toolbarEntries,
 } from "../editorChrome.ts";
-import type { EditorTool } from "../editorMode.ts";
+import type { ToolSpec, ToolSpecs } from "../toolSpec.ts";
+
+const specs: ToolSpecs = BUILT_IN_SPECS;
 
 const nothing: ModeChromeInput = {
+	specs,
 	tool: null,
 	editingText: false,
 	styledText: false,
@@ -18,7 +29,7 @@ const nothing: ModeChromeInput = {
 	wide: false,
 };
 
-const TOOLS: [EditorTool, string][] = [
+const TOOLS: [string, string][] = [
 	["draw", "Draw"],
 	["redact", "Redact"],
 	["find", "Find"],
@@ -146,6 +157,110 @@ describe("modeChrome", () => {
 			// The layouts differ only in where the panel goes.
 			assert.deepEqual({ ...wide, inBar: false }, phone, panel);
 		}
+	});
+});
+
+describe("toolbarEntries", () => {
+	test("gives each button its spec's or the editor's own label and key", () => {
+		const entries = toolbarEntries(specs, BUILT_IN_TOOLBAR);
+		assert.deepEqual(
+			entries.map((entry) => [entry.id, entry.label, entry.key]),
+			[
+				["text", "Text", "T"],
+				["draw", "Draw", "D"],
+				["redact", "Redact", "R"],
+				["find", "Find", "F"],
+				["sticker", "Sticker", "A"],
+				["crop", "Crop", "C"],
+				["adjust", "Adjust", "E"],
+				["cutOut", "Cut out", "B"],
+				["photo", "Add photo", "P"],
+			],
+		);
+	});
+
+	test("a tool with a target waits for an image", () => {
+		const waiting = toolbarEntries(specs, BUILT_IN_TOOLBAR)
+			.filter((entry) => entry.needsImage)
+			.map((entry) => entry.id);
+		assert.deepEqual(waiting, ["find", "adjust", "cutOut"]);
+	});
+
+	test("takes a made-up tool's button from its spec", () => {
+		const ruler: ToolSpec = {
+			target: "photo",
+			tray: false,
+			sized: false,
+			label: "Ruler",
+			icon: "ruler",
+			key: "U",
+			shortcut: "Measure",
+			actsOn: () => true,
+		};
+		assert.deepEqual(toolbarEntries({ ruler }, ["ruler", "text"]), [
+			{
+				id: "ruler",
+				label: "Ruler",
+				icon: "ruler",
+				key: "U",
+				shortcut: "Measure",
+				needsImage: true,
+			},
+			{
+				id: "text",
+				label: "Text",
+				icon: "format-text",
+				key: "T",
+				shortcut: "Add text",
+				needsImage: false,
+			},
+		]);
+	});
+});
+
+describe("layerActionsFor", () => {
+	const canvas = { width: 100, height: 100 };
+	const effect = { type: "solid", color: "#000000" } as const;
+	const actions = (layer: Parameters<typeof layerActionsFor>[0]) =>
+		layerActionsFor(layer, specs, BUILT_IN_TOOLBAR);
+
+	test("a photo can be redacted, found, adjusted, and cut out, in the toolbar's order", () => {
+		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
+		assert.deepEqual(actions(photo), ["redact", "find", "adjust", "cutOut"]);
+		assert.deepEqual(actions({ ...photo, hidden: true }), ["redact", "adjust"]);
+	});
+
+	test("a drawing or a shape is drawn, and a redaction is redacted", () => {
+		const drawing = createDrawingLayer({
+			type: "pen",
+			color: "#FF3B30",
+			width: 10,
+			points: [0, 0, 10, 10],
+		});
+		assert.deepEqual(actions(drawing), ["draw"]);
+		const shape = createShapeLayer(
+			"rectangle",
+			{ x: 0, y: 0, rotation: 0, width: 40, height: 20 },
+			{ color: "#FF3B30", strokeWidth: 4 },
+		);
+		assert.deepEqual(actions(shape), ["draw"]);
+		const redaction = createRedactionBox(
+			{ x: 0, y: 0, width: 40, height: 20 },
+			effect,
+		);
+		assert.deepEqual(actions(redaction), ["redact"]);
+	});
+
+	test("text offers none of these", () => {
+		assert.deepEqual(actions(createTextLayer(canvas, "Hello")), []);
+	});
+
+	test("a tool left out of the toolbar isn't offered", () => {
+		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
+		assert.deepEqual(layerActionsFor(photo, specs, ["adjust", "redact"]), [
+			"adjust",
+			"redact",
+		]);
 	});
 });
 

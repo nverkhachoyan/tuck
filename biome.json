@@ -710,6 +710,8 @@
 											"expo-router/**",
 											"@/editor",
 											"@/editor/**",
+											"./tools/**",
+											"../tools/**",
 											"../screens/**",
 											"../app/**",
 											"../site/**",
@@ -717,7 +719,41 @@
 											"../../app/**",
 											"../../site/**"
 										],
-										"message": "The editor doesn't import a route, a screen, site/, projects/, photos/, or expo-router (the app reaches it through its host), imports itself by relative path, and only detection/ imports image-analysis. See AGENTS.md."
+										"message": "The editor doesn't import a route, a screen, site/, projects/, photos/, or expo-router (the app reaches it through its host), imports itself by relative path, only detection/ imports image-analysis, and only builtInSpecs.ts and builtInTools.ts import a tool (the rest take the list they're given). See AGENTS.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/editor/builtInSpecs.ts", "src/editor/builtInTools.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
+											"@/editor",
+											"@/editor/**",
+											"../screens/**",
+											"../app/**",
+											"../site/**"
+										],
+										"message": "The built-in lists import the editor's tools, and no route, screen, site/, projects/, photos/, or expo-router. See AGENTS.md."
 									}
 								]
 							}

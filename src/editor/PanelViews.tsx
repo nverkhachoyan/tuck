@@ -1,9 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
+import type { OpenTool, ToolControllers } from "./defineTool";
 import type { DockPanel } from "./editorChrome";
 import {
 	type EditorModeAction,
 	type EditorModeState,
-	type EditorTool,
 	openTray,
 } from "./editorMode";
 import { EyedropperHint } from "./shell/ColorPicker";
@@ -16,12 +16,6 @@ import {
 	TextStylePanel,
 } from "./text/TextStylePanel";
 import type { TextController } from "./text/useTextEditing";
-import {
-	isTool,
-	TOOL_DEFINITIONS,
-	type ToolControllers,
-	toolWithController,
-} from "./toolDefinitions";
 
 /**
  * What the panels read besides the editor's context (see
@@ -90,13 +84,19 @@ const OTHER_PANELS: Record<
 
 /** `tool`'s view in `slot`, given its controller, or null without one. */
 function toolView(
-	tool: EditorTool,
-	controllers: ToolControllers,
+	{ definition, controller }: OpenTool,
 	slot: "Dock" | "Bar" | "Tray" | "Results",
 ) {
-	const { definition, controller } = toolWithController(tool, controllers);
 	const View = definition.views[slot];
 	return View ? <View controller={controller} /> : null;
+}
+
+/** The open tool `panel` is, or undefined for the editor's own panels. */
+function openToolIn(
+	panel: DockPanel,
+	controllers: ToolControllers,
+): OpenTool | undefined {
+	return controllers[panel] as OpenTool | undefined;
 }
 
 /**
@@ -116,13 +116,11 @@ export function ToolTrays({
 	const { mode, textPicker, eyedropper } = modeState;
 	const { styledText } = text;
 	const tray = openTray(mode);
+	const open = openToolIn(panel, controllers);
 	return (
 		<>
-			{tray && toolView(tray, controllers, "Tray")}
-			{!tray &&
-				!eyedropper &&
-				isTool(panel) &&
-				toolView(panel, controllers, "Results")}
+			{tray && toolView(controllers[tray], "Tray")}
+			{!tray && !eyedropper && open && toolView(open, "Results")}
 			{textPicker && styledText && (
 				<TextColorPicker
 					layer={styledText}
@@ -141,8 +139,13 @@ export function ToolTrays({
 }
 
 /** Whether `panel` has a section in the wide inspector, which opening it opens. */
-export function hasInspectorSection(panel: DockPanel): boolean {
-	return isTool(panel) && TOOL_DEFINITIONS[panel].views.Inspector !== undefined;
+export function hasInspectorSection(
+	panel: DockPanel,
+	controllers: ToolControllers,
+): boolean {
+	return (
+		openToolIn(panel, controllers)?.definition.views.Inspector !== undefined
+	);
 }
 
 /** The open tool's inspector section over `layers`, or the layers alone. */
@@ -155,11 +158,9 @@ export function InspectorContent({
 	panel: DockPanel;
 	layers: ReactNode;
 }) {
-	if (!isTool(panel)) return layers;
-	const { definition, controller } = toolWithController(
-		panel,
-		context.controllers,
-	);
+	const open = openToolIn(panel, context.controllers);
+	if (!open) return layers;
+	const { definition, controller } = open;
 	const Section = definition.views.Inspector;
 	return Section ? <Section controller={controller}>{layers}</Section> : layers;
 }
@@ -182,14 +183,15 @@ export function ContextBarContent({
 	chrome: { title: string } & ModeActionProps;
 }) {
 	if (panel === "idle") return null;
-	if (isTool(panel)) {
+	const open = openToolIn(panel, context.controllers);
+	if (open) {
 		return (
 			<ContextBar {...chrome} keepFocus={false}>
-				{toolView(panel, context.controllers, "Bar")}
+				{toolView(open, "Bar")}
 			</ContextBar>
 		);
 	}
-	const views = OTHER_PANELS[panel];
+	const views = OTHER_PANELS[panel as "text" | "layer"];
 	return (
 		<ContextBar {...chrome} keepFocus={views.keepBarFocus?.(context) ?? false}>
 			{views.bar(context)}
@@ -211,6 +213,7 @@ export function DockContent({
 	idle: ReactNode;
 }) {
 	if (panel === "idle") return idle;
-	if (isTool(panel)) return toolView(panel, context.controllers, "Dock");
-	return OTHER_PANELS[panel].dock(context);
+	const open = openToolIn(panel, context.controllers);
+	if (open) return toolView(open, "Dock");
+	return OTHER_PANELS[panel as "text" | "layer"].dock(context);
 }

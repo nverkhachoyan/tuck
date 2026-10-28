@@ -1,56 +1,52 @@
-// The editor's tools as the dock, the rail, the layer actions, and the
-// chrome name them. Plain TypeScript, so the chrome reads their labels in
-// tests.
+// The buttons the dock, the rail, and the layer actions show. Plain
+// TypeScript, so the chrome reads their labels in tests.
 
 import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
-import type { ToolKey } from "../shortcuts";
 
-type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
+export type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-// A tool a button can mark as open.
-export type MarkedTool =
-	| "text"
-	| "draw"
-	| "redact"
-	| "find"
-	| "adjust"
-	| "cutOut"
-	| "crop"
-	| "sticker";
+/**
+ * The editor's own entries among the tools' buttons: Text, Sticker, and
+ * Crop are modes and sheets of the editor's, and Add photo picks a photo.
+ */
+export type OwnTool = "text" | "sticker" | "crop" | "photo";
 
+/**
+ * A button for a tool or one of the editor's own entries.
+ * - `id`: the tool's id, or the entry's name.
+ * - `key`: the letter that picks it up.
+ * - `shortcut`: its line in the list of shortcuts.
+ * - `needsImage`: hidden until the document has an image to work on.
+ */
 export type ToolEntry = {
-	key: ToolKey;
+	id: string;
 	label: string;
 	icon: ToolIcon;
-	// Hidden until the document has an image to work on.
-	needsImage?: boolean;
+	key: string;
+	shortcut: string;
+	needsImage: boolean;
 };
 
-// The order the dock and the rail show them.
-export const TOOLS: readonly ToolEntry[] = [
-	{ key: "text", label: "Text", icon: "format-text" },
-	{ key: "draw", label: "Draw", icon: "draw" },
-	{ key: "redact", label: "Redact", icon: "blur" },
-	{
-		key: "find",
-		label: "Find",
-		icon: "image-search-outline",
-		needsImage: true,
+/** The editor's own entries' buttons; their keys are `TOOL_KEYS`. */
+export const TOOLS: Record<
+	OwnTool,
+	{ label: string; icon: ToolIcon; shortcut: string }
+> = {
+	text: { label: "Text", icon: "format-text", shortcut: "Add text" },
+	sticker: {
+		label: "Sticker",
+		icon: "sticker-emoji",
+		shortcut: "Add a sticker",
 	},
-	{ key: "sticker", label: "Sticker", icon: "sticker-emoji" },
-	{ key: "crop", label: "Crop", icon: "crop-rotate" },
-	{ key: "adjust", label: "Adjust", icon: "tune-variant", needsImage: true },
-	{
-		key: "cutOut",
-		label: "Cut out",
-		icon: "scissors-cutting",
-		needsImage: true,
+	crop: { label: "Crop", icon: "crop-rotate", shortcut: "Crop" },
+	photo: {
+		label: "Add photo",
+		icon: "image-plus-outline",
+		shortcut: "Add a photo",
 	},
-	{ key: "photo", label: "Add photo", icon: "image-plus-outline" },
-];
+};
 
-/** What a tool's button, footer, and bar call it. */
-export function toolLabel(key: ToolKey): string {
-	return TOOLS.find((entry) => entry.key === key)?.label ?? key;
+export function isOwnTool(id: string): id is OwnTool {
+	return id in TOOLS;
 }

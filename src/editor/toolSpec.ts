@@ -1,17 +1,34 @@
+import type { Layer } from "../model/layers/layer.ts";
+import type { ToolIcon } from "./shell/toolList.ts";
+
+/** A tool's name in the editor: its key in the list of tools. */
+export type ToolId = string;
+
 /**
- * What the mode and the shortcuts need to know of one of the editor's tools,
- * in plain TypeScript beside its definition, so Node's tests can read it.
- * - `id`: its name in the mode.
+ * What the mode, the chrome, and the shortcuts need to know of one of the
+ * editor's tools, in plain TypeScript beside its definition, so Node's tests
+ * can read it.
  * - `target`: what it works on. "none" needs nothing; "photo" needs a photo
  *   to work in, and is put down when the last one goes; "image" works on
  *   the image it started on, and is put down when that one is hidden or
- *   gone.
+ *   gone. A tool with a target waits for an image before its button shows.
  * - `tray`: whether it has a tray of options on the phone.
  * - `sized`: whether `[` and `]` step its brush.
+ * - `label`, `icon`: its button, and the title of its panel.
+ * - `key`: the letter that picks it up.
+ * - `shortcut`: its line in the list of shortcuts.
+ * - `actsOn`: whether a selected `layer` offers it among its actions.
  */
 export type ToolSpec = {
-	id: string;
 	target: "none" | "photo" | "image";
 	tray: boolean;
 	sized: boolean;
+	label: string;
+	icon: ToolIcon;
+	key: string;
+	shortcut: string;
+	actsOn: (layer: Layer) => boolean;
 };
+
+/** Each tool's spec, by its id. */
+export type ToolSpecs = Readonly<Record<ToolId, ToolSpec>>;

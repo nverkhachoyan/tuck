@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { isHexColor } from "@/model/color";
 import type { EditorDocument } from "@/model/document";
@@ -12,12 +12,19 @@ import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Toast } from "@/ui/Toast";
 import { space } from "@/ui/theme";
+import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
+import { BUILT_IN_TOOLS } from "./builtInTools";
 import { CropTool } from "./crop/CropTool";
+import type { ToolList } from "./defineTool";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import { EditorHeader } from "./EditorHeader";
 import { EditorInspector } from "./EditorInspector";
 import { EditorRail } from "./EditorRail";
-import { railChosenTool } from "./editorChrome";
+import {
+	layerActionsFor,
+	railChosenTool,
+	toolbarEntries,
+} from "./editorChrome";
 import { EditorContext, type EditorContextValue } from "./editorContext";
 import type { EditorHost } from "./editorHost";
 import { openTray, takesKeys } from "./editorMode";
@@ -37,6 +44,7 @@ import { HeaderActions } from "./shell/HeaderActions";
 import { SaveErrorBanner } from "./shell/SaveErrorBanner";
 import { TrayHeight } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
+import { shortcutGroups, toolsByKey } from "./shortcuts";
 import { StickerPopover, StickerSheet } from "./stickers/StickerSheet";
 import { useSavedStickers } from "./stickers/useSavedStickers";
 import { useStickerActions } from "./stickers/useStickerActions";
@@ -62,16 +70,41 @@ const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
 /**
  * The editor for the session's document, in the app that `host` gives it.
- * Its save problem shows in the header and over the canvas.
+ * - `host`: the app's side; its save problem shows in the header and over
+ *   the canvas.
+ * - `tools`: the tools it offers, by id, the built-in ones unless given
+ *   others (see `editorTools`). Read once: the list must not change while
+ *   it's mounted, since each tool's hook runs every render.
+ * - `toolbar`: the order of the dock's and the rail's buttons, mixing tool
+ *   ids and the editor's own entries.
  */
 export function Editor({
 	document,
 	host,
+	tools = BUILT_IN_TOOLS,
+	toolbar = BUILT_IN_TOOLBAR,
 }: {
 	document: EditorDocument;
 	host: EditorHost;
+	tools?: ToolList;
+	toolbar?: readonly string[];
 }) {
 	const { focused, saveProblem } = host;
+	const [toolbox] = useState(() => {
+		const specs = Object.fromEntries(
+			Object.entries(tools).map(([id, tool]) => [id, tool.spec]),
+		);
+		const entries = toolbarEntries(specs, toolbar);
+		return {
+			tools,
+			specs,
+			toolbar,
+			entries,
+			toolsByKey: toolsByKey(entries),
+			shortcutGroups: shortcutGroups(entries),
+		};
+	});
+	const { specs } = toolbox;
 	const selectedLayer = useStore(selectSelectedLayer);
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const canUndo = useStore(selectCanUndo);
@@ -98,11 +131,14 @@ export function Editor({
 	// down if its image goes away, or its photo does, and a text color picker
 	// closes if other text is styled.
 	const targetImage = targetImageLayer(document, selectedLayer);
-	const [modeState, dispatchMode] = useEditorMode({
-		isAdjustable: (id) => visibleImageLayer(document, id) !== undefined,
-		hasPhoto: targetImage !== null,
-		selectedTextId: selectedTextLayer?.id ?? null,
-	});
+	const [modeState, dispatchMode] = useEditorMode(
+		{
+			isAdjustable: (id) => visibleImageLayer(document, id) !== undefined,
+			hasPhoto: targetImage !== null,
+			selectedTextId: selectedTextLayer?.id ?? null,
+		},
+		specs,
+	);
 	const { mode, eyedropper } = modeState;
 	// The tool in the dock. While drawing, strokes on the canvas go into the
 	// selected drawing, or a new one; while redacting, into the selected
@@ -167,6 +203,7 @@ export function Editor({
 		resetEdit,
 		announcements,
 	} = useEditorTools({
+		tools: toolbox.tools,
 		document,
 		mode,
 		dispatchMode,
@@ -192,7 +229,7 @@ export function Editor({
 		typing: editingText,
 		layersOpen,
 		inspectorRequested:
-			layersOpen || (tool !== null && hasInspectorSection(tool)),
+			layersOpen || (tool !== null && hasInspectorSection(tool, controllers)),
 	});
 	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
 	const toolOptionsOpen = openTray(mode) !== null;
@@ -235,6 +272,7 @@ export function Editor({
 	};
 
 	const { panel, inBar, modeActions } = useEditorChrome({
+		specs,
 		tool,
 		controllers,
 		text,
@@ -245,6 +283,8 @@ export function Editor({
 	});
 
 	useEditorShortcuts({
+		specs,
+		toolsByKey: toolbox.toolsByKey,
 		enabled: focused && !keysTaken,
 		modeState,
 		selection: selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
@@ -288,9 +328,11 @@ export function Editor({
 	);
 
 	const hasImage = targetImage !== null;
-	// What the dock offers for the selected layer, by its kind.
-	const layerActions = selectedLayer && {
-		layer: selectedLayer,
+	// What the dock offers for the selected layer: the tools that act on it.
+	const layerTools =
+		selectedLayer && layerActionsFor(selectedLayer, specs, toolbox.toolbar);
+	const layerActions = layerTools && {
+		tools: toolbox.entries.filter((entry) => layerTools.includes(entry.id)),
 		startTool,
 		sticker: stickerSave.status,
 		onSaveSticker: stickerSave.save,
@@ -434,6 +476,7 @@ export function Editor({
 						{layersBeside && !wide && layersPanel}
 						{wide && (
 							<EditorRail
+								tools={toolbox.entries}
 								chosen={railChosenTool({
 									tool,
 									editingText,
@@ -473,6 +516,7 @@ export function Editor({
 									panel={panel}
 									idle={
 										<ToolsPanel
+											tools={toolbox.entries}
 											addBusy={addBusy}
 											hasImage={hasImage}
 											startTool={startTool}
@@ -532,6 +576,7 @@ export function Editor({
 					)}
 					{modeState.shortcutsOpen && (
 						<ShortcutsOverlay
+							groups={toolbox.shortcutGroups}
 							onClose={() => dispatchMode({ type: "closeShortcuts" })}
 						/>
 					)}

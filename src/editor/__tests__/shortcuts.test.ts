@@ -1,7 +1,18 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { type KeyPress, shortcutFor } from "../shortcuts.ts";
+import { BUILT_IN_SPECS, BUILT_IN_TOOLBAR } from "../builtInSpecs.ts";
+import { toolbarEntries } from "../editorChrome.ts";
+import {
+	type KeyPress,
+	shortcutFor as shortcutForTools,
+	shortcutGroups,
+	toolsByKey,
+} from "../shortcuts.ts";
+
+const entries = toolbarEntries(BUILT_IN_SPECS, BUILT_IN_TOOLBAR);
+const tools = toolsByKey(entries);
+const shortcutFor = (press: KeyPress) => shortcutForTools(press, tools);
 
 const press = (key: string, modifiers: Partial<KeyPress> = {}): KeyPress => ({
 	key,
@@ -139,5 +150,16 @@ describe("shortcutFor", () => {
 			shortcutFor(press("z", { metaKey: true, altKey: true })),
 			null,
 		);
+	});
+});
+
+describe("shortcutGroups", () => {
+	test("lists each tool's line in the toolbar's order, then the layers", () => {
+		const [toolGroup] = shortcutGroups(entries);
+		assert.deepEqual(
+			toolGroup.items.map((item) => item.keys),
+			["T", "D", "R", "F", "A", "C", "E", "B", "P", "L"],
+		);
+		assert.equal(toolGroup.items[3].action, "Find faces or text to redact");
 	});
 });

@@ -3,41 +3,31 @@ import type { EditorDocument } from "@/model/document";
 import { type Framing, visibleImageLayer } from "@/model/framing";
 import type { Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
-import type { ToolDefinition, ToolEnv } from "./defineTool";
+import {
+	definitionOf,
+	type ToolControllers,
+	type ToolEnv,
+	type ToolList,
+} from "./defineTool";
 import type { EditorHost } from "./editorHost";
-import type {
-	EditorMode,
-	EditorModeAction,
-	EditorTool,
-	ToolStart,
-} from "./editorMode";
+import type { EditorMode, EditorModeAction } from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useStore } from "./store";
 import { useTextEditing } from "./text/useTextEditing";
-import {
-	TOOL_DEFINITIONS,
-	type ToolControllers,
-	toolWithController,
-} from "./toolDefinitions";
-import { TOOL_SPECS } from "./toolSpecs";
-
-// The list is fixed for the editor's life, so its hooks always run in the
-// same order.
-const TOOL_LIST = Object.entries(TOOL_DEFINITIONS) as [
-	EditorTool,
-	ToolDefinition<unknown>,
-][];
+import type { ToolId } from "./toolSpec";
 
 /**
- * All of the editor's tools, their undo session, and their starters, Done,
- * and Cancel. Each tool's controller comes from its definition's
- * `useController`, given what `env` and the mode say of it. The order below
+ * All of the editor's tools (`tools`, which must not change while it's
+ * mounted), their undo session, and their starters, Done, and Cancel. Each
+ * tool's controller comes from its definition's `useController`, given what
+ * `env` and the mode say of it. The order below
  * matters: `useToolSession` runs first, so its effect begins the session
  * before the effect at the end runs a tool's `started`. Running it earlier
  * would put what it does, like Cut out's remembered cut, in the session's
  * starting document, where Cancel can't take it back.
  */
 export function useEditorTools({
+	tools,
 	document,
 	mode,
 	dispatchMode,
@@ -50,6 +40,7 @@ export function useEditorTools({
 	visibleArea,
 	notify,
 }: {
+	tools: ToolList;
 	document: EditorDocument;
 	mode: EditorMode;
 	dispatchMode: (action: EditorModeAction) => void;
@@ -76,10 +67,10 @@ export function useEditorTools({
 	});
 
 	const closeTool = () => dispatchMode({ type: "endTool" });
-	const openImageId =
-		mode.type === "tool" && "layerId" in mode ? mode.layerId : null;
-	const controllers = {} as ToolControllers;
-	for (const [id, definition] of TOOL_LIST) {
+	const openImageId = mode.type === "tool" ? mode.layerId : null;
+	const controllers: ToolControllers = {};
+	for (const [id, listed] of Object.entries(tools)) {
+		const definition = definitionOf(listed);
 		const open = tool === id;
 		const { target } = definition.spec;
 		const image =
@@ -89,7 +80,7 @@ export function useEditorTools({
 					? (visibleImageLayer(document, openImageId) ?? null)
 					: null;
 		// biome-ignore lint/correctness/useHookAtTopLevel: the list is fixed for the editor's life, so each tool's hooks run in the same order every render.
-		controllers[id] = definition.useController({
+		const controller = definition.useController({
 			document,
 			documentSize,
 			open,
@@ -99,12 +90,13 @@ export function useEditorTools({
 			view,
 			addImage,
 		});
+		controllers[id] = { definition, controller };
 	}
 	// Done does what the tool's own Done does, then closes it, and lets go of
 	// the selection if the tool asks.
 	const finishTool = () => {
 		if (!tool) return;
-		const { definition, controller } = toolWithController(tool, controllers);
+		const { definition, controller } = controllers[tool];
 		definition.done?.(controller);
 		closeTool();
 		if (definition.deselectOnDone) selectLayer(null);
@@ -117,28 +109,20 @@ export function useEditorTools({
 	// main one. Its `started` runs from the effect below, once its session
 	// has begun, or at once when it's already open on that photo. Starting a
 	// tool that's open, as the rail does, opens it again.
-	const pendingStart = useRef<{ tool: EditorTool; image: ImageLayer } | null>(
-		null,
-	);
-	const startTool = (next: EditorTool) => {
-		const { target } = TOOL_SPECS[next];
-		if (target !== "none" && !targetImage) return;
-		const { definition, controller } = toolWithController(next, controllers);
+	const pendingStart = useRef<{ tool: ToolId; image: ImageLayer } | null>(null);
+	const startTool = (next: ToolId) => {
+		const { definition, controller } = controllers[next];
+		if (definition.spec.target !== "none" && !targetImage) return;
 		definition.prepare?.(controller);
 		if (definition.started && targetImage) {
 			const openOnImage =
 				mode.type === "tool" &&
 				mode.tool === next &&
-				(!("layerId" in mode) || mode.layerId === targetImage.id);
+				(mode.layerId === null || mode.layerId === targetImage.id);
 			if (openOnImage) definition.started(controller, targetImage);
 			else pendingStart.current = { tool: next, image: targetImage };
 		}
-		// TypeScript can't build a member of `ToolStart` from any tool.
-		const start = (
-			target === "image" && targetImage
-				? { tool: next, layerId: targetImage.id }
-				: { tool: next }
-		) as ToolStart;
+		const start = { tool: next, layerId: targetImage?.id ?? null };
 		dispatchMode({ type: "startTool", start });
 	};
 	// After every render, so it runs once the tool is open on its photo.
@@ -147,10 +131,7 @@ export function useEditorTools({
 		if (!pending || pending.tool !== tool) return;
 		if (openImageId !== null && pending.image.id !== openImageId) return;
 		pendingStart.current = null;
-		const { definition, controller } = toolWithController(
-			pending.tool,
-			controllers,
-		);
+		const { definition, controller } = controllers[pending.tool];
 		definition.started?.(controller, pending.image);
 	});
 
@@ -167,14 +148,10 @@ export function useEditorTools({
 
 	// What each tool's key, button, and layer action picks up. A selected
 	// drawing or redaction takes the strokes, as its own Draw or Redact does.
-	const toolStarters = Object.fromEntries(
-		(Object.keys(TOOL_SPECS) as EditorTool[]).map((next) => [
-			next,
-			() => startTool(next),
-		]),
-	) as Record<EditorTool, () => void>;
 	const starters: ToolStarters = {
-		...toolStarters,
+		...Object.fromEntries(
+			Object.keys(tools).map((next) => [next, () => startTool(next)]),
+		),
 		text: startNewText,
 		sticker: openStickers,
 		photo: pickPhoto,
@@ -184,19 +161,19 @@ export function useEditorTools({
 	// [ and ] step the open tool's brush, if it has one.
 	const stepToolSize = (step: 1 | -1) => {
 		if (!tool) return;
-		const { definition, controller } = toolWithController(tool, controllers);
+		const { definition, controller } = controllers[tool];
 		definition.stepSize?.(controller, step);
 	};
 
 	// The header's Reset takes back the open tool's changes to its image, if
 	// it offers that, and each tool may have something to announce.
-	const openTool = tool && toolWithController(tool, controllers);
+	const openTool = tool && controllers[tool];
 	const resetEdit = openTool
 		? openTool.definition.reset?.(openTool.controller)
 		: undefined;
-	const announcements = TOOL_LIST.map(
-		([id, definition]) =>
-			[id, definition.announcement?.(controllers[id]) ?? null] as const,
+	const announcements = Object.entries(controllers).map(
+		([id, { definition, controller }]) =>
+			[id, definition.announcement?.(controller) ?? null] as const,
 	);
 
 	return {
@@ -220,7 +197,7 @@ export function useEditorTools({
  * ahead of the tool hooks, so the session has begun before a tool's own
  * effects change the document.
  */
-export function useToolSession(tool: EditorTool | null) {
+export function useToolSession(tool: ToolId | null) {
 	const { beginSession, commitSession } = useStore((state) => state.actions);
 	useEffect(() => {
 		if (!tool) return;

@@ -1,47 +1,40 @@
 import { StyleSheet, View } from "react-native";
-import type { Layer } from "@/model/layers/layer";
 import { space } from "@/ui/theme";
 import { TOOL_KEYS } from "../shortcuts";
 import { BarButton } from "./ContextBar";
-import { layerActionsFor } from "./layerActions";
 import { ToolButton, ToolRow } from "./ToolButton";
 import type { ToolStarters } from "./ToolsPanel";
-import { TOOLS } from "./toolList";
+import type { ToolEntry } from "./toolList";
 
 /**
  * What only the selected photo, drawing, shape, or redaction can do, in
  * place of the tools, as the text panel is for text; the actions every
  * layer shares float by it (see `SelectionBar`). It's moved and sized on
- * the canvas, and tapping the canvas off it deselects it. Which tools a
- * layer offers is `layerActionsFor`, and their labels and icons are `TOOLS`.
- * Keeping a photo as a sticker stays its own row: Saved, or Sticker.
+ * the canvas, and tapping the canvas off it deselects it. `tools` are the
+ * tools the layer offers (see `layerActionsFor`). Keeping a photo as a
+ * sticker stays its own row: Saved, or Sticker.
  */
 export function LayerActionsPanel({
-	layer,
+	tools,
 	startTool,
 	sticker,
 	onSaveSticker,
 }: {
-	layer: Layer;
+	tools: readonly ToolEntry[];
 	startTool: ToolStarters;
 	sticker: "saving" | "saved" | undefined;
 	onSaveSticker: (() => void) | undefined;
 }) {
 	return (
 		<ToolRow>
-			{layerActionsFor(layer).map((key) => {
-				const entry = TOOLS.find((tool) => tool.key === key);
-				return (
-					entry && (
-						<ToolButton
-							key={key}
-							label={entry.label}
-							icon={entry.icon}
-							onPress={startTool[key]}
-						/>
-					)
-				);
-			})}
+			{tools.map((entry) => (
+				<ToolButton
+					key={entry.id}
+					label={entry.label}
+					icon={entry.icon}
+					onPress={startTool[entry.id]}
+				/>
+			))}
 			{onSaveSticker && (
 				<ToolButton
 					label={sticker === "saved" ? "Saved" : "Sticker"}
@@ -65,32 +58,27 @@ export function LayerActionsPanel({
  * floating by the layer, is unchanged.
  */
 export function LayerBar({
-	layer,
+	tools,
 	startTool,
 	sticker,
 	onSaveSticker,
 }: {
-	layer: Layer;
+	tools: readonly ToolEntry[];
 	startTool: ToolStarters;
 	sticker: "saving" | "saved" | undefined;
 	onSaveSticker: (() => void) | undefined;
 }) {
 	return (
 		<View style={styles.actions}>
-			{layerActionsFor(layer).map((key) => {
-				const entry = TOOLS.find((tool) => tool.key === key);
-				return (
-					entry && (
-						<BarButton
-							key={key}
-							label={entry.label}
-							icon={entry.icon}
-							shortcut={TOOL_KEYS[key]}
-							onPress={startTool[key]}
-						/>
-					)
-				);
-			})}
+			{tools.map((entry) => (
+				<BarButton
+					key={entry.id}
+					label={entry.label}
+					icon={entry.icon}
+					shortcut={entry.key}
+					onPress={startTool[entry.id]}
+				/>
+			))}
 			{onSaveSticker && (
 				<BarButton
 					label={sticker === "saved" ? "Saved" : "Sticker"}

@@ -1,10 +1,10 @@
 import type { RefObject } from "react";
 import { StyleSheet, View } from "react-native";
 import { Surface } from "@/ui/Surface";
-import type { EditorTool } from "./editorMode";
 import { PANEL_GAP, PANEL_RADIUS } from "./shell/Dock";
 import { mapStarters, type ToolStarters, ToolsPanel } from "./shell/ToolsPanel";
-import type { MarkedTool } from "./shell/toolList";
+import type { ToolEntry } from "./shell/toolList";
+import type { ToolId } from "./toolSpec";
 import { RAIL_WIDTH } from "./useEditorLayout";
 
 /**
@@ -12,6 +12,7 @@ import { RAIL_WIDTH } from "./useEditorLayout";
  * Picking a tool while another is open finishes the earlier one first.
  */
 export function EditorRail({
+	tools,
 	chosen,
 	addBusy,
 	hasImage,
@@ -21,11 +22,12 @@ export function EditorRail({
 	finishText,
 	stickerAnchor,
 }: {
-	chosen: MarkedTool | null;
+	tools: readonly ToolEntry[];
+	chosen: string | null;
 	addBusy: boolean;
 	hasImage: boolean;
 	startTool: ToolStarters;
-	tool: EditorTool | null;
+	tool: ToolId | null;
 	finishTool: () => void;
 	finishText: () => void;
 	stickerAnchor?: RefObject<View | null>;
@@ -40,6 +42,7 @@ export function EditorRail({
 		<View style={styles.railArea}>
 			<Surface resting style={styles.rail} contentStyle={styles.railContent}>
 				<ToolsPanel
+					tools={tools}
 					vertical
 					tool={chosen}
 					addBusy={addBusy}

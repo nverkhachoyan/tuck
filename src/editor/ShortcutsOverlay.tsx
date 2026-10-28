@@ -4,13 +4,20 @@ import { PanelHeader } from "@/ui/BottomSheet";
 import { Surface } from "@/ui/Surface";
 import { formatShortcut } from "@/ui/Tooltip";
 import { colors, radii, space, typography } from "@/ui/theme";
-import { SHORTCUT_GROUPS } from "./shortcuts";
+import type { ShortcutGroup } from "./shortcuts";
 
 /**
- * Every keyboard shortcut, in a card over the editor, opened with ?. A
- * click outside it, Escape, or ? again closes it.
+ * Every keyboard shortcut (`groups`, from `shortcutGroups`), in a card over
+ * the editor, opened with ?. A click outside it, Escape, or ? again closes
+ * it.
  */
-export function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
+export function ShortcutsOverlay({
+	groups,
+	onClose,
+}: {
+	groups: ShortcutGroup[];
+	onClose: () => void;
+}) {
 	return (
 		<Animated.View
 			entering={FadeIn.duration(140)}
@@ -31,7 +38,7 @@ export function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
 					onClose={onClose}
 				/>
 				<ScrollView contentContainerStyle={styles.groups}>
-					{SHORTCUT_GROUPS.map(({ title, items }) => (
+					{groups.map(({ title, items }) => (
 						<View key={title} style={styles.group}>
 							<Text style={styles.groupTitle}>{title}</Text>
 							{items.map(({ keys, action }) => (

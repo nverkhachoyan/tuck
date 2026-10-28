@@ -5,7 +5,8 @@ import type { ImageLayer } from "@/model/layers/image";
 import type { ToolStroke } from "./canvas/canvasTool";
 import type { CanvasInput } from "./canvasInputFor";
 import type { EditorHost } from "./editorHost";
-import type { ToolSpec } from "./toolSpec";
+import type { OwnTool } from "./shell/toolList";
+import type { ToolId, ToolSpec } from "./toolSpec";
 
 type ToolView<C> = ComponentType<{ controller: C }>;
 
@@ -36,7 +37,8 @@ export type ToolEnv = {
  * One of the editor's tools, as its own folder describes it, given its
  * controller `C` (what its hook returns). The editor reads it wherever it
  * shows or finishes the tool.
- * - `spec`: what the mode and the shortcuts know of it (see `ToolSpec`).
+ * - `spec`: what the mode, the chrome, and the shortcuts know of it (see
+ *   `ToolSpec`).
  * - `useController`: its hook, given what the editor gives it (`ToolEnv`).
  * - `views.Dock`: the phone dock's panel.
  * - `views.Bar`: the wide header's options, inside the shared `ContextBar`;
@@ -95,4 +97,44 @@ export function defineTool<C>(
 	definition: ToolDefinition<C>,
 ): ToolDefinition<C> {
 	return definition;
+}
+
+/**
+ * A tool in a list, whatever its controller. A list can't carry each
+ * controller's type, so `definitionOf` gives a tool its definition back.
+ */
+export type Tool = { spec: ToolSpec };
+
+/** The editor's tools, by id. */
+export type ToolList = Readonly<Record<ToolId, Tool>>;
+
+export function definitionOf(tool: Tool): ToolDefinition<unknown> {
+	return tool as ToolDefinition<unknown>;
+}
+
+/** A tool's definition, with the controller its hook built this render. */
+export type OpenTool = {
+	definition: ToolDefinition<unknown>;
+	controller: unknown;
+};
+
+/** Each tool, with its controller, by id. */
+export type ToolControllers = Record<ToolId, OpenTool>;
+
+// Ids the editor's own entries and panels already use.
+type TakenId = OwnTool | "layer" | "idle";
+
+/**
+ * `tools` and the order of the dock's and the rail's buttons (`toolbar`),
+ * for `<Editor>`, checked to agree: the toolbar names only tools in the
+ * list and the editor's own entries, and no tool takes an id the editor
+ * uses.
+ */
+export function editorTools<
+	Tools extends ToolList & { [Id in TakenId]?: never },
+>(config: {
+	tools: Tools;
+	toolbar: readonly ((keyof Tools & string) | OwnTool)[];
+}): { tools: ToolList; toolbar: readonly string[] } {
+	return config;
 }

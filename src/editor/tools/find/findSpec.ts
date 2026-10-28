@@ -1,8 +1,13 @@
 import type { ToolSpec } from "../../toolSpec.ts";
 
+// A hidden photo can't be searched.
 export const findSpec = {
-	id: "find",
 	target: "photo",
 	tray: true,
 	sized: false,
+	label: "Find",
+	icon: "image-search-outline",
+	key: "F",
+	shortcut: "Find faces or text to redact",
+	actsOn: (layer) => layer.type === "image" && !layer.hidden,
 } as const satisfies ToolSpec;

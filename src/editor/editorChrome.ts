@@ -1,14 +1,46 @@
-// What the editor's chrome shows for the mode: which panel the dock or the
-// context bar holds, its title, and what its Cancel and Done do. Plain
-// TypeScript, so the phone and wide layouts are tested to agree; the screen
-// turns the actions into handlers once and gives both layouts the result.
+// What the editor's chrome shows: the tools' buttons, which panel the dock
+// or the context bar holds for the mode, its title, and what its Cancel and
+// Done do. Plain TypeScript, so the phone and wide layouts are tested to
+// agree; the screen turns the actions into handlers once and gives both
+// layouts the result.
 
-import type { EditorTool } from "./editorMode.ts";
-import { type MarkedTool, toolLabel } from "./shell/toolList.ts";
+import type { Layer } from "../model/layers/layer.ts";
+import { isOwnTool, TOOLS, type ToolEntry } from "./shell/toolList.ts";
+import { TOOL_KEYS } from "./shortcuts.ts";
+import type { ToolId, ToolSpecs } from "./toolSpec.ts";
+
+/**
+ * The buttons for `toolbar`'s tools and entries, in its order: a tool's
+ * from its spec in `specs`, and an entry's from `TOOLS`.
+ */
+export function toolbarEntries(
+	specs: ToolSpecs,
+	toolbar: readonly string[],
+): ToolEntry[] {
+	return toolbar.map((id) => {
+		if (isOwnTool(id)) {
+			return { id, ...TOOLS[id], key: TOOL_KEYS[id], needsImage: false };
+		}
+		const { label, icon, key, shortcut, target } = specs[id];
+		return { id, label, icon, key, shortcut, needsImage: target !== "none" };
+	});
+}
+
+/**
+ * The tools a selected `layer` offers in place of the toolbar: those in
+ * `toolbar` whose spec acts on it, in its order.
+ */
+export function layerActionsFor(
+	layer: Layer,
+	specs: ToolSpecs,
+	toolbar: readonly string[],
+): ToolId[] {
+	return toolbar.filter((id) => specs[id]?.actsOn(layer));
+}
 
 // What the dock shows: a tool's panel, text's style, the selected layer's
 // actions, or, with nothing selected, the tools or the layers.
-export type DockPanel = EditorTool | "text" | "layer" | "idle";
+export type DockPanel = ToolId | "text" | "layer" | "idle";
 
 // What Cancel and Done apply to: the open tool, the text being typed, or the
 // selection, which Done lets go of.
@@ -36,7 +68,8 @@ export type ModeChrome = {
 };
 
 export type ModeChromeInput = {
-	tool: EditorTool | null;
+	specs: ToolSpecs;
+	tool: ToolId | null;
 	editingText: boolean;
 	styledText: boolean;
 	layerName: string | null;
@@ -46,8 +79,9 @@ export type ModeChromeInput = {
 
 /**
  * The editor's chrome for the mode, the same for the dock and the bar.
- * - `tool`: the open tool, which comes first. Its Cancel and Done are the
- *   tool's, and Done says `toolDoneLabel` when the tool gives one.
+ * - `tool`: the open tool, which comes first. Its title is its spec's label
+ *   in `specs`, its Cancel and Done are the tool's, and Done says
+ *   `toolDoneLabel` when the tool gives one.
  * - `editingText`: text being typed, whose Cancel and Done are the text's.
  * - `styledText`: text styled but not typed (a selected text layer), which
  *   shows text's panel with no Cancel, and Done lets go of it.
@@ -56,6 +90,7 @@ export type ModeChromeInput = {
  * - `wide`: a wide window, where every panel but `"idle"` is in the bar.
  */
 export function modeChrome({
+	specs,
 	tool,
 	editingText,
 	styledText,
@@ -70,7 +105,7 @@ export function modeChrome({
 
 	if (tool) {
 		return chrome(tool, {
-			title: toolLabel(tool),
+			title: specs[tool]?.label ?? tool,
 			cancel: "tool",
 			done: "tool",
 			doneLabel: toolDoneLabel,
@@ -89,7 +124,7 @@ export function modeChrome({
 }
 
 export type RailChosenToolInput = {
-	tool: EditorTool | null;
+	tool: ToolId | null;
 	editingText: boolean;
 	cropping: boolean;
 	stickersOpen: boolean;
@@ -108,7 +143,7 @@ export function railChosenTool({
 	editingText,
 	cropping,
 	stickersOpen,
-}: RailChosenToolInput): MarkedTool | null {
+}: RailChosenToolInput): string | null {
 	if (editingText) return "text";
 	if (cropping) return "crop";
 	if (stickersOpen) return "sticker";

@@ -3,9 +3,10 @@ import type { Point } from "@/model/geometry";
 import { sampleColor } from "@/render/renderDocument";
 import type { ToolStroke } from "./canvas/canvasTool";
 import { canvasInputFor } from "./canvasInputFor";
-import type { EditorModeAction, EditorTool, Eyedropper } from "./editorMode";
+import type { ToolControllers } from "./defineTool";
+import type { EditorModeAction, Eyedropper } from "./editorMode";
 import { isCustomColor } from "./shell/ColorSwatches";
-import { type ToolControllers, toolWithController } from "./toolDefinitions";
+import type { ToolId } from "./toolSpec";
 
 /**
  * What input on the canvas does for the editor's state (see
@@ -23,14 +24,14 @@ export function useCanvasInput({
 	onCustomColor,
 }: {
 	document: EditorDocument;
-	tool: EditorTool | null;
+	tool: ToolId | null;
 	controllers: ToolControllers;
 	eyedropper: Eyedropper | null;
 	editingText: boolean;
 	dispatchMode: (action: EditorModeAction) => void;
 	onCustomColor: (color: string) => void;
 }) {
-	const open = tool && toolWithController(tool, controllers);
+	const open = tool ? controllers[tool] : null;
 	// Each tool memoizes its own input, so this one changes only with it.
 	const input = canvasInputFor({
 		eyedropper: eyedropper !== null,

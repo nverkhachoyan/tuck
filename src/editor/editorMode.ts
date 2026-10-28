@@ -6,7 +6,7 @@ import type { Rect } from "../model/geometry.ts";
 import type { TextLayer } from "../model/layers/text.ts";
 import type { TextSelection } from "../model/textEditing.ts";
 import type { Shortcut } from "./shortcuts.ts";
-import { TOOL_SPECS } from "./toolSpecs.ts";
+import type { ToolId, ToolSpecs } from "./toolSpec.ts";
 
 /** A text layer's colors, which its Color, Outline, and Box tabs pick. */
 export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
@@ -33,33 +33,17 @@ export type TextEditState = {
 	area?: Rect;
 };
 
-type Specs = typeof TOOL_SPECS;
-
-export type EditorTool = keyof Specs;
-
-// The tools that work on the image they started on.
-type ImageTool = {
-	[Tool in EditorTool]: Specs[Tool]["target"] extends "image" ? Tool : never;
-}[EditorTool];
-
-// The image a tool works on, when it works on one.
-type ImageOf<Tool extends EditorTool> = Tool extends ImageTool
-	? { layerId: string }
-	: unknown;
-
-// One object type, so hovers show plain objects rather than intersections.
-type Flat<T> = { [Key in keyof T]: T[Key] };
-
 /**
- * Each tool's mode, from its spec: `layerId` when it works on the image it
- * started on, and `optionsOpen` when it has a tray.
+ * A tool's mode. `layerId` is the image it started on, for a tool whose
+ * spec's target is "image", and null for the rest; `optionsOpen` is whether
+ * its tray is open, and stays false for a tool without one.
  */
-type ToolMode = {
-	[Tool in EditorTool]: Flat<
-		{ type: "tool"; tool: Tool } & ImageOf<Tool> &
-			(Specs[Tool]["tray"] extends true ? { optionsOpen: boolean } : unknown)
-	>;
-}[EditorTool];
+export type ToolMode = {
+	type: "tool";
+	tool: ToolId;
+	layerId: string | null;
+	optionsOpen: boolean;
+};
 
 /**
  * What the canvas and the dock are given over to, one at a time: nothing, a
@@ -72,12 +56,8 @@ export type EditorMode =
 	| { type: "text"; edit: TextEditState }
 	| { type: "crop" };
 
-type TrayTool = Extract<EditorMode, { optionsOpen: boolean }>;
-
-/** A tool to start, with the image it works on when it needs one. */
-export type ToolStart = {
-	[Tool in EditorTool]: Flat<{ tool: Tool } & ImageOf<Tool>>;
-}[EditorTool];
+/** A tool to start, with the image it would work on, if any. */
+export type ToolStart = { tool: ToolId; layerId: string | null };
 
 /**
  * The mode, and what sits over it. A text color picker belongs to a layer,
@@ -141,17 +121,19 @@ const idle = { type: "idle" } as const;
  * crop screen covers it, and it's open again after. A tool starts with its
  * tray closed, and closes a text color picker. Starting anything, and
  * ending a tool, stops the eyedropper: what it was picking for has moved on.
+ * What a tool's mode holds follows its spec in `specs`.
  */
 export function editorModeReducer(
 	state: EditorModeState,
 	action: EditorModeAction,
+	specs: ToolSpecs,
 ): EditorModeState {
 	const { mode } = state;
 	switch (action.type) {
 		case "startTool":
 			return {
 				...state,
-				mode: toolMode(action.start),
+				mode: toolMode(action.start, specs),
 				textPicker: null,
 				eyedropper: null,
 				sheet: withoutLayers(state.sheet),
@@ -163,11 +145,11 @@ export function editorModeReducer(
 				eyedropper: null,
 			};
 		case "toggleToolOptions":
-			return hasTray(mode)
+			return mode.type === "tool" && specs[mode.tool]?.tray
 				? { ...state, mode: { ...mode, optionsOpen: !mode.optionsOpen } }
 				: state;
 		case "closeToolOptions":
-			return hasTray(mode) && mode.optionsOpen
+			return mode.type === "tool" && mode.optionsOpen
 				? { ...state, mode: { ...mode, optionsOpen: false } }
 				: state;
 		case "startText":
@@ -201,7 +183,10 @@ export function editorModeReducer(
 		case "startEyedropper":
 			return {
 				...state,
-				mode: hasTray(mode) ? { ...mode, optionsOpen: false } : mode,
+				mode:
+					mode.type === "tool" && mode.optionsOpen
+						? { ...mode, optionsOpen: false }
+						: mode,
 				textPicker: null,
 				eyedropper: action.eyedropper,
 			};
@@ -225,7 +210,7 @@ export function editorModeReducer(
 		case "closeShortcuts":
 			return state.shortcutsOpen ? { ...state, shortcutsOpen: false } : state;
 		case "settle":
-			return settle(state, action.targets);
+			return settle(state, action.targets, specs);
 	}
 }
 
@@ -233,14 +218,15 @@ export function editorModeReducer(
  * `state` with what's gone put away: a tool whose image is gone or hidden,
  * or that works in a photo when none is left (see `ToolSpec`'s `target`),
  * and a text color picker whose text isn't the one styled any more. The
- * same `state` when nothing is.
+ * same `state` when nothing is. A tool's target is its spec's in `specs`.
  */
 export function settle(
 	state: EditorModeState,
 	targets: ModeTargets,
+	specs: ToolSpecs,
 ): EditorModeState {
 	const { mode, textPicker } = state;
-	const toolGone = mode.type === "tool" && targetGone(mode, targets);
+	const toolGone = mode.type === "tool" && targetGone(mode, targets, specs);
 	const styledTextId =
 		mode.type === "text" ? mode.edit.layer.id : targets.selectedTextId;
 	const pickerGone = textPicker !== null && textPicker.layerId !== styledTextId;
@@ -270,12 +256,14 @@ export type ShortcutCommand =
  * What `shortcut` does with `state` open and `selection` selected: a command
  * for the screen to carry out, "held" for a key used up doing nothing, or
  * null for a key left to the browser. The screen doesn't ask while typing or
- * cropping, which take their own keys (see `takesKeys`).
+ * cropping, which take their own keys (see `takesKeys`). Whether the open
+ * tool has a brush is its spec's in `specs`.
  */
 export function shortcutCommand(
 	state: EditorModeState,
 	selection: "text" | "layer" | null,
 	shortcut: Shortcut,
+	specs: ToolSpecs,
 ): ShortcutCommand | "held" | null {
 	// The list of shortcuts closes with its own key or Escape, and holds the
 	// rest back.
@@ -304,9 +292,9 @@ export function shortcutCommand(
 	}
 	if (state.mode.type === "tool") {
 		if (shortcut.type === "deselect") return { type: "doneWithTool" };
-		// [ and ] step a brush while Draw, Redact, or Cut out is open. A
-		// sub-tool with no size, like a box, leaves the size where it is.
-		if (shortcut.type === "brushSize" && TOOL_SPECS[state.mode.tool].sized) {
+		// [ and ] step a brush while a tool with one is open. A sub-tool with
+		// no size, like a box, leaves the size where it is.
+		if (shortcut.type === "brushSize" && specs[state.mode.tool]?.sized) {
 			return shortcut;
 		}
 		return null;
@@ -318,33 +306,36 @@ export function shortcutCommand(
 	return shortcut;
 }
 
-// The mode a tool starts in. A tool with a tray starts with it closed.
-// TypeScript can't check a member of `ToolMode` built from any tool, so
-// it's cast; the tests cover each tool's.
-function toolMode(start: ToolStart): ToolMode {
-	const tray = TOOL_SPECS[start.tool].tray ? { optionsOpen: false } : {};
-	return { type: "tool", ...start, ...tray } as ToolMode;
+// The mode a tool starts in, with its tray closed.
+function toolMode(start: ToolStart, specs: ToolSpecs): ToolMode {
+	const isImageTool = specs[start.tool]?.target === "image";
+	return {
+		type: "tool",
+		tool: start.tool,
+		layerId: isImageTool ? start.layerId : null,
+		optionsOpen: false,
+	};
 }
 
 // Whether what `mode` works on is gone.
-function targetGone(mode: ToolMode, targets: ModeTargets): boolean {
-	switch (TOOL_SPECS[mode.tool].target) {
+function targetGone(
+	mode: ToolMode,
+	targets: ModeTargets,
+	specs: ToolSpecs,
+): boolean {
+	switch (specs[mode.tool]?.target) {
 		case "image":
-			return "layerId" in mode && !targets.isAdjustable(mode.layerId);
+			return mode.layerId !== null && !targets.isAdjustable(mode.layerId);
 		case "photo":
 			return !targets.hasPhoto;
-		case "none":
+		default:
 			return false;
 	}
 }
 
-function hasTray(mode: EditorMode): mode is TrayTool {
-	return mode.type === "tool" && TOOL_SPECS[mode.tool].tray;
-}
-
 /** The tool whose tray is open, or null when none is. */
 export function openTray(mode: EditorMode) {
-	return hasTray(mode) && mode.optionsOpen ? mode.tool : null;
+	return mode.type === "tool" && mode.optionsOpen ? mode.tool : null;
 }
 
 function withoutLayers(

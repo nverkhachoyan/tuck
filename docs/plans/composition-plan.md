@@ -80,7 +80,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 7. Give the editor its host (October 27, 2026)
 - [x] 8a. Build every tool's controller the same way (October 27, 2026)
 - [x] 8b. Give the canvas's input kinds their own gestures and drawing (October 27, 2026)
-- [ ] 8c. Take the tool list as a prop
+- [x] 8c. Take the tool list as a prop (October 27, 2026)
 - [ ] 9. Docs
 - [ ] 10. Give readers a map
 

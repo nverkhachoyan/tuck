@@ -1,38 +1,26 @@
+import type { OwnTool, ToolEntry } from "./shell/toolList.ts";
+
 // Nudge distances in screen pixels, so a nudge looks the same at any zoom.
 const NUDGE_PX = 1;
 const NUDGE_FAR_PX = 10;
 
-export type ToolKey =
-	| "text"
-	| "draw"
-	| "redact"
-	| "find"
-	| "sticker"
-	| "photo"
-	| "crop"
-	| "adjust"
-	| "cutOut";
-
 // A letter picks up a tool, and L shows or hides the layers. Each tool's
-// button shows its key on hover. A opens the stickers (it was Add's), P the
-// photo picker, and F Find. E adjusts, since A is taken, and B cuts
-// out the subject, taking its background away.
-export const TOOL_KEYS: Record<ToolKey, string> = {
+// button shows its key on hover. A tool's key is its spec's; these are the
+// editor's own entries'. A opens the stickers, and P the photo picker.
+export const TOOL_KEYS: Record<OwnTool, string> = {
 	text: "T",
-	draw: "D",
-	redact: "R",
-	find: "F",
 	sticker: "A",
 	photo: "P",
 	crop: "C",
-	adjust: "E",
-	cutOut: "B",
 };
 export const LAYERS_KEY = "L";
 
-const TOOLS_BY_KEY = new Map(
-	Object.entries(TOOL_KEYS).map(([tool, key]) => [key, tool as ToolKey]),
-);
+/** Each tool's or entry's id, by the letter that picks it up. */
+export function toolsByKey(
+	tools: readonly Pick<ToolEntry, "id" | "key">[],
+): ReadonlyMap<string, string> {
+	return new Map(tools.map((tool) => [tool.key, tool.id]));
+}
 
 export type Shortcut =
 	| { type: "undo" }
@@ -45,7 +33,7 @@ export type Shortcut =
 	| { type: "nudge"; dx: number; dy: number }
 	| { type: "zoom"; to: "in" | "out" | "fit" }
 	| { type: "brushSize"; step: 1 | -1 }
-	| { type: "tool"; tool: ToolKey }
+	| { type: "tool"; tool: string }
 	| { type: "layers" }
 	| { type: "export" }
 	| { type: "help" };
@@ -66,11 +54,15 @@ const ARROWS: Record<string, [number, number]> = {
 };
 
 /**
- * The editor command for a key press, or null. ⌘ on a Mac and Ctrl
+ * The editor command for a key press, or null, with `tools` giving the
+ * letters that pick up a tool (see `toolsByKey`). ⌘ on a Mac and Ctrl
  * elsewhere are treated alike, and Option/Alt combinations are left to the
  * system.
  */
-export function shortcutFor(press: KeyPress): Shortcut | null {
+export function shortcutFor(
+	press: KeyPress,
+	tools: ReadonlyMap<string, string>,
+): Shortcut | null {
 	if (press.altKey) return null;
 	if (press.metaKey || press.ctrlKey) return modifiedShortcut(press);
 	const arrow = ARROWS[press.key];
@@ -98,7 +90,7 @@ export function shortcutFor(press: KeyPress): Shortcut | null {
 	if (press.key === "]") return { type: "brushSize", step: 1 };
 	const letter = press.key.toUpperCase();
 	if (letter === LAYERS_KEY) return { type: "layers" };
-	const tool = TOOLS_BY_KEY.get(letter);
+	const tool = tools.get(letter);
 	return tool ? { type: "tool", tool } : null;
 }
 
@@ -132,27 +124,27 @@ function modifiedShortcut(press: KeyPress): Shortcut | null {
 
 /**
  * Every shortcut, as the help overlay lists them, in the notation tooltips
- * take ("mod+shift+Z").
+ * take ("mod+shift+Z"), with a line for each of `tools` in their order.
  */
-export const SHORTCUT_GROUPS: {
+export function shortcutGroups(tools: readonly ToolEntry[]): ShortcutGroup[] {
+	return [
+		{
+			title: "Tools",
+			items: [
+				...tools.map((tool) => ({ keys: tool.key, action: tool.shortcut })),
+				{ keys: LAYERS_KEY, action: "Show or hide layers" },
+			],
+		},
+		...OTHER_GROUPS,
+	];
+}
+
+export type ShortcutGroup = {
 	title: string;
 	items: { keys: string; action: string }[];
-}[] = [
-	{
-		title: "Tools",
-		items: [
-			{ keys: TOOL_KEYS.text, action: "Add text" },
-			{ keys: TOOL_KEYS.draw, action: "Draw" },
-			{ keys: TOOL_KEYS.redact, action: "Redact" },
-			{ keys: TOOL_KEYS.find, action: "Find faces or text to redact" },
-			{ keys: TOOL_KEYS.sticker, action: "Add a sticker" },
-			{ keys: TOOL_KEYS.photo, action: "Add a photo" },
-			{ keys: TOOL_KEYS.crop, action: "Crop" },
-			{ keys: TOOL_KEYS.adjust, action: "Adjust" },
-			{ keys: TOOL_KEYS.cutOut, action: "Cut out" },
-			{ keys: LAYERS_KEY, action: "Show or hide layers" },
-		],
-	},
+};
+
+const OTHER_GROUPS: ShortcutGroup[] = [
 	{
 		title: "Editing",
 		items: [
