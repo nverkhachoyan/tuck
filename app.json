@@ -68,8 +68,7 @@
 			"expo-asset",
 			"expo-font",
 			"./modules/image-analysis/app.plugin.js",
-			"./modules/share-target/app.plugin.js",
-			"./plugins/withSceneLifecycle.js"
+			"./modules/share-target/app.plugin.js"
 		],
 		"name": "Tuck",
 		"slug": "tuck",

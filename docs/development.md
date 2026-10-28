@@ -28,7 +28,7 @@ To load a fresh bundle in the development build, `xcrun simctl terminate <udid> 
 
 ## Devices
 
-- **iOS 27** stops an app built with its SDK at launch unless it adopts the scene life cycle (`plugins/withSceneLifecycle.js`; see architecture.md). The simulators run iOS 26.5, so only a device shows it. Launch on a device with `xcrun devicectl device process launch --device <udid> --terminate-existing --payload-url <dev client URL> com.nverk.tuck`, and read crash reports with `xcrun devicectl device info files --domain-type systemCrashLogs`: an exit code of 0 there can still be a crash.
+- **iOS 27** stops an app built with its SDK at launch unless it adopts the scene life cycle, which Expo 58's template does (see architecture.md). The simulators run iOS 26.5, so only a device shows it. Launch on a device with `xcrun devicectl device process launch --device <udid> --terminate-existing --payload-url <dev client URL> com.nverk.tuck`, and read crash reports with `xcrun devicectl device info files --domain-type systemCrashLogs`: an exit code of 0 there can still be a crash.
 - **iPad** shows the wide layouts, so check a layout change on the iPad Pro 13-inch simulator too. Store screenshots come from Release builds: a development build covers the app with its floating Tools button (see [store-listing/listing.md](./store-listing/listing.md)).
 - **Keyboard.** The iOS simulator here runs headless with a hardware keyboard attached, so the software keyboard never appears. Verify keyboard layout on a real device.
 
