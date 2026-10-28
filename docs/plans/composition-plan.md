@@ -83,7 +83,7 @@ Each tool's hook runs in `useEditorTools`, which `EditorScreen` calls in its bod
 - [x] 8c. Take the tool list as a prop (October 27, 2026)
 - [x] 8d. Make Crop a tool (October 28, 2026)
 - [x] 8e. Make Stickers a tool (October 28, 2026)
-- [ ] 9. Docs
+- [x] 9. Docs (October 28, 2026)
 - [ ] 10. Give readers a map
 
 Each step is its own commit and passes `npm run check`, `npm run typecheck`, `npm test`, and `npm run build --prefix docs/interactive`; steps that move `.web` files or entry imports also run `npm run build:web`. The interactive docs import much of what moves (`render/`, `store/`, `canvas/hitTest.ts`, `canvas/layerBounds.ts`, Crop's `cropGeometry.ts`), so each step updates the lessons' imports and `sources.ts` in the same commit.

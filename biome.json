@@ -887,6 +887,27 @@
 											"../../../../site/**"
 										],
 										"message": "The editor's tools, Layers, and Text don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+									},
+									{
+										"group": [
+											"../../*",
+											"!../../defineTool",
+											"!../../toolSpec",
+											"!../../toolSpec.ts",
+											"!../../editorContext",
+											"!../../canvasInputFor",
+											"!../../editorHost",
+											"!../../store",
+											"../../../*",
+											"!../../../defineTool",
+											"!../../../toolSpec",
+											"!../../../toolSpec.ts",
+											"!../../../editorContext",
+											"!../../../canvasInputFor",
+											"!../../../editorHost",
+											"!../../../store"
+										],
+										"message": "A tool reaches the editor root only through defineTool.ts, toolSpec.ts, editorContext.ts, canvasInputFor.ts, editorHost.ts, and store/, besides canvas/, shell/, and detection/. See docs/architecture.md."
 									}
 								]
 							}
@@ -930,6 +951,70 @@
 											"../../../site/**"
 										],
 										"message": "The editor's tools, Layers, and Text don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+									},
+									{
+										"group": [
+											"../*",
+											"!../editorContext",
+											"!../editorMode",
+											"!../store"
+										],
+										"message": "Layers and Text reach the editor root only through editorContext.ts, editorMode.ts, and store/, besides canvas/ and shell/. See docs/architecture.md."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/editor/layers/__tests__/**",
+				"src/editor/text/__tests__/**"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": [
+											"image-analysis",
+											"@/app/**",
+											"@/screens/**",
+											"@/site/**",
+											"@/projects/**",
+											"@/photos/**",
+											"expo-router",
+											"expo-router/**",
+											"@/editor",
+											"@/editor/**",
+											"../tools/**",
+											"../layers/**",
+											"../text/**",
+											"../../tools/**",
+											"../../layers/**",
+											"../../text/**",
+											"../../screens/**",
+											"../../app/**",
+											"../../site/**",
+											"../../../screens/**",
+											"../../../app/**",
+											"../../../site/**"
+										],
+										"message": "The editor's tools, Layers, and Text don't import each other, a route, a screen, site/, projects/, photos/, or expo-router: what they share is at the editor root, in canvas/, in shell/, or in detection/. See AGENTS.md."
+									},
+									{
+										"group": [
+											"../../*",
+											"!../../editorContext",
+											"!../../editorMode",
+											"!../../store"
+										],
+										"message": "Layers and Text reach the editor root only through editorContext.ts, editorMode.ts, and store/, besides canvas/ and shell/. See docs/architecture.md."
 									}
 								]
 							}

@@ -86,6 +86,8 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - A doc comment longer than a short paragraph is a sentence on what it is, then a short list, one line per behavior or parameter.
 - Name the editor document `document`, not `doc`. The DOM lib's global `document` means a missing parameter still type-checks.
 - Tests live in `__tests__/` beside what they test, start with `/// <reference types="node" />` (TypeScript 6 no longer includes `@types` packages by default), and import with an explicit `.ts` extension (Node's type stripping needs it). A tested module imports its dependencies by relative `.ts` path and nothing React-based (store slices import only types from `zustand`; tests use `createStore` from `zustand/vanilla`).
+- A tool's hook (`useController`) runs in `Editor`'s body, above the `EditorContext` provider, so it can't read the context: give it what it needs through `ToolEnv`, the store, or a shared preference. Only a tool's views read `editorContext.ts`.
+- Outside `src/editor/`, import the editor only from `@/editor`. Inside it, nothing but `builtInSpecs.ts` and `builtInTools.ts` imports a tool, and tools don't import each other.
 - Renaming or retyping something a `docs/interactive` lesson covers, or changing `render/`'s imports, can break that build: update the lesson in the same change.
 
 ## Git Commits
