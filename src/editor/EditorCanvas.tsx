@@ -1,3 +1,4 @@
+import type { TextSelection } from "@tuck/skia-text-input";
 import {
 	type ReactNode,
 	type Ref,
@@ -21,7 +22,7 @@ import { Canvas, Group } from "react-native-skia";
 import type { EditorDocument } from "@/model/document";
 import type { Box, Point, Rect, Transform } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
-import { type TextSelection, withPlaceholder } from "@/model/textEditing";
+import { withPlaceholder } from "@/model/layers/text";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
 import { cursorStyle } from "./canvas/canvasCursor";

@@ -1,3 +1,4 @@
+import type { TextSelection } from "@tuck/skia-text-input";
 import { useRef } from "react";
 import { Platform } from "react-native";
 import type { EditorDocument } from "@/model/document";
@@ -7,7 +8,6 @@ import {
 	type TextLayer,
 	type TextLayerEdit,
 } from "@/model/layers/text";
-import type { TextSelection } from "@/model/textEditing";
 import { usePreference } from "@/platform/usePreference";
 import type { EditorModeAction, TextEditState } from "../editorMode";
 import { useStore } from "../store";

@@ -55,6 +55,15 @@ export function initialFontSize(area: Size): number {
 	return Math.max(1, Math.round(Math.min(area.width, area.height) * 0.08));
 }
 
+// Drawn faded in text being edited while it's empty, so the box reads as a
+// place to type. Never part of the document.
+export const TEXT_PLACEHOLDER = "Your text";
+
+/** `layer` with the placeholder for its text while it has none. */
+export function withPlaceholder<T extends { text: string }>(layer: T): T {
+	return layer.text === "" ? { ...layer, text: TEXT_PLACEHOLDER } : layer;
+}
+
 export type TextLayerStyle = Pick<
 	TextLayer,
 	"font" | "color" | "outlineColor" | "backgroundColor" | "align"

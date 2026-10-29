@@ -1,4 +1,9 @@
 import {
+	type CaretText,
+	caretText,
+	type TextSelection,
+} from "@tuck/skia-text-input";
+import {
 	PaintStyle,
 	Skia,
 	type SkPaint,
@@ -9,11 +14,6 @@ import {
 } from "react-native-skia";
 import type { Box, Point, Rect } from "@/model/geometry";
 import type { TextAlign, TextFont, TextLayer } from "@/model/layers/text";
-import {
-	type CaretText,
-	caretText,
-	type TextSelection,
-} from "@/model/textEditing";
 import { getFontProvider, TEXT_FONTS } from "./fonts";
 
 export type TextLayerLayout = {

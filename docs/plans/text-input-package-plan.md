@@ -2,7 +2,7 @@
 
 Written October 28, 2026. This plan moves the editor's in-place text editing (the hidden input, the caret and selection drawn with Skia, and the gesture that places them) into a workspace package, `packages/skia-text-input`, and then asks whether Text should become a tool.
 
-**Status:** not started.
+**Status:** step 1 built on October 28, 2026. Expo's default Metro config resolved the workspace link with no `metro.config.js`, and so did the docs' Vite and `tsc`.
 
 ## 1. Why
 
@@ -26,7 +26,7 @@ The package stays `"private": true`. It's published only once someone asks for i
 
 ## 3. The package
 
-* **Name:** `react-native-skia-text-input` in `packages/skia-text-input/` (free on npm as of this writing; renaming costs nothing while it's private).
+* **Name:** `@tuck/skia-text-input` in `packages/skia-text-input/`. Publishing under the `@tuck` scope needs an npm organization named `tuck` (not checked: npm's lookup needs a login); renaming costs nothing while it's private.
 * **Entry points:** `.` for the React Native parts, and `./core` (from step 2) for the pure helpers and Skia layout, so a caller drawing its own caret needs neither Reanimated nor Gesture Handler.
 * **Exports** point at `src/*.ts`, so the app, Node's tests, Metro, and the docs' Vite and `tsc` use the source with no build step. Publishing (section 6) adds `publishConfig.exports` pointing at a built `lib/`, which pnpm swaps in when it packs.
 * **Peers:** `react`, `react-native`, and `react-native-skia`, plus `react-native-reanimated` and `react-native-gesture-handler` marked optional, added as each step first needs them. The app keeps one copy of each (docs/architecture.md).
@@ -60,7 +60,8 @@ Making the editor itself a package is a separate decision, made when something o
 
 Publish when someone asks for it or Tuck isn't its only user, and the API has held still for a while.
 
-* `pnpm --dir packages/skia-text-input publish --access public` works from this private repository; pnpm turns `workspace:*` into the version.
+* Create the `tuck` organization on npm first (free for public packages), or rename the package if it's taken.
+* `pnpm --dir packages/skia-text-input publish --access public` (a scoped package publishes as private without it) works from this private repository; pnpm turns `workspace:*` into the version.
 * A private repository means no public source, issues, or npm provenance, and its `repository` link would 404. Ship `src/` in the tarball, and mirror the folder to a public repository with `git subtree split --prefix packages/skia-text-input` if it should be open.
 * Choose a license for the package (the repository has none yet; see release-checklist §6).
 

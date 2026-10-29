@@ -20,7 +20,6 @@ import layerShape from "@src/model/layers/shape.ts?raw";
 import layerText from "@src/model/layers/text.ts?raw";
 import shapes from "@src/model/shapes.ts?raw";
 import strokes from "@src/model/strokes.ts?raw";
-import textEditing from "@src/model/textEditing.ts?raw";
 import documentRenderScene from "@src/render/DocumentRenderScene.tsx?raw";
 import decodedImages from "@src/render/decodedImages.ts?raw";
 import decodeImageLayers from "@src/render/decodeImageLayers.ts?raw";
@@ -52,7 +51,6 @@ export const sources = {
 	"src/model/layers/text.ts": layerText,
 	"src/model/shapes.ts": shapes,
 	"src/model/strokes.ts": strokes,
-	"src/model/textEditing.ts": textEditing,
 	"src/render/decodeImageLayers.ts": decodeImageLayers,
 	"src/render/decodedImages.ts": decodedImages,
 	"src/render/DocumentRenderScene.tsx": documentRenderScene,

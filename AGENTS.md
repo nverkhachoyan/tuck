@@ -42,7 +42,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - Give `beginRecording` explicit bounds: on web it defaults to a rect from (0, 0), culling anything left of or above the origin.
 - A `Group`'s `opacity` doesn't fade a paragraph: fade through a layer, `<Group layer={<Paint opacity={…} />}>`.
 - Skia paragraphs on web throw without a font provider: build every paragraph with `getFontProvider()` from `render/fonts.ts`.
-- `getRectsForRange` gives an empty or whitespace-only line no box, so caret geometry measures a copy with a filler on each empty line (`caretText` in `model/textEditing.ts`).
+- `getRectsForRange` gives an empty or whitespace-only line no box, so caret geometry measures a copy with a filler on each empty line (`caretText` in `packages/skia-text-input/`).
 - On web, Skia can drop redraws asked for while its surface is being set up, so a scene driven only by shared values can stay blank. Mount the drawing once the view has a size, as `EditorCanvas` and `CropCanvas` do.
 - On web, Skia binds to CanvasKit when its module is first evaluated, so anything importing Skia before CanvasKit loads gets a dead API that throws only when called. Keep `index.web.ts`'s load order.
 

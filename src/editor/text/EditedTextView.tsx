@@ -1,3 +1,4 @@
+import { clampSelection } from "@tuck/skia-text-input";
 import { useEffect, useMemo } from "react";
 import {
 	cancelAnimation,
@@ -10,8 +11,7 @@ import {
 	withTiming,
 } from "react-native-reanimated";
 import { Group, Paint, Path, Rect, rect, Skia } from "react-native-skia";
-import type { TextLayer } from "@/model/layers/text";
-import { clampSelection, withPlaceholder } from "@/model/textEditing";
+import { type TextLayer, withPlaceholder } from "@/model/layers/text";
 import { TextLayerView } from "@/render/layers/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
 import { colors } from "@/ui/theme";

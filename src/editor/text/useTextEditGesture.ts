@@ -1,9 +1,9 @@
+import { type TextSelection, wordRange } from "@tuck/skia-text-input";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hitTestBox, toLayerSpace } from "@/model/geometry";
-import { type TextSelection, wordRange } from "@/model/textEditing";
 import { textIndexAt } from "@/render/textLayerLayout";
 import { createDoubleTap } from "../canvas/doubleTap";
 import { hasFinePointer } from "../canvas/handleMetrics";

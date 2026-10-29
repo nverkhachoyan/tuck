@@ -2,7 +2,13 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createDocumentFromImage } from "../../document.ts";
-import { createTextLayer, defaultTextStyle, initialFontSize } from "../text.ts";
+import {
+	createTextLayer,
+	defaultTextStyle,
+	initialFontSize,
+	TEXT_PLACEHOLDER,
+	withPlaceholder,
+} from "../text.ts";
 
 const landscape = () =>
 	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true);
@@ -57,5 +63,21 @@ describe("createTextLayer", () => {
 			Array.from({ length: 50 }, () => createTextLayer(document, "x").id),
 		);
 		assert.equal(ids.size, 50);
+	});
+});
+
+describe("withPlaceholder", () => {
+	test("fills empty text with the placeholder", () => {
+		const layer = { id: "a", text: "" };
+		assert.deepEqual(withPlaceholder(layer), {
+			id: "a",
+			text: TEXT_PLACEHOLDER,
+		});
+		assert.equal(layer.text, "");
+	});
+
+	test("leaves text that has something, and keeps the same layer", () => {
+		const layer = { id: "a", text: " " };
+		assert.equal(withPlaceholder(layer), layer);
 	});
 });

@@ -1,0 +1,13 @@
+{
+  "name": "@tuck/skia-text-input",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Edit text in place on a React Native Skia canvas.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test \"src/**/*.test.ts\""
+  }
+}

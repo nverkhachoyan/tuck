@@ -1,3 +1,4 @@
+import type { TextSelection } from "@tuck/skia-text-input";
 import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
 import {
 	BackHandler,
@@ -8,7 +9,6 @@ import {
 	type TextStyle,
 	View,
 } from "react-native";
-import type { TextSelection } from "@/model/textEditing";
 import { colorScheme, HEADER_HEIGHT } from "@/ui/theme";
 
 export type TextEditorHandle = {
