@@ -1,4 +1,7 @@
-import type { TextSelection } from "@tuck/skia-text-input/core";
+import type {
+	HiddenTextInputHandle,
+	TextSelection,
+} from "@tuck/skia-text-input";
 import { useRef } from "react";
 import { Platform } from "react-native";
 import type { EditorDocument } from "@/model/document";
@@ -12,7 +15,6 @@ import { usePreference } from "@/platform/usePreference";
 import type { EditorModeAction, TextEditState } from "../editorMode";
 import { useStore } from "../store";
 import { selectSelectedTextLayer } from "../store/editorSlice";
-import type { TextEditorHandle } from "./TextEditor";
 import { parseTextStyle, withTextEdit } from "./textSettings";
 
 export type TextController = ReturnType<typeof useTextEditing>;
@@ -37,7 +39,7 @@ export function useTextEditing({
 		useStore((state) => state.actions);
 	// New text starts in the style text was last given.
 	const [textStyle, setTextStyle] = usePreference("textStyle", parseTextStyle);
-	const editorRef = useRef<TextEditorHandle>(null);
+	const editorRef = useRef<HiddenTextInputHandle>(null);
 	// The text the dock styles: what's being typed, or else the selection.
 	const styledText: TextLayer | undefined = edit?.layer ?? selectedTextLayer;
 

@@ -2,13 +2,17 @@
 
 Written October 28, 2026. This plan moves the editor's in-place text editing (the hidden input, the caret and selection drawn with Skia, and the gesture that places them) into a workspace package, `packages/skia-text-input`, and then asks whether Text should become a tool.
 
-**Status:** steps 1 and 2 built on October 28, 2026.
+**Status:** steps 1 to 3 built on October 28, 2026.
 
 What building it found:
 * Expo's default Metro config resolved the workspace link with no `metro.config.js`, and so did the docs' Vite and `tsc`.
 * The package lists `react-native-skia` as a peer (`>=2.15`) and a dev dependency at the app's exact version, and pnpm links both to the same folder, so there's one Skia. Check that again whenever either version changes.
 * `createCaretLayout` is tested in Node against a fake monospaced paragraph, since the package imports only Skia's types. A selection across an empty line covers its filler, a narrow box that shows the line is selected.
-* The app imports everything from `@tuck/skia-text-input/core` so far; the components from step 3 come from the root entry.
+* The app imports helpers and layout from `@tuck/skia-text-input/core`, and the components from the root entry, which only the editor imports. `render/` and the interactive docs load no React Native from the package.
+* React, React Native, Reanimated, and Worklets are peers and dev dependencies too, at the app's versions, and each links to the app's copy. Reanimated is an optional peer, since `/core` doesn't need it.
+* `HiddenTextInput` isn't fully controlled: it takes `initialSelection`, placed on its first focus, and a ref's `select` moves the caret later, as `TextEditor` did. Setting a `TextInput`'s selection from a prop on every change fights the platform's own.
+* Checked on web (headless Chrome) and the iPhone 17 Pro simulator: typing, the caret on an empty line and blinking, Select All's highlight with the empty line's filler, a font change keeping the keyboard (a real click on web), typing over a selection, Escape on web, and ✓.
+* Seen, not caused by this step: on iOS, a selection shows the system's selection handles at the hidden input, behind the header's top left; and once on web, the first switch to Modern drew the outline off its letters, which four more fresh runs on this step and the last didn't repeat.
 
 ## 1. Why
 

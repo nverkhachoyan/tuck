@@ -1,49 +1,67 @@
-import type { TextSelection } from "@tuck/skia-text-input/core";
 import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
 import {
 	BackHandler,
 	Platform,
+	type StyleProp,
 	StyleSheet,
 	TextInput,
 	type TextInputInstance,
 	type TextStyle,
 	View,
+	type ViewStyle,
 } from "react-native";
-import { colorScheme, HEADER_HEIGHT } from "@/ui/theme";
+import type { TextSelection } from "./selection.ts";
 
-export type TextEditorHandle = {
+export type HiddenTextInputHandle = {
 	// Takes the keyboard back, keeping the caret where it was.
 	focus: () => void;
 	// Moves the caret, or selects, and takes the keyboard.
 	select: (selection: TextSelection) => void;
 };
 
-type TextEditorProps = {
-	ref?: Ref<TextEditorHandle>;
-	text: string;
-	// Where the caret starts, once the input first has focus.
+/**
+ * The props of a `HiddenTextInput`.
+ * - `value`: the text being edited.
+ * - `initialSelection`: where the caret starts, once the input first has
+ *   focus.
+ * - `onChangeText`, `onSelectionChange`, `onFocusChange`: what the input
+ *   reports, for the canvas to draw.
+ * - `onDone`: Escape, ⌘/Ctrl+Enter, or Android's back button.
+ * - `style`: where the input sits. It takes the screen's touches nowhere, but
+ *   focusing it scrolls to it, so keep it where the screen won't scroll: by
+ *   default the top 44 points.
+ * - `keyboardAppearance` and `accessibilityLabel` pass through.
+ */
+export type HiddenTextInputProps = {
+	ref?: Ref<HiddenTextInputHandle>;
+	value: string;
 	initialSelection: TextSelection;
 	onChangeText: (text: string) => void;
 	onSelectionChange: (selection: TextSelection) => void;
 	onFocusChange: (focused: boolean) => void;
-	// Escape, ⌘/Ctrl+Enter, or Android's back button, as Done by the dock.
 	onDone: () => void;
+	style?: StyleProp<ViewStyle>;
+	keyboardAppearance?: "default" | "light" | "dark";
+	accessibilityLabel?: string;
 };
 
 /**
- * This is the input the keyboard types into, hidden behind the screen's
- * header, which stays in use: the canvas shows what it holds exactly as the
- * text will look, at its size, angle, and wrapping, which no input could.
+ * An input the keyboard types into, hidden: a canvas draws what it holds
+ * exactly as the text will look, at its size, angle, and wrapping, which no
+ * input could. It still does the typing, autocorrect, paste, and undo.
  */
-export function TextEditor({
+export function HiddenTextInput({
 	ref,
-	text,
+	value,
 	initialSelection,
 	onChangeText,
 	onSelectionChange,
 	onFocusChange,
 	onDone,
-}: TextEditorProps) {
+	style,
+	keyboardAppearance,
+	accessibilityLabel = "Text",
+}: HiddenTextInputProps) {
 	const input = useRef<TextInputInstance>(null);
 	// The first focus, as it opens, places the caret.
 	const placed = useRef(false);
@@ -67,7 +85,7 @@ export function TextEditor({
 		input.current?.focus();
 	}, []);
 
-	// Android's back button finishes editing rather than leaving the editor.
+	// Android's back button finishes editing rather than leaving the screen.
 	useEffect(() => {
 		const subscription = BackHandler.addEventListener(
 			"hardwareBackPress",
@@ -80,10 +98,10 @@ export function TextEditor({
 	}, [onDone]);
 
 	return (
-		<View style={styles.field}>
+		<View style={[styles.field, style]}>
 			<TextInput
 				ref={input}
-				value={text}
+				value={value}
 				onChangeText={onChangeText}
 				onSelectionChange={(event) =>
 					onSelectionChange(event.nativeEvent.selection)
@@ -107,8 +125,8 @@ export function TextEditor({
 					}
 				}}
 				multiline
-				keyboardAppearance={colorScheme}
-				accessibilityLabel="Caption"
+				keyboardAppearance={keyboardAppearance}
+				accessibilityLabel={accessibilityLabel}
 				style={styles.input}
 			/>
 		</View>
@@ -128,19 +146,17 @@ function setInputSelection(
 }
 
 const styles = StyleSheet.create({
-	// Where the header is, at the top, so focusing it never scrolls the
-	// screen, and letting touches through to the header's buttons.
 	field: {
 		position: "absolute",
 		top: 0,
 		left: 0,
 		right: 0,
-		height: HEADER_HEIGHT,
+		height: 44,
 		pointerEvents: "none",
 	},
-	// Hidden, and out of the way of the header's buttons. At least 16px,
-	// or Safari on iOS zooms the page into it. On web, lines only break
-	// where the text does, so the arrow keys move up and down by those.
+	// Hidden, and out of the way of what's under it. At least 16px, or
+	// Safari on iOS zooms the page into it. On web, lines only break where
+	// the text does, so the arrow keys move up and down by those.
 	input: {
 		position: "absolute",
 		top: 0,

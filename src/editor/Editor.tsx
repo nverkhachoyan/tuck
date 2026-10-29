@@ -1,3 +1,4 @@
+import { HiddenTextInput } from "@tuck/skia-text-input";
 import {
 	createRef,
 	useCallback,
@@ -18,7 +19,7 @@ import { Announcement } from "@/ui/Announcement";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Toast } from "@/ui/Toast";
-import { space } from "@/ui/theme";
+import { colorScheme, HEADER_HEIGHT, space } from "@/ui/theme";
 import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
 import { BUILT_IN_TOOLS } from "./builtInTools";
 import { definitionOf, type ToolList } from "./defineTool";
@@ -60,7 +61,6 @@ import {
 	selectSelectedLayer,
 	selectSelectedTextLayer,
 } from "./store/editorSlice";
-import { TextEditor } from "./text/TextEditor";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
@@ -559,14 +559,19 @@ export function Editor({
 
 					{dragging && <DropOverlay label="Drop to add to the canvas" />}
 					{text.edit && (
-						<TextEditor
+						<HiddenTextInput
 							ref={text.editorRef}
-							text={text.edit.layer.text}
+							value={text.edit.layer.text}
 							initialSelection={text.edit.initialSelection}
 							onChangeText={text.changeText}
 							onSelectionChange={text.changeSelection}
 							onFocusChange={text.changeFocus}
 							onDone={text.finish}
+							// Behind the header, which stays in use, so focusing it never
+							// scrolls the screen.
+							style={styles.textInput}
+							keyboardAppearance={colorScheme}
+							accessibilityLabel="Caption"
 						/>
 					)}
 					{modeState.shortcutsOpen && (
@@ -584,5 +589,8 @@ export function Editor({
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+	},
+	textInput: {
+		height: HEADER_HEIGHT,
 	},
 });
