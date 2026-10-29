@@ -2,7 +2,7 @@
 
 Written October 28, 2026. This plan moves the editor's in-place text editing (the hidden input, the caret and selection drawn with Skia, and the gesture that places them) into a workspace package, `packages/skia-text-input`, and then asks whether Text should become a tool.
 
-**Status:** steps 1 to 3 built on October 28, 2026.
+**Status:** steps 1 to 4 built on October 28, 2026.
 
 What building it found:
 * Expo's default Metro config resolved the workspace link with no `metro.config.js`, and so did the docs' Vite and `tsc`.
@@ -12,7 +12,9 @@ What building it found:
 * React, React Native, Reanimated, and Worklets are peers and dev dependencies too, at the app's versions, and each links to the app's copy. Reanimated is an optional peer, since `/core` doesn't need it.
 * `HiddenTextInput` isn't fully controlled: it takes `initialSelection`, placed on its first focus, and a ref's `select` moves the caret later, as `TextEditor` did. Setting a `TextInput`'s selection from a prop on every change fights the platform's own.
 * Checked on web (headless Chrome) and the iPhone 17 Pro simulator: typing, the caret on an empty line and blinking, Select All's highlight with the empty line's filler, a font change keeping the keyboard (a real click on web), typing over a selection, Escape on web, and ✓.
-* Seen, not caused by this step: on iOS, a selection shows the system's selection handles at the hidden input, behind the header's top left; and once on web, the first switch to Modern drew the outline off its letters, which four more fresh runs on this step and the last didn't repeat.
+* `useCanvasTextGesture` takes `text` and `toIndex(x, y, clamp)`; Tuck's `useTextEditGesture` keeps the viewport, the layer's hit box with its padding, and the tap slop (a `tapSlop` option). The package keeps its own copy of the double tap timing (`doubleTap.ts`, not exported), so the editor's `createDoubleTap` stays for zooming, and its own fine pointer check for hover. Gesture Handler and Worklets joined the peers, optional like Reanimated.
+* Checked step 4 on web (headless Chrome: a tap places the caret, a double tap selects the word, a drag selects, clamped past the text, and a tap off it finishes) and on the iPhone simulator (tap, drag, tap away). Headless Chrome's synthetic mouse doesn't change the canvas cursor, on this step or step 3's build, so hover went unchecked; and there the first drag after a tap selects nothing, on step 3's build too, while iOS's did.
+* Seen, not caused by step 3: on iOS, a selection shows the system's selection handles at the hidden input, behind the header's top left; and once on web, the first switch to Modern drew the outline off its letters, which four more fresh runs on this step and the last didn't repeat.
 
 ## 1. Why
 

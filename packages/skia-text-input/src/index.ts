@@ -6,3 +6,7 @@ export {
 	type HiddenTextInputProps,
 } from "./HiddenTextInput.tsx";
 export { SelectionHighlight } from "./SelectionHighlight.tsx";
+export {
+	type CanvasTextGestureOptions,
+	useCanvasTextGesture,
+} from "./useCanvasTextGesture.ts";
