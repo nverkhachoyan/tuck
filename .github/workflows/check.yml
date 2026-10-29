@@ -13,19 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Takes pnpm's version from package.json's `packageManager`.
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run check
-      - run: npm run typecheck
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            docs/interactive/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm typecheck
       # The interactive docs import the app's model, so a change there that a
       # lesson depends on fails here.
-      - run: npm ci --prefix docs/interactive
-      - run: npm run build --prefix docs/interactive
-      - run: npm test
+      - run: pnpm --dir docs/interactive install --frozen-lockfile
+      - run: pnpm --dir docs/interactive build
+      - run: pnpm test
       # Bundles the web app with Metro, which the checks above never run, so an
       # import only Metro resolves (a `.web.ts` file's, an asset, the entry's
       # untyped `import()`) fails here instead of at deploy.
-      - run: npm run build:web
+      - run: pnpm build:web

@@ -33,7 +33,7 @@ doesn't require terms.
       for Tuck, so projects saved on tuck.nverk.me won't appear on
       tuck.tools.
 - [x] Set up support@tuck.tools.
-- [x] Expo account: `npx eas-cli@latest login`, then `npx eas-cli@latest init`
+- [x] Expo account: `pnpm dlx eas-cli@latest login`, then `pnpm dlx eas-cli@latest init`
       in the repo. It writes `extra.eas.projectId` and `owner` into
       `app.json`; commit that.
 
@@ -42,13 +42,13 @@ doesn't require terms.
 - [x] Join the Apple Developer Program ($99 a year). As an individual, your
       legal name is shown as the seller. An organization shows the company
       name and needs a D-U-N-S number.
-- [x] `npx eas-cli@latest build -p ios --profile production`. Sign in with
+- [x] `pnpm dlx eas-cli@latest build -p ios --profile production`. Sign in with
       your Apple account when asked: EAS registers `com.nverk.tuck` and the
       share extension's `com.nverk.tuck.ShareExtension`, turns on the App
       Group `group.com.nverk.tuck` for both, and makes the certificates and
       profiles. If the App Group step fails, create the group under
       Identifiers → App Groups and run the build again.
-- [x] `npx eas-cli@latest submit -p ios --profile production` creates the
+- [x] `pnpm dlx eas-cli@latest submit -p ios --profile production` creates the
       App Store Connect record (it asks for the name, **Tuck: Photo
       Markup**) and uploads the build to TestFlight. Try it there on a real
       iPhone, including "Edit in Tuck" from the share sheet.
@@ -73,7 +73,7 @@ doesn't require terms.
       a row before it can publish to production. An organization account
       (D-U-N-S number) skips this.
 - [x] Create the app: name **Tuck: Photo Markup**, app (not game), free.
-- [ ] `npx eas-cli@latest build -p android --profile production` makes the
+- [ ] `pnpm dlx eas-cli@latest build -p android --profile production` makes the
       upload keystore and an `.aab`. Upload the first one by hand in Play
       Console (a closed testing track); Google's API can't make the first
       upload. After that, `eas submit -p android` works with a service

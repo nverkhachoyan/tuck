@@ -1,10 +1,20 @@
 import { readdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const platform = fileURLToPath(new URL("src/platform/", import.meta.url));
+// CanvasKit is React Native Skia's dependency, not the app's, so it's found
+// from Skia's folder, as `scripts/copy-web-assets.mjs` finds it.
+const require = createRequire(import.meta.url);
+const canvasKitWasm = require.resolve(
+	"canvaskit-wasm/bin/full/canvaskit.wasm",
+	{
+		paths: [require.resolve("react-native-skia", { paths: [repoRoot] })],
+	},
+);
 
 /**
  * `@expo-google-fonts/<font>/<weight>` exports its file with a `require` of
@@ -72,6 +82,10 @@ export default defineConfig({
 			},
 			{ find: /^expo-asset$/, replacement: `${platform}expoAsset.ts` },
 			{ find: /^expo-font$/, replacement: `${platform}expoFont.ts` },
+			{
+				find: /^canvaskit-wasm\/bin\/full\/canvaskit\.wasm/,
+				replacement: canvasKitWasm,
+			},
 		],
 		extensions: webFirst,
 		// The app's dependencies come from the repo's own `node_modules`, at the

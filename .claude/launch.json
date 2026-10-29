@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "exec npx expo start --web --port \"${PORT:-8082}\""
+        "exec pnpm expo start --web --port \"${PORT:-8082}\""
       ],
       "port": 8082,
       "autoPort": true
@@ -16,7 +16,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "exec npx --yes serve@14.2.4 dist --listen \"${PORT:-8083}\""
+        "exec pnpm dlx serve@14.2.4 dist --listen \"${PORT:-8083}\""
       ],
       "port": 8083,
       "autoPort": true
@@ -26,7 +26,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd docs/interactive && exec npx vite --port \"${PORT:-5180}\" --strictPort"
+        "cd docs/interactive && exec pnpm exec vite --port \"${PORT:-5180}\" --strictPort"
       ],
       "port": 5180,
       "autoPort": true

@@ -6,8 +6,8 @@ from the source as it is now.
 
 ```bash
 cd docs/interactive
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 It opens at http://localhost:5180 (the `docs` launch configuration in
@@ -24,14 +24,14 @@ It opens at http://localhost:5180 (the `docs` launch configuration in
 3. Steps the reader works through go in a `<Flow>`: each step says what to try
    and checks the lesson's live state for when it's done.
 
-`npm run build` type-checks the lessons against `src/` and bundles them. CI runs
+`pnpm build` type-checks the lessons against `src/` and bundles them. CI runs
 it, so a change to something a lesson covers fails until the lesson is updated.
 
 ## The rendering lessons
 
 The rendering chapter draws with the app's real `src/render/` code, on
 React Native Skia's web build (CanvasKit) and React Native Web, taken from the
-repo root's `node_modules` at the versions the app runs: run `npm install` at
+repo root's `node_modules` at the versions the app runs: run `pnpm install` at
 the root first. `vite.config.ts` makes that work outside Metro: it maps
 `react-native` to `react-native-web`, prefers Metro's `.web` files, and stands
 in for what only Metro or a phone has (`src/platform/`: Reanimated, React

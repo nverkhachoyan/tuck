@@ -1,6 +1,7 @@
 {
   "name": "tuck",
   "main": "index",
+  "packageManager": "pnpm@11.12.0",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -13,7 +14,7 @@
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\" \"modules/**/*.test.ts\"",
     "postinstall": "node scripts/copy-web-assets.mjs",
     "build:web": "expo export -p web && cp dist/+not-found.html dist/404.html && node scripts/write-service-worker.mjs && node scripts/check-csp.mjs",
-    "deploy": "npm run build:web && npx eas-cli@latest deploy"
+    "deploy": "pnpm build:web && pnpm dlx eas-cli@latest deploy"
   },
   "dependencies": {
     "@expo-google-fonts/anton": "^0.4.2",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
     "@types/node": "^24.13.6",
+    "@types/react": "~19.3.0",
     "@types/react-dom": "~19.3.0",
     "typescript": "~6.0.3"
   }

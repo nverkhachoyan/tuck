@@ -13,7 +13,14 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - The app runs in a development build, not Expo Go. `ios/` and `android/` are generated: native configuration goes in `app.json` and config plugins.
 - Android release builds shrink with R8 (Expo 58), and a library that ships no rules can break only there: ML Kit's vision libraries and ONNX Runtime did, kept in `modules/image-analysis/android/consumer-rules.pro`. After adding a native dependency, run what uses it in a Release build.
 - Hermes has no `Array.prototype.toSorted` (it throws on iOS and Android, works on web). Sort a copy.
-- `npm install` copies `package.json`'s indentation into `package-lock.json`, and `npx expo install` rewrites `package.json` (and `app.json`, when it adds a plugin) with 2 spaces. Run `npm run format` afterward, and if a lockfile diff runs to thousands of lines, check `git diff -w`: it's indentation.
+- `pnpm expo install` rewrites `app.json` with 2 spaces when it adds a plugin. Run `pnpm format` afterward.
+
+### pnpm
+
+- pnpm links only what a `package.json` lists, so importing a dependency's dependency fails (`@types/react` came through `@types/react-dom` under npm). List it, or resolve it from the package that owns it, as `copy-web-assets.mjs` and the docs' `vite.config.ts` find CanvasKit through Skia.
+- pnpm 11 refuses any package published less than a day ago (`minimumReleaseAge`), lockfile entries included, and `pnpm <script>` reinstalls first when the install is stale. Right after a same-day release lands in the lockfile, wait out the day or set `pnpm_config_minimum_release_age=0` in your own shell; don't commit an exclusion.
+- A dependency's install scripts run only once `allowBuilds` in `pnpm-workspace.yaml` allows them; set one to `false` to stop pnpm asking.
+- pnpm treats the folder holding the nearest `pnpm-workspace.yaml` above it as the root, so `docs/interactive` has its own to install apart from the app.
 
 ### Layout
 
@@ -98,4 +105,4 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ## Code Checks
 
-- After code changes, run `npm run check` (formatting and lint; `npm run format` fixes), `npm run typecheck`, and `npm test` when touching `model/`, store slices, or other pure modules (it covers `modules/` too). Run `npm run build:web` after changing `.web` files, the entry files, or imports TypeScript doesn't check (assets, untyped imports): Metro catches an import that won't resolve. CI runs all four.
+- After code changes, run `pnpm check` (formatting and lint; `pnpm format` fixes), `pnpm typecheck`, and `pnpm test` when touching `model/`, store slices, or other pure modules (it covers `modules/` too). Run `pnpm build:web` after changing `.web` files, the entry files, or imports TypeScript doesn't check (assets, untyped imports): Metro catches an import that won't resolve. CI runs all four.

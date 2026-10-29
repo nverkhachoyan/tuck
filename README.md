@@ -19,13 +19,13 @@ iOS simulator or an Android emulator (this generates the ignored `ios/` and
 `android/` folders and starts Metro):
 
 ```sh
-npm install
-npm run ios
-npm run android
+pnpm install
+pnpm ios
+pnpm android
 ```
 
-Once a build is installed, `npm start` serves JavaScript changes to it, and
-`npm run web` runs the web version.
+Once a build is installed, `pnpm start` serves JavaScript changes to it, and
+`pnpm web` runs the web version.
 
 ## The code
 
@@ -58,8 +58,8 @@ model and renderer, from the bottom up.
 CI runs all four checks on every push to `main` and on pull requests:
 
 ```sh
-npm run check       # Biome formatting and lint rules (npm run format to fix)
-npm run typecheck   # TypeScript
-npm test            # Node unit tests across src/ and modules/
-npm run build:web   # Static web export, service worker, and CSP check
+pnpm check       # Biome formatting and lint rules (pnpm format to fix)
+pnpm typecheck   # TypeScript
+pnpm test        # Node unit tests across src/ and modules/
+pnpm build:web   # Static web export, service worker, and CSP check
 ```

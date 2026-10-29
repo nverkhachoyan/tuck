@@ -158,8 +158,8 @@ appear.
 1. `docs/store-listing/source/compose.sh content` renders the pictures, and
    `node docs/store-listing/source/seed.mjs` writes the five projects to
    `docs/store-listing/source/out/projects/`.
-2. Install a Release build (`npx expo run:ios --configuration Release`, or
-   `npx expo run:android --variant release`): a development build covers the
+2. Install a Release build (`pnpm expo run:ios --configuration Release`, or
+   `pnpm expo run:android --variant release`): a development build covers the
    app with its Tools button. Copy the projects into the app's
    `Documents/projects/` (iOS: `xcrun simctl get_app_container <udid>
    com.nverk.tuck data`). A release Android build can't be written into, so
