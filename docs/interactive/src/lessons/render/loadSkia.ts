@@ -11,7 +11,7 @@ let loading: Promise<void> | null = null;
 export function loadSkia(): Promise<void> {
 	// Imported here, so CanvasKit's script loads with the first rendering
 	// lesson rather than the docs.
-	loading ??= import("@shopify/react-native-skia/lib/module/web").then(
+	loading ??= import("react-native-skia/lib/module/web").then(
 		({ LoadSkiaWeb }) => LoadSkiaWeb({ locateFile: () => wasm }),
 	);
 	return loading;

@@ -19,7 +19,7 @@ import {
 	StrokeCap,
 	StrokeJoin,
 	TileMode,
-} from "@shopify/react-native-skia";
+} from "react-native-skia";
 import {
 	type Box,
 	type Point,

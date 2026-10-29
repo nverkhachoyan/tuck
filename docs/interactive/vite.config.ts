@@ -63,7 +63,7 @@ export default defineConfig({
 			// React Native's asset registry, only to use them if they're there.
 			{ find: /^react-native$/, replacement: "react-native-web" },
 			{
-				find: /^react-native\/Libraries\/Image\/AssetRegistry$/,
+				find: /^react-native\/(asset-registry|Libraries\/Image\/AssetRegistry)$/,
 				replacement: `${platform}assetRegistry.ts`,
 			},
 			{

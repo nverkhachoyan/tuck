@@ -1,12 +1,5 @@
-import {
-	Group,
-	Path,
-	Rect,
-	rect,
-	Shadow,
-	Skia,
-} from "@shopify/react-native-skia";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
+import { Group, Path, Rect, rect, Shadow, Skia } from "react-native-skia";
 import type { EditorDocument } from "@/model/document";
 import type { Layer } from "@/model/layers/layer";
 import { toTransformList } from "@/render/layerTransform";

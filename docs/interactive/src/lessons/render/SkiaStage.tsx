@@ -1,6 +1,6 @@
-import { Canvas, Group } from "@shopify/react-native-skia";
 import { LoadFonts } from "@src/render/fonts.ts";
 import { type ReactNode, Suspense, useEffect, useRef, useState } from "react";
+import { Canvas, Group } from "react-native-skia";
 
 /**
  * A Skia canvas fit to its column, drawing `children` in document space. It

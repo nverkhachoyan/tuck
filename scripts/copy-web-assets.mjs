@@ -16,7 +16,7 @@ function copy(source, destination) {
 
 copy(
 	require.resolve("canvaskit-wasm/bin/full/canvaskit.wasm", {
-		paths: [require.resolve("@shopify/react-native-skia")],
+		paths: [require.resolve("react-native-skia")],
 	}),
 	"canvaskit.wasm",
 );

@@ -1,4 +1,4 @@
-import type { SkImage } from "@shopify/react-native-skia";
+import type { SkImage } from "react-native-skia";
 
 /** A decoded image, kept in memory until its holder calls `release`. */
 export type HeldImage = { decoded: Promise<SkImage>; release: () => void };

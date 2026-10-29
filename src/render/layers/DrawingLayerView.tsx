@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from "react";
 import {
 	BlurMask,
 	Group,
@@ -5,8 +6,7 @@ import {
 	Path,
 	Skia,
 	type SkPath,
-} from "@shopify/react-native-skia";
-import type { ComponentProps, ReactNode } from "react";
+} from "react-native-skia";
 import { mixColors } from "@/model/color";
 import {
 	type Brush,

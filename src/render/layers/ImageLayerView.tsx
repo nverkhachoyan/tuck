@@ -1,3 +1,4 @@
+import { type ComponentProps, type ReactNode, useMemo } from "react";
 import {
 	BlurMask,
 	Group,
@@ -8,8 +9,7 @@ import {
 	type SkImage,
 	ColorMatrix as SkiaColorMatrix,
 	Image as SkiaImage,
-} from "@shopify/react-native-skia";
-import { type ComponentProps, type ReactNode, useMemo } from "react";
+} from "react-native-skia";
 import { adjustmentMatrix, type ColorMatrix } from "@/model/adjustments";
 import type { CutStroke, ImageLayer } from "@/model/layers/image";
 import { pathFor } from "./DrawingLayerView";

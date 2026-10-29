@@ -1,4 +1,3 @@
-import { Canvas, Fill, Group, Path, Skia } from "@shopify/react-native-skia";
 import { useCallback, useMemo, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -7,6 +6,7 @@ import {
 	type SharedValue,
 	useDerivedValue,
 } from "react-native-reanimated";
+import { Canvas, Fill, Group, Path, Skia } from "react-native-skia";
 import {
 	type PhotoPlacement,
 	rebaseTransform,

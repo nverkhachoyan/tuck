@@ -1,4 +1,4 @@
-import { FillType, Path, Skia, type SkPath } from "@shopify/react-native-skia";
+import { FillType, Path, Skia, type SkPath } from "react-native-skia";
 import {
 	isLineShape,
 	type ShapeKind,

@@ -1,5 +1,5 @@
-import { drawAsImage, type SkImage } from "@shopify/react-native-skia";
 import type { ReactElement } from "react";
+import { drawAsImage, type SkImage } from "react-native-skia";
 
 /**
  * Draws `element` into an image `size` pixels across, offscreen. Skia's own

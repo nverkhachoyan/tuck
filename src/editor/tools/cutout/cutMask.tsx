@@ -8,7 +8,7 @@ import {
 	Skia,
 	ColorMatrix as SkiaColorMatrix,
 	Image as SkiaImage,
-} from "@shopify/react-native-skia";
+} from "react-native-skia";
 import type { ImageLayer } from "@/model/layers/image";
 import { drawOffscreen } from "@/render/drawOffscreen";
 import { CutMask, imageBox } from "@/render/layers/ImageLayerView";

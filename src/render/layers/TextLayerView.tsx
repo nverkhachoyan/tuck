@@ -1,4 +1,4 @@
-import { Paragraph, Path } from "@shopify/react-native-skia";
+import { Paragraph, Path } from "react-native-skia";
 import type { TextLayer } from "@/model/layers/text";
 import { layoutTextLayer } from "../textLayerLayout";
 

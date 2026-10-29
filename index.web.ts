@@ -1,7 +1,7 @@
 // Expo's runtime first: among other things it installs the loader Metro's
 // dynamic `import()` below needs on web.
 import "expo";
-import { LoadSkiaWeb } from "@shopify/react-native-skia/lib/module/web";
+import { LoadSkiaWeb } from "react-native-skia/lib/module/web";
 import { registerServiceWorker } from "@/platform/serviceWorker";
 
 // The export's pages are rendered ahead of time, and the browser renders them

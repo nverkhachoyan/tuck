@@ -1,5 +1,5 @@
-import type { SkImage } from "@shopify/react-native-skia";
 import { useEffect, useRef, useState } from "react";
+import type { SkImage } from "react-native-skia";
 import { isCutOut } from "@/model/cutout";
 import type { ImageLayer } from "@/model/layers/image";
 import {

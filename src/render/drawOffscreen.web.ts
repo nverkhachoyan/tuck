@@ -1,10 +1,10 @@
+import type { ReactElement } from "react";
 import {
 	drawAsPicture,
 	type SkImage,
 	Skia,
 	type SkSurface,
-} from "@shopify/react-native-skia";
-import type { ReactElement } from "react";
+} from "react-native-skia";
 
 // How long the shared surface outlives its last drawing, so its GPU memory
 // (a camera photo's is tens of megabytes) goes once export is done.

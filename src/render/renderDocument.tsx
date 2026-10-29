@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
 	AlphaType,
 	ColorType,
@@ -5,8 +6,7 @@ import {
 	Group,
 	ImageFormat,
 	type SkImage,
-} from "@shopify/react-native-skia";
-import type { ReactNode } from "react";
+} from "react-native-skia";
 import { averageColor } from "@/model/color";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import type { Rect } from "@/model/geometry";

@@ -6,7 +6,7 @@ import {
 	type SkPath,
 	TextAlign as SkTextAlign,
 	StrokeJoin,
-} from "@shopify/react-native-skia";
+} from "react-native-skia";
 import type { Box, Point, Rect } from "@/model/geometry";
 import type { TextAlign, TextFont, TextLayer } from "@/model/layers/text";
 import {

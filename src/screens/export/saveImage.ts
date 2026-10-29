@@ -1,7 +1,7 @@
-import type { SkImage } from "@shopify/react-native-skia";
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
+import type { SkImage } from "react-native-skia";
 import { type ExportFormat, encodeImage, exportFormats } from "./exportFormat";
 
 // `saveImage.web.ts` implements the same API for browsers.

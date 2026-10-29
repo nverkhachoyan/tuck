@@ -1,4 +1,4 @@
-import { ImageFormat, type SkImage } from "@shopify/react-native-skia";
+import { ImageFormat, type SkImage } from "react-native-skia";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 
 export type ExportFormat = "jpeg" | "png";

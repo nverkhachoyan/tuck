@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { SkImage } from "@shopify/react-native-skia";
+import type { SkImage } from "react-native-skia";
 import { withMask } from "../../model/cutout.ts";
 import { createDocumentFromImage } from "../../model/document.ts";
 import type { ImageLayer } from "../../model/layers/image.ts";

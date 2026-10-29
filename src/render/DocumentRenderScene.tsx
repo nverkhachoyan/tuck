@@ -1,4 +1,4 @@
-import { Fill, Group, Rect, type SkImage } from "@shopify/react-native-skia";
+import { Fill, Group, Rect, type SkImage } from "react-native-skia";
 import { assertNever } from "@/model/assertNever";
 import type { EditorDocument } from "@/model/document";
 import type { Layer } from "@/model/layers/layer";

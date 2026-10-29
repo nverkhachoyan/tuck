@@ -7,9 +7,9 @@ import type { Layer } from "@model/layers/layer.ts";
 import { createRedactionBox } from "@model/layers/redaction.ts";
 import { createShapeLayer } from "@model/layers/shape.ts";
 import { createTextLayer } from "@model/layers/text.ts";
-import type { SkImage } from "@shopify/react-native-skia";
 import { decodedImages } from "@src/render/decodedImages.ts";
 import { decodeImageLayers } from "@src/render/decodeImageLayers.ts";
+import type { SkImage } from "react-native-skia";
 import { makePhotoFile } from "./photoFile.ts";
 
 export type Sample = {

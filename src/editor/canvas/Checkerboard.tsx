@@ -1,12 +1,5 @@
-import {
-	Group,
-	Path,
-	Rect,
-	rect,
-	Skia,
-	type SkRect,
-} from "@shopify/react-native-skia";
 import { useMemo } from "react";
+import { Group, Path, Rect, rect, Skia, type SkRect } from "react-native-skia";
 import { CHECKER_CELL, colors } from "@/ui/theme";
 
 // Past this many squares, they're drawn bigger instead.

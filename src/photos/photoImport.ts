@@ -1,6 +1,6 @@
-import { AlphaType, ColorType, Skia } from "@shopify/react-native-skia";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import { AlphaType, ColorType, Skia } from "react-native-skia";
 import { MAX_PHOTO_PIXELS, photoScale } from "./photoScale";
 
 export type PickedPhoto = {

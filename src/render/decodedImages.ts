@@ -1,4 +1,4 @@
-import { type SkImage, Skia } from "@shopify/react-native-skia";
+import { type SkImage, Skia } from "react-native-skia";
 import { createImageCache } from "./imageCache";
 
 /**

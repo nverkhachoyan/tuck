@@ -1,11 +1,3 @@
-import {
-	Group,
-	Paint,
-	Path,
-	Rect,
-	rect,
-	Skia,
-} from "@shopify/react-native-skia";
 import { useEffect, useMemo } from "react";
 import {
 	cancelAnimation,
@@ -17,6 +9,7 @@ import {
 	withSequence,
 	withTiming,
 } from "react-native-reanimated";
+import { Group, Paint, Path, Rect, rect, Skia } from "react-native-skia";
 import type { TextLayer } from "@/model/layers/text";
 import { clampSelection, withPlaceholder } from "@/model/textEditing";
 import { TextLayerView } from "@/render/layers/TextLayerView";

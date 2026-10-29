@@ -1,4 +1,3 @@
-import { Canvas, Group } from "@shopify/react-native-skia";
 import {
 	type ReactNode,
 	type Ref,
@@ -18,6 +17,7 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
+import { Canvas, Group } from "react-native-skia";
 import type { EditorDocument } from "@/model/document";
 import type { Box, Point, Rect, Transform } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";

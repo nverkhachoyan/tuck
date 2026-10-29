@@ -1,5 +1,5 @@
-import { Image, ImageFormat, type SkImage } from "@shopify/react-native-skia";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Image, ImageFormat, type SkImage } from "react-native-skia";
 import type { EditorDocument } from "@/model/document";
 import { drawOffscreen } from "@/render/drawOffscreen";
 import { renderDocument } from "@/render/renderDocument";

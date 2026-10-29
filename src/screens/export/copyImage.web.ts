@@ -1,4 +1,4 @@
-import { ImageFormat, type SkImage } from "@shopify/react-native-skia";
+import { ImageFormat, type SkImage } from "react-native-skia";
 
 /** Copies PNG even when the chosen export format is JPEG. */
 export function copyImage(image: SkImage): Promise<void> {

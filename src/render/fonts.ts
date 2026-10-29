@@ -3,10 +3,10 @@ import { CourierPrime_700Bold } from "@expo-google-fonts/courier-prime/700Bold";
 import { Montserrat_800ExtraBold } from "@expo-google-fonts/montserrat/800ExtraBold";
 import { PermanentMarker_400Regular } from "@expo-google-fonts/permanent-marker/400Regular";
 import { PlayfairDisplay_700Bold } from "@expo-google-fonts/playfair-display/700Bold";
-import { Skia, type SkTypefaceFontProvider } from "@shopify/react-native-skia";
 import { Asset } from "expo-asset";
 import * as Font from "expo-font";
 import { use } from "react";
+import { Skia, type SkTypefaceFontProvider } from "react-native-skia";
 import type { TextFont } from "@/model/layers/text";
 
 /**

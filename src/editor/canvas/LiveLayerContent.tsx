@@ -1,3 +1,4 @@
+import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import {
 	BackdropFilter,
 	ImageFilter,
@@ -7,8 +8,7 @@ import {
 	rect,
 	type SkImage,
 	type SkRect,
-} from "@shopify/react-native-skia";
-import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
+} from "react-native-skia";
 import { transformsEqual } from "@/model/geometry";
 import type {
 	RedactionBox,

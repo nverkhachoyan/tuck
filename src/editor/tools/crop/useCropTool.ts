@@ -1,4 +1,3 @@
-import { rect } from "@shopify/react-native-skia";
 import {
 	useCallback,
 	useEffect,
@@ -13,6 +12,7 @@ import {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
+import { rect } from "react-native-skia";
 import { scheduleOnRN } from "react-native-worklets";
 import type { EditorDocument } from "@/model/document";
 import { documentFraming, framingAnchor } from "@/model/framing";

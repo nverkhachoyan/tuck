@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import type { SkImage } from "@shopify/react-native-skia";
 import {
 	Redirect,
 	useIsFocused,
@@ -20,6 +19,7 @@ import {
 	type ViewInstance,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { SkImage } from "react-native-skia";
 import { useSession } from "@/editor";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
