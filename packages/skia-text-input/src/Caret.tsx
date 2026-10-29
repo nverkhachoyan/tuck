@@ -50,7 +50,7 @@ export function Caret({
 	const bar = useDerivedValue(() => {
 		const barWidth = width * pixel.value;
 		return skRect(x - barWidth / 2, y, barWidth, height);
-	}, [pixel, x, y, height, width]);
+	});
 	const haloRect = useDerivedValue(() => {
 		const margin = halo * pixel.value;
 		const haloWidth = width * pixel.value + margin * 2;
@@ -60,7 +60,7 @@ export function Caret({
 			haloWidth,
 			height + margin * 2,
 		);
-	}, [pixel, x, y, height, width, halo]);
+	});
 	const opacity = useSharedValue(1);
 	useEffect(() => {
 		opacity.value = withSequence(

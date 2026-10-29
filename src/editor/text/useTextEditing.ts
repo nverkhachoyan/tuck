@@ -124,10 +124,8 @@ export function useTextEditing({
 		finish,
 		cancel: () => dispatchMode({ type: "endText" }),
 		style,
-		select: (selection: TextSelection) => {
-			editorRef.current?.select(selection);
-			change({ selection });
-		},
+		// Reported back through `changeSelection`.
+		select: (selection: TextSelection) => editorRef.current?.select(selection),
 		changeText: (text: string) => changeLayer({ text }),
 		changeSelection: (selection: TextSelection) => change({ selection }),
 		changeFocus: (focused: boolean) => change({ focused }),

@@ -1,4 +1,11 @@
-import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
+import {
+	type Ref,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useLayoutEffect,
+	useRef,
+} from "react";
 import {
 	BackHandler,
 	Platform,
@@ -15,7 +22,8 @@ import type { TextSelection } from "./selection.ts";
 export type HiddenTextInputHandle = {
 	// Takes the keyboard back, keeping the caret where it was.
 	focus: () => void;
-	// Moves the caret, or selects, and takes the keyboard.
+	// Moves the caret, or selects, and takes the keyboard; reported through
+	// `onSelectionChange`.
 	select: (selection: TextSelection) => void;
 };
 
@@ -25,7 +33,8 @@ export type HiddenTextInputHandle = {
  * - `initialSelection`: where the caret starts, once the input first has
  *   focus.
  * - `onChangeText`, `onSelectionChange`, `onFocusChange`: what the input
- *   reports, for the canvas to draw.
+ *   reports, for the canvas to draw. A selection placed from code
+ *   (`initialSelection`, `select`) is reported too.
  * - `onDone`: Escape, ⌘/Ctrl+Enter, or Android's back button.
  * - `style`: where the input sits. It takes the screen's touches nowhere, but
  *   focusing it scrolls to it, so keep it where the screen won't scroll: by
@@ -65,18 +74,29 @@ export function HiddenTextInput({
 	const input = useRef<TextInputInstance>(null);
 	// The first focus, as it opens, places the caret.
 	const placed = useRef(false);
+	// iOS doesn't report a selection set from code, so placing one reports
+	// it too.
+	const reportSelection = useRef(onSelectionChange);
+	useLayoutEffect(() => {
+		reportSelection.current = onSelectionChange;
+	});
+	const place = useCallback((selection: TextSelection) => {
+		placed.current = true;
+		if (!input.current) return;
+		setInputSelection(input.current, selection);
+		reportSelection.current(selection);
+	}, []);
 
 	useImperativeHandle(
 		ref,
 		() => ({
 			focus: () => input.current?.focus(),
 			select: (selection) => {
-				placed.current = true;
 				input.current?.focus();
-				if (input.current) setInputSelection(input.current, selection);
+				place(selection);
 			},
 		}),
-		[],
+		[place],
 	);
 
 	// Not `autoFocus`: on web, React focuses that while it can't report the
@@ -108,9 +128,7 @@ export function HiddenTextInput({
 				}
 				onFocus={() => {
 					onFocusChange(true);
-					if (placed.current || !input.current) return;
-					placed.current = true;
-					setInputSelection(input.current, initialSelection);
+					if (!placed.current) place(initialSelection);
 				}}
 				onBlur={() => onFocusChange(false)}
 				onKeyPress={(event) => {
