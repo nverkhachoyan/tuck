@@ -1,4 +1,4 @@
-import { parseHex, type Rgb, toHex } from "../model/color.ts";
+import { parseHex, type Rgb, toHex } from "./color.ts";
 
 /**
  * A color as a color picker holds it: `hue` in degrees (0 to 360), and

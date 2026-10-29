@@ -1,4 +1,3 @@
-import { isHexColor } from "../../../model/color.ts";
 import type { Size } from "../../../model/geometry.ts";
 import type { Brush, PenTip } from "../../../model/layers/drawing.ts";
 import {
@@ -8,6 +7,7 @@ import {
 	type ShapeStyle,
 	shapeKinds,
 } from "../../../model/layers/shape.ts";
+import { isHexColor } from "../../../ui/color.ts";
 import type { CanvasTool } from "../../canvas/canvasTool.ts";
 
 export type DrawTool = "pen" | PenTip | "shape" | "eraser";

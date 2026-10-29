@@ -7,7 +7,6 @@ import {
 	useState,
 } from "react";
 import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
-import { isHexColor } from "@/model/color";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
 import type { Point } from "@/model/geometry";
@@ -15,6 +14,7 @@ import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import { Announcement } from "@/ui/Announcement";
 import { CanvasStage } from "@/ui/CanvasStage";
+import { isHexColor } from "@/ui/color";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Toast } from "@/ui/Toast";
 import { space } from "@/ui/theme";
