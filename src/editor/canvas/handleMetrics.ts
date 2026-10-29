@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import type { Box, Point, Transform } from "@/model/geometry";
+import type { Box, Point, Transform } from "../document/geometry";
 import {
 	CORNERS,
 	type Handle,

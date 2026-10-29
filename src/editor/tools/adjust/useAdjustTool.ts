@@ -7,15 +7,15 @@ import {
 	useSharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
+import type { CanvasInput } from "../../canvasInputFor";
+import type { ToolEnv } from "../../defineTool";
 import {
 	type AdjustmentKey,
 	type Adjustments,
 	adjustmentMatrix,
 	type ColorMatrix,
 	neutralAdjustments,
-} from "@/model/adjustments";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
+} from "../../layers/image/adjustments";
 import type { DialScale } from "../../shell/dialDrag";
 import { useStore } from "../../store";
 

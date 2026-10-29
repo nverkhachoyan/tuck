@@ -7,7 +7,7 @@ import {
 	useState,
 } from "react";
 import type { ViewInstance } from "react-native";
-import type { Point, Rect, Size } from "@/model/geometry";
+import type { Point, Rect, Size } from "../document/geometry";
 import { createDoubleTap } from "./doubleTap";
 import { useShownViewport } from "./shownViewport";
 import { useWheelZoom } from "./useWheelZoom";

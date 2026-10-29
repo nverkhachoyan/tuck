@@ -4,9 +4,9 @@ import {
 	cosSin,
 	type Size,
 	type Transform,
-} from "../../model/geometry.ts";
+} from "../document/geometry.ts";
 
-// Worklets, like `model/geometry.ts`, so gestures run them on the UI thread.
+// Worklets, like `editor/document/geometry.ts`, so gestures run them on the UI thread.
 
 /** How near a quarter turn a layer's or a line's angle settles on it. */
 export const ROTATION_SNAP = (4 * Math.PI) / 180;

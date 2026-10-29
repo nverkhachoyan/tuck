@@ -18,9 +18,6 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { Canvas, Group } from "react-native-skia";
-import type { EditorDocument } from "@/model/document";
-import type { Box, Point, Rect, Transform } from "@/model/geometry";
-import type { Layer } from "@/model/layers/layer";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
 import { cursorStyle } from "./canvas/canvasCursor";
@@ -60,7 +57,10 @@ import {
 	inputRules,
 	outlinedLayerFor,
 } from "./canvasInputFor";
+import type { EditorDocument } from "./document/document";
+import type { Box, Point, Rect, Transform } from "./document/geometry";
 import { EditorScene, type SceneDraft } from "./EditorScene";
+import type { Layer } from "./layers/layer";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.

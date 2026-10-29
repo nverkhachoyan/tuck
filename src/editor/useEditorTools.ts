@@ -1,18 +1,18 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { BackHandler } from "react-native";
-import type { EditorDocument } from "@/model/document";
-import { visibleImageLayer } from "@/model/framing";
-import { type Point, type Size, toLayerSpace } from "@/model/geometry";
-import type { ImageLayer } from "@/model/layers/image";
-import type { Layer } from "@/model/layers/layer";
 import {
 	definitionOf,
 	type ToolControllers,
 	type ToolEnv,
 	type ToolList,
 } from "./defineTool";
+import type { EditorDocument } from "./document/document";
+import { visibleImageLayer } from "./document/framing";
+import { type Point, type Size, toLayerSpace } from "./document/geometry";
 import type { EditorHost } from "./editorHost";
 import type { EditorMode, EditorModeAction } from "./editorMode";
+import type { ImageLayer } from "./layers/image/image";
+import type { Layer } from "./layers/layer";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useStore } from "./store";
 import type { ToolId } from "./toolSpec";

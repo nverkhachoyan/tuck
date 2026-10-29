@@ -7,20 +7,19 @@ import {
 	useState,
 } from "react";
 import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
-import { isHexColor } from "@/model/color";
-import type { EditorDocument } from "@/model/document";
-import { targetImageLayer, visibleImageLayer } from "@/model/framing";
-import type { Point } from "@/model/geometry";
-import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import { Announcement } from "@/ui/Announcement";
 import { CanvasStage } from "@/ui/CanvasStage";
+import { isHexColor } from "@/ui/color";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Toast } from "@/ui/Toast";
 import { space } from "@/ui/theme";
 import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
 import { BUILT_IN_TOOLS } from "./builtInTools";
 import { definitionOf, type ToolList } from "./defineTool";
+import type { EditorDocument } from "./document/document";
+import { targetImageLayer, visibleImageLayer } from "./document/framing";
+import type { Point } from "./document/geometry";
 import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import { EditorHeader } from "./EditorHeader";
 import { EditorInspector } from "./EditorInspector";
@@ -31,7 +30,8 @@ import { EditorContext, type EditorContextValue } from "./editorContext";
 import type { EditorHost } from "./editorHost";
 import { openTray, takesKeys } from "./editorMode";
 import { LayerSelectionBar, useArrangeSelected } from "./LayerSelectionBar";
-import { LayersPanel, layerListProps } from "./layers/LayersPanel";
+import { maxNewImageShortSide } from "./layers/image/image";
+import { LayersPanel, layerListProps } from "./layers/panel/LayersPanel";
 import {
 	ContextBarContent,
 	DockContent,

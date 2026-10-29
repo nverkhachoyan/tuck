@@ -3,7 +3,7 @@ import { useWindowDimensions, type ViewInstance } from "react-native";
 import { compactControls } from "@/ui/density";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import { editorFrame } from "./editorFrame";
-import { LAYERS_SIDEBAR_INSET } from "./layers/LayersPanel";
+import { LAYERS_SIDEBAR_INSET } from "./layers/panel/LayersPanel";
 import { INSPECTOR_WIDTH, PANEL_GAP, useDockInset } from "./shell/Dock";
 
 // Room for the chosen tool's highlight inside the rail's card. Its tools are

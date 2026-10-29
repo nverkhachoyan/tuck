@@ -1,4 +1,4 @@
-import type { Point } from "../../model/geometry.ts";
+import type { Point } from "../document/geometry.ts";
 
 // A second tap this soon after the first, and this near it in screen
 // pixels, makes a double tap.

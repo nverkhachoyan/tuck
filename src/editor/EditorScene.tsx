@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import { Fill, Group, Rect, rect, Shadow } from "react-native-skia";
-import type { EditorDocument } from "@/model/document";
-import type { Layer } from "@/model/layers/layer";
-import { toTransformList } from "@/render/layerTransform";
 import { colorScheme, colors } from "@/ui/theme";
 import { CanvasBackground } from "./canvas/Checkerboard";
 import {
@@ -20,6 +17,9 @@ import {
 	useScreenPixels,
 } from "./canvas/SelectionOverlay";
 import type { LiveAdjustment } from "./canvasInputFor";
+import type { EditorDocument } from "./document/document";
+import type { Layer } from "./layers/layer";
+import { toTransformList } from "./layers/layerTransform";
 
 // The canvas's shadows on the table around it, as a print's: a tight one
 // where it touches and a soft one that lifts it, in screen pixels. At night,

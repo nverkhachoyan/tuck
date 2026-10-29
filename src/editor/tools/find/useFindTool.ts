@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { boundingBox, type Rect } from "@/model/geometry";
-import type { RedactionBoxPlacement } from "@/model/layers/redaction";
 import type { CanvasInput } from "../../canvasInputFor";
 import type { ToolEnv } from "../../defineTool";
 import type { DetectionFeature } from "../../detection/imageDetection";
+import { boundingBox, type Rect } from "../../document/geometry";
+import type { RedactionBoxPlacement } from "../../layers/redaction/redaction";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
 import {

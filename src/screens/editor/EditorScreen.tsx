@@ -2,7 +2,7 @@ import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Editor, type EditorHost, getSession, useSession } from "@/editor";
-import type { EditorDocument } from "@/model/document";
+import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";

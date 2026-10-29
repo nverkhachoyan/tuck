@@ -1,6 +1,9 @@
-import { type EditorDocument, hasTransparency } from "@model/document.ts";
-import { DocumentRenderScene } from "@src/render/DocumentRenderScene.tsx";
-import { renderDocument } from "@src/render/renderDocument.tsx";
+import {
+	type EditorDocument,
+	hasTransparency,
+} from "@src/editor/document/document.ts";
+import { DocumentRenderScene } from "@src/editor/render/DocumentRenderScene.tsx";
+import { renderDocument } from "@src/editor/render/renderDocument.tsx";
 import {
 	type ExportFormat,
 	encodeImage,
@@ -205,17 +208,17 @@ export default function ExportLesson() {
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
 			label: "renderDocument",
-			file: "src/render/renderDocument.tsx",
+			file: "src/editor/render/renderDocument.tsx",
 			name: "renderDocument",
 		},
 		{
 			label: "decodeImageLayers",
-			file: "src/render/decodeImageLayers.ts",
+			file: "src/editor/render/decodeImageLayers.ts",
 			name: "decodeImageLayers",
 		},
 		{
 			label: "decodedImages",
-			file: "src/render/decodedImages.ts",
+			file: "src/editor/render/decodedImages.ts",
 			name: "decodedImages",
 		},
 		{
@@ -405,8 +408,8 @@ export default function ExportLesson() {
 			<section className="read-the-code">
 				<h2>Read the code</h2>
 				<p>
-					The export pipeline: <code>src/render/</code> draws, and the export
-					screen picks the size and format.
+					The export pipeline: <code>src/editor/render/</code> draws, and the
+					export screen picks the size and format.
 				</p>
 				<div className="tabs" role="tablist">
 					{tabs.map((candidate) => (

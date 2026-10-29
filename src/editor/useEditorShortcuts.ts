@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent } from "react";
 import { Platform } from "react-native";
-import { assertNever } from "@/model/assertNever";
+import { assertNever } from "./document/assertNever";
 import {
 	type EditorModeAction,
 	type EditorModeState,

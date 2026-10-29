@@ -1,18 +1,22 @@
 import {
 	createDocumentFromImage,
 	type EditorDocument,
-} from "@model/document.ts";
+} from "@src/editor/document/document.ts";
 import {
 	documentFraming,
 	type Framing,
 	framingAnchor,
 	reframeDocument,
-} from "@model/framing.ts";
-import { type Size, toDocumentSpace, toLayerSpace } from "@model/geometry.ts";
-import type { Layer } from "@model/layers/layer.ts";
-import { createRedactionBox } from "@model/layers/redaction.ts";
-import { createShapeLayer } from "@model/layers/shape.ts";
-import { createTextLayer } from "@model/layers/text.ts";
+} from "@src/editor/document/framing.ts";
+import {
+	type Size,
+	toDocumentSpace,
+	toLayerSpace,
+} from "@src/editor/document/geometry.ts";
+import type { Layer } from "@src/editor/layers/layer.ts";
+import { createRedactionBox } from "@src/editor/layers/redaction/redaction.ts";
+import { createShapeLayer } from "@src/editor/layers/shape/shape.ts";
+import { createTextLayer } from "@src/editor/layers/text/text.ts";
 import {
 	boxWithRatio,
 	type CropState,
@@ -248,22 +252,22 @@ export function FramingLesson() {
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
 			label: "reframeDocument",
-			file: "src/model/framing.ts",
+			file: "src/editor/document/framing.ts",
 			name: "reframeDocument",
 		},
 		{
 			label: "rebaseTransform",
-			file: "src/model/framing.ts",
+			file: "src/editor/document/framing.ts",
 			name: "rebaseTransform",
 		},
 		{
 			label: "framingAnchor",
-			file: "src/model/framing.ts",
+			file: "src/editor/document/framing.ts",
 			name: "framingAnchor",
 		},
 		{
 			label: "turnsWithPhoto",
-			file: "src/model/framing.ts",
+			file: "src/editor/document/framing.ts",
 			name: "turnsWithPhoto",
 		},
 		{
@@ -288,7 +292,7 @@ export function FramingLesson() {
 		},
 		{
 			label: "reframe",
-			file: "src/model/edits/crop.ts",
+			file: "src/editor/document/documentEdits.ts",
 			name: "reframe",
 		},
 	];
@@ -317,7 +321,7 @@ export function FramingLesson() {
 
 	return (
 		<article className="lesson">
-			<p className="eyebrow">The model · Lesson 5</p>
+			<p className="eyebrow">The document · Lesson 5</p>
 			<h1>Cropping moves an anchor</h1>
 			<p className="lede">
 				Cropping, turning, flipping, and straightening are one operation: give

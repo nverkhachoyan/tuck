@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSharedValue } from "react-native-reanimated";
-import type { EditorDocument } from "@/model/document";
-import type { Size } from "@/model/geometry";
-import type { Layer } from "@/model/layers/layer";
+import type { EditorDocument } from "../document/document";
+import type { Size } from "../document/geometry";
+import type { Layer } from "../layers/layer";
 import {
 	type CanvasLookups,
 	type CanvasTool,

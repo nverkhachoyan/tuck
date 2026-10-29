@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import type { EditorDocument } from "@/model/document";
-import { hitTestBox, type Point, type Size } from "@/model/geometry";
+import type { EditorDocument } from "../document/document";
+import { hitTestBox, type Point, type Size } from "../document/geometry";
 import type { CanvasLookups } from "./canvasTool";
 import { findLayerAt, type LayerTarget, regionAt } from "./hitTest";
 import { layerBounds } from "./layerBounds";

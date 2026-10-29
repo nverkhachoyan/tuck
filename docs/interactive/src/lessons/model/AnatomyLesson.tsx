@@ -3,23 +3,26 @@ import {
 	type EditorDocument,
 	hasEdits,
 	hasTransparency,
-} from "@model/document.ts";
-import type { Transform } from "@model/geometry.ts";
-import { createDrawingLayer } from "@model/layers/drawing.ts";
-import { createImageLayer, createStickerLayer } from "@model/layers/image.ts";
+} from "@src/editor/document/document.ts";
+import type { Transform } from "@src/editor/document/geometry.ts";
+import { createDrawingLayer } from "@src/editor/layers/drawing/drawing.ts";
+import {
+	createImageLayer,
+	createStickerLayer,
+} from "@src/editor/layers/image/image.ts";
 import {
 	duplicateLayer,
 	type Layer,
 	reorderLayer,
-} from "@model/layers/layer.ts";
-import { createRedactionBox } from "@model/layers/redaction.ts";
+} from "@src/editor/layers/layer.ts";
+import { createRedactionBox } from "@src/editor/layers/redaction/redaction.ts";
 import {
 	createShapeLayer,
 	isLine,
 	isLineShape,
 	type ShapeKind,
-} from "@model/layers/shape.ts";
-import { createTextLayer } from "@model/layers/text.ts";
+} from "@src/editor/layers/shape/shape.ts";
+import { createTextLayer } from "@src/editor/layers/text/text.ts";
 import { useEffect, useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -76,19 +79,31 @@ function layerLabel(layer: Layer): string {
 
 type Declaration = { file: SourceFile; name: string };
 
+// Each layer type's file, in its own folder.
+const layerFiles: Record<Layer["type"], SourceFile> = {
+	image: "src/editor/layers/image/image.ts",
+	text: "src/editor/layers/text/text.ts",
+	drawing: "src/editor/layers/drawing/drawing.ts",
+	shape: "src/editor/layers/shape/shape.ts",
+	redaction: "src/editor/layers/redaction/redaction.ts",
+};
+
 // The declaration that defines a layer, and the factory that made it.
 function declarations(layer: Layer): {
 	type: Declaration;
 	factory: Declaration;
 } {
-	const file = `src/model/layers/${layer.type}.ts` as const;
+	const file = layerFiles[layer.type];
 	switch (layer.type) {
 		case "image":
 			return {
 				type: { file, name: "ImageLayer" },
 				factory:
 					layer.id === "photo"
-						? { file: "src/model/document.ts", name: "createDocumentFromImage" }
+						? {
+								file: "src/editor/document/document.ts",
+								name: "createDocumentFromImage",
+							}
 						: {
 								file,
 								name: layer.sticker ? "createStickerLayer" : "createImageLayer",
@@ -413,10 +428,10 @@ export function AnatomyLesson() {
 					...declaration,
 				}))
 			: []),
-		{ label: "Layer", file: "src/model/layers/layer.ts", name: "Layer" },
+		{ label: "Layer", file: "src/editor/layers/layer.ts", name: "Layer" },
 		{
 			label: "EditorDocument",
-			file: "src/model/document.ts",
+			file: "src/editor/document/document.ts",
 			name: "EditorDocument",
 		},
 		{
@@ -426,12 +441,12 @@ export function AnatomyLesson() {
 		},
 		{
 			label: "duplicateOffset",
-			file: "src/model/layers/layer.ts",
+			file: "src/editor/layers/layer.ts",
 			name: "duplicateOffset",
 		},
 		{
 			label: "hasTransparency",
-			file: "src/model/document.ts",
+			file: "src/editor/document/document.ts",
 			name: "hasTransparency",
 		},
 	];
@@ -442,7 +457,7 @@ export function AnatomyLesson() {
 
 	return (
 		<article className="lesson">
-			<p className="eyebrow">The model · Lesson 2</p>
+			<p className="eyebrow">The document · Lesson 2</p>
 			<h1>Anatomy of a layer</h1>
 			<p className="lede">
 				A document is a canvas and a flat list of layers, bottom to top. Every

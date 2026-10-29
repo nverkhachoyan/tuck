@@ -16,13 +16,13 @@ and the others when they apply:
 ```sh
 pnpm check       # formatting and lint, including the import rules (pnpm format fixes formatting)
 pnpm typecheck
-pnpm test        # after touching model/, store slices, or other pure modules
+pnpm test        # after touching document or layer files, store slices, or other pure modules
 pnpm build:web   # after changing .web files, the entry files, or untyped imports
 ```
 
-Changing `render/`'s imports, or something an "Inside Tuck" lesson quotes,
-can break `pnpm --dir docs/interactive build`; update the lesson in the
-same change.
+Changing the imports of `src/editor/render/` or the layer views, or something
+an "Inside Tuck" lesson quotes, can break `pnpm --dir docs/interactive build`;
+update the lesson in the same change.
 
 ## Commits
 
@@ -36,10 +36,11 @@ The full list of conventions and hard-won lessons is
 [AGENTS.md](./AGENTS.md); [docs/architecture.md](./docs/architecture.md)
 explains the layout. The ones that come up first:
 
-- Imports flow one way, from `app/` down to `model/` (see the README's map),
-  and `biome.json` fails `pnpm check` on an import that goes the wrong way.
-  Outside `src/editor/`, import the editor only from `@/editor`.
-- `model/` is plain TypeScript: no React, React Native, or Skia.
+- Imports flow one way, from `app/` down to the editor (see the README's map),
+  and nothing checks it. Outside `src/editor/`, import the editor only from
+  `@/editor`, or `@/editor/core` for plain TypeScript.
+- The editor's `document/` and its layers' lowercase `.ts` files are plain
+  TypeScript: no React, React Native, or Skia.
 - Colors, text styles, corners, and gaps come from `ui/theme.ts`, never
   literals: the palette is picked at launch.
 - A tool lives in its own folder under `src/editor/tools/`, as a spec (plain

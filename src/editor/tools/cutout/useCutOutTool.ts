@@ -1,11 +1,11 @@
 import { useMemo, useRef } from "react";
-import { imagePointAt, isCutOut } from "@/model/cutout";
-import { visibleImageLayer } from "@/model/framing";
-import type { ImageLayer } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import type { ToolEnv } from "../../defineTool";
+import { visibleImageLayer } from "../../document/framing";
+import type { ImageLayer } from "../../layers/image/image";
+import { imagePointAt, isCutOut } from "../../layers/image/mask";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
 import {

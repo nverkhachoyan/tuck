@@ -1,16 +1,19 @@
-import { type AdjustmentKey, adjustmentKeys } from "@model/adjustments.ts";
-import type { EditorDocument } from "@model/document.ts";
-import { withAdjustments } from "@model/layers/image.ts";
-import type { Layer } from "@model/layers/layer.ts";
-import type { RedactionEffect } from "@model/layers/redaction.ts";
-import { type TextFont, textFonts } from "@model/layers/text.ts";
-import { DocumentRenderScene } from "@src/render/DocumentRenderScene.tsx";
-import { DrawingLayerView } from "@src/render/layers/DrawingLayerView.tsx";
-import { ImageLayerView } from "@src/render/layers/ImageLayerView.tsx";
-import { RedactionLayerView } from "@src/render/layers/RedactionLayerView.tsx";
-import { ShapeLayerView } from "@src/render/layers/ShapeLayerView.tsx";
-import { TextLayerView } from "@src/render/layers/TextLayerView.tsx";
-import { toTransformList } from "@src/render/layerTransform.ts";
+import type { EditorDocument } from "@src/editor/document/document.ts";
+import { DrawingLayerView } from "@src/editor/layers/drawing/DrawingLayerView.tsx";
+import {
+	type AdjustmentKey,
+	adjustmentKeys,
+} from "@src/editor/layers/image/adjustments.ts";
+import { ImageLayerView } from "@src/editor/layers/image/ImageLayerView.tsx";
+import { withAdjustments } from "@src/editor/layers/image/image.ts";
+import type { Layer } from "@src/editor/layers/layer.ts";
+import { toTransformList } from "@src/editor/layers/layerTransform.ts";
+import { RedactionLayerView } from "@src/editor/layers/redaction/RedactionLayerView.tsx";
+import type { RedactionEffect } from "@src/editor/layers/redaction/redaction.ts";
+import { ShapeLayerView } from "@src/editor/layers/shape/ShapeLayerView.tsx";
+import { TextLayerView } from "@src/editor/layers/text/TextLayerView.tsx";
+import { type TextFont, textFonts } from "@src/editor/layers/text/text.ts";
+import { DocumentRenderScene } from "@src/editor/render/DocumentRenderScene.tsx";
 import { useEffect, useState } from "react";
 import { Fill, Group, Paint, type SkImage } from "react-native-skia";
 import { SourceView } from "../../source/SourceView.tsx";
@@ -141,9 +144,9 @@ export default function LayersLesson() {
 				<p>
 					Turn or scale the selected layer. Each layer is drawn inside a{" "}
 					<code>Group</code> with <code>toTransformList(transform)</code>:
-					translate, rotate, scale, the same five numbers as the model's first
-					lesson, in Skia's form. The blur keeps its strength, because its sigma
-					is divided by the layer's scale.
+					translate, rotate, scale, the same five numbers as the document's
+					first lesson, in Skia's form. The blur keeps its strength, because its
+					sigma is divided by the layer's scale.
 				</p>
 			),
 			done: ({ tried }) => tried.has("transform"),
@@ -200,42 +203,42 @@ export default function LayersLesson() {
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
 			label: "DocumentRenderScene",
-			file: "src/render/DocumentRenderScene.tsx",
+			file: "src/editor/render/DocumentRenderScene.tsx",
 			name: "DocumentRenderScene",
 		},
 		{
 			label: "LayerContent",
-			file: "src/render/DocumentRenderScene.tsx",
+			file: "src/editor/render/DocumentRenderScene.tsx",
 			name: "LayerContent",
 		},
 		{
 			label: "toTransformList",
-			file: "src/render/layerTransform.ts",
+			file: "src/editor/layers/layerTransform.ts",
 			name: "toTransformList",
 		},
 		{
 			label: "RedactionLayerView",
-			file: "src/render/layers/RedactionLayerView.tsx",
+			file: "src/editor/layers/redaction/RedactionLayerView.tsx",
 			name: "RedactionLayerView",
 		},
 		{
 			label: "pixelateFilter",
-			file: "src/render/layers/RedactionLayerView.tsx",
+			file: "src/editor/layers/redaction/RedactionLayerView.tsx",
 			name: "pixelateFilter",
 		},
 		{
 			label: "ImageLayerView",
-			file: "src/render/layers/ImageLayerView.tsx",
+			file: "src/editor/layers/image/ImageLayerView.tsx",
 			name: "ImageLayerView",
 		},
 		{
 			label: "TextLayerView",
-			file: "src/render/layers/TextLayerView.tsx",
+			file: "src/editor/layers/text/TextLayerView.tsx",
 			name: "TextLayerView",
 		},
 		{
 			label: "loadSkiaFonts",
-			file: "src/render/fonts.ts",
+			file: "src/editor/layers/text/fonts.ts",
 			name: "loadSkiaFonts",
 		},
 	];
@@ -248,9 +251,9 @@ export default function LayersLesson() {
 			<h1>From layer to pixels</h1>
 			<p className="lede">
 				This canvas is Skia, running as CanvasKit in your browser, drawing the
-				document with the app's own <code>render/</code> code: the scene export
-				draws, <code>DocumentRenderScene</code>, and each layer type's view.
-				Pick a layer and change it; every pixel below comes from the app.
+				document with the app's own rendering code: the scene export draws,{" "}
+				<code>DocumentRenderScene</code>, and each layer type's view. Pick a
+				layer and change it; every pixel below comes from the app.
 			</p>
 
 			<div className="playground">
@@ -525,7 +528,7 @@ export default function LayersLesson() {
 				<h2>Read the code</h2>
 				<p>
 					The render code drawing the canvas above, from{" "}
-					<code>src/render/</code>.
+					<code>src/editor/render/</code> and <code>src/editor/layers/</code>.
 				</p>
 				<div className="tabs" role="tablist">
 					{tabs.map((candidate) => (

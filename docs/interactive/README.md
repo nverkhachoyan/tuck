@@ -1,6 +1,6 @@
 # Inside Tuck
 
-Interactive lessons on the codebase, read from the bottom up: the model, then
+Interactive lessons on the codebase, read from the bottom up: the document, then
 the store, then rendering. Each lesson runs the app's real code and quotes it
 from the source as it is now.
 
@@ -16,8 +16,8 @@ It opens at http://localhost:5180 (the `docs` launch configuration in
 
 1. Write a component in `src/lessons/<chapter>/` and give it to its entry in
    `src/lessons.ts` (an entry without a component shows as "soon").
-2. Import what it explains from `@model/…` rather than copying it, and quote
-   code with `<SourceView file="src/model/geometry.ts" name="toLayerSpace" />`,
+2. Import what it explains from `@src/…` rather than copying it, and quote
+   code with `<SourceView file="src/editor/document/geometry.ts" name="toLayerSpace" />`,
    which reads the declaration by name from the file. A file a lesson quotes
    needs an entry in `src/source/sources.ts`.
 3. Steps the reader works through go in a `<Flow>`: each step says what to try
@@ -28,7 +28,7 @@ it, so a change to something a lesson covers fails until the lesson is updated.
 
 ## The rendering lessons
 
-The rendering chapter draws with the app's real `src/render/` code, on
+The rendering chapter draws with the app's real `src/editor/render/` and `src/editor/layers/` code, on
 React Native Skia's web build (CanvasKit) and React Native Web, taken from the
 repo root's `node_modules` at the versions the app runs (the root's
 `pnpm install` installs both). `vite.config.ts` makes that work outside Metro: it maps

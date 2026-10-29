@@ -1,6 +1,6 @@
-import type { EditorDocument } from "@model/document.ts";
-import { hitTestBox, type Point } from "@model/geometry.ts";
-import type { Layer } from "@model/layers/layer.ts";
+import type { EditorDocument } from "@src/editor/document/document.ts";
+import { hitTestBox, type Point } from "@src/editor/document/geometry.ts";
+import type { Layer } from "@src/editor/layers/layer.ts";
 import { type PointerEvent, useRef } from "react";
 import { DocumentScene, layerBox, Selection } from "./layerViews.tsx";
 

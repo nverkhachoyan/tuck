@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { toDocumentSpace } from "../../../model/geometry.ts";
+import { toDocumentSpace } from "../../document/geometry.ts";
 import { dragLineEnd, lineBetween, shapeFromDrag } from "../shapeDrag.ts";
 
 const near = (actual: number, expected: number) =>

@@ -1,4 +1,4 @@
-import type { EditorDocument } from "@/model/document";
+import type { EditorDocument } from "./document/document";
 import { useStore } from "./store";
 import type { EditorState } from "./store/editorSlice";
 

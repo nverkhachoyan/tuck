@@ -14,11 +14,11 @@ import {
 } from "react-native-reanimated";
 import { rect } from "react-native-skia";
 import { scheduleOnRN } from "react-native-worklets";
-import type { EditorDocument } from "@/model/document";
-import { documentFraming, framingAnchor } from "@/model/framing";
-import type { Size } from "@/model/geometry";
 import { blendViewports, fitRectToView } from "../../canvas/viewport";
 import type { ToolEnv } from "../../defineTool";
+import type { EditorDocument } from "../../document/document";
+import { documentFraming, framingAnchor } from "../../document/framing";
+import type { Size } from "../../document/geometry";
 import { useStore } from "../../store";
 import {
 	boxWithRatio,

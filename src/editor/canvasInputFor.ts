@@ -1,6 +1,4 @@
 import type { DerivedValue } from "react-native-reanimated";
-import type { ColorMatrix } from "../model/adjustments.ts";
-import type { Layer } from "../model/layers/layer.ts";
 import {
 	type CanvasTool,
 	cutImageId,
@@ -9,6 +7,8 @@ import {
 } from "./canvas/canvasTool.ts";
 import type { CanvasRegion } from "./canvas/RegionOutline.tsx";
 import type { EditText } from "./canvas/useEditTextGesture.ts";
+import type { ColorMatrix } from "./layers/image/adjustments.ts";
+import type { Layer } from "./layers/layer.ts";
 import type { DialDrag } from "./shell/dialDrag.ts";
 
 /**

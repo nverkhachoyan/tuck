@@ -1,7 +1,7 @@
-import type { EditorDocument } from "../../../model/document.ts";
-import type { ImageLayer } from "../../../model/layers/image.ts";
-import type { RedactionBoxPlacement } from "../../../model/layers/redaction.ts";
 import type { DetectionFeature } from "../../detection/imageDetection.ts";
+import type { EditorDocument } from "../../document/document.ts";
+import type { ImageLayer } from "../../layers/image/image.ts";
+import type { RedactionBoxPlacement } from "../../layers/redaction/redaction.ts";
 import type { MappedDetectionRect } from "./mapDetectionRects.ts";
 
 // A region Find found, placed in the document.

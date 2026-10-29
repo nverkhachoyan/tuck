@@ -3,18 +3,18 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { devtools } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
-import { neutralAdjustments } from "../../../model/adjustments.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-} from "../../../model/document.ts";
-import { documentFraming } from "../../../model/framing.ts";
-import type { DrawingLayer, Stroke } from "../../../model/layers/drawing.ts";
-import type { ImageLayer } from "../../../model/layers/image.ts";
-import type { RedactionLayer } from "../../../model/layers/redaction.ts";
-import type { ShapeLayer } from "../../../model/layers/shape.ts";
-import type { TextLayer } from "../../../model/layers/text.ts";
-import type { MaskStroke } from "../../../model/strokes.ts";
+} from "../../document/document.ts";
+import { documentFraming } from "../../document/framing.ts";
+import type { DrawingLayer, Stroke } from "../../layers/drawing/drawing.ts";
+import { neutralAdjustments } from "../../layers/image/adjustments.ts";
+import type { ImageLayer } from "../../layers/image/image.ts";
+import type { RedactionLayer } from "../../layers/redaction/redaction.ts";
+import type { ShapeLayer } from "../../layers/shape/shape.ts";
+import type { MaskStroke } from "../../layers/strokes.ts";
+import type { TextLayer } from "../../layers/text/text.ts";
 import {
 	createEditorSlice,
 	type EditorSlice,

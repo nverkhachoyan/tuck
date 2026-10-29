@@ -1,5 +1,5 @@
-import type { EditorDocument } from "@/model/document";
-import type { Layer } from "@/model/layers/layer";
+import type { EditorDocument } from "./document/document";
+import type { Layer } from "./layers/layer";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { useStore } from "./store";
 

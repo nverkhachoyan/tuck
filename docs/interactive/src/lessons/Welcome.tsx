@@ -2,12 +2,16 @@ import { chapters } from "../lessons.ts";
 
 const layers = [
 	{ folder: "app", role: "Routes: each file registers a screen" },
-	{ folder: "screens", role: "Home, create, the editor and its tools, export" },
+	{ folder: "screens", role: "Home, create, the editor's route, export" },
+	{ folder: "photos · projects", role: "Import and saving" },
 	{
-		folder: "photos · projects · render · store",
-		role: "Import, saving, drawing, shared state",
+		folder: "editor · its store · render",
+		role: "The editor and its tools, shared state, drawing",
 	},
-	{ folder: "model", role: "The document as plain data, and its geometry" },
+	{
+		folder: "editor/document · editor/layers",
+		role: "The document and its layers as plain data, and their geometry",
+	},
 ];
 
 export function Welcome() {
@@ -26,8 +30,8 @@ export function Welcome() {
 
 			<h2>Read from the bottom up</h2>
 			<p>
-				Imports in Tuck flow one way, from routes down to the model. Reading in
-				the other direction means every file you open only uses things you've
+				Imports in Tuck flow one way, from routes down to the document. Reading
+				in the other direction means every file you open only uses things you've
 				already seen.
 			</p>
 			<ol className="layer-stack">

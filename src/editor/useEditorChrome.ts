@@ -1,7 +1,7 @@
-import type { Layer } from "@/model/layers/layer";
 import type { ToolControllers } from "./defineTool";
 import { modeChrome } from "./editorChrome";
-import { layerKindName } from "./layers/LayerRow";
+import type { Layer } from "./layers/layer";
+import { layerKindName } from "./layers/panel/LayerRow";
 import type { ModeActionProps } from "./shell/Dock";
 import { useStore } from "./store";
 import type { ToolId, ToolSpecs } from "./toolSpec";

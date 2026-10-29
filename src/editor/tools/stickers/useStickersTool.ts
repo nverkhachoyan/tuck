@@ -1,5 +1,5 @@
-import type { Layer } from "@/model/layers/layer";
 import type { ToolEnv } from "../../defineTool";
+import type { Layer } from "../../layers/layer";
 import type { LayerAction } from "../../shell/LayerActionsPanel";
 import { useSavedStickers } from "./useSavedStickers";
 import { useStickerActions } from "./useStickerActions";

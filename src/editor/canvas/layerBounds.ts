@@ -1,9 +1,9 @@
-import { assertNever } from "@/model/assertNever";
-import type { Box } from "@/model/geometry";
-import type { Layer } from "@/model/layers/layer";
-import { shapeBox } from "@/model/shapes";
-import { drawingBox } from "@/model/strokes";
-import { textLayerBounds } from "@/render/textLayerLayout";
+import { assertNever } from "../document/assertNever";
+import type { Box } from "../document/geometry";
+import type { Layer } from "../layers/layer";
+import { shapeBox } from "../layers/shape/shapeGeometry";
+import { drawingBox } from "../layers/strokes";
+import { textLayerBounds } from "../layers/text/textLayerLayout";
 
 /**
  * The box a layer occupies in its own space, centered on its origin. The

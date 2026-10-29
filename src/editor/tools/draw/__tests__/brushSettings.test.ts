@@ -1,8 +1,8 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { penTips } from "../../../../model/layers/drawing.ts";
-import { createShapeLayer } from "../../../../model/layers/shape.ts";
+import { penTips } from "../../../layers/drawing/drawing.ts";
+import { createShapeLayer } from "../../../layers/shape/shape.ts";
 import {
 	BRUSH_SIZES,
 	brushFor,

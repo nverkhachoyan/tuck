@@ -1,18 +1,22 @@
-import { adjustmentMatrix } from "@model/adjustments.ts";
-import type { EditorDocument } from "@model/document.ts";
+import type { EditorDocument } from "@src/editor/document/document.ts";
 import {
 	type Box,
 	type Transform,
 	toDocumentSpace,
 	transformMatrix,
-} from "@model/geometry.ts";
-import type { Stroke } from "@model/layers/drawing.ts";
-import type { ImageLayer } from "@model/layers/image.ts";
-import type { Layer } from "@model/layers/layer.ts";
-import { isLine, type ShapeLayer } from "@model/layers/shape.ts";
-import type { TextLayer } from "@model/layers/text.ts";
-import { arrowHead, outlineThickness, shapeBox } from "@model/shapes.ts";
-import { drawingBox } from "@model/strokes.ts";
+} from "@src/editor/document/geometry.ts";
+import type { Stroke } from "@src/editor/layers/drawing/drawing.ts";
+import { adjustmentMatrix } from "@src/editor/layers/image/adjustments.ts";
+import type { ImageLayer } from "@src/editor/layers/image/image.ts";
+import type { Layer } from "@src/editor/layers/layer.ts";
+import { isLine, type ShapeLayer } from "@src/editor/layers/shape/shape.ts";
+import {
+	arrowHead,
+	outlineThickness,
+	shapeBox,
+} from "@src/editor/layers/shape/shapeGeometry.ts";
+import { drawingBox } from "@src/editor/layers/strokes.ts";
+import type { TextLayer } from "@src/editor/layers/text/text.ts";
 import { type ReactNode, useId } from "react";
 import { antonLoaded } from "../../ui/fonts.ts";
 import { Photo } from "../../ui/Photo.tsx";
@@ -22,7 +26,7 @@ export function svgMatrix(transform: Transform): string {
 	return `matrix(${a} ${b} ${c} ${d} ${tx} ${ty})`;
 }
 
-// The app lays text out with a Skia paragraph (`render/textLayerLayout.ts`),
+// The app lays text out with a Skia paragraph (`editor/layers/text/textLayerLayout.ts`),
 // which a browser can't run without CanvasKit. This measures with a 2D
 // canvas instead, wrapping and sizing the block the same way: close, but not
 // to the pixel.

@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { SkImage } from "react-native-skia";
-import { isCutOut } from "@/model/cutout";
-import type { ImageLayer } from "@/model/layers/image";
 import {
 	deleteTemporaryFile,
 	writeTemporaryPng,
 } from "@/platform/temporaryFile";
-import { decodedImages, decodeImage } from "@/render/decodedImages";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import {
@@ -18,6 +15,9 @@ import {
 	prepareObjectSelection,
 	releaseObjectSelection,
 } from "../../detection/subjectDetection";
+import type { ImageLayer } from "../../layers/image/image";
+import { isCutOut } from "../../layers/image/mask";
+import { decodedImages, decodeImage } from "../../render/decodedImages";
 import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
 import { type LastPick, nextMask, picksAgain } from "./pickGrowth";
 

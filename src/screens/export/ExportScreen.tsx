@@ -21,7 +21,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { SkImage } from "react-native-skia";
 import { useSession } from "@/editor";
-import { type EditorDocument, hasTransparency } from "@/model/document";
+import { type EditorDocument, hasTransparency } from "@/editor/core";
 import { editorHref, projectRouteId } from "@/projects/projectRoute";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";

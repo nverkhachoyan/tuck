@@ -1,4 +1,4 @@
-import type { Size } from "../../model/geometry.ts";
+import type { Size } from "../../editor/core.ts";
 
 // The largest image export renders. A canvas expanded past a big photo can
 // ask for more than a phone can hold while encoding it. Matches the photo

@@ -1,4 +1,4 @@
-// Worklets, like `model/geometry.ts`, so gestures run them on the UI thread.
+// Worklets, like `editor/document/geometry.ts`, so gestures run them on the UI thread.
 
 /** A gesture event's position (on iOS, the midpoint of its pointers). */
 export type PointerSample = {

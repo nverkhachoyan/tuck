@@ -1,5 +1,5 @@
 import { ImageFormat, type SkImage } from "react-native-skia";
-import { type EditorDocument, hasTransparency } from "@/model/document";
+import { type EditorDocument, hasTransparency } from "@/editor/core";
 
 export type ExportFormat = "jpeg" | "png";
 

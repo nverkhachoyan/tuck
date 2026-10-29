@@ -1,18 +1,18 @@
-import type { EditorDocument } from "../../../model/document.ts";
-import { type Framing, framingAnchor } from "../../../model/framing.ts";
+import type { EditorDocument } from "../../document/document.ts";
+import { type Framing, framingAnchor } from "../../document/framing.ts";
 import {
 	cosSin,
 	normalizeAngle,
 	type Point,
 	type Rect,
 	type Size,
-} from "../../../model/geometry.ts";
+} from "../../document/geometry.ts";
 
 // The crop tool's geometry, in "crop space": the photo's own pixels, centered
 // on the origin, turned and mirrored the way the canvas will show them. With
 // no locked photo, the canvas stands in for one (see `framingAnchor`). The
 // canvas-to-be is `box`, upright in that space; dragging it is in
-// `cropDrag.ts`. Worklets, like `model/geometry.ts`, so gestures run them on
+// `cropDrag.ts`. Worklets, like `editor/document/geometry.ts`, so gestures run them on
 // the UI thread.
 
 const QUARTER_TURN = Math.PI / 2;

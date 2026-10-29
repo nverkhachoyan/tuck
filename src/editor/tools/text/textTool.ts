@@ -1,5 +1,5 @@
-import { textIndexAt } from "@/render/textLayerLayout";
 import { defineTool } from "../../defineTool";
+import { textIndexAt } from "../../layers/text/textLayerLayout";
 import { TextDraft, TextInput } from "./TextEditing";
 import { TextColorResults, TextDock, TextToolBar } from "./TextStylePanel";
 import { textSpec } from "./textSpec";

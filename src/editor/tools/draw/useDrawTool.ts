@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { isLine, isLineShape } from "@/model/layers/shape";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import type { ToolEnv } from "../../defineTool";
+import { isLine, isLineShape } from "../../layers/shape/shape";
 import { useStore } from "../../store";
 import {
 	selectSelectedLayer,

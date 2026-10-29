@@ -1,4 +1,4 @@
-import { createDocumentFromImage } from "@model/document.ts";
+import { createDocumentFromImage } from "@src/editor/document/document.ts";
 import {
 	createEditorSlice,
 	type EditorSlice,

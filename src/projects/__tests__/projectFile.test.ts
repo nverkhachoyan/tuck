@@ -1,26 +1,22 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { withMask } from "../../model/cutout.ts";
 import {
 	createBlankDocument,
 	createDocumentFromImage,
-	type EditorDocument,
-} from "../../model/document.ts";
-import { createDrawingLayer } from "../../model/layers/drawing.ts";
-import {
-	createStickerLayer,
-	type ImageLayer,
-	withAdjustments,
-} from "../../model/layers/image.ts";
-import {
+	createDrawingLayer,
 	createMaskedRedaction,
 	createRedactionBox,
 	createRedactionStrokes,
-} from "../../model/layers/redaction.ts";
-import { createShapeLayer } from "../../model/layers/shape.ts";
-import { createTextLayer } from "../../model/layers/text.ts";
-import type { MaskStroke } from "../../model/strokes.ts";
+	createShapeLayer,
+	createStickerLayer,
+	createTextLayer,
+	type EditorDocument,
+	type ImageLayer,
+	type MaskStroke,
+	withAdjustments,
+	withMask,
+} from "../../editor/core.ts";
 import { formatCreatedAt } from "../formatCreatedAt.ts";
 import {
 	copyName,

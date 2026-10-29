@@ -7,10 +7,13 @@ import {
 import { StyleSheet } from "react-native";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import { Group, Paint } from "react-native-skia";
-import { TextLayerView } from "@/render/layers/TextLayerView";
-import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
 import { colorScheme, colors, HEADER_HEIGHT } from "@/ui/theme";
 import { SELECTION_HALO } from "../../canvas/SelectionOverlay";
+import { TextLayerView } from "../../layers/text/TextLayerView";
+import {
+	textCaretRect,
+	textSelectionRects,
+} from "../../layers/text/textLayerLayout";
 import type { TextController } from "./useTextTool";
 
 // Faint enough to read as a hint rather than text that's there.
