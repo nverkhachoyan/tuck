@@ -1,3 +1,7 @@
+packages:
+  - docs/interactive
+  - packages/*
+
 allowBuilds:
   protobufjs: false
   tesseract.js: false

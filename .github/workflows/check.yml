@@ -19,15 +19,11 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            docs/interactive/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm typecheck
       # The interactive docs import the app's model, so a change there that a
       # lesson depends on fails here.
-      - run: pnpm --dir docs/interactive install --frozen-lockfile
       - run: pnpm --dir docs/interactive build
       - run: pnpm test
       # Bundles the web app with Metro, which the checks above never run, so an

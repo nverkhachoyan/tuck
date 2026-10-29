@@ -20,7 +20,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - pnpm links only what a `package.json` lists, so importing a dependency's dependency fails (`@types/react` came through `@types/react-dom` under npm). List it, or resolve it from the package that owns it, as `copy-web-assets.mjs` and the docs' `vite.config.ts` find CanvasKit through Skia.
 - pnpm 11 refuses any package published less than a day ago (`minimumReleaseAge`), lockfile entries included, and `pnpm <script>` reinstalls first when the install is stale. Right after a same-day release lands in the lockfile, wait out the day or set `pnpm_config_minimum_release_age=0` in your own shell; don't commit an exclusion.
 - A dependency's install scripts run only once `allowBuilds` in `pnpm-workspace.yaml` allows them; set one to `false` to stop pnpm asking.
-- pnpm treats the folder holding the nearest `pnpm-workspace.yaml` above it as the root, so `docs/interactive` has its own to install apart from the app.
+- The repo is a pnpm workspace: one `pnpm install` at the root installs the app, `docs/interactive`, and `packages/*`. Run a package's script with `pnpm --dir <path> <script>`.
 
 ### Layout
 

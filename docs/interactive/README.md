@@ -5,9 +5,8 @@ the store, then rendering. Each lesson runs the app's real code and quotes it
 from the source as it is now.
 
 ```bash
-cd docs/interactive
 pnpm install
-pnpm dev
+pnpm --dir docs/interactive dev
 ```
 
 It opens at http://localhost:5180 (the `docs` launch configuration in
@@ -31,8 +30,8 @@ it, so a change to something a lesson covers fails until the lesson is updated.
 
 The rendering chapter draws with the app's real `src/render/` code, on
 React Native Skia's web build (CanvasKit) and React Native Web, taken from the
-repo root's `node_modules` at the versions the app runs: run `pnpm install` at
-the root first. `vite.config.ts` makes that work outside Metro: it maps
+repo root's `node_modules` at the versions the app runs (the root's
+`pnpm install` installs both). `vite.config.ts` makes that work outside Metro: it maps
 `react-native` to `react-native-web`, prefers Metro's `.web` files, and stands
 in for what only Metro or a phone has (`src/platform/`: Reanimated, React
 Native's asset registry, `expo-asset`, `expo-font`, and the font packages'
