@@ -214,7 +214,7 @@ A separate change once SDK 58 has settled. Software Mansion publishes a migratio
 * Builders become hooks with a config object: `Gesture.Pan().minDistance(0)` becomes `usePanGesture({ minDistance: 0, ... })`.
 * Callbacks are renamed: `onStart` → `onActivate`, `onEnd` → `onDeactivate`. `onChange` is gone (use `onUpdate`'s `change*` fields), and `onEnd`'s `success` becomes `event.canceled`, inverted.
 * Composition: `Gesture.Race` → `useCompetingGestures`, `Gesture.Simultaneous` → `useSimultaneousGestures`. Relations: `blocksExternalGesture` → `block`, `requireExternalGestureToFail` → `requireToFail`, `simultaneousWithExternalGesture` → `simultaneousWith`.
-* Hook gestures and builder gestures can't have relations with each other, so migrate the canvas's composed gestures (`useViewGesture`, `useLayerTransformGesture`, `usePaintGesture`, `useTextEditGesture`, `useCropGesture`, and their composition in the editor) in one change. `Dial`, `ColorPicker`, `BottomSheet`, and `LayerRow` can go one at a time.
+* Hook gestures and builder gestures can't have relations with each other, so migrate the canvas's composed gestures (`useViewGesture`, `useLayerTransformGesture`, `usePaintGesture`, `useEditTextGesture`, `useCropGesture`, and their composition in the editor) in one change. `Dial`, `ColorPicker`, `BottomSheet`, and `LayerRow` can go one at a time.
 * Since hooks run in a component's body, check this fits how tool hooks build gestures through `ToolEnv` (the hooks run above the `EditorContext` provider).
 * Recheck the AGENTS.md learnings on `Gesture.Simultaneous` nesting and `minDistance(0)` Pans, which may no longer apply.
 

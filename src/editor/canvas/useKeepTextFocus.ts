@@ -8,13 +8,13 @@ import { Platform, type ViewInstance } from "react-native";
  */
 export function useKeepTextFocus(
 	containerRef: RefObject<ViewInstance | null>,
-	editingText: boolean,
+	keepFocus: boolean,
 ) {
 	useEffect(() => {
-		if (Platform.OS !== "web" || !editingText) return;
+		if (Platform.OS !== "web" || !keepFocus) return;
 		const node = containerRef.current as unknown as HTMLElement | null;
-		const keepFocus = (event: MouseEvent) => event.preventDefault();
-		node?.addEventListener("mousedown", keepFocus);
-		return () => node?.removeEventListener("mousedown", keepFocus);
-	}, [containerRef, editingText]);
+		const holdFocus = (event: MouseEvent) => event.preventDefault();
+		node?.addEventListener("mousedown", holdFocus);
+		return () => node?.removeEventListener("mousedown", holdFocus);
+	}, [containerRef, keepFocus]);
 }

@@ -373,22 +373,17 @@ type LayerListActions = Pick<
 	| "setBackground"
 >;
 
-/**
- * The layers panel's props, from the document, the selection, and the store.
- * Picking a layer ends any text being edited first.
- */
+/** The layers panel's props, from the document, the selection, and the store. */
 export function layerListProps({
 	document,
 	selectedLayer,
 	actions,
-	onFinishText,
 	onClose,
 	bottomInset,
 }: {
 	document: EditorDocument;
 	selectedLayer: Layer | undefined;
 	actions: LayerListActions;
-	onFinishText: () => void;
 	onClose: () => void;
 	bottomInset: number;
 }) {
@@ -397,10 +392,7 @@ export function layerListProps({
 		groups: document.groups ?? [],
 		background: document.background,
 		selectedLayerId: selectedLayer?.id ?? null,
-		onSelect: (id: string) => {
-			onFinishText();
-			actions.selectLayer(id);
-		},
+		onSelect: actions.selectLayer,
 		onMove: actions.moveLayer,
 		onSetHidden: actions.setLayerHidden,
 		onSetLocked: actions.setLayerLocked,

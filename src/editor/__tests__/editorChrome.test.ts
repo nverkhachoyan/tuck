@@ -12,7 +12,6 @@ import {
 	layerActionsFor,
 	type ModeChromeInput,
 	modeChrome,
-	railChosenTool,
 	toolbarEntries,
 } from "../editorChrome.ts";
 import type { ToolSpec, ToolSpecs } from "../toolSpec.ts";
@@ -22,8 +21,7 @@ const specs: ToolSpecs = BUILT_IN_SPECS;
 const nothing: ModeChromeInput = {
 	specs,
 	tool: null,
-	editingText: false,
-	styledText: false,
+	stylingTool: null,
 	layerName: null,
 	toolDoneLabel: undefined,
 	wide: false,
@@ -61,7 +59,7 @@ describe("modeChrome", () => {
 		const chrome = modeChrome({
 			...nothing,
 			tool: "draw",
-			styledText: true,
+			stylingTool: "text",
 			layerName: "Text",
 		});
 		assert.equal(chrome.panel, "draw");
@@ -76,42 +74,17 @@ describe("modeChrome", () => {
 		);
 	});
 
-	test("only a tool's Done takes its label", () => {
+	test("only an open tool's Done takes its label", () => {
 		assert.equal(
-			modeChrome({ ...nothing, editingText: true, toolDoneLabel: "Redact" })
+			modeChrome({ ...nothing, stylingTool: "text", toolDoneLabel: "Redact" })
 				.actions?.doneLabel,
 			undefined,
 		);
 	});
 
-	test("text being typed has text's Cancel and Done", () => {
+	test("a tool styling the selection shows its panel, with no Cancel, and Done deselects", () => {
 		assert.deepEqual(
-			modeChrome({
-				...nothing,
-				editingText: true,
-				styledText: true,
-				layerName: "Text",
-			}),
-			{
-				panel: "text",
-				actions: { title: "Text", cancel: "text", done: "text" },
-				inBar: false,
-			},
-		);
-	});
-
-	test("new text being typed, with nothing selected, has them too", () => {
-		assert.deepEqual(
-			modeChrome({ ...nothing, editingText: true, styledText: true }).actions,
-			{ title: "Text", cancel: "text", done: "text" },
-		);
-	});
-
-	test("selected text not being typed has no Cancel, and Done deselects", () => {
-		// "Text" is what `layerKindName` gives a text layer, which a phone's
-		// footer showed for it.
-		assert.deepEqual(
-			modeChrome({ ...nothing, styledText: true, layerName: "Text" }),
+			modeChrome({ ...nothing, stylingTool: "text", layerName: "Text" }),
 			{
 				panel: "text",
 				actions: { title: "Text", done: "deselect" },
@@ -143,8 +116,8 @@ describe("modeChrome", () => {
 				tool,
 				{ tool },
 			]),
-			["text", { editingText: true, styledText: true }],
-			["text", { styledText: true, layerName: "Text" }],
+			["text", { tool: "text" }],
+			["text", { stylingTool: "text", layerName: "Text" }],
 			["layer", { layerName: "Photo" }],
 			["idle", {}],
 		];
@@ -197,7 +170,7 @@ describe("toolbarEntries", () => {
 			shortcut: "Measure",
 			actsOn: () => true,
 		};
-		assert.deepEqual(toolbarEntries({ ruler }, ["ruler", "text"]), [
+		assert.deepEqual(toolbarEntries({ ruler }, ["ruler", "photo"]), [
 			{
 				id: "ruler",
 				label: "Ruler",
@@ -207,11 +180,11 @@ describe("toolbarEntries", () => {
 				needsImage: true,
 			},
 			{
-				id: "text",
-				label: "Text",
-				icon: "format-text",
-				key: "T",
-				shortcut: "Add text",
+				id: "photo",
+				label: "Add photo",
+				icon: "image-plus-outline",
+				key: "P",
+				shortcut: "Add a photo",
 				needsImage: false,
 			},
 		]);
@@ -261,30 +234,5 @@ describe("layerActionsFor", () => {
 			"adjust",
 			"redact",
 		]);
-	});
-});
-
-describe("railChosenTool", () => {
-	const idle = {
-		tool: null,
-		editingText: false,
-	};
-
-	test("with nothing active, no tool is chosen", () => {
-		assert.equal(railChosenTool(idle), null);
-	});
-
-	test("each tool marks its own button", () => {
-		for (const [tool] of TOOLS) {
-			assert.equal(railChosenTool({ ...idle, tool }), tool);
-		}
-	});
-
-	test("text being typed marks Text", () => {
-		assert.equal(railChosenTool({ ...idle, editingText: true }), "text");
-	});
-
-	test("text being typed comes before the open tool", () => {
-		assert.equal(railChosenTool({ tool: "draw", editingText: true }), "text");
 	});
 });

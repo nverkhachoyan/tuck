@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
+import type { DerivedValue } from "react-native-reanimated";
 import type { EditorDocument } from "@/model/document";
-import type { Rect, Size } from "@/model/geometry";
+import type { Point, Rect, Size } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import type { Layer } from "@/model/layers/layer";
 import type { ToolStroke } from "./canvas/canvasTool";
@@ -20,6 +21,8 @@ type ToolViews<C> = {
 	Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
 	Controls?: ToolView<C>;
 	Sheet?: ToolView<C>;
+	Input?: ToolView<C>;
+	Draft?: ComponentType<{ controller: C; viewScale: DerivedValue<number> }>;
 };
 
 /**
@@ -31,7 +34,8 @@ type ToolViews<C> = {
  *   "none".
  * - `close`: puts the tool down, keeping its changes.
  * - `notify`: shows `message` in the edit notice, with Undo.
- * - `view`: zooms the canvas to an area of the document, or back to the fit.
+ * - `view`: zooms the canvas to an area of the document, or back to the
+ *   fit, and gives the part of the document in view.
  * - `addImage`: keeps an image the tool made, as the host does.
  * - `addLayerImage`: adds the image `load` gives as a photo or a sticker,
  *   placed in view; one image is added at a time, Add photo's included, and
@@ -45,7 +49,11 @@ export type ToolEnv = {
 	image: ImageLayer | null;
 	close: () => void;
 	notify: (message: string) => void;
-	view: { zoomToArea: (area: Rect) => void; fit: () => void };
+	view: {
+		zoomToArea: (area: Rect) => void;
+		fit: () => void;
+		visibleArea: () => Rect | undefined;
+	};
 	addImage: EditorHost["addImage"];
 	addLayerImage: (
 		load: () => Promise<PickedImage | null>,
@@ -67,8 +75,8 @@ export type ToolEnv = {
  * - `views.Bar`: the wide header's options, inside the shared `ContextBar`;
  *   without it, the bar has the title, ✕, and ✓ only.
  * - `views.Tray`: the phone's tray of options, while it's open.
- * - `views.Results`: what sits over the canvas while no tray is open and the
- *   eyedropper isn't running.
+ * - `views.Results`: what sits over the canvas while its panel shows, no
+ *   tray is open, and the eyedropper isn't running.
  * - `views.Inspector`: a section above the wide inspector's layers, given
  *   them as children. A tool with one opens the inspector.
  * - `views.Stage`: drawn in the canvas's place, opaque over it, while it's
@@ -78,6 +86,11 @@ export type ToolEnv = {
  * - `views.Sheet`: shown while it's open, in a bottom sheet on a phone and
  *   in a popover beside its rail button on a wide window. Dismissing it
  *   closes the tool.
+ * - `views.Input`: mounted out of sight behind the header while it's open,
+ *   for a hidden input that takes the keyboard, only when its spec's
+ *   `takesKeys` is "typing".
+ * - `views.Draft`: drawn in the scene in place of `draft`'s layer, or on top
+ *   of the layers when it's new, given the view's scale.
  * - `sheetTitle`: what its sheet is called, when that isn't its label.
  * - `sheetDismissed`: what it does once its sheet has finished closing.
  * - `prepare`: readies it before it opens, as by picking the sub-tool that
@@ -97,6 +110,14 @@ export type ToolEnv = {
  * - `announcement`: what the editor announces for it.
  * - `layerAction`: a button it adds to the selected `layer`'s actions, or
  *   null.
+ * - `draft`: the layer it's editing in place while it's open, as placed and
+ *   outlined, and whether it's new, or null; `views.Draft` draws it.
+ * - `edit`: editing a layer it `owns` in place. A tap on a selected layer
+ *   it owns, the selection bar's Edit, and Enter call `start` with that
+ *   layer and where the tap landed in its space (null for the end), then
+ *   open the tool without `prepare`. While one it owns is selected and
+ *   nothing is open, its `Dock`, `Bar`, and `Results` show, titled with its
+ *   label, with no Cancel, and Done letting go of the layer.
  * - `stepSize`: steps its brush for `[` and `]`, exactly when its spec is
  *   `sized`.
  */
@@ -112,6 +133,11 @@ export type ToolDefinition<C> = {
 	sheetTitle?: string;
 	sheetDismissed?: (controller: C) => void;
 	layerAction?: (controller: C, layer: Layer) => LayerAction | null;
+	draft?: (controller: C) => { layer: Layer; isNew: boolean } | null;
+	edit?: {
+		owns: (layer: Layer) => boolean;
+		start: (controller: C, layer: Layer, point: Point | null) => void;
+	};
 } & (
 	| {
 			views: ToolViews<C> & { Stage?: never };

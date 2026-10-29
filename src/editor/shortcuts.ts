@@ -6,12 +6,9 @@ const NUDGE_PX = 1;
 const NUDGE_FAR_PX = 10;
 
 // A letter picks up a tool, and L shows or hides the layers. Each tool's
-// button shows its key on hover. A tool's key is its spec's; these are the
-// editor's own entries'. P opens the photo picker.
-export const TOOL_KEYS: Record<OwnTool, string> = {
-	text: "T",
-	photo: "P",
-};
+// button shows its key on hover. A tool's key is its spec's; this is the
+// editor's own entry's. P opens the photo picker.
+export const TOOL_KEYS: Record<OwnTool, string> = { photo: "P" };
 export const LAYERS_KEY = "L";
 
 /** Each tool's or entry's id, by the letter that picks it up. */
@@ -124,8 +121,8 @@ function modifiedShortcut(press: KeyPress): Shortcut | null {
 /**
  * Every shortcut, as the help overlay lists them, in the notation tooltips
  * take ("mod+shift+Z"), with a line for each of `tools` in their order, and
- * a group for each tool whose spec in `specs` takes the keys, which Enter and
- * Escape apply.
+ * a group for each tool whose spec in `specs` takes the keys, which Enter
+ * (⌘/Ctrl+Enter while typing) and Escape apply.
  */
 export function shortcutGroups(
 	tools: readonly ToolEntry[],
@@ -144,7 +141,10 @@ export function shortcutGroups(
 		...keyTakers.map((tool) => ({
 			title: tool.label,
 			items: [
-				{ keys: "Enter", action: "Apply" },
+				{
+					keys: specs[tool.id]?.takesKeys === "typing" ? "mod+Enter" : "Enter",
+					action: "Apply",
+				},
 				{ keys: "Escape", action: "Apply" },
 			],
 		})),

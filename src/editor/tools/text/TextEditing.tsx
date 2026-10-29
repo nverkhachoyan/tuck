@@ -1,17 +1,17 @@
 import {
 	Caret,
 	clampSelection,
+	HiddenTextInput,
 	SelectionHighlight,
 } from "@tuck/skia-text-input";
-import { useMemo } from "react";
+import { StyleSheet } from "react-native";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import { Group, Paint } from "react-native-skia";
-import { withPlaceholder } from "@/model/layers/text";
 import { TextLayerView } from "@/render/layers/TextLayerView";
 import { textCaretRect, textSelectionRects } from "@/render/textLayerLayout";
-import { colors } from "@/ui/theme";
-import { SELECTION_HALO } from "../canvas/SelectionOverlay";
-import type { TextEditState } from "../editorMode";
+import { colorScheme, colors, HEADER_HEIGHT } from "@/ui/theme";
+import { SELECTION_HALO } from "../../canvas/SelectionOverlay";
+import type { TextController } from "./useTextTool";
 
 // Faint enough to read as a hint rather than text that's there.
 const PLACEHOLDER_OPACITY = 0.45;
@@ -21,23 +21,24 @@ const PLACEHOLDER_OPACITY = 0.45;
  * selection over it, or the caret, blinking while it holds still. Empty, it
  * shows the placeholder, faded, with the caret at its start.
  */
-export function EditedTextView({
-	edit,
+export function TextDraft({
+	controller: text,
 	viewScale,
 }: {
-	edit: TextEditState;
+	controller: TextController;
 	viewScale: DerivedValue<number>;
 }) {
-	const { layer, focused } = edit;
-	const shown = useMemo(() => withPlaceholder(layer), [layer]);
-	const selection = clampSelection(edit.selection, layer.text.length);
-	const collapsed = selection.start === selection.end;
+	const { edit, shown } = text;
 	// One screen pixel, across the layer, in its own units.
-	const { scaleX } = layer.transform;
+	const scaleX = edit?.layer.transform.scaleX ?? 1;
 	const pixel = useDerivedValue(
 		() => 1 / (viewScale.value * scaleX),
 		[viewScale, scaleX],
 	);
+	if (!edit || !shown) return null;
+	const { layer, focused } = edit;
+	const selection = clampSelection(edit.selection, layer.text.length);
+	const collapsed = selection.start === selection.end;
 	return (
 		<>
 			{shown === layer ? (
@@ -64,3 +65,36 @@ export function EditedTextView({
 		</>
 	);
 }
+
+/**
+ * The input that takes the keyboard while text is typed, behind the header,
+ * which stays in use, so focusing it never scrolls the screen.
+ */
+export function TextInput({
+	controller: text,
+}: {
+	controller: TextController;
+}) {
+	const { edit } = text;
+	if (!edit) return null;
+	return (
+		<HiddenTextInput
+			ref={text.inputRef}
+			value={edit.layer.text}
+			initialSelection={edit.initialSelection}
+			onChangeText={text.changeText}
+			onSelectionChange={text.changeSelection}
+			onFocusChange={text.changeFocus}
+			onDone={text.finish}
+			style={styles.input}
+			keyboardAppearance={colorScheme}
+			accessibilityLabel="Caption"
+		/>
+	);
+}
+
+const styles = StyleSheet.create({
+	input: {
+		height: HEADER_HEIGHT,
+	},
+});

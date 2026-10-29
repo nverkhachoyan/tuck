@@ -1,4 +1,3 @@
-import { HiddenTextInput } from "@tuck/skia-text-input";
 import {
 	createRef,
 	useCallback,
@@ -11,15 +10,14 @@ import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
 import { isHexColor } from "@/model/color";
 import type { EditorDocument } from "@/model/document";
 import { targetImageLayer, visibleImageLayer } from "@/model/framing";
-import { type Point, toLayerSpace } from "@/model/geometry";
+import type { Point } from "@/model/geometry";
 import { maxNewImageShortSide } from "@/model/layers/image";
 import { usePreference } from "@/platform/usePreference";
-import { textIndexAt } from "@/render/textLayerLayout";
 import { Announcement } from "@/ui/Announcement";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Toast } from "@/ui/Toast";
-import { colorScheme, HEADER_HEIGHT, space } from "@/ui/theme";
+import { space } from "@/ui/theme";
 import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
 import { BUILT_IN_TOOLS } from "./builtInTools";
 import { definitionOf, type ToolList } from "./defineTool";
@@ -27,11 +25,8 @@ import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
 import { EditorHeader } from "./EditorHeader";
 import { EditorInspector } from "./EditorInspector";
 import { EditorRail } from "./EditorRail";
-import {
-	layerActionsFor,
-	railChosenTool,
-	toolbarEntries,
-} from "./editorChrome";
+import type { SceneDraft } from "./EditorScene";
+import { layerActionsFor, toolbarEntries } from "./editorChrome";
 import { EditorContext, type EditorContextValue } from "./editorContext";
 import type { EditorHost } from "./editorHost";
 import { openTray, takesKeys } from "./editorMode";
@@ -59,7 +54,6 @@ import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
-	selectSelectedTextLayer,
 } from "./store/editorSlice";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
@@ -118,7 +112,6 @@ export function Editor({
 	});
 	const { specs } = toolbox;
 	const selectedLayer = useStore(selectSelectedLayer);
-	const selectedTextLayer = useStore(selectSelectedTextLayer);
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
 	const actions = useStore((state) => state.actions);
@@ -139,14 +132,12 @@ export function Editor({
 	const rootRef = useRef<ViewInstance>(null);
 
 	// What the editor is doing, and what's open over it. A tool puts itself
-	// down if its image goes away, or its photo does, and a text color picker
-	// closes if other text is styled.
+	// down if its image goes away, or its photo does.
 	const targetImage = targetImageLayer(document, selectedLayer);
 	const [modeState, dispatchMode] = useEditorMode(
 		{
 			isAdjustable: (id) => visibleImageLayer(document, id) !== undefined,
 			hasPhoto: targetImage !== null,
-			selectedTextId: selectedTextLayer?.id ?? null,
 		},
 		specs,
 	);
@@ -158,10 +149,10 @@ export function Editor({
 	// out, taps pick a subject, or strokes paint the cut. A tap away from what
 	// the tool works on puts it down, as Done does.
 	const tool = mode.type === "tool" ? mode.tool : null;
-	const keysTaken = takesKeys(mode, specs);
-	// A tool that keeps a draft until Done: Export would leave it out, and an
-	// edit to the layers would change the document under it.
-	const draftOpen = tool !== null && specs[tool]?.takesKeys === true;
+	// A tool that keeps a draft until Done takes the keys: Export would leave
+	// the draft out, and an edit to the layers would change the document
+	// under it.
+	const draftOpen = takesKeys(mode, specs);
 	const layersOpen = modeState.sheet === "layers";
 
 	const documentSize = useMemo(
@@ -178,7 +169,7 @@ export function Editor({
 		host,
 		// On web, an image pasted or dropped onto the editor joins the canvas,
 		// unless another screen or tool is in front of it.
-		enabled: focused && !keysTaken,
+		enabled: focused && !draftOpen,
 		maxShortSide: maxNewImageShortSide(document),
 		onImage: async ({ uri, width, height, opaque }, kind) => {
 			const url = await host.addImage(uri, opaque);
@@ -198,8 +189,9 @@ export function Editor({
 
 	const {
 		controllers,
-		text,
 		startTool,
+		editLayer,
+		editorOf,
 		done,
 		cancel,
 		finishTool,
@@ -219,17 +211,21 @@ export function Editor({
 		view: {
 			zoomToArea: (area) => canvasRef.current?.zoomToArea(area),
 			fit: () => canvasRef.current?.zoom("fit"),
+			visibleArea: () => canvasRef.current?.visibleArea(),
 		},
-		visibleArea: () => canvasRef.current?.visibleArea(),
 		notify: editNotice.notify,
 	});
 
-	const editingText = text.edit !== null;
 	const openTool = tool ? controllers[tool] : undefined;
+	// The tool that edits the selected layer in place, whose panel styles it
+	// while nothing is open.
+	const selectedEditor = (selectedLayer && editorOf(selectedLayer)) ?? null;
+	const ToolInput = openTool?.definition.views.Input;
+	const typing = tool !== null && specs[tool]?.takesKeys === "typing";
 	// Find and Adjust live in the inspector, so they open it even though
 	// starting a tool closes the layers sheet. A tall window has it open anyway.
 	const layout = useEditorLayout({
-		typing: editingText,
+		typing,
 		layersOpen,
 		inspectorRequested:
 			layersOpen || (tool !== null && hasInspectorSection(tool, controllers)),
@@ -249,7 +245,6 @@ export function Editor({
 		tool,
 		controllers,
 		eyedropper,
-		editingText,
 		dispatchMode,
 		onCustomColor: setCustomColor,
 	});
@@ -264,15 +259,9 @@ export function Editor({
 
 	const selectedPlace = useArrangeSelected(document, selectedLayer);
 
-	// Text being typed is finished first, so it goes where the editor does,
-	// and Back puts the open tool down as Done does.
-	const openExport = () => {
-		text.finish();
-		host.openExport();
-	};
+	// Back puts the open tool down as Done does.
 	const leave = () => {
 		finishTool();
-		text.finish();
 		host.leave();
 	};
 
@@ -280,8 +269,8 @@ export function Editor({
 		specs,
 		tool,
 		controllers,
-		text,
 		selectedLayer,
+		stylingTool: selectedEditor,
 		wide,
 		done,
 		cancel,
@@ -290,17 +279,19 @@ export function Editor({
 	useEditorShortcuts({
 		specs,
 		toolsByKey: toolbox.toolsByKey,
-		enabled: focused && !keysTaken,
+		enabled: focused && !draftOpen,
 		modeState,
-		selection: selectedTextLayer ? "text" : selectedLayer ? "layer" : null,
+		selection: selectedEditor ? "editable" : selectedLayer ? "layer" : null,
 		dispatchMode,
 		undo,
 		redo,
-		openExport,
+		openExport: host.openExport,
 		zoom: (to) => canvasRef.current?.zoom(to),
 		done,
 		startTool,
-		editSelected: () => text.editSelected(),
+		editSelected: () => {
+			if (selectedLayer) editLayer(selectedLayer);
+		},
 		deleteSelected: () => {
 			if (selectedLayer) editNotice.deleteLayer(selectedLayer.id);
 		},
@@ -310,7 +301,7 @@ export function Editor({
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
 	});
-	useToolKeys({ enabled: focused && draftOpen, done });
+	useToolKeys({ enabled: focused && draftOpen, typing, done });
 
 	const layerList = layerListProps({
 		document,
@@ -320,7 +311,6 @@ export function Editor({
 			deleteLayer: editNotice.deleteLayer,
 			deleteLayerGroup: editNotice.deleteGroup,
 		},
-		onFinishText: text.finish,
 		onClose: closeLayers,
 		bottomInset: dockInset,
 	});
@@ -367,30 +357,34 @@ export function Editor({
 	};
 	const panels: PanelContext = {
 		controllers,
-		text,
-		dispatchMode,
 		layerActions: layerActions || undefined,
-		editingText,
-		restoreTextFocus: () => text.editorRef.current?.focus(),
 	};
 
-	// A tap on selected text edits it, with the caret where it landed.
-	const editSelectedTextAt =
-		selectedTextLayer &&
-		((point: Point) =>
-			text.editSelected(
-				textIndexAt(
-					selectedTextLayer,
-					toLayerSpace(selectedTextLayer.transform, point),
-				),
-			));
+	// A tap on a selected layer a tool edits in place edits it there, from
+	// where the tap landed.
+	const editable = selectedEditor !== null && selectedLayer;
+	const editSelectedAt =
+		editable && ((point: Point) => editLayer(editable, point));
+
+	// The layer the open tool edits in place, drawn by its `Draft` view.
+	const openDraft = openTool?.definition.draft?.(openTool.controller);
+	const DraftView = openTool?.definition.views.Draft;
+	const draft: SceneDraft | null =
+		openTool && openDraft && DraftView
+			? {
+					...openDraft,
+					render: (viewScale) => (
+						<DraftView controller={openTool.controller} viewScale={viewScale} />
+					),
+				}
+			: null;
 
 	const selectionBar = selectedLayer && (
 		<LayerSelectionBar
 			layer={selectedLayer}
 			index={selectedPlace.index}
 			topIndex={selectedPlace.topIndex}
-			onEdit={() => text.editSelected()}
+			onEdit={editable ? () => editLayer(editable) : undefined}
 			onSetResizable={setLayerResizable}
 			onArrange={selectedPlace.arrange}
 			onDuplicate={duplicateSelectedLayer}
@@ -413,6 +407,7 @@ export function Editor({
 									context={panels}
 									panel={panel}
 									chrome={modeActions}
+									keepFocus={typing}
 								/>
 							) : undefined
 						}
@@ -421,19 +416,18 @@ export function Editor({
 							onReset={resetEdit}
 							// A tall window's inspector already shows the layers.
 							layers={
-								!tool && !editingText && !inspectorPinned
+								!tool && !inspectorPinned
 									? {
 											open: layersOpen,
 											onToggle: () => dispatchMode({ type: "toggleLayers" }),
 										}
 									: undefined
 							}
-							// While typing, undo and redo wait: the text isn't a step yet.
-							canUndo={canUndo && !editingText}
-							canRedo={canRedo && !editingText}
+							canUndo={canUndo}
+							canRedo={canRedo}
 							onUndo={undo}
 							onRedo={redo}
-							onExport={draftOpen ? undefined : openExport}
+							onExport={draftOpen ? undefined : host.openExport}
 						/>
 					</EditorHeader>
 					{/* The dock covers the stage's bottom, which runs under it. On a
@@ -443,11 +437,10 @@ export function Editor({
 							ref={canvasRef}
 							document={document}
 							selectedLayer={selectedLayer}
-							textEdit={text.edit}
-							onTextSelect={text.select}
-							onTextEditDone={text.finish}
+							draft={draft}
+							keepFocus={typing}
 							onSelectLayer={selectLayer}
-							onTapSelectedLayer={editSelectedTextAt}
+							onTapSelectedLayer={editSelectedAt || undefined}
 							onCommitTransform={transformLayer}
 							onResizeBox={resizeBox}
 							onNudgeLayer={nudgeLayer}
@@ -486,16 +479,12 @@ export function Editor({
 						{wide && (
 							<EditorRail
 								tools={toolbox.entries}
-								chosen={railChosenTool({
-									tool,
-									editingText,
-								})}
+								chosen={tool}
 								addBusy={addBusy}
 								hasImage={hasImage}
 								startTool={startTool}
 								tool={tool}
 								finishTool={finishTool}
-								finishText={text.finish}
 								sheetAnchors={toolbox.sheetAnchors}
 							/>
 						)}
@@ -558,21 +547,8 @@ export function Editor({
 					))}
 
 					{dragging && <DropOverlay label="Drop to add to the canvas" />}
-					{text.edit && (
-						<HiddenTextInput
-							ref={text.editorRef}
-							value={text.edit.layer.text}
-							initialSelection={text.edit.initialSelection}
-							onChangeText={text.changeText}
-							onSelectionChange={text.changeSelection}
-							onFocusChange={text.changeFocus}
-							onDone={text.finish}
-							// Behind the header, which stays in use, so focusing it never
-							// scrolls the screen.
-							style={styles.textInput}
-							keyboardAppearance={colorScheme}
-							accessibilityLabel="Caption"
-						/>
+					{typing && openTool && ToolInput && (
+						<ToolInput controller={openTool.controller} />
 					)}
 					{modeState.shortcutsOpen && (
 						<ShortcutsOverlay
@@ -589,8 +565,5 @@ export function Editor({
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-	},
-	textInput: {
-		height: HEADER_HEIGHT,
 	},
 });

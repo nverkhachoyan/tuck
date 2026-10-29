@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createDrawingLayer } from "../../model/layers/drawing.ts";
 import { createImageLayer } from "../../model/layers/image.ts";
+import type { Layer } from "../../model/layers/layer.ts";
 import { createRedactionBox } from "../../model/layers/redaction.ts";
 import { createShapeLayer } from "../../model/layers/shape.ts";
 import type { CanvasTool } from "../canvas/canvasTool.ts";
@@ -21,40 +22,21 @@ describe("canvasInputFor", () => {
 		drag: {} as DialDrag,
 		adjusting: null,
 	};
-	const inputs = { eyedropper: false, toolInput: null, editingText: false };
+	const inputs = { eyedropper: false, toolInput: null };
 
 	test("selects with nothing else going on", () => {
 		assert.deepEqual(canvasInputFor(inputs), { type: "select" });
 	});
 
-	test("picks a color over the tool's input and typing", () => {
-		assert.deepEqual(
-			canvasInputFor({ eyedropper: true, toolInput, editingText: true }),
-			{ type: "tool", tool: { type: "pickColor" } },
-		);
-	});
-
-	test("gives the tool's input over typing", () => {
-		assert.equal(
-			canvasInputFor({ ...inputs, toolInput, editingText: true }),
-			toolInput,
-		);
-	});
-
-	test("edits the text being typed over selecting", () => {
-		assert.deepEqual(canvasInputFor({ ...inputs, editingText: true }), {
-			type: "editText",
+	test("picks a color over the tool's input", () => {
+		assert.deepEqual(canvasInputFor({ eyedropper: true, toolInput }), {
+			type: "tool",
+			tool: { type: "pickColor" },
 		});
 	});
 
-	test("leaves a tool with no input to typing or selecting", () => {
-		assert.deepEqual(
-			canvasInputFor({ ...inputs, toolInput: null, editingText: true }),
-			{ type: "editText" },
-		);
-		assert.deepEqual(canvasInputFor({ ...inputs, toolInput: null }), {
-			type: "select",
-		});
+	test("gives the tool's input over selecting", () => {
+		assert.equal(canvasInputFor({ ...inputs, toolInput }), toolInput);
 	});
 });
 
@@ -113,6 +95,14 @@ const regions: CanvasInput = {
 	regions: [],
 	onToggle: () => {},
 };
+const editText = (layer: Layer): CanvasInput => ({
+	type: "editText",
+	layer,
+	text: "",
+	indexAt: () => null,
+	onSelect: () => {},
+	onDone: () => {},
+});
 
 describe("inputRules", () => {
 	test("selecting moves the selection, and one finger pans only when zoomed", () => {
@@ -168,7 +158,7 @@ describe("inputRules", () => {
 	});
 
 	test("editing text keeps one finger, and the cursor follows the text", () => {
-		assert.deepEqual(inputRules({ type: "editText" }, true), {
+		assert.deepEqual(inputRules(editText(drawing), true), {
 			selection: "still",
 			oneFinger: null,
 			cursor: "hover",
@@ -204,11 +194,7 @@ describe("outlinedLayerFor", () => {
 		...createImageLayer(canvas, "other.jpg", 100, 100, true),
 		id: "other",
 	};
-	const none = {
-		layers: [photo, other],
-		selectedLayer: undefined,
-		editedLayer: null,
-	};
+	const none = { layers: [photo, other], selectedLayer: undefined };
 
 	test("cutting out or adjusting outlines the image, when there's another", () => {
 		const cut: CanvasInput = { type: "tool", tool: cutBrush };
@@ -247,10 +233,7 @@ describe("outlinedLayerFor", () => {
 	});
 
 	test("editing text outlines the text, and selecting outlines nothing", () => {
-		assert.equal(
-			outlinedLayerFor({ type: "editText" }, { ...none, editedLayer: drawing }),
-			drawing,
-		);
+		assert.equal(outlinedLayerFor(editText(drawing), none), drawing);
 		assert.equal(outlinedLayerFor({ type: "select" }, none), null);
 		assert.equal(outlinedLayerFor(regions, none), null);
 	});

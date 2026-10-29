@@ -15,17 +15,18 @@ import { FadeRow, MeasuredItem } from "@/ui/FadeRow";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { colors, typography, webTransition } from "@/ui/theme";
-import { useColorTarget, useEditorContext } from "../editorContext";
-import type { TextColorKey } from "../editorMode";
-import { ColorChip } from "../shell/ColorOptions";
-import { ColorSwatches, customSwatch } from "../shell/ColorSwatches";
+import { useColorTarget, useEditorContext } from "../../editorContext";
+import { ColorChip } from "../../shell/ColorOptions";
+import { ColorSwatches, customSwatch } from "../../shell/ColorSwatches";
 import {
 	BarChip,
 	BarGroup,
 	BarSections,
 	OptionSegments,
-} from "../shell/ContextBar";
-import { ToolOption, ToolOptions } from "../shell/ToolOptions";
+} from "../../shell/ContextBar";
+import { ToolOption, ToolOptions } from "../../shell/ToolOptions";
+import type { TextColorKey } from "./textSettings";
+import type { TextController } from "./useTextTool";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
 // not smaller views with `hitSlop`, which can't reach past a parent's bounds.
@@ -77,12 +78,68 @@ const COLOR_TITLES: Record<TextColorKey, string> = {
 	backgroundColor: "Box",
 };
 
+/** Text's dock panel: the style of the text being typed or selected. */
+export function TextDock({ controller: text }: { controller: TextController }) {
+	const { styledText } = text;
+	return (
+		styledText && (
+			<TextStylePanel
+				layer={styledText}
+				onChange={text.style}
+				onOpenPicker={text.openPicker}
+			/>
+		)
+	);
+}
+
+/**
+ * Text's options in the wide header, which put the caret back in the
+ * hidden input as a chip closes while text is typed.
+ */
+export function TextToolBar({
+	controller: text,
+}: {
+	controller: TextController;
+}) {
+	const { styledText, edit, inputRef } = text;
+	return (
+		styledText && (
+			<TextBar
+				layer={styledText}
+				onChange={text.style}
+				restoreFocus={edit ? () => inputRef.current?.focus() : undefined}
+			/>
+		)
+	);
+}
+
+/** The color picker the dock's custom swatch opened, over the canvas. */
+export function TextColorResults({
+	controller: text,
+}: {
+	controller: TextController;
+}) {
+	const { styledText, picker } = text;
+	return (
+		picker &&
+		styledText && (
+			<TextColorPicker
+				layer={styledText}
+				colorKey={picker.key}
+				onChange={text.style}
+				onClose={text.closePicker}
+			/>
+		)
+	);
+}
+
 /**
  * A picker for one of a text layer's colors, in a card over the canvas (see
  * `ToolOptions`), since the dock's panel has no room for one. The text
- * takes the color once the finger lifts; the custom color does too.
+ * takes the color once the finger lifts; the custom color does too. The
+ * eyedropper closes it, so the canvas is in view.
  */
-export function TextColorPicker({
+function TextColorPicker({
 	layer,
 	colorKey,
 	onChange,
@@ -108,7 +165,10 @@ export function TextColorPicker({
 					// An outline or box that's off starts from the text's fill.
 					value={layer[colorKey] ?? layer.color}
 					onChangeEnd={onPickCustom}
-					onEyedropper={onEyedropper}
+					onEyedropper={() => {
+						onClose();
+						onEyedropper();
+					}}
 				/>
 			</ToolOption>
 		</ToolOptions>
@@ -130,7 +190,7 @@ type TextStylePanelProps = {
  * `SelectionBar`). There's no Done button: tapping anywhere on the canvas
  * off the text deselects it, or finishes typing.
  */
-export function TextStylePanel({
+function TextStylePanel({
 	layer,
 	onChange,
 	onOpenPicker,
@@ -173,7 +233,7 @@ export function TextStylePanel({
  * the tabs. `restoreFocus` puts the caret back in the hidden input when a
  * chip closes, and only while text is being typed.
  */
-export function TextBar({
+function TextBar({
 	layer,
 	onChange,
 	restoreFocus,

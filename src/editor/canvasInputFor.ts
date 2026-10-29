@@ -8,12 +8,14 @@ import {
 	restyles,
 } from "./canvas/canvasTool.ts";
 import type { CanvasRegion } from "./canvas/RegionOutline.tsx";
+import type { EditText } from "./canvas/useEditTextGesture.ts";
 import type { DialDrag } from "./shell/dialDrag.ts";
 
 /**
  * What input on the canvas does, one at a time: select and transform
  * layers; paint, drag out a box or a shape, or pick a color with a `tool`;
- * place the caret in, or select, the text being edited; toggle the
+ * place the caret in, or select, text being edited in place (see
+ * `EditText`); toggle the
  * `regions` shown over the image `imageId` with taps, as Find does; or hold
  * the layers still and turn a dial with a sideways drag (`drag`), as Adjust
  * does, drawing the image it changes live (`adjusting`).
@@ -21,7 +23,7 @@ import type { DialDrag } from "./shell/dialDrag.ts";
 export type CanvasInput =
 	| { type: "select" }
 	| { type: "tool"; tool: CanvasTool }
-	| { type: "editText" }
+	| ({ type: "editText" } & EditText)
 	| {
 			type: "regions";
 			imageId: string;
@@ -83,26 +85,21 @@ export function inputRules(
 }
 
 const PICK_COLOR: CanvasInput = { type: "tool", tool: { type: "pickColor" } };
-const EDIT_TEXT: CanvasInput = { type: "editText" };
 const SELECT: CanvasInput = { type: "select" };
 
 /**
  * What input on the canvas does, first match winning: the eyedropper's
- * pick, the open tool's input (`toolInput`), typing, or else selecting.
+ * pick, the open tool's input (`toolInput`), or else selecting.
  */
 export function canvasInputFor({
 	eyedropper,
 	toolInput,
-	editingText,
 }: {
 	eyedropper: boolean;
 	toolInput: CanvasInput | null;
-	editingText: boolean;
 }): CanvasInput {
 	if (eyedropper) return PICK_COLOR;
-	if (toolInput) return toolInput;
-	if (editingText) return EDIT_TEXT;
-	return SELECT;
+	return toolInput ?? SELECT;
 }
 
 /**
@@ -116,11 +113,9 @@ export function outlinedLayerFor(
 	{
 		layers,
 		selectedLayer,
-		editedLayer,
 	}: {
 		layers: readonly Layer[];
 		selectedLayer: Layer | undefined;
-		editedLayer: Layer | null;
 	},
 ): Layer | null {
 	switch (input.type) {
@@ -133,7 +128,7 @@ export function outlinedLayerFor(
 				: null;
 		}
 		case "editText":
-			return editedLayer;
+			return input.layer;
 		case "dial":
 			return input.adjusting && outlinedImage(layers, input.adjusting.layerId);
 		case "select":

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { defaultTextStyle } from "../../../model/layers/text.ts";
+import { defaultTextStyle } from "../../../../model/layers/text.ts";
 import { parseTextStyle, withTextEdit } from "../textSettings.ts";
 
 describe("parseTextStyle", () => {

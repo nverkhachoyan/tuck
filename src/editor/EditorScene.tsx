@@ -20,8 +20,6 @@ import {
 	useScreenPixels,
 } from "./canvas/SelectionOverlay";
 import type { LiveAdjustment } from "./canvasInputFor";
-import type { TextEditState } from "./editorMode";
-import { EditedTextView } from "./text/EditedTextView";
 
 // The canvas's shadows on the table around it, as a print's: a tight one
 // where it touches and a soft one that lifts it, in screen pixels. At night,
@@ -33,10 +31,21 @@ const LIFT_BLUR_PX = 14;
 const EDGE_PX = 1;
 const showEdge = colorScheme === "dark";
 
+/**
+ * A layer the open tool is editing in place (its definition's `draft`):
+ * `layer` as placed, which the scene draws with `render` in place of the
+ * document's, or on top of the layers when `isNew`.
+ */
+export type SceneDraft = {
+	layer: Layer;
+	isNew: boolean;
+	render: (viewScale: DerivedValue<number>) => ReactNode;
+};
+
 type EditorSceneProps = {
 	document: EditorDocument;
 	selectedLayerId: string | null;
-	textEdit: TextEditState | null;
+	draft: SceneDraft | null;
 	// Screen pixels per document unit, as shown: it follows a zoom as it goes.
 	viewScale: DerivedValue<number>;
 	// The same once the view settles, for what's too costly to draw again on
@@ -71,7 +80,7 @@ type EditorSceneProps = {
 export function EditorScene({
 	document,
 	selectedLayerId,
-	textEdit,
+	draft,
 	viewScale,
 	settledScale,
 	live,
@@ -82,7 +91,7 @@ export function EditorScene({
 	regions,
 	onImageError,
 }: EditorSceneProps) {
-	const editedId = textEdit && !textEdit.isNew ? textEdit.layer.id : null;
+	const draftId = draft && !draft.isNew ? draft.layer.id : null;
 	const canvas = rect(0, 0, document.width, document.height);
 	const contactOffset = useScreenPixels(viewScale, CONTACT_OFFSET_PX);
 	const contactBlur = useScreenPixels(viewScale, CONTACT_BLUR_PX);
@@ -104,8 +113,8 @@ export function EditorScene({
 						clip={layer.type === "image" && layer.locked ? canvas : undefined}
 					>
 						<LiveLayer layer={layer} live={live}>
-							{textEdit && layer.id === editedId ? (
-								<EditedTextView edit={textEdit} viewScale={viewScale} />
+							{draft && layer.id === draftId ? (
+								draft.render(viewScale)
 							) : (
 								<StrokeTarget
 									layer={layer}
@@ -124,9 +133,9 @@ export function EditorScene({
 					</Group>
 				),
 			)}
-			{textEdit?.isNew && (
-				<Group transform={toTransformList(textEdit.layer.transform)}>
-					<EditedTextView edit={textEdit} viewScale={viewScale} />
+			{draft?.isNew && (
+				<Group transform={toTransformList(draft.layer.transform)}>
+					{draft.render(viewScale)}
 				</Group>
 			)}
 			{stroke?.targetId === null && (

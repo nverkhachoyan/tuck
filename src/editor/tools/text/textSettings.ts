@@ -1,11 +1,14 @@
-import { isHexColor } from "../../model/color.ts";
+import { isHexColor } from "../../../model/color.ts";
 import {
 	defaultTextStyle,
 	type TextAlign,
 	type TextLayerEdit,
 	type TextLayerStyle,
 	textFonts,
-} from "../../model/layers/text.ts";
+} from "../../../model/layers/text.ts";
+
+/** A text layer's colors, which its Color, Outline, and Box tabs pick. */
+export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
 
 const ALIGNS: TextAlign[] = ["left", "center", "right"];
 

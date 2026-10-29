@@ -16,7 +16,10 @@ export type ToolId = string;
  * - `sized`: whether `[` and `]` step its brush.
  * - `takesKeys`: whether it keeps a draft of its own until Done. While it's
  *   open the editor's shortcuts, paste, and drop are off, Escape and Enter
- *   run Done, Export hides, and the layers can't be changed.
+ *   run Done, Export hides, and the layers can't be changed. "typing" for
+ *   one that types into a hidden input (its definition's `views.Input`):
+ *   Enter is a new line and ⌘/Ctrl+Enter runs Done, the dock rides the
+ *   keyboard, and a press in the context bar keeps the input's focus.
  * - `label`, `icon`: its button, and the title of its panel.
  * - `key`: the letter that picks it up.
  * - `shortcut`: its line in the list of shortcuts.
@@ -26,7 +29,7 @@ export type ToolSpec = {
 	target: "none" | "photo" | "image";
 	tray: boolean;
 	sized: boolean;
-	takesKeys?: true;
+	takesKeys?: true | "typing";
 	label: string;
 	icon: ToolIcon;
 	key: string;

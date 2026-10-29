@@ -38,19 +38,19 @@ export function layerActionsFor(
 	return toolbar.filter((id) => specs[id]?.actsOn(layer));
 }
 
-// What the dock shows: a tool's panel, text's style, the selected layer's
-// actions, or, with nothing selected, the tools or the layers.
-export type DockPanel = ToolId | "text" | "layer" | "idle";
+// What the dock shows: a tool's panel, the selected layer's actions, or,
+// with nothing selected, the tools or the layers.
+export type DockPanel = ToolId | "layer" | "idle";
 
-// What Cancel and Done apply to: the open tool, the text being typed, or the
-// selection, which Done lets go of.
-export type ChromeCancel = "tool" | "text";
-export type ChromeDone = "tool" | "text" | "deselect";
+// What Done applies to: the open tool, or the selection, which Done lets go
+// of.
+export type ChromeDone = "tool" | "deselect";
 
 export type ChromeActions = {
 	title: string;
-	// Absent when there's nothing to take back, as with a selected layer.
-	cancel?: ChromeCancel;
+	// The open tool's Cancel; absent when there's nothing to take back, as
+	// with a selected layer.
+	cancel?: "tool";
 	done: ChromeDone;
 	// What Done does, when it's more than finishing.
 	doneLabel?: string;
@@ -59,7 +59,7 @@ export type ChromeActions = {
 export type ModeChrome = {
 	panel: DockPanel;
 	// The title and actions for the dock's footer or the context bar, for the
-	// open tool, the text being typed or styled, or the selected layer.
+	// open tool, or the selected layer and the tool styling it.
 	// Nothing in context has none.
 	actions: ChromeActions | null;
 	// Whether the panel sits in the wide header's context bar, in place of
@@ -70,8 +70,7 @@ export type ModeChrome = {
 export type ModeChromeInput = {
 	specs: ToolSpecs;
 	tool: ToolId | null;
-	editingText: boolean;
-	styledText: boolean;
+	stylingTool: ToolId | null;
 	layerName: string | null;
 	toolDoneLabel: string | undefined;
 	wide: boolean;
@@ -82,9 +81,9 @@ export type ModeChromeInput = {
  * - `tool`: the open tool, which comes first. Its title is its spec's label
  *   in `specs`, its Cancel and Done are the tool's, and Done says
  *   `toolDoneLabel` when the tool gives one.
- * - `editingText`: text being typed, whose Cancel and Done are the text's.
- * - `styledText`: text styled but not typed (a selected text layer), which
- *   shows text's panel with no Cancel, and Done lets go of it.
+ * - `stylingTool`: the tool that edits the selected layer in place (its
+ *   definition's `edit`), whose panel styles it with nothing open, titled
+ *   with its label, with no Cancel, and Done lets go of the layer.
  * - `layerName`: the selected layer's name (`layerKindName`), for its title.
  *   Done lets go of it, and there's no Cancel.
  * - `wide`: a wide window, where every panel but `"idle"` is in the bar.
@@ -92,8 +91,7 @@ export type ModeChromeInput = {
 export function modeChrome({
 	specs,
 	tool,
-	editingText,
-	styledText,
+	stylingTool,
 	layerName,
 	toolDoneLabel,
 	wide,
@@ -111,31 +109,14 @@ export function modeChrome({
 			doneLabel: toolDoneLabel,
 		});
 	}
-	if (editingText) {
-		return chrome("text", { title: "Text", cancel: "text", done: "text" });
-	}
-	if (styledText) {
-		return chrome("text", { title: "Text", done: "deselect" });
+	if (stylingTool) {
+		return chrome(stylingTool, {
+			title: specs[stylingTool]?.label ?? stylingTool,
+			done: "deselect",
+		});
 	}
 	if (layerName !== null) {
 		return chrome("layer", { title: layerName, done: "deselect" });
 	}
 	return chrome("idle", null);
-}
-
-export type RailChosenToolInput = {
-	tool: ToolId | null;
-	editingText: boolean;
-};
-
-/**
- * Which tool the wide rail highlights as chosen: Text while text is typed
- * (`editingText`), or else the open tool. When none is active, no tool is
- * marked.
- */
-export function railChosenTool({
-	tool,
-	editingText,
-}: RailChosenToolInput): string | null {
-	return editingText ? "text" : tool;
 }

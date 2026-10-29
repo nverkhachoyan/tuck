@@ -49,7 +49,7 @@ export function useEditorShortcuts({
 	toolsByKey: ReadonlyMap<string, string>;
 	enabled: boolean;
 	modeState: EditorModeState;
-	selection: "text" | "layer" | null;
+	selection: "editable" | "layer" | null;
 	dispatchMode: (action: EditorModeAction) => void;
 	undo: () => void;
 	redo: () => void;
@@ -157,13 +157,16 @@ function isEditable(target: EventTarget | null) {
 /**
  * Keys on web for an open tool that takes them (see `takesKeys`), only while
  * `enabled`: Escape runs Done from anywhere, as it's Done in the other
- * tools, and Enter from the canvas, while controls keep their own.
+ * tools, and Enter from the canvas, while controls keep their own. While
+ * `typing`, Enter needs ⌘/Ctrl, as it does in the input.
  */
 export function useToolKeys({
 	enabled,
+	typing,
 	done,
 }: {
 	enabled: boolean;
+	typing: boolean;
 	done: () => void;
 }) {
 	const onDone = useEffectEvent(done);
@@ -174,17 +177,18 @@ export function useToolKeys({
 			// handled. Running Done here too would close the tool as the menu
 			// closed.
 			if (event.defaultPrevented) return;
-			if (
-				event.key === "Escape" ||
-				(event.key === "Enter" && !isInteractiveElement(event.target))
-			) {
+			const enter =
+				event.key === "Enter" &&
+				(!typing || event.metaKey || event.ctrlKey) &&
+				!isInteractiveElement(event.target);
+			if (event.key === "Escape" || enter) {
 				onDone();
 				event.preventDefault();
 			}
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [enabled]);
+	}, [enabled, typing]);
 }
 
 /** Whether a web key event belongs to a control that handles Enter itself. */

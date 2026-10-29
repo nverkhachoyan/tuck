@@ -22,16 +22,16 @@ const ruler = defineTool({ spec, useController, views: { Dock: views.Dock } });
 describe("editorTools", () => {
 	test("hands over the tools and the toolbar as they are", () => {
 		const tools = { ruler };
-		const config = editorTools({ tools, toolbar: ["ruler", "text"] });
+		const config = editorTools({ tools, toolbar: ["ruler", "photo"] });
 		assert.equal(config.tools, tools);
-		assert.deepEqual(config.toolbar, ["ruler", "text"]);
+		assert.deepEqual(config.toolbar, ["ruler", "photo"]);
 	});
 
 	test("takes only tools in the list, and no id the editor uses", () => {
 		// @ts-expect-error: the toolbar names a tool that isn't in the list.
 		editorTools({ tools: { ruler }, toolbar: ["rular"] });
-		// @ts-expect-error: "text" is the editor's own entry.
-		editorTools({ tools: { text: ruler }, toolbar: [] });
+		// @ts-expect-error: "photo" is the editor's own entry.
+		editorTools({ tools: { photo: ruler }, toolbar: [] });
 	});
 });
 

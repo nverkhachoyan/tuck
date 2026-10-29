@@ -19,7 +19,6 @@ export function useCanvasInput({
 	tool,
 	controllers,
 	eyedropper,
-	editingText,
 	dispatchMode,
 	onCustomColor,
 }: {
@@ -27,7 +26,6 @@ export function useCanvasInput({
 	tool: ToolId | null;
 	controllers: ToolControllers;
 	eyedropper: Eyedropper | null;
-	editingText: boolean;
 	dispatchMode: (action: EditorModeAction) => void;
 	onCustomColor: (color: string) => void;
 }) {
@@ -36,7 +34,6 @@ export function useCanvasInput({
 	const input = canvasInputFor({
 		eyedropper: eyedropper !== null,
 		toolInput: open?.definition.canvasInput?.(open.controller) ?? null,
-		editingText,
 	});
 
 	// A picked color becomes the custom color too, unless a swatch already

@@ -1,4 +1,3 @@
-import type { TextSelection } from "@tuck/skia-text-input/core";
 import {
 	type ReactNode,
 	type Ref,
@@ -22,7 +21,6 @@ import { Canvas, Group } from "react-native-skia";
 import type { EditorDocument } from "@/model/document";
 import type { Box, Point, Rect, Transform } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
-import { withPlaceholder } from "@/model/layers/text";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
 import { cursorStyle } from "./canvas/canvasCursor";
@@ -45,6 +43,8 @@ import { useCanvasCursor } from "./canvas/useCanvasCursor";
 import { useCanvasTap } from "./canvas/useCanvasTap";
 import { useCanvasZoom } from "./canvas/useCanvasZoom";
 import { useDialDrag } from "./canvas/useDialDrag";
+import { useEditTextGesture } from "./canvas/useEditTextGesture";
+import { useKeepTextFocus } from "./canvas/useKeepTextFocus";
 import { useLayerTransformGesture } from "./canvas/useLayerTransformGesture";
 import { useRegionTap } from "./canvas/useRegionTap";
 import { useShiftHeld } from "./canvas/useShiftHeld";
@@ -60,10 +60,7 @@ import {
 	inputRules,
 	outlinedLayerFor,
 } from "./canvasInputFor";
-import { EditorScene } from "./EditorScene";
-import type { TextEditState } from "./editorMode";
-import { useKeepTextFocus } from "./text/useKeepTextFocus";
-import { useTextEditGesture } from "./text/useTextEditGesture";
+import { EditorScene, type SceneDraft } from "./EditorScene";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
@@ -95,15 +92,16 @@ type EditorCanvasProps = {
 	// What input does (see `CanvasInput`). With no tool or text, it selects
 	// and transforms layers.
 	input?: CanvasInput;
-	// Text being edited in place (see `TextEditState`), drawn as typed. With
-	// an `editText` input, presses on it place the caret or select, and a tap
-	// off it finishes.
-	textEdit?: TextEditState | null;
-	onTextSelect?: (selection: TextSelection) => void;
-	onTextEditDone?: () => void;
+	// A layer the open tool is editing in place, drawn in its place (see
+	// `SceneDraft`). With an `editText` input, presses on it place the caret
+	// or select, and a tap off it finishes.
+	draft?: SceneDraft | null;
+	// Whether a press on the canvas keeps the focus of the input taking the
+	// keyboard, as while text is typed (see `useKeepTextFocus`).
+	keepFocus?: boolean;
 	onSelectLayer?: (id: string | null) => void;
 	// A tap on the layer that's already selected, in document space (the
-	// editor opens its text there).
+	// editor edits it there, when a tool edits it in place).
 	onTapSelectedLayer?: (point: Point) => void;
 	onCommitTransform?: (id: string, transform: Transform) => void;
 	// A redaction's box resized by its handles, which moves its center too.
@@ -193,9 +191,8 @@ export function EditorCanvas({
 	document,
 	selectedLayer,
 	input = SELECT,
-	textEdit = null,
-	onTextSelect,
-	onTextEditDone,
+	draft = null,
+	keepFocus = false,
 	onSelectLayer,
 	onTapSelectedLayer,
 	onCommitTransform,
@@ -214,8 +211,7 @@ export function EditorCanvas({
 	const containerRef = useRef<ViewInstance>(null);
 	const live = useLiveTransform();
 	const aspectLocked = useShiftHeld();
-	const editingText = textEdit !== null;
-	useKeepTextFocus(containerRef, editingText);
+	useKeepTextFocus(containerRef, keepFocus);
 
 	const handleImageError = useCallback((error: unknown) => {
 		console.warn("Couldn't load an image layer", error);
@@ -459,11 +455,9 @@ export function EditorCanvas({
 		[selectedLayer, scale, onNudgeLayer],
 	);
 
-	const textGesture = useTextEditGesture({
-		edit: textEdit,
+	const textGesture = useEditTextGesture({
+		edit: input.type === "editText" ? input : null,
 		viewport,
-		onSelect: onTextSelect,
-		onDone: onTextEditDone,
 		onCursor: setCursor,
 	});
 
@@ -482,16 +476,9 @@ export function EditorCanvas({
 		onToolInteractionEnd,
 	});
 	const cuttingOutId = cutImageId(tool);
-	// Empty, text being edited is outlined around its placeholder.
-	const textEditLayer = textEdit?.layer ?? null;
-	const editedLayer = useMemo(
-		() => textEditLayer && withPlaceholder(textEditLayer),
-		[textEditLayer],
-	);
 	const outlinedLayer = outlinedLayerFor(input, {
 		layers: document.layers,
 		selectedLayer,
-		editedLayer,
 	});
 	const handleIdleTap = useCallback(
 		(screenX: number, screenY: number) => {
@@ -564,7 +551,7 @@ export function EditorCanvas({
 								<EditorScene
 									document={document}
 									selectedLayerId={movableLayer ? selectedLayerId : null}
-									textEdit={textEdit}
+									draft={draft}
 									viewScale={shown.scale}
 									settledScale={scale}
 									live={live}

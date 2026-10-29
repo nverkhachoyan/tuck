@@ -19,7 +19,6 @@ export function EditorRail({
 	startTool,
 	tool,
 	finishTool,
-	finishText,
 	sheetAnchors,
 }: {
 	tools: readonly ToolEntry[];
@@ -29,13 +28,11 @@ export function EditorRail({
 	startTool: ToolStarters;
 	tool: ToolId | null;
 	finishTool: () => void;
-	finishText: () => void;
 	sheetAnchors?: Readonly<Record<string, RefObject<ViewInstance | null>>>;
 }) {
 	// A tool picked from the rail while another is open finishes that one.
 	const fromRail = (start: () => void) => () => {
 		if (tool) finishTool();
-		finishText();
 		start();
 	};
 	return (

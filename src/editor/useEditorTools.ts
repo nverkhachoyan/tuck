@@ -2,8 +2,9 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { BackHandler } from "react-native";
 import type { EditorDocument } from "@/model/document";
 import { visibleImageLayer } from "@/model/framing";
-import type { Rect, Size } from "@/model/geometry";
+import { type Point, type Size, toLayerSpace } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
+import type { Layer } from "@/model/layers/layer";
 import {
 	definitionOf,
 	type ToolControllers,
@@ -14,7 +15,6 @@ import type { EditorHost } from "./editorHost";
 import type { EditorMode, EditorModeAction } from "./editorMode";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useStore } from "./store";
-import { useTextEditing } from "./text/useTextEditing";
 import type { ToolId } from "./toolSpec";
 
 /**
@@ -22,7 +22,8 @@ import type { ToolId } from "./toolSpec";
  * mounted), their undo session, and their starters, Done, and Cancel. Every
  * close but Cancel runs the open tool's Done: Android's back button too. Each
  * tool's controller comes from its definition's `useController`, given what
- * `env` and the mode say of it. The order below
+ * `env` and the mode say of it. `editorOf` finds the tool that edits a layer
+ * in place (its definition's `edit`), and `editLayer` starts it. The order below
  * matters: `useToolSession` runs first, so its effect begins the session
  * before the effect at the end runs a tool's `started`. Running it earlier
  * would put what it does, like Cut out's remembered cut, in the session's
@@ -39,7 +40,6 @@ export function useEditorTools({
 	addLayerImage,
 	addPhoto,
 	view,
-	visibleArea,
 	notify,
 }: {
 	tools: ToolList;
@@ -52,7 +52,6 @@ export function useEditorTools({
 	addLayerImage: ToolEnv["addLayerImage"];
 	addPhoto: () => void;
 	view: ToolEnv["view"];
-	visibleArea: () => Rect | undefined;
 	notify: (message: string) => void;
 }) {
 	const { cancelSession, selectLayer } = useStore((state) => state.actions);
@@ -62,12 +61,6 @@ export function useEditorTools({
 	const [reopened, setReopened] = useState(0);
 
 	useToolSession(tool, reopened);
-
-	const text = useTextEditing({
-		document,
-		edit: mode.type === "text" ? mode.edit : null,
-		dispatchMode,
-	});
 
 	const closeTool = () => dispatchMode({ type: "endTool" });
 	const openImageId = mode.type === "tool" ? mode.layerId : null;
@@ -132,6 +125,25 @@ export function useEditorTools({
 		if (next === tool) setReopened((count) => count + 1);
 		dispatchMode({ type: "startTool", start });
 	};
+	// The tool that edits `layer` in place, if any.
+	const editorOf = (layer: Layer): ToolId | undefined =>
+		Object.keys(tools).find((id) => definitionOf(tools[id]).edit?.owns(layer));
+	// `layer`'s editor, set to edit it with what it places at `point` in the
+	// document, or at its end, then opened. Any other open tool finishes
+	// first.
+	const editLayer = (layer: Layer, point?: Point) => {
+		const id = editorOf(layer);
+		if (id === undefined) return;
+		if (tool && tool !== id) finishTool();
+		const { definition, controller } = controllers[id];
+		const at = point ? toLayerSpace(layer.transform, point) : null;
+		definition.edit?.start(controller, layer, at);
+		if (id === tool) setReopened((count) => count + 1);
+		dispatchMode({
+			type: "startTool",
+			start: { tool: id, layerId: targetImage?.id ?? null },
+		});
+	};
 	// After every render, so it runs once the tool is open on its photo.
 	useEffect(() => {
 		const pending = pendingStart.current;
@@ -156,15 +168,12 @@ export function useEditorTools({
 		return () => subscription.remove();
 	}, [tool]);
 
-	const startNewText = () => text.startNew(visibleArea());
-
 	// What each tool's key, button, and layer action picks up. A selected
 	// drawing or redaction takes the strokes, as its own Draw or Redact does.
 	const starters: ToolStarters = {
 		...Object.fromEntries(
 			Object.keys(tools).map((next) => [next, () => startTool(next)]),
 		),
-		text: startNewText,
 		photo: addPhoto,
 	};
 
@@ -188,8 +197,9 @@ export function useEditorTools({
 
 	return {
 		controllers,
-		text,
 		startTool: starters,
+		editLayer,
+		editorOf,
 		done: finishTool,
 		cancel: cancelTool,
 		finishTool,

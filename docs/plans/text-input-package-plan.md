@@ -1,6 +1,6 @@
 # Text input package
 
-Written October 28, 2026. This plan moves the editor's in-place text editing (the hidden input, the caret and selection drawn with Skia, and the gesture that places them) into a workspace package, `packages/skia-text-input`, and then asks whether Text should become a tool.
+Written October 28, 2026. This plan moves the editor's in-place text editing (the hidden input, the caret and selection drawn with Skia, and the gesture that places them) into a workspace package, `packages/skia-text-input`, and then makes Text a tool.
 
 **Status:** all five steps built on October 28, 2026. Not published (section 6).
 
@@ -60,15 +60,18 @@ Each step leaves the app working, and runs `pnpm check`, `pnpm typecheck`, `pnpm
 4. **Gesture.** `useCanvasTextGesture({ text, toIndex, onSelect, onDone, onCursor })`, where `toIndex(x, y, clamp)` maps a view point to an index or null. Tap, drag, double tap, tap away, the second-finger cancel, and hover keep today's behavior; double tap timing comes from the editor's `createDoubleTap` as a parameter or a copy in the package.
 5. **Ready to pack.** A README with the technique and the API, a `tsconfig.build.json` emitting `lib/` (`rewriteRelativeImportExtensions`), `publishConfig`, and a `pnpm pack` tried in a fresh Expo app. No publish.
 
-## 5. Then: Text as a tool?
+## 5. Text as a tool
 
-Text is the editor's own, not a tool, because it needs what no tool has: its own editor mode, styling a selected layer with nothing open, drawing its draft in place of the document's layer, and starting from a double tap on the canvas. Widening `defineTool` for one tool makes every tool's API harder to read, so the rule has been to wait for a second tool that needs the same.
+Text was the editor's own, not a tool, because it seemed to need what no tool had: its own editor mode, styling a selected layer with nothing open, drawing its draft in place of the document's layer, and starting from a tap on its own layer (a tap on the selected layer, not a double tap, which zooms). The rule had been to widen `defineTool` only once a second tool needed the same. Decided on October 28, 2026 to move Text first and let labelled arrows test the slots after: none of those needs is Text's alone, labelled arrows need every one, and the coupling cost an `editingText` branch in eight of the editor's files.
 
-Labelled arrows would be that tool. After step 4:
+How each need maps:
+* **Its own mode** is a tool's mode. The edit lives in Text's controller; the session makes it one undo step, which also keeps Undo off while typing. Its spec `takesKeys`: shortcuts, paste, and drop wait, Escape runs Done, Export hides, and the inspector's layers wait while typing (before, Export and picking a layer finished the text first).
+* **A draft in its layer's place:** `draft(controller)` gives the layer as placed and outlined (Text's with its placeholder) and whether it's new, and `views.Draft` draws it in the scene, given `viewScale`.
+* **Starting from a tap on its own layer:** `edit: { owns(layer), start(controller, layer, point) }`. A tap on a selected layer it owns, the selection bar's Edit, and Enter start it (`point` in the layer's space, or null for the end), and the editor opens it without `prepare`.
+* **Styling a selected layer with nothing open:** the same `edit.owns`: a selected layer it owns shows its `Dock`, `Bar`, and `Results` with nothing open, titled with its label, with no Cancel, and Done letting go of the layer. Draw would own a labelled arrow this way; a tool that styles layers it doesn't edit in place would need its own predicate back.
+* **Typing:** `views.Input`, mounted behind the header while it's open, holds the `HiddenTextInput`; its spec's `takesKeys: "typing"` keeps the context bar's focus, moves the dock with the keyboard, and makes ⌘/Ctrl+Enter Done. The canvas's `editText` input carries the layer, its text, `indexAt(point, padding)` in the layer's space (a null padding clamps), `onSelect`, and `onDone`, so the canvas's gesture assumes no text layer.
 
-* Look at what's left in `editor/text/`, and sketch the two slots both would need: drawing a layer's draft in its place while it's edited, and starting from a double tap on a layer the tool owns.
-* Build labelled arrows on the package. If they fit those slots, move Text to `tools/text/` with them; if they don't, the slots were wrong, and Text stays.
-* An arrow's label sits along the arrow rather than in a text layer's box, so it's also the check that `createCaretLayout` and `toIndex` don't assume a text layer.
+Then: build labelled arrows on the package and these slots. An arrow's label sits along the arrow rather than in a text layer's box, so it's also the check that `createCaretLayout` and `indexAt` don't assume a text layer. If the slots don't fit, change them with both tools on them.
 
 Making the editor itself a package is a separate decision, made when something outside the repo needs it.
 

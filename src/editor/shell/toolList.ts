@@ -6,11 +6,8 @@ import type { ComponentProps } from "react";
 
 export type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-/**
- * The editor's own entries among the tools' buttons: Text is a mode of the
- * editor's, and Add photo picks a photo.
- */
-export type OwnTool = "text" | "photo";
+/** The editor's own entry among the tools' buttons: Add photo. */
+export type OwnTool = "photo";
 
 /**
  * A button for a tool or one of the editor's own entries.
@@ -28,12 +25,11 @@ export type ToolEntry = {
 	needsImage: boolean;
 };
 
-/** The editor's own entries' buttons; their keys are `TOOL_KEYS`. */
+/** The editor's own entry's button; its key is in `TOOL_KEYS`. */
 export const TOOLS: Record<
 	OwnTool,
 	{ label: string; icon: ToolIcon; shortcut: string }
 > = {
-	text: { label: "Text", icon: "format-text", shortcut: "Add text" },
 	photo: {
 		label: "Add photo",
 		icon: "image-plus-outline",

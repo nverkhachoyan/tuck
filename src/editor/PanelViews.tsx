@@ -13,84 +13,33 @@ import { Popover } from "@/ui/Popover";
 import { colors } from "@/ui/theme";
 import type { OpenTool, ToolControllers } from "./defineTool";
 import type { DockPanel } from "./editorChrome";
-import {
-	type EditorModeAction,
-	type EditorModeState,
-	openTray,
-} from "./editorMode";
+import { type EditorModeState, openTray } from "./editorMode";
 import { ContextBar } from "./shell/ContextBar";
 import type { ModeActionProps } from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
-import {
-	TextBar,
-	TextColorPicker,
-	TextStylePanel,
-} from "./text/TextStylePanel";
-import type { TextController } from "./text/useTextEditing";
 
 /**
  * What the panels read besides the editor's context (see
  * `editorContext.ts`): the tools' controllers, which their definitions'
- * views are given, and what text and a selected layer show.
+ * views are given, and what a selected layer shows.
  */
 export type PanelContext = {
 	controllers: ToolControllers;
-	text: TextController;
-	dispatchMode: (action: EditorModeAction) => void;
 	layerActions: ComponentProps<typeof LayerActionsPanel> | undefined;
-	editingText: boolean;
-	restoreTextFocus: () => void;
 };
 
 /**
- * The panels that aren't tools: the style of the text being typed or
- * selected, and the selected layer's actions. Each field renders elements
- * and calls no hooks. `modeChrome` picks `"text"` only with styled text and
- * `"layer"` only with a selected layer, so their checks below never fail.
- * - `keepBarFocus`: whether a press in the bar keeps the text's caret.
+ * The selected layer's actions, the one panel that isn't a tool's. Each
+ * field renders elements and calls no hooks. `modeChrome` picks `"layer"`
+ * only with a selected layer, so its checks below never fail.
  */
-const OTHER_PANELS: Record<
-	"text" | "layer",
-	{
-		dock: (context: PanelContext) => ReactNode;
-		bar: (context: PanelContext) => ReactNode;
-		keepBarFocus?: (context: PanelContext) => boolean;
-	}
-> = {
-	text: {
-		dock: ({ text, dispatchMode }) => {
-			const { styledText } = text;
-			return (
-				styledText && (
-					<TextStylePanel
-						layer={styledText}
-						onChange={text.style}
-						onOpenPicker={(key) =>
-							dispatchMode({
-								type: "openTextPicker",
-								layerId: styledText.id,
-								key,
-							})
-						}
-					/>
-				)
-			);
-		},
-		bar: ({ text, editingText, restoreTextFocus }) =>
-			text.styledText && (
-				<TextBar
-					layer={text.styledText}
-					onChange={text.style}
-					restoreFocus={editingText ? restoreTextFocus : undefined}
-				/>
-			),
-		keepBarFocus: ({ editingText }) => editingText,
-	},
-	layer: {
-		dock: ({ layerActions }) =>
-			layerActions && <LayerActionsPanel {...layerActions} />,
-		bar: ({ layerActions }) => layerActions && <LayerBar {...layerActions} />,
-	},
+const LAYER_PANEL: {
+	dock: (context: PanelContext) => ReactNode;
+	bar: (context: PanelContext) => ReactNode;
+} = {
+	dock: ({ layerActions }) =>
+		layerActions && <LayerActionsPanel {...layerActions} />,
+	bar: ({ layerActions }) => layerActions && <LayerBar {...layerActions} />,
 };
 
 /** `tool`'s view in `slot`, given its controller, or null without one. */
@@ -111,8 +60,8 @@ function openToolIn(
 }
 
 /**
- * What opens over the canvas, above the dock: the tool's tray, its results,
- * and a text color picker.
+ * What opens over the canvas, above the dock: the tool's tray, or the
+ * results of the tool whose panel shows.
  */
 export function ToolTrays({
 	context,
@@ -123,23 +72,14 @@ export function ToolTrays({
 	modeState: EditorModeState;
 	panel: DockPanel;
 }) {
-	const { controllers, text, dispatchMode } = context;
-	const { mode, textPicker, eyedropper } = modeState;
-	const { styledText } = text;
+	const { controllers } = context;
+	const { mode, eyedropper } = modeState;
 	const tray = openTray(mode);
 	const open = openToolIn(panel, controllers);
 	return (
 		<>
 			{tray && toolView(controllers[tray], "Tray")}
 			{!tray && !eyedropper && open && toolView(open, "Results")}
-			{textPicker && styledText && (
-				<TextColorPicker
-					layer={styledText}
-					colorKey={textPicker.key}
-					onChange={text.style}
-					onClose={() => dispatchMode({ type: "closeTextPicker" })}
-				/>
-			)}
 		</>
 	);
 }
@@ -282,38 +222,33 @@ export function InspectorContent({
  * open tool's options, or a selected layer's actions. Phones have no bar;
  * the dock shows the same tools. With nothing in context, the header keeps
  * the title. One `ContextBar` stays mounted as the panel changes, keeping
- * its scroll and fades.
+ * its scroll and fades. While `keepFocus`, a press in it keeps the focus
+ * of the input taking the keyboard.
  */
 export function ContextBarContent({
 	context,
 	panel,
 	chrome,
+	keepFocus,
 }: {
 	context: PanelContext;
 	panel: DockPanel;
 	// The bar's title, Cancel, and Done, which `modeChrome` chose.
 	chrome: { title: string } & ModeActionProps;
+	keepFocus: boolean;
 }) {
 	if (panel === "idle") return null;
 	const open = openToolIn(panel, context.controllers);
-	if (open) {
-		return (
-			<ContextBar {...chrome} keepFocus={false}>
-				{toolView(open, "Bar")}
-			</ContextBar>
-		);
-	}
-	const views = OTHER_PANELS[panel as "text" | "layer"];
 	return (
-		<ContextBar {...chrome} keepFocus={views.keepBarFocus?.(context) ?? false}>
-			{views.bar(context)}
+		<ContextBar {...chrome} keepFocus={keepFocus}>
+			{open ? toolView(open, "Bar") : LAYER_PANEL.bar(context)}
 		</ContextBar>
 	);
 }
 
 /**
- * What the dock holds: the open tool's panel, the style of the text being
- * typed or selected, the selected layer's actions, or else `idle`.
+ * What the dock holds: the panel of the open tool or of the tool styling
+ * the selection, the selected layer's actions, or else `idle`.
  */
 export function DockContent({
 	context,
@@ -326,8 +261,7 @@ export function DockContent({
 }) {
 	if (panel === "idle") return idle;
 	const open = openToolIn(panel, context.controllers);
-	if (open) return toolView(open, "Dock");
-	return OTHER_PANELS[panel as "text" | "layer"].dock(context);
+	return open ? toolView(open, "Dock") : LAYER_PANEL.dock(context);
 }
 
 const styles = StyleSheet.create({

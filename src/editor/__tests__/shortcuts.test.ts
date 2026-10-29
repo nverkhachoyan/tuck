@@ -173,16 +173,32 @@ describe("shortcutGroups", () => {
 			"Tools",
 			"Editing",
 			"View",
+			"Text",
 			"Crop",
 			"Help",
 		]);
-		const { crop: _, ...withoutCrop } = BUILT_IN_SPECS;
-		const toolbar = BUILT_IN_TOOLBAR.filter((id) => id !== "crop");
-		assert.deepEqual(titles(withoutCrop, toolbar), [
+		const { crop: _, text: __, ...without } = BUILT_IN_SPECS;
+		const toolbar = BUILT_IN_TOOLBAR.filter(
+			(id) => id !== "crop" && id !== "text",
+		);
+		assert.deepEqual(titles(without, toolbar), [
 			"Tools",
 			"Editing",
 			"View",
 			"Help",
 		]);
+	});
+
+	test("applies with ⌘/Ctrl+Enter while typing, and Enter otherwise", () => {
+		const groups = shortcutGroups(
+			toolbarEntries(BUILT_IN_SPECS, BUILT_IN_TOOLBAR),
+			BUILT_IN_SPECS,
+		);
+		const keys = (title: string) =>
+			groups
+				.find((group) => group.title === title)
+				?.items.map((item) => item.keys);
+		assert.deepEqual(keys("Text"), ["mod+Enter", "Escape"]);
+		assert.deepEqual(keys("Crop"), ["Enter", "Escape"]);
 	});
 });

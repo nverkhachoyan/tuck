@@ -6,9 +6,11 @@ import { drawSpec } from "./tools/draw/drawSpec.ts";
 import { findSpec } from "./tools/find/findSpec.ts";
 import { redactSpec } from "./tools/redact/redactSpec.ts";
 import { stickersSpec } from "./tools/stickers/stickersSpec.ts";
+import { textSpec } from "./tools/text/textSpec.ts";
 
 /** The built-in tools' specs, from their own folders, by id. */
 export const BUILT_IN_SPECS = {
+	text: textSpec,
 	draw: drawSpec,
 	redact: redactSpec,
 	find: findSpec,

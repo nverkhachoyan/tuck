@@ -28,8 +28,8 @@ export function useArrangeSelected(
 }
 
 /**
- * The selection bar for `layer`, at `index` in the stack: Edit for text and
- * Free resize for text and images.
+ * The selection bar for `layer`, at `index` in the stack: Edit for a layer
+ * a tool edits in place (`onEdit`), and Free resize for text and images.
  */
 export function LayerSelectionBar({
 	layer,
@@ -44,7 +44,7 @@ export function LayerSelectionBar({
 	layer: Layer;
 	index: number;
 	topIndex: number;
-	onEdit: () => void;
+	onEdit?: () => void;
 	onSetResizable: (id: string, resizable: boolean) => void;
 	onArrange: (move: ArrangeMove) => void;
 	onDuplicate: () => void;
@@ -55,7 +55,7 @@ export function LayerSelectionBar({
 		<SelectionBar
 			canMoveForward={index < topIndex}
 			canMoveBackward={index > 0}
-			onEdit={layer.type === "text" ? onEdit : undefined}
+			onEdit={onEdit}
 			stretched={layer.resizable === true}
 			onToggleStretch={
 				resizable ? () => onSetResizable(layer.id, !layer.resizable) : undefined

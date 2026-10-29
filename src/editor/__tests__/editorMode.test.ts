@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createTextLayer } from "../../model/layers/text.ts";
 import { BUILT_IN_SPECS } from "../builtInSpecs.ts";
 import {
 	type EditorModeAction,
@@ -14,7 +13,6 @@ import {
 	type ShortcutCommand,
 	settle as settleWith,
 	shortcutCommand,
-	type TextEditState,
 	takesKeys,
 } from "../editorMode.ts";
 import type { Shortcut } from "../shortcuts.ts";
@@ -33,23 +31,15 @@ const settle = (state: State, targets: ModeTargets) =>
 	settleWith(state, targets, specs);
 const command = (
 	state: State,
-	selection: "text" | "layer" | null,
+	selection: "editable" | "layer" | null,
 	shortcut: Shortcut,
 ): ShortcutCommand | "held" | null =>
 	shortcutCommand(state, selection, shortcut, specs);
 
-const edit = (id: string): TextEditState => ({
-	layer: { ...createTextLayer({ width: 100, height: 100 }, ""), id },
-	isNew: false,
-	selection: { start: 0, end: 0 },
-	initialSelection: { start: 0, end: 0 },
-	focused: false,
-});
 const eyedropper = (): Eyedropper => ({ apply: () => {} });
 const targets = (overrides: Partial<ModeTargets> = {}): ModeTargets => ({
 	isAdjustable: () => true,
 	hasPhoto: true,
-	selectedTextId: null,
 	...overrides,
 });
 
@@ -59,11 +49,10 @@ const drawing = run(initialEditorMode, {
 });
 
 describe("editorModeReducer", () => {
-	test("starting a tool closes the layers sheet and a text color picker", () => {
+	test("starting a tool closes the layers sheet", () => {
 		const state = run(
 			initialEditorMode,
 			{ type: "toggleLayers" },
-			{ type: "openTextPicker", layerId: "text", key: "color" },
 			{ type: "startTool", start: { tool: "redact", layerId: null } },
 		);
 		assert.deepEqual(state.mode, {
@@ -73,7 +62,6 @@ describe("editorModeReducer", () => {
 			optionsOpen: false,
 		});
 		assert.equal(state.sheet, null);
-		assert.equal(state.textPicker, null);
 
 		const adjusting = run(
 			initialEditorMode,
@@ -105,7 +93,10 @@ describe("editorModeReducer", () => {
 
 	test("typing and cropping close the layers sheet", () => {
 		const layers = run(initialEditorMode, { type: "toggleLayers" });
-		const typing = run(layers, { type: "startText", edit: edit("text") });
+		const typing = run(layers, {
+			type: "startTool",
+			start: { tool: "text", layerId: null },
+		});
 		assert.equal(typing.sheet, null);
 		const cropping = run(layers, {
 			type: "startTool",
@@ -120,7 +111,7 @@ describe("editorModeReducer", () => {
 		assert.equal(cropping.sheet, null);
 	});
 
-	test("ending a tool stops the eyedropper, and ends only a tool", () => {
+	test("ending a tool stops the eyedropper", () => {
 		const picking = run(
 			drawing,
 			{ type: "toggleToolOptions" },
@@ -129,15 +120,6 @@ describe("editorModeReducer", () => {
 		const ended = run(picking, { type: "endTool" });
 		assert.deepEqual(ended.mode, { type: "idle" });
 		assert.equal(ended.eyedropper, null);
-
-		const typing = run(
-			initialEditorMode,
-			{ type: "startText", edit: edit("text") },
-			{ type: "startEyedropper", eyedropper: eyedropper() },
-			{ type: "endTool" },
-		);
-		assert.equal(typing.mode.type, "text");
-		assert.equal(typing.eyedropper, null);
 	});
 
 	test("a tool's tray opens and closes, and Adjust has none", () => {
@@ -158,7 +140,7 @@ describe("editorModeReducer", () => {
 		assert.equal(run(adjusting, { type: "toggleToolOptions" }), adjusting);
 	});
 
-	test("the eyedropper closes the tray or picker it came from", () => {
+	test("the eyedropper closes the tray it came from", () => {
 		const picker = eyedropper();
 		const fromTray = run(
 			drawing,
@@ -172,17 +154,9 @@ describe("editorModeReducer", () => {
 			optionsOpen: false,
 		});
 		assert.equal(fromTray.eyedropper, picker);
-
-		const fromText = run(
-			initialEditorMode,
-			{ type: "openTextPicker", layerId: "text", key: "outlineColor" },
-			{ type: "startEyedropper", eyedropper: picker },
-		);
-		assert.equal(fromText.textPicker, null);
-		assert.equal(fromText.eyedropper, picker);
 	});
 
-	test("the tray and a text color picker can open while the eyedropper waits", () => {
+	test("the tray can open while the eyedropper waits", () => {
 		const picker = eyedropper();
 		const tray = run(
 			drawing,
@@ -191,14 +165,6 @@ describe("editorModeReducer", () => {
 		);
 		assert.equal(tray.eyedropper, picker);
 		assert.equal(tray.mode.type === "tool" && tray.mode.tool, "draw");
-
-		const text = run(
-			initialEditorMode,
-			{ type: "startEyedropper", eyedropper: picker },
-			{ type: "openTextPicker", layerId: "text", key: "color" },
-		);
-		assert.equal(text.eyedropper, picker);
-		assert.deepEqual(text.textPicker, { layerId: "text", key: "color" });
 	});
 
 	test("a pick that lands after another eyedropper started leaves that one", () => {
@@ -228,33 +194,9 @@ describe("editorModeReducer", () => {
 		for (const action of [
 			{ type: "startTool", start: { tool: "draw", layerId: null } },
 			{ type: "startTool", start: { tool: "adjust", layerId: "photo" } },
-			{ type: "startText", edit: edit("text") },
 		] satisfies EditorModeAction[]) {
 			assert.equal(run(waiting, action).eyedropper, null, action.type);
 		}
-	});
-
-	test("text changes only while typing, and ends with it", () => {
-		const change = (text: string): EditorModeAction => ({
-			type: "changeText",
-			change: (current) => ({
-				...current,
-				layer: { ...current.layer, text },
-			}),
-		});
-		assert.equal(run(initialEditorMode, change("x")), initialEditorMode);
-
-		const started = edit("text");
-		const typing = run(
-			initialEditorMode,
-			{ type: "startText", edit: started },
-			change("HELLO"),
-		);
-		assert.deepEqual(typing.mode, {
-			type: "text",
-			edit: { ...started, layer: { ...started.layer, text: "HELLO" } },
-		});
-		assert.deepEqual(run(typing, { type: "endText" }).mode, { type: "idle" });
 	});
 
 	test("Stickers opens as a tool, closing the layers sheet and the tool before it", () => {
@@ -275,11 +217,9 @@ describe("editorModeReducer", () => {
 	test("closing what's already closed changes nothing", () => {
 		for (const type of [
 			"closeToolOptions",
-			"closeTextPicker",
 			"stopEyedropper",
 			"closeLayers",
 			"closeShortcuts",
-			"endText",
 		] as const) {
 			assert.equal(
 				run(initialEditorMode, { type }),
@@ -410,45 +350,11 @@ describe("settle", () => {
 		);
 		assert.equal(settle(drawing, targets({ hasPhoto: false })), drawing);
 	});
-
-	test("closes a text color picker when other text is styled", () => {
-		const picking = run(initialEditorMode, {
-			type: "openTextPicker",
-			layerId: "a",
-			key: "color",
-		});
-		assert.equal(settle(picking, targets({ selectedTextId: "a" })), picking);
-		assert.equal(
-			settle(picking, targets({ selectedTextId: "b" })).textPicker,
-			null,
-		);
-		assert.equal(settle(picking, targets()).textPicker, null);
-	});
-
-	test("styles the text being typed rather than the selection", () => {
-		const typing = run(
-			initialEditorMode,
-			{ type: "startText", edit: edit("new") },
-			{ type: "openTextPicker", layerId: "new", key: "backgroundColor" },
-		);
-		assert.equal(settle(typing, targets({ selectedTextId: "a" })), typing);
-	});
-
-	test("a picker that closed stays closed when its text comes back", () => {
-		const settled = run(
-			initialEditorMode,
-			{ type: "openTextPicker", layerId: "a", key: "color" },
-			{ type: "settle", targets: targets({ selectedTextId: "b" }) },
-			{ type: "settle", targets: targets({ selectedTextId: "a" }) },
-		);
-		assert.equal(settled.textPicker, null);
-	});
 });
 
 describe("openTray", () => {
 	test("is the tool whose tray is open", () => {
 		assert.equal(openTray({ type: "idle" }), null);
-		assert.equal(openTray({ type: "text", edit: edit("text") }), null);
 		assert.equal(
 			openTray({
 				type: "tool",
@@ -489,15 +395,16 @@ describe("openTray", () => {
 });
 
 describe("takesKeys", () => {
-	test("typing and a tool whose spec says so take the keys", () => {
-		const cropping = run(initialEditorMode, {
-			type: "startTool",
-			start: { tool: "crop", layerId: null },
-		});
+	test("a tool whose spec says so takes the keys, typing or not", () => {
+		const open = (tool: string) =>
+			run(initialEditorMode, {
+				type: "startTool",
+				start: { tool, layerId: null },
+			}).mode;
 		const keys = (mode: EditorModeState["mode"]) =>
 			takesKeys(mode, BUILT_IN_SPECS);
-		assert.equal(keys({ type: "text", edit: edit("text") }), true);
-		assert.equal(keys(cropping.mode), true);
+		assert.equal(keys(open("text")), true);
+		assert.equal(keys(open("crop")), true);
 		assert.equal(keys({ type: "idle" }), false);
 		assert.equal(keys(drawing.mode), false);
 	});
@@ -642,11 +549,12 @@ describe("shortcutCommand", () => {
 		}
 	});
 
-	test("the selection keys act on a selection, and E only on text", () => {
+	test("the selection keys act on a selection, and Enter only on one a tool edits", () => {
 		for (const key of [esc, remove, nudge]) {
 			assert.equal(command(initialEditorMode, "layer", key), key);
+			assert.equal(command(initialEditorMode, "editable", key), key);
 		}
 		assert.equal(command(initialEditorMode, "layer", edit), null);
-		assert.equal(command(initialEditorMode, "text", edit), edit);
+		assert.equal(command(initialEditorMode, "editable", edit), edit);
 	});
 });
