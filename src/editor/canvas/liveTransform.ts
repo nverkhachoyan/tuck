@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Platform } from "react-native";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnUI } from "react-native-worklets";
-import type { Box, Transform } from "@/model/geometry";
+import type { Box, Transform } from "../document/geometry";
 import type { ResizeMode } from "./handleGeometry";
 
 const MIN_LAYER_SCALE = 0.2;

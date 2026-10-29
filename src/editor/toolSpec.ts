@@ -1,4 +1,4 @@
-import type { Layer } from "../model/layers/layer.ts";
+import type { Layer } from "./layers/layer.ts";
 import type { ToolIcon } from "./shell/toolList.ts";
 
 /** A tool's name in the editor: its key in the list of tools. */

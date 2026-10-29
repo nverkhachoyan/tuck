@@ -9,16 +9,7 @@ import {
 	type SkImage,
 	type SkRect,
 } from "react-native-skia";
-import { transformsEqual } from "@/model/geometry";
-import type {
-	RedactionBox,
-	RedactionLayer,
-	RedactionMask,
-	RedactionStrokes,
-} from "@/model/layers/redaction";
-import type { ShapeLayer } from "@/model/layers/shape";
-import { shapeBox } from "@/model/shapes";
-import { drawingBox } from "@/model/strokes";
+import { transformsEqual } from "../document/geometry";
 import {
 	type FilterEffect,
 	maskedRedactionPicture,
@@ -29,7 +20,16 @@ import {
 	redactionFilter,
 	strokesPicture,
 } from "../layers/redaction/RedactionLayerView";
+import type {
+	RedactionBox,
+	RedactionLayer,
+	RedactionMask,
+	RedactionStrokes,
+} from "../layers/redaction/redaction";
 import { shapePath } from "../layers/shape/ShapeLayerView";
+import type { ShapeLayer } from "../layers/shape/shape";
+import { shapeBox } from "../layers/shape/shapeGeometry";
+import { drawingBox } from "../layers/strokes";
 import { useDecodedImage } from "../render/useDecodedImage";
 import {
 	type LiveTransform,

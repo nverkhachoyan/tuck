@@ -1,19 +1,23 @@
 import {
 	createDocumentFromImage,
 	type EditorDocument,
-} from "@model/document.ts";
+} from "@src/editor/document/document.ts";
 import {
 	hitTestBox,
 	type Point,
 	type Transform,
 	toLayerSpace,
-} from "@model/geometry.ts";
+} from "@src/editor/document/geometry.ts";
 import {
 	createDrawingLayer,
 	type DrawingLayer,
 	type Stroke,
-} from "@model/layers/drawing.ts";
-import { addStroke, drawingBox, hitTestDrawing } from "@model/strokes.ts";
+} from "@src/editor/layers/drawing/drawing.ts";
+import {
+	addStroke,
+	drawingBox,
+	hitTestDrawing,
+} from "@src/editor/layers/strokes.ts";
 import { useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -214,26 +218,34 @@ export function StrokesLesson() {
 	];
 
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
-		{ label: "addStroke", file: "src/model/strokes.ts", name: "addStroke" },
+		{
+			label: "addStroke",
+			file: "src/editor/layers/strokes.ts",
+			name: "addStroke",
+		},
 		{
 			label: "recenterDrawing",
-			file: "src/model/strokes.ts",
+			file: "src/editor/layers/strokes.ts",
 			name: "recenterDrawing",
 		},
 		{
 			label: "createDrawingLayer",
-			file: "src/model/layers/drawing.ts",
+			file: "src/editor/layers/drawing/drawing.ts",
 			name: "createDrawingLayer",
 		},
-		{ label: "drawingBox", file: "src/model/strokes.ts", name: "drawingBox" },
+		{
+			label: "drawingBox",
+			file: "src/editor/layers/strokes.ts",
+			name: "drawingBox",
+		},
 		{
 			label: "hitTestDrawing",
-			file: "src/model/strokes.ts",
+			file: "src/editor/layers/strokes.ts",
 			name: "hitTestDrawing",
 		},
 		{
 			label: "drawStroke",
-			file: "src/model/edits/draw.ts",
+			file: "src/editor/layers/drawing/drawingEdits.ts",
 			name: "drawStroke",
 		},
 		{
@@ -255,7 +267,7 @@ export function StrokesLesson() {
 
 	return (
 		<article className="lesson">
-			<p className="eyebrow">The model · Lesson 4</p>
+			<p className="eyebrow">The document · Lesson 4</p>
 			<h1>Strokes into layer space</h1>
 			<p className="lede">
 				A stroke is drawn in document space, under your pointer. It's stored in

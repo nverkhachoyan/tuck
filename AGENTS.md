@@ -86,9 +86,9 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ## Conventions
 
-- Keep imports flowing one way (`app` → `screens` → `editor` → `photos` / `projects` → `model`, with `ui/` and `platform/` beneath); docs/architecture.md lists the rules, and nothing checks them: read it before adding an import across folders, and update it when the structure changes.
+- Keep imports flowing one way (`app` → `screens` → `editor`, with `photos/` and `projects/` beside the screens, and `ui/` and `platform/` beneath); docs/architecture.md lists the rules, and nothing checks them: read it before adding an import across folders, and update it when the structure changes.
 - Keep `biome.json` small: formatting and the recommended lint rules, and add to it only when something can't be caught any other way. Don't add import-boundary overrides or an import-checking script; if a boundary truly needs a check, keep it to a few lines.
-- Only routes go in `src/app/`; screens live in `src/screens/` and don't import each other. `model/` stays plain TypeScript (no React, React Native, or Skia), and the editor's `render/` and layer views (`editor/layers/`) never read its store.
+- Only routes go in `src/app/`; screens live in `src/screens/` and don't import each other. The editor's `document/` and the lowercase `.ts` files in its `layers/` stay plain TypeScript (no React, React Native, or Skia), and its `render/` and layer views never read its store.
 - Take colors from `colors` in `ui/theme.ts`, never literals that assume one palette (day or night is picked at launch and never switches while running). Draw over the photo in `colors.selection`; fade to a palette color with `fadeTo`.
 - Take text sizes and weights from `typography`, corners from `radii`, and gaps from `space`; a one-off gap off the scale may stay literal. Literal font sizes only for Anton display text, font previews, and the text editor's 16px hidden input. Circles keep half their size as a radius.
 - Name component files in PascalCase, other modules in camelCase. Prefer growing an existing file over adding a single-use one; split a file when it gains a second responsibility.
@@ -96,7 +96,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - Name the editor document `document`, not `doc`. The DOM lib's global `document` means a missing parameter still type-checks.
 - Tests live in `__tests__/` beside what they test, start with `/// <reference types="node" />` (TypeScript 6 no longer includes `@types` packages by default), and import with an explicit `.ts` extension (Node's type stripping needs it). A tested module imports its dependencies by relative `.ts` path and nothing React-based (store slices import only types from `zustand`; tests use `createStore` from `zustand/vanilla`).
 - A tool's hook (`useController`) runs in `Editor`'s body, above the `EditorContext` provider, so it can't read the context: give it what it needs through `ToolEnv`, the store, or a shared preference. Only a tool's views read `editorContext.ts`.
-- Outside `src/editor/`, import the editor only from `@/editor`. Inside it, nothing but `builtInSpecs.ts` and `builtInTools.ts` imports a tool, and tools don't import each other.
+- Outside `src/editor/`, import the editor only from `@/editor`, or `@/editor/core` for plain TypeScript (`projects/`, `photos/`, and Node tests, by relative `.ts` path). Inside it, nothing but `builtInSpecs.ts` and `builtInTools.ts` imports a tool, and tools don't import each other.
 - Renaming or retyping something a `docs/interactive` lesson covers, or changing the imports of `editor/render/` or the layer views, can break that build: update the lesson in the same change.
 
 ## Git Commits
@@ -105,4 +105,4 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ## Code Checks
 
-- After code changes, run `pnpm check` (formatting and lint; `pnpm format` fixes), `pnpm typecheck`, and `pnpm test` when touching `model/`, store slices, or other pure modules (it covers `modules/` too). Run `pnpm build:web` after changing `.web` files, the entry files, or imports TypeScript doesn't check (assets, untyped imports): Metro catches an import that won't resolve. CI runs all four.
+- After code changes, run `pnpm check` (formatting and lint; `pnpm format` fixes), `pnpm typecheck`, and `pnpm test` when touching the editor's document or layer files, store slices, or other pure modules (it covers `modules/` too). Run `pnpm build:web` after changing `.web` files, the entry files, or imports TypeScript doesn't check (assets, untyped imports): Metro catches an import that won't resolve. CI runs all four.

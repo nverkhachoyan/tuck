@@ -26,8 +26,8 @@ export function Welcome() {
 
 			<h2>Read from the bottom up</h2>
 			<p>
-				Imports in Tuck flow one way, from routes down to the model. Reading in
-				the other direction means every file you open only uses things you've
+				Imports in Tuck flow one way, from routes down to the document. Reading
+				in the other direction means every file you open only uses things you've
 				already seen.
 			</p>
 			<ol className="layer-stack">

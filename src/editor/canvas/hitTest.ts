@@ -4,8 +4,8 @@ import {
 	type Point,
 	type Transform,
 	toLayerSpace,
-} from "../../model/geometry.ts";
-import { hitTestDrawing, type MaskStroke } from "../../model/strokes.ts";
+} from "../document/geometry.ts";
+import { hitTestDrawing, type MaskStroke } from "../layers/strokes.ts";
 import type { ResizeMode } from "./handleGeometry.ts";
 
 /**

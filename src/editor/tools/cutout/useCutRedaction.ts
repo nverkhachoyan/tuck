@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
 import { ImageFormat } from "react-native-skia";
-import type { Rect } from "@/model/geometry";
-import type { ImageLayer } from "@/model/layers/image";
 import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
+import type { Rect } from "../../document/geometry";
+import type { ImageLayer } from "../../layers/image/image";
 import { renderCutShape } from "../../render/renderDocument";
 
 // A selection's mask is stretched over what it covers, so it needn't have

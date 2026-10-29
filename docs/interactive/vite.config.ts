@@ -64,7 +64,6 @@ export default defineConfig({
 		alias: [
 			// Lessons import the app's real modules, so the docs break when they
 			// change instead of quietly going stale.
-			{ find: /^@model\//, replacement: `${repoRoot}src/model/` },
 			{ find: /^@src\//, replacement: `${repoRoot}src/` },
 			// The app's own alias, which its rendering code imports through.
 			{ find: /^@\//, replacement: `${repoRoot}src/` },

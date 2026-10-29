@@ -10,11 +10,10 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"skipLibCheck": true,
-		// The app's model imports its siblings with explicit `.ts` extensions.
+		// The app's document and layer files import their siblings with explicit `.ts` extensions.
 		"allowImportingTsExtensions": true,
 		"types": ["vite/client", "node"],
 		"paths": {
-			"@model/*": ["../../src/model/*"],
 			"@src/*": ["../../src/*"],
 			// The app's own alias, which its rendering code imports through.
 			"@/*": ["../../src/*"],

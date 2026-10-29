@@ -7,13 +7,9 @@ import {
 	Skia,
 	type SkPath,
 } from "react-native-skia";
-import {
-	type Brush,
-	type DrawingLayer,
-	layerBlend,
-} from "@/model/layers/drawing";
-import type { MaskStroke } from "@/model/strokes";
 import { mixColors } from "@/ui/color";
+import type { MaskStroke } from "../strokes";
+import { type Brush, type DrawingLayer, layerBlend } from "./drawing";
 
 // A marker's ink is see-through, so what it highlights shows through it.
 const MARKER_OPACITY = 0.45;

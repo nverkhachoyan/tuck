@@ -1,9 +1,9 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { LayerGroup } from "../../../../model/document.ts";
-import type { Layer } from "../../../../model/layers/layer.ts";
-import { createTextLayer } from "../../../../model/layers/text.ts";
+import type { LayerGroup } from "../../../document/document.ts";
+import type { Layer } from "../../layer.ts";
+import { createTextLayer } from "../../text/text.ts";
 import { layerListEntries } from "../layerListEntries.ts";
 
 // Bottom first, as the document holds them.

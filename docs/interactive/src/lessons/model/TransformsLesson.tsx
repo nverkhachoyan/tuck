@@ -5,7 +5,7 @@ import {
 	type Transform,
 	toDocumentSpace,
 	toLayerSpace,
-} from "@model/geometry.ts";
+} from "@src/editor/document/geometry.ts";
 import { type ReactNode, useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import { Flow, type FlowStep } from "../../ui/Flow.tsx";
@@ -292,7 +292,7 @@ export function TransformsLesson() {
 
 	return (
 		<article className="lesson">
-			<p className="eyebrow">The model · Lesson 1</p>
+			<p className="eyebrow">The document · Lesson 1</p>
 			<h1>Two spaces and a transform</h1>
 			<p className="lede">
 				Everything in Tuck lives in one of two spaces.{" "}
@@ -460,9 +460,9 @@ export function TransformsLesson() {
 			<section className="read-the-code">
 				<h2>Read the code</h2>
 				<p>
-					These are the real functions from <code>src/model/geometry.ts</code>,
-					read from the file as it is now. The playground above calls them
-					directly.
+					These are the real functions from{" "}
+					<code>src/editor/document/geometry.ts</code>, read from the file as it
+					is now. The playground above calls them directly.
 				</p>
 				<div className="tabs" role="tablist">
 					{sourceNames.map((name) => (
@@ -479,7 +479,7 @@ export function TransformsLesson() {
 					))}
 				</div>
 				<SourceView
-					file="src/model/geometry.ts"
+					file="src/editor/document/geometry.ts"
 					name={shownSource}
 					focus={focus?.name === shownSource ? focus.line : null}
 				/>

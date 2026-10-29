@@ -1,8 +1,8 @@
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import { Group, Path, Rect, rect, Skia } from "react-native-skia";
-import type { RedactionBoxPlacement } from "@/model/layers/redaction";
 import { colors } from "@/ui/theme";
 import { toTransformList } from "../layers/layerTransform";
+import type { RedactionBoxPlacement } from "../layers/redaction/redaction";
 import { useScreenPixels } from "./SelectionOverlay";
 
 // A region's check mark's radius, in screen pixels: a share of the

@@ -11,8 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSession, openDocument } from "@/editor";
-import { createBlankDocument } from "@/model/document";
-import type { Size } from "@/model/geometry";
+import { createBlankDocument, type Size } from "@/editor/core";
 import { usePreference } from "@/platform/usePreference";
 import { editorHref } from "@/projects/projectRoute";
 import { createBlankProject } from "@/projects/projectService";

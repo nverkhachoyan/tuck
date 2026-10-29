@@ -7,7 +7,7 @@ import { Asset } from "expo-asset";
 import * as Font from "expo-font";
 import { use } from "react";
 import { Skia, type SkTypefaceFontProvider } from "react-native-skia";
-import type { TextFont } from "@/model/layers/text";
+import type { TextFont } from "./text";
 
 /**
  * The typefaces text layers use, each in the one weight it's drawn in. They

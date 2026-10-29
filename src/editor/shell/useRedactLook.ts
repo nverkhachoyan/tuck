@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import type { Size } from "@/model/geometry";
 import { readPreference, writePreference } from "@/platform/preferenceStore";
 import { usePreference } from "@/platform/usePreference";
+import type { Size } from "../document/geometry";
 import {
 	parseRedactLook,
 	type RedactLook,

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { ImageLayer } from "../../../../model/layers/image.ts";
+import type { ImageLayer } from "../../../layers/image/image.ts";
 import { mapDetectionRects } from "../mapDetectionRects.ts";
 
 const close = (actual: number, expected: number) =>

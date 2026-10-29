@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { EditorDocument } from "@/model/document";
+import type { EditorDocument } from "./document/document";
 import { layerKindName } from "./layers/panel/LayerRow";
 import { useStore } from "./store";
 

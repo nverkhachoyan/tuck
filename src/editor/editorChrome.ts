@@ -4,7 +4,7 @@
 // agree; the screen turns the actions into handlers once and gives both
 // layouts the result.
 
-import type { Layer } from "../model/layers/layer.ts";
+import type { Layer } from "./layers/layer.ts";
 import { isOwnTool, TOOLS, type ToolEntry } from "./shell/toolList.ts";
 import { TOOL_KEYS } from "./shortcuts.ts";
 import type { ToolId, ToolSpecs } from "./toolSpec.ts";

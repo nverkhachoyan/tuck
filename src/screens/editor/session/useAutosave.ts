@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import { AppState, Platform } from "react-native";
-import { type EditorDocument, hasEdits } from "@/model/document";
+import { type EditorDocument, hasEdits } from "@/editor/core";
 import { projects } from "@/projects/projectService";
 
 /**

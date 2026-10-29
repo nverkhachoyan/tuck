@@ -3,10 +3,10 @@ import {
 	type Point,
 	type Transform,
 	toDocumentSpace,
-} from "../../model/geometry.ts";
+} from "../document/geometry.ts";
 
 // The selection's corner (scale) and knob (rotate) handles, the side handles
-// of a box that resizes freely, and the drags that grab them. Worklets, like `model/geometry.ts`, so gestures run them on
+// of a box that resizes freely, and the drags that grab them. Worklets, like `editor/document/geometry.ts`, so gestures run them on
 // the UI thread. Sizes come in as arguments: `handleMetrics.ts` picks them
 // for the platform, which keeps this file free of React Native and testable.
 

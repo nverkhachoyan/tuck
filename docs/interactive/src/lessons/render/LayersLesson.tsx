@@ -1,15 +1,18 @@
-import { type AdjustmentKey, adjustmentKeys } from "@model/adjustments.ts";
-import type { EditorDocument } from "@model/document.ts";
-import { withAdjustments } from "@model/layers/image.ts";
-import type { Layer } from "@model/layers/layer.ts";
-import type { RedactionEffect } from "@model/layers/redaction.ts";
-import { type TextFont, textFonts } from "@model/layers/text.ts";
+import type { EditorDocument } from "@src/editor/document/document.ts";
 import { DrawingLayerView } from "@src/editor/layers/drawing/DrawingLayerView.tsx";
+import {
+	type AdjustmentKey,
+	adjustmentKeys,
+} from "@src/editor/layers/image/adjustments.ts";
 import { ImageLayerView } from "@src/editor/layers/image/ImageLayerView.tsx";
+import { withAdjustments } from "@src/editor/layers/image/image.ts";
+import type { Layer } from "@src/editor/layers/layer.ts";
 import { toTransformList } from "@src/editor/layers/layerTransform.ts";
 import { RedactionLayerView } from "@src/editor/layers/redaction/RedactionLayerView.tsx";
+import type { RedactionEffect } from "@src/editor/layers/redaction/redaction.ts";
 import { ShapeLayerView } from "@src/editor/layers/shape/ShapeLayerView.tsx";
 import { TextLayerView } from "@src/editor/layers/text/TextLayerView.tsx";
+import { type TextFont, textFonts } from "@src/editor/layers/text/text.ts";
 import { DocumentRenderScene } from "@src/editor/render/DocumentRenderScene.tsx";
 import { useEffect, useState } from "react";
 import { Fill, Group, Paint, type SkImage } from "react-native-skia";

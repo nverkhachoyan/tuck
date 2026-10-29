@@ -3,8 +3,8 @@ import { Platform } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { straightStroke } from "@/model/strokes";
 import { hapticTick } from "@/platform/haptics";
+import { straightStroke } from "../layers/strokes";
 import { type DocumentViewport, viewPointToDocument } from "./viewport";
 
 // A point closer than this to the last one, in screen pixels, adds nothing

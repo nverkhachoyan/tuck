@@ -7,7 +7,7 @@ import {
 	renderThumbnail,
 	useSession,
 } from "@/editor";
-import type { EditorDocument } from "@/model/document";
+import type { EditorDocument } from "@/editor/core";
 import {
 	isProjectOpenElsewhere,
 	NEWER_VERSION_MESSAGE,

@@ -1,9 +1,9 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { Transform } from "../../../model/geometry.ts";
-import type { DrawingLayer } from "../../../model/layers/drawing.ts";
-import type { RedactionStrokes } from "../../../model/layers/redaction.ts";
+import type { Transform } from "../../document/geometry.ts";
+import type { DrawingLayer } from "../../layers/drawing/drawing.ts";
+import type { RedactionStrokes } from "../../layers/redaction/redaction.ts";
 import {
 	findLayerAt,
 	hitsLayer,

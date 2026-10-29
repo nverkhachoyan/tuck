@@ -1,6 +1,6 @@
-import type { Size } from "../../model/geometry.ts";
-import type { RedactionEffect } from "../../model/layers/redaction.ts";
 import { isHexColor } from "../../ui/color.ts";
+import type { Size } from "../document/geometry.ts";
+import type { RedactionEffect } from "../layers/redaction/redaction.ts";
 
 /**
  * How a new redaction looks, whichever tool adds it: Redact, Find, or Cut

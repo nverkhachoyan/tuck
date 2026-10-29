@@ -1,11 +1,6 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createDrawingLayer } from "../../model/layers/drawing.ts";
-import { createImageLayer } from "../../model/layers/image.ts";
-import { createRedactionBox } from "../../model/layers/redaction.ts";
-import { createShapeLayer } from "../../model/layers/shape.ts";
-import { createTextLayer } from "../../model/layers/text.ts";
 import { BUILT_IN_SPECS, BUILT_IN_TOOLBAR } from "../builtInSpecs.ts";
 import {
 	type DockPanel,
@@ -14,6 +9,11 @@ import {
 	modeChrome,
 	toolbarEntries,
 } from "../editorChrome.ts";
+import { createDrawingLayer } from "../layers/drawing/drawing.ts";
+import { createImageLayer } from "../layers/image/image.ts";
+import { createRedactionBox } from "../layers/redaction/redaction.ts";
+import { createShapeLayer } from "../layers/shape/shape.ts";
+import { createTextLayer } from "../layers/text/text.ts";
 import type { ToolSpec, ToolSpecs } from "../toolSpec.ts";
 
 const specs: ToolSpecs = BUILT_IN_SPECS;

@@ -1,12 +1,12 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createDrawingLayer } from "../../../model/layers/drawing.ts";
+import { createDrawingLayer } from "../../layers/drawing/drawing.ts";
 import {
 	createRedactionBox,
 	createRedactionStrokes,
-} from "../../../model/layers/redaction.ts";
-import { createShapeLayer } from "../../../model/layers/shape.ts";
+} from "../../layers/redaction/redaction.ts";
+import { createShapeLayer } from "../../layers/shape/shape.ts";
 import {
 	type CanvasTool,
 	canAddTo,

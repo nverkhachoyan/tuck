@@ -4,17 +4,17 @@ import type {
 } from "@tuck/skia-text-input";
 import { useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
-import type { Point, Rect } from "@/model/geometry";
+import { usePreference } from "@/platform/usePreference";
+import { layerBounds } from "../../canvas/layerBounds";
+import type { CanvasInput } from "../../canvasInputFor";
+import type { ToolEnv } from "../../defineTool";
+import type { Point, Rect } from "../../document/geometry";
 import {
 	createTextLayer,
 	type TextLayer,
 	type TextLayerEdit,
 	withPlaceholder,
-} from "@/model/layers/text";
-import { usePreference } from "@/platform/usePreference";
-import { layerBounds } from "../../canvas/layerBounds";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
+} from "../../layers/text/text";
 import { textIndexAt } from "../../layers/text/textLayerLayout";
 import { useStore } from "../../store";
 import { selectSelectedTextLayer } from "../../store/editorSlice";

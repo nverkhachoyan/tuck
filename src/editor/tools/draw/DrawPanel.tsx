@@ -1,10 +1,10 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
 import { StyleSheet, View } from "react-native";
-import { shapeKinds } from "@/model/layers/shape";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../../editorContext";
+import { shapeKinds } from "../../layers/shape/shape";
 import { ColorChip, ColorOptions } from "../../shell/ColorOptions";
 import {
 	BarChip,

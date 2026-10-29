@@ -1,8 +1,8 @@
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import { Group, Path, Rect, rect, Shadow, Skia } from "react-native-skia";
-import type { EditorDocument } from "@/model/document";
-import type { Layer } from "@/model/layers/layer";
 import { colors } from "@/ui/theme";
+import type { EditorDocument } from "../document/document";
+import type { Layer } from "../layers/layer";
 import { toTransformList } from "../layers/layerTransform";
 import { handleSides } from "./handleGeometry";
 import { handleMetrics, shownHandles } from "./handleMetrics";

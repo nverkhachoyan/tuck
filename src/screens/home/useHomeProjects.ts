@@ -6,7 +6,7 @@ import {
 	openDocument,
 	renderThumbnail,
 } from "@/editor";
-import { createDocumentFromImage, type EditorDocument } from "@/model/document";
+import { createDocumentFromImage, type EditorDocument } from "@/editor/core";
 import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
 import { importSharedPhoto } from "@/photos/sharedPhoto";

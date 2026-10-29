@@ -1,4 +1,7 @@
-import { type EditorDocument, hasTransparency } from "@model/document.ts";
+import {
+	type EditorDocument,
+	hasTransparency,
+} from "@src/editor/document/document.ts";
 import { DocumentRenderScene } from "@src/editor/render/DocumentRenderScene.tsx";
 import { renderDocument } from "@src/editor/render/renderDocument.tsx";
 import {

@@ -1,9 +1,9 @@
 import { Fill, Group, Rect, type SkImage } from "react-native-skia";
-import { assertNever } from "@/model/assertNever";
-import type { EditorDocument } from "@/model/document";
-import type { Layer } from "@/model/layers/layer";
+import { assertNever } from "../document/assertNever";
+import type { EditorDocument } from "../document/document";
 import { DrawingLayerView } from "../layers/drawing/DrawingLayerView";
 import { ImageLayerView } from "../layers/image/ImageLayerView";
+import type { Layer } from "../layers/layer";
 import { toTransformList } from "../layers/layerTransform";
 import { RedactionLayerView } from "../layers/redaction/RedactionLayerView";
 import { ShapeLayerView } from "../layers/shape/ShapeLayerView";

@@ -1,16 +1,29 @@
 import type { StateCreator } from "zustand";
 // Registers the "zustand/devtools" mutator that `SliceCreator` names.
 import type {} from "zustand/middleware";
-import type { Adjustments } from "../../model/adjustments.ts";
 import {
 	addLayerOnTop,
 	type EditorDocument,
 	findLayer,
-} from "../../model/document.ts";
-import { setAdjustments } from "../../model/edits/adjust.ts";
-import { reframe, setBackground } from "../../model/edits/crop.ts";
-import { invertMask, paintMask, setMask } from "../../model/edits/cutout.ts";
-import { addShape, drawStroke, setShapeStyle } from "../../model/edits/draw.ts";
+} from "../document/document.ts";
+import { reframe, setBackground } from "../document/documentEdits.ts";
+import type { Framing } from "../document/framing.ts";
+import type { Rect, Transform } from "../document/geometry.ts";
+import type { Stroke } from "../layers/drawing/drawing.ts";
+import { drawStroke } from "../layers/drawing/drawingEdits.ts";
+import type { Adjustments } from "../layers/image/adjustments.ts";
+import {
+	type CutStroke,
+	createImageLayer,
+	createStickerLayer,
+} from "../layers/image/image.ts";
+import {
+	invertMask,
+	paintMask,
+	setAdjustments,
+	setMask,
+} from "../layers/image/imageEdits.ts";
+import { duplicateLayer, type Layer } from "../layers/layer.ts";
 import {
 	deleteLayer,
 	deleteLayerGroup,
@@ -21,45 +34,37 @@ import {
 	setLayerGroupFlag,
 	setLayerResizable,
 	transformLayer,
-} from "../../model/edits/layers.ts";
+} from "../layers/layerEdits.ts";
+import type {
+	RedactionBoxPlacement,
+	RedactionEffect,
+	RedactionLayer,
+} from "../layers/redaction/redaction.ts";
 import {
 	addMaskedRedaction,
 	addRedactionBox,
 	addRedactionBoxes,
 	paintRedaction,
 	setRedactionEffect,
-} from "../../model/edits/redact.ts";
-import {
-	updateTextLayer as editTextLayer,
-	addTextLayer as placeTextLayer,
-} from "../../model/edits/text.ts";
-import type { Framing } from "../../model/framing.ts";
-import type { Rect, Transform } from "../../model/geometry.ts";
-import type { Stroke } from "../../model/layers/drawing.ts";
-import {
-	type CutStroke,
-	createImageLayer,
-	createStickerLayer,
-} from "../../model/layers/image.ts";
-import { duplicateLayer, type Layer } from "../../model/layers/layer.ts";
-import type {
-	RedactionBoxPlacement,
-	RedactionEffect,
-	RedactionLayer,
-} from "../../model/layers/redaction.ts";
+} from "../layers/redaction/redactionEdits.ts";
 import type {
 	ShapeEdit,
 	ShapeKind,
 	ShapeLayer,
 	ShapePlacement,
 	ShapeStyle,
-} from "../../model/layers/shape.ts";
+} from "../layers/shape/shape.ts";
+import { addShape, setShapeStyle } from "../layers/shape/shapeEdits.ts";
+import type { MaskStroke } from "../layers/strokes.ts";
 import type {
 	TextLayer,
 	TextLayerEdit,
 	TextLayerStyle,
-} from "../../model/layers/text.ts";
-import type { MaskStroke } from "../../model/strokes.ts";
+} from "../layers/text/text.ts";
+import {
+	updateTextLayer as editTextLayer,
+	addTextLayer as placeTextLayer,
+} from "../layers/text/textEdits.ts";
 
 // Undo steps kept; the oldest are dropped beyond this.
 export const MAX_HISTORY = 100;

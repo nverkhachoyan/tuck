@@ -5,7 +5,7 @@ import {
 	createDocumentFromImage,
 	type EditorDocument,
 	hasEdits,
-} from "../model/document.ts";
+} from "../editor/core.ts";
 import {
 	copyName,
 	imageFiles,

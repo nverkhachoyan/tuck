@@ -12,9 +12,9 @@ import {
 	TextAlign as SkTextAlign,
 	StrokeJoin,
 } from "react-native-skia";
-import type { Box, Point, Rect } from "@/model/geometry";
-import type { TextAlign, TextFont, TextLayer } from "@/model/layers/text";
+import type { Box, Point, Rect } from "../../document/geometry";
 import { getFontProvider, TEXT_FONTS } from "./fonts";
+import type { TextAlign, TextFont, TextLayer } from "./text";
 
 export type TextLayerLayout = {
 	// Drawn first, behind the text: a box around each line; null when disabled.

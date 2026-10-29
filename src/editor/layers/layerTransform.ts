@@ -1,4 +1,4 @@
-import type { Transform } from "@/model/geometry";
+import type { Transform } from "../document/geometry";
 
 /**
  * Skia's transform list for a layer's document-space transform. A worklet,

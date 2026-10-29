@@ -1,4 +1,4 @@
-import type { Size } from "../../model/geometry.ts";
+import type { Size } from "../../editor/core.ts";
 
 export const MIN_CANVAS_SIDE = 16;
 // Export's limit: a longer side would be shrunk on the way out.

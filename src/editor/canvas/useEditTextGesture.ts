@@ -3,8 +3,8 @@ import {
 	useCanvasTextGesture,
 } from "@tuck/skia-text-input";
 import { useCallback } from "react";
-import { type Point, toLayerSpace } from "@/model/geometry";
-import type { Layer } from "@/model/layers/layer";
+import { type Point, toLayerSpace } from "../document/geometry";
+import type { Layer } from "../layers/layer";
 import { HIT_PADDING_PX } from "./layerTargets";
 import { TAP_SLOP_PX } from "./strokeIntent";
 import { type DocumentViewport, viewPointToDocument } from "./viewport";

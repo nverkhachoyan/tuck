@@ -1,5 +1,5 @@
-import type { Size } from "../../../model/geometry.ts";
-import type { Layer } from "../../../model/layers/layer.ts";
+import type { Size } from "../../document/geometry.ts";
+import type { Layer } from "../../layers/layer.ts";
 
 // Width / height, or "original" for the photo's own. Each fixed ratio's
 // turned counterpart is listed too, so turning the photo keeps one selected.

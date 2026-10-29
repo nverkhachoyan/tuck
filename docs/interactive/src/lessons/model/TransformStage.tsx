@@ -4,7 +4,7 @@ import {
 	type Transform,
 	toDocumentSpace,
 	transformMatrix,
-} from "@model/geometry.ts";
+} from "@src/editor/document/geometry.ts";
 import { type PointerEvent, useRef } from "react";
 import { Photo } from "../../ui/Photo.tsx";
 

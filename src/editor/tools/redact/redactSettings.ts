@@ -1,6 +1,6 @@
-import type { Size } from "../../../model/geometry.ts";
-import type { MaskStroke } from "../../../model/strokes.ts";
 import type { CanvasTool } from "../../canvas/canvasTool.ts";
+import type { Size } from "../../document/geometry.ts";
+import type { MaskStroke } from "../../layers/strokes.ts";
 import {
 	isIndex,
 	type RedactLook,

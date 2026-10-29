@@ -1,10 +1,6 @@
 import { FillType, Path, Skia, type SkPath } from "react-native-skia";
-import {
-	isLineShape,
-	type ShapeKind,
-	type ShapeLayer,
-} from "@/model/layers/shape";
-import { arrowHead, outlineThickness, shapeBox } from "@/model/shapes";
+import { isLineShape, type ShapeKind, type ShapeLayer } from "./shape";
+import { arrowHead, outlineThickness, shapeBox } from "./shapeGeometry";
 
 // Captured by the worklet below as a plain number.
 const EVEN_ODD = FillType.EvenOdd;

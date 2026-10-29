@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, ImageFormat, type SkImage } from "react-native-skia";
 import { drawOffscreen, renderDocument } from "@/editor";
-import type { EditorDocument } from "@/model/document";
+import type { EditorDocument } from "@/editor/core";
 
 // The largest the preview's own copy is, in pixels: the export sheet's strip
 // at 3x.

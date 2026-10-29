@@ -6,13 +6,13 @@ import {
 	createDocumentFromImage,
 	type EditorDocument,
 	hasEdits,
-} from "../../../../model/document.ts";
+} from "../../../document/document.ts";
 import {
 	documentFraming,
 	framingsEqual,
 	reframeDocument,
-} from "../../../../model/framing.ts";
-import { createTextLayer } from "../../../../model/layers/text.ts";
+} from "../../../document/framing.ts";
+import { createTextLayer } from "../../../layers/text/text.ts";
 import {
 	boxWithRatio,
 	type CropState,

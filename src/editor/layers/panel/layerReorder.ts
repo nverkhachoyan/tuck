@@ -1,4 +1,4 @@
-// Worklets, like `model/geometry.ts`, so the layers panel's drag runs them
+// Worklets, like `editor/document/geometry.ts`, so the layers panel's drag runs them
 // on the UI thread. The panel lists the layers top first, one slot per row.
 
 export function moveItem<T>(

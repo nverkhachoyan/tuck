@@ -9,8 +9,8 @@ import {
 	ColorMatrix as SkiaColorMatrix,
 	Image as SkiaImage,
 } from "react-native-skia";
-import type { ImageLayer } from "@/model/layers/image";
 import { CutMask, imageBox } from "../../layers/image/ImageLayerView";
+import type { ImageLayer } from "../../layers/image/image";
 import { drawOffscreen } from "../../render/drawOffscreen";
 
 // Turns white into black and black into white. Its last column is in 0–1

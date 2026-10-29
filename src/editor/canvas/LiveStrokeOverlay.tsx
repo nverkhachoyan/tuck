@@ -14,22 +14,16 @@ import {
 	rect,
 	Skia,
 } from "react-native-skia";
-import type { ColorMatrix } from "@/model/adjustments";
-import { type Point, rectFromCorners } from "@/model/geometry";
-import { identityTransform } from "@/model/layers/base";
-import type { Brush } from "@/model/layers/drawing";
-import type { CutStroke } from "@/model/layers/image";
-import type { Layer } from "@/model/layers/layer";
-import type {
-	RedactionEffect,
-	RedactionStrokes,
-} from "@/model/layers/redaction";
-import { isLineShape } from "@/model/layers/shape";
-import { lineReach } from "@/model/shapes";
 import { colors } from "@/ui/theme";
+import { type Point, rectFromCorners } from "../document/geometry";
+import { identityTransform } from "../layers/base";
 import { BrushStroke, strokePath } from "../layers/drawing/DrawingLayerView";
+import type { Brush } from "../layers/drawing/drawing";
+import type { ColorMatrix } from "../layers/image/adjustments";
 import { MaskStrokePath } from "../layers/image/ImageLayerView";
+import type { CutStroke } from "../layers/image/image";
 import { LayerContent } from "../layers/LayerContent";
+import type { Layer } from "../layers/layer";
 import {
 	toInverseTransformList,
 	toTransformList,
@@ -39,7 +33,13 @@ import {
 	recordRedactionStrokes,
 	redactionFilter,
 } from "../layers/redaction/RedactionLayerView";
+import type {
+	RedactionEffect,
+	RedactionStrokes,
+} from "../layers/redaction/redaction";
 import { shapePath } from "../layers/shape/ShapeLayerView";
+import { isLineShape } from "../layers/shape/shape";
+import { lineReach } from "../layers/shape/shapeGeometry";
 import type { CanvasTool } from "./canvasTool";
 import { LiveRedaction, LiveShape } from "./LiveLayerContent";
 import type { LiveTransform } from "./liveTransform";

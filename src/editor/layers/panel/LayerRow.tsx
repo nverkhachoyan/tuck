@@ -23,14 +23,14 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { assertNever } from "@/model/assertNever";
-import type { Layer } from "@/model/layers/layer";
-import type { RedactionEffect } from "@/model/layers/redaction";
 import { hapticTick } from "@/platform/haptics";
 import { IconButton } from "@/ui/IconButton";
 import { chosenOnWeb } from "@/ui/interaction";
 import { colors, radii, typography } from "@/ui/theme";
+import { assertNever } from "../../document/assertNever";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
+import type { Layer } from "../layer";
+import type { RedactionEffect } from "../redaction/redaction";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 export const ROW_HEIGHT = 52;

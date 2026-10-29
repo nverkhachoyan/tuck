@@ -1,19 +1,22 @@
 import {
+	createDocumentFromImage,
+	type EditorDocument,
+} from "@src/editor/document/document.ts";
+import {
 	type AdjustmentKey,
 	type Adjustments,
 	adjustmentKeys,
 	neutralAdjustments,
-} from "@model/adjustments.ts";
+} from "@src/editor/layers/image/adjustments.ts";
 import {
-	createDocumentFromImage,
-	type EditorDocument,
-} from "@model/document.ts";
-import { type ImageLayer, withAdjustments } from "@model/layers/image.ts";
+	type ImageLayer,
+	withAdjustments,
+} from "@src/editor/layers/image/image.ts";
 import {
 	type Layer,
 	reorderLayer,
 	resizeLayerBox,
-} from "@model/layers/layer.ts";
+} from "@src/editor/layers/layer.ts";
 import {
 	createShapeLayer,
 	isLine,
@@ -21,7 +24,7 @@ import {
 	type ShapeEdit,
 	type ShapeKind,
 	type ShapeLayer,
-} from "@model/layers/shape.ts";
+} from "@src/editor/layers/shape/shape.ts";
 import { useState } from "react";
 import { SourceView } from "../../source/SourceView.tsx";
 import type { SourceFile } from "../../source/sources.ts";
@@ -357,32 +360,32 @@ export function IdentityLesson() {
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
 			label: "withAdjustments",
-			file: "src/model/layers/image.ts",
+			file: "src/editor/layers/image/image.ts",
 			name: "withAdjustments",
 		},
 		{
 			label: "restyleShape",
-			file: "src/model/layers/shape.ts",
+			file: "src/editor/layers/shape/shape.ts",
 			name: "restyleShape",
 		},
 		{
 			label: "reorderLayer",
-			file: "src/model/layers/layer.ts",
+			file: "src/editor/layers/layer.ts",
 			name: "reorderLayer",
 		},
 		{
 			label: "resizeLayerBox",
-			file: "src/model/layers/layer.ts",
+			file: "src/editor/layers/layer.ts",
 			name: "resizeLayerBox",
 		},
 		{
 			label: "setAdjustments",
-			file: "src/model/edits/adjust.ts",
+			file: "src/editor/layers/image/imageEdits.ts",
 			name: "setAdjustments",
 		},
 		{
 			label: "resizeBox",
-			file: "src/model/edits/layers.ts",
+			file: "src/editor/layers/layerEdits.ts",
 			name: "resizeBox",
 		},
 		{
@@ -415,7 +418,7 @@ export function IdentityLesson() {
 
 	return (
 		<article className="lesson">
-			<p className="eyebrow">The model · Lesson 3</p>
+			<p className="eyebrow">The document · Lesson 3</p>
 			<h1>Same object, or a new one</h1>
 			<p className="lede">
 				Model functions never change a layer in place. They return a new object,

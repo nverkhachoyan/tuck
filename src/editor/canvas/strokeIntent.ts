@@ -2,8 +2,8 @@ import {
 	type Point,
 	rectFromCorners,
 	type Size,
-} from "../../model/geometry.ts";
-import { isLineShape } from "../../model/layers/shape.ts";
+} from "../document/geometry.ts";
+import { isLineShape } from "../layers/shape/shape.ts";
 import type { CanvasTool, ToolStroke } from "./canvasTool.ts";
 import { shapeFromDrag } from "./shapeDrag.ts";
 

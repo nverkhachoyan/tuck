@@ -1,5 +1,5 @@
 import { Paragraph, Path } from "react-native-skia";
-import type { TextLayer } from "@/model/layers/text";
+import type { TextLayer } from "./text";
 import { layoutTextLayer } from "./textLayerLayout";
 
 /**

@@ -1,4 +1,4 @@
-import type { Size } from "../model/geometry.ts";
+import type { Size } from "../editor/core.ts";
 
 // Larger photos are scaled down to this many pixels. The editor and export
 // each hold the photo decoded in full, so 48MP and larger camera modes can run

@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
-import type { ColorMatrix } from "@/model/adjustments";
-import { assertNever } from "@/model/assertNever";
-import type { ImageLayer } from "@/model/layers/image";
-import type { Layer } from "@/model/layers/layer";
-import type { RedactionMask } from "@/model/layers/redaction";
+import { assertNever } from "../document/assertNever";
 import { useDecodedImage } from "../render/useDecodedImage";
 import { DrawingLayerView } from "./drawing/DrawingLayerView";
+import type { ColorMatrix } from "./image/adjustments";
 import { ImageLayerView } from "./image/ImageLayerView";
+import type { ImageLayer } from "./image/image";
+import type { Layer } from "./layer";
 import { RedactionLayerView } from "./redaction/RedactionLayerView";
+import type { RedactionMask } from "./redaction/redaction";
 import { ShapeLayerView } from "./shape/ShapeLayerView";
 import { TextLayerView } from "./text/TextLayerView";
 

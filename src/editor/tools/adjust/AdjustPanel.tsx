@@ -6,9 +6,12 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { type AdjustmentKey, adjustmentKeys } from "@/model/adjustments";
 import { Chip } from "@/ui/Chip";
 import { colors, radii, space, typography } from "@/ui/theme";
+import {
+	type AdjustmentKey,
+	adjustmentKeys,
+} from "../../layers/image/adjustments";
 import { Dial } from "../../shell/Dial";
 import {
 	ADJUST_DIAL_MAX,

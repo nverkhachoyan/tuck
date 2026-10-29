@@ -24,13 +24,13 @@ export type Chapter = {
 };
 
 // In the order a new reader should take them: the imports flow from the
-// screens down to the model, so reading upward means every file only uses
+// screens down to the document, so reading upward means every file only uses
 // what's already been covered.
 export const chapters: Chapter[] = [
 	{
 		id: "model",
-		title: "The model",
-		folder: "src/model",
+		title: "The document",
+		folder: "src/editor/document",
 		lessons: [
 			{
 				id: "transforms",

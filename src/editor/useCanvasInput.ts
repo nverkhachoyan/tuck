@@ -1,8 +1,8 @@
-import type { EditorDocument } from "@/model/document";
-import type { Point } from "@/model/geometry";
 import type { ToolStroke } from "./canvas/canvasTool";
 import { canvasInputFor } from "./canvasInputFor";
 import type { ToolControllers } from "./defineTool";
+import type { EditorDocument } from "./document/document";
+import type { Point } from "./document/geometry";
 import type { EditorModeAction, Eyedropper } from "./editorMode";
 import { sampleColor } from "./render/renderDocument";
 import { isCustomColor } from "./shell/ColorSwatches";

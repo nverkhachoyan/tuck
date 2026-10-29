@@ -25,15 +25,15 @@ import {
 	type Point,
 	type Transform,
 	toLayerSpace,
-} from "@/model/geometry";
+} from "../../document/geometry";
+import { pathFor } from "../drawing/DrawingLayerView";
+import { drawingBox, type MaskStroke } from "../strokes";
 import type {
 	RedactionEffect,
 	RedactionLayer,
 	RedactionMask,
 	RedactionStrokes,
-} from "@/model/layers/redaction";
-import { drawingBox, type MaskStroke } from "@/model/strokes";
-import { pathFor } from "../drawing/DrawingLayerView";
+} from "./redaction";
 
 // How far past its sigma a blur reads what's around it: beyond three sigmas,
 // a Gaussian's weights round to nothing.

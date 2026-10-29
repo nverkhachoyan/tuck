@@ -1,18 +1,18 @@
-import type { Point, Rect } from "../../model/geometry.ts";
+import type { Point, Rect } from "../document/geometry.ts";
 import {
 	type Brush,
 	layerBlend,
 	strokeBlend,
-} from "../../model/layers/drawing.ts";
-import type { CutStroke } from "../../model/layers/image.ts";
-import type { Layer } from "../../model/layers/layer.ts";
-import type { RedactionEffect } from "../../model/layers/redaction.ts";
+} from "../layers/drawing/drawing.ts";
+import type { CutStroke } from "../layers/image/image.ts";
+import type { Layer } from "../layers/layer.ts";
+import type { RedactionEffect } from "../layers/redaction/redaction.ts";
 import type {
 	ShapeKind,
 	ShapePlacement,
 	ShapeStyle,
-} from "../../model/layers/shape.ts";
-import type { MaskStroke } from "../../model/strokes.ts";
+} from "../layers/shape/shape.ts";
+import type { MaskStroke } from "../layers/strokes.ts";
 import type { Handle } from "./handleGeometry.ts";
 
 /**

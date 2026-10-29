@@ -1,12 +1,12 @@
 import type { ComponentType, ReactNode } from "react";
 import type { DerivedValue } from "react-native-reanimated";
-import type { EditorDocument } from "@/model/document";
-import type { Point, Rect, Size } from "@/model/geometry";
-import type { ImageLayer } from "@/model/layers/image";
-import type { Layer } from "@/model/layers/layer";
 import type { ToolStroke } from "./canvas/canvasTool";
 import type { CanvasInput } from "./canvasInputFor";
+import type { EditorDocument } from "./document/document";
+import type { Point, Rect, Size } from "./document/geometry";
 import type { EditorHost, PickedImage } from "./editorHost";
+import type { ImageLayer } from "./layers/image/image";
+import type { Layer } from "./layers/layer";
 import type { LayerAction } from "./shell/LayerActionsPanel";
 import type { OwnTool } from "./shell/toolList";
 import type { ToolId, ToolSpec } from "./toolSpec";

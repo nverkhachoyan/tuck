@@ -1,15 +1,15 @@
+import type {
+	DetectionFeature,
+	DetectionRect,
+} from "../../detection/imageDetection.ts";
 import {
 	cosSin,
 	type Point,
 	type Size,
 	toDocumentSpace,
-} from "../../../model/geometry.ts";
-import type { ImageLayer } from "../../../model/layers/image.ts";
-import type { RedactionBoxPlacement } from "../../../model/layers/redaction.ts";
-import type {
-	DetectionFeature,
-	DetectionRect,
-} from "../../detection/imageDetection.ts";
+} from "../../document/geometry.ts";
+import type { ImageLayer } from "../../layers/image/image.ts";
+import type { RedactionBoxPlacement } from "../../layers/redaction/redaction.ts";
 
 export type MappedDetectionRect = RedactionBoxPlacement & {
 	sourceIndex: number;

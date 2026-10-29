@@ -7,12 +7,6 @@ import {
 	useDerivedValue,
 } from "react-native-reanimated";
 import { Canvas, Fill, Group, Path, Skia } from "react-native-skia";
-import {
-	type PhotoPlacement,
-	rebaseTransform,
-	turnsWithPhoto,
-} from "@/model/framing";
-import type { Layer } from "@/model/layers/layer";
 import { colors } from "@/ui/theme";
 import { CanvasBackground } from "../../canvas/Checkerboard";
 import { type CanvasCursor, cursorStyle } from "../../canvas/canvasCursor";
@@ -22,7 +16,13 @@ import {
 	SELECTION_STROKE_PX,
 } from "../../canvas/SelectionOverlay";
 import type { DocumentViewport } from "../../canvas/viewport";
+import {
+	type PhotoPlacement,
+	rebaseTransform,
+	turnsWithPhoto,
+} from "../../document/framing";
 import { LayerContent } from "../../layers/LayerContent";
+import type { Layer } from "../../layers/layer";
 import { toTransformList } from "../../layers/layerTransform";
 import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";

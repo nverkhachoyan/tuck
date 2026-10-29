@@ -7,11 +7,11 @@ import {
 	ImageFormat,
 	type SkImage,
 } from "react-native-skia";
-import { type EditorDocument, hasTransparency } from "@/model/document";
-import type { Rect } from "@/model/geometry";
-import type { ImageLayer } from "@/model/layers/image";
 import { averageColor } from "@/ui/color";
+import { type EditorDocument, hasTransparency } from "../document/document";
+import type { Rect } from "../document/geometry";
 import { CutCoverage, ImageLayerView } from "../layers/image/ImageLayerView";
+import type { ImageLayer } from "../layers/image/image";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";

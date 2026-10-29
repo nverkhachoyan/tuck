@@ -1,5 +1,5 @@
-import type { LayerGroup } from "../../../model/document.ts";
-import type { Layer } from "../../../model/layers/layer.ts";
+import type { LayerGroup } from "../../document/document.ts";
+import type { Layer } from "../layer.ts";
 
 export type LayerListEntry =
 	| { type: "layer"; layer: Layer }

@@ -1,9 +1,9 @@
 import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import type { PenTip } from "@/model/layers/drawing";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, space, typography } from "@/ui/theme";
+import type { PenTip } from "../layers/drawing/drawing";
 import { BarChip } from "./ContextBar";
 
 // The dock's widest, so a tray lines up with the dock it rises out of.
