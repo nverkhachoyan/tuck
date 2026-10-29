@@ -2,7 +2,7 @@
 
 Written October 28, 2026. This plan moves the editor's in-place text editing (the hidden input, the caret and selection drawn with Skia, and the gesture that places them) into a workspace package, `packages/skia-text-input`, and then asks whether Text should become a tool.
 
-**Status:** steps 1 to 4 built on October 28, 2026.
+**Status:** all five steps built on October 28, 2026. Not published (section 6).
 
 What building it found:
 * Expo's default Metro config resolved the workspace link with no `metro.config.js`, and so did the docs' Vite and `tsc`.
@@ -14,6 +14,10 @@ What building it found:
 * Checked on web (headless Chrome) and the iPhone 17 Pro simulator: typing, the caret on an empty line and blinking, Select All's highlight with the empty line's filler, a font change keeping the keyboard (a real click on web), typing over a selection, Escape on web, and ✓.
 * `useCanvasTextGesture` takes `text` and `toIndex(x, y, clamp)`; Tuck's `useTextEditGesture` keeps the viewport, the layer's hit box with its padding, and the tap slop (a `tapSlop` option). The package keeps its own copy of the double tap timing (`doubleTap.ts`, not exported), so the editor's `createDoubleTap` stays for zooming, and its own fine pointer check for hover. Gesture Handler and Worklets joined the peers, optional like Reanimated.
 * Checked step 4 on web (headless Chrome: a tap places the caret, a double tap selects the word, a drag selects, clamped past the text, and a tap off it finishes) and on the iPhone simulator (tap, drag, tap away). Headless Chrome's synthetic mouse doesn't change the canvas cursor, on this step or step 3's build, so hover went unchecked; and there the first drag after a tap selects nothing, on step 3's build too, while iOS's did.
+* Step 5: `pnpm --dir packages/skia-text-input build` emits `lib/` (gitignored) with `tsconfig.build.json`, and `prepack` builds it, so a pack is never stale. pnpm swaps `publishConfig.exports` in when it packs, and the tarball holds `lib/`, `src/` (for the source maps), and the README. The `.d.ts` files keep `.ts` and `.tsx` in their imports, which TypeScript accepts in declaration files.
+* The pack, tried in a fresh `create-expo-app` (SDK 58, npm, which picked Skia 3.8 for the `>=2.15` peer): it type-checks through both entries, bundles for iOS and the web, the app's Babel transforms the package's worklets, and on the iPhone simulator a tap places the caret, a drag selects, and typing replaces the selection.
+* The trial found a bug Tuck hid: iOS never reports a selection set from code to `onSelectionChange`, and Tuck's `select` stored the selection itself. `HiddenTextInput` now reports what `select` and `initialSelection` place, and Tuck's `select` relies on that (checked again in Tuck on iOS and the web).
+* It also showed Reanimated warning, on native, about `Caret`'s dependency lists, which native ignores; `Caret` dropped them. About seven of Tuck's own `useDerivedValue` calls still pass one.
 * Seen, not caused by step 3: on iOS, a selection shows the system's selection handles at the hidden input, behind the header's top left; and once on web, the first switch to Modern drew the outline off its letters, which four more fresh runs on this step and the last didn't repeat.
 
 ## 1. Why
@@ -72,6 +76,7 @@ Making the editor itself a package is a separate decision, made when something o
 
 Publish when someone asks for it or Tuck isn't its only user, and the API has held still for a while.
 
+* Remove `"private": true` (pnpm refuses to publish a private package) and add a `license`.
 * Create the `tuck` organization on npm first (free for public packages), or rename the package if it's taken.
 * `pnpm --dir packages/skia-text-input publish --access public` (a scoped package publishes as private without it) works from this private repository; pnpm turns `workspace:*` into the version.
 * A private repository means no public source, issues, or npm provenance, and its `repository` link would 404. Ship `src/` in the tarball, and mirror the folder to a public repository with `git subtree split --prefix packages/skia-text-input` if it should be open.

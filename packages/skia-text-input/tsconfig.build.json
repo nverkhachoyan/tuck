@@ -1,0 +1,25 @@
+{
+	// Emits `lib/` for publishing (`publishConfig`); the app, Node's tests,
+	// and the docs read `src/` directly.
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["DOM", "ES2023"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"customConditions": ["react-native"],
+		"jsx": "react-jsx",
+		"strict": true,
+		"skipLibCheck": true,
+		"types": [],
+		"rootDir": "src",
+		"outDir": "lib",
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true,
+		// Source imports end in `.ts`, which Node's tests need; the output's
+		// end in `.js`.
+		"rewriteRelativeImportExtensions": true
+	},
+	"include": ["src"],
+	"exclude": ["src/__tests__"]
+}

@@ -51,3 +51,6 @@ public/mobile-sam-worker.js
 
 # Vercel CLI (local `vercel build`)
 .vercel/
+
+# Workspace packages build here only to publish
+packages/*/lib/
