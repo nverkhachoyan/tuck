@@ -3,9 +3,9 @@ import { ImageFormat } from "react-native-skia";
 import type { Rect } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
 import { writeTemporaryPng } from "@/platform/temporaryFile";
-import { renderCutShape } from "@/render/renderDocument";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
+import { renderCutShape } from "../../render/renderDocument";
 
 // A selection's mask is stretched over what it covers, so it needn't have
 // every pixel of a large photo: soft edges hide the difference.

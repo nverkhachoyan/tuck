@@ -28,7 +28,7 @@ it, so a change to something a lesson covers fails until the lesson is updated.
 
 ## The rendering lessons
 
-The rendering chapter draws with the app's real `src/render/` code, on
+The rendering chapter draws with the app's real `src/editor/render/` and `src/editor/layers/` code, on
 React Native Skia's web build (CanvasKit) and React Native Web, taken from the
 repo root's `node_modules` at the versions the app runs (the root's
 `pnpm install` installs both). `vite.config.ts` makes that work outside Metro: it maps

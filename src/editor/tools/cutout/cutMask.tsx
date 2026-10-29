@@ -10,8 +10,8 @@ import {
 	Image as SkiaImage,
 } from "react-native-skia";
 import type { ImageLayer } from "@/model/layers/image";
-import { drawOffscreen } from "@/render/drawOffscreen";
-import { CutMask, imageBox } from "@/render/layers/ImageLayerView";
+import { CutMask, imageBox } from "../../layers/image/ImageLayerView";
+import { drawOffscreen } from "../../render/drawOffscreen";
 
 // Turns white into black and black into white. Its last column is in 0–1
 // units.

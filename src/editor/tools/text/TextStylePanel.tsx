@@ -8,7 +8,6 @@ import {
 	type TextLayerEdit,
 	textFonts,
 } from "@/model/layers/text";
-import { TEXT_FONTS } from "@/render/fonts";
 import { Chip } from "@/ui/Chip";
 import { ColorPicker } from "@/ui/ColorPicker";
 import { FadeRow, MeasuredItem } from "@/ui/FadeRow";
@@ -16,6 +15,7 @@ import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { colors, typography, webTransition } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../../editorContext";
+import { TEXT_FONTS } from "../../layers/text/fonts";
 import { ColorChip } from "../../shell/ColorOptions";
 import { ColorSwatches, customSwatch } from "../../shell/ColorSwatches";
 import {

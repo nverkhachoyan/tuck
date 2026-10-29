@@ -13,8 +13,6 @@ import {
 	turnsWithPhoto,
 } from "@/model/framing";
 import type { Layer } from "@/model/layers/layer";
-import { LayerContent } from "@/render/LayerContent";
-import { toTransformList } from "@/render/layerTransform";
 import { colors } from "@/ui/theme";
 import { CanvasBackground } from "../../canvas/Checkerboard";
 import { type CanvasCursor, cursorStyle } from "../../canvas/canvasCursor";
@@ -24,6 +22,8 @@ import {
 	SELECTION_STROKE_PX,
 } from "../../canvas/SelectionOverlay";
 import type { DocumentViewport } from "../../canvas/viewport";
+import { LayerContent } from "../../layers/LayerContent";
+import { toTransformList } from "../../layers/layerTransform";
 import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
 import { useCropGesture } from "./useCropGesture";

@@ -11,12 +11,12 @@ import { averageColor } from "@/model/color";
 import { type EditorDocument, hasTransparency } from "@/model/document";
 import type { Rect } from "@/model/geometry";
 import type { ImageLayer } from "@/model/layers/image";
+import { CutCoverage, ImageLayerView } from "../layers/image/ImageLayerView";
 import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";
 import { drawOffscreen } from "./drawOffscreen";
 import { keptBounds } from "./keptBounds";
-import { CutCoverage, ImageLayerView } from "./layers/ImageLayerView";
 
 // A thumbnail's shorter side, in pixels: a project card's print on a phone
 // at 3x.

@@ -20,9 +20,9 @@ pnpm test        # after touching model/, store slices, or other pure modules
 pnpm build:web   # after changing .web files, the entry files, or untyped imports
 ```
 
-Changing `render/`'s imports, or something an "Inside Tuck" lesson quotes,
-can break `pnpm --dir docs/interactive build`; update the lesson in the
-same change.
+Changing the imports of `src/editor/render/` or the layer views, or something
+an "Inside Tuck" lesson quotes, can break `pnpm --dir docs/interactive build`;
+update the lesson in the same change.
 
 ## Commits
 

@@ -1,6 +1,12 @@
 import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { closeDocument, getSession, openDocument, useSession } from "@/editor";
+import {
+	closeDocument,
+	getSession,
+	openDocument,
+	renderThumbnail,
+	useSession,
+} from "@/editor";
 import type { EditorDocument } from "@/model/document";
 import {
 	isProjectOpenElsewhere,
@@ -8,7 +14,6 @@ import {
 } from "@/projects/projectLifecycle";
 import { projectRouteId, UNSAVED_PROJECT } from "@/projects/projectRoute";
 import { closeProject, openProject } from "@/projects/projectService";
-import { renderThumbnail } from "@/render/renderDocument";
 import { errorMessage } from "@/ui/errorMessage";
 
 type ProjectSession =

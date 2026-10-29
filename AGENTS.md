@@ -32,16 +32,16 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ### Skia
 
-- `useImage()` fails silently (a decode error resolves to `null`, and a failed read rejects unhandled without calling `onError`). Load image layers with `decodeImage` through the `decodedImages` cache (`render/decodedImages.ts`).
+- `useImage()` fails silently (a decode error resolves to `null`, and a failed read rejects unhandled without calling `onError`). Load image layers with `decodeImage` through the `decodedImages` cache (`editor/render/decodedImages.ts`).
 - A hook holding an image from `decodedImages` must forget it in the same cleanup that releases it, or a URI that comes back hands Skia a freed image ("Cannot pass deleted object as a pointer of type Image const*" on web). Anything that keeps an image past its holder (an `SkPicture`) must be cached by the decoded image.
 - A backdrop filter reads only the layer it's drawn in: inside a `Group layer`, a `Mask`, or anything else that saves a layer, it blurs nothing. The same goes for a blend mode, which blends onto that layer alone. Keep document layers drawn straight onto the canvas. A filter's sigma is mapped through the canvas transform, so document-unit blurs look the same at any zoom.
 - Skia's web build throws for runtime-shader, matrix-transform, tile, and picture image filters. Build effects from blur, displacement map, shader, offset, and morphology filters. A displacement map samples nearest-neighbor from 8-bit offsets, and its shader draws in the canvas's color space: on a P3 canvas a red or green offset bleeds into other channels, and only gray passes unchanged.
 - On iOS a `Canvas` defaults to Display P3, while offscreen renders and web are sRGB: a canvas that previews the document sets `colorSpace="srgb"`. A `ColorMatrix`'s last column is in 0–1 units, not 0–255.
 - CanvasKit's `readPixels` returns null for `Gray_8` from a GPU surface: read `RGBA_8888` and keep one channel. `Skia.Image.MakeImage` with `Gray_8` does work on web.
-- On web each `drawAsImage` makes its own WebGL context, and the browser drops the oldest: draw offscreen with `drawOffscreen` (`render/drawOffscreen.ts`). Don't give a Skia canvas that must keep up with quick changes a large `SkImage` something else will dispose.
+- On web each `drawAsImage` makes its own WebGL context, and the browser drops the oldest: draw offscreen with `drawOffscreen` (`editor/render/drawOffscreen.ts`). Don't give a Skia canvas that must keep up with quick changes a large `SkImage` something else will dispose.
 - Give `beginRecording` explicit bounds: on web it defaults to a rect from (0, 0), culling anything left of or above the origin.
 - A `Group`'s `opacity` doesn't fade a paragraph: fade through a layer, `<Group layer={<Paint opacity={…} />}>`.
-- Skia paragraphs on web throw without a font provider: build every paragraph with `getFontProvider()` from `render/fonts.ts`.
+- Skia paragraphs on web throw without a font provider: build every paragraph with `getFontProvider()` from `editor/layers/text/fonts.ts`.
 - `getRectsForRange` gives an empty or whitespace-only line no box, so caret geometry measures a copy with a filler on each empty line (`caretText` in `packages/skia-text-input/`).
 - On web, Skia can drop redraws asked for while its surface is being set up, so a scene driven only by shared values can stay blank. Mount the drawing once the view has a size, as `EditorCanvas` and `CropCanvas` do.
 - On web, Skia binds to CanvasKit when its module is first evaluated, so anything importing Skia before CanvasKit loads gets a dead API that throws only when called. Keep `index.web.ts`'s load order.
@@ -86,9 +86,9 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ## Conventions
 
-- Keep imports flowing one way (`app` → `screens` → `editor` → `photos` / `projects` / `render` → `model`, with `ui/` and `platform/` beneath); docs/architecture.md lists the rules, and nothing checks them: read it before adding an import across folders, and update it when the structure changes.
+- Keep imports flowing one way (`app` → `screens` → `editor` → `photos` / `projects` → `model`, with `ui/` and `platform/` beneath); docs/architecture.md lists the rules, and nothing checks them: read it before adding an import across folders, and update it when the structure changes.
 - Keep `biome.json` small: formatting and the recommended lint rules, and add to it only when something can't be caught any other way. Don't add import-boundary overrides or an import-checking script; if a boundary truly needs a check, keep it to a few lines.
-- Only routes go in `src/app/`; screens live in `src/screens/` and don't import each other. `model/` stays plain TypeScript (no React, React Native, or Skia), and `render/` never reads the editor's store.
+- Only routes go in `src/app/`; screens live in `src/screens/` and don't import each other. `model/` stays plain TypeScript (no React, React Native, or Skia), and the editor's `render/` and layer views (`editor/layers/`) never read its store.
 - Take colors from `colors` in `ui/theme.ts`, never literals that assume one palette (day or night is picked at launch and never switches while running). Draw over the photo in `colors.selection`; fade to a palette color with `fadeTo`.
 - Take text sizes and weights from `typography`, corners from `radii`, and gaps from `space`; a one-off gap off the scale may stay literal. Literal font sizes only for Anton display text, font previews, and the text editor's 16px hidden input. Circles keep half their size as a radius.
 - Name component files in PascalCase, other modules in camelCase. Prefer growing an existing file over adding a single-use one; split a file when it gains a second responsibility.
@@ -97,7 +97,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - Tests live in `__tests__/` beside what they test, start with `/// <reference types="node" />` (TypeScript 6 no longer includes `@types` packages by default), and import with an explicit `.ts` extension (Node's type stripping needs it). A tested module imports its dependencies by relative `.ts` path and nothing React-based (store slices import only types from `zustand`; tests use `createStore` from `zustand/vanilla`).
 - A tool's hook (`useController`) runs in `Editor`'s body, above the `EditorContext` provider, so it can't read the context: give it what it needs through `ToolEnv`, the store, or a shared preference. Only a tool's views read `editorContext.ts`.
 - Outside `src/editor/`, import the editor only from `@/editor`. Inside it, nothing but `builtInSpecs.ts` and `builtInTools.ts` imports a tool, and tools don't import each other.
-- Renaming or retyping something a `docs/interactive` lesson covers, or changing `render/`'s imports, can break that build: update the lesson in the same change.
+- Renaming or retyping something a `docs/interactive` lesson covers, or changing the imports of `editor/render/` or the layer views, can break that build: update the lesson in the same change.
 
 ## Git Commits
 

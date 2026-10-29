@@ -2,10 +2,10 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { SkImage } from "react-native-skia";
-import { withMask } from "../../model/cutout.ts";
-import { createDocumentFromImage } from "../../model/document.ts";
-import type { ImageLayer } from "../../model/layers/image.ts";
-import { duplicateLayer } from "../../model/layers/layer.ts";
+import { withMask } from "../../../model/cutout.ts";
+import { createDocumentFromImage } from "../../../model/document.ts";
+import type { ImageLayer } from "../../../model/layers/image.ts";
+import { duplicateLayer } from "../../../model/layers/layer.ts";
 import { decodeImageLayers } from "../decodeImageLayers.ts";
 import { createImageCache } from "../imageCache.ts";
 

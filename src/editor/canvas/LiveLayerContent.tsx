@@ -28,9 +28,9 @@ import {
 	recordMaskedRedaction,
 	redactionFilter,
 	strokesPicture,
-} from "@/render/layers/RedactionLayerView";
-import { shapePath } from "@/render/layers/ShapeLayerView";
-import { useDecodedImage } from "@/render/useDecodedImage";
+} from "../layers/redaction/RedactionLayerView";
+import { shapePath } from "../layers/shape/ShapeLayerView";
+import { useDecodedImage } from "../render/useDecodedImage";
 import {
 	type LiveTransform,
 	liveBoxOf,

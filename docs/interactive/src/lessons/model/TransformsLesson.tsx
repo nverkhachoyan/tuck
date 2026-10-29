@@ -518,7 +518,8 @@ export function TransformsLesson() {
 				</div>
 				<p className="where-used">
 					<strong>Where it's used:</strong> rendering builds Skia's transform
-					list from the same five numbers (<code>render/layerTransform.ts</code>
+					list from the same five numbers (
+					<code>editor/layers/layerTransform.ts</code>
 					), and the editor's gestures, selection handles, and detection results
 					all convert through <code>toLayerSpace</code> and{" "}
 					<code>toDocumentSpace</code>.

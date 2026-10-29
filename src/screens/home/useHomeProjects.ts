@@ -1,6 +1,11 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { closeDocument, getSession, openDocument } from "@/editor";
+import {
+	closeDocument,
+	getSession,
+	openDocument,
+	renderThumbnail,
+} from "@/editor";
 import { createDocumentFromImage, type EditorDocument } from "@/model/document";
 import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
@@ -19,7 +24,6 @@ import {
 	renameProject,
 	updateThumbnail,
 } from "@/projects/projectService";
-import { renderThumbnail } from "@/render/renderDocument";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 

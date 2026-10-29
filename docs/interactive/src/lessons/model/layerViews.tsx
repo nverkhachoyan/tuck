@@ -22,7 +22,7 @@ export function svgMatrix(transform: Transform): string {
 	return `matrix(${a} ${b} ${c} ${d} ${tx} ${ty})`;
 }
 
-// The app lays text out with a Skia paragraph (`render/textLayerLayout.ts`),
+// The app lays text out with a Skia paragraph (`editor/layers/text/textLayerLayout.ts`),
 // which a browser can't run without CanvasKit. This measures with a 2D
 // canvas instead, wrapping and sizing the block the same way: close, but not
 // to the pixel.

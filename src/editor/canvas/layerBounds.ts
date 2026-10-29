@@ -3,7 +3,7 @@ import type { Box } from "@/model/geometry";
 import type { Layer } from "@/model/layers/layer";
 import { shapeBox } from "@/model/shapes";
 import { drawingBox } from "@/model/strokes";
-import { textLayerBounds } from "@/render/textLayerLayout";
+import { textLayerBounds } from "../layers/text/textLayerLayout";
 
 /**
  * The box a layer occupies in its own space, centered on its origin. The

@@ -9,7 +9,7 @@ import {
 
 export type TextAlign = "left" | "center" | "right";
 
-// Named for how they look; `render/fonts.ts` maps each to its bundled font.
+// Named for how they look; `editor/layers/text/fonts.ts` maps each to its bundled font.
 export const textFonts = [
 	"classic",
 	"modern",

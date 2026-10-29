@@ -12,10 +12,10 @@ import {
 	withPlaceholder,
 } from "@/model/layers/text";
 import { usePreference } from "@/platform/usePreference";
-import { textIndexAt } from "@/render/textLayerLayout";
 import { layerBounds } from "../../canvas/layerBounds";
 import type { CanvasInput } from "../../canvasInputFor";
 import type { ToolEnv } from "../../defineTool";
+import { textIndexAt } from "../../layers/text/textLayerLayout";
 import { useStore } from "../../store";
 import { selectSelectedTextLayer } from "../../store/editorSlice";
 import {

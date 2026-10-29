@@ -36,10 +36,10 @@ has the rules, which `biome.json` enforces.
 src/
   app/        routes only (Expo Router)
   screens/    home, create, export, info, and the editor's route
-  editor/     the editor, entered through index.ts; tools/ holds one folder per tool
+  editor/     the editor, entered through index.ts; tools/ holds one folder per tool,
+              layers/ one per layer type, and render/ draws a document with Skia
   photos/     picking and importing photos
   projects/   saving projects on the device
-  render/     drawing a document with Skia, for the canvas and export
   model/      the document and its edits, in plain TypeScript
   site/       the web site's pages and metadata
   ui/         shared controls and the theme

@@ -30,7 +30,7 @@ import { hapticTick } from "@/platform/haptics";
 import { IconButton } from "@/ui/IconButton";
 import { chosenOnWeb } from "@/ui/interaction";
 import { colors, radii, typography } from "@/ui/theme";
-import { SHAPE_ICONS, SHAPE_NAMES } from "../shell/shapeIcons";
+import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 export const ROW_HEIGHT = 52;

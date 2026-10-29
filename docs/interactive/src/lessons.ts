@@ -90,7 +90,7 @@ export const chapters: Chapter[] = [
 	{
 		id: "render",
 		title: "Rendering",
-		folder: "src/render",
+		folder: "src/editor/render",
 		lessons: [
 			{
 				id: "layer-content",

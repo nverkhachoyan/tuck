@@ -14,7 +14,7 @@ import { BottomSheet, PanelHeader } from "@/ui/BottomSheet";
 import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, typography } from "@/ui/theme";
-import type { EditorStoreActions } from "../store/editorSlice";
+import type { EditorStoreActions } from "../../store/editorSlice";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 import { layerListEntries } from "./layerListEntries";
 

@@ -12,7 +12,7 @@ import {
 } from "react-native-skia";
 import { adjustmentMatrix, type ColorMatrix } from "@/model/adjustments";
 import type { CutStroke, ImageLayer } from "@/model/layers/image";
-import { pathFor } from "./DrawingLayerView";
+import { pathFor } from "../drawing/DrawingLayerView";
 
 const MIRRORED = [{ scaleX: -1 }];
 // While a cut is refined, what it keeps is washed green and what it

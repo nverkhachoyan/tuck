@@ -5,7 +5,7 @@ import { Suspense, useState } from "react";
 import { Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { LoadFonts, resetFailedFonts } from "@/render/fonts";
+import { LoadFonts, resetFailedFonts } from "@/editor";
 import { PageHead } from "@/site/PageHead";
 import { SUPPORT_EMAIL } from "@/site/site";
 import { Button } from "@/ui/Button";

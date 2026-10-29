@@ -31,7 +31,7 @@ import { EditorContext, type EditorContextValue } from "./editorContext";
 import type { EditorHost } from "./editorHost";
 import { openTray, takesKeys } from "./editorMode";
 import { LayerSelectionBar, useArrangeSelected } from "./LayerSelectionBar";
-import { LayersPanel, layerListProps } from "./layers/LayersPanel";
+import { LayersPanel, layerListProps } from "./layers/panel/LayersPanel";
 import {
 	ContextBarContent,
 	DockContent,

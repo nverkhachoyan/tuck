@@ -26,20 +26,20 @@ import type {
 } from "@/model/layers/redaction";
 import { isLineShape } from "@/model/layers/shape";
 import { lineReach } from "@/model/shapes";
-import { LayerContent } from "@/render/LayerContent";
-import { BrushStroke, strokePath } from "@/render/layers/DrawingLayerView";
-import { MaskStrokePath } from "@/render/layers/ImageLayerView";
+import { colors } from "@/ui/theme";
+import { BrushStroke, strokePath } from "../layers/drawing/DrawingLayerView";
+import { MaskStrokePath } from "../layers/image/ImageLayerView";
+import { LayerContent } from "../layers/LayerContent";
+import {
+	toInverseTransformList,
+	toTransformList,
+} from "../layers/layerTransform";
 import {
 	maskMarks,
 	recordRedactionStrokes,
 	redactionFilter,
-} from "@/render/layers/RedactionLayerView";
-import { shapePath } from "@/render/layers/ShapeLayerView";
-import {
-	toInverseTransformList,
-	toTransformList,
-} from "@/render/layerTransform";
-import { colors } from "@/ui/theme";
+} from "../layers/redaction/RedactionLayerView";
+import { shapePath } from "../layers/shape/ShapeLayerView";
 import type { CanvasTool } from "./canvasTool";
 import { LiveRedaction, LiveShape } from "./LiveLayerContent";
 import type { LiveTransform } from "./liveTransform";

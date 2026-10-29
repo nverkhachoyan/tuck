@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { EditorDocument } from "@/model/document";
-import { layerKindName } from "./layers/LayerRow";
+import { layerKindName } from "./layers/panel/LayerRow";
 import { useStore } from "./store";
 
 // Long enough to read it and reach Undo, short enough not to linger.

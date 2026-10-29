@@ -19,7 +19,7 @@ const canvasKitWasm = require.resolve(
 /**
  * `@expo-google-fonts/<font>/<weight>` exports its file with a `require` of
  * a `.ttf`, which only Metro understands. Here it exports the file's URL,
- * which is what `render/fonts.ts` hands Skia in the end.
+ * which is what `editor/layers/text/fonts.ts` hands Skia in the end.
  */
 function expoGoogleFonts(): Plugin {
 	const prefix = "\0expo-google-font:";
@@ -66,7 +66,7 @@ export default defineConfig({
 			// change instead of quietly going stale.
 			{ find: /^@model\//, replacement: `${repoRoot}src/model/` },
 			{ find: /^@src\//, replacement: `${repoRoot}src/` },
-			// The app's own alias, which its `render/` code imports through.
+			// The app's own alias, which its rendering code imports through.
 			{ find: /^@\//, replacement: `${repoRoot}src/` },
 			// React Native Skia's web build runs on CanvasKit and React Native
 			// Web, as the app's web build does. It looks for Reanimated, and for

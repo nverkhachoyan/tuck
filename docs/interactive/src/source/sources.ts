@@ -1,5 +1,14 @@
 import hitTest from "@src/editor/canvas/hitTest.ts?raw";
 import layerBounds from "@src/editor/canvas/layerBounds.ts?raw";
+import imageLayerView from "@src/editor/layers/image/ImageLayerView.tsx?raw";
+import layerTransform from "@src/editor/layers/layerTransform.ts?raw";
+import redactionLayerView from "@src/editor/layers/redaction/RedactionLayerView.tsx?raw";
+import fonts from "@src/editor/layers/text/fonts.ts?raw";
+import textLayerView from "@src/editor/layers/text/TextLayerView.tsx?raw";
+import documentRenderScene from "@src/editor/render/DocumentRenderScene.tsx?raw";
+import decodedImages from "@src/editor/render/decodedImages.ts?raw";
+import decodeImageLayers from "@src/editor/render/decodeImageLayers.ts?raw";
+import renderDocument from "@src/editor/render/renderDocument.tsx?raw";
 import editorSlice from "@src/editor/store/editorSlice.ts?raw";
 import storeIndex from "@src/editor/store/index.ts?raw";
 import cropGeometry from "@src/editor/tools/crop/cropGeometry.ts?raw";
@@ -20,15 +29,6 @@ import layerShape from "@src/model/layers/shape.ts?raw";
 import layerText from "@src/model/layers/text.ts?raw";
 import shapes from "@src/model/shapes.ts?raw";
 import strokes from "@src/model/strokes.ts?raw";
-import documentRenderScene from "@src/render/DocumentRenderScene.tsx?raw";
-import decodedImages from "@src/render/decodedImages.ts?raw";
-import decodeImageLayers from "@src/render/decodeImageLayers.ts?raw";
-import fonts from "@src/render/fonts.ts?raw";
-import imageLayerView from "@src/render/layers/ImageLayerView.tsx?raw";
-import redactionLayerView from "@src/render/layers/RedactionLayerView.tsx?raw";
-import textLayerView from "@src/render/layers/TextLayerView.tsx?raw";
-import layerTransform from "@src/render/layerTransform.ts?raw";
-import renderDocument from "@src/render/renderDocument.tsx?raw";
 import exportFormat from "@src/screens/export/exportFormat.ts?raw";
 import exportSizes from "@src/screens/export/exportSizes.ts?raw";
 
@@ -51,15 +51,15 @@ export const sources = {
 	"src/model/layers/text.ts": layerText,
 	"src/model/shapes.ts": shapes,
 	"src/model/strokes.ts": strokes,
-	"src/render/decodeImageLayers.ts": decodeImageLayers,
-	"src/render/decodedImages.ts": decodedImages,
-	"src/render/DocumentRenderScene.tsx": documentRenderScene,
-	"src/render/fonts.ts": fonts,
-	"src/render/layers/ImageLayerView.tsx": imageLayerView,
-	"src/render/layerTransform.ts": layerTransform,
-	"src/render/layers/RedactionLayerView.tsx": redactionLayerView,
-	"src/render/renderDocument.tsx": renderDocument,
-	"src/render/layers/TextLayerView.tsx": textLayerView,
+	"src/editor/render/decodeImageLayers.ts": decodeImageLayers,
+	"src/editor/render/decodedImages.ts": decodedImages,
+	"src/editor/render/DocumentRenderScene.tsx": documentRenderScene,
+	"src/editor/layers/text/fonts.ts": fonts,
+	"src/editor/layers/image/ImageLayerView.tsx": imageLayerView,
+	"src/editor/layers/layerTransform.ts": layerTransform,
+	"src/editor/layers/redaction/RedactionLayerView.tsx": redactionLayerView,
+	"src/editor/render/renderDocument.tsx": renderDocument,
+	"src/editor/layers/text/TextLayerView.tsx": textLayerView,
 	"src/editor/canvas/hitTest.ts": hitTest,
 	"src/editor/canvas/layerBounds.ts": layerBounds,
 	"src/editor/tools/crop/cropGeometry.ts": cropGeometry,

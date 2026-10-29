@@ -2,7 +2,12 @@
 
 Written October 29, 2026. This plan moves `src/render/` and `src/model/` into `src/editor/`, and gathers everything about one layer type (its type, its edits, and its view) into one folder under `editor/layers/`.
 
-**Status:** not started.
+**Status:** step 1 built on October 29, 2026.
+
+What building it found:
+* `editor/layers/` (except `panel/`) and `editor/render/` import only each other and `model/`. The panel imports `shell/` and the store.
+* The canvas and the tools now reach the layer views and `render/` by relative path, since nothing in the editor imports `@/editor`. Inside the editor, those were `@/render/...` imports before.
+* Checked: the iOS bundle (`pnpm expo export -p ios`), and on the web export, a text layer with its font, a stroke, export's preview, and the home thumbnail, with no console errors.
 
 ## 1. Why
 

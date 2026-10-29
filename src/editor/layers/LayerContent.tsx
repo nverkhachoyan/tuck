@@ -4,12 +4,12 @@ import { assertNever } from "@/model/assertNever";
 import type { ImageLayer } from "@/model/layers/image";
 import type { Layer } from "@/model/layers/layer";
 import type { RedactionMask } from "@/model/layers/redaction";
-import { DrawingLayerView } from "./layers/DrawingLayerView";
-import { ImageLayerView } from "./layers/ImageLayerView";
-import { RedactionLayerView } from "./layers/RedactionLayerView";
-import { ShapeLayerView } from "./layers/ShapeLayerView";
-import { TextLayerView } from "./layers/TextLayerView";
-import { useDecodedImage } from "./useDecodedImage";
+import { useDecodedImage } from "../render/useDecodedImage";
+import { DrawingLayerView } from "./drawing/DrawingLayerView";
+import { ImageLayerView } from "./image/ImageLayerView";
+import { RedactionLayerView } from "./redaction/RedactionLayerView";
+import { ShapeLayerView } from "./shape/ShapeLayerView";
+import { TextLayerView } from "./text/TextLayerView";
 
 /**
  * A layer's content in its own space, loading images asynchronously.

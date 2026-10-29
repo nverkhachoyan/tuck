@@ -16,7 +16,7 @@
 		"paths": {
 			"@model/*": ["../../src/model/*"],
 			"@src/*": ["../../src/*"],
-			// The app's own alias, which its `render/` code imports through.
+			// The app's own alias, which its rendering code imports through.
 			"@/*": ["../../src/*"],
 			// One React's types for the docs and the app's code alike.
 			"react": ["./node_modules/@types/react"],

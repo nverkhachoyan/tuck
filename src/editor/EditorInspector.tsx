@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
 import type { DockPanel } from "./editorChrome";
-import { LayersPanel, type layerListProps } from "./layers/LayersPanel";
+import { LayersPanel, type layerListProps } from "./layers/panel/LayersPanel";
 import { InspectorContent, type PanelContext } from "./PanelViews";
 import { Inspector } from "./shell/Dock";
 

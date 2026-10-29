@@ -33,7 +33,7 @@ import type {
 	RedactionStrokes,
 } from "@/model/layers/redaction";
 import { drawingBox, type MaskStroke } from "@/model/strokes";
-import { pathFor } from "./DrawingLayerView";
+import { pathFor } from "../drawing/DrawingLayerView";
 
 // How far past its sigma a blur reads what's around it: beyond three sigmas,
 // a Gaussian's weights round to nothing.

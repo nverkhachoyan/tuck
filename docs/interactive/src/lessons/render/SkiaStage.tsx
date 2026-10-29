@@ -1,4 +1,4 @@
-import { LoadFonts } from "@src/render/fonts.ts";
+import { LoadFonts } from "@src/editor/layers/text/fonts.ts";
 import { type ReactNode, Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, Group } from "react-native-skia";
 
