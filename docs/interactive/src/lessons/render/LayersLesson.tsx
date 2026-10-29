@@ -144,9 +144,9 @@ export default function LayersLesson() {
 				<p>
 					Turn or scale the selected layer. Each layer is drawn inside a{" "}
 					<code>Group</code> with <code>toTransformList(transform)</code>:
-					translate, rotate, scale, the same five numbers as the model's first
-					lesson, in Skia's form. The blur keeps its strength, because its sigma
-					is divided by the layer's scale.
+					translate, rotate, scale, the same five numbers as the document's
+					first lesson, in Skia's form. The blur keeps its strength, because its
+					sigma is divided by the layer's scale.
 				</p>
 			),
 			done: ({ tried }) => tried.has("transform"),

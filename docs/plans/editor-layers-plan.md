@@ -2,7 +2,7 @@
 
 Written October 29, 2026. This plan moves `src/render/` and `src/model/` into `src/editor/`, and gathers everything about one layer type (its type, its edits, and its view) into one folder under `editor/layers/`.
 
-**Status:** steps 1 to 3 built on October 29, 2026.
+**Status:** all four steps built on October 29, 2026.
 
 What building it found:
 * `editor/layers/` (except `panel/`) and `editor/render/` import only each other and `model/`. The panel imports `shell/` and the store.
@@ -13,6 +13,8 @@ What building it found:
 * `drawingEdits.ts` keeps `drawStroke`, whose eraser removes shapes through `shape/shapeGeometry.ts`. `addShape` and `setShapeStyle` went to `shape/shapeEdits.ts`, and the cut-out edits joined `setAdjustments` in `image/imageEdits.ts`, with their tests split and merged the same way.
 * `@/editor/core` re-exports only what `projects/`, `photos/`, the screens, and the project tests use. The docs app dropped its `@model` alias and imports through `@src/`. The chapter's lesson eyebrows now say "The document", and lesson prose about "the model" as a concept stayed.
 * Checked on the web export: a saved project reopening, a shape, a redaction box, a quarter turn with Turn layers on, undo, and the Layers panel, with no console errors.
+* Step 4: architecture.md's Modules list now reads in order (the store, then `document/`, `layers/`, and `render/`, then the canvas and tools), with the export screen back beside the editor's route. The boundary claims were checked against the imports. AGENTS.md gained the layer folder convention and when to add to `core.ts`. The docs app's welcome page lists the new folders.
+* Seen, not caused by this plan: in the docs app's dev server, leaving the "Export is the same scene" lesson for another one blanks the page with "Cannot pass deleted object as a pointer of type sk_sp<Picture>" from Skia's `drawPicture`. `main` does the same.
 
 ## 1. Why
 

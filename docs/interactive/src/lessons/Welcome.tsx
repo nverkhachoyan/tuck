@@ -2,12 +2,16 @@ import { chapters } from "../lessons.ts";
 
 const layers = [
 	{ folder: "app", role: "Routes: each file registers a screen" },
-	{ folder: "screens", role: "Home, create, the editor and its tools, export" },
+	{ folder: "screens", role: "Home, create, the editor's route, export" },
+	{ folder: "photos · projects", role: "Import and saving" },
 	{
-		folder: "photos · projects · render · store",
-		role: "Import, saving, drawing, shared state",
+		folder: "editor · its store · render",
+		role: "The editor and its tools, shared state, drawing",
 	},
-	{ folder: "model", role: "The document as plain data, and its geometry" },
+	{
+		folder: "editor/document · editor/layers",
+		role: "The document and its layers as plain data, and their geometry",
+	},
 ];
 
 export function Welcome() {

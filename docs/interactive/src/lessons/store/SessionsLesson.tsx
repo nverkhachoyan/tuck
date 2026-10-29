@@ -411,7 +411,7 @@ export function SessionsLesson() {
 				<h2>Read the code</h2>
 				<p>
 					Sessions in <code>src/editor/store/editorSlice.ts</code>. Every check
-					is an identity check on snapshots, as in the model chapter.
+					is an identity check on snapshots, as in the document chapter.
 				</p>
 				<div className="tabs" role="tablist">
 					{tabs.map((candidate) => (

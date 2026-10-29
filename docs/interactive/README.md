@@ -1,6 +1,6 @@
 # Inside Tuck
 
-Interactive lessons on the codebase, read from the bottom up: the model, then
+Interactive lessons on the codebase, read from the bottom up: the document, then
 the store, then rendering. Each lesson runs the app's real code and quotes it
 from the source as it is now.
 
