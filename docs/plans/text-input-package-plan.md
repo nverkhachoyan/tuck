@@ -2,7 +2,13 @@
 
 Written October 28, 2026. This plan moves the editor's in-place text editing (the hidden input, the caret and selection drawn with Skia, and the gesture that places them) into a workspace package, `packages/skia-text-input`, and then asks whether Text should become a tool.
 
-**Status:** step 1 built on October 28, 2026. Expo's default Metro config resolved the workspace link with no `metro.config.js`, and so did the docs' Vite and `tsc`.
+**Status:** steps 1 and 2 built on October 28, 2026.
+
+What building it found:
+* Expo's default Metro config resolved the workspace link with no `metro.config.js`, and so did the docs' Vite and `tsc`.
+* The package lists `react-native-skia` as a peer (`>=2.15`) and a dev dependency at the app's exact version, and pnpm links both to the same folder, so there's one Skia. Check that again whenever either version changes.
+* `createCaretLayout` is tested in Node against a fake monospaced paragraph, since the package imports only Skia's types. A selection across an empty line covers its filler, a narrow box that shows the line is selected.
+* The app imports everything from `@tuck/skia-text-input/core` so far; the components from step 3 come from the root entry.
 
 ## 1. Why
 

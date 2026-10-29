@@ -1,4 +1,4 @@
-import type { TextSelection } from "@tuck/skia-text-input";
+import type { TextSelection } from "@tuck/skia-text-input/core";
 import {
 	type ReactNode,
 	type Ref,

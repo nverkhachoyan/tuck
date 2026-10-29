@@ -1,4 +1,4 @@
-import type { TextSelection } from "@tuck/skia-text-input";
+import type { TextSelection } from "@tuck/skia-text-input/core";
 import { useRef } from "react";
 import { Platform } from "react-native";
 import type { EditorDocument } from "@/model/document";

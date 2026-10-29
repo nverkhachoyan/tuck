@@ -5,9 +5,16 @@
   "description": "Edit text in place on a React Native Skia canvas.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./core": "./src/core.ts"
   },
   "scripts": {
     "test": "node --test \"src/**/*.test.ts\""
+  },
+  "peerDependencies": {
+    "react-native-skia": ">=2.15"
+  },
+  "devDependencies": {
+    "react-native-skia": "2.15.2"
   }
 }

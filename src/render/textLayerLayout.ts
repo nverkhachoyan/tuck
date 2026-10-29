@@ -1,8 +1,8 @@
 import {
-	type CaretText,
-	caretText,
+	type CaretLayout,
+	createCaretLayout,
 	type TextSelection,
-} from "@tuck/skia-text-input";
+} from "@tuck/skia-text-input/core";
 import {
 	PaintStyle,
 	Skia,
@@ -114,22 +114,19 @@ function lineBoxes(
 	return builder.build();
 }
 
-type CaretLayout = CaretText & { paragraph: SkParagraph };
-
 // Like `layouts`, for editing: built only for the layer being edited.
 const caretLayouts = new WeakMap<TextLayer, CaretLayout>();
 
-/**
- * The text laid out as `caretText` has it, at the width the layer's own text
- * took, so its lines fall where the drawn text's do, empty ones included.
- */
+// At the width the layer's own text took, so its lines fall where the drawn
+// text's do.
 function caretLayout(layer: TextLayer): CaretLayout {
 	const cached = caretLayouts.get(layer);
 	if (cached) return cached;
-	const mapping = caretText(layer.text);
-	const paragraph = buildParagraph(layer, undefined, mapping.caretText);
-	paragraph.layout(layoutTextLayer(layer).width);
-	const layout = { ...mapping, paragraph };
+	const layout = createCaretLayout(
+		layer.text,
+		layoutTextLayer(layer).width,
+		(text) => buildParagraph(layer, undefined, text),
+	);
 	caretLayouts.set(layer, layout);
 	return layout;
 }
@@ -155,53 +152,26 @@ export function textCaretRect(layer: TextLayer, index: number): Rect {
 		const { height } = layoutTextLayer(layer);
 		return { x: 0, y: -height / 2, width: 0, height };
 	}
-	const { paragraph, caretText: text, toCaret } = caretLayout(layer);
-	const j = toCaret[Math.max(0, Math.min(index, layer.text.length))];
-	// Before the character it's at, unless that ends the line: then after the
-	// one before, which is never a line break (see `caretText`).
-	const before = j < text.length && text[j] !== "\n";
-	const rects = before
-		? paragraph.getRectsForRange(j, j + 1)
-		: paragraph.getRectsForRange(j - 1, j);
-	const rect = before ? rects[0] : rects[rects.length - 1];
-	if (!rect) {
-		return toLayerRect(layer, { x: 0, y: 0, width: 0, height: layer.fontSize });
-	}
-	return toLayerRect(layer, {
-		x: before ? rect.x : rect.x + rect.width,
-		y: rect.y,
-		width: 0,
-		height: rect.height,
-	});
+	return toLayerRect(layer, caretLayout(layer).caretRect(index));
 }
 
 /** The boxes a selection of the layer's text covers, in the layer's space. */
 export function textSelectionRects(
 	layer: TextLayer,
-	{ start, end }: TextSelection,
+	selection: TextSelection,
 ): Rect[] {
-	const { paragraph, toCaret } = caretLayout(layer);
-	const clamp = (index: number) =>
-		toCaret[Math.max(0, Math.min(index, layer.text.length))];
-	return paragraph.getRectsForRange(clamp(start), clamp(end)).map((rect) =>
-		toLayerRect(layer, {
-			x: rect.x,
-			y: rect.y,
-			width: rect.width,
-			height: rect.height,
-		}),
-	);
+	return caretLayout(layer)
+		.selectionRects(selection)
+		.map((rect) => toLayerRect(layer, rect));
 }
 
 /** The index of the layer's text nearest a point in the layer's space. */
 export function textIndexAt(layer: TextLayer, point: Point): number {
-	const { paragraph, caretText: text, fromCaret } = caretLayout(layer);
 	const { width, height } = layoutTextLayer(layer);
-	const j = paragraph.getGlyphPositionAtCoordinate(
-		point.x + width / 2,
-		point.y + height / 2,
-	);
-	return fromCaret[Math.max(0, Math.min(j, text.length))];
+	return caretLayout(layer).indexAt({
+		x: point.x + width / 2,
+		y: point.y + height / 2,
+	});
 }
 
 // The outline's stroke, as a share of the font size. The fill covers its

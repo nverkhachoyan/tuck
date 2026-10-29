@@ -2,7 +2,7 @@
 // the rules for what can be on together are tested; `useEditorMode` holds
 // the state for the screen.
 
-import type { TextSelection } from "@tuck/skia-text-input";
+import type { TextSelection } from "@tuck/skia-text-input/core";
 import type { Rect } from "../model/geometry.ts";
 import type { TextLayer } from "../model/layers/text.ts";
 import type { Shortcut } from "./shortcuts.ts";

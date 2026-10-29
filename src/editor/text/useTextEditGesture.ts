@@ -1,4 +1,4 @@
-import { type TextSelection, wordRange } from "@tuck/skia-text-input";
+import { type TextSelection, wordRange } from "@tuck/skia-text-input/core";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";

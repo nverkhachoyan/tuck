@@ -1,4 +1,4 @@
-import { clampSelection } from "@tuck/skia-text-input";
+import { clampSelection } from "@tuck/skia-text-input/core";
 import { useEffect, useMemo } from "react";
 import {
 	cancelAnimation,
