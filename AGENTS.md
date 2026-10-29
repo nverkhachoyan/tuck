@@ -7,10 +7,11 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 ### Expo and native APIs
 
 - Skia can't decode HEIC, the iPhone's default capture format: re-encode picked photos to JPEG (`expo-image-manipulator`) before Skia sees them, or device photos silently fail to render.
-- `expo-image-manipulator` (SDK 57) deprecated `manipulateAsync`: use `ImageManipulator.manipulate(uri)...renderAsync()` → `ImageRef.saveAsync(options)`. Check a package's own `.d.ts` rather than assume an old signature.
-- `expo-media-library` (SDK 57): the classic top-level functions like `saveToLibraryAsync` type-check but throw. Save with `MediaLibrary.Asset.create(uri)`, after `requestPermissionsAsync(true, ["photo"])` (on iOS `Asset.create` never prompts).
-- `expo-file-system` (SDK 57) has no web implementation (`File` and `Directory` are empty stubs), so anything stored with it needs a `.web.ts`. On native, `move` and `copy` are async; `moveSync`/`copySync` are synchronous.
+- `expo-image-manipulator` (SDK 58) deprecated `manipulateAsync`: use `ImageManipulator.manipulate(uri)...renderAsync()` → `ImageRef.saveAsync(options)`. Check a package's own `.d.ts` rather than assume an old signature.
+- `expo-media-library` (SDK 58): the classic top-level functions like `saveToLibraryAsync` type-check but throw. Save with `MediaLibrary.Asset.create(uri)`, after `requestPermissionsAsync(true, ["photo"])` (on iOS `Asset.create` never prompts).
+- `expo-file-system` (SDK 58) has no web implementation (`File` and `Directory` are empty stubs), so anything stored with it needs a `.web.ts`. On native, `write`, `move`, and `copy` are async; `writeSync`, `moveSync`, and `copySync` are synchronous. Nothing flags an unawaited `write`, so a write followed by a move must await it.
 - The app runs in a development build, not Expo Go. `ios/` and `android/` are generated: native configuration goes in `app.json` and config plugins.
+- Android release builds shrink with R8 (Expo 58), and a library that ships no rules can break only there: ML Kit's vision libraries and ONNX Runtime did, kept in `modules/image-analysis/android/consumer-rules.pro`. After adding a native dependency, run what uses it in a Release build.
 - Hermes has no `Array.prototype.toSorted` (it throws on iOS and Android, works on web). Sort a copy.
 - `npm install` copies `package.json`'s indentation into `package-lock.json`, and `npx expo install` rewrites `package.json` (and `app.json`, when it adds a plugin) with 2 spaces. Run `npm run format` afterward, and if a lockfile diff runs to thousands of lines, check `git diff -w`: it's indentation.
 

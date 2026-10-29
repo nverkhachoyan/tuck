@@ -122,7 +122,7 @@ ML Kit is worse off: its iOS binaries have no arm64 simulator slice, and Xcode 2
 
 ## Platform notes
 
-* **iOS 16.** Expo SDK 57's minimum iOS is 16.4, but subject masks need iOS 17. Hide subject detection on 16.x (the module reports whether it's available) rather than raise the whole app's minimum.
+* **iOS 16.** Expo SDK 58's minimum iOS is 16.4, but subject masks need iOS 17. Hide subject detection on 16.x (the module reports whether it's available) rather than raise the whole app's minimum.
 * **Android without Google Play services** (Huawei phones, for example) can't run any of the ML Kit features, and on other phones the models download after install. The module reports what's available, and the UI hides what isn't. Declare the models in the manifest's `com.google.mlkit.vision.DEPENDENCIES` so they download at install rather than on first use.
 * **Development build.** The app runs in `expo-dev-client` rather than Expo Go ([development.md](./development.md) records how to build and reload it on the simulator and emulator).
 

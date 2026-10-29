@@ -2,7 +2,17 @@
 
 Researched October 28, 2026. This plan moves the app from Expo SDK 57 to SDK 58, then React Native Skia to its new package name, and later to Skia 3. It covers what changes, what in this code it touches, and the order to do it in.
 
-**To implement:** follow section 3, which is safe to do now. Section 4 (Skia 3) is blocked on an upstream issue, and section 5 (Gesture Handler's hooks) comes after SDK 58 settles.
+**Status:** section 3 was built on October 28, 2026, on the `expo-sdk-58` branch. Section 4 (Skia 3) is blocked on an upstream issue, and section 5 (Gesture Handler's hooks) comes after SDK 58 settles.
+
+What building it found:
+* Biome 2.6 formats Markdown (its formatter is off in `biome.json`) and adds a React Native raw-text rule, which skips the info pages' text components and the DOM-rendered files.
+* The layer list keeps Gesture Handler's `LegacyScrollView`, so a row's builder `Pan` can still block it.
+* An Android Release build with R8 broke Find (a `NullPointerException` in ML Kit) and Pick (ONNX Runtime's JNI aborted). Neither library ships R8 rules; `modules/image-analysis/android/consumer-rules.pro` keeps them.
+* SDK 58's precompiled modules build with Xcode 27.1.
+* Skia 2.15's web build looks for `react-native/asset-registry`, which `docs/interactive` stubs.
+* Once, on a cold Vite cache, the interactive docs threw "Cannot pass deleted object as a pointer of type sk_sp<Picture>" switching to the Export lesson; it didn't happen again. Skia 2.14 deletes a canvas's last picture on unmount, so watch for it in the app: Expo Router 58 hides a stack screen in React `Activity` once two screens are above it, which cleans up and reruns a canvas's effects.
+
+Checked: web at 390, 1024, and 1440 points (editor, strokes, Layers sheet and row drag, export preview, Find's 28 faces, Pick, the CSP check); the iPhone simulator (projects, highlighter, strokes, redaction, layer row drag); Android Release on the emulator (Find faces, Pick, Subjects). Not checked yet from section 6: the iPad simulator and a narrow iPad window, the share extension, saving to Photos, the rest of the gesture checklist, offline web, and comparing renders against SDK 57 screenshots.
 
 ## 1. Where things stand
 
