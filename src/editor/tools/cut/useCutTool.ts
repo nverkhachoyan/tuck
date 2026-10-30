@@ -11,28 +11,28 @@ import { useStore } from "../../store";
 import {
 	cutCanvasTool,
 	cutToolInUse,
-	parseCutOutSettings,
+	parseCutSettings,
 	stepCutSize,
-} from "./cutOutSettings";
+} from "./cutSettings";
 import { useCutOut } from "./useCutOut";
 import { useCutRedaction } from "./useCutRedaction";
 
-export type CutOutController = ReturnType<typeof useCutOutTool>;
+export type CutController = ReturnType<typeof useCutTool>;
 
 /**
- * Cut out, on its `image` while it's open: its settings, kept between
+ * Cut, on its `image` while it's open: its settings, kept between
  * sessions, the tool they and the device give, and finding, picking,
  * inverting, resetting, and redacting the cut, each undefined where it
- * can't be done. A mask found after Cut out was put down, or moved to
+ * can't be done. A mask found after Cut was put down, or moved to
  * another image, isn't wanted any more. Redacting the cut's selection takes
  * back the cut, adds a redaction in its shape, in the editor's redaction
- * look, which is selected, and closes Cut out (`close`). Masks are kept
+ * look, which is selected, and closes Cut (`close`). Masks are kept
  * through the host's `addImage`. `stepSize` steps the brush's
  * size for `[` and `]`, `canvasInput` paints or picks on a document of
  * `documentSize`, while there's an image shown to cut out, and
  * `finishStroke` paints the cut, or cuts out only the subject tapped.
  */
-export function useCutOutTool({
+export function useCutTool({
 	image,
 	documentSize,
 	addImage,
@@ -44,13 +44,14 @@ export function useCutOutTool({
 		useStore((state) => state.actions);
 	const layerId = useRef<string | null>(null);
 	layerId.current = layer?.id ?? null;
-	const [settings, change] = usePreference("cutOut", parseCutOutSettings);
+	// Saved under Cut out's key, so its settings carry over.
+	const [settings, change] = usePreference("cutOut", parseCutSettings);
 	const { effectFor } = useRedactLook();
 	const keep = (uri: string) => addImage(uri, false);
 	const cutOut = useCutOut({
 		key,
 		image: layer,
-		picking: settings.tool === "pick",
+		picking: settings.tool === "tap",
 		latest: (id) => {
 			const current = useStore.getState().document;
 			return current ? visibleImageLayer(current, id) : undefined;
@@ -92,7 +93,7 @@ export function useCutOutTool({
 		change,
 		tool,
 		canvasInput,
-		// A sub-tool with no size, like Pick, leaves the settings alone.
+		// A sub-tool with no size, like Tap, leaves the settings alone.
 		stepSize: (step: 1 | -1) => {
 			const next = stepCutSize(settings, tool, step);
 			if (next !== settings) change(next);

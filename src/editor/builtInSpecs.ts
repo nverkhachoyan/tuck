@@ -1,7 +1,7 @@
 import type { OwnTool } from "./shell/toolList.ts";
 import { adjustSpec } from "./tools/adjust/adjustSpec.ts";
 import { cropSpec } from "./tools/crop/cropSpec.ts";
-import { cutOutSpec } from "./tools/cutout/cutOutSpec.ts";
+import { cutSpec } from "./tools/cut/cutSpec.ts";
 import { drawSpec } from "./tools/draw/drawSpec.ts";
 import { findSpec } from "./tools/find/findSpec.ts";
 import { redactSpec } from "./tools/redact/redactSpec.ts";
@@ -15,7 +15,7 @@ export const BUILT_IN_SPECS = {
 	redact: redactSpec,
 	find: findSpec,
 	sticker: stickersSpec,
-	cutOut: cutOutSpec,
+	cut: cutSpec,
 	crop: cropSpec,
 	adjust: adjustSpec,
 };
@@ -36,6 +36,6 @@ export const BUILT_IN_TOOLBAR: readonly (
 	"sticker",
 	"crop",
 	"adjust",
-	"cutOut",
+	"cut",
 	"photo",
 ];

@@ -32,7 +32,7 @@ const TOOLS: [string, string][] = [
 	["redact", "Redact"],
 	["find", "Find"],
 	["adjust", "Adjust"],
-	["cutOut", "Cut out"],
+	["cut", "Cut"],
 ];
 
 describe("modeChrome", () => {
@@ -146,7 +146,7 @@ describe("toolbarEntries", () => {
 				["sticker", "Sticker", "A"],
 				["crop", "Crop", "C"],
 				["adjust", "Adjust", "E"],
-				["cutOut", "Cut out", "B"],
+				["cut", "Cut", "B"],
 				["photo", "Add photo", "P"],
 			],
 		);
@@ -156,7 +156,7 @@ describe("toolbarEntries", () => {
 		const waiting = toolbarEntries(specs, BUILT_IN_TOOLBAR)
 			.filter((entry) => entry.needsImage)
 			.map((entry) => entry.id);
-		assert.deepEqual(waiting, ["find", "adjust", "cutOut"]);
+		assert.deepEqual(waiting, ["find", "adjust", "cut"]);
 	});
 
 	test("takes a made-up tool's button from its spec", () => {
@@ -199,7 +199,7 @@ describe("layerActionsFor", () => {
 
 	test("a photo can be redacted, found, adjusted, and cut out, in the toolbar's order", () => {
 		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
-		assert.deepEqual(actions(photo), ["redact", "find", "adjust", "cutOut"]);
+		assert.deepEqual(actions(photo), ["redact", "find", "adjust", "cut"]);
 		assert.deepEqual(actions({ ...photo, hidden: true }), ["redact", "adjust"]);
 	});
 

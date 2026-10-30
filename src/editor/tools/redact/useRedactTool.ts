@@ -22,7 +22,7 @@ export type RedactController = ReturnType<typeof useRedactTool>;
 
 /**
  * Redact's settings, kept between sessions, with the editor's redaction
- * look, which Find and Cut out redact with too. They show the selected
+ * look, which Find and Cut redact with too. They show the selected
  * redaction's style, which new ones then share, so a redaction can be
  * picked to match. Changing them restyles that one. `stepSize` steps the
  * brush's size for `[` and `]`, `canvasInput` brushes or drags out

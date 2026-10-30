@@ -18,7 +18,7 @@ const parseSavedLook = (saved: unknown) =>
 
 /**
  * How new redactions look, kept between sessions and shared by Redact, Find,
- * and Cut out.
+ * and Cut.
  * - `look` and `changeLook`, which takes any of its parts.
  * - `effectFor(size)`: the effect it redacts with on a canvas of `size`.
  */

@@ -79,12 +79,12 @@ describe("editorModeReducer", () => {
 		const cutting = run(
 			initialEditorMode,
 			{ type: "toggleLayers" },
-			{ type: "startTool", start: { tool: "cutOut", layerId: "photo" } },
+			{ type: "startTool", start: { tool: "cut", layerId: "photo" } },
 			{ type: "toggleToolOptions" },
 		);
 		assert.deepEqual(cutting.mode, {
 			type: "tool",
-			tool: "cutOut",
+			tool: "cut",
 			layerId: "photo",
 			optionsOpen: true,
 		});
@@ -314,10 +314,10 @@ describe("settle", () => {
 		assert.deepEqual(settled.mode, { type: "idle" });
 	});
 
-	test("puts Cut out down when its image is gone or hidden", () => {
+	test("puts Cut down when its image is gone or hidden", () => {
 		const cutting = run(initialEditorMode, {
 			type: "startTool",
-			start: { tool: "cutOut", layerId: "photo" },
+			start: { tool: "cut", layerId: "photo" },
 		});
 		assert.equal(settle(cutting, targets()), cutting);
 		const settled = settle(
@@ -385,11 +385,11 @@ describe("openTray", () => {
 		assert.equal(
 			openTray({
 				type: "tool",
-				tool: "cutOut",
+				tool: "cut",
 				layerId: "photo",
 				optionsOpen: true,
 			}),
-			"cutOut",
+			"cut",
 		);
 	});
 });
@@ -500,7 +500,7 @@ describe("shortcutCommand", () => {
 		}
 	});
 
-	test("[ and ] step a brush while Draw, Redact, or Cut out is open", () => {
+	test("[ and ] step a brush while Draw, Redact, or Cut is open", () => {
 		const smaller = { type: "brushSize", step: -1 } as const;
 		const larger = { type: "brushSize", step: 1 } as const;
 		assert.deepEqual(command(drawing, null, smaller), smaller);
@@ -519,7 +519,7 @@ describe("shortcutCommand", () => {
 			command(
 				run(initialEditorMode, {
 					type: "startTool",
-					start: { tool: "cutOut", layerId: "image" },
+					start: { tool: "cut", layerId: "image" },
 				}),
 				null,
 				smaller,

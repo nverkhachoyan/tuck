@@ -20,25 +20,25 @@ import {
 	ToolOptions,
 } from "../../shell/ToolOptions";
 import {
-	type CutOutTool,
+	type CutTool,
 	cutSizeIndex,
 	isCutBrush,
 	withCutSize,
-} from "./cutOutSettings";
-import type { CutOutController } from "./useCutOutTool";
+} from "./cutSettings";
+import type { CutController } from "./useCutTool";
 
 type Icon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-// Cut out's sub-tools, in the order the dock and the bar show them.
+// Cut's sub-tools, in the order the dock and the bar show them.
 const CUT_TOOLS = [
-	{ tool: "pick", title: "Pick", icon: "gesture-tap" },
-	{ tool: "keep", title: "Keep", icon: "brush" },
-	{ tool: "erase", title: "Erase", icon: "eraser" },
-] as const satisfies readonly { tool: CutOutTool; title: string; icon: Icon }[];
+	{ tool: "tap", title: "Tap", icon: "gesture-tap" },
+	{ tool: "add", title: "Add", icon: "brush" },
+	{ tool: "subtract", title: "Subtract", icon: "eraser" },
+] as const satisfies readonly { tool: CutTool; title: string; icon: Icon }[];
 
-// The sub-tools on offer: Pick only where this device can find subjects.
+// The sub-tools on offer: Tap only where this device can find subjects.
 const cutTools = (canPick: boolean) =>
-	CUT_TOOLS.filter(({ tool }) => canPick || tool !== "pick");
+	CUT_TOOLS.filter(({ tool }) => canPick || tool !== "tap");
 
 // The brushes' edges, in the order the size chip's popover and the tray
 // show them.
@@ -48,22 +48,22 @@ const BRUSH_EDGES = [
 ] as const satisfies readonly { soft: boolean; title: string; icon: Icon }[];
 
 /**
- * Cut out's tools, in place of the toolbar while cutting an image out:
- * Subjects cuts out every subject again, Pick the one under a tap, and Keep
- * and Erase paint the cut by hand, with their size in a tray over the
- * canvas. Tapping the brush in use opens its size too. Subjects and Pick
+ * Cut's tools, in place of the toolbar while cutting an image out:
+ * Subjects cuts out every subject again, Tap the one under a finger, and Add
+ * and Subtract paint the cut by hand, with their size in a tray over the
+ * canvas. Tapping the brush in use opens its size too. Subjects and Tap
  * show only where this device can find subjects (`findAll`), and spin
  * while they're finding one (`finding`). Once there's a cut, Invert keeps
  * what it removes instead and removes what it keeps (`invert`), and Redact
  * hides what it keeps under a redaction (`redact`): inverted first, that
  * blurs only the background. Each spins while it works.
  */
-export function CutOutPanel({ controller }: { controller: CutOutController }) {
+export function CutPanel({ controller }: { controller: CutController }) {
 	const { trayOpen, toggleTray } = useEditorContext();
 	const { settings, tool, finding, findAll, inverting, invert } = controller;
 	const { redacting, redact, change } = controller;
-	const pickTool = (choice: CutOutTool) => {
-		if (choice === tool && choice !== "pick") toggleTray();
+	const pickTool = (choice: CutTool) => {
+		if (choice === tool && choice !== "tap") toggleTray();
 		else change({ ...settings, tool: choice });
 	};
 	return (
@@ -82,7 +82,7 @@ export function CutOutPanel({ controller }: { controller: CutOutController }) {
 					label={title}
 					icon={icon}
 					selected={tool === choice}
-					busy={choice === "pick" && finding === "one"}
+					busy={choice === "tap" && finding === "one"}
 					onPress={() => pickTool(choice)}
 				/>
 			))}
@@ -93,7 +93,7 @@ export function CutOutPanel({ controller }: { controller: CutOutController }) {
 					glyph={
 						<SizeDot
 							size={SIZE_DOTS[cutSizeIndex(settings, tool)]}
-							color={tool === "keep" ? colors.textPrimary : null}
+							color={tool === "add" ? colors.textPrimary : null}
 						/>
 					}
 					open={trayOpen}
@@ -121,17 +121,17 @@ export function CutOutPanel({ controller }: { controller: CutOutController }) {
 }
 
 /**
- * Cut out's options in the wide editor's header: Pick, Keep, and Erase, then
+ * Cut's options in the wide editor's header: Tap, Add, and Subtract, then
  * the brushes' size, then Subjects, Invert, and Redact. Soft and Hard sit in
  * the size chip. Choosing the sub-tool already in use leaves it, since the
  * options stay in view. The canvas wash is unchanged.
  */
-export function CutOutBar({ controller }: { controller: CutOutController }) {
+export function CutBar({ controller }: { controller: CutController }) {
 	const { settings, tool, finding, findAll, inverting, invert } = controller;
 	const { redacting, redact, change: onChange } = controller;
 	const options = cutTools(findAll !== undefined).map((option) => ({
 		...option,
-		busy: option.tool === "pick" && finding === "one",
+		busy: option.tool === "tap" && finding === "one",
 	}));
 	const selected = Math.max(
 		0,
@@ -141,7 +141,7 @@ export function CutOutBar({ controller }: { controller: CutOutController }) {
 		<BarSections>
 			<BarGroup>
 				<OptionSegments
-					label="Cut out tool"
+					label="Cut tool"
 					options={options}
 					selected={selected}
 					onSelect={(index) => {
@@ -155,7 +155,7 @@ export function CutOutBar({ controller }: { controller: CutOutController }) {
 				<BarGroup>
 					<SizeChip
 						index={cutSizeIndex(settings, tool)}
-						color={tool === "keep" ? colors.textPrimary : null}
+						color={tool === "add" ? colors.textPrimary : null}
 						onPick={(index) => onChange(withCutSize(settings, tool, index))}
 					>
 						{(close) => (
@@ -214,13 +214,9 @@ export function CutOutBar({ controller }: { controller: CutOutController }) {
 
 /**
  * The size of the brush in use, and whether both brushes' edges are soft,
- * in a tray above the dock. Pick has no options, so none show for it.
+ * in a tray above the dock. Tap has no options, so none show for it.
  */
-export function CutOutOptions({
-	controller,
-}: {
-	controller: CutOutController;
-}) {
+export function CutOptions({ controller }: { controller: CutController }) {
 	const { bottomInset, closeTray } = useEditorContext();
 	const { settings, tool, change: onChange } = controller;
 	if (!isCutBrush(tool)) return null;
@@ -234,7 +230,7 @@ export function CutOutOptions({
 			<ToolOption label="Size">
 				<SizeChoices
 					index={cutSizeIndex(settings, tool)}
-					color={tool === "keep" ? colors.textPrimary : null}
+					color={tool === "add" ? colors.textPrimary : null}
 					onPick={(index) => onChange(withCutSize(settings, tool, index))}
 				/>
 			</ToolOption>

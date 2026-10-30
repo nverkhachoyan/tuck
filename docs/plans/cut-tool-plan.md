@@ -2,7 +2,12 @@
 
 Written October 29, 2026, from [the brainstorm](../brainstorming/cut-out-flow.md). This plan turns Cut out into **Cut**, a tool that selects first and acts afterward, and adds **Remove BG**, a quick action in the tray that removes a photo's background in one tap.
 
-**Status:** not started.
+**Status:** step 1 built on October 29, 2026.
+
+What building it found:
+* Step 1: the settings stay under the `cutOut` preference key. `usePreference` reads only its own key, so a new key would have dropped everyone's brush sizes. `parseCutSettings` reads Cut out's `pick`, `keep`, `erase`, `keepSize`, and `eraseSize`.
+* Step 1: names for the *layer* keep "cut out" (`isCutOut`, `renderCutOut`, "a cut-out"), since an image with a cut is still a cut-out. Only the tool's names changed. `useCutOut`, `cutMask.tsx`, `pickGrowth.ts`, and `isCutOutAvailable` kept theirs too.
+* Step 1: the Strokes lesson pointed at `cutout.ts`, which an earlier refactor had already moved into `layers/image/mask.ts`. Fixed.
 
 ## 1. What changes for the user
 
@@ -80,7 +85,7 @@ The tray has tools that open a session, and one entry of the editor's own (Add p
 - Ids: `cut` and `removeBg`. Folder: `tools/cut/`. Files: `cutTool.ts`, `cutSpec.ts`, `useCutTool.ts`, `cutSettings.ts`, `CutPanel.tsx`, `removeBgTool.ts`, `removeBgSpec.ts`. `useCutOut.ts`, `cutMask.tsx`, `pickGrowth.ts`, and `useCutRedaction.ts` move unchanged.
 - Labels: "Cut" (icon `scissors-cutting`) and "Remove BG" (icon to pick, such as `image-filter-center-focus-weak` or `auto-fix`). Measure "Remove BG" in the dock at the narrowest phone width.
 - Keys: Cut keeps **B** unless **X** is free in `TOOL_KEYS`. Pick a free letter for Remove BG and list it in the shortcuts.
-- Settings: the preference key goes from `cutOut` to `cut`, and `CutSettings.tool` becomes `"tap" | "add" | "subtract"`, plus a `tapMode: "add" | "subtract"`. `parseCutSettings` maps the old `pick` / `keep` / `erase` values, so nobody loses their brush sizes.
+- Settings: the preference key stays `cutOut` (see step 1's finding), and `CutSettings.tool` becomes `"tap" | "add" | "subtract"`, plus a `tapMode: "add" | "subtract"`. `parseCutSettings` maps the old `pick` / `keep` / `erase` values, so nobody loses their brush sizes.
 - Projects: layers keep `mask` and `maskStrokes`, so saved projects need no migration.
 
 ## 3. Steps

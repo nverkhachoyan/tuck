@@ -26,7 +26,7 @@ import type { ToolId } from "./toolSpec";
  * in place (its definition's `edit`), and `editLayer` starts it. The order below
  * matters: `useToolSession` runs first, so its effect begins the session
  * before the effect at the end runs a tool's `started`. Running it earlier
- * would put what it does, like Cut out's remembered cut, in the session's
+ * would put what it does, like Cut's remembered cut, in the session's
  * starting document, where Cancel can't take it back.
  */
 export function useEditorTools({

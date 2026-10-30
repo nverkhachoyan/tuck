@@ -96,7 +96,7 @@ export function useCutOut({
 	useEffect(() => {
 		if (uri !== undefined && picking) prepareObjectSelection(uri);
 	}, [uri, picking]);
-	// Put down, or moved to another image, Cut out lets go of what it read.
+	// Put down, or moved to another image, Cut lets go of what it read.
 	useEffect(() => {
 		if (uri === undefined) return;
 		return () => {
@@ -136,7 +136,7 @@ export function useCutOut({
 				setNews(null);
 				showAlert(
 					"Nothing to cut out",
-					"There's no clear subject where you tapped. Try the middle of it, or paint the cut with Keep and Erase.",
+					"There's no clear subject where you tapped. Try the middle of it, or paint the cut with Add and Subtract.",
 				);
 				return;
 			}
@@ -178,7 +178,7 @@ export function useCutOut({
 			showAlert(
 				"Couldn't remove the background",
 				isSubjectModelDownloading(error)
-					? "Cut out is still downloading. Try again in a moment."
+					? "Cut is still downloading. Try again in a moment."
 					: errorMessage(error),
 			);
 		} finally {
