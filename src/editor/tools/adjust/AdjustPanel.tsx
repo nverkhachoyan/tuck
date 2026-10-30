@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.onHighlight,
 	},
 	inspectorStack: {
-		flex: 1,
+		flexShrink: 1,
 	},
 	section: {
 		paddingBottom: space.xs,

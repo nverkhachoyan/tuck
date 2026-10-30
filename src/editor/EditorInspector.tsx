@@ -48,7 +48,7 @@ export function EditorInspector({
 
 const styles = StyleSheet.create({
 	layers: {
-		flex: 1,
+		flexShrink: 1,
 	},
 	inert: {
 		opacity: 0.4,
