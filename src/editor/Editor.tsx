@@ -68,6 +68,9 @@ const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
 /**
  * The editor for the session's document, in the app that `host` gives it.
+ * - `document`: the session's document as the app sees it. The editor draws
+ *   the store's own, which differs while a tool previews its changes (see
+ *   `Session`).
  * - `host`: the app's side; its save problem shows in the header and over
  *   the canvas.
  * - `tools`: the tools it offers, by id, the built-in ones unless given
@@ -77,7 +80,7 @@ const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
  *   ids and the editor's own entries.
  */
 export function Editor({
-	document,
+	document: opened,
 	host,
 	tools = BUILT_IN_TOOLS,
 	toolbar = BUILT_IN_TOOLBAR,
@@ -88,6 +91,7 @@ export function Editor({
 	toolbar?: readonly string[];
 }) {
 	const { focused, saveProblem } = host;
+	const document = useStore((state) => state.document) ?? opened;
 	const [toolbox] = useState(() => {
 		const specs = Object.fromEntries(
 			Object.entries(tools).map(([id, tool]) => [id, tool.spec]),

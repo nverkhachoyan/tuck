@@ -56,7 +56,7 @@ type EditorSceneProps = {
 	// Outlined without handles, as a tool's target: it holds still.
 	outlinedLayer: Layer | null;
 	adjusting: LiveAdjustment | null;
-	// The image being cut out, which shows what it cuts away faintly.
+	// The image being cut, which shows its cut as a selection.
 	cuttingOutId: string | null;
 	// What a `regions` input shows over the canvas.
 	regions: readonly CanvasRegion[];
@@ -125,7 +125,9 @@ export function EditorScene({
 											? adjusting.matrix
 											: undefined
 									}
-									showRemoved={cuttingOutId === layer.id}
+									selectionColor={
+										cuttingOutId === layer.id ? colors.selection : undefined
+									}
 									onImageError={onImageError}
 								/>
 							)}

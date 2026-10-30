@@ -20,6 +20,7 @@ import {
 	ToolOptions,
 } from "../../shell/ToolOptions";
 import {
+	type CutTapMode,
 	type CutTool,
 	cutSizeIndex,
 	isCutBrush,
@@ -40,6 +41,13 @@ const CUT_TOOLS = [
 const cutTools = (canPick: boolean) =>
 	CUT_TOOLS.filter(({ tool }) => canPick || tool !== "tap");
 
+// Which way a tap goes, in the order the bar shows them; the dock shows
+// the one in use, and a press switches.
+const TAP_MODES = [
+	{ mode: "add", title: "Adds", icon: "plus-circle-outline" },
+	{ mode: "subtract", title: "Subtracts", icon: "minus-circle-outline" },
+] as const satisfies readonly { mode: CutTapMode; title: string; icon: Icon }[];
+
 // The brushes' edges, in the order the size chip's popover and the tray
 // show them.
 const BRUSH_EDGES = [
@@ -48,20 +56,26 @@ const BRUSH_EDGES = [
 ] as const satisfies readonly { soft: boolean; title: string; icon: Icon }[];
 
 /**
- * Cut's tools, in place of the toolbar while cutting an image out:
- * Subjects cuts out every subject again, Tap the one under a finger, and Add
- * and Subtract paint the cut by hand, with their size in a tray over the
- * canvas. Tapping the brush in use opens its size too. Subjects and Tap
- * show only where this device can find subjects (`findAll`), and spin
- * while they're finding one (`finding`). Once there's a cut, Invert keeps
- * what it removes instead and removes what it keeps (`invert`), and Redact
- * hides what it keeps under a redaction (`redact`): inverted first, that
- * blurs only the background. Each spins while it works.
+ * Cut's tools, in place of the toolbar while cutting an image out. Each
+ * spins while it works.
+ * - Subjects adds every subject to the selection, and Tap the one under a
+ *   finger. Both show only where this device can find subjects
+ *   (`findAll`), and spin while they're finding one (`finding`).
+ * - While Tap is in use, one button says whether taps add or subtract, and
+ *   switches it. After a tap, Smaller and Larger step what it selected
+ *   (`resize`).
+ * - Add and Subtract paint the selection by hand, with their size in a tray
+ *   over the canvas. Tapping the brush in use opens its size too.
+ * - Invert selects what's unselected instead (`invert`), and once something
+ *   is selected, Redact hides it under a redaction (`redact`): inverted
+ *   first, that blurs only the background.
  */
 export function CutPanel({ controller }: { controller: CutController }) {
 	const { trayOpen, toggleTray } = useEditorContext();
 	const { settings, tool, finding, findAll, inverting, invert } = controller;
-	const { redacting, redact, change } = controller;
+	const { redacting, redact, change, resize, setTapMode } = controller;
+	const tapMode =
+		TAP_MODES.find(({ mode }) => mode === settings.tapMode) ?? TAP_MODES[0];
 	const pickTool = (choice: CutTool) => {
 		if (choice === tool && choice !== "tap") toggleTray();
 		else change({ ...settings, tool: choice });
@@ -86,6 +100,16 @@ export function CutPanel({ controller }: { controller: CutController }) {
 					onPress={() => pickTool(choice)}
 				/>
 			))}
+			{tool === "tap" && (
+				<ToolButton
+					label={tapMode.title}
+					icon={tapMode.icon}
+					onPress={() =>
+						setTapMode(tapMode.mode === "add" ? "subtract" : "add")
+					}
+				/>
+			)}
+			{resize && resizeButtons(resize, ToolButton)}
 			{isCutBrush(tool) && (
 				<ToolButton
 					label="Size"
@@ -122,13 +146,20 @@ export function CutPanel({ controller }: { controller: CutController }) {
 
 /**
  * Cut's options in the wide editor's header: Tap, Add, and Subtract, then
- * the brushes' size, then Subjects, Invert, and Redact. Soft and Hard sit in
- * the size chip. Choosing the sub-tool already in use leaves it, since the
- * options stay in view. The canvas wash is unchanged.
+ * whether taps add or subtract and Smaller and Larger, or the brushes'
+ * size, then Subjects, Invert, and Redact. Soft and Hard sit in the size
+ * chip. Choosing the sub-tool already in use leaves it, since the options
+ * stay in view.
  */
 export function CutBar({ controller }: { controller: CutController }) {
 	const { settings, tool, finding, findAll, inverting, invert } = controller;
-	const { redacting, redact, change: onChange } = controller;
+	const {
+		redacting,
+		redact,
+		change: onChange,
+		resize,
+		setTapMode,
+	} = controller;
 	const options = cutTools(findAll !== undefined).map((option) => ({
 		...option,
 		busy: option.tool === "tap" && finding === "one",
@@ -151,6 +182,22 @@ export function CutBar({ controller }: { controller: CutController }) {
 					}}
 				/>
 			</BarGroup>
+			{tool === "tap" && (
+				<BarGroup>
+					<OptionSegments
+						label="Taps"
+						options={TAP_MODES}
+						selected={TAP_MODES.findIndex(
+							({ mode }) => mode === settings.tapMode,
+						)}
+						onSelect={(index) => {
+							const next = TAP_MODES[index]?.mode;
+							if (next && next !== settings.tapMode) setTapMode(next);
+						}}
+					/>
+					{resize && resizeButtons(resize, BarButton)}
+				</BarGroup>
+			)}
 			{isCutBrush(tool) && (
 				<BarGroup>
 					<SizeChip
@@ -210,6 +257,34 @@ export function CutBar({ controller }: { controller: CutController }) {
 			)}
 		</BarSections>
 	);
+}
+
+/**
+ * Smaller and Larger, stepping the last tap's selection through the sizes
+ * found there, each disabled at its end, as the dock's or the bar's
+ * `Button`. Siblings rather than a component, so a row that fades its
+ * children (`FadeRow`) counts each.
+ */
+function resizeButtons(
+	resize: NonNullable<CutController["resize"]>,
+	Button: typeof ToolButton | typeof BarButton,
+) {
+	return [
+		<Button
+			key="smaller"
+			label="Smaller"
+			icon="arrow-collapse-all"
+			disabled={resize.index === 0}
+			onPress={() => resize.step(-1)}
+		/>,
+		<Button
+			key="larger"
+			label="Larger"
+			icon="arrow-expand-all"
+			disabled={resize.index === resize.count - 1}
+			onPress={() => resize.step(1)}
+		/>,
+	];
 }
 
 /**

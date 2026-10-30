@@ -7,6 +7,8 @@ import type { CutStroke } from "../../layers/image/image.ts";
 export type CutTool = "tap" | "add" | "subtract";
 // The tools that paint, each with a size of its own.
 export type CutBrushTool = Exclude<CutTool, "tap">;
+// Whether a tap adds what's under it to the selection, or subtracts it.
+export type CutTapMode = "add" | "subtract";
 
 export type CutSettings = {
 	tool: CutTool;
@@ -15,6 +17,7 @@ export type CutSettings = {
 	subtractSize: number;
 	// Whether both brushes' edges fade, like a found mask's.
 	soft: boolean;
+	tapMode: CutTapMode;
 };
 
 export const defaultCutSettings: CutSettings = {
@@ -22,6 +25,7 @@ export const defaultCutSettings: CutSettings = {
 	addSize: 2,
 	subtractSize: 2,
 	soft: true,
+	tapMode: "add",
 };
 
 // Brush widths as a share of the canvas's shorter side, like the other
@@ -75,6 +79,7 @@ export function parseCutSettings(saved: unknown): CutSettings {
 		subtractSize: indexOf("subtractSize"),
 		soft:
 			typeof fields.soft === "boolean" ? fields.soft : defaultCutSettings.soft,
+		tapMode: fields.tapMode === "subtract" ? "subtract" : "add",
 	};
 }
 

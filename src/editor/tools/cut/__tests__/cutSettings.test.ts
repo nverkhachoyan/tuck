@@ -21,6 +21,7 @@ describe("parseCutSettings", () => {
 			addSize: 0,
 			subtractSize: 4,
 			soft: false,
+			tapMode: "subtract",
 		} as const;
 		assert.deepEqual(parseCutSettings(settings), settings);
 	});
@@ -34,6 +35,7 @@ describe("parseCutSettings", () => {
 				addSize: 1.5,
 				subtractSize: 99,
 				soft: "yes",
+				tapMode: "both",
 			}),
 			defaultCutSettings,
 		);
@@ -47,7 +49,13 @@ describe("parseCutSettings", () => {
 				eraseSize: 4,
 				soft: false,
 			}),
-			{ tool: "subtract", addSize: 0, subtractSize: 4, soft: false },
+			{
+				tool: "subtract",
+				addSize: 0,
+				subtractSize: 4,
+				soft: false,
+				tapMode: "add",
+			},
 		);
 		assert.equal(parseCutSettings({ tool: "pick" }).tool, "tap");
 		assert.equal(parseCutSettings({ tool: "keep" }).tool, "add");
@@ -131,6 +139,7 @@ describe("cutBrush", () => {
 			addSize: 0,
 			subtractSize: 4,
 			soft: false,
+			tapMode: "add",
 		} as const;
 		assert.deepEqual(cutBrush(settings, "add", size), {
 			type: "pen",

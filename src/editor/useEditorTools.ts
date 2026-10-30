@@ -54,13 +54,19 @@ export function useEditorTools({
 	view: ToolEnv["view"];
 	notify: (message: string) => void;
 }) {
-	const { cancelSession, selectLayer } = useStore((state) => state.actions);
+	const { cancelSession, commitSession, selectLayer } = useStore(
+		(state) => state.actions,
+	);
 	const tool = mode.type === "tool" ? mode.tool : null;
 	// Counts the open tool being started again, as the rail does, which
 	// ends its session and begins another.
 	const [reopened, setReopened] = useState(0);
 
-	useToolSession(tool, reopened);
+	useToolSession(
+		tool,
+		reopened,
+		tool !== null && definitionOf(tools[tool]).spec.previews === true,
+	);
 
 	const closeTool = () => dispatchMode({ type: "endTool" });
 	const openImageId = mode.type === "tool" ? mode.layerId : null;
@@ -92,11 +98,14 @@ export function useEditorTools({
 		controllers[id] = { definition, controller };
 	}
 	// Done does what the tool's own Done does, then closes it, and lets go of
-	// the selection if the tool asks.
+	// the selection if the tool asks. Its session ends at once rather than
+	// when the tool unmounts, so the app sees its changes right away, as Back
+	// needs when it saves before leaving.
 	const finishTool = () => {
 		if (!tool) return;
 		const { definition, controller } = controllers[tool];
 		definition.done?.(controller);
+		commitSession();
 		closeTool();
 		if (definition.deselectOnDone) selectLayer(null);
 	};
@@ -216,12 +225,16 @@ export function useEditorTools({
  * ahead of the tool hooks, so the session has begun before a tool's own
  * effects change the document.
  */
-export function useToolSession(tool: ToolId | null, reopened: number) {
+export function useToolSession(
+	tool: ToolId | null,
+	reopened: number,
+	previews: boolean,
+) {
 	const { beginSession, commitSession } = useStore((state) => state.actions);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `reopened` ends the session and begins another.
 	useEffect(() => {
 		if (!tool) return;
-		beginSession();
+		beginSession(previews);
 		return commitSession;
-	}, [tool, reopened, beginSession, commitSession]);
+	}, [tool, reopened, previews, beginSession, commitSession]);
 }

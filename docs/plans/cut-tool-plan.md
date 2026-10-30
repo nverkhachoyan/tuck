@@ -2,12 +2,18 @@
 
 Written October 29, 2026, from [the brainstorm](../brainstorming/cut-out-flow.md). This plan turns Cut out into **Cut**, a tool that selects first and acts afterward, and adds **Remove BG**, a quick action in the tray that removes a photo's background in one tap.
 
-**Status:** step 1 built on October 29, 2026.
+**Status:** steps 1 and 2 built on October 29, 2026.
 
 What building it found:
 * Step 1: the settings stay under the `cutOut` preference key. `usePreference` reads only its own key, so a new key would have dropped everyone's brush sizes. `parseCutSettings` reads Cut out's `pick`, `keep`, `erase`, `keepSize`, and `eraseSize`.
 * Step 1: names for the *layer* keep "cut out" (`isCutOut`, `renderCutOut`, "a cut-out"), since an image with a cut is still a cut-out. Only the tool's names changed. `useCutOut`, `cutMask.tsx`, `pickGrowth.ts`, and `isCutOutAvailable` kept theirs too.
 * Step 1: the Strokes lesson pointed at `cutout.ts`, which an earlier refactor had already moved into `layers/image/mask.ts`. Fixed.
+* Step 2: `ImageLayerView`'s `showRemoved` became `selectionColor`. `EditorScene` passes `colors.selection`, so the layer view still reads no palette (the docs app renders it).
+* Step 2: the empty selection's file is made once per session key, when Cut first opens on an uncut image, and `start` waits for it while taps are ignored (one task runs at a time). `AsyncImage` hid the whole photo until a new mask decoded. A cut shown as a selection now draws the photo meanwhile, since it hides nothing.
+* Step 2: the brush "Add" and the tap mode "Adds" sit side by side; the tap mode shows only while Tap is in use. The tap-again cycle stayed, beside Smaller and Larger.
+* Step 2: Smaller and Larger first rendered as one component, which `FadeGroup` counted as one item, stacking them (the `Children.toArray` learning). They're now sibling elements.
+* Step 2: `cutShowsAt` went, since taps take their mode from the UI.
+* Step 2: autosave saved the live document, so leaving the app mid-Cut saved the selection as the photo's cut, and an empty selection as an invisible photo. Cut's spec now says it `previews`: its session keeps that, and the app's view of the session (`useSession`, `getSession`, through `selectAppDocument`) is the document from before Cut opened until Done. `Editor` draws the store's own document rather than the one the app hands it, which is the app's view. `finishTool` commits the session at once rather than when the tool unmounts, so Back, which saves before leaving, sees Done's changes. Checked on web: an empty selection reloads as the earlier cut, and a selection after Done reloads as the new one.
 
 ## 1. What changes for the user
 

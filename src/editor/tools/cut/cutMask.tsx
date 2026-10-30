@@ -9,51 +9,11 @@ import {
 	ColorMatrix as SkiaColorMatrix,
 	Image as SkiaImage,
 } from "react-native-skia";
-import { CutMask, imageBox } from "../../layers/image/ImageLayerView";
-import type { ImageLayer } from "../../layers/image/image";
 import { drawOffscreen } from "../../render/drawOffscreen";
 
 // Turns white into black and black into white. Its last column is in 0–1
 // units.
 const INVERT = [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0];
-
-/**
- * Whether `layer`'s cut, with its decoded `mask` and its strokes, shows the
- * image `at` a point on it, as fractions of its width and height from its
- * top left before it's flipped (see `imagePointAt`). A soft edge counts
- * where it's at least half shown.
- */
-export async function cutShowsAt(
-	layer: ImageLayer,
-	mask: SkImage | undefined,
-	at: { x: number; y: number },
-): Promise<boolean> {
-	const box = imageBox(layer);
-	const x = box.x + at.x * layer.width;
-	const y = box.y + at.y * layer.height;
-	const image = await drawOffscreen(
-		<Group>
-			<Fill color="black" />
-			<Group transform={[{ translateX: 0.5 - x }, { translateY: 0.5 - y }]}>
-				<CutMask layer={layer} mask={mask} />
-			</Group>
-		</Group>,
-		{ width: 1, height: 1 },
-	);
-	if (!image) throw new Error("Couldn't read the cut");
-	try {
-		const pixel = image.readPixels(0, 0, {
-			width: 1,
-			height: 1,
-			colorType: ColorType.RGBA_8888,
-			alphaType: AlphaType.Unpremul,
-		});
-		if (!pixel) throw new Error("Couldn't read the cut");
-		return pixel[0] >= 128;
-	} finally {
-		image.dispose();
-	}
-}
 
 /**
  * Returns a grayscale PNG's bytes. Both masks cover the whole image, so the

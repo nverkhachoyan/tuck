@@ -19,6 +19,7 @@ import {
 	createEditorSlice,
 	type EditorSlice,
 	MAX_HISTORY,
+	selectAppDocument,
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
@@ -1127,6 +1128,32 @@ describe("editorSlice", () => {
 			actions.undo();
 			assert.equal(store.getState().document, before);
 			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("the app sees where a previewing session started, until it's committed", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const before = store.getState().document;
+			actions.beginSession(true);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			assert.notEqual(store.getState().document, before);
+			assert.equal(selectAppDocument(store.getState()), before);
+			actions.commitSession();
+			assert.equal(
+				selectAppDocument(store.getState()),
+				store.getState().document,
+			);
+		});
+
+		test("the app sees a session's changes as they're made, unless it previews", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.beginSession();
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			assert.equal(
+				selectAppDocument(store.getState()),
+				store.getState().document,
+			);
 		});
 
 		test("canceling restores where the session started", () => {

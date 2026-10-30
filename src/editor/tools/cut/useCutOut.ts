@@ -18,47 +18,49 @@ import {
 import type { ImageLayer } from "../../layers/image/image";
 import { isCutOut } from "../../layers/image/mask";
 import { decodedImages, decodeImage } from "../../render/decodedImages";
-import { combineMasks, cutShowsAt, invertedMask } from "./cutMask";
+import { combineMasks, invertedMask } from "./cutMask";
 import { type LastPick, nextMask, picksAgain } from "./pickGrowth";
 
 /**
- * The last pick, kept to grow it: the masks found where it was tapped, the
- * one it took, the image's mask before it (`base`), and whether it added
- * to that or took out of it (null when there was none, and the pick is all
- * that's kept).
+ * The last pick, kept to grow or shrink it: the masks found where it was
+ * tapped, the one it took, the image's mask before it (`base`), and whether
+ * it added to that or took out of it.
  */
 type Pick = LastPick & {
 	masks: SkImage[];
 	index: number;
 	base: string | undefined;
-	add: boolean | null;
+	add: boolean;
 };
 
+/** Which of the last pick's masks it took, of how many, and the mask it left. */
+export type PickSize = { mask: string; index: number; count: number };
+
 /**
- * Finds the subjects to cut out of `image`, and turns a cut inside out.
- * - Finds every subject, or with a point the one there, or once Segment
- *   Anything is ready, any object there.
- * - A point on an image without a mask cuts out only what's there. On one
- *   with a mask, it adds that to the cut, or takes it out when the cut
- *   shows the image there.
- * - Another tap on the same spot grows what it took, from a part to the
- *   whole and around again, where there's more than one to choose from.
+ * Selects what to cut out of `image`, and turns a selection inside out. The
+ * selection is the image's mask while Cut is open; one that selects nothing
+ * is `emptyMask`, a black pixel stretched over the image.
+ * - `findAll` adds every subject to the selection. Every subject found once
+ *   is used again while the session's `key` stays the same, since its
+ *   project keeps the file until it closes.
+ * - `pick` adds the subject at a point, or once Segment Anything is ready,
+ *   any object there, or takes it out of the selection. Another tap on the
+ *   same spot grows what it took, from a part to the whole and around
+ *   again, and `resize` steps it a size larger or smaller (`pickSize`, while
+ *   the selection is what it left).
  * - While `picking`, the image is read ahead for that.
- * - `latest` is the image as it is by then, which a pick changes.
- * - `find` hands the mask to `onMask`, once `keep` has put its file where
- *   the document can use it, saying whether it was picked, which keeps the
- *   strokes that refined the cut.
- * - `onMask` decides whether the image still wants it.
- * - `finding` says which is being found, while one is. A second find
- *   meanwhile does nothing.
- * - Every subject found once is used again while the session's `key` stays
- *   the same, since its project keeps the file until it closes.
- * - `invert` turns the cut inside out, keeping what it removed and removing
- *   what it kept, and hands `onInvert` the inverted mask's file,
- *   `inverting` meanwhile. It waits for a find, and a find for it.
- * - `news` says what the last find or inversion did, for a screen reader.
+ * - `clear` selects nothing, and `invert` turns the selection inside out
+ *   (`inverting` meanwhile).
+ * - `latest` is the image as it is by then, which each of these changes.
+ * - A new mask goes to `onMask` once `keep` has put its file where the
+ *   document can use it, saying whether to keep the strokes that refined
+ *   the selection; `onMask` decides whether the image still wants it.
+ *   Inverting goes to `onInvert`.
+ * - `finding` says which is being found, while one is. Only one of these
+ *   runs at a time: another meanwhile does nothing.
+ * - `news` says what the last one did, for a screen reader.
  * - `canFind` is false while this device can't find subjects, when only the
- *   brushes cut.
+ *   brushes select.
  */
 export function useCutOut({
 	key,
@@ -74,22 +76,33 @@ export function useCutOut({
 	picking: boolean;
 	latest: (layerId: string) => ImageLayer | undefined;
 	keep: (uri: string) => Promise<string>;
-	onMask: (layerId: string, mask: string, picked: boolean) => void;
+	onMask: (layerId: string, mask: string, keepStrokes: boolean) => void;
 	onInvert: (layerId: string, mask: string) => void;
 }) {
 	const [finding, setFinding] = useState<"all" | "one" | null>(null);
 	const [inverting, setInverting] = useState(false);
 	const [news, setNews] = useState<string | null>(null);
+	const [pickSize, setPickSize] = useState<PickSize | null>(null);
+	const [emptyMask, setEmptyMask] = useState<{
+		key: string | null;
+		uri: string;
+	} | null>(null);
 	const busy = useRef(false);
-	// The mask of every subject found for each image file in this session.
-	const found = useRef({ key, masks: new Map<string, string>() });
+	// The mask of every subject found for each image file in this session,
+	// and the one that selects nothing.
+	const found = useRef({
+		key,
+		masks: new Map<string, string>(),
+		empty: null as Promise<string> | null,
+	});
 	if (found.current.key !== key) {
-		found.current = { key, masks: new Map() };
+		found.current = { key, masks: new Map(), empty: null };
 	}
 	const lastPick = useRef<Pick | null>(null);
 	const forgetPick = () => {
 		for (const mask of lastPick.current?.masks ?? []) mask.dispose();
 		lastPick.current = null;
+		setPickSize(null);
 	};
 
 	const uri = image?.uri;
@@ -106,77 +119,38 @@ export function useCutOut({
 		};
 	}, [uri]);
 
-	const findAll = async (layer: ImageLayer) => {
-		const mask = await findSubjectMask(layer.uri);
-		if (!mask) {
-			setNews(null);
-			showAlert(
-				"Nothing to cut out",
-				"There's no clear subject in front of the background.",
-			);
-			return;
+	const keepEmptyMask = () => {
+		const session = found.current;
+		if (!session.empty) {
+			const made = invertedMask(undefined)
+				.then((bytes) => keep(writeTemporaryPng(bytes)))
+				.then((uri) => {
+					setEmptyMask({ key: session.key, uri });
+					return uri;
+				});
+			// A failed write is tried again next time.
+			made.catch(() => {
+				if (session.empty === made) session.empty = null;
+			});
+			session.empty = made;
 		}
-		const url = await keep(mask.uri);
-		found.current.masks.set(layer.uri, url);
-		onMask(layer.id, url, false);
-		setNews("Background removed");
+		return session.empty;
 	};
 
-	const pick = async (layer: ImageLayer, at: ImagePoint) => {
-		const current = latest(layer.id);
-		if (!current) return;
-		const last = lastPick.current;
-		let next: Pick;
-		if (last && last.masks.length > 1 && picksAgain(last, current, at)) {
-			next = { ...last, index: nextMask(last.index, last.masks.length) };
-		} else {
-			forgetPick();
-			const found = await newPick(current, at);
-			if (!found) {
-				setNews(null);
-				showAlert(
-					"Nothing to cut out",
-					"There's no clear subject where you tapped. Try the middle of it, or paint the cut with Add and Subtract.",
-				);
-				return;
-			}
-			next = found;
-		}
-		const grown = next.masks === last?.masks;
-		let kept: string;
-		try {
-			kept = await keep(writeTemporaryPng(await pickedMask(next)));
-			// Cut another way meanwhile, the pick no longer fits.
-			if (latest(layer.id)?.mask !== current.mask) {
-				throw new PickOvertaken();
-			}
-		} catch (error) {
-			if (!grown) for (const mask of next.masks) mask.dispose();
-			if (error instanceof PickOvertaken) return;
-			throw error;
-		}
-		onMask(layer.id, kept, true);
-		lastPick.current = { ...next, mask: kept };
-		setNews(pickNews(next, grown));
-	};
-
-	const find = async (layer: ImageLayer, at?: ImagePoint) => {
-		const known = at ? undefined : found.current.masks.get(layer.uri);
-		if (known !== undefined) {
-			onMask(layer.id, known, false);
-			setNews("Background removed");
-			return;
-		}
+	// Runs `task` unless another is running, saying which is being found.
+	const exclusive = async (
+		kind: "all" | "one" | null,
+		task: () => Promise<void>,
+	) => {
 		if (busy.current) return;
 		busy.current = true;
-		setFinding(at ? "one" : "all");
-		setNews(at ? "Finding the subject" : "Removing the background");
+		setFinding(kind);
 		try {
-			await (at ? pick(layer, at) : findAll(layer));
+			await task();
 		} catch (error) {
 			setNews(null);
 			showAlert(
-				"Couldn't remove the background",
+				"Couldn't select that",
 				isSubjectModelDownloading(error)
 					? "Cut is still downloading. Try again in a moment."
 					: errorMessage(error),
@@ -186,6 +160,118 @@ export function useCutOut({
 			setFinding(null);
 		}
 	};
+
+	const findAll = (layer: ImageLayer) =>
+		exclusive("all", async () => {
+			setNews("Finding the subjects");
+			let subject = found.current.masks.get(layer.uri);
+			if (subject === undefined) {
+				const mask = await findSubjectMask(layer.uri);
+				if (!mask) {
+					setNews(null);
+					showAlert(
+						"Nothing to select",
+						"There's no clear subject in front of the background.",
+					);
+					return;
+				}
+				subject = await keep(mask.uri);
+				found.current.masks.set(layer.uri, subject);
+			}
+			const current = latest(layer.id);
+			if (!current) return;
+			const empty = found.current.empty && (await found.current.empty);
+			const base = current.mask;
+			const kept =
+				base === undefined || base === empty
+					? subject
+					: await keep(
+							writeTemporaryPng(
+								await withMask(base, (mask) =>
+									withMask(subject, (found) =>
+										combineMasks(mask, found, "add"),
+									),
+								),
+							),
+						);
+			// Cut another way meanwhile, the subjects no longer fit.
+			if (latest(layer.id)?.mask !== base) return;
+			forgetPick();
+			onMask(layer.id, kept, true);
+			setNews("Subjects selected");
+		});
+
+	// Leaves the image with `next`'s mask, `grown` from the last pick.
+	const applyPick = async (current: ImageLayer, next: Pick, grown: boolean) => {
+		let kept: string;
+		try {
+			kept = await keep(writeTemporaryPng(await pickedMask(next)));
+			// Cut another way meanwhile, the pick no longer fits.
+			if (latest(current.id)?.mask !== current.mask) {
+				throw new PickOvertaken();
+			}
+		} catch (error) {
+			if (!grown) for (const mask of next.masks) mask.dispose();
+			if (error instanceof PickOvertaken) return;
+			throw error;
+		}
+		onMask(current.id, kept, true);
+		lastPick.current = { ...next, mask: kept };
+		setPickSize(
+			next.masks.length > 1
+				? { mask: kept, index: next.index, count: next.masks.length }
+				: null,
+		);
+	};
+
+	const pick = (layer: ImageLayer, at: ImagePoint, add: boolean) =>
+		exclusive("one", async () => {
+			const current = latest(layer.id);
+			if (!current) return;
+			const last = lastPick.current;
+			if (last && last.masks.length > 1 && picksAgain(last, current, at)) {
+				const index = nextMask(last.index, last.masks.length);
+				await applyPick(current, { ...last, index }, true);
+				setNews(
+					index === 0
+						? "Selection back to the smallest part"
+						: "Selection grown",
+				);
+				return;
+			}
+			forgetPick();
+			setNews("Finding the object");
+			const next = await newPick(current, at, add);
+			if (!next) {
+				setNews(null);
+				showAlert(
+					"Nothing to select",
+					"There's no clear subject where you tapped. Try the middle of it, or paint the selection with Add and Subtract.",
+				);
+				return;
+			}
+			await applyPick(current, next, false);
+			setNews(add ? "Added to the selection" : "Taken out of the selection");
+		});
+
+	const resize = (layer: ImageLayer, step: 1 | -1) =>
+		exclusive("one", async () => {
+			const current = latest(layer.id);
+			const last = lastPick.current;
+			if (!current || !last || current.mask !== last.mask) return;
+			const index = last.index + step;
+			if (index < 0 || index >= last.masks.length) return;
+			await applyPick(current, { ...last, index }, true);
+			setNews(step > 0 ? "Selection grown" : "Selection shrunk");
+		});
+
+	const clear = (layer: ImageLayer, announce: boolean) =>
+		exclusive(null, async () => {
+			const empty = await keepEmptyMask();
+			forgetPick();
+			onMask(layer.id, empty, false);
+			setNews(announce ? "Selection cleared" : null);
+		});
 
 	const invert = async (layer: ImageLayer) => {
 		const current = latest(layer.id);
@@ -208,10 +294,10 @@ export function useCutOut({
 			}
 			forgetPick();
 			onInvert(layer.id, kept);
-			setNews("Cut inverted");
+			setNews("Selection inverted");
 		} catch (error) {
 			setNews(null);
-			showAlert("Couldn't invert the cut", errorMessage(error));
+			showAlert("Couldn't invert the selection", errorMessage(error));
 		} finally {
 			busy.current = false;
 			setInverting(false);
@@ -223,7 +309,13 @@ export function useCutOut({
 		finding,
 		inverting,
 		news,
-		find,
+		emptyMask: emptyMask?.key === key ? emptyMask.uri : null,
+		pickSize,
+		keepEmptyMask,
+		findAll,
+		pick,
+		resize,
+		clear,
 		invert,
 	};
 }
@@ -231,47 +323,26 @@ export function useCutOut({
 class PickOvertaken extends Error {}
 
 /**
- * A first pick at `at` on `image`, as it is now: the objects found there,
- * and whether it adds to the image's mask or takes out of it. Null when
- * nothing was found.
+ * A first pick at `at` on `image`, as it is now, adding to its mask or
+ * taking out of it: the objects found there, or null when nothing was.
  */
 async function newPick(
 	image: ImageLayer,
 	at: ImagePoint,
+	add: boolean,
 ): Promise<Pick | null> {
 	const objects = await findObjectMasks(image.uri, at);
 	const masks = await decodeMasks(objects.masks.map(({ uri }) => uri));
 	if (masks.length === 0) return null;
-	const { mask } = image;
-	try {
-		const add =
-			mask === undefined
-				? null
-				: !(await withMask(mask, (decoded) => cutShowsAt(image, decoded, at)));
-		return {
-			layerId: image.id,
-			at,
-			mask: "",
-			masks,
-			index: objects.likeliest,
-			base: mask,
-			add,
-		};
-	} catch (error) {
-		for (const decoded of masks) decoded.dispose();
-		throw error;
-	}
-}
-
-/** What a pick did, for a screen reader: `grown` from the same tap's last. */
-function pickNews({ index, add }: Pick, grown: boolean): string {
-	if (grown) {
-		return index === 0
-			? "Selection back to the smallest part"
-			: "Selection grown";
-	}
-	if (add === null) return "Subject picked";
-	return add ? "Subject added" : "Subject removed";
+	return {
+		layerId: image.id,
+		at,
+		mask: "",
+		masks,
+		index: objects.likeliest,
+		base: image.mask,
+		add,
+	};
 }
 
 /** Decodes found masks' files, deleting each once it's read. */
@@ -288,7 +359,7 @@ async function decodeMasks(uris: string[]): Promise<SkImage[]> {
 	}
 }
 
-/** Runs `use` with the image layer's mask at `uri`, decoded. */
+/** Runs `use` with the mask at `uri`, decoded. */
 async function withMask<T>(
 	uri: string,
 	use: (mask: SkImage) => Promise<T>,
@@ -304,8 +375,7 @@ async function withMask<T>(
 /** The mask a pick leaves its image with, as a grayscale PNG's bytes. */
 function pickedMask({ masks, index, base, add }: Pick): Promise<Uint8Array> {
 	const picked = masks[index];
-	if (base === undefined) return combineMasks(null, picked, "add");
-	return withMask(base, (mask) =>
-		combineMasks(mask, picked, add === false ? "remove" : "add"),
-	);
+	const mode = add ? "add" : "remove";
+	if (base === undefined) return combineMasks(null, picked, mode);
+	return withMask(base, (mask) => combineMasks(mask, picked, mode));
 }

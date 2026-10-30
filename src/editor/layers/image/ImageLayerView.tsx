@@ -3,6 +3,7 @@ import {
 	BlurMask,
 	Group,
 	Mask,
+	Morphology,
 	Paint,
 	Path,
 	Rect,
@@ -15,12 +16,11 @@ import { adjustmentMatrix, type ColorMatrix } from "./adjustments";
 import type { CutStroke, ImageLayer } from "./image";
 
 const MIRRORED = [{ scaleX: -1 }];
-// While a cut is refined, what it keeps is washed green and what it
-// removes dimmed and washed red. They're over the photo, so they don't
-// follow the palette.
-const KEPT_TINT = "rgba(34, 197, 94, 0.35)";
-const REMOVED_TINT = "rgba(239, 68, 68, 0.5)";
-const REMOVED_OPACITY = 0.6;
+// While a cut is refined, the whole photo shows, and what it selects is
+// washed and outlined in the selection color.
+const SELECTION_WASH = 0.35;
+// The outline's width, as a share of the image's shorter side.
+const SELECTION_EDGE = 0.003;
 
 /**
  * Draws an already-decoded image layer in its own space, centered on the
@@ -29,8 +29,9 @@ const REMOVED_OPACITY = 0.6;
  * Callers position it with the layer's transform. A live `matrix` (a shared
  * value) colors it instead, while a control is changing its adjustments.
  * `liveMask` is a stroke still being painted on the cut, in the image's own
- * pixels, and `showRemoved` shows what's cut away too, tinted red, and
- * what's kept tinted green, so both can be told apart and painted.
+ * pixels. With a `selectionColor`, the cut doesn't hide anything: the whole
+ * image shows, with what the cut keeps washed and outlined in that color,
+ * as a selection.
  */
 export function ImageLayerView({
 	layer,
@@ -38,14 +39,14 @@ export function ImageLayerView({
 	mask,
 	matrix,
 	liveMask,
-	showRemoved = false,
+	selectionColor,
 }: {
 	layer: ImageLayer;
 	image: SkImage;
 	mask?: SkImage;
 	matrix?: { value: ColorMatrix };
 	liveMask?: ReactNode;
-	showRemoved?: boolean;
+	selectionColor?: string;
 }) {
 	const { adjustments, maskStrokes } = layer;
 	const saved = useMemo(
@@ -60,34 +61,28 @@ export function ImageLayerView({
 		</SkiaImage>
 	);
 	const cut = mask || maskStrokes || liveMask;
+	const cutMask = cut && (
+		<CutMask layer={layer} mask={mask}>
+			{liveMask}
+		</CutMask>
+	);
 	return (
 		<Group transform={layer.flipped ? MIRRORED : undefined}>
-			{cut && showRemoved && (
-				<Group layer={<Paint opacity={REMOVED_OPACITY} />}>
+			{selectionColor ? (
+				<>
 					{content}
-					<Tint layer={layer} color={REMOVED_TINT} />
-				</Group>
-			)}
-			{cut ? (
+					{cutMask && (
+						<Selection layer={layer} cutMask={cutMask} color={selectionColor}>
+							{content}
+						</Selection>
+					)}
+				</>
+			) : cutMask ? (
 				// The mask covers the image exactly, so nothing needs clipping
 				// to it, which would draw the image twice.
-				<Mask
-					mode="luminance"
-					clip={false}
-					mask={
-						<CutMask layer={layer} mask={mask}>
-							{liveMask}
-						</CutMask>
-					}
-				>
+				<Mask mode="luminance" clip={false} mask={cutMask}>
 					{content}
-					{showRemoved && <Tint layer={layer} color={KEPT_TINT} />}
 				</Mask>
-			) : showRemoved ? (
-				<Group layer>
-					{content}
-					<Tint layer={layer} color={KEPT_TINT} />
-				</Group>
 			) : (
 				content
 			)}
@@ -96,11 +91,75 @@ export function ImageLayerView({
 }
 
 /**
+ * What `cutMask` selects of the image drawn as `children`: washed in
+ * `color`, and outlined in it where a dilated copy of the mask reaches past
+ * the mask itself (morphology, unlike a runtime shader, works on web).
+ */
+function Selection({
+	layer,
+	cutMask,
+	color,
+	children,
+}: {
+	layer: ImageLayer;
+	cutMask: ReactNode;
+	color: string;
+	children: ReactNode;
+}) {
+	const edge = SELECTION_EDGE * Math.min(layer.width, layer.height);
+	return (
+		<>
+			<Mask mode="luminance" clip={false} mask={cutMask}>
+				<Group layer>
+					{children}
+					<Tint layer={layer} color={color} opacity={SELECTION_WASH} />
+				</Group>
+			</Mask>
+			<Mask
+				mode="luminance"
+				clip={false}
+				mask={
+					<Group>
+						<Group
+							layer={
+								<Paint>
+									<Morphology operator="dilate" radius={edge} />
+								</Paint>
+							}
+						>
+							{cutMask}
+						</Group>
+						<Group layer={<Paint blendMode="difference" />}>{cutMask}</Group>
+					</Group>
+				}
+			>
+				<Rect {...imageBox(layer)} color={color} />
+			</Mask>
+		</>
+	);
+}
+
+/**
  * A wash of `color` over what's drawn before it in the same layer, only
  * where that has pixels, so a transparent image isn't tinted as a box.
  */
-function Tint({ layer, color }: { layer: ImageLayer; color: string }) {
-	return <Rect {...imageBox(layer)} color={color} blendMode="srcATop" />;
+function Tint({
+	layer,
+	color,
+	opacity,
+}: {
+	layer: ImageLayer;
+	color: string;
+	opacity?: number;
+}) {
+	return (
+		<Rect
+			{...imageBox(layer)}
+			color={color}
+			opacity={opacity}
+			blendMode="srcATop"
+		/>
+	);
 }
 
 /**

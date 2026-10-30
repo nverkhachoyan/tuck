@@ -76,9 +76,11 @@ export type EditorSnapshot = {
 
 // While a tool is open, where it started, and the redo step that was next
 // then. Undo stops at the start, and redo at that step, so a tool never
-// steps into changes from before it opened.
+// steps into changes from before it opened. A tool that only `previews` its
+// changes until Done leaves the app seeing where it started.
 export type EditorSession = EditorSnapshot & {
 	redoStop: EditorSnapshot | undefined;
+	previews: boolean;
 };
 
 export type EditorState = {
@@ -126,6 +128,13 @@ export const selectSelectedShape = (
 	const layer = selectSelectedLayer(state);
 	return layer?.type === "shape" ? layer : undefined;
 };
+
+/**
+ * The document as the app sees it, to save or draw a thumbnail of: where a
+ * session started while its tool only previews its changes.
+ */
+export const selectAppDocument = ({ document, session }: EditorState) =>
+	session?.previews ? session.document : document;
 
 // Within a session, not past its start: Cancel is the way back from there.
 export const selectCanUndo = ({ past, document, session }: EditorState) =>
@@ -497,11 +506,18 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			);
 		},
 
-		beginSession: () => {
+		beginSession: (previews = false) => {
 			const { document, selectedLayerId, future, session } = get();
 			if (!document || session) return;
 			set(
-				{ session: { document, selectedLayerId, redoStop: future[0] } },
+				{
+					session: {
+						document,
+						selectedLayerId,
+						redoStop: future[0],
+						previews,
+					},
+				},
 				false,
 				"editor/beginSession",
 			);
