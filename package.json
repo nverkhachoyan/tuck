@@ -1,6 +1,7 @@
 {
   "name": "tuck",
   "main": "index",
+  "license": "MIT",
   "packageManager": "pnpm@11.28.9",
   "scripts": {
     "start": "expo start",

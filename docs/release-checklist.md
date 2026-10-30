@@ -115,7 +115,7 @@ doesn't require terms.
 
 ## 6. Open source
 
-- [ ] Choose a license, and add `LICENSE` and the `license` field in
+- [x] Choose a license, and add `LICENSE` and the `license` field in
       `package.json`.
 - [ ] Scan git history for secrets and private names (machine and device
       names, local paths). The repo went public on October 29, 2026, so

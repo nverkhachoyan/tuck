@@ -63,3 +63,8 @@ pnpm typecheck   # TypeScript
 pnpm test        # Node unit tests across src/ and modules/
 pnpm build:web   # Static web export, service worker, and CSP check
 ```
+
+## License
+
+[MIT](./LICENSE). The stickers in `assets/stickers/` and the fonts keep their
+own licenses, listed in the app's Licenses page.
