@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Read [docs/architecture.md](docs/architecture.md) before changing how the code is laid out, and [docs/development.md](docs/development.md) before building native code, running on a simulator, emulator, or device, or testing in the browser pane or headless Chrome. Detection (`modules/image-analysis`) has its own notes in [docs/on-device-detection.md](docs/on-device-detection.md); the design system is [DESIGN.md](DESIGN.md).
+Read [docs/architecture.md](docs/architecture.md) before changing how the code is laid out, and [docs/development.md](docs/development.md) before building native code, running on a simulator, emulator, or device, or testing in the browser pane or headless Chrome. Detection (`modules/image-analysis`) has its own notes in [docs/on-device-detection.md](docs/on-device-detection.md); the design system is [DESIGN.md](DESIGN.md). [docs/GOTCHAS.md](docs/GOTCHAS.md) records bugs in the app's own code that took more than reading to find, with how each was found: read it when debugging a race or a freed Skia image, and add to it when such a bug is fixed.
 
 ## Learnings
 
@@ -33,7 +33,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 ### Skia
 
 - `useImage()` fails silently (a decode error resolves to `null`, and a failed read rejects unhandled without calling `onError`). Load image layers with `decodeImage` through the `decodedImages` cache (`editor/render/decodedImages.ts`).
-- A hook holding an image from `decodedImages` must forget it in the same cleanup that releases it, or a URI that comes back hands Skia a freed image ("Cannot pass deleted object as a pointer of type Image const*" on web). Anything that keeps an image past its holder (an `SkPicture`) must be cached by the decoded image.
+- A hook holding an image from `decodedImages` must forget it in the same cleanup that releases it, or a URI that comes back hands Skia a freed image ("Cannot pass deleted object as a pointer of type Image const*" on web). Anything that keeps an image past its holder (an `SkPicture`) must be cached by the decoded image. A delayed free must start from the last release, not any earlier one (docs/GOTCHAS.md).
 - A backdrop filter reads only the layer it's drawn in: inside a `Group layer`, a `Mask`, or anything else that saves a layer, it blurs nothing. The same goes for a blend mode, which blends onto that layer alone. Keep document layers drawn straight onto the canvas. A filter's sigma is mapped through the canvas transform, so document-unit blurs look the same at any zoom.
 - Skia's web build throws for runtime-shader, matrix-transform, tile, and picture image filters. Build effects from blur, displacement map, shader, offset, and morphology filters. A displacement map samples nearest-neighbor from 8-bit offsets, and its shader draws in the canvas's color space: on a P3 canvas a red or green offset bleeds into other channels, and only gray passes unchanged.
 - On iOS a `Canvas` defaults to Display P3, while offscreen renders and web are sRGB: a canvas that previews the document sets `colorSpace="srgb"`. A `ColorMatrix`'s last column is in 0–1 units, not 0–255.
