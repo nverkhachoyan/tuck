@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
 		pointerEvents: "box-none",
 	},
 	inspector: {
-		flex: 1,
+		flexShrink: 1,
 		paddingTop: 12,
 	},
 	inspectorTitle: {

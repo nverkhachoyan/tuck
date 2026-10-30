@@ -109,13 +109,15 @@ export function Dock({
  */
 export function Inspector({ children }: { children: ReactNode }) {
 	return (
-		<Surface
-			resting
-			style={styles.inspectorCard}
-			contentStyle={styles.inspectorFill}
-		>
-			{children}
-		</Surface>
+		<View style={styles.inspectorArea}>
+			<Surface
+				resting
+				style={styles.inspectorCard}
+				contentStyle={styles.inspectorFill}
+			>
+				{children}
+			</Surface>
+		</View>
 	);
 }
 
@@ -260,16 +262,20 @@ const styles = StyleSheet.create({
 	fullContent: {
 		height: DOCK_HEIGHT,
 	},
-	inspectorCard: {
+	inspectorArea: {
 		position: "absolute",
 		top: PANEL_GAP,
 		right: PANEL_GAP,
 		bottom: PANEL_GAP,
 		width: INSPECTOR_WIDTH,
+		pointerEvents: "box-none",
+	},
+	inspectorCard: {
+		maxHeight: "100%",
 		borderRadius: PANEL_RADIUS,
 	},
 	inspectorFill: {
-		flex: 1,
+		flexShrink: 1,
 	},
 	panel: {
 		flexDirection: "row",

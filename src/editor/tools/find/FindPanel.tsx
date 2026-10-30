@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
 		color: colors.textPrimary,
 	},
 	inspectorStack: {
-		flex: 1,
+		flexShrink: 1,
 	},
 	findSection: {
 		borderBottomWidth: StyleSheet.hairlineWidth,
