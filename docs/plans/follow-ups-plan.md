@@ -18,23 +18,9 @@ The refactors from October 24 to 29 were checked on web at 390, 1024, and 1440 p
 
 ## 2. Bugs to look into
 
-### A rail click right after a header ✓ or ✕ is lost
-
-Seen in the browser pane on a wide window, on `main` too.
-
-* **Steps:** open a tool (Find, or Cut), press ✕ or ✓ in the header, then at once click a tool in the rail (Find).
-* **Seen:** the editor goes back to idle and the rail's tool doesn't open. A second click on it opens it.
-* **Unknown:** the pane was hidden, so its page ran about two frames a second (see docs/development.md), and the lost click may be that alone. Try it in headless Chrome at 60 frames a second, and by hand in a browser, before looking at the code. If it holds there, look at what the header's ✓ and ✕ leave behind as the context bar gives way to the title (a hover or pointer state, or a press that the rail's `Pressable` sees as its own).
-
-### A photo dropped just after a reload lands off the canvas
-
-* **Steps:** reload the editor on a project, and drop a photo onto the canvas within a few seconds, before the canvas has drawn.
-* **Seen:** the photo joins the layers and is selected, but sits outside the document: the canvas doesn't show it, and Find on it says "Nothing in the visible crop". The same drop a few seconds later lands in the middle of the view.
-* **Unknown:** the drop was a synthetic `DragEvent`, so check with a real drag too. The likely cause is `useAddImage`'s `onImage` in `Editor.tsx`, which places the image in `canvasRef.current?.visibleArea()`: before the canvas has its size or its view, that area may be empty or at the wrong place, rather than undefined (which would place it in the middle).
-
-### iOS shows selection handles at the hidden text input
-
-While text is selected on iOS, the system's selection handles show at `HiddenTextInput`, behind the header's top left.
+* [#19: A rail click right after a header ✓ or ✕ is lost](https://github.com/nverkhachoyan/tuck/issues/19)
+* [#20: A photo dropped just after a reload lands off the canvas](https://github.com/nverkhachoyan/tuck/issues/20)
+* [#21: iOS shows selection handles at the hidden text input](https://github.com/nverkhachoyan/tuck/issues/21)
 
 ## 3. Smart selection
 
@@ -53,36 +39,8 @@ Cut's Subject, Tap (MobileSAM on every platform), Add and Subtract, Invert, and 
 
 ## 4. Upgrades waiting
 
-### React Native Skia 3
-
-**Blocked on [wcandillon/react-native-skia#4355](https://github.com/wcandillon/react-native-skia/issues/4355):** Skia 3 removed `Canvas`'s `colorSpace` prop, and the canvas renders in Display P3 on wide-gamut Apple displays. The editor sets `colorSpace="srgb"` on `EditorCanvas`, `CropCanvas`, and the docs' `SkiaStage` so the preview draws as the export does. Stay on an exact `react-native-skia` 2.x pin until that issue gives a way back.
-
-Tested October 28, 2026 on 3.8.1, against 2.6.2 and an offscreen render (the export's path), on the iPhone 17 Pro simulator and an iPhone 17 Pro Max. Values are sRGB:
-
-| Operation | Offscreen (export) | 2.x, `srgb` canvas | 2.x, P3 canvas | 3.8.1 canvas |
-| --- | --- | --- | --- | --- |
-| `rgb(255,0,0)` fill | 255, 0, 0 | 255, 0, 0 | 255, 0, 0 | 255, 0, 0 |
-| Red through a `ColorMatrix` that averages R and G | 128 gray | 128 | 143 | 128 |
-| Displacement map from an `rgb(128,0,0)` shader, scale 200 | no shift | no shift | 8.3 pt | 8.3 pt |
-| Highlighter yellow `rgb(255,221,0)` multiplied over `rgb(0,160,255)` | 0, 139, 0 | 0, 139, 0 | 34, 140, 64 | 34, 140, 64 |
-| Middle of a 12-point blur across a red and blue edge | 124, 0, 132 | 125, 0, 130 | 125, 10, 147 | 126, 10, 147 |
-
-So on 3.x the highlighter previews visibly greener over saturated colors than it exports, and blurs drift at saturated edges. Color filters and pixelate are unaffected, and exported files stay right. Other ways forward, if upstream says no: preview the document as an sRGB offscreen image (a frame of latency, memory on large photos, and live strokes on an overlay), or accept the mismatch, which breaks "what you see is what you export". Rebuild the test as a throwaway route drawing the table's five operations as swatches, and rerun it on each Skia 3 release that touches color spaces.
-
-Once unblocked:
-* Decide on Android's new floor: Vulkan 1.1 and API 26 (`minSdkVersion` through `expo-build-properties`). Google Play hides the app from phones without Vulkan. Check Play Console's device catalog for how many that is.
-* Renames: `Skia.Image.MakeImage` → `MakeRaster` (`cutMask.tsx`), `makeNonTextureImage()` → `makeRasterImageSync()`, which throws instead of returning null (`drawOffscreen.web.ts`). `readPixels` on a GPU image blocks; check `photoImport.ts`, `cutMask.tsx`, and `renderDocument.tsx`.
-* Rendering moves off the UI thread (a scene records once per commit and replays on a thread pool), and surfaces share one WebGL context on web. Recheck the AGENTS.md learnings on image lifetimes, `SkPicture`s outliving their holder, `drawOffscreen`, and `readPixels`, and drop whichever no longer hold.
-* Minor versions have renamed and removed APIs; read each release's notes before a bump.
-* Verify with a Release build on a real Android phone, a long editing session on iOS watching memory, and live strokes and pinches on a large photo.
-
-### Gesture Handler's hooks API
-
-Gesture Handler 3 deprecates the `Gesture.*` builders for hooks (`usePanGesture`, `useSimultaneousGestures`). Software Mansion publishes a migration skill (`gesture-handler-3-migration`).
-* Callbacks are renamed (`onStart` → `onActivate`, `onEnd` → `onDeactivate`, `success` → `canceled`, inverted), and relations too (`blocksExternalGesture` → `block`).
-* Hook and builder gestures can't relate to each other, so the canvas's composed gestures (`useViewGesture`, `useLayerTransformGesture`, `usePaintGesture`, `useEditTextGesture`, `useCropGesture`) move in one change. `Dial`, `ColorPicker`, `BottomSheet`, and `LayerRow` (which keeps `LegacyScrollView` until then) can go one at a time.
-* Hooks run in a component's body: check that fits how tool hooks build gestures through `ToolEnv`.
-* Recheck the AGENTS.md learnings on `Gesture.Simultaneous` nesting and `minDistance(0)` Pans.
+* [#18: Upgrade to React Native Skia 3](https://github.com/nverkhachoyan/tuck/issues/18) (unblocked upstream by [wcandillon/react-native-skia#4367](https://github.com/wcandillon/react-native-skia/pull/4367), closing [wcandillon/react-native-skia#4355](https://github.com/wcandillon/react-native-skia/issues/4355))
+* [#22: Migrate gestures to Gesture Handler 3's hooks API](https://github.com/nverkhachoyan/tuck/issues/22)
 
 ## 5. Later
 
