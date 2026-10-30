@@ -32,7 +32,7 @@ Tagline in use: "The last touch for photos and screenshots." Alternative: "Make 
 
 ## Capabilities and Constraints
 
-- Tools: text edited in place on the canvas (fonts, colors, an eyedropper, alignment, outline, background box); Redact (box or brush, as solid, blur, or pixelate); Find (faces and text, which it redacts in Redact's style); Crop (aspect presets, turns, flips, straightening, and expanding the canvas); Adjust (brightness, contrast, saturation, warmth); Draw (pen, highlighter, marker, neon, eraser, and shapes); Cut out (subject and object selection as a reversible mask, with Keep and Erase brushes, Invert, and Redact, which hides the selection under a redaction in its shape); stickers (bundled emoji and the user's own, including cut-outs); adding photos as layers; a layers panel; undo and redo.
+- Tools: text edited in place on the canvas (fonts, colors, an eyedropper, alignment, outline, background box); Redact (box or brush, as solid, blur, or pixelate); Find (faces and text, which it redacts in Redact's style); Crop (aspect presets, turns, flips, straightening, and expanding the canvas); Adjust (brightness, contrast, saturation, warmth); Draw (pen, highlighter, marker, neon, eraser, and shapes); Cut (select subjects and objects by tap or brush, then copy them to a new layer, keep or remove them as a reversible mask, redact them, or save a sticker); Remove BG (one tap); stickers (bundled emoji and the user's own, including cut-outs); adding photos as layers; a layers panel; undo and redo.
 - Each tool remembers its settings between sessions.
 - Built with Expo and React Native. Skia draws the canvas and the export alike. Native code only for detection and the share target. Runs in a development build, not Expo Go.
 - No backend, accounts, cloud storage, remote processing, or AI APIs. Not planned: generative fill, prompt editing, face recognition, template galleries, feeds, or "AI Studio"-style surfaces.
@@ -42,7 +42,7 @@ Tagline in use: "The last touch for photos and screenshots." Alternative: "Make 
 ## Brand Commitments
 
 - Name: **Tuck**, listed in the App Store and Google Play as "Tuck: Photo Markup". The bundle ID and Android package are `com.nverk.tuck`, the URL scheme and Expo slug `tuck`, and the web is at tuck.tools. The repository and its folder are named `tuck` too.
-- Voice: plain, short, and confident, with no hype. The home tagline sets the tone: "The last touch for photos and screenshots. No account, no waiting." Tool names are verbs or plain nouns (Text, Redact, Crop, Adjust, Draw, Cut out).
+- Voice: plain, short, and confident, with no hype. The home tagline sets the tone: "The last touch for photos and screenshots. No account, no waiting." Tool names are verbs or plain nouns (Text, Redact, Crop, Adjust, Draw, Cut).
 - Assets: wordmark, app icon (`assets/icon.svg`, `assets/adaptive-icon.svg`, `assets/favicon.svg`), bundled caption fonts, and Noto Emoji stickers (Apache 2.0).
 - The visual identity, "Print, Ink & Highlighter" on a light table, is recorded in `DESIGN.md`.
 

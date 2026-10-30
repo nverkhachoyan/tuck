@@ -1,83 +1,109 @@
 # Follow-ups
 
-What's left from the plans in `docs/plans/`, gathered October 26, 2026, when the finished plans were removed. Every step those plans listed has landed. What remains is checks only a device can make, smart selection's later stages, and a few bugs and ideas. The removed plans are in git history, as of `7afc71a`: the context bar and its refinement, Crop and Stickers on wide windows, redaction trust, the export sheet, polish and copy, the Draw highlighter, the editor screen refactor, the tool views registry, tool options, tool code out of `canvas/`, smart selection, and its spike. Each tool's canvas input was planned and built after that, and its plan removed as of `b87e7f6`; so were Crop's UI, as of `3bbc0d8`, and how the tools open and close, as of `c5a2a23`. Tools that stand alone and each tool's spec and definition were removed as of `737ebdb`, and the plan that gave each folder clear edges (the editor's store, host, and tool list, Crop and Stickers as tools), with the debate over Crop that led to step 8d, as of `aaed202`.
+Everything still open from finished plans, gathered October 29, 2026. Each section stands alone, so they can go in any order. Finished plans are removed once built; what building them found lives in git history (the last ones as of `281f08e`: Cut and Remove BG, the dependency upgrade, the editor's layer folders, and the text input package).
 
-Each section stands alone, so they can go in any order.
+Cut and Remove BG's open items are issues: [#13](https://github.com/nverkhachoyan/tuck/issues/13), [#14](https://github.com/nverkhachoyan/tuck/issues/14), [#15](https://github.com/nverkhachoyan/tuck/issues/15), [#16](https://github.com/nverkhachoyan/tuck/issues/16), and [#17](https://github.com/nverkhachoyan/tuck/issues/17). As other entries here become issues, replace them with a link.
 
 ## 1. Checks only a device can make
 
-The October 24 critique work and the refactors after it (October 25 and 26) were checked on web, at 390, 1024, and 1440 points wide. The tool options refactor (`bdb2805`) and the move of tool code out of `canvas/` (`703fddf` to `7afc71a`) weren't run on a simulator, and the `canvas/` move's web check isn't recorded either. Nor is either check recorded for each tool's canvas input (`eb0e554` to `b87e7f6`), which changed what every canvas gesture calls, though not the gestures themselves. The tool lifecycle refactor (`2e5c184` to `9294a2f`) was checked on web at 390 and 1440 points wide, but not on a simulator. The folder refactor (October 27 and 28, through `8b11bbb`) was smoke-run in the browser pane after each step; its closing iOS simulator pass isn't recorded.
+The refactors from October 24 to 29 were checked on web at 390, 1024, and 1440 points wide, and some on the iPhone simulator. These weren't.
 
-* **Every canvas tool kind, after the canvas input refactor.** In the web editor at 390 and 1440 points wide, and on the iOS simulator: a pen, highlighter (it joins only a highlighter layer), and eraser stroke; a dragged rectangle and arrow, a tap that selects a shape, and a drag that moves the selected one; a Redact box, a brushed redaction that joins the selected one, and a tap that selects a box; a Cut out brush stroke and a Pick tap; the eyedropper from Draw's color, from text's color while typing (the text keeps drawing), and from Find's redaction style (the found regions hide while it picks); a Find region chosen and unchosen, and a tap off the image that puts Find down; a sideways drag in Adjust; and a tap off the document while painting that puts the tool down.
-
-* **The editor on iPhone and iPad, after the refactors.** On the iOS simulator and the iPad Pro 13-inch simulator: open every tool, then Cancel and Done it (Crop: Cancel leaves no undo step, Done leaves one; Stickers opens as a sheet on iPhone and a popover on iPad); type text and tap the canvas while typing (the caret moves and the keyboard stays); double-tap a text layer; run Find, choose and unchoose a region, and step through Review; drag sideways on the photo in Adjust; draw a stroke; crop.
-* **The context bar on iPad.** Touch on the bar's chips and their popovers, Dynamic Type at larger sizes, and 1133 and 1180-point windows. Check on the iPad mini simulator too.
-* **Crop and Stickers on iPad.** Crop's UI refactor (`77e25c1` to `3bbc0d8`) moved its options into `CropPanel` and its fill into shell's `SwatchChip`. On the iPad Pro 13-inch simulator, Crop now shows the wide header: the ratio menu, Rotate's actions and its switch, the straighten dial by finger, and the background chip all worked by touch. Still to check on an iPad: the same by hand, and the sticker popover's touch and long-press delete.
+* **Every canvas tool kind.** In the web editor at 390 and 1440 points wide, and on the iOS simulator: a pen, highlighter (it joins only a highlighter layer), and eraser stroke; a dragged rectangle and arrow, a tap that selects a shape, and a drag that moves the selected one; a Redact box, a brushed redaction that joins the selected one, and a tap that selects a box; a Cut brush stroke and a Tap; the eyedropper from Draw's color, from text's color while typing (the text keeps drawing), and from Find's redaction style (the found regions hide while it picks); a Find region chosen and unchosen, and a tap off the image that puts Find down; a sideways drag in Adjust; and a tap off the document while painting that puts the tool down.
+* **The editor on iPhone and iPad.** On the iOS simulator and the iPad Pro 13-inch simulator: open every tool, then Cancel and Done it (Crop: Cancel leaves no undo step, Done leaves one; Stickers opens as a sheet on iPhone and a popover on iPad); type text and tap the canvas while typing (the caret moves and the keyboard stays); double-tap a text layer; run Find, choose and unchoose a region, and step through Review; drag sideways on the photo in Adjust; draw a stroke; crop.
+* **iPad specifics.** The context bar's chips and popovers by touch, Dynamic Type at larger sizes, and 1133 and 1180-point windows, on the iPad mini too. Crop's header controls and the sticker popover's long-press delete by hand. Since Expo 58 the iPad window can be resized: check the editor at narrow window sizes.
 * **The phone's trays.** The bar's chips share `SizeChoices`, `ColorChip`, and `AlignPicker` with the phone's trays. Look at each tray on the iPhone simulator for anything that moved.
 * **Find on native.** Vision and ML Kit find different faces than MediaPipe. Run Find on the Solvay photo on the iOS simulator and the Android emulator, and check that the tray's words ("28 found", "26 of 28 chosen", "No faces found") fit what they find.
+* **After Expo 58, still unchecked:** the share extension, saving to Photos, the web app offline after a cold load with the service worker cleared, and renders of a project with every layer kind compared against Expo 57 screenshots (Skia 2.11 changed how `Mask`s composite and antialiasing defaults).
 * **Screen readers.** The iOS Simulator has no VoiceOver, so these wait for a device. With VoiceOver on an iPhone, check Find's Review row as one adjustable control, and swipe through the export sheet to check that it never reaches the editor behind it. Do the same with TalkBack on an Android phone.
 
-## 2. Smart selection
-
-Cut out's Subjects, Pick (MobileSAM on every platform), Keep and Erase, Invert, Redact, and keeping a cut as a sticker are built. What's open:
-
-* **App size.** The models add 44 MB to each app, and ONNX Runtime 34 MB to Android's (its arm64 library, before the store compresses it). iOS's Release size isn't measured. An int8 encoder might bring the models to about 12 MB, if the masks hold up. On-demand resources and Play Asset Delivery could fetch them the first time Pick opens, from Apple's and Google's servers.
-* **Android on a phone.** Only the emulator has run Pick: about 2 seconds to read a photo, and taps from 0.15 seconds back to back to over a second spaced out. If a phone is slow, look at ONNX Runtime's NNAPI or QNN providers, or LiteRT on the GPU.
-* **The first Pick after launch on iOS** takes about 3 seconds while Core ML loads the model, against a quarter of a second after that.
-* **WebAssembly threads.** Where WebGPU isn't available, web encodes on one thread in about 3 seconds. Cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` in `vercel.json`) would allow threads, likely about 1 second. Everything the site loads is its own, but check the share target and file handlers first.
-* **Pick without Vision or ML Kit.** Segment Anything needs neither, so Pick could show on iOS 16 and on Android without Play services, where Cut out offers only the brushes.
-* **Edges.** SAM's masks come out at 256×256 and are scaled up, so hair and fur come out soft and blocky. Refine the mask against the photo (a guided filter), or run the decoder again on a crop around the object.
-* **Gestures.** A second mode or a long press for points that subtract, and a drag for a box, which `strokeIntent` already tells from a tap. Each is a new `CanvasTool` kind: its union member and `ToolStroke` member, its row in `CANVAS_TOOLS` (`canvas/canvasTool.ts`), its builder in `cutOutSettings.ts`, its case in `useCanvasInput`'s `finishStroke`, and its live drawing in `LiveStrokeOverlay`.
-* **Memory in browsers.** Not measured with MobileSAM alone in its worker. With all three models loaded, the page held about 130 MB of JavaScript heap.
-* **Copy a cut to a new layer**, the cut-out image with its mask applied, beside keeping it as a sticker.
-* **Adjust only the selection.**
-* **Remove an object.** Fill the hole a selection leaves with an inpainting model: MI-GAN (MIT, made for phones, about 30 MB) or LaMa (Apache 2.0, about 200 MB). It's the biggest piece here, so research it first.
-
-## 3. Bugs to look into
-
-Seen while checking other work, recorded October 27, 2026. The first two were also seen on `main` before the change being checked, so neither comes from it. The last was recorded October 29 on the Cut branch, and comes from its bar.
+## 2. Bugs to look into
 
 ### A rail click right after a header ✓ or ✕ is lost
 
-Seen in the browser pane on a wide window, while smoke-testing the folder refactor (`ba24ea7`), and again on `56cfe06` with that step's changes stashed.
+Seen in the browser pane on a wide window, on `main` too.
 
-* **Steps:** open a tool (Find, or Cut out), press ✕ or ✓ in the header, then at once click a tool in the rail (Find).
+* **Steps:** open a tool (Find, or Cut), press ✕ or ✓ in the header, then at once click a tool in the rail (Find).
 * **Seen:** the editor goes back to idle and the rail's tool doesn't open. A second click on it opens it.
-* **Expected:** the first click opens the tool.
 * **Unknown:** the pane was hidden, so its page ran about two frames a second (see docs/development.md), and the lost click may be that alone. Try it in headless Chrome at 60 frames a second, and by hand in a browser, before looking at the code. If it holds there, look at what the header's ✓ and ✕ leave behind as the context bar gives way to the title (a hover or pointer state, or a press that the rail's `Pressable` sees as its own).
 
 ### A photo dropped just after a reload lands off the canvas
 
-Seen in the browser pane on a wide window, in the same smoke run.
-
 * **Steps:** reload the editor on a project, and drop a photo onto the canvas within a few seconds, before the canvas has drawn.
 * **Seen:** the photo joins the layers and is selected, but sits outside the document: the canvas doesn't show it, and Find on it says "Nothing in the visible crop". The same drop a few seconds later lands in the middle of the view.
-* **Expected:** the photo lands in the visible area, or the middle of the document while there's no view yet.
-* **Unknown:** the drop was a synthetic `DragEvent`, sent from a script, so check with a real drag too. The likely cause is `useAddImage`'s `onImage` in `Editor.tsx`, which places the image in `canvasRef.current?.visibleArea()`: before the canvas has its size or its view, that area may be empty or at the wrong place, rather than undefined (which would place it in the middle). Look at what `visibleArea()` returns before the first layout.
+* **Unknown:** the drop was a synthetic `DragEvent`, so check with a real drag too. The likely cause is `useAddImage`'s `onImage` in `Editor.tsx`, which places the image in `canvasRef.current?.visibleArea()`: before the canvas has its size or its view, that area may be empty or at the wrong place, rather than undefined (which would place it in the middle).
 
-### Cut's header runs out of room once something is selected
+### iOS shows selection handles at the hidden text input
 
-Tracked in [#15](https://github.com/nverkhachoyan/tuck/issues/15), with the phone dock's same squeeze.
+While text is selected on iOS, the system's selection handles show at `HiddenTextInput`, behind the header's top left.
 
-## 4. Release
+## 3. Smart selection
 
-The iPad store screenshots come from a Release build (see `docs/store-listing/listing.md`). The wide editor now shows a tool's options in the header, so retake them if the listing shows the editor with a tool open.
+Cut's Subject, Tap (MobileSAM on every platform), Add and Subtract, Invert, and its Apply actions are built. What's open:
+
+* **App size.** The models add 44 MB to each app, and ONNX Runtime 34 MB to Android's (its arm64 library, before the store compresses it). iOS's Release size isn't measured. An int8 encoder might bring the models to about 12 MB, if the masks hold up. On-demand resources and Play Asset Delivery could fetch them the first time Tap is used.
+* **Android on a phone.** Only the emulator has run Tap: about 2 seconds to read a photo, and taps from 0.15 seconds back to back to over a second spaced out. If a phone is slow, look at ONNX Runtime's NNAPI or QNN providers, or LiteRT on the GPU.
+* **The first Tap after launch on iOS** takes about 3 seconds while Core ML loads the model, against a quarter of a second after that.
+* **WebAssembly threads.** Where WebGPU isn't available, web encodes on one thread in about 3 seconds. Cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` in `vercel.json`) would allow threads, likely about 1 second. Check the share target and file handlers first.
+* **Tap without Vision or ML Kit.** Segment Anything needs neither, so Tap could show on iOS 16 and on Android without Play services, where Cut offers only the brushes.
+* **Edges.** SAM's masks come out at 256×256 and are scaled up, so hair and fur come out soft and blocky. Refine the mask against the photo (a guided filter), or run the decoder again on a crop around the object.
+* **A drag for a box**, which `strokeIntent` already tells from a tap. It's a new `CanvasTool` kind: its union member and `ToolStroke` member, its row in `CANVAS_TOOLS` (`canvas/canvasTool.ts`), its builder in `cutSettings.ts`, its case in `useCanvasInput`'s `finishStroke`, and its live drawing in `LiveStrokeOverlay`.
+* **Memory in browsers.** Not measured with MobileSAM alone in its worker. With all three models loaded, the page held about 130 MB of JavaScript heap.
+* **Adjust only the selection.**
+* **Remove an object.** Fill the hole Remove leaves with an inpainting model: MI-GAN (MIT, made for phones, about 30 MB) or LaMa (Apache 2.0, about 200 MB). It's the biggest piece here, so research it first.
+
+## 4. Upgrades waiting
+
+### React Native Skia 3
+
+**Blocked on [wcandillon/react-native-skia#4355](https://github.com/wcandillon/react-native-skia/issues/4355):** Skia 3 removed `Canvas`'s `colorSpace` prop, and the canvas renders in Display P3 on wide-gamut Apple displays. The editor sets `colorSpace="srgb"` on `EditorCanvas`, `CropCanvas`, and the docs' `SkiaStage` so the preview draws as the export does. Stay on an exact `react-native-skia` 2.x pin until that issue gives a way back.
+
+Tested October 28, 2026 on 3.8.1, against 2.6.2 and an offscreen render (the export's path), on the iPhone 17 Pro simulator and an iPhone 17 Pro Max. Values are sRGB:
+
+| Operation | Offscreen (export) | 2.x, `srgb` canvas | 2.x, P3 canvas | 3.8.1 canvas |
+| --- | --- | --- | --- | --- |
+| `rgb(255,0,0)` fill | 255, 0, 0 | 255, 0, 0 | 255, 0, 0 | 255, 0, 0 |
+| Red through a `ColorMatrix` that averages R and G | 128 gray | 128 | 143 | 128 |
+| Displacement map from an `rgb(128,0,0)` shader, scale 200 | no shift | no shift | 8.3 pt | 8.3 pt |
+| Highlighter yellow `rgb(255,221,0)` multiplied over `rgb(0,160,255)` | 0, 139, 0 | 0, 139, 0 | 34, 140, 64 | 34, 140, 64 |
+| Middle of a 12-point blur across a red and blue edge | 124, 0, 132 | 125, 0, 130 | 125, 10, 147 | 126, 10, 147 |
+
+So on 3.x the highlighter previews visibly greener over saturated colors than it exports, and blurs drift at saturated edges. Color filters and pixelate are unaffected, and exported files stay right. Other ways forward, if upstream says no: preview the document as an sRGB offscreen image (a frame of latency, memory on large photos, and live strokes on an overlay), or accept the mismatch, which breaks "what you see is what you export". Rebuild the test as a throwaway route drawing the table's five operations as swatches, and rerun it on each Skia 3 release that touches color spaces.
+
+Once unblocked:
+* Decide on Android's new floor: Vulkan 1.1 and API 26 (`minSdkVersion` through `expo-build-properties`). Google Play hides the app from phones without Vulkan. Check Play Console's device catalog for how many that is.
+* Renames: `Skia.Image.MakeImage` → `MakeRaster` (`cutMask.tsx`), `makeNonTextureImage()` → `makeRasterImageSync()`, which throws instead of returning null (`drawOffscreen.web.ts`). `readPixels` on a GPU image blocks; check `photoImport.ts`, `cutMask.tsx`, and `renderDocument.tsx`.
+* Rendering moves off the UI thread (a scene records once per commit and replays on a thread pool), and surfaces share one WebGL context on web. Recheck the AGENTS.md learnings on image lifetimes, `SkPicture`s outliving their holder, `drawOffscreen`, and `readPixels`, and drop whichever no longer hold.
+* Minor versions have renamed and removed APIs; read each release's notes before a bump.
+* Verify with a Release build on a real Android phone, a long editing session on iOS watching memory, and live strokes and pinches on a large photo.
+
+### Gesture Handler's hooks API
+
+Gesture Handler 3 deprecates the `Gesture.*` builders for hooks (`usePanGesture`, `useSimultaneousGestures`). Software Mansion publishes a migration skill (`gesture-handler-3-migration`).
+* Callbacks are renamed (`onStart` → `onActivate`, `onEnd` → `onDeactivate`, `success` → `canceled`, inverted), and relations too (`blocksExternalGesture` → `block`).
+* Hook and builder gestures can't relate to each other, so the canvas's composed gestures (`useViewGesture`, `useLayerTransformGesture`, `usePaintGesture`, `useEditTextGesture`, `useCropGesture`) move in one change. `Dial`, `ColorPicker`, `BottomSheet`, and `LayerRow` (which keeps `LegacyScrollView` until then) can go one at a time.
+* Hooks run in a component's body: check that fits how tool hooks build gestures through `ToolEnv`.
+* Recheck the AGENTS.md learnings on `Gesture.Simultaneous` nesting and `minDistance(0)` Pans.
 
 ## 5. Later
 
-Ideas carried over from the roadmap that VISION.md held, not yet planned. Weigh each on its own before starting one.
+Not yet planned. Weigh each on its own before starting one.
 
-* More adjustments: highlights, shadows, exposure, vignette, and sharpen. Add them one at a time, only where they feel as good as the four there are.
+* **Labelled arrows** for marking up screenshots, editing their label in place with `@tuck/skia-text-input` and Text's tool slots (`draft`, `edit.owns`, `views.Input`). The label sits along the arrow, not in a box, so it's the test that `createCaretLayout` and the slots don't assume a text layer; if they don't fit, change them with both tools on them.
+* **Preview photos.** Every render decodes a photo at up to 25 million pixels (`MAX_PHOTO_PIXELS`): about 98 MB on the GPU for a 24MP photo, per layer, while a phone canvas shows about 1,300 pixels across. Editing on a 2,048-pixel copy and keeping the full photo for export, the eyedropper, and Cut's renders would cut that by eight. Measure first: one, three, and five 24MP photos then an export, on a 4–6 GB iPhone, a mid-range Android phone, and a Chrome tab. Only if one runs out or comes close, prototype swapping in the full photo past the preview's zoom, since a soft preview over small text would mislead a redaction.
+* **A Select tool** that picks layers and objects by finger or cursor (the name was kept free for it).
+* **Publishing `@tuck/skia-text-input`**, once someone asks or Tuck isn't its only user and the API has held still. Remove `"private": true`, create the `tuck` npm organization (or rename), and `pnpm --dir packages/skia-text-input publish --access public`; `prepack` builds `lib/`. Not built until needed: right-to-left text, input method composition on the canvas, grapheme-aware word selection, up and down arrows by wrapped line, touch drag handles and the edit menu, and a screen reader reading the drawn text.
+* **Each layer type's bounds in its own folder**, if `canvas/layerBounds.ts`'s switch grows.
+* More adjustments: highlights, shadows, exposure, vignette, and sharpen, one at a time, only where they feel as good as the four there are.
 * PDF redaction, researched in [docs/pdf-redaction.md](../pdf-redaction.md): flatten each page to an image, redact it in the editor, and write a new PDF.
 * Blurring license plates automatically, as Find does faces.
 * Redacting several photos at once.
 * Collages.
 * Better HEIC and RAW import.
-* Packages, once something outside this repo needs a part on its own (another app embedding the editor, or a tool reading the document format). Then one `packages/editor` with subpath exports (`@tuck/editor`, `/render`, `/document` for today's `model/`), starting with a spike: Metro resolving `.web.ts` through `exports`, tsc, Biome, Vite, the Node tests, and Expo autolinking `modules/image-analysis` once it has a `package.json`. Keep `biome.json`'s bans, since hoisting lets a package import what it never declared. The full plan is in git history as of `aaed202` (`docs/plans/composition-plan.md`).
+* Packages, once something outside this repo needs a part on its own. Then one `packages/editor` with subpath exports (`@tuck/editor`, `/render`, `/core`), starting with a spike: Metro resolving `.web.ts` through `exports`, tsc, Biome, Vite, the Node tests, and Expo autolinking `modules/image-analysis` once it has a `package.json`. The full plan is in git history as of `aaed202` (`docs/plans/composition-plan.md`).
 
 ## Considered and left
 
-These were weighed in the removed plans and set aside. Don't add them unless use shows they're missed.
+Weighed in removed plans and set aside. Don't add them unless use shows they're missed.
 
 * Snapping highlights to lines of text, and straightening for every pen, not only the highlighter.
 * Pinch to zoom in the export preview.

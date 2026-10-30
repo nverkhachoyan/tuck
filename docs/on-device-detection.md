@@ -72,7 +72,7 @@ Return a mask, not a cutout. Skia applies the mask to the image layer, so the or
 
 ### Selecting objects
 
-Added after this research (October 2026): Cut out's Pick selects the object at a tap with MobileSAM, run with ONNX Runtime on every platform (Core ML on iOS, the CPU on Android, and a module worker with WebGPU or WebAssembly on web), alongside the subject masks above. `modules/image-analysis/src/objectSelection.ts` and its `.web.ts` are its entry points; [Implementation notes](#implementation-notes) records how the models were prepared and what each platform needs.
+Added after this research (October 2026): Cut's Tap selects the object at a tap with MobileSAM, run with ONNX Runtime on every platform (Core ML on iOS, the CPU on Android, and a module worker with WebGPU or WebAssembly on web), alongside the subject masks above. `modules/image-analysis/src/objectSelection.ts` and its `.web.ts` are its entry points; [Implementation notes](#implementation-notes) records how the models were prepared and what each platform needs.
 
 ## The simulator
 

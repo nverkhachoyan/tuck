@@ -62,6 +62,8 @@ doesn't require terms.
     address, phone, and email are shown on the listing.
   - Screenshots for the 6.9" iPhone and the 13" iPad, and the listing text:
     both are in `docs/store-listing/screenshots/` and `docs/store-listing/listing.md`.
+    The wide editor now shows a tool's options in the header, so retake the
+    iPad ones from a Release build if they show a tool open.
   - Export compliance is already answered (`usesNonExemptEncryption: false`).
   - Review notes: no sign-in needed; mention the share extension.
 
@@ -116,5 +118,6 @@ doesn't require terms.
 - [ ] Choose a license, and add `LICENSE` and the `license` field in
       `package.json`.
 - [ ] Scan git history for secrets and private names (machine and device
-      names, local paths) before the repo goes public.
-- [ ] Check that nothing in `docs/` assumes a private repo.
+      names, local paths). The repo went public on October 29, 2026, so
+      rotate anything found rather than only rewriting history.
+- [x] Check that nothing in `docs/` assumes a private repo.
