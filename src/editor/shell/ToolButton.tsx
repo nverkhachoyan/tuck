@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
 		...typography.caption,
 		letterSpacing: 0.1,
 		color: colors.textPrimary,
+		textAlign: "center",
 	},
 	smallLabel: {
 		fontSize: 11,

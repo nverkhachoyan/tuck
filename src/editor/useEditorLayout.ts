@@ -6,9 +6,10 @@ import { editorFrame } from "./editorFrame";
 import { LAYERS_SIDEBAR_INSET } from "./layers/panel/LayersPanel";
 import { INSPECTOR_WIDTH, PANEL_GAP, useDockInset } from "./shell/Dock";
 
-// Room for the chosen tool's highlight inside the rail's card. Its tools are
-// smaller where controls are sized for a mouse.
-export const RAIL_WIDTH = compactControls ? 64 : 84;
+// Room for the chosen tool's highlight inside the rail's card, and for its
+// longest label ("Remove BG", in bold) on one line. Its tools are smaller
+// where controls are sized for a mouse.
+export const RAIL_WIDTH = compactControls ? 70 : 84;
 // How much of the canvas's sides the rail and the inspector cover, with the
 // gaps around their cards.
 export const RAIL_INSET = RAIL_WIDTH + 2 * PANEL_GAP;
