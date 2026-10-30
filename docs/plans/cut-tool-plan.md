@@ -2,7 +2,7 @@
 
 Written October 29, 2026, from [the brainstorm](../brainstorming/cut-out-flow.md). This plan turns Cut out into **Cut**, a tool that selects first and acts afterward, and adds **Remove BG**, a quick action in the tray that removes a photo's background in one tap.
 
-**Status:** steps 1, 2, and 3 built on October 29, 2026.
+**Status:** all five steps built on October 29, 2026.
 
 What building it found:
 * Step 1: the settings stay under the `cutOut` preference key. `usePreference` reads only its own key, so a new key would have dropped everyone's brush sizes. `parseCutSettings` reads Cut out's `pick`, `keep`, `erase`, `keepSize`, and `eraseSize`.
@@ -23,6 +23,13 @@ What building it found:
 * Step 3: the phone dock (Subjects, Tap, Add, Subtract, Size, Invert, Apply) no longer fits at 375 points and scrolls, with Apply last; with Tap's mode button it's eight. This answers the open question in part: a later step should move something, such as the tap mode, into the tray.
 * Step 3: checked on the web export (wide and 375 points): New layer, Update cut, Keep only, Remove on an uncut photo and on a cut layer, Redact, Save sticker, and one undo step each.
 * Step 3: checked on an iPhone 17 Pro Max (iOS 27, Release build): New layer, Update cut, Keep only, Remove of a tapped subject from a cut photo (it lines up on the P3 canvas), Redact, and Save sticker, which then shows first under Yours, each with its notice and Undo. The dock's seven buttons fit at 440 points, but after a tap, Smaller and Larger push Apply off the end, and the dock keeps them while a brush is in use (the bar shows them only with Tap).
+* Step 4: `ToolSpec.action` and `ToolDefinition.run`, as planned, plus `busy`, which spins the button in the tray, the rail, and the layer actions (Add photo's spinner now goes through the same list). The mode reducer ignores starting an action, so one never becomes a mode.
+* Step 4: Cut and Remove BG share the subjects found per session through `subjectMaskOf` in `useCutOut.ts`, a module-level cache by session key, since each tool's hook keeps its own state. After Remove BG, Cut's Subjects is instant.
+* Step 4: the edit notice takes an optional second button (`NoticeAction`), and `ToolEnv.startTool(id, image)` opens a tool on an image, finishing any other one. It runs from a ref set every render, since the notice's Refine is pressed renders after Remove BG ran. Refine reads the image again first, so Cut opens on its cut, not the uncut one Remove BG started from.
+* Step 4: Remove BG replaces any cut the image had (settling the first open question), and skips the notice when the cut was already the subject's, since Undo would take back an earlier edit. Its key is G. It shows an alert where the device can't find subjects, where nothing is found, and while the model downloads.
+* Step 4: at 375 points the phone's tools are two rows of five, and "Remove BG" fits. In the wide rail its label wraps to two lines.
+* Step 4: checked on web (wide and 375 points): on the project's photo from the rail, and on a photo layer from its layer actions, with the notice, Undo, and Refine opening Cut with the subject selected. The notice goes after 5 seconds, which is short for reaching Refine. Not yet tried on iOS or Android, or with no subject or a downloading model.
+* Step 5: `docs/architecture.md` describes actions, Remove BG, and the notice's button. The Strokes lesson needed no change.
 
 ## 1. What changes for the user
 

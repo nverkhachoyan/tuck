@@ -88,6 +88,8 @@ Bad: selection and result are still fused after the first action, and there are 
 
 ## Decisions (2026-10-29)
 
+Built on October 29, 2026, from [the plan](../plans/cut-tool-plan.md), which records what changed while building it: ✓ ended up with no default action, New layer joined the Apply menu, and Update cut became Keep only on a layer that was cut. Remove BG and its Refine notice work as point 3 below says.
+
 Plan A plus Remove BG, with these changes:
 
 - **The tool is called "Cut", not Select or Cut out.** "Select" is saved for a future tool that picks layers and objects by finger or cursor. "Cut out" is retired.
