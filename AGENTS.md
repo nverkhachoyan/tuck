@@ -104,6 +104,14 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 - Use Conventional Commits format for commit messages, such as `feat: add text editing` or `fix: handle invalid image input`.
 
+## Issues
+
+- File an issue for what a change finds but leaves: a bug seen in passing, a check only a device can make, or a rough edge a plan's findings record. One issue per finding; search open issues first (`gh issue list --search`), and add to one that covers it.
+- Write it with a template in `.github/ISSUE_TEMPLATE/` (Bug, Task, Idea), keeping its headings: `gh issue create --title … --body-file …`. The title says the problem or the job in plain words, in sentence case, with no prefix ("Remove BG's label wraps in the wide rail"). Give the PR, commit, or doc it came from.
+- Labels: one type (`bug`, `task`, `enhancement`, `documentation`, `accessibility`), then `tool: <name>`, `platform: ios|android|web` where it's limited to one, and `needs device` for what only a simulator, emulator, or phone can check. Add a `tool:` label the first time a tool needs one.
+- No attribution lines (co-author, "Generated with").
+- When an issue takes over an entry in `docs/plans/`, replace the entry with a link to it.
+
 ## Code Checks
 
 - After code changes, run `pnpm check` (formatting and lint; `pnpm format` fixes), `pnpm typecheck`, and `pnpm test` when touching the editor's document or layer files, store slices, or other pure modules (it covers `modules/` too). Run `pnpm build:web` after changing `.web` files, the entry files, or imports TypeScript doesn't check (assets, untyped imports): Metro catches an import that won't resolve. CI runs all four.

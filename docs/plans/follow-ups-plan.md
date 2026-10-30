@@ -57,12 +57,7 @@ Seen in the browser pane on a wide window, in the same smoke run.
 
 ### Cut's header runs out of room once something is selected
 
-Seen in headless Chrome at 1280 by 800 on October 29, 2026, while fixing a freed mask on Cut's second tap, with New layer joining the Apply menu (that fix, and how it was found, is in docs/GOTCHAS.md).
-
-* **Steps:** on a wide window, open Cut with Tap, and tap an object.
-* **Seen:** before the tap the header shows Tap, Add, Subtract, Adds, Subtracts, Subjects, and Invert. After it, Smaller, Larger, and Reset join them, Invert is pushed off or clipped at the right edge, and Apply doesn't show at all.
-* **Expected:** Invert and Apply stay in reach while anything is selected, since Apply is the only way to act on the selection now that ✓ only puts Cut down.
-* **Unknown:** whether the bar scrolls to Apply or clips it, and at which width it starts. The phone dock has the same squeeze (docs/plans/cut-tool-plan.md, step 3): moving the tap mode, or Smaller and Larger, out of the bar may answer both.
+Tracked in [#15](https://github.com/nverkhachoyan/tuck/issues/15), with the phone dock's same squeeze.
 
 ## 4. Release
 

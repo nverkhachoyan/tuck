@@ -1,0 +1,26 @@
+name: Task
+description: A check or chore with a clear end, such as trying a change on a device.
+labels: ["task"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: What to do, and why it's needed.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: A short list of what has to be true to close it.
+      placeholder: |
+        - [ ] Tried on the iOS simulator
+        - [ ] Tried on the Android emulator
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: The PR, commit, or doc it came from.
