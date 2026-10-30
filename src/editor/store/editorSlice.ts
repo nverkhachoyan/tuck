@@ -9,6 +9,7 @@ import {
 import { reframe, setBackground } from "../document/documentEdits.ts";
 import type { Framing } from "../document/framing.ts";
 import type { Rect, Transform } from "../document/geometry.ts";
+import { createLayerId } from "../layers/base.ts";
 import type { Stroke } from "../layers/drawing/drawing.ts";
 import { drawStroke } from "../layers/drawing/drawingEdits.ts";
 import type { Adjustments } from "../layers/image/adjustments.ts";
@@ -16,8 +17,10 @@ import {
 	type CutStroke,
 	createImageLayer,
 	createStickerLayer,
+	type ImageLayer,
 } from "../layers/image/image.ts";
 import {
+	addCutCopy,
 	invertMask,
 	paintMask,
 	setAdjustments,
@@ -76,9 +79,11 @@ export type EditorSnapshot = {
 
 // While a tool is open, where it started, and the redo step that was next
 // then. Undo stops at the start, and redo at that step, so a tool never
-// steps into changes from before it opened.
+// steps into changes from before it opened. A tool that only `previews` its
+// changes until Done leaves the app seeing where it started.
 export type EditorSession = EditorSnapshot & {
 	redoStop: EditorSnapshot | undefined;
+	previews: boolean;
 };
 
 export type EditorState = {
@@ -126,6 +131,13 @@ export const selectSelectedShape = (
 	const layer = selectSelectedLayer(state);
 	return layer?.type === "shape" ? layer : undefined;
 };
+
+/**
+ * The document as the app sees it, to save or draw a thumbnail of: where a
+ * session started while its tool only previews its changes.
+ */
+export const selectAppDocument = ({ document, session }: EditorState) =>
+	session?.previews ? session.document : document;
 
 // Within a session, not past its start: Cancel is the way back from there.
 export const selectCanUndo = ({ past, document, session }: EditorState) =>
@@ -374,6 +386,19 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 				setMask(document, id, mask, options),
 			),
 
+		// By id, like `setMask`. The copy is selected, though it isn't on top.
+		addCutCopy: (
+			id: string,
+			selection: Pick<ImageLayer, "mask" | "maskStrokes">,
+		) => {
+			const copyId = createLayerId("image");
+			setDocument(
+				"editor/addCutCopy",
+				(document) => addCutCopy(document, id, selection, copyId),
+				copyId,
+			);
+		},
+
 		// By id, like `setMask`.
 		invertMask: (id: string, mask: string) =>
 			setDocument("editor/invertMask", (document) =>
@@ -497,11 +522,18 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			);
 		},
 
-		beginSession: () => {
+		beginSession: (previews = false) => {
 			const { document, selectedLayerId, future, session } = get();
 			if (!document || session) return;
 			set(
-				{ session: { document, selectedLayerId, redoStop: future[0] } },
+				{
+					session: {
+						document,
+						selectedLayerId,
+						redoStop: future[0],
+						previews,
+					},
+				},
 				false,
 				"editor/beginSession",
 			);
@@ -530,10 +562,27 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 
 		// Redo brings the canceled changes back as one step. Any change in the
 		// session cleared the redo steps from before it, so `future` holds only
-		// the session's own undone steps, which still follow on from there.
+		// the session's own undone steps, which still follow on from there. A
+		// session that only previews leaves nothing to redo: what it showed
+		// wasn't an edit (Cut's selection), so the redo steps go back to the
+		// ones from before it.
 		cancelSession: () => {
 			const { document, selectedLayerId, session, past, future } = get();
 			if (!document || !session) return;
+			if (session.previews) {
+				const stop = session.redoStop ? future.indexOf(session.redoStop) : -1;
+				set(
+					{
+						...snapshotOf(session),
+						past: pastBefore(past, session),
+						future: stop === -1 ? [] : future.slice(stop),
+						session: null,
+					},
+					false,
+					"editor/cancelSession",
+				);
+				return;
+			}
 			if (document === session.document) {
 				set({ session: null }, false, "editor/cancelSession");
 				return;

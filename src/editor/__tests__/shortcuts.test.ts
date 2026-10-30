@@ -97,6 +97,10 @@ describe("shortcutFor", () => {
 		assert.deepEqual(shortcutFor(press("p")), { type: "tool", tool: "photo" });
 		assert.deepEqual(shortcutFor(press("c")), { type: "tool", tool: "crop" });
 		assert.deepEqual(shortcutFor(press("e")), { type: "tool", tool: "adjust" });
+		assert.deepEqual(shortcutFor(press("g")), {
+			type: "tool",
+			tool: "removeBg",
+		});
 		assert.deepEqual(shortcutFor(press("l")), { type: "layers" });
 		// Caps Lock on.
 		assert.deepEqual(shortcutFor(press("T")), { type: "tool", tool: "text" });
@@ -159,7 +163,7 @@ describe("shortcutGroups", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["T", "D", "R", "F", "A", "C", "E", "B", "P", "L"],
+			["T", "D", "R", "F", "A", "C", "E", "G", "B", "P", "L"],
 		);
 		assert.equal(toolGroup.items[3].action, "Find faces or text to redact");
 	});

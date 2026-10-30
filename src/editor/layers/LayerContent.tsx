@@ -14,20 +14,20 @@ import { TextLayerView } from "./text/TextLayerView";
 /**
  * A layer's content in its own space, loading images asynchronously.
  * `stroke` is one still being drawn on a drawing layer, or on an image's
- * cut, which `showRemoved` shows what it cuts away from; `matrix` colors an
+ * cut, which `selectionColor` shows as a selection; `matrix` colors an
  * image in place of its adjustments (see `ImageLayerView`).
  */
 export function LayerContent({
 	layer,
 	stroke,
 	matrix,
-	showRemoved,
+	selectionColor,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke?: ReactNode;
 	matrix?: { value: ColorMatrix };
-	showRemoved?: boolean;
+	selectionColor?: string;
 	onImageError: (error: unknown) => void;
 }) {
 	switch (layer.type) {
@@ -37,7 +37,7 @@ export function LayerContent({
 					layer={layer}
 					matrix={matrix}
 					liveMask={stroke}
-					showRemoved={showRemoved}
+					selectionColor={selectionColor}
 					onError={onImageError}
 				/>
 			);
@@ -62,23 +62,24 @@ export function LayerContent({
  * Draws nothing until the image, and its mask if it has one, have decoded,
  * or if either can't be: a cut-out never shows its background meanwhile.
  * A new mask shows once it has decoded, and the one before it until then.
+ * A cut shown as a selection hides nothing, so the image shows meanwhile.
  */
 function AsyncImage({
 	layer,
 	matrix,
 	liveMask,
-	showRemoved,
+	selectionColor,
 	onError,
 }: {
 	layer: ImageLayer;
 	matrix?: { value: ColorMatrix };
 	liveMask?: ReactNode;
-	showRemoved?: boolean;
+	selectionColor?: string;
 	onError: (error: unknown) => void;
 }) {
 	const image = useDecodedImage(layer.uri, onError);
 	const mask = useDecodedImage(layer.mask ?? null, onError);
-	if (!image || mask === undefined) return null;
+	if (!image || (mask === undefined && !selectionColor)) return null;
 	return (
 		<ImageLayerView
 			layer={layer}
@@ -86,7 +87,7 @@ function AsyncImage({
 			mask={mask ?? undefined}
 			matrix={matrix}
 			liveMask={liveMask}
-			showRemoved={showRemoved}
+			selectionColor={selectionColor}
 		/>
 	);
 }

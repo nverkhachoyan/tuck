@@ -35,7 +35,7 @@ Cut out's Subjects, Pick (MobileSAM on every platform), Keep and Erase, Invert, 
 
 ## 3. Bugs to look into
 
-Seen while checking other work, recorded October 27, 2026. Each was also seen on `main` before the change being checked, so none comes from it.
+Seen while checking other work, recorded October 27, 2026. The first two were also seen on `main` before the change being checked, so neither comes from it. The last was recorded October 29 on the Cut branch, and comes from its bar.
 
 ### A rail click right after a header ✓ or ✕ is lost
 
@@ -54,6 +54,10 @@ Seen in the browser pane on a wide window, in the same smoke run.
 * **Seen:** the photo joins the layers and is selected, but sits outside the document: the canvas doesn't show it, and Find on it says "Nothing in the visible crop". The same drop a few seconds later lands in the middle of the view.
 * **Expected:** the photo lands in the visible area, or the middle of the document while there's no view yet.
 * **Unknown:** the drop was a synthetic `DragEvent`, sent from a script, so check with a real drag too. The likely cause is `useAddImage`'s `onImage` in `Editor.tsx`, which places the image in `canvasRef.current?.visibleArea()`: before the canvas has its size or its view, that area may be empty or at the wrong place, rather than undefined (which would place it in the middle). Look at what `visibleArea()` returns before the first layout.
+
+### Cut's header runs out of room once something is selected
+
+Tracked in [#15](https://github.com/nverkhachoyan/tuck/issues/15), with the phone dock's same squeeze.
 
 ## 4. Release
 

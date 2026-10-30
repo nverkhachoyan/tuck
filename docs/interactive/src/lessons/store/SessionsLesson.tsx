@@ -319,7 +319,7 @@ export function SessionsLesson() {
 									<button
 										type="button"
 										className="button-small"
-										onClick={actions.beginSession}
+										onClick={() => actions.beginSession()}
 									>
 										Open the tool
 									</button>

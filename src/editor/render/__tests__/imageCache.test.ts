@@ -66,6 +66,25 @@ describe("createImageCache", () => {
 		assert.deepEqual(disposed, ["mask.png"]);
 	});
 
+	test("waits from the last release, not an earlier one that ends after it", async () => {
+		const { decode, disposed } = fakeDecoder();
+		const pending: (() => void)[] = [];
+		const cache = createImageCache(decode, (free) => pending.push(free));
+		const drawn = cache.acquire("mask.png");
+		const read = cache.acquire("mask.png");
+		await drawn.decoded;
+
+		read.release();
+		drawn.release();
+		const [readsWait, drawnsWait] = pending.splice(0);
+		readsWait();
+		await nextTask();
+		assert.deepEqual(disposed, [], "still drawn by an older recording");
+		drawnsWait();
+		await nextTask();
+		assert.deepEqual(disposed, ["mask.png"]);
+	});
+
 	test("decodes again after a failure, and the failed holder's release leaves the retry alone", async () => {
 		const { decode, disposed } = fakeDecoder();
 		let attempts = 0;

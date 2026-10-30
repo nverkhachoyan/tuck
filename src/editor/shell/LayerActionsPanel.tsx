@@ -19,6 +19,7 @@ export type LayerAction = {
 
 type LayerActionsProps = {
 	tools: readonly ToolEntry[];
+	busy: readonly string[];
 	startTool: ToolStarters;
 	actions: readonly LayerAction[];
 };
@@ -28,11 +29,12 @@ type LayerActionsProps = {
  * place of the tools, as the text panel is for text; the actions every
  * layer shares float by it (see `SelectionBar`). It's moved and sized on
  * the canvas, and tapping the canvas off it deselects it. `tools` are the
- * tools the layer offers (see `layerActionsFor`), then the buttons tools add
- * for it (`actions`).
+ * tools the layer offers (see `layerActionsFor`), spinning while in `busy`,
+ * then the buttons tools add for it (`actions`).
  */
 export function LayerActionsPanel({
 	tools,
+	busy,
 	startTool,
 	actions,
 }: LayerActionsProps) {
@@ -43,6 +45,7 @@ export function LayerActionsPanel({
 					key={entry.id}
 					label={entry.label}
 					icon={entry.icon}
+					busy={busy.includes(entry.id)}
 					onPress={startTool[entry.id]}
 				/>
 			))}
@@ -65,7 +68,12 @@ export function LayerActionsPanel({
  * the layer's kind as the bar's name and ✓ to deselect it. `SelectionBar`,
  * floating by the layer, is unchanged.
  */
-export function LayerBar({ tools, startTool, actions }: LayerActionsProps) {
+export function LayerBar({
+	tools,
+	busy,
+	startTool,
+	actions,
+}: LayerActionsProps) {
 	return (
 		<View style={styles.actions}>
 			{tools.map((entry) => (
@@ -74,6 +82,7 @@ export function LayerBar({ tools, startTool, actions }: LayerActionsProps) {
 					label={entry.label}
 					icon={entry.icon}
 					shortcut={entry.key}
+					busy={busy.includes(entry.id)}
 					onPress={startTool[entry.id]}
 				/>
 			))}

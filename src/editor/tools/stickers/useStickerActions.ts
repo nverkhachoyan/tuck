@@ -2,8 +2,11 @@ import { useCallback, useRef } from "react";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import type { ToolEnv } from "../../defineTool";
+import {
+	SAVED_STICKER_MAX_SIDE,
+	type StickerImage,
+} from "../../savedStickers/savedStickers";
 import type { Sticker } from "./bundledStickers";
-import { SAVED_STICKER_MAX_SIDE, type StickerImage } from "./savedStickers";
 import { bundledStickerImage } from "./stickerFile";
 import type { ShownSticker, useSavedStickers } from "./useSavedStickers";
 

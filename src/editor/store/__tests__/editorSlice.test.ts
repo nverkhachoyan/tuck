@@ -19,6 +19,7 @@ import {
 	createEditorSlice,
 	type EditorSlice,
 	MAX_HISTORY,
+	selectAppDocument,
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
@@ -1129,6 +1130,32 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
+		test("the app sees where a previewing session started, until it's committed", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const before = store.getState().document;
+			actions.beginSession(true);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			assert.notEqual(store.getState().document, before);
+			assert.equal(selectAppDocument(store.getState()), before);
+			actions.commitSession();
+			assert.equal(
+				selectAppDocument(store.getState()),
+				store.getState().document,
+			);
+		});
+
+		test("the app sees a session's changes as they're made, unless it previews", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.beginSession();
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			assert.equal(
+				selectAppDocument(store.getState()),
+				store.getState().document,
+			);
+		});
+
 		test("canceling restores where the session started", () => {
 			const { store, text } = storeWithText();
 			const actions = store.getState().actions;
@@ -1159,6 +1186,36 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().selectedLayerId, selectedLayerId);
 			actions.undo();
 			assert.equal(store.getState().document, before);
+		});
+
+		test("canceling a previewing session leaves nothing of it to redo", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const { document: before, past } = store.getState();
+			actions.beginSession(true);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.drawStroke(pen([100, 100, 200, 0]));
+			actions.undo();
+			actions.cancelSession();
+			assert.equal(store.getState().document, before);
+			assert.deepEqual(store.getState().past, past);
+			assert.equal(selectCanRedo(store.getState()), false);
+		});
+
+		test("a previewing session that changed nothing keeps the redo steps from before it", () => {
+			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
+			actions.deleteLayer(text.id);
+			actions.undo();
+			const { future } = store.getState();
+			actions.beginSession(true);
+			actions.cancelSession();
+			assert.deepEqual(store.getState().future, future);
+			actions.redo();
+			assert.equal(
+				store.getState().document?.layers.some(({ id }) => id === text.id),
+				false,
+			);
 		});
 
 		test("a canceled session keeps the steps undone within it", () => {
@@ -1330,6 +1387,33 @@ describe("editorSlice", () => {
 			actions.setMask(text.id, "file:///mask.png");
 			actions.setMask("missing", "file:///mask.png");
 			assert.equal(store.getState().document, before);
+		});
+	});
+
+	describe("addCutCopy", () => {
+		test("selects the copy, in one undo step", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const steps = store.getState().past.length;
+			actions.addCutCopy("photo", { mask: "file:///mask.png" });
+			const { document, selectedLayerId, past } = store.getState();
+			const copy = document?.layers[1] as ImageLayer;
+			assert.equal(copy.type, "image");
+			assert.equal(copy.mask, "file:///mask.png");
+			assert.equal(selectedLayerId, copy.id);
+			assert.equal(past.length, steps + 1);
+			actions.undo();
+			assert.equal(store.getState().document?.layers.length, 2);
+		});
+
+		test("a missing image adds nothing and keeps the selection", () => {
+			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
+			actions.selectLayer(text.id);
+			const before = store.getState().document;
+			actions.addCutCopy("missing", { mask: "file:///mask.png" });
+			assert.equal(store.getState().document, before);
+			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 	});
 

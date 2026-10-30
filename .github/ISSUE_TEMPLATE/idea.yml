@@ -1,0 +1,21 @@
+name: Idea
+description: Something the app could do, or do better.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What's missing or awkward today, and for whom.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What could change. Leave it open if it isn't clear yet.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: The PR, commit, or doc it came from, and anything weighed already.

@@ -1,7 +1,7 @@
 import { Asset } from "expo-asset";
 import { File, Paths } from "expo-file-system";
+import type { StickerImage } from "../../savedStickers/savedStickers";
 import { STICKER_SIZE, type Sticker } from "./bundledStickers";
-import type { StickerImage } from "./savedStickers";
 
 // `stickerFile.web.ts` does the same in browsers.
 

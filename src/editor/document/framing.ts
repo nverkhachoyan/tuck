@@ -56,7 +56,7 @@ export function framingAnchor(document: EditorDocument): FramingAnchor {
 }
 
 /**
- * The image a photo tool (Adjust, Cut out, or Find) works on: the selected
+ * The image a photo tool (Adjust, Cut, or Find) works on: the selected
  * visible image, or else the photo the canvas is framed around, or else the
  * lowest visible image. Null with none.
  */

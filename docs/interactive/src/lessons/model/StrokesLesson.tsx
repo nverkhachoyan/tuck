@@ -539,7 +539,7 @@ export function StrokesLesson() {
 						<h3>Cutting out works the same way</h3>
 						<p>
 							Refining a cut-out by hand uses <code>addMaskStroke</code> in{" "}
-							<code>cutout.ts</code>: the same trip into the image's own pixels,
+							<code>mask.ts</code>: the same trip into the image's own pixels,
 							plus one step more, undoing a flip, since a mask belongs to the
 							unflipped image.
 						</p>

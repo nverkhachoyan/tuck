@@ -73,14 +73,14 @@ export function StrokeTarget({
 	stroke,
 	live,
 	matrix,
-	showRemoved,
+	selectionColor,
 	onImageError,
 }: {
 	layer: Layer;
 	stroke: LiveStroke | null;
 	live: LiveTransform;
 	matrix?: DerivedValue<ColorMatrix>;
-	showRemoved: boolean;
+	selectionColor: string | undefined;
 	onImageError: (error: unknown) => void;
 }) {
 	const tool = stroke?.tool;
@@ -119,7 +119,7 @@ export function StrokeTarget({
 					</Group>
 				}
 				matrix={matrix}
-				showRemoved={showRemoved}
+				selectionColor={selectionColor}
 				onImageError={onImageError}
 			/>
 		);
@@ -141,7 +141,7 @@ export function StrokeTarget({
 				)
 			}
 			matrix={matrix}
-			showRemoved={showRemoved}
+			selectionColor={selectionColor}
 			onImageError={onImageError}
 		/>
 	);

@@ -20,6 +20,11 @@ export type ToolId = string;
  *   one that types into a hidden input (its definition's `views.Input`):
  *   Enter is a new line and ⌘/Ctrl+Enter runs Done, the dock rides the
  *   keyboard, and a press in the context bar keeps the input's focus.
+ * - `previews`: whether what it does to the document until Done is only a
+ *   preview, as Cut's selection is: meanwhile the app (autosave,
+ *   thumbnails) sees the document from before it opened.
+ * - `action`: whether pressing it runs its definition's `run` on its target
+ *   and opens no mode, as Remove BG does.
  * - `label`, `icon`: its button, and the title of its panel.
  * - `key`: the letter that picks it up.
  * - `shortcut`: its line in the list of shortcuts.
@@ -30,6 +35,8 @@ export type ToolSpec = {
 	tray: boolean;
 	sized: boolean;
 	takesKeys?: true | "typing";
+	previews?: true;
+	action?: true;
 	label: string;
 	icon: ToolIcon;
 	key: string;

@@ -33,7 +33,8 @@ type ToolViews<C> = {
  *   the image it started on while it's open for "image", and null for
  *   "none".
  * - `close`: puts the tool down, keeping its changes.
- * - `notify`: shows `message` in the edit notice, with Undo.
+ * - `notify`: shows `message` in the edit notice, with Undo, and `action`
+ *   beside it when given.
  * - `view`: zooms the canvas to an area of the document, or back to the
  *   fit, and gives the part of the document in view.
  * - `addImage`: keeps an image the tool made, as the host does.
@@ -41,6 +42,7 @@ type ToolViews<C> = {
  *   placed in view; one image is added at a time, Add photo's included, and
  *   an alert shows if it fails. Null from `load` adds nothing.
  * - `pickPhoto`, `importPhoto`: read a photo as the host does.
+ * - `startTool`: opens `tool` on `image`, finishing any other open tool.
  */
 export type ToolEnv = {
 	document: EditorDocument;
@@ -48,7 +50,7 @@ export type ToolEnv = {
 	open: boolean;
 	image: ImageLayer | null;
 	close: () => void;
-	notify: (message: string) => void;
+	notify: (message: string, action?: NoticeAction) => void;
 	view: {
 		zoomToArea: (area: Rect) => void;
 		fit: () => void;
@@ -61,7 +63,11 @@ export type ToolEnv = {
 	) => void;
 	pickPhoto: EditorHost["pickPhoto"];
 	importPhoto: EditorHost["importPhoto"];
+	startTool: (tool: ToolId, image: ImageLayer) => void;
 };
+
+/** A button the edit notice shows beside Undo. */
+export type NoticeAction = { label: string; onPress: () => void };
 
 /**
  * One of the editor's tools, as its own folder describes it, given its
@@ -120,6 +126,9 @@ export type ToolEnv = {
  *   label, with no Cancel, and Done letting go of the layer.
  * - `stepSize`: steps its brush for `[` and `]`, exactly when its spec is
  *   `sized`.
+ * - `run`: what pressing it does on its target image, exactly when its spec
+ *   is an `action`. Such a tool has no views and no canvas input.
+ * - `busy`: whether its button spins, while what it runs is working.
  */
 export type ToolDefinition<C> = {
 	useController: (env: ToolEnv) => C;
@@ -130,6 +139,7 @@ export type ToolDefinition<C> = {
 	deselectOnDone?: boolean;
 	reset?: (controller: C) => (() => void) | undefined;
 	announcement?: (controller: C) => string | null;
+	busy?: (controller: C) => boolean;
 	sheetTitle?: string;
 	sheetDismissed?: (controller: C) => void;
 	layerAction?: (controller: C, layer: Layer) => LayerAction | null;
@@ -156,6 +166,13 @@ export type ToolDefinition<C> = {
 				stepSize: (controller: C, step: 1 | -1) => void;
 		  }
 		| { spec: ToolSpec & { sized: false }; stepSize?: never }
+	) &
+	(
+		| {
+				spec: ToolSpec & { action: true };
+				run: (controller: C, image: ImageLayer) => void;
+		  }
+		| { spec: ToolSpec & { action?: never }; run?: never }
 	);
 
 /** A tool's definition, with its controller's type checked against it. */

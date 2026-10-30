@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { NoticeAction } from "./defineTool";
 import type { EditorDocument } from "./document/document";
 import { layerKindName } from "./layers/panel/LayerRow";
 import { useStore } from "./store";
@@ -6,13 +7,18 @@ import { useStore } from "./store";
 // Long enough to read it and reach Undo, short enough not to linger.
 const SHOWN_MS = 5000;
 
-type Notice = { message: string; after: EditorDocument | null };
+type Notice = {
+	message: string;
+	after: EditorDocument | null;
+	action?: NoticeAction;
+};
 
 /**
  * Deleting a layer or a group of layers, and what a tool notifies (Find's
- * redaction), say so, with Undo. The note goes once anything else changes the document,
- * since Undo would then take back that change instead, or after a few
- * seconds.
+ * redaction), say so, with Undo, and the tool's own `action` if it gives one.
+ * The note goes once anything else changes the document, since Undo would
+ * then take back that change instead, after a few seconds, or once its
+ * action is pressed.
  */
 export function useEditNotice(document: EditorDocument) {
 	const { undo, deleteLayer, deleteLayerGroup, beginSession, commitSession } =
@@ -39,6 +45,13 @@ export function useEditNotice(document: EditorDocument) {
 
 	return {
 		message: notice?.message ?? null,
+		action: notice?.action && {
+			label: notice.action.label,
+			onPress: () => {
+				setNotice(null);
+				notice.action?.onPress();
+			},
+		},
 		deleteLayer: (id: string) => {
 			const layer = document.layers.find((candidate) => candidate.id === id);
 			if (!layer) return;
@@ -50,8 +63,8 @@ export function useEditNotice(document: EditorDocument) {
 			deleted(`${group.name} deleted`, () => deleteLayerGroup(id));
 		},
 		// Shows `message`, once a tool has changed the document.
-		notify: (message: string) =>
-			setNotice({ message, after: useStore.getState().document }),
+		notify: (message: string, action?: NoticeAction) =>
+			setNotice({ message, after: useStore.getState().document, action }),
 		// A change made just before a tool opened (Find's redaction, as Redact
 		// opens) sits before the new session's start, where Undo doesn't
 		// reach. The session has no changes of its own while the note shows,

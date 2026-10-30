@@ -10,6 +10,7 @@ import { createTextLayer } from "../../text/text.ts";
 import { neutralAdjustments } from "../adjustments.ts";
 import type { CutStroke, ImageLayer } from "../image.ts";
 import {
+	addCutCopy,
 	invertMask,
 	paintMask,
 	setAdjustments,
@@ -119,5 +120,52 @@ describe("paintMask", () => {
 			paintMask(document, "photo", { ...eraser, points: [] }),
 			document,
 		);
+	});
+});
+
+describe("addCutCopy", () => {
+	const strokes: CutStroke[] = [pen];
+	const withText = () => {
+		const document = photo();
+		return addLayerOnTop(document, createTextLayer(document, "Hello"));
+	};
+
+	test("puts a copy cut to the selection just above its image, exactly over it", () => {
+		const document = withText();
+		const next = addCutCopy(
+			document,
+			"photo",
+			{ mask: "file:///a.png", maskStrokes: strokes },
+			"copy",
+		);
+		assert.deepEqual(
+			next.layers.map((layer) => layer.id),
+			["photo", "copy", document.layers[1].id],
+		);
+		const copy = next.layers[1] as ImageLayer;
+		assert.equal(copy.uri, image(document).uri);
+		assert.deepEqual(copy.transform, image(document).transform);
+		assert.equal(copy.mask, "file:///a.png");
+		assert.equal(copy.maskStrokes, strokes);
+		assert.equal(next.layers[0], document.layers[0]);
+	});
+
+	test("takes the selection's cut, not its source's, and starts unlocked", () => {
+		const cut = setMask(photo(), "photo", "file:///old.png");
+		assert.equal(image(cut).locked, true);
+		const copy = addCutCopy(cut, "photo", { maskStrokes: strokes }, "copy")
+			.layers[1] as ImageLayer;
+		assert.equal("mask" in copy, false);
+		assert.equal(copy.maskStrokes, strokes);
+		assert.equal(copy.locked, false);
+		assert.equal(copy.hidden, false);
+	});
+
+	test("copies only images", () => {
+		const document = withText();
+		const textId = document.layers[1].id;
+		const selection = { mask: "file:///a.png" };
+		assert.equal(addCutCopy(document, textId, selection, "copy"), document);
+		assert.equal(addCutCopy(document, "gone", selection, "copy"), document);
 	});
 });

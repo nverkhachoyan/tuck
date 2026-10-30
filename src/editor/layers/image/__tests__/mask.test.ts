@@ -7,6 +7,8 @@ import {
 	addMaskStroke,
 	imagePointAt,
 	isCutOut,
+	removalOf,
+	selectsNothing,
 	withInvertedCut,
 	withMask,
 } from "../mask.ts";
@@ -208,5 +210,61 @@ describe("isCutOut", () => {
 		const layer = photo();
 		assert.equal(isCutOut(layer), false);
 		assert.equal(isCutOut(withMask(layer, "file:///a.png")), true);
+	});
+});
+
+describe("selectsNothing", () => {
+	const empty = "file:///empty.png";
+	const stroke = { width: 10, points: [0, 0, 5, 5] };
+
+	test("an uncut image, or the empty mask, selects nothing", () => {
+		assert.equal(selectsNothing(photo(), empty), true);
+		assert.equal(selectsNothing(withMask(photo(), empty), empty), true);
+	});
+
+	test("an eraser on the empty mask still selects nothing, and a pen selects", () => {
+		const blank = withMask(photo(), empty);
+		const erased = {
+			...blank,
+			maskStrokes: [{ ...stroke, type: "eraser" as const }],
+		};
+		assert.equal(selectsNothing(erased, empty), true);
+		const painted = {
+			...blank,
+			maskStrokes: [{ ...stroke, type: "pen" as const }],
+		};
+		assert.equal(selectsNothing(painted, empty), false);
+	});
+
+	test("any other cut selects, even before the empty mask is made", () => {
+		const cut = withMask(photo(), "file:///subject.png");
+		assert.equal(selectsNothing(cut, empty), false);
+		assert.equal(selectsNothing(cut, null), false);
+	});
+});
+
+describe("removalOf", () => {
+	const empty = "file:///empty.png";
+	const selection = withMask(photo(), "file:///selection.png");
+
+	test("takes the selection out of the whole of an uncut image", () => {
+		assert.deepEqual(removalOf(photo(), selection, empty), {
+			from: null,
+			selection,
+		});
+	});
+
+	test("takes the selection out of the cut the image had", () => {
+		const before = withMask(photo(), "file:///cut.png");
+		assert.deepEqual(removalOf(before, selection, empty), {
+			from: before,
+			selection,
+		});
+	});
+
+	test("removes nothing when nothing is selected", () => {
+		const before = withMask(photo(), "file:///cut.png");
+		assert.equal(removalOf(before, withMask(photo(), empty), empty), null);
+		assert.equal(removalOf(before, photo(), empty), null);
 	});
 });

@@ -1,15 +1,12 @@
 import { useState } from "react";
-import { ImageFormat } from "react-native-skia";
-import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import type { EditorHost } from "../../editorHost";
-import type { ImageLayer } from "../../layers/image/image";
 import { isCutOut } from "../../layers/image/mask";
-import { renderCutOut } from "../../render/renderDocument";
+import { SAVED_STICKER_MAX_SIDE } from "../../savedStickers/savedStickers";
+import { cutOutSticker } from "../../savedStickers/saveSticker";
 import { useStore } from "../../store";
 import { selectSelectedLayer } from "../../store/editorSlice";
-import { SAVED_STICKER_MAX_SIDE, type StickerImage } from "./savedStickers";
 import type { useSavedStickers } from "./useSavedStickers";
 
 /**
@@ -59,18 +56,4 @@ export function useStickerSave(
 				: undefined,
 		save: image ? save : undefined,
 	};
-}
-
-async function cutOutSticker(layer: ImageLayer): Promise<StickerImage> {
-	const image = await renderCutOut(layer, SAVED_STICKER_MAX_SIDE);
-	try {
-		return {
-			uri: writeTemporaryPng(image.encodeToBytes(ImageFormat.PNG)),
-			width: image.width(),
-			height: image.height(),
-			opaque: false,
-		};
-	} finally {
-		image.dispose();
-	}
 }

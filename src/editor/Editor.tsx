@@ -68,6 +68,9 @@ const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
 /**
  * The editor for the session's document, in the app that `host` gives it.
+ * - `document`: the session's document as the app sees it. The editor draws
+ *   the store's own, which differs while a tool previews its changes (see
+ *   `Session`).
  * - `host`: the app's side; its save problem shows in the header and over
  *   the canvas.
  * - `tools`: the tools it offers, by id, the built-in ones unless given
@@ -77,7 +80,7 @@ const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
  *   ids and the editor's own entries.
  */
 export function Editor({
-	document,
+	document: opened,
 	host,
 	tools = BUILT_IN_TOOLS,
 	toolbar = BUILT_IN_TOOLBAR,
@@ -88,6 +91,7 @@ export function Editor({
 	toolbar?: readonly string[];
 }) {
 	const { focused, saveProblem } = host;
+	const document = useStore((state) => state.document) ?? opened;
 	const [toolbox] = useState(() => {
 		const specs = Object.fromEntries(
 			Object.entries(tools).map(([id, tool]) => [id, tool.spec]),
@@ -190,6 +194,7 @@ export function Editor({
 	const {
 		controllers,
 		startTool,
+		busy: busyTools,
 		editLayer,
 		editorOf,
 		done,
@@ -324,12 +329,16 @@ export function Editor({
 	);
 
 	const hasImage = targetImage !== null;
+	// The buttons that spin: Add photo while a photo is on its way, and the
+	// tools whose work is running.
+	const busy = addBusy ? [...busyTools, "photo"] : busyTools;
 	// What the dock offers for the selected layer: the tools that act on it,
 	// and the buttons tools add for it, each in the toolbar's order.
 	const layerTools =
 		selectedLayer && layerActionsFor(selectedLayer, specs, toolbox.toolbar);
 	const layerActions = layerTools && {
 		tools: toolbox.entries.filter((entry) => layerTools.includes(entry.id)),
+		busy,
 		startTool,
 		actions: toolbox.toolbar.flatMap((id) => {
 			const listed = controllers[id];
@@ -480,7 +489,7 @@ export function Editor({
 							<EditorRail
 								tools={toolbox.entries}
 								chosen={tool}
-								addBusy={addBusy}
+								busy={busy}
 								hasImage={hasImage}
 								startTool={startTool}
 								tool={tool}
@@ -514,7 +523,7 @@ export function Editor({
 									idle={
 										<ToolsPanel
 											tools={toolbox.entries}
-											addBusy={addBusy}
+											busy={busy}
 											hasImage={hasImage}
 											startTool={startTool}
 										/>
@@ -529,6 +538,7 @@ export function Editor({
 							message={editNotice.message}
 							action="Undo"
 							onAction={editNotice.undo}
+							secondAction={editNotice.action}
 							inset={{
 								left: layout.canvasInset.left,
 								right: layout.coveredRight ?? 0,

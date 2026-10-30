@@ -10,15 +10,15 @@ import type { ToolEntry } from "./toolList";
  * marking it. The tool's options are in the header's context bar, not here.
  * On web, each shows the letter that picks it up on hover. A tool with a
  * sheet opens it beside its rail button on a wide window, which `anchors`
- * gives by the tool's id. Add photo picks a photo to add, and
- * spins while one is on its way. A tool that needs an image shows only with
+ * gives by the tool's id. A button in `busy` spins, as Add photo does
+ * while a photo is on its way. A tool that needs an image shows only with
  * one to work on.
  */
 export function ToolsPanel({
 	tools: entries,
 	vertical = false,
 	tool,
-	addBusy,
+	busy,
 	hasImage,
 	startTool,
 	anchors,
@@ -26,7 +26,7 @@ export function ToolsPanel({
 	tools: readonly ToolEntry[];
 	vertical?: boolean;
 	tool?: string | null;
-	addBusy: boolean;
+	busy: readonly string[];
 	hasImage: boolean;
 	startTool: ToolStarters;
 	anchors?: Readonly<Record<string, RefObject<ViewInstance | null>>>;
@@ -47,7 +47,7 @@ export function ToolsPanel({
 					compact={compact}
 					selected={vertical ? undefined : open}
 					marked={vertical ? open : undefined}
-					busy={entry.id === "photo" && addBusy}
+					busy={busy.includes(entry.id)}
 					buttonRef={anchors?.[entry.id]}
 					onPress={startTool[entry.id]}
 				/>

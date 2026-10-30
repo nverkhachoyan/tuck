@@ -11,6 +11,39 @@ export function isCutOut(layer: ImageLayer): boolean {
 }
 
 /**
+ * Whether Cut's selection on `layer` selects nothing: the image isn't cut,
+ * or its mask is `emptyMask`, the one that selects nothing, with nothing
+ * painted back.
+ */
+export function selectsNothing(
+	layer: ImageLayer,
+	emptyMask: string | null,
+): boolean {
+	if (!isCutOut(layer)) return true;
+	return (
+		emptyMask !== null &&
+		layer.mask === emptyMask &&
+		!layer.maskStrokes?.some((stroke) => stroke.type === "pen")
+	);
+}
+
+/**
+ * What Cut's Remove does to an image that was `before` when Cut opened,
+ * given its `selection`: the selection is taken out of the cut it had
+ * (`from`), or out of the whole image (`from` null) when it had none, which
+ * leaves the selection inverted. Null when nothing is selected, since
+ * there's nothing to remove.
+ */
+export function removalOf(
+	before: ImageLayer,
+	selection: ImageLayer,
+	emptyMask: string | null,
+): { from: ImageLayer | null; selection: ImageLayer } | null {
+	if (selectsNothing(selection, emptyMask)) return null;
+	return { from: isCutOut(before) ? before : null, selection };
+}
+
+/**
  * `layer` shown through `mask` (see `ImageLayer`), or whole again when it's
  * null, or `layer` itself when that's how it's shown already. Strokes that
  * refined the cut before go with it, since they were painted against the

@@ -9,51 +9,18 @@ import {
 	ColorMatrix as SkiaColorMatrix,
 	Image as SkiaImage,
 } from "react-native-skia";
-import { CutMask, imageBox } from "../../layers/image/ImageLayerView";
+import { CutMask } from "../../layers/image/ImageLayerView";
 import type { ImageLayer } from "../../layers/image/image";
+import { decodedImages } from "../../render/decodedImages";
 import { drawOffscreen } from "../../render/drawOffscreen";
+
+// A flattened cut's longer side, at most, when strokes refine it: soft
+// edges hide the difference on a larger photo.
+const FLAT_MAX_SIDE = 2048;
 
 // Turns white into black and black into white. Its last column is in 0–1
 // units.
 const INVERT = [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0];
-
-/**
- * Whether `layer`'s cut, with its decoded `mask` and its strokes, shows the
- * image `at` a point on it, as fractions of its width and height from its
- * top left before it's flipped (see `imagePointAt`). A soft edge counts
- * where it's at least half shown.
- */
-export async function cutShowsAt(
-	layer: ImageLayer,
-	mask: SkImage | undefined,
-	at: { x: number; y: number },
-): Promise<boolean> {
-	const box = imageBox(layer);
-	const x = box.x + at.x * layer.width;
-	const y = box.y + at.y * layer.height;
-	const image = await drawOffscreen(
-		<Group>
-			<Fill color="black" />
-			<Group transform={[{ translateX: 0.5 - x }, { translateY: 0.5 - y }]}>
-				<CutMask layer={layer} mask={mask} />
-			</Group>
-		</Group>,
-		{ width: 1, height: 1 },
-	);
-	if (!image) throw new Error("Couldn't read the cut");
-	try {
-		const pixel = image.readPixels(0, 0, {
-			width: 1,
-			height: 1,
-			colorType: ColorType.RGBA_8888,
-			alphaType: AlphaType.Unpremul,
-		});
-		if (!pixel) throw new Error("Couldn't read the cut");
-		return pixel[0] >= 128;
-	} finally {
-		image.dispose();
-	}
-}
 
 /**
  * Returns a grayscale PNG's bytes. Both masks cover the whole image, so the
@@ -109,6 +76,73 @@ export async function invertedMask(
 	);
 	if (!inverted) throw new Error("Couldn't invert the cut");
 	return encodeGrayPng(inverted);
+}
+
+/**
+ * The mask Cut's Remove leaves an image with, as a grayscale PNG's bytes:
+ * `selection`'s cut taken out of `from`'s, or out of the whole image when
+ * `from` is null (see `removalOf`).
+ */
+export async function removedMask(
+	from: ImageLayer | null,
+	selection: ImageLayer,
+): Promise<Uint8Array> {
+	const selected = await flattenedCut(selection);
+	try {
+		if (!from) return await invertedMask(selected);
+		const kept = await flattenedCut(from);
+		try {
+			return await combineMasks(kept, selected, "remove");
+		} finally {
+			kept.dispose();
+		}
+	} finally {
+		selected.dispose();
+	}
+}
+
+/**
+ * What `layer`'s cut shows, its mask with its strokes painted over it, as
+ * one gray image stretched over the image like any mask. Without strokes it
+ * has its mask's pixels; with them, the image's, up to `FLAT_MAX_SIDE`, so
+ * a stroke on a small mask keeps its edge.
+ */
+async function flattenedCut(layer: ImageLayer): Promise<SkImage> {
+	const held =
+		layer.mask === undefined ? null : decodedImages.acquire(layer.mask);
+	try {
+		const mask = held ? await held.decoded : undefined;
+		let width = mask?.width() ?? 1;
+		let height = mask?.height() ?? 1;
+		if (layer.maskStrokes) {
+			const scale = Math.min(
+				1,
+				FLAT_MAX_SIDE / Math.max(layer.width, layer.height),
+			);
+			width = Math.max(width, Math.round(layer.width * scale));
+			height = Math.max(height, Math.round(layer.height * scale));
+		}
+		const flat = await drawOffscreen(
+			<Group>
+				<Fill color="black" />
+				<Group
+					transform={[
+						{ scaleX: width / layer.width },
+						{ scaleY: height / layer.height },
+						{ translateX: layer.width / 2 },
+						{ translateY: layer.height / 2 },
+					]}
+				>
+					<CutMask layer={layer} mask={mask} />
+				</Group>
+			</Group>,
+			{ width, height },
+		);
+		if (!flat) throw new Error("Couldn't read the selection");
+		return flat;
+	} finally {
+		held?.release();
+	}
 }
 
 /**
