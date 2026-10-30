@@ -23,6 +23,8 @@ export type ToolId = string;
  * - `previews`: whether what it does to the document until Done is only a
  *   preview, as Cut's selection is: meanwhile the app (autosave,
  *   thumbnails) sees the document from before it opened.
+ * - `action`: whether pressing it runs its definition's `run` on its target
+ *   and opens no mode, as Remove BG does.
  * - `label`, `icon`: its button, and the title of its panel.
  * - `key`: the letter that picks it up.
  * - `shortcut`: its line in the list of shortcuts.
@@ -34,6 +36,7 @@ export type ToolSpec = {
 	sized: boolean;
 	takesKeys?: true | "typing";
 	previews?: true;
+	action?: true;
 	label: string;
 	icon: ToolIcon;
 	key: string;

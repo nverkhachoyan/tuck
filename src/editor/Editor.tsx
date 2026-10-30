@@ -194,6 +194,7 @@ export function Editor({
 	const {
 		controllers,
 		startTool,
+		busy: busyTools,
 		editLayer,
 		editorOf,
 		done,
@@ -328,12 +329,16 @@ export function Editor({
 	);
 
 	const hasImage = targetImage !== null;
+	// The buttons that spin: Add photo while a photo is on its way, and the
+	// tools whose work is running.
+	const busy = addBusy ? [...busyTools, "photo"] : busyTools;
 	// What the dock offers for the selected layer: the tools that act on it,
 	// and the buttons tools add for it, each in the toolbar's order.
 	const layerTools =
 		selectedLayer && layerActionsFor(selectedLayer, specs, toolbox.toolbar);
 	const layerActions = layerTools && {
 		tools: toolbox.entries.filter((entry) => layerTools.includes(entry.id)),
+		busy,
 		startTool,
 		actions: toolbox.toolbar.flatMap((id) => {
 			const listed = controllers[id];
@@ -484,7 +489,7 @@ export function Editor({
 							<EditorRail
 								tools={toolbox.entries}
 								chosen={tool}
-								addBusy={addBusy}
+								busy={busy}
 								hasImage={hasImage}
 								startTool={startTool}
 								tool={tool}
@@ -518,7 +523,7 @@ export function Editor({
 									idle={
 										<ToolsPanel
 											tools={toolbox.entries}
-											addBusy={addBusy}
+											busy={busy}
 											hasImage={hasImage}
 											startTool={startTool}
 										/>
@@ -533,6 +538,7 @@ export function Editor({
 							message={editNotice.message}
 							action="Undo"
 							onAction={editNotice.undo}
+							secondAction={editNotice.action}
 							inset={{
 								left: layout.canvasInset.left,
 								right: layout.coveredRight ?? 0,

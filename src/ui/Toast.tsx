@@ -15,7 +15,8 @@ const RISE = { duration: 160, easing: Easing.out(Easing.cubic) };
 
 /**
  * A short note that something happened, floating over the bottom of the
- * canvas, with an action to take it back. `inset` keeps it clear of the dock
+ * canvas, with an action to take it back, after `secondAction` when there's
+ * one. `inset` keeps it clear of the dock
  * and any panel beside the canvas. It rises in as it mounts, and a screen
  * reader hears it too. Whoever shows it decides when it goes.
  */
@@ -23,11 +24,13 @@ export function Toast({
 	message,
 	action,
 	onAction,
+	secondAction,
 	inset,
 }: {
 	message: string;
 	action: string;
 	onAction: () => void;
+	secondAction?: { label: string; onPress: () => void };
 	inset: Pick<ViewStyle, "left" | "right" | "bottom">;
 }) {
 	const reduceMotion = useReducedMotion();
@@ -46,6 +49,12 @@ export function Toast({
 				<Text style={styles.message} numberOfLines={1}>
 					{message}
 				</Text>
+				{secondAction && (
+					<TextButton
+						label={secondAction.label}
+						onPress={secondAction.onPress}
+					/>
+				)}
 				<TextButton label={action} tone="strong" onPress={onAction} />
 			</Animated.View>
 		</View>

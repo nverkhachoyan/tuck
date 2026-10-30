@@ -49,6 +49,14 @@ const drawing = run(initialEditorMode, {
 });
 
 describe("editorModeReducer", () => {
+	test("an action never opens as a mode", () => {
+		const state = run(drawing, {
+			type: "startTool",
+			start: { tool: "removeBg", layerId: "photo" },
+		});
+		assert.equal(state, drawing);
+	});
+
 	test("starting a tool closes the layers sheet", () => {
 		const state = run(
 			initialEditorMode,

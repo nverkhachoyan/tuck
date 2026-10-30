@@ -74,8 +74,8 @@ const idle = { type: "idle" } as const;
 
 /**
  * Starting a tool closes the layers sheet, and starts it with its tray
- * closed. Starting and ending a tool stop the eyedropper: what it was
- * picking for has moved on.
+ * closed; an action (see `ToolSpec`) never opens. Starting and ending a tool
+ * stop the eyedropper: what it was picking for has moved on.
  * What a tool's mode holds follows its spec in `specs`.
  */
 export function editorModeReducer(
@@ -86,6 +86,7 @@ export function editorModeReducer(
 	const { mode } = state;
 	switch (action.type) {
 		case "startTool":
+			if (specs[action.start.tool]?.action) return state;
 			return {
 				...state,
 				mode: toolMode(action.start, specs),

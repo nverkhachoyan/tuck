@@ -3,6 +3,7 @@ import type { Tool } from "./defineTool";
 import { adjustTool } from "./tools/adjust/adjustTool";
 import { cropTool } from "./tools/crop/cropTool";
 import { cutTool } from "./tools/cut/cutTool";
+import { removeBgTool } from "./tools/cut/removeBgTool";
 import { drawTool } from "./tools/draw/drawTool";
 import { findTool } from "./tools/find/findTool";
 import { redactTool } from "./tools/redact/redactTool";
@@ -17,6 +18,7 @@ export const BUILT_IN_TOOLS = {
 	find: findTool,
 	sticker: stickersTool,
 	cut: cutTool,
+	removeBg: removeBgTool,
 	crop: cropTool,
 	adjust: adjustTool,
 } satisfies Record<keyof typeof BUILT_IN_SPECS, Tool>;

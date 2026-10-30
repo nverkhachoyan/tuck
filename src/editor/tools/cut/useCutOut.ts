@@ -40,9 +40,7 @@ export type PickSize = { mask: string; index: number; count: number };
  * Selects what to cut out of `image`, and turns a selection inside out. The
  * selection is the image's mask while Cut is open; one that selects nothing
  * is `emptyMask`, a black pixel stretched over the image.
- * - `findAll` adds every subject to the selection. Every subject found once
- *   is used again while the session's `key` stays the same, since its
- *   project keeps the file until it closes.
+ * - `findAll` adds every subject to the selection (`subjectMaskOf`).
  * - `pick` adds the subject at a point, or once Segment Anything is ready,
  *   any object there, or takes it out of the selection. Another tap on the
  *   same spot grows what it took, from a part to the whole and around
@@ -89,16 +87,9 @@ export function useCutOut({
 		uri: string;
 	} | null>(null);
 	const busy = useRef(false);
-	// The mask of every subject found for each image file in this session,
-	// and the one that selects nothing.
-	const found = useRef({
-		key,
-		masks: new Map<string, string>(),
-		empty: null as Promise<string> | null,
-	});
-	if (found.current.key !== key) {
-		found.current = { key, masks: new Map(), empty: null };
-	}
+	// The mask that selects nothing, made once per session.
+	const found = useRef({ key, empty: null as Promise<string> | null });
+	if (found.current.key !== key) found.current = { key, empty: null };
 	const lastPick = useRef<Pick | null>(null);
 	const forgetPick = () => {
 		for (const mask of lastPick.current?.masks ?? []) mask.dispose();
@@ -165,19 +156,14 @@ export function useCutOut({
 	const findAll = (layer: ImageLayer) =>
 		exclusive("all", async () => {
 			setNews("Finding the subjects");
-			let subject = found.current.masks.get(layer.uri);
-			if (subject === undefined) {
-				const mask = await findSubjectMask(layer.uri);
-				if (!mask) {
-					setNews(null);
-					showAlert(
-						"Nothing to select",
-						"There's no clear subject in front of the background.",
-					);
-					return;
-				}
-				subject = await keep(mask.uri);
-				found.current.masks.set(layer.uri, subject);
+			const subject = await subjectMaskOf(key, layer.uri, keep);
+			if (subject === null) {
+				setNews(null);
+				showAlert(
+					"Nothing to select",
+					"There's no clear subject in front of the background.",
+				);
+				return;
 			}
 			const current = latest(layer.id);
 			if (!current) return;
@@ -323,6 +309,36 @@ export function useCutOut({
 }
 
 class PickOvertaken extends Error {}
+
+// The mask of every subject found in each image file, for the session whose
+// key found them, since its project keeps the files until it closes.
+let foundSubjects = {
+	key: null as string | null,
+	masks: new Map<string, string>(),
+};
+
+/**
+ * The mask of every subject in the image at `uri`, kept with `keep`, or null
+ * when there's none. Cut and Remove BG find each image's once while the
+ * session's `key` stays the same.
+ */
+export async function subjectMaskOf(
+	key: string | null,
+	uri: string,
+	keep: (uri: string) => Promise<string>,
+): Promise<string | null> {
+	if (foundSubjects.key !== key) {
+		foundSubjects = { key, masks: new Map() };
+	}
+	const session = foundSubjects;
+	const kept = session.masks.get(uri);
+	if (kept !== undefined) return kept;
+	const mask = await findSubjectMask(uri);
+	if (!mask) return null;
+	const subject = await keep(mask.uri);
+	session.masks.set(uri, subject);
+	return subject;
+}
 
 /**
  * A first pick at `at` on `image`, as it is now, adding to its mask or

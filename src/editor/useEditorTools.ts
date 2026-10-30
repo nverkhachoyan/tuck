@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { BackHandler } from "react-native";
 import {
 	definitionOf,
+	type NoticeAction,
 	type ToolControllers,
 	type ToolEnv,
 	type ToolList,
@@ -52,7 +53,7 @@ export function useEditorTools({
 	addLayerImage: ToolEnv["addLayerImage"];
 	addPhoto: () => void;
 	view: ToolEnv["view"];
-	notify: (message: string) => void;
+	notify: (message: string, action?: NoticeAction) => void;
 }) {
 	const { cancelSession, commitSession, selectLayer } = useStore(
 		(state) => state.actions,
@@ -94,6 +95,7 @@ export function useEditorTools({
 			addLayerImage,
 			pickPhoto: host.pickPhoto,
 			importPhoto: host.importPhoto,
+			startTool: (next, on) => latestOpenOn.current(next, on),
 		});
 		controllers[id] = { definition, controller };
 	}
@@ -113,26 +115,41 @@ export function useEditorTools({
 		cancelSession();
 		closeTool();
 	};
-	// A tool that needs a photo works in or on the selected one, or else the
-	// main one. Its `started` runs from the effect below, once its session
-	// has begun, or at once when it's already open on that photo. Starting a
-	// tool that's open, as the rail does, opens it again.
+	// A tool that needs a photo works in or on `image`: the selected one, or
+	// else the main one. Its `started` runs from the effect below, once its
+	// session has begun, or at once when it's already open on that photo.
+	// Starting a tool that's open, as the rail does, opens it again. An
+	// action runs on the photo and opens nothing.
 	const pendingStart = useRef<{ tool: ToolId; image: ImageLayer } | null>(null);
-	const startTool = (next: ToolId) => {
+	const startTool = (next: ToolId, image = targetImage) => {
 		const { definition, controller } = controllers[next];
-		if (definition.spec.target !== "none" && !targetImage) return;
+		if (definition.spec.target !== "none" && !image) return;
+		if (definition.run) {
+			if (image) definition.run(controller, image);
+			return;
+		}
 		definition.prepare?.(controller);
-		if (definition.started && targetImage) {
+		if (definition.started && image) {
 			const openOnImage =
 				mode.type === "tool" &&
 				mode.tool === next &&
-				(mode.layerId === null || mode.layerId === targetImage.id);
-			if (openOnImage) definition.started(controller, targetImage);
-			else pendingStart.current = { tool: next, image: targetImage };
+				(mode.layerId === null || mode.layerId === image.id);
+			if (openOnImage) definition.started(controller, image);
+			else pendingStart.current = { tool: next, image };
 		}
-		const start = { tool: next, layerId: targetImage?.id ?? null };
+		const start = { tool: next, layerId: image?.id ?? null };
 		if (next === tool) setReopened((count) => count + 1);
 		dispatchMode({ type: "startTool", start });
+	};
+	// What a tool's `startTool` runs, from this render whenever it's called,
+	// as from a notice shown renders ago.
+	const latestOpenOn = useRef<(next: ToolId, image: ImageLayer) => void>(
+		() => {},
+	);
+	latestOpenOn.current = (next, image) => {
+		if (!controllers[next]) return;
+		if (tool && tool !== next) finishTool();
+		startTool(next, image);
 	};
 	// The tool that edits `layer` in place, if any.
 	const editorOf = (layer: Layer): ToolId | undefined =>
@@ -186,6 +203,12 @@ export function useEditorTools({
 		photo: addPhoto,
 	};
 
+	// The tools whose buttons spin, while what they run is working.
+	const busy = Object.keys(controllers).filter((id) => {
+		const { definition, controller } = controllers[id];
+		return definition.busy?.(controller) === true;
+	});
+
 	// [ and ] step the open tool's brush, if it has one.
 	const stepToolSize = (step: 1 | -1) => {
 		if (!tool) return;
@@ -207,6 +230,7 @@ export function useEditorTools({
 	return {
 		controllers,
 		startTool: starters,
+		busy,
 		editLayer,
 		editorOf,
 		done: finishTool,

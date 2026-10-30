@@ -14,7 +14,7 @@ import { RAIL_WIDTH } from "./useEditorLayout";
 export function EditorRail({
 	tools,
 	chosen,
-	addBusy,
+	busy,
 	hasImage,
 	startTool,
 	tool,
@@ -23,7 +23,7 @@ export function EditorRail({
 }: {
 	tools: readonly ToolEntry[];
 	chosen: string | null;
-	addBusy: boolean;
+	busy: readonly string[];
 	hasImage: boolean;
 	startTool: ToolStarters;
 	tool: ToolId | null;
@@ -42,7 +42,7 @@ export function EditorRail({
 					tools={tools}
 					vertical
 					tool={chosen}
-					addBusy={addBusy}
+					busy={busy}
 					hasImage={hasImage}
 					startTool={mapStarters(startTool, fromRail)}
 					anchors={sheetAnchors}
