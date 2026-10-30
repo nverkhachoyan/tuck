@@ -1,14 +1,25 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
+import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { usePreference } from "@/platform/usePreference";
+import { errorMessage } from "@/ui/errorMessage";
+import { showAlert } from "@/ui/showAlert";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
 import type { ToolEnv } from "../../defineTool";
+import { findLayer } from "../../document/document";
 import { visibleImageLayer } from "../../document/framing";
 import type { ImageLayer } from "../../layers/image/image";
-import { imagePointAt, isCutOut } from "../../layers/image/mask";
+import {
+	imagePointAt,
+	isCutOut,
+	removalOf,
+	selectsNothing,
+} from "../../layers/image/mask";
+import { cutOutSticker, saveSticker } from "../../savedStickers/saveSticker";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
+import { removedMask } from "./cutMask";
 import {
 	type CutTapMode,
 	cutCanvasTool,
@@ -20,6 +31,9 @@ import { useCutOut } from "./useCutOut";
 import { useCutRedaction } from "./useCutRedaction";
 
 export type CutController = ReturnType<typeof useCutTool>;
+
+/** What the phone's tray shows: the brush's options, or the Apply menu. */
+export type CutTray = "brush" | "apply";
 
 /**
  * Cut, on its `image` while it's open: its settings, kept between sessions,
@@ -34,9 +48,18 @@ export type CutController = ReturnType<typeof useCutTool>;
  *   says; on web, holding Shift adds and holding Alt subtracts.
  * - `resize` steps the last tap's selection a size larger or smaller, while
  *   it's still the selection.
- * - Redacting the selection takes back the cut, adds a redaction in its
- *   shape, in the editor's redaction look, which is selected, and closes
- *   Cut (`close`).
+ * - Done (`done`, named by `doneLabel`) copies the selection to a new layer
+ *   above the image, selected, when Cut opened on an image that wasn't cut,
+ *   and makes it the image's new cut when it opened on one that was.
+ * - The Apply menu's actions (`apply`), each undefined while nothing is
+ *   selected: Keep only makes the selection the image's cut; Remove hides
+ *   the selection, taking it out of the cut the image had (`removalOf`);
+ *   Redact adds a redaction in its shape, in the editor's redaction look,
+ *   which is selected; and each closes Cut (`close`) as one undo step,
+ *   with a notice (`notify`). Save sticker keeps what's selected as a saved
+ *   sticker and leaves Cut open (`stickerSaved` until the selection
+ *   changes). `applying` names the action running, while one runs.
+ * - `tray` is what the phone's tray shows, set by `showInTray`.
  * - `stepSize` steps the brush's size for `[` and `]`, `canvasInput` paints
  *   or taps on a document of `documentSize`, while there's an image shown
  *   to cut, and `finishStroke` paints the selection, or selects what was
@@ -47,11 +70,31 @@ export function useCutTool({
 	documentSize,
 	addImage,
 	close,
-}: Pick<ToolEnv, "image" | "documentSize" | "addImage" | "close">) {
+	notify,
+}: Pick<ToolEnv, "image" | "documentSize" | "addImage" | "close" | "notify">) {
 	const layer = image ?? undefined;
 	const key = useStore((state) => state.key);
-	const { setMask, invertMask, cancelSession, addMaskedRedaction, paintMask } =
-		useStore((state) => state.actions);
+	// The image as it was when Cut opened.
+	const before = useStore((state) => {
+		const found =
+			layer && state.session && findLayer(state.session.document, layer.id);
+		return found?.type === "image" ? found : undefined;
+	});
+	const {
+		setMask,
+		invertMask,
+		cancelSession,
+		commitSession,
+		addMaskedRedaction,
+		addCutCopy,
+		paintMask,
+	} = useStore((state) => state.actions);
+	const [tray, showInTray] = useState<CutTray>("brush");
+	const [applying, setApplying] = useState<"remove" | "saveSticker" | null>(
+		null,
+	);
+	const applyingNow = useRef(false);
+	const [savedSticker, setSavedSticker] = useState<ImageLayer | null>(null);
 	const layerId = useRef<string | null>(null);
 	layerId.current = layer?.id ?? null;
 	// Saved under Cut out's key, so its settings carry over.
@@ -81,17 +124,62 @@ export function useCutTool({
 			if (layerId.current !== id) return;
 			cancelSession();
 			addMaskedRedaction(id, mask, rect, effectFor(documentSize));
+			notify("Selection redacted");
 			close();
 		},
 	});
 	const cut = layer && isCutOut(layer) ? layer : undefined;
-	// Nothing painted on the mask that selects nothing still selects nothing.
 	const selected =
-		cut &&
-		(cut.mask !== cutOut.emptyMask ||
-			cut.maskStrokes?.some((stroke) => stroke.type === "pen"))
-			? cut
-			: undefined;
+		layer && !selectsNothing(layer, cutOut.emptyMask) ? layer : undefined;
+	const removal =
+		before && selected ? removalOf(before, selected, cutOut.emptyMask) : null;
+	const openedOnCut = before !== undefined && isCutOut(before);
+
+	// Runs `task` unless another action is running, with an alert titled
+	// `failed` if it throws.
+	const runAction = async (
+		action: "remove" | "saveSticker",
+		failed: string,
+		task: () => Promise<void>,
+	) => {
+		if (applyingNow.current) return;
+		applyingNow.current = true;
+		setApplying(action);
+		try {
+			await task();
+		} catch (error) {
+			showAlert(failed, errorMessage(error));
+		} finally {
+			applyingNow.current = false;
+			setApplying(null);
+		}
+	};
+	// Its Undo would take back an earlier change if the session made none.
+	const notifyIfChanged = (message: string) => {
+		const { document, session } = useStore.getState();
+		if (document !== session?.document) notify(message);
+	};
+	const keepOnly = () => {
+		notifyIfChanged(openedOnCut ? "Cut updated" : "Kept only the selection");
+		commitSession();
+		close();
+	};
+	const remove = (from: ImageLayer | null, selection: ImageLayer) =>
+		runAction("remove", "Couldn't remove the selection", async () => {
+			const bytes = await removedMask(from, selection);
+			const mask = await keep(writeTemporaryPng(bytes));
+			if (layerId.current !== selection.id) return;
+			cancelSession();
+			setMask(selection.id, mask);
+			notify("Selection removed");
+			close();
+		});
+	const saveAsSticker = (selection: ImageLayer) =>
+		runAction("saveSticker", "Couldn't save sticker", async () => {
+			await saveSticker(await cutOutSticker(selection));
+			setSavedSticker(selection);
+			cutOut.announce("Saved as a sticker");
+		});
 	const { pickSize } = cutOut;
 	const tool = cutToolInUse(settings, cutOut.canFind);
 	const cutLayerId = layer?.id;
@@ -121,7 +209,6 @@ export function useCutTool({
 		news: cutOut.news,
 		finding: cutOut.finding,
 		inverting: cutOut.inverting,
-		redacting: redaction.busy,
 		findAll:
 			cutOut.canFind && layer ? () => void cutOut.findAll(layer) : undefined,
 		resize:
@@ -133,7 +220,22 @@ export function useCutTool({
 					}
 				: undefined,
 		invert: cut ? () => void cutOut.invert(cut) : undefined,
-		redact: selected ? () => void redaction.redact(selected) : undefined,
+		apply: {
+			keepOnly: selected ? keepOnly : undefined,
+			remove: removal
+				? () => void remove(removal.from, removal.selection)
+				: undefined,
+			redact: selected ? () => void redaction.redact(selected) : undefined,
+			saveSticker: selected ? () => void saveAsSticker(selected) : undefined,
+		},
+		applying: redaction.busy ? ("redact" as const) : applying,
+		stickerSaved:
+			selected !== undefined &&
+			savedSticker?.id === selected.id &&
+			savedSticker.mask === selected.mask &&
+			savedSticker.maskStrokes === selected.maskStrokes,
+		tray,
+		showInTray,
 		reset: selected ? () => void cutOut.clear(selected, true) : undefined,
 		// Opened on `image`, which this render doesn't show yet: one that
 		// isn't cut yet starts selecting nothing; one that is starts
@@ -143,8 +245,18 @@ export function useCutTool({
 			layerId.current = image.id;
 			void cutOut.clear(image, false);
 		},
+		doneLabel: !selected ? undefined : openedOnCut ? "Update cut" : "New layer",
 		done: () => {
-			if (!selected) cancelSession();
+			if (!selected) {
+				cancelSession();
+			} else if (openedOnCut) {
+				notifyIfChanged("Cut updated");
+			} else {
+				const { mask, maskStrokes } = selected;
+				cancelSession();
+				addCutCopy(selected.id, { mask, maskStrokes });
+				notify("Selection copied to a new layer");
+			}
 		},
 		finishStroke: (stroke: ToolStroke) => {
 			switch (stroke.type) {

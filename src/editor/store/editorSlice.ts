@@ -9,6 +9,7 @@ import {
 import { reframe, setBackground } from "../document/documentEdits.ts";
 import type { Framing } from "../document/framing.ts";
 import type { Rect, Transform } from "../document/geometry.ts";
+import { createLayerId } from "../layers/base.ts";
 import type { Stroke } from "../layers/drawing/drawing.ts";
 import { drawStroke } from "../layers/drawing/drawingEdits.ts";
 import type { Adjustments } from "../layers/image/adjustments.ts";
@@ -16,8 +17,10 @@ import {
 	type CutStroke,
 	createImageLayer,
 	createStickerLayer,
+	type ImageLayer,
 } from "../layers/image/image.ts";
 import {
+	addCutCopy,
 	invertMask,
 	paintMask,
 	setAdjustments,
@@ -382,6 +385,19 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			setDocument("editor/setMask", (document) =>
 				setMask(document, id, mask, options),
 			),
+
+		// By id, like `setMask`. The copy is selected, though it isn't on top.
+		addCutCopy: (
+			id: string,
+			selection: Pick<ImageLayer, "mask" | "maskStrokes">,
+		) => {
+			const copyId = createLayerId("image");
+			setDocument(
+				"editor/addCutCopy",
+				(document) => addCutCopy(document, id, selection, copyId),
+				copyId,
+			);
+		},
 
 		// By id, like `setMask`.
 		invertMask: (id: string, mask: string) =>

@@ -1360,6 +1360,33 @@ describe("editorSlice", () => {
 		});
 	});
 
+	describe("addCutCopy", () => {
+		test("selects the copy, in one undo step", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const steps = store.getState().past.length;
+			actions.addCutCopy("photo", { mask: "file:///mask.png" });
+			const { document, selectedLayerId, past } = store.getState();
+			const copy = document?.layers[1] as ImageLayer;
+			assert.equal(copy.type, "image");
+			assert.equal(copy.mask, "file:///mask.png");
+			assert.equal(selectedLayerId, copy.id);
+			assert.equal(past.length, steps + 1);
+			actions.undo();
+			assert.equal(store.getState().document?.layers.length, 2);
+		});
+
+		test("a missing image adds nothing and keeps the selection", () => {
+			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
+			actions.selectLayer(text.id);
+			const before = store.getState().document;
+			actions.addCutCopy("missing", { mask: "file:///mask.png" });
+			assert.equal(store.getState().document, before);
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+	});
+
 	describe("invertMask", () => {
 		test("inverting a cut is one undo step", () => {
 			const { store } = storeWithText();

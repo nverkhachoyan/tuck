@@ -2,7 +2,7 @@
 
 Written October 29, 2026, from [the brainstorm](../brainstorming/cut-out-flow.md). This plan turns Cut out into **Cut**, a tool that selects first and acts afterward, and adds **Remove BG**, a quick action in the tray that removes a photo's background in one tap.
 
-**Status:** steps 1 and 2 built on October 29, 2026.
+**Status:** steps 1, 2, and 3 built on October 29, 2026.
 
 What building it found:
 * Step 1: the settings stay under the `cutOut` preference key. `usePreference` reads only its own key, so a new key would have dropped everyone's brush sizes. `parseCutSettings` reads Cut out's `pick`, `keep`, `erase`, `keepSize`, and `eraseSize`.
@@ -14,6 +14,13 @@ What building it found:
 * Step 2: Smaller and Larger first rendered as one component, which `FadeGroup` counted as one item, stacking them (the `Children.toArray` learning). They're now sibling elements.
 * Step 2: `cutShowsAt` went, since taps take their mode from the UI.
 * Step 2: autosave saved the live document, so leaving the app mid-Cut saved the selection as the photo's cut, and an empty selection as an invisible photo. Cut's spec now says it `previews`: its session keeps that, and the app's view of the session (`useSession`, `getSession`, through `selectAppDocument`) is the document from before Cut opened until Done. `Editor` draws the store's own document rather than the one the app hands it, which is the app's view. `finishTool` commits the session at once rather than when the tool unmounts, so Back, which saves before leaving, sees Done's changes. Checked on web: an empty selection reloads as the earlier cut, and a selection after Done reloads as the new one.
+* Step 3: saved stickers' storage moved out of `tools/stickers/` into `editor/savedStickers/`, which both Stickers and Cut import, with the cut-out render (`cutOutSticker`). The Stickers hook runs for the editor's whole life and reads the list once, so `saveSticker` tells it through `onStickerSaved`: a sticker saved in Cut shows under Yours without reopening the project.
+* Step 3: `addCutCopy` takes the copy's id from the store action, so the copy is selected though it isn't on top (`selectionAfter` selects only a new top layer). The copy starts unlocked and shown, since the document's own photo is locked.
+* Step 3: the rules are plain functions in `mask.ts`: `selectsNothing` (moved out of `useCutTool`) and `removalOf`. Remove flattens the cut from before the session too, since it may have strokes. A flattened cut has its mask's pixels, or the image's up to 2048 on a side when strokes refine it.
+* Step 3: the actions that close Cut (New layer, Update cut, Keep only, Remove, Redact) show the edit notice, whose toast also announces and offers Undo. "Cut updated" and Keep only show it only when the session changed something, since its Undo would otherwise take back an earlier edit. Save sticker changes nothing to undo, so it announces through Cut's `news` (`useCutOut`'s `announce`) and its menu item turns into Saved until the selection changes.
+* Step 3: the Apply popover (a `BarChip`) stays open while Save sticker runs, and the other actions are disabled while one runs. On the phone, the tray shows either the brush's options or the Apply menu (`tray` in the controller).
+* Step 3: the phone dock (Subjects, Tap, Add, Subtract, Size, Invert, Apply) no longer fits at 375 points and scrolls, with Apply last; with Tap's mode button it's eight. This answers the open question in part: a later step should move something, such as the tap mode, into the tray.
+* Step 3: checked on the web export (wide and 375 points): New layer, Update cut, Keep only, Remove on an uncut photo and on a cut layer, Redact, Save sticker, and one undo step each. Not yet tried on the iOS simulator.
 
 ## 1. What changes for the user
 

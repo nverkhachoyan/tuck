@@ -1,10 +1,12 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
+import { StyleSheet, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
-import { colors } from "@/ui/theme";
+import { colors, space } from "@/ui/theme";
 import { useEditorContext } from "../../editorContext";
 import {
 	BarButton,
+	BarChip,
 	BarGroup,
 	BarSections,
 	OptionSegments,
@@ -26,7 +28,7 @@ import {
 	isCutBrush,
 	withCutSize,
 } from "./cutSettings";
-import type { CutController } from "./useCutTool";
+import type { CutController, CutTray } from "./useCutTool";
 
 type Icon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -55,6 +57,26 @@ const BRUSH_EDGES = [
 	{ soft: false, title: "Hard", icon: "circle" },
 ] as const satisfies readonly { soft: boolean; title: string; icon: Icon }[];
 
+// The Apply menu's actions, in the order the popover and the tray show them.
+const APPLY_ACTIONS = [
+	{
+		action: "keepOnly",
+		title: "Keep only",
+		icon: "image-filter-center-focus-weak",
+	},
+	{ action: "remove", title: "Remove", icon: "selection-remove" },
+	{ action: "redact", title: "Redact", icon: "blur" },
+	{
+		action: "saveSticker",
+		title: "Save sticker",
+		icon: "sticker-plus-outline",
+	},
+] as const satisfies readonly {
+	action: keyof CutController["apply"];
+	title: string;
+	icon: Icon;
+}[];
+
 /**
  * Cut's tools, in place of the toolbar while cutting an image out. Each
  * spins while it works.
@@ -67,17 +89,25 @@ const BRUSH_EDGES = [
  * - Add and Subtract paint the selection by hand, with their size in a tray
  *   over the canvas. Tapping the brush in use opens its size too.
  * - Invert selects what's unselected instead (`invert`), and once something
- *   is selected, Redact hides it under a redaction (`redact`): inverted
- *   first, that blurs only the background.
+ *   is selected, Apply opens the other actions in the tray (`apply`).
  */
 export function CutPanel({ controller }: { controller: CutController }) {
-	const { trayOpen, toggleTray } = useEditorContext();
+	const { trayOpen, toggleTray, closeTray } = useEditorContext();
 	const { settings, tool, finding, findAll, inverting, invert } = controller;
-	const { redacting, redact, change, resize, setTapMode } = controller;
+	const { apply, change, resize, setTapMode, tray, showInTray } = controller;
 	const tapMode =
 		TAP_MODES.find(({ mode }) => mode === settings.tapMode) ?? TAP_MODES[0];
+	// Opens the tray on `content`, or closes it when that's what it shows.
+	const openTray = (content: CutTray) => {
+		if (trayOpen && tray === content) {
+			closeTray();
+			return;
+		}
+		showInTray(content);
+		if (!trayOpen) toggleTray();
+	};
 	const pickTool = (choice: CutTool) => {
-		if (choice === tool && choice !== "tap") toggleTray();
+		if (choice === tool && choice !== "tap") openTray("brush");
 		else change({ ...settings, tool: choice });
 	};
 	return (
@@ -120,8 +150,8 @@ export function CutPanel({ controller }: { controller: CutController }) {
 							color={tool === "add" ? colors.textPrimary : null}
 						/>
 					}
-					open={trayOpen}
-					onPress={toggleTray}
+					open={trayOpen && tray === "brush"}
+					onPress={() => openTray("brush")}
 				/>
 			)}
 			{invert && (
@@ -132,12 +162,12 @@ export function CutPanel({ controller }: { controller: CutController }) {
 					onPress={invert}
 				/>
 			)}
-			{redact && (
+			{apply.keepOnly && (
 				<ToolButton
-					label="Redact"
-					icon="blur"
-					busy={redacting}
-					onPress={redact}
+					label="Apply"
+					icon="dots-horizontal"
+					open={trayOpen && tray === "apply"}
+					onPress={() => openTray("apply")}
 				/>
 			)}
 		</ToolRow>
@@ -147,19 +177,13 @@ export function CutPanel({ controller }: { controller: CutController }) {
 /**
  * Cut's options in the wide editor's header: Tap, Add, and Subtract, then
  * whether taps add or subtract and Smaller and Larger, or the brushes'
- * size, then Subjects, Invert, and Redact. Soft and Hard sit in the size
- * chip. Choosing the sub-tool already in use leaves it, since the options
- * stay in view.
+ * size, then Subjects, Invert, and the Apply menu, a popover. Soft and Hard
+ * sit in the size chip. Choosing the sub-tool already in use leaves it,
+ * since the options stay in view.
  */
 export function CutBar({ controller }: { controller: CutController }) {
 	const { settings, tool, finding, findAll, inverting, invert } = controller;
-	const {
-		redacting,
-		redact,
-		change: onChange,
-		resize,
-		setTapMode,
-	} = controller;
+	const { apply, change: onChange, resize, setTapMode } = controller;
 	const options = cutTools(findAll !== undefined).map((option) => ({
 		...option,
 		busy: option.tool === "tap" && finding === "one",
@@ -227,7 +251,7 @@ export function CutBar({ controller }: { controller: CutController }) {
 					</SizeChip>
 				</BarGroup>
 			)}
-			{(findAll || invert || redact) && (
+			{(findAll || invert || apply.keepOnly) && (
 				<BarGroup>
 					{findAll && (
 						<BarButton
@@ -245,13 +269,12 @@ export function CutBar({ controller }: { controller: CutController }) {
 							onPress={invert}
 						/>
 					)}
-					{redact && (
-						<BarButton
-							label="Redact"
-							icon="blur"
-							busy={redacting}
-							onPress={redact}
-						/>
+					{apply.keepOnly && (
+						<BarChip label="Apply" icon="dots-horizontal" text="Apply">
+							<View style={styles.menu}>
+								{applyButtons(controller, BarButton)}
+							</View>
+						</BarChip>
 					)}
 				</BarGroup>
 			)}
@@ -288,12 +311,52 @@ function resizeButtons(
 }
 
 /**
- * The size of the brush in use, and whether both brushes' edges are soft,
- * in a tray above the dock. Tap has no options, so none show for it.
+ * The Apply menu's actions, as the bar's or the tray's `Button`, each
+ * spinning while it runs and the others disabled meanwhile. Save sticker says Saved once the selection is kept
+ * as one. Siblings rather than a component, like `resizeButtons`.
+ */
+function applyButtons(
+	{ apply, applying, stickerSaved }: CutController,
+	Button: typeof ToolButton | typeof BarButton,
+) {
+	return APPLY_ACTIONS.map(({ action, title, icon }) => {
+		const saved = action === "saveSticker" && stickerSaved;
+		const onPress = apply[action];
+		const busy = applying === action;
+		return (
+			<Button
+				key={action}
+				label={saved ? "Saved" : title}
+				icon={saved ? "sticker-check-outline" : icon}
+				busy={busy}
+				disabled={!onPress || saved || (applying !== null && !busy)}
+				onPress={() => onPress?.()}
+			/>
+		);
+	});
+}
+
+/**
+ * In a tray above the dock, either the Apply menu's actions, or the size of
+ * the brush in use and whether both brushes' edges are soft. Tap has no
+ * options, so no brush options show for it.
  */
 export function CutOptions({ controller }: { controller: CutController }) {
 	const { bottomInset, closeTray } = useEditorContext();
-	const { settings, tool, change: onChange } = controller;
+	const { settings, tool, change: onChange, tray } = controller;
+	if (tray === "apply") {
+		return (
+			<ToolOptions
+				closeLabel="Close the Apply menu"
+				bottomInset={bottomInset}
+				onClose={closeTray}
+			>
+				<View style={styles.actions}>
+					{applyButtons(controller, ToolButton)}
+				</View>
+			</ToolOptions>
+		);
+	}
 	if (!isCutBrush(tool)) return null;
 	return (
 		<ToolOptions
@@ -329,3 +392,14 @@ export function CutOptions({ controller }: { controller: CutController }) {
 		</ToolOptions>
 	);
 }
+
+const styles = StyleSheet.create({
+	menu: {
+		gap: space.xs,
+		padding: space.xs,
+	},
+	actions: {
+		flexDirection: "row",
+		justifyContent: "space-around",
+	},
+});

@@ -58,7 +58,8 @@ export type PickSize = { mask: string; index: number; count: number };
  *   Inverting goes to `onInvert`.
  * - `finding` says which is being found, while one is. Only one of these
  *   runs at a time: another meanwhile does nothing.
- * - `news` says what the last one did, for a screen reader.
+ * - `news` says what the last one did, for a screen reader, or what was
+ *   last given to `announce`.
  * - `canFind` is false while this device can't find subjects, when only the
  *   brushes select.
  */
@@ -309,6 +310,7 @@ export function useCutOut({
 		finding,
 		inverting,
 		news,
+		announce: setNews,
 		emptyMask: emptyMask?.key === key ? emptyMask.uri : null,
 		pickSize,
 		keepEmptyMask,

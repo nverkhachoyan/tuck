@@ -1,27 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/ui/errorMessage";
 import {
-	newStickerId,
 	type SavedSticker,
 	type StickerImage,
 	withStickerUsed,
-} from "./savedStickers";
+} from "../../savedStickers/savedStickers";
+import { onStickerSaved, saveSticker } from "../../savedStickers/saveSticker";
 import {
-	addSticker,
 	listStickers,
 	markStickerUsed,
 	releaseStickerUrl,
 	removeSticker,
 	stickerImageCopy,
 	stickerUrl,
-} from "./stickerStorage";
+} from "../../savedStickers/stickerStorage";
 
 export type ShownSticker = SavedSticker & { url: string };
 
 /**
  * The saved stickers, most recently used first, loaded when mounted: null
- * until then, and empty with an `error` if they couldn't be read. Each of
- * the actions throws if it fails, leaving the list as it was.
+ * until then, and empty with an `error` if they couldn't be read. A sticker
+ * saved anywhere (Cut saves them too) joins the list first, once it's
+ * loaded. Each of the actions throws if it fails, leaving the list as it
+ * was.
  */
 export function useSavedStickers() {
 	const [stickers, setStickers] = useState<ShownSticker[] | null>(null);
@@ -52,29 +53,32 @@ export function useSavedStickers() {
 				setStickers([]);
 			}
 		})();
+		const unsubscribe = onStickerSaved((sticker) => {
+			void stickerUrl(sticker).then((url) => {
+				if (!mounted) {
+					releaseStickerUrl(url);
+					return;
+				}
+				shown.add(url);
+				// Saved while the list was loading, it's in what loads.
+				setStickers((list) =>
+					list && !list.some(({ id }) => id === sticker.id)
+						? [{ ...sticker, url }, ...list]
+						: list,
+				);
+			});
+		});
 		return () => {
 			mounted = false;
+			unsubscribe();
 			for (const url of shown) releaseStickerUrl(url);
 			shown.clear();
 		};
 	}, []);
 
 	/** Keeps `image`, whose URI it takes over, as a new sticker, listed first. */
-	const save = async (image: StickerImage): Promise<SavedSticker> => {
-		const now = Date.now();
-		const sticker: SavedSticker = {
-			id: newStickerId(now),
-			width: image.width,
-			height: image.height,
-			opaque: image.opaque,
-			usedAt: now,
-		};
-		await addSticker(sticker, image.uri);
-		const url = await stickerUrl(sticker);
-		urls.current.add(url);
-		setStickers((list) => [{ ...sticker, url }, ...(list ?? [])]);
-		return sticker;
-	};
+	const save = (image: StickerImage): Promise<SavedSticker> =>
+		saveSticker(image);
 
 	/**
 	 * A copy of the sticker's image for a project to take, and moves the
