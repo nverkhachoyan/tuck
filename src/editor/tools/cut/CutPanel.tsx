@@ -59,6 +59,7 @@ const BRUSH_EDGES = [
 
 // The Apply menu's actions, in the order the popover and the tray show them.
 const APPLY_ACTIONS = [
+	{ action: "newLayer", title: "New layer", icon: "layers-plus" },
 	{
 		action: "keepOnly",
 		title: "Keep only",
@@ -89,7 +90,7 @@ const APPLY_ACTIONS = [
  * - Add and Subtract paint the selection by hand, with their size in a tray
  *   over the canvas. Tapping the brush in use opens its size too.
  * - Invert selects what's unselected instead (`invert`), and once something
- *   is selected, Apply opens the other actions in the tray (`apply`).
+ *   is selected, Apply opens what can be done with it in the tray (`apply`).
  */
 export function CutPanel({ controller }: { controller: CutController }) {
 	const { trayOpen, toggleTray, closeTray } = useEditorContext();
@@ -162,7 +163,7 @@ export function CutPanel({ controller }: { controller: CutController }) {
 					onPress={invert}
 				/>
 			)}
-			{apply.keepOnly && (
+			{apply.newLayer && (
 				<ToolButton
 					label="Apply"
 					icon="dots-horizontal"
@@ -251,7 +252,7 @@ export function CutBar({ controller }: { controller: CutController }) {
 					</SizeChip>
 				</BarGroup>
 			)}
-			{(findAll || invert || apply.keepOnly) && (
+			{(findAll || invert || apply.newLayer) && (
 				<BarGroup>
 					{findAll && (
 						<BarButton
@@ -269,7 +270,7 @@ export function CutBar({ controller }: { controller: CutController }) {
 							onPress={invert}
 						/>
 					)}
-					{apply.keepOnly && (
+					{apply.newLayer && (
 						<BarChip label="Apply" icon="dots-horizontal" text="Apply">
 							<View style={styles.menu}>
 								{applyButtons(controller, BarButton)}

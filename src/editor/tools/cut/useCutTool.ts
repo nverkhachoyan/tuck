@@ -40,19 +40,19 @@ export type CutTray = "brush" | "apply";
  * the tool they and the device give, and selecting, inverting, clearing,
  * and redacting the selection, each undefined where it can't be done.
  * - The selection is the image's cut while Cut is open. An image that isn't
- *   cut opens selecting nothing, and Done with nothing selected cancels, so
- *   it's left as it was (`done`).
+ *   cut opens selecting nothing.
+ * - Done (`done`) only puts Cut down, leaving the image as it was: nothing
+ *   happens to a selection until an action is chosen.
  * - A mask found after Cut was put down, or moved to another image, isn't
  *   wanted any more. Masks are kept through the host's `addImage`.
  * - A tap adds what's under it, or subtracts it, as `settings.tapMode`
  *   says; on web, holding Shift adds and holding Alt subtracts.
  * - `resize` steps the last tap's selection a size larger or smaller, while
  *   it's still the selection.
- * - Done (`done`, named by `doneLabel`) copies the selection to a new layer
- *   above the image, selected, when Cut opened on an image that wasn't cut,
- *   and makes it the image's new cut when it opened on one that was.
  * - The Apply menu's actions (`apply`), each undefined while nothing is
- *   selected: Keep only makes the selection the image's cut; Remove hides
+ *   selected: New layer copies the selection to a new layer above the
+ *   image, selected, leaving the image whole; Keep only makes the selection
+ *   the image's cut, replacing any it had; Remove hides
  *   the selection, taking it out of the cut the image had (`removalOf`);
  *   Redact adds a redaction in its shape, in the editor's redaction look,
  *   which is selected; and each closes Cut (`close`) as one undo step,
@@ -159,6 +159,13 @@ export function useCutTool({
 		const { document, session } = useStore.getState();
 		if (document !== session?.document) notify(message);
 	};
+	const newLayer = (selection: ImageLayer) => {
+		const { mask, maskStrokes } = selection;
+		cancelSession();
+		addCutCopy(selection.id, { mask, maskStrokes });
+		notify("Selection copied to a new layer");
+		close();
+	};
 	const keepOnly = () => {
 		notifyIfChanged(openedOnCut ? "Cut updated" : "Kept only the selection");
 		commitSession();
@@ -221,6 +228,7 @@ export function useCutTool({
 				: undefined,
 		invert: cut ? () => void cutOut.invert(cut) : undefined,
 		apply: {
+			newLayer: selected ? () => newLayer(selected) : undefined,
 			keepOnly: selected ? keepOnly : undefined,
 			remove: removal
 				? () => void remove(removal.from, removal.selection)
@@ -245,19 +253,7 @@ export function useCutTool({
 			layerId.current = image.id;
 			void cutOut.clear(image, false);
 		},
-		doneLabel: !selected ? undefined : openedOnCut ? "Update cut" : "New layer",
-		done: () => {
-			if (!selected) {
-				cancelSession();
-			} else if (openedOnCut) {
-				notifyIfChanged("Cut updated");
-			} else {
-				const { mask, maskStrokes } = selected;
-				cancelSession();
-				addCutCopy(selected.id, { mask, maskStrokes });
-				notify("Selection copied to a new layer");
-			}
-		},
+		done: cancelSession,
 		finishStroke: (stroke: ToolStroke) => {
 			switch (stroke.type) {
 				case "cutBrush": {

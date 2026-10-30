@@ -562,10 +562,27 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 
 		// Redo brings the canceled changes back as one step. Any change in the
 		// session cleared the redo steps from before it, so `future` holds only
-		// the session's own undone steps, which still follow on from there.
+		// the session's own undone steps, which still follow on from there. A
+		// session that only previews leaves nothing to redo: what it showed
+		// wasn't an edit (Cut's selection), so the redo steps go back to the
+		// ones from before it.
 		cancelSession: () => {
 			const { document, selectedLayerId, session, past, future } = get();
 			if (!document || !session) return;
+			if (session.previews) {
+				const stop = session.redoStop ? future.indexOf(session.redoStop) : -1;
+				set(
+					{
+						...snapshotOf(session),
+						past: pastBefore(past, session),
+						future: stop === -1 ? [] : future.slice(stop),
+						session: null,
+					},
+					false,
+					"editor/cancelSession",
+				);
+				return;
+			}
 			if (document === session.document) {
 				set({ session: null }, false, "editor/cancelSession");
 				return;

@@ -10,7 +10,6 @@ export const cutTool = defineTool<CutController>({
 	started: (cut, image) => cut.start(image),
 	canvasInput: (cut) => cut.canvasInput,
 	finishStroke: (cut, stroke) => cut.finishStroke(stroke),
-	doneLabel: (cut) => cut.doneLabel,
 	done: (cut) => cut.done(),
 	reset: (cut) => cut.reset,
 	announcement: (cut) => cut.news,

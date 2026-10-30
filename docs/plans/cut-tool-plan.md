@@ -17,10 +17,12 @@ What building it found:
 * Step 3: saved stickers' storage moved out of `tools/stickers/` into `editor/savedStickers/`, which both Stickers and Cut import, with the cut-out render (`cutOutSticker`). The Stickers hook runs for the editor's whole life and reads the list once, so `saveSticker` tells it through `onStickerSaved`: a sticker saved in Cut shows under Yours without reopening the project.
 * Step 3: `addCutCopy` takes the copy's id from the store action, so the copy is selected though it isn't on top (`selectionAfter` selects only a new top layer). The copy starts unlocked and shown, since the document's own photo is locked.
 * Step 3: the rules are plain functions in `mask.ts`: `selectsNothing` (moved out of `useCutTool`) and `removalOf`. Remove flattens the cut from before the session too, since it may have strokes. A flattened cut has its mask's pixels, or the image's up to 2048 on a side when strokes refine it.
-* Step 3: the actions that close Cut (New layer, Update cut, Keep only, Remove, Redact) show the edit notice, whose toast also announces and offers Undo. "Cut updated" and Keep only show it only when the session changed something, since its Undo would otherwise take back an earlier edit. Save sticker changes nothing to undo, so it announces through Cut's `news` (`useCutOut`'s `announce`) and its menu item turns into Saved until the selection changes.
+* Step 3, changed afterward: ✓ no longer runs a default action (New layer, or Update cut on a layer that was cut). It puts Cut down like ✕, and New layer joined the Apply menu, first. Keep only on a cut layer does what Update cut did, with the notice "Cut updated". Redo after ✓ or ✕ still applied the selection as the cut, since a canceled session goes onto the redo steps. A session that previews (Cut's) now leaves nothing of itself to redo when canceled (`cancelSession`), only the redo steps from before it.
+* Step 3: the actions that close Cut (New layer, Keep only, Remove, Redact) show the edit notice, whose toast also announces and offers Undo. "Cut updated" and Keep only show it only when the session changed something, since its Undo would otherwise take back an earlier edit. Save sticker changes nothing to undo, so it announces through Cut's `news` (`useCutOut`'s `announce`) and its menu item turns into Saved until the selection changes.
 * Step 3: the Apply popover (a `BarChip`) stays open while Save sticker runs, and the other actions are disabled while one runs. On the phone, the tray shows either the brush's options or the Apply menu (`tray` in the controller).
 * Step 3: the phone dock (Subjects, Tap, Add, Subtract, Size, Invert, Apply) no longer fits at 375 points and scrolls, with Apply last; with Tap's mode button it's eight. This answers the open question in part: a later step should move something, such as the tap mode, into the tray.
-* Step 3: checked on the web export (wide and 375 points): New layer, Update cut, Keep only, Remove on an uncut photo and on a cut layer, Redact, Save sticker, and one undo step each. Not yet tried on the iOS simulator.
+* Step 3: checked on the web export (wide and 375 points): New layer, Update cut, Keep only, Remove on an uncut photo and on a cut layer, Redact, Save sticker, and one undo step each.
+* Step 3: checked on an iPhone 17 Pro Max (iOS 27, Release build): New layer, Update cut, Keep only, Remove of a tapped subject from a cut photo (it lines up on the P3 canvas), Redact, and Save sticker, which then shows first under Yours, each with its notice and Undo. The dock's seven buttons fit at 440 points, but after a tap, Smaller and Larger push Apply off the end, and the dock keeps them while a brush is in use (the bar shows them only with Tap).
 
 ## 1. What changes for the user
 
@@ -30,11 +32,9 @@ What building it found:
   - **Add** and **Subtract** brushes (today's Keep and Erase).
   - A **+ / −** toggle sets whether taps add or subtract. On web, Shift adds and Alt subtracts, as in Photoshop.
   - **Invert**.
-- **✓ runs the default action:**
-  - **New layer** for a fresh selection: the selection is copied to a new layer above the photo, and the photo stays whole.
-  - **Update cut** when Cut opened on a layer that was already cut: the selection starts as that layer's cut and becomes its new cut.
-- **An Apply menu holds the other actions:** **Keep only** (today's Cut out result), **Remove** (hide the selection), **Redact**, and **Save sticker**.
-- **Remove BG** is a button in the tray and in an image's layer actions. One tap finds the subject and cuts the background away as one undo step. A notice says "Background removed" and offers Undo and **Refine**, which opens Cut on that layer.
+- **✓ has no default action:** it puts Cut down and leaves the photo as it was, like ✕. Nothing happens to a selection until it's chosen deliberately. (Decided after step 3 was built; it first ran New layer, or Update cut on a layer that was already cut.)
+- **An Apply menu holds every action:** **New layer** (the selection copied to a new layer above the photo, which stays whole), **Keep only** (today's Cut out result; on a layer that was already cut, its cut becomes the selection), **Remove** (hide the selection), **Redact**, and **Save sticker**.
+- **Remove BG** is a button in the tray and in an image's layer actions. One tap finds the subject and cuts the background away as one undo step. A notice says "Background removed" and offers Undo and **Refine**, which opens Cut on that layer. Refined there, the cut lands through Keep only, since ✓ changes nothing.
 
 ## 2. Design
 
@@ -59,7 +59,7 @@ The risk to keep in mind: a project autosaved while Cut is open saves the select
 | Action | Edit | Where |
 | --- | --- | --- |
 | New layer | Copy the image layer with the selection as its cut, placed exactly above the photo with no offset, and select it | new `addCutCopy` in `layers/image/imageEdits.ts`, store action `addCutCopy` |
-| Update cut, Keep only | `setMask` with the selection (Keep only on a layer that was cut replaces its cut) | existing |
+| Keep only | `setMask` with the selection (on a layer that was cut, it replaces the cut) | existing |
 | Remove | The layer's cut from before the session, minus the selection (on an uncut photo, the inverted selection) | `combineMasks(…, "remove")` on the flattened selection, then `setMask` |
 | Redact | `addMaskedRedaction` | existing (`useCutRedaction`) |
 | Save sticker | `renderCutOut` on the in-session layer, then save the sticker. The document isn't changed, and the tool stays open. | reuse `useStickerSave`'s `cutOutSticker` path (move it into a shared helper if a tool import would cross folders) |
@@ -68,14 +68,9 @@ The risk to keep in mind: a project autosaved while Cut is open saves the select
 
 ### ✓ and the Apply menu
 
-The tool definition already has `doneLabel` and `done`:
+Cut's `done` cancels the session, so ✓ changes nothing, and the empty-selection pixel never lands. `finishTool`'s `commitSession()` after it commits nothing (it returns without a session).
 
-- `doneLabel`: "New layer", "Update cut", or "Done" (nothing selected).
-- `done`: runs the default action. With nothing selected, it cancels the session, so the empty-selection pixel never lands.
-
-Check that `finishTool`'s `closeTool()` after a `done` that has already called `cancelSession()` commits nothing (`commitSession` returns without a session).
-
-The other actions go in an **Apply** button with a popover: `ui/Popover` on the wide bar, and a tray or sheet on the phone (reuse `ToolOptions`, like the brush tray).
+The actions go in an **Apply** button with a popover: `ui/Popover` on the wide bar, and a tray or sheet on the phone (reuse `ToolOptions`, like the brush tray).
 
 ### Remove BG as a quick action
 
@@ -126,7 +121,7 @@ Behavior stays the same.
 
 - Pure edits with tests: `addCutCopy` (layer placed above its source, selected, mask and strokes copied) and the Remove combination's rules (uncut, cut, empty selection).
 - Selection flattening in `cutMask.tsx`.
-- `doneLabel` and `done`: New layer or Update cut.
+- `done`: put Cut down without changing anything (first built as New layer or Update cut, then changed).
 - The Apply menu (bar popover, phone tray) with Keep only, Remove, Redact (moved out of the dock row), and Save sticker.
 - Announcements for each action (`news`), and alerts on failure, as today.
 

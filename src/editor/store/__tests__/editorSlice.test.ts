@@ -1188,6 +1188,36 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().document, before);
 		});
 
+		test("canceling a previewing session leaves nothing of it to redo", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const { document: before, past } = store.getState();
+			actions.beginSession(true);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.drawStroke(pen([100, 100, 200, 0]));
+			actions.undo();
+			actions.cancelSession();
+			assert.equal(store.getState().document, before);
+			assert.deepEqual(store.getState().past, past);
+			assert.equal(selectCanRedo(store.getState()), false);
+		});
+
+		test("a previewing session that changed nothing keeps the redo steps from before it", () => {
+			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
+			actions.deleteLayer(text.id);
+			actions.undo();
+			const { future } = store.getState();
+			actions.beginSession(true);
+			actions.cancelSession();
+			assert.deepEqual(store.getState().future, future);
+			actions.redo();
+			assert.equal(
+				store.getState().document?.layers.some(({ id }) => id === text.id),
+				false,
+			);
+		});
+
 		test("a canceled session keeps the steps undone within it", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;
