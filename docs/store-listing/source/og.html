@@ -1,7 +1,8 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><style>
 @font-face{font-family:Anton;src:url("../../../node_modules/@expo-google-fonts/anton/400Regular/Anton_400Regular.ttf")}
 *{margin:0;box-sizing:border-box}
-body{width:1200px;height:630px;overflow:hidden;background:#e2e3e6;font-family:-apple-system,system-ui,sans-serif;position:relative}
+body{width:100vw;height:100vh;overflow:hidden;background:#e2e3e6;font-family:-apple-system,system-ui,sans-serif}
+.card{width:1200px;height:630px;position:relative;transform-origin:0 0}
 .word{position:absolute;left:84px;top:132px;font-family:Anton,sans-serif;font-size:184px;line-height:1.2;color:#000}
 .word:before{content:"";position:absolute;left:-22px;right:-30px;top:30px;bottom:11px;background:#ffe433;border-radius:6px 12px 8px 10px;transform:rotate(-2deg);z-index:-1}
 .tag{position:absolute;left:86px;top:400px;width:470px;font-size:33px;line-height:1.3;color:#000;font-weight:600}
@@ -10,9 +11,15 @@ body{width:1200px;height:630px;overflow:hidden;background:#e2e3e6;font-family:-a
 .p img{display:block;width:100%}
 .a{left:640px;top:80px;transform:rotate(-6deg)}
 .b{left:880px;top:46px;transform:rotate(5deg)}
-</style></head><body>
+</style></head><body><div class="card" id="card">
 <div class="word">Tuck</div>
 <div class="tag">The last touch for photos and screenshots.<span>Private, on your device. No account.</span></div>
 <div class="p a"><img src="out/raw/iphone-1-redact.png" alt="Redact"></div>
 <div class="p b"><img src="out/raw/iphone-3-caption.png" alt="A caption"></div>
+</div>
+<script>
+// Rendered at another size (GitHub's 1280 × 640), the card fills the height and centers.
+const s = innerHeight / 630;
+card.style.transform = `translateX(${(innerWidth - 1200 * s) / 2}px) scale(${s})`;
+</script>
 </body></html>

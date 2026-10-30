@@ -1,4 +1,9 @@
+<img src="./assets/icon.svg" alt="" width="96" height="96">
+
 # Tuck
+
+**The last touch for photos and screenshots.** Private, on your device. No
+account. Try it at [tuck.tools](https://www.tuck.tools).
 
 A local-first Expo photo editor for quick edits such as adding captions, making
 memes, blurring or redacting sensitive details, cropping, and cutting out

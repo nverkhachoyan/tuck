@@ -188,4 +188,6 @@ appear.
    The last number trims Android's 63-pixel status bar. The feature graphic
    is `feature.html`, rendered at 1024 × 500 with headless Chrome. The web
    app's link preview, `public/og.jpg`, is `og.html` rendered the same way
-   at 1200 × 630.
+   at 1200 × 630. Rendered at 1280 × 640, it's the GitHub repository's
+   social preview, `screenshots/github-social-preview.png`, uploaded in the
+   repository's Settings → General → Social preview.
