@@ -177,16 +177,16 @@ describe("toolbarEntries", () => {
 		assert.deepEqual(
 			entries.map((entry) => [entry.id, entry.label, entry.key]),
 			[
+				["crop", "Crop", "C"],
+				["cut", "Cut", "B"],
+				["adjust", "Adjust", "E"],
 				["text", "Text", "T"],
 				["pen", "Pen", "D"],
 				["shape", "Shape", "S"],
 				["eraser", "Eraser", "X"],
-				["redact", "Redact", "R"],
 				["find", "Find", "F"],
+				["redact", "Redact", "R"],
 				["sticker", "Sticker", "A"],
-				["crop", "Crop", "C"],
-				["adjust", "Adjust", "E"],
-				["cut", "Cut", "B"],
 				["photo", "Add photo", "P"],
 			],
 		);
@@ -196,7 +196,7 @@ describe("toolbarEntries", () => {
 		const waiting = toolbarEntries(specs, BUILT_IN_TOOLBAR)
 			.filter((entry) => entry.needsImage)
 			.map((entry) => entry.id);
-		assert.deepEqual(waiting, ["find", "adjust", "cut"]);
+		assert.deepEqual(waiting, ["cut", "adjust", "find"]);
 	});
 
 	test("takes a made-up tool's button from its spec", () => {
@@ -251,9 +251,9 @@ describe("layerActionsFor", () => {
 	const actions = (layer: Parameters<typeof layerActionsFor>[0]) =>
 		layerActionsFor(layer, specs, BUILT_IN_TOOLBAR);
 
-	test("a photo can be redacted, found, adjusted, and cut, in the toolbar's order", () => {
+	test("a photo can be cut, adjusted, found, and redacted, in the toolbar's order", () => {
 		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
-		assert.deepEqual(actions(photo), ["redact", "find", "adjust", "cut"]);
+		assert.deepEqual(actions(photo), ["cut", "adjust", "find", "redact"]);
 		assert.deepEqual(actions({ ...photo, hidden: true }), ["adjust"]);
 	});
 

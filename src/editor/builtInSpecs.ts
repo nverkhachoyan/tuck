@@ -35,15 +35,15 @@ export const BUILT_IN_TOOLBAR: readonly (
 	| keyof typeof BUILT_IN_SPECS
 	| OwnTool
 )[] = [
+	"crop",
+	"cut",
+	"adjust",
 	"text",
 	"pen",
 	"shape",
 	"eraser",
-	"redact",
 	"find",
+	"redact",
 	"sticker",
-	"crop",
-	"adjust",
-	"cut",
 	"photo",
 ];
