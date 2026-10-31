@@ -135,7 +135,8 @@ export type ToolDefinition<C> = {
 	useController: (env: ToolEnv) => C;
 	prepare?: (controller: C) => void;
 	started?: (controller: C, image: ImageLayer) => void;
-	doneLabel?: (controller: C) => string | undefined;
+	doneLabel?: (controller: C) => string | null | undefined;
+	doneVariant?: (controller: C) => "primary" | "secondary" | undefined;
 	done?: (controller: C) => void;
 	deselectOnDone?: boolean;
 	reset?: (controller: C) => (() => void) | undefined;

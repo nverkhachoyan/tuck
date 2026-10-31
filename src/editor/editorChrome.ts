@@ -51,9 +51,10 @@ export type ChromeActions = {
 	// The open tool's Cancel; absent when there's nothing to take back, as
 	// with a selected layer.
 	cancel?: "tool";
-	done: ChromeDone;
+	done?: ChromeDone;
 	// What Done does, when it's more than finishing.
 	doneLabel?: string;
+	doneVariant?: "primary" | "secondary";
 };
 
 export type ModeChrome = {
@@ -72,7 +73,8 @@ export type ModeChromeInput = {
 	tool: ToolId | null;
 	stylingTool: ToolId | null;
 	layerName: string | null;
-	toolDoneLabel: string | undefined;
+	toolDoneLabel?: string | null;
+	toolDoneVariant?: "primary" | "secondary";
 	wide: boolean;
 };
 
@@ -94,6 +96,7 @@ export function modeChrome({
 	stylingTool,
 	layerName,
 	toolDoneLabel,
+	toolDoneVariant,
 	wide,
 }: ModeChromeInput): ModeChrome {
 	const chrome = (
@@ -102,11 +105,13 @@ export function modeChrome({
 	): ModeChrome => ({ panel, actions, inBar: wide && panel !== "idle" });
 
 	if (tool) {
+		const hasDone = toolDoneLabel !== null;
 		return chrome(tool, {
 			title: specs[tool]?.label ?? tool,
 			cancel: "tool",
-			done: "tool",
-			doneLabel: toolDoneLabel,
+			done: hasDone ? "tool" : undefined,
+			doneLabel: toolDoneLabel ?? undefined,
+			...(toolDoneVariant ? { doneVariant: toolDoneVariant } : {}),
 		});
 	}
 	if (stylingTool) {
