@@ -1,9 +1,7 @@
 import type { RefObject } from "react";
 import { StyleSheet, View, type ViewInstance } from "react-native";
 import { Surface } from "@/ui/Surface";
-import { colors, space } from "@/ui/theme";
 import { PANEL_GAP, PANEL_RADIUS } from "./shell/Dock";
-import { ToolButton } from "./shell/ToolButton";
 import { mapStarters, type ToolStarters, ToolsPanel } from "./shell/ToolsPanel";
 import type { ToolEntry } from "./shell/toolList";
 import type { ToolId } from "./toolSpec";
@@ -22,7 +20,6 @@ export function EditorRail({
 	tool,
 	finishTool,
 	sheetAnchors,
-	onShortcuts,
 }: {
 	tools: readonly ToolEntry[];
 	chosen: string | null;
@@ -32,7 +29,6 @@ export function EditorRail({
 	tool: ToolId | null;
 	finishTool: () => void;
 	sheetAnchors?: Readonly<Record<string, RefObject<ViewInstance | null>>>;
-	onShortcuts?: () => void;
 }) {
 	// A tool picked from the rail while another is open finishes that one.
 	const fromRail = (start: () => void) => () => {
@@ -51,18 +47,6 @@ export function EditorRail({
 					startTool={mapStarters(startTool, fromRail)}
 					anchors={sheetAnchors}
 				/>
-				{onShortcuts && (
-					<View style={styles.footer}>
-						<View style={styles.divider} />
-						<ToolButton
-							label="Help"
-							icon="help-circle-outline"
-							shortcut="?"
-							compact={false}
-							onPress={onShortcuts}
-						/>
-					</View>
-				)}
 			</Surface>
 		</View>
 	);
@@ -85,15 +69,5 @@ const styles = StyleSheet.create({
 	},
 	railContent: {
 		flexShrink: 1,
-	},
-	footer: {
-		alignItems: "center",
-		paddingBottom: space.xs,
-	},
-	divider: {
-		width: 32,
-		height: StyleSheet.hairlineWidth,
-		backgroundColor: colors.border,
-		marginVertical: 4,
 	},
 });

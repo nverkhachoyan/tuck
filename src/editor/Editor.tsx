@@ -585,7 +585,6 @@ export function Editor({
 								tool={tool}
 								finishTool={finishTool}
 								sheetAnchors={toolbox.sheetAnchors}
-								onShortcuts={() => dispatchMode({ type: "openShortcuts" })}
 							/>
 						)}
 
