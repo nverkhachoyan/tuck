@@ -165,9 +165,9 @@ describe("shortcutGroups", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["T", "D", "S", "X", "R", "F", "A", "C", "E", "B", "P", "L"],
+			["C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
-		assert.equal(toolGroup.items[5].action, "Find faces or text to redact");
+		assert.equal(toolGroup.items[7].action, "Find faces or text to redact");
 	});
 
 	test("gives a tool that takes the keys a group of its own", () => {
@@ -179,8 +179,8 @@ describe("shortcutGroups", () => {
 			"Tools",
 			"Editing",
 			"View",
-			"Text",
 			"Crop",
+			"Text",
 			"Help",
 		]);
 		const { crop: _, text: __, ...without } = BUILT_IN_SPECS;
