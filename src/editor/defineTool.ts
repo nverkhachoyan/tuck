@@ -8,7 +8,7 @@ import type { EditorHost, PickedImage } from "./editorHost";
 import type { ImageLayer } from "./layers/image/image";
 import type { Layer } from "./layers/layer";
 import type { LayerAction } from "./shell/LayerActionsPanel";
-import type { OwnTool } from "./shell/toolList";
+import type { OwnTool, ToolIcon, ToolVariant } from "./shell/toolList";
 import type { ToolId, ToolSpec } from "./toolSpec";
 
 type ToolView<C> = ComponentType<{ controller: C }>;
@@ -147,6 +147,12 @@ export type ToolDefinition<C> = {
 	layerAction?: (controller: C, layer: Layer) => LayerAction | null;
 	stylesLayer?: (layer: Layer) => boolean;
 	draft?: (controller: C) => { layer: Layer; isNew: boolean } | null;
+	variants?: (controller: C) => readonly ToolVariant[] | undefined;
+	activeVariant?: (controller: C) => string | undefined;
+	selectVariant?: (controller: C, variantId: string) => void;
+	variantEntry?: (
+		controller: C,
+	) => { label?: string; icon?: ToolIcon } | undefined;
 	edit?: {
 		owns: (layer: Layer) => boolean;
 		start: (controller: C, layer: Layer, point: Point | null) => void;

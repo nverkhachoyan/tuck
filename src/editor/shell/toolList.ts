@@ -6,6 +6,14 @@ import type { ComponentProps } from "react";
 
 export type ToolIcon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
+/** A subtool choice within a tool group button on the rail or dock. */
+export type ToolVariant = {
+	id: string;
+	label: string;
+	icon: ToolIcon;
+	shortcut?: string;
+};
+
 /** The editor's own entry among the tools' buttons: Add photo. */
 export type OwnTool = "photo";
 
@@ -15,6 +23,9 @@ export type OwnTool = "photo";
  * - `key`: the letter that picks it up.
  * - `shortcut`: its line in the list of shortcuts.
  * - `needsImage`: hidden until the document has an image to work on.
+ * - `variants`: subtool choices offered via corner indicator flyout.
+ * - `activeVariant`: the currently selected variant id.
+ * - `onSelectVariant`: switches to the chosen variant.
  */
 export type ToolEntry = {
 	id: string;
@@ -23,6 +34,9 @@ export type ToolEntry = {
 	key: string;
 	shortcut: string;
 	needsImage: boolean;
+	variants?: readonly ToolVariant[];
+	activeVariant?: string;
+	onSelectVariant?: (variantId: string) => void;
 };
 
 /** The editor's own entry's button; its key is in `TOOL_KEYS`. */

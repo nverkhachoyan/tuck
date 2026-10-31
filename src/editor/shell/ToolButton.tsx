@@ -11,6 +11,8 @@ import {
 } from "react";
 import {
 	ActivityIndicator,
+	type GestureResponderEvent,
+	Platform,
 	Pressable,
 	ScrollView,
 	StyleSheet,
@@ -18,6 +20,7 @@ import {
 	View,
 	type ViewInstance,
 } from "react-native";
+import { hapticTick } from "@/platform/haptics";
 import { compactControls } from "@/ui/density";
 import { Highlight } from "@/ui/Highlight";
 import { chosenOnWeb, interaction, pressAtOnce } from "@/ui/interaction";
@@ -64,6 +67,8 @@ export function ToolButton({
 	busy = false,
 	compact = false,
 	buttonRef,
+	hasFlyout = false,
+	onFlyout,
 	onPress,
 }: {
 	label: string;
@@ -79,6 +84,8 @@ export function ToolButton({
 	compact?: boolean;
 	// The pressable, when a popover hangs from this button.
 	buttonRef?: RefObject<ViewInstance | null>;
+	hasFlyout?: boolean;
+	onFlyout?: () => void;
 	onPress: () => void;
 }) {
 	const inRail = useContext(InRail);
@@ -98,6 +105,49 @@ export function ToolButton({
 		: highlighted
 			? colors.onHighlight
 			: colors.textPrimary;
+
+	const handlePress = (event: GestureResponderEvent) => {
+		if (hasFlyout && onFlyout) {
+			if (chosen) {
+				onFlyout();
+				return;
+			}
+			const ne = event?.nativeEvent as unknown as
+				| Record<string, number | undefined>
+				| undefined;
+			const x = ne?.locationX ?? ne?.offsetX;
+			const y = ne?.locationY ?? ne?.offsetY;
+			if (
+				typeof x === "number" &&
+				typeof y === "number" &&
+				x >= 30 &&
+				y >= 30
+			) {
+				onFlyout();
+				return;
+			}
+		}
+		onPress();
+	};
+
+	const handleLongPress = () => {
+		if (hasFlyout && onFlyout && !inactive) {
+			hapticTick();
+			onFlyout();
+		}
+	};
+
+	const webContextMenu = (
+		Platform.OS === "web" && hasFlyout && onFlyout
+			? {
+					onContextMenu: (event: { preventDefault?: () => void }) => {
+						event.preventDefault?.();
+						onFlyout();
+					},
+				}
+			: {}
+	) as object;
+
 	return (
 		<>
 			<Pressable
@@ -108,9 +158,12 @@ export function ToolButton({
 					if (buttonRef) buttonRef.current = node;
 				}}
 				{...pressAtOnce}
+				{...webContextMenu}
 				hitSlop={8}
 				disabled={inactive}
-				onPress={onPress}
+				onPress={handlePress}
+				onLongPress={hasFlyout ? handleLongPress : undefined}
+				delayLongPress={350}
 				accessibilityRole="button"
 				accessibilityLabel={label}
 				accessibilityState={{
@@ -155,6 +208,21 @@ export function ToolButton({
 											color={ink}
 										/>
 									))
+								)}
+								{hasFlyout && !busy && (
+									<View
+										style={[
+											styles.flyoutMarker,
+											small && styles.smallFlyoutMarker,
+											{
+												borderBottomColor: highlighted
+													? colors.onHighlight
+													: chosen
+														? colors.textPrimary
+														: colors.textTertiary,
+											},
+										]}
+									/>
 								)}
 							</View>
 							<Text
@@ -321,6 +389,25 @@ const styles = StyleSheet.create({
 	tilePressed: {
 		backgroundColor: colors.pressedOverlay,
 		transform: [{ scale: 0.92 }],
+	},
+	flyoutMarker: {
+		position: "absolute",
+		right: 3,
+		bottom: 3,
+		width: 0,
+		height: 0,
+		borderStyle: "solid",
+		borderLeftWidth: 5,
+		borderLeftColor: "transparent",
+		borderBottomWidth: 5,
+		borderRightWidth: 0,
+		borderTopWidth: 0,
+	},
+	smallFlyoutMarker: {
+		right: 2,
+		bottom: 2,
+		borderLeftWidth: 4,
+		borderBottomWidth: 4,
 	},
 	label: {
 		...typography.caption,

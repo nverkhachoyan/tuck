@@ -42,4 +42,38 @@ describe("defineTool", () => {
 		// @ts-expect-error: the stage covers the canvas, so nothing reaches its input.
 		defineTool({ spec, useController, views, canvasInput: () => null });
 	});
+
+	test("declares tool variants and active selection", () => {
+		let chosen = "a";
+		const grouped = defineTool({
+			spec,
+			useController: () => ({ current: chosen }),
+			views: { Dock: views.Dock },
+			variants: () => [
+				{ id: "a", label: "Option A", icon: "pencil" },
+				{ id: "b", label: "Option B", icon: "brush" },
+			],
+			activeVariant: (c) => c.current,
+			selectVariant: (_c, id) => {
+				chosen = id;
+			},
+			variantEntry: (c) => ({
+				label: c.current === "b" ? "Option B" : "Option A",
+				icon: c.current === "b" ? "brush" : "pencil",
+			}),
+		});
+
+		const controller = grouped.useController({} as never);
+		assert.deepEqual(grouped.variants?.(controller), [
+			{ id: "a", label: "Option A", icon: "pencil" },
+			{ id: "b", label: "Option B", icon: "brush" },
+		]);
+		assert.equal(grouped.activeVariant?.(controller), "a");
+		assert.deepEqual(grouped.variantEntry?.(controller), {
+			label: "Option A",
+			icon: "pencil",
+		});
+		grouped.selectVariant?.(controller, "b");
+		assert.equal(chosen, "b");
+	});
 });

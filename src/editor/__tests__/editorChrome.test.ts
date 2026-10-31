@@ -14,6 +14,7 @@ import { createImageLayer } from "../layers/image/image.ts";
 import { createRedactionBox } from "../layers/redaction/redaction.ts";
 import { createShapeLayer } from "../layers/shape/shape.ts";
 import { createTextLayer } from "../layers/text/text.ts";
+import type { ToolEntry } from "../shell/toolList.ts";
 import type { ToolSpec, ToolSpecs } from "../toolSpec.ts";
 
 const specs: ToolSpecs = BUILT_IN_SPECS;
@@ -228,6 +229,20 @@ describe("toolbarEntries", () => {
 				needsImage: false,
 			},
 		]);
+	});
+
+	test("supports optional variants on tool entries", () => {
+		const entries = toolbarEntries(specs, ["pen", "shape", "cut"]);
+		const withFlyout: ToolEntry = {
+			...entries[0],
+			variants: [
+				{ id: "pen", label: "Pen", icon: "draw-pen" },
+				{ id: "marker", label: "Highlighter", icon: "marker" },
+			],
+			activeVariant: "pen",
+		};
+		assert.equal(withFlyout.variants?.length, 2);
+		assert.equal(withFlyout.activeVariant, "pen");
 	});
 });
 
