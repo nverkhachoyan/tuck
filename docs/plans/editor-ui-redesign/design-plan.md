@@ -4,6 +4,9 @@ Written October 30, 2026, from the [UI/UX Audit & Brainstorm](../../brainstorm/u
 
 Technical implementation details (store slices, component decomposition, worklets, tests) are intentionally excluded and will be handled in a separate implementation plan.
 
+> [!NOTE]
+> During implementation, the wide-screen surface architecture pivoted from the "Unified Floating Bottom Tool Card" described in Section 3 below back to refining the anchored top `ContextBar` while splitting `Draw` into dedicated `Pen`, `Shape`, and `Eraser` tools. See [implementation-plan.md](./implementation-plan.md) for the authoritative as-built architecture.
+
 ---
 
 ## 1. Principles & Creative North Star
