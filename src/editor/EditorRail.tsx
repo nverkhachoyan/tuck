@@ -70,6 +70,6 @@ const styles = StyleSheet.create({
 	},
 	railContent: {
 		flexShrink: 1,
-		paddingVertical: space.xs,
+		paddingVertical: space.xxs,
 	},
 });
