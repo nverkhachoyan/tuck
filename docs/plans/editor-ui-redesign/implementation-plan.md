@@ -12,7 +12,8 @@ Companion to [design-plan.md](design-plan.md) (and grounded in [DESIGN.md](../..
 - [x] **Step 4: Cut Tool Commit Semantics (`Keep only ✓`), Re-Editing Cutouts & Floating `Tap` Modifier Pill** (`feat(cut): commit selection with Keep only, support restoring cutouts, and float Tap modifiers`)
 - [x] **Step 5: Text Tool Ergonomics — 1-Tap Cycling Align & Inline Dock Color** (`feat(text): replace Align tab with 1-tap cycle button and swap custom color inline in dock`)
 - [ ] **Step 6: Crop Flattening & Stage Polish** (`feat(crop,adjust,find): flatten wide Crop, size stage dynamically, and opaque-surface readouts`)
-- [ ] **Step 7: Docs & Final Polish** (`docs: sync architecture and design docs with top bar and split tools`)
+- [ ] **Step 7: Rail Tool Groups & Subtool Flyouts** (`feat(rail): add tool group corner markers and right-click/long-press subtool flyouts for Pen, Shape, and Cut`)
+- [ ] **Step 8: Docs & Final Polish** (`docs: sync architecture and design docs with top bar and split tools`)
 
 ---
 
@@ -234,7 +235,30 @@ flowchart TD
 
 ---
 
-### Step 7: Comment Audit, Architecture & Design Docs Sync, Interactive Docs Check & Full Verification
+### Step 7: Rail Tool Groups & Subtool Flyouts
+**Commit:** `feat(rail): add tool group corner markers and right-click/long-press subtool flyouts for Pen, Shape, and Cut`
+
+#### Files to Modify
+- `src/editor/shell/ToolButton.tsx` (add optional corner flyout indicator `flyout?: boolean`, right-click `onContextMenu`, and long-press handler)
+- `src/editor/EditorRail.tsx` & `src/editor/shell/ToolsPanel.tsx` (wire group popovers with `placement="right"`)
+- `src/editor/shell/toolList.ts` (tool group configuration: Pen tips, Shape kinds, Cut / Remove BG)
+- `src/editor/tools/pen/`, `src/editor/tools/shape/`, `src/editor/tools/cut/` (update rail icon to reflect active variant)
+
+#### Technical Details
+1. **Corner Flyout Indicator:**
+   - Small `◢` corner marker in the bottom-right corner of the icon tile.
+   - Drawn in `colors.textTertiary`, switching to `colors.onHighlight` when selected.
+2. **Desktop / Web Interaction:**
+   - Left-click activates tool with its current variant.
+   - Right-click (`onContextMenu`) or click-and-hold opens a popover adjacent to the rail (`placement="right"`).
+   - Selecting a variant switches to it, updates the rail icon, and starts the tool.
+3. **Touch / Mobile Interaction:**
+   - Long-press triggers light haptic tick (`Haptics.impactAsync`) and opens the variant popover/tray.
+   - Tapping an already active tool button opens its variant selector.
+
+---
+
+### Step 8: Comment Audit, Architecture & Design Docs Sync, Interactive Docs Check & Full Verification
 **Commit:** `docs: sync architecture and design docs with top bar and split tools`
 
 #### Files to Modify
