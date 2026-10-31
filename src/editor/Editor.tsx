@@ -35,8 +35,8 @@ import { LayersPanel, layerListProps } from "./layers/panel/LayersPanel";
 import {
 	ContextBarContent,
 	DockContent,
-	hasInspectorSection,
 	type PanelContext,
+	ToolCard,
 	ToolSheet,
 	ToolStage,
 	ToolTrays,
@@ -227,13 +227,10 @@ export function Editor({
 	const selectedEditor = (selectedLayer && editorOf(selectedLayer)) ?? null;
 	const ToolInput = openTool?.definition.views.Input;
 	const typing = tool !== null && specs[tool]?.takesKeys === "typing";
-	// Find and Adjust live in the inspector, so they open it even though
-	// starting a tool closes the layers sheet. A tall window has it open anyway.
 	const layout = useEditorLayout({
 		typing,
 		layersOpen,
-		inspectorRequested:
-			layersOpen || (tool !== null && hasInspectorSection(tool, controllers)),
+		cardOpen: openTool?.definition.views.Card !== undefined,
 	});
 	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
 	const toolOptionsOpen = openTray(mode) !== null;
@@ -469,6 +466,9 @@ export function Editor({
 						{!wide && (
 							<ToolTrays context={panels} modeState={modeState} panel={panel} />
 						)}
+						{wide && openTool?.definition.views.Card && (
+							<ToolCard tool={openTool} inset={layout.canvasInset} />
+						)}
 						{eyedropper && (
 							<EyedropperHint
 								onCancel={() => dispatchMode({ type: "stopEyedropper" })}
@@ -498,17 +498,10 @@ export function Editor({
 							/>
 						)}
 
-						{/* After the tool's options, so taps on the dock reach it rather
-				    than closing them. A wide screen has no dock. Its inspector,
-				    when the window is tall enough or Layers, Find, or Adjust
-				    has it open, is the layers, with Find or Adjust above them. */}
+						{/* Rendered after ToolTrays so taps on the dock reach it rather
+						    than dismissing an open tray. */}
 						{inspector ? (
-							<EditorInspector
-								context={panels}
-								panel={panel}
-								layerList={layerList}
-								layersInert={draftOpen}
-							/>
+							<EditorInspector layerList={layerList} layersInert={draftOpen} />
 						) : !wide ? (
 							<Dock
 								panel={panel}

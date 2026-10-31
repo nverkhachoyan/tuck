@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType } from "react";
 import type { DerivedValue } from "react-native-reanimated";
 import type { ToolStroke } from "./canvas/canvasTool";
 import type { CanvasInput } from "./canvasInputFor";
@@ -18,7 +18,7 @@ type ToolViews<C> = {
 	Bar?: ToolView<C>;
 	Tray?: ToolView<C>;
 	Results?: ToolView<C>;
-	Inspector?: ComponentType<{ controller: C; children: ReactNode }>;
+	Card?: ToolView<C>;
 	Controls?: ToolView<C>;
 	Sheet?: ToolView<C>;
 	Input?: ToolView<C>;
@@ -83,8 +83,9 @@ export type NoticeAction = { label: string; onPress: () => void };
  * - `views.Tray`: the phone's tray of options, while it's open.
  * - `views.Results`: what sits over the canvas while its panel shows, no
  *   tray is open, and the eyedropper isn't running.
- * - `views.Inspector`: a section above the wide inspector's layers, given
- *   them as children. A tool with one opens the inspector.
+ * - `views.Card`: a card along the bottom of a wide canvas while it's open,
+ *   which the canvas fits above. It leaves the canvas's gestures alone, so
+ *   it suits what a tool reports or turns while the photo stays in reach.
  * - `views.Stage`: drawn in the canvas's place, opaque over it, while it's
  *   open. A tool with one has no `canvasInput` or `finishStroke`.
  * - `views.Controls`: a strip under the canvas while it's open, above the

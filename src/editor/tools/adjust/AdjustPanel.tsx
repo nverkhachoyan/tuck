@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	useAnimatedReaction,
@@ -34,99 +34,67 @@ const signed = (steps: number) => (steps > 0 ? `+${steps}` : `${steps}`);
  * The Adjust tool's dock panel: a choice of adjustment, each marked while
  * the image's adjustments change it, over the dial that changes the chosen one, which
  * a sideways drag over the photo turns too. While it changes, its value
- * shows large just above the dock. The inspector passes `floatingValue` false
- * and heads the section with the value instead.
+ * shows large just above the dock.
  */
-export function AdjustPanel({
-	controller,
-	floatingValue = true,
-}: {
-	controller: AdjustController;
-	floatingValue?: boolean;
-}) {
-	const { adjustments, chosen, choose } = controller;
-	const label = LABELS[chosen];
+export function AdjustPanel({ controller }: { controller: AdjustController }) {
 	return (
-		<View style={[styles.panel, floatingValue && styles.panelFill]}>
-			{floatingValue && <ChangingValue controller={controller} label={label} />}
-			<View style={styles.choices}>
-				{adjustmentKeys.map((key) => (
-					<AdjustmentChoice
-						key={key}
-						label={LABELS[key]}
-						selected={key === chosen}
-						changed={(adjustments?.[key] ?? 0) !== 0}
-						onPress={() => choose(key)}
-					/>
-				))}
-			</View>
-			<Dial
-				// A fresh dial per adjustment, so a drag never carries over.
-				key={chosen}
-				value={controller.dialValue}
-				max={ADJUST_DIAL_MAX}
-				scale={ADJUST_DIAL_SCALE}
-				label={label}
-				increaseLabel={`Increase ${label.toLowerCase()}`}
-				decreaseLabel={`Decrease ${label.toLowerCase()}`}
-				readout={signed}
-				valueText={signed}
-				onBegin={controller.begin}
-				onChange={controller.change}
-				onEnd={controller.end}
+		<View style={styles.panel}>
+			<ChangingValue
+				controller={controller}
+				label={LABELS[controller.chosen]}
 			/>
+			<AdjustChoices controller={controller} />
+			<AdjustDial controller={controller} />
 		</View>
 	);
 }
 
-/**
- * Adjust on a wide screen: the chosen adjustment's name and value head the
- * section, then the same choices and dial, above the layers. The bar only
- * names the tool. The section's height follows that content.
- */
-export function AdjustInspector({
-	controller,
-	children,
-}: {
-	controller: AdjustController;
-	children: ReactNode;
-}) {
+/** The adjustments to choose from, each marked while it's changed. */
+function AdjustChoices({ controller }: { controller: AdjustController }) {
+	const { adjustments, chosen, choose } = controller;
 	return (
-		<View style={styles.inspectorStack}>
-			<View style={styles.section}>
-				<AdjustHeading controller={controller} />
-				<AdjustPanel controller={controller} floatingValue={false} />
-			</View>
-			{children}
+		<View style={styles.choices}>
+			{adjustmentKeys.map((key) => (
+				<AdjustmentChoice
+					key={key}
+					label={LABELS[key]}
+					selected={key === chosen}
+					changed={(adjustments?.[key] ?? 0) !== 0}
+					onPress={() => choose(key)}
+				/>
+			))}
 		</View>
 	);
 }
 
-/** The chosen adjustment and its value, live as the dial moves. */
-function AdjustHeading({ controller }: { controller: AdjustController }) {
-	const { adjustments } = controller;
+/** The dial that changes the chosen adjustment. */
+function AdjustDial({ controller }: { controller: AdjustController }) {
 	const label = LABELS[controller.chosen];
-	// The saved value, for the moment a choice changes. A reaction already
-	// watching the dial can miss that, since the dial's shared value is stable.
-	const settled = Math.round(
-		(adjustments?.[controller.chosen] ?? 0) * ADJUST_DIAL_MAX,
-	);
-	const [steps, setSteps] = useState(settled);
-	const [tracked, setTracked] = useState(controller.chosen);
-	if (tracked !== controller.chosen) {
-		setTracked(controller.chosen);
-		setSteps(settled);
-	}
-	useAnimatedReaction(
-		() => Math.round(controller.dialValue.value),
-		(shown, previous) => {
-			if (shown !== previous) scheduleOnRN(setSteps, shown);
-		},
-	);
 	return (
-		<View style={styles.heading} accessibilityRole="header">
-			<Text style={styles.headingName}>{label}</Text>
-			<Text style={styles.headingValue}>{signed(steps)}</Text>
+		<Dial
+			// A fresh dial per adjustment, so a drag never carries over.
+			key={controller.chosen}
+			value={controller.dialValue}
+			max={ADJUST_DIAL_MAX}
+			scale={ADJUST_DIAL_SCALE}
+			label={label}
+			increaseLabel={`Increase ${label.toLowerCase()}`}
+			decreaseLabel={`Decrease ${label.toLowerCase()}`}
+			readout={signed}
+			valueText={signed}
+			onBegin={controller.begin}
+			onChange={controller.change}
+			onEnd={controller.end}
+		/>
+	);
+}
+
+/** Adjust's choices and dial in the wide editor's bottom card. */
+export function AdjustCard({ controller }: { controller: AdjustController }) {
+	return (
+		<View style={styles.card}>
+			<AdjustChoices controller={controller} />
+			<AdjustDial controller={controller} />
 		</View>
 	);
 }
@@ -199,15 +167,11 @@ const styles = StyleSheet.create({
 	// Lowered a little: the highlight's tilt reaches above the chips, and the
 	// dial's ticks stop short of its track's foot.
 	panel: {
+		flex: 1,
 		justifyContent: "center",
 		paddingHorizontal: 12,
 		paddingTop: 4,
 		gap: 8,
-	},
-	// The dock's slot has a fixed height. The inspector's section follows
-	// its content, where a flexing child would collapse on native.
-	panelFill: {
-		flex: 1,
 	},
 	// Just above the dock, over the canvas, touching nothing.
 	changingArea: {
@@ -264,28 +228,11 @@ const styles = StyleSheet.create({
 	changedSelected: {
 		backgroundColor: colors.onHighlight,
 	},
-	inspectorStack: {
-		flexShrink: 1,
-	},
-	section: {
+	// Sized by its content, where a flexing child would collapse on native.
+	card: {
+		paddingHorizontal: 12,
+		paddingTop: space.xs,
 		paddingBottom: space.xs,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	heading: {
-		flexDirection: "row",
-		alignItems: "baseline",
-		gap: space.xs,
-		paddingHorizontal: 20,
-		paddingTop: space.sm,
-		paddingBottom: space.xxs,
-	},
-	headingName: {
-		...typography.labelStrong,
-		color: colors.textPrimary,
-	},
-	headingValue: {
-		...typography.figure,
-		color: colors.textPrimary,
+		gap: 8,
 	},
 });

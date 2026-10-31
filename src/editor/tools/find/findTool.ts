@@ -1,7 +1,7 @@
 import { defineTool } from "../../defineTool";
 import {
 	FindBar,
-	FindInspector,
+	FindCard,
 	FindOptions,
 	FindPanel,
 	FindTray,
@@ -19,7 +19,7 @@ export const findTool = defineTool<FindController>({
 		Bar: FindBar,
 		Tray: FindOptions,
 		Results: FindTray,
-		Inspector: FindInspector,
+		Card: FindCard,
 	},
 	canvasInput: (find) => find.canvasInput,
 	doneLabel: (find) => findDoneLabel(find.selectedCount),
