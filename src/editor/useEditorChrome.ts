@@ -21,6 +21,7 @@ export function useEditorChrome({
 	wide,
 	done,
 	cancel,
+	onReset,
 }: {
 	specs: ToolSpecs;
 	tool: ToolId | null;
@@ -30,6 +31,7 @@ export function useEditorChrome({
 	wide: boolean;
 	done: () => void;
 	cancel: () => void;
+	onReset?: () => void;
 }) {
 	const { selectLayer } = useStore((state) => state.actions);
 	const open = tool && controllers[tool];
@@ -47,10 +49,12 @@ export function useEditorChrome({
 	const modeActions: ({ title: string } & ModeActionProps) | null =
 		chrome.actions && {
 			title: chrome.actions.title,
-			onCancel: chrome.actions.cancel && cancel,
+			onReset,
+			onCancel: chrome.actions.cancel ? cancel : undefined,
+			cancelShortcut: "Escape",
 			onDone: onDone[chrome.actions.done],
 			doneLabel: chrome.actions.doneLabel,
-			doneShortcut: "Escape",
+			doneShortcut: "Enter",
 		};
 	return { panel: chrome.panel, inBar: chrome.inBar, modeActions };
 }

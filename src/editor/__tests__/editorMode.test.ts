@@ -45,7 +45,7 @@ const targets = (overrides: Partial<ModeTargets> = {}): ModeTargets => ({
 
 const drawing = run(initialEditorMode, {
 	type: "startTool",
-	start: { tool: "draw", layerId: null },
+	start: { tool: "pen", layerId: null },
 });
 
 describe("editorModeReducer", () => {
@@ -134,7 +134,7 @@ describe("editorModeReducer", () => {
 		const open = run(drawing, { type: "toggleToolOptions" });
 		assert.deepEqual(open.mode, {
 			type: "tool",
-			tool: "draw",
+			tool: "pen",
 			layerId: null,
 			optionsOpen: true,
 		});
@@ -157,7 +157,7 @@ describe("editorModeReducer", () => {
 		);
 		assert.deepEqual(fromTray.mode, {
 			type: "tool",
-			tool: "draw",
+			tool: "pen",
 			layerId: null,
 			optionsOpen: false,
 		});
@@ -172,7 +172,7 @@ describe("editorModeReducer", () => {
 			{ type: "toggleToolOptions" },
 		);
 		assert.equal(tray.eyedropper, picker);
-		assert.equal(tray.mode.type === "tool" && tray.mode.tool, "draw");
+		assert.equal(tray.mode.type === "tool" && tray.mode.tool, "pen");
 	});
 
 	test("a pick that lands after another eyedropper started leaves that one", () => {
@@ -200,7 +200,7 @@ describe("editorModeReducer", () => {
 			eyedropper: eyedropper(),
 		});
 		for (const action of [
-			{ type: "startTool", start: { tool: "draw", layerId: null } },
+			{ type: "startTool", start: { tool: "pen", layerId: null } },
 			{ type: "startTool", start: { tool: "adjust", layerId: "photo" } },
 		] satisfies EditorModeAction[]) {
 			assert.equal(run(waiting, action).eyedropper, null, action.type);
@@ -347,11 +347,11 @@ describe("settle", () => {
 		assert.deepEqual(
 			run(settled, {
 				type: "startTool",
-				start: { tool: "draw", layerId: null },
+				start: { tool: "pen", layerId: null },
 			}).mode,
 			{
 				type: "tool",
-				tool: "draw",
+				tool: "pen",
 				layerId: null,
 				optionsOpen: false,
 			},
@@ -366,7 +366,7 @@ describe("openTray", () => {
 		assert.equal(
 			openTray({
 				type: "tool",
-				tool: "draw",
+				tool: "pen",
 				layerId: null,
 				optionsOpen: false,
 			}),
@@ -375,11 +375,11 @@ describe("openTray", () => {
 		assert.equal(
 			openTray({
 				type: "tool",
-				tool: "draw",
+				tool: "pen",
 				layerId: null,
 				optionsOpen: true,
 			}),
-			"draw",
+			"pen",
 		);
 		assert.equal(
 			openTray({
@@ -424,7 +424,7 @@ describe("shortcutCommand", () => {
 	const redo: Shortcut = { type: "redo" };
 	const esc: Shortcut = { type: "deselect" };
 	const zoom: Shortcut = { type: "zoom", to: "in" };
-	const draw: Shortcut = { type: "tool", tool: "draw" };
+	const pen: Shortcut = { type: "tool", tool: "pen" };
 	const sticker: Shortcut = { type: "tool", tool: "sticker" };
 	const layers: Shortcut = { type: "layers" };
 	const edit: Shortcut = { type: "edit" };
@@ -447,7 +447,7 @@ describe("shortcutCommand", () => {
 		assert.deepEqual(command(listOpen, "layer", esc), {
 			type: "closeShortcuts",
 		});
-		for (const key of [undo, draw, zoom, remove]) {
+		for (const key of [undo, pen, zoom, remove]) {
 			assert.equal(command(listOpen, "layer", key), "held");
 		}
 	});
@@ -475,8 +475,8 @@ describe("shortcutCommand", () => {
 	});
 
 	test("Escape puts Stickers down, as any tool, and A or the other keys wait", () => {
-		assert.deepEqual(command(stickers, null, esc), { type: "doneWithTool" });
-		for (const key of [sticker, draw, layers, remove]) {
+		assert.deepEqual(command(stickers, null, esc), { type: "cancelTool" });
+		for (const key of [sticker, pen, layers, remove]) {
 			assert.equal(command(stickers, "layer", key), null);
 		}
 	});
@@ -494,21 +494,24 @@ describe("shortcutCommand", () => {
 		assert.deepEqual(command(both, "layer", esc), {
 			type: "stopEyedropper",
 		});
-		for (const key of [draw, layers, remove]) {
+		for (const key of [pen, layers, remove]) {
 			assert.equal(command(picking, "layer", key), null);
 		}
 	});
 
-	test("with a tool open, Escape is Done and other keys pass", () => {
+	test("with a tool open, Escape is Cancel, Enter is Done, and other keys pass", () => {
 		assert.deepEqual(command(drawing, "layer", esc), {
+			type: "cancelTool",
+		});
+		assert.deepEqual(command(drawing, "layer", edit), {
 			type: "doneWithTool",
 		});
-		for (const key of [draw, layers, remove, nudge]) {
+		for (const key of [pen, layers, remove, nudge]) {
 			assert.equal(command(drawing, "layer", key), null);
 		}
 	});
 
-	test("[ and ] step a brush while Draw, Redact, or Cut is open", () => {
+	test("[ and ] step a brush while Pen, Redact, or Cut is open", () => {
 		const smaller = { type: "brushSize", step: -1 } as const;
 		const larger = { type: "brushSize", step: 1 } as const;
 		assert.deepEqual(command(drawing, null, smaller), smaller);
@@ -549,7 +552,7 @@ describe("shortcutCommand", () => {
 	});
 
 	test("tool keys and L work with nothing selected; the rest pass", () => {
-		assert.equal(command(initialEditorMode, null, draw), draw);
+		assert.equal(command(initialEditorMode, null, pen), pen);
 		assert.equal(command(initialEditorMode, null, sticker), sticker);
 		assert.equal(command(initialEditorMode, null, layers), layers);
 		for (const key of [esc, remove, edit, nudge]) {

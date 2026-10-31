@@ -1,12 +1,12 @@
 import type { ToolSpec } from "../../toolSpec.ts";
 
-export const drawSpec = {
+export const eraserSpec = {
 	target: "none",
-	tray: true,
+	tray: false,
 	sized: true,
-	label: "Draw",
-	icon: "draw",
-	key: "D",
-	shortcut: "Draw",
+	label: "Eraser",
+	icon: "eraser",
+	key: "X",
+	shortcut: "Eraser",
 	actsOn: (layer) => layer.type === "drawing" || layer.type === "shape",
 } as const satisfies ToolSpec;

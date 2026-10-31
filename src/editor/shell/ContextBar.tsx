@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
 	Children,
@@ -25,34 +26,33 @@ import { FadeGroup, FadeRow, MeasuredItem, Unmeasured } from "@/ui/FadeRow";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
+import { TextButton } from "@/ui/TextButton";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
-import { ModeActions } from "./Dock";
 
 // A segment's, an action's, and a chip's height: a touch target, or less
 // where controls are sized for a mouse.
 const ITEM_HEIGHT = compactControls ? 36 : 44;
+const ACTION_BUTTON_SIZE = compactControls ? 32 : 36;
 
 /**
  * The wide editor's header, between Back and the header's actions: the
  * context's name, its options, then Cancel and Done. A divider sets those
- * off from Reset, undo, and Export. It's a toolbar for screen readers.
- * - Options arrive as `BarSections`: groups 2 points apart, a rule between
- *   groups. The highlighter marks the mode. A value is a `BarChip`.
- * - The row scrolls when it doesn't fit. The fade ends between options,
- *   rather than across a label, and settles once scrolling stops.
+ * off from undo, redo, and Export.
  */
 export function ContextBar({
 	title,
+	onReset,
 	onCancel,
-	cancelShortcut,
+	cancelShortcut = "Escape",
 	onDone,
-	doneLabel,
-	doneShortcut,
+	doneLabel = "Done",
+	doneShortcut = "Enter",
 	keepFocus = false,
 	children,
 }: {
 	title: string;
+	onReset?: () => void;
 	onCancel?: () => void;
 	cancelShortcut?: string;
 	onDone: () => void;
@@ -67,13 +67,13 @@ export function ContextBar({
 	useEffect(() => {
 		if (!keepFocus || Platform.OS !== "web") return;
 		const node = barRef.current as unknown as HTMLElement | null;
-		// Capture, before the control itself: the browser moves focus on
-		// pointer-down unless that default is canceled. The canvas does the
-		// same so a tap there places the caret instead of dismissing the key.
 		const keep = (event: MouseEvent) => event.preventDefault();
 		node?.addEventListener("mousedown", keep, true);
 		return () => node?.removeEventListener("mousedown", keep, true);
 	}, [keepFocus]);
+
+	const isDoneWord = !doneLabel || doneLabel === "Done";
+
 	return (
 		<View
 			ref={barRef}
@@ -87,15 +87,70 @@ export function ContextBar({
 			<FadeRow style={styles.scroll} contentStyle={styles.scrollContent}>
 				{children}
 			</FadeRow>
-			<ModeActions
-				onCancel={onCancel}
-				cancelShortcut={cancelShortcut}
-				onDone={onDone}
-				doneLabel={doneLabel}
-				doneShortcut={doneShortcut}
-			/>
+			<View style={styles.actions}>
+				{onReset && <TextButton label="Reset" onPress={onReset} />}
+				{onCancel && (
+					<BarActionButton
+						icon="close-outline"
+						label="Cancel"
+						shortcut={cancelShortcut}
+						onPress={onCancel}
+					/>
+				)}
+				{isDoneWord ? (
+					<BarActionButton
+						icon="checkmark-outline"
+						label={doneLabel}
+						shortcut={doneShortcut}
+						onPress={onDone}
+					/>
+				) : (
+					<TextButton
+						label={doneLabel}
+						shortcut={doneShortcut}
+						onPress={onDone}
+					/>
+				)}
+			</View>
 			<View style={styles.divider} />
 		</View>
+	);
+}
+
+function BarActionButton({
+	icon,
+	label,
+	shortcut,
+	onPress,
+}: {
+	icon: ComponentProps<typeof Ionicons>["name"];
+	label: string;
+	shortcut?: string;
+	onPress: () => void;
+}) {
+	const { anchor, tooltip } = useTooltip(label, shortcut);
+	return (
+		<>
+			<Pressable
+				{...anchor}
+				hitSlop={6}
+				onPress={onPress}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.barActionButton,
+						webTransition,
+						hovered && styles.segmentHovered,
+						pressed && styles.segmentPressed,
+					];
+				}}
+			>
+				<Ionicons name={icon} size={20} color={colors.textPrimary} />
+			</Pressable>
+			{tooltip}
+		</>
 	);
 }
 
@@ -392,13 +447,28 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 	},
+	actions: {
+		flexDirection: "row",
+		alignItems: "center",
+		flexShrink: 0,
+		gap: 6,
+		marginLeft: space.xs,
+	},
+	barActionButton: {
+		width: ACTION_BUTTON_SIZE,
+		height: ACTION_BUTTON_SIZE,
+		borderRadius: ACTION_BUTTON_SIZE / 2,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	},
 	divider: {
 		width: StyleSheet.hairlineWidth,
-		alignSelf: "stretch",
+		height: 24,
+		alignSelf: "center",
 		flexShrink: 0,
-		marginVertical: 14,
-		marginLeft: space.xs,
-		backgroundColor: colors.border,
+		marginHorizontal: 12,
+		backgroundColor: colors.borderStrong,
 	},
 	group: {
 		flexDirection: "row",

@@ -1,5 +1,12 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+	Platform,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+	type ViewInstance,
+} from "react-native";
 import { LegacyScrollView, ScrollView } from "react-native-gesture-handler";
 import Animated, {
 	Easing,
@@ -56,13 +63,24 @@ export function LayersPanel({
 	bottomInset,
 	open,
 	onClose,
+	inert = false,
 	...list
 }: LayerListProps & {
 	layout: "sidebar" | "sheet" | "inspector";
 	bottomInset: number;
 	open: boolean;
 	onClose: () => void;
+	inert?: boolean;
 }) {
+	const sidebarRef = useRef<ViewInstance>(null);
+	const sheetRef = useRef<ViewInstance>(null);
+	useEffect(() => {
+		if (Platform.OS !== "web") return;
+		const node = (layout === "sidebar" ? sidebarRef : sheetRef)
+			.current as unknown as HTMLElement | null;
+		node?.toggleAttribute("inert", inert);
+	}, [inert, layout]);
+
 	if (layout === "inspector") {
 		return (
 			<View style={styles.inspector}>
@@ -75,7 +93,12 @@ export function LayersPanel({
 	}
 	if (layout === "sheet") {
 		return (
-			<View style={styles.sheetArea}>
+			<View
+				ref={sheetRef}
+				pointerEvents={inert ? "none" : "box-none"}
+				aria-hidden={inert ? true : undefined}
+				style={styles.sheetArea}
+			>
 				{open && (
 					<BottomSheet
 						title="Layers"
@@ -90,6 +113,9 @@ export function LayersPanel({
 	}
 	return (
 		<View
+			ref={sidebarRef}
+			pointerEvents={inert ? "none" : "box-none"}
+			aria-hidden={inert ? true : undefined}
 			style={[styles.sidebarArea, { bottom: bottomInset + SIDEBAR_MARGIN }]}
 		>
 			{open && (

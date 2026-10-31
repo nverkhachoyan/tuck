@@ -3,16 +3,20 @@ import { adjustSpec } from "./tools/adjust/adjustSpec.ts";
 import { cropSpec } from "./tools/crop/cropSpec.ts";
 import { cutSpec } from "./tools/cut/cutSpec.ts";
 import { removeBgSpec } from "./tools/cut/removeBgSpec.ts";
-import { drawSpec } from "./tools/draw/drawSpec.ts";
+import { eraserSpec } from "./tools/eraser/eraserSpec.ts";
 import { findSpec } from "./tools/find/findSpec.ts";
+import { penSpec } from "./tools/pen/penSpec.ts";
 import { redactSpec } from "./tools/redact/redactSpec.ts";
+import { shapeSpec } from "./tools/shape/shapeSpec.ts";
 import { stickersSpec } from "./tools/stickers/stickersSpec.ts";
 import { textSpec } from "./tools/text/textSpec.ts";
 
 /** The built-in tools' specs, from their own folders, by id. */
 export const BUILT_IN_SPECS = {
 	text: textSpec,
-	draw: drawSpec,
+	pen: penSpec,
+	shape: shapeSpec,
+	eraser: eraserSpec,
 	redact: redactSpec,
 	find: findSpec,
 	sticker: stickersSpec,
@@ -32,7 +36,9 @@ export const BUILT_IN_TOOLBAR: readonly (
 	| OwnTool
 )[] = [
 	"text",
-	"draw",
+	"pen",
+	"shape",
+	"eraser",
 	"redact",
 	"find",
 	"sticker",

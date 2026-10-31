@@ -24,12 +24,14 @@ export const TrayHeight = createContext<(height: number) => void>(() => {});
  */
 export function Tray({
 	bottomInset,
+	rightInset = 0,
 	dismissLabel,
 	onDismiss,
 	dismissOnOutsidePress = true,
 	children,
 }: {
 	bottomInset: number;
+	rightInset?: number;
 	dismissLabel?: string;
 	onDismiss?: () => void;
 	dismissOnOutsidePress?: boolean;
@@ -48,7 +50,12 @@ export function Tray({
 					accessibilityLabel={dismissLabel}
 				/>
 			)}
-			<View style={[styles.trayArea, { bottom: bottomInset }]}>
+			<View
+				style={[
+					styles.trayArea,
+					{ bottom: bottomInset, paddingRight: rightInset },
+				]}
+			>
 				<Animated.View
 					entering={FadeIn.duration(160)}
 					exiting={FadeOut.duration(100)}
@@ -65,12 +72,14 @@ export function Tray({
 export function ToolOptions({
 	closeLabel,
 	bottomInset,
+	rightInset,
 	onClose,
 	dismissOnOutsidePress,
 	children,
 }: {
 	closeLabel: string;
 	bottomInset: number;
+	rightInset?: number;
 	onClose: () => void;
 	dismissOnOutsidePress?: boolean;
 	children: ReactNode;
@@ -78,6 +87,7 @@ export function ToolOptions({
 	return (
 		<Tray
 			bottomInset={bottomInset}
+			rightInset={rightInset}
 			dismissLabel={closeLabel}
 			onDismiss={onClose}
 			dismissOnOutsidePress={dismissOnOutsidePress}
