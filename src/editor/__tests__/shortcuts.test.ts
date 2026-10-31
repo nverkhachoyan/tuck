@@ -12,7 +12,7 @@ import {
 import type { ToolSpecs } from "../toolSpec.ts";
 
 const entries = toolbarEntries(BUILT_IN_SPECS, BUILT_IN_TOOLBAR);
-const tools = toolsByKey(entries);
+const tools = toolsByKey(entries, BUILT_IN_SPECS);
 const shortcutFor = (press: KeyPress) => shortcutForTools(press, tools);
 
 const press = (key: string, modifiers: Partial<KeyPress> = {}): KeyPress => ({
@@ -165,7 +165,7 @@ describe("shortcutGroups", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["T", "D", "S", "X", "R", "F", "A", "C", "E", "G", "B", "P", "L"],
+			["T", "D", "S", "X", "R", "F", "A", "C", "E", "B", "P", "L"],
 		);
 		assert.equal(toolGroup.items[5].action, "Find faces or text to redact");
 	});

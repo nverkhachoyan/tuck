@@ -14,8 +14,15 @@ export const LAYERS_KEY = "L";
 /** Each tool's or entry's id, by the letter that picks it up. */
 export function toolsByKey(
 	tools: readonly Pick<ToolEntry, "id" | "key">[],
+	specs?: ToolSpecs,
 ): ReadonlyMap<string, string> {
-	return new Map(tools.map((tool) => [tool.key, tool.id]));
+	const map = new Map(tools.map((tool) => [tool.key, tool.id]));
+	if (specs) {
+		for (const [id, spec] of Object.entries(specs)) {
+			if (!map.has(spec.key)) map.set(spec.key, id);
+		}
+	}
+	return map;
 }
 
 export type Shortcut =
