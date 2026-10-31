@@ -23,6 +23,7 @@ export const findTool = defineTool<FindController>({
 	},
 	canvasInput: (find) => find.canvasInput,
 	doneLabel: (find) => findDoneLabel(find.selectedCount),
+	doneVariant: (find) => (find.selectedCount > 0 ? "primary" : undefined),
 	done: (find) => find.redact(),
 	deselectOnDone: true,
 });

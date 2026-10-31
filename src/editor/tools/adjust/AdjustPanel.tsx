@@ -7,6 +7,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Chip } from "@/ui/Chip";
+import { Surface } from "@/ui/Surface";
 import { colors, radii, space, typography } from "@/ui/theme";
 import {
 	type AdjustmentKey,
@@ -122,9 +123,11 @@ function ChangingValue({
 	}));
 	return (
 		<View style={styles.changingArea}>
-			<Animated.View style={[styles.changing, style]}>
-				<Text style={styles.changingLabel}>{label}</Text>
-				<Text style={styles.changingValue}>{signed(steps)}</Text>
+			<Animated.View style={style}>
+				<Surface style={styles.changingPill} contentStyle={styles.changing}>
+					<Text style={styles.changingLabel}>{label}</Text>
+					<Text style={styles.changingValue}>{signed(steps)}</Text>
+				</Surface>
 			</Animated.View>
 		</View>
 	);
@@ -183,12 +186,13 @@ const styles = StyleSheet.create({
 		paddingBottom: 12,
 		pointerEvents: "none",
 	},
+	changingPill: {
+		borderRadius: radii.medium,
+	},
 	changing: {
 		alignItems: "center",
 		paddingHorizontal: 16,
 		paddingVertical: 6,
-		borderRadius: radii.medium,
-		backgroundColor: colors.scrim,
 	},
 	changingLabel: {
 		...typography.caption,
