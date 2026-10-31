@@ -1,8 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { StyleSheet, Text, View, type ViewInstance } from "react-native";
 import { Button } from "@/ui/Button";
 import { ColorPicker } from "@/ui/ColorPicker";
+import { Popover } from "@/ui/Popover";
 import { Surface } from "@/ui/Surface";
 import { SwatchChip } from "@/ui/SwatchChip";
 import { colors, radii, typography } from "@/ui/theme";
@@ -69,6 +70,70 @@ export function ColorOptions({
 					onEyedropper={onEyedropper}
 				/>
 			)}
+		</>
+	);
+}
+
+/**
+ * A single row of swatches for a compact dock panel, where the custom swatch
+ * opens `ColorPicker` in a popover above the dock rather than expanding inline.
+ */
+export function ColorSwatchRow({
+	value,
+	customColor,
+	onPick,
+	onPickCustom,
+	onEyedropper,
+}: {
+	value: string;
+	customColor: string | null;
+	onPick: (color: string) => void;
+	onPickCustom: (color: string) => void;
+	onEyedropper?: () => void;
+}) {
+	const anchor = useRef<ViewInstance>(null);
+	const [pickerOpen, setPickerOpen] = useState(false);
+	const [draft, setDraft] = useState<string | null>(null);
+	const shown = draft ?? value;
+	const custom = customSwatch(shown, customColor, onPick, () =>
+		setPickerOpen(true),
+	);
+	return (
+		<>
+			<ColorSwatches
+				value={shown}
+				custom={{ ...custom, anchorRef: anchor }}
+				onPick={(color) => {
+					setPickerOpen(false);
+					if (color) onPick(color);
+				}}
+			/>
+			<Popover
+				anchor={anchor}
+				open={pickerOpen}
+				onClose={() => {
+					setDraft(null);
+					setPickerOpen(false);
+				}}
+				label="Custom color"
+			>
+				<ColorPicker
+					value={shown}
+					onChange={setDraft}
+					onChangeEnd={(color) => {
+						setDraft(null);
+						onPickCustom(color);
+					}}
+					onEyedropper={
+						onEyedropper &&
+						(() => {
+							setDraft(null);
+							setPickerOpen(false);
+							onEyedropper();
+						})
+					}
+				/>
+			</Popover>
 		</>
 	);
 }

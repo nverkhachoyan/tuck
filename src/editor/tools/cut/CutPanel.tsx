@@ -160,13 +160,16 @@ export function CutPanel({ controller }: { controller: CutController }) {
  * Houses [+ Adds | − Subtracts] and [Smaller | Larger] stepping buttons.
  */
 export function TapModifierPill({ controller }: { controller: CutController }) {
-	const { wide, bottomInset } = useEditorContext();
+	const { wide, bottomInset, rightInset = 0 } = useEditorContext();
 	const { settings, tool, setTapMode, resize } = controller;
 	if (wide || tool !== "tap") return null;
 
 	return (
 		<View
-			style={[styles.pillArea, { bottom: bottomInset + 8 }]}
+			style={[
+				styles.pillArea,
+				{ bottom: bottomInset + 8, paddingRight: rightInset },
+			]}
 			pointerEvents="box-none"
 		>
 			<Surface style={styles.pill} contentStyle={styles.pillContent}>
@@ -360,13 +363,14 @@ function applyButtons(
  * options, so no brush options show for it.
  */
 export function CutOptions({ controller }: { controller: CutController }) {
-	const { bottomInset, closeTray } = useEditorContext();
+	const { bottomInset, rightInset, closeTray } = useEditorContext();
 	const { settings, tool, change: onChange, tray } = controller;
 	if (tray === "apply") {
 		return (
 			<ToolOptions
 				closeLabel="Close Actions"
 				bottomInset={bottomInset}
+				rightInset={rightInset}
 				onClose={closeTray}
 			>
 				<View style={styles.actions}>
@@ -380,6 +384,7 @@ export function CutOptions({ controller }: { controller: CutController }) {
 		<ToolOptions
 			closeLabel="Close brush options"
 			bottomInset={bottomInset}
+			rightInset={rightInset}
 			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>

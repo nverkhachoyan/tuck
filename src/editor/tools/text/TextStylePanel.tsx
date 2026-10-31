@@ -1,7 +1,13 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ReactNode, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { type ReactNode, useRef, useState } from "react";
+import {
+	type AccessibilityActionEvent,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
 import { Chip } from "@/ui/Chip";
 import { ColorSliderBar } from "@/ui/ColorPicker";
 import { FadeRow, MeasuredItem } from "@/ui/FadeRow";
@@ -94,6 +100,7 @@ export function TextDock({ controller: text }: { controller: TextController }) {
 			<TextStylePanel
 				layer={styledText}
 				onChange={text.style}
+				onPreview={text.preview}
 				pickerKey={picker?.key ?? null}
 				onOpenPicker={text.openPicker}
 				onClosePicker={text.closePicker}
@@ -123,6 +130,10 @@ export function TextToolBar({
 	);
 }
 
+const RED: Hsv = { hue: 0, saturation: 1, value: 1 };
+const HUE_STEP = 10;
+const TONE_STEP = 0.05;
+
 /**
  * In-place color picker inside the 100pt dock when a custom swatch is tapped.
  * Keeps the virtual keyboard open while typing text by avoiding overlays.
@@ -131,20 +142,35 @@ function InlineTextColorPicker({
 	layer,
 	colorKey,
 	onChange,
+	onPreview,
 	onClose,
 }: {
 	layer: TextLayer;
 	colorKey: TextColorKey;
 	onChange: (patch: TextLayerEdit) => void;
+	onPreview?: (patch: TextLayerEdit) => void;
 	onClose: () => void;
 }) {
-	const initialHex = layer[colorKey] ?? layer.color;
-	const [hsv, setHsv] = useState<Hsv>(
-		() => hexToHsv(initialHex) ?? { hue: 0, saturation: 1, value: 1 },
-	);
+	const value = layer[colorKey] ?? layer.color;
+	const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? RED);
+	const [lastValue, setLastValue] = useState(value);
+	if (value !== lastValue) {
+		setLastValue(value);
+		if (value !== hsvToHex(hsv)) setHsv(hexToHsv(value, hsv.hue) ?? hsv);
+	}
+
+	const latest = useRef(hsv);
+	latest.current = hsv;
 	const { onPickCustom, onEyedropper } = useColorTarget((color) =>
 		onChange({ [colorKey]: color }),
 	);
+
+	const preview = (next: Hsv) => {
+		latest.current = next;
+		setHsv(next);
+		onPreview?.({ [colorKey]: hsvToHex(next) });
+	};
+	const commit = () => onPickCustom(hsvToHex(latest.current));
 
 	const pureHex = hsvToHex({ hue: hsv.hue, saturation: 1, value: 1 });
 	const currentHex = hsvToHex(hsv);
@@ -152,19 +178,31 @@ function InlineTextColorPicker({
 
 	const changeHue = (fraction: number) => {
 		const hue = Math.min(360, Math.max(0, fraction * 360));
-		const next = { ...hsv, hue };
-		setHsv(next);
-		const hex = hsvToHex(next);
-		onChange({ [colorKey]: hex });
-		onPickCustom(hex);
+		preview({ ...latest.current, hue });
 	};
 
 	const changeTone = (fraction: number) => {
-		const next = toneToHsv(hsv.hue, fraction);
-		setHsv(next);
-		const hex = hsvToHex(next);
-		onChange({ [colorKey]: hex });
-		onPickCustom(hex);
+		preview(toneToHsv(latest.current.hue, fraction));
+	};
+
+	const stepHue = (event: AccessibilityActionEvent) => {
+		const step = event.nativeEvent.actionName === "increment" ? 1 : -1;
+		const hue = Math.min(
+			360,
+			Math.max(0, latest.current.hue + step * HUE_STEP),
+		);
+		preview({ ...latest.current, hue });
+		commit();
+	};
+
+	const stepTone = (event: AccessibilityActionEvent) => {
+		const step = event.nativeEvent.actionName === "increment" ? 1 : -1;
+		const nextTone = Math.min(
+			1,
+			Math.max(0, hsvToTone(latest.current) + step * TONE_STEP),
+		);
+		preview(toneToHsv(latest.current.hue, nextTone));
+		commit();
 	};
 
 	return (
@@ -210,20 +248,26 @@ function InlineTextColorPicker({
 					thumbColor={pureHex}
 					background={styles.hues}
 					onMove={changeHue}
+					onEnd={commit}
 					accessibilityLabel="Hue"
 					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
+					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+					onAccessibilityAction={stepHue}
 				/>
 				<ColorSliderBar
 					value={tone}
 					thumbColor={currentHex}
 					background={toneGradient(pureHex)}
 					onMove={changeTone}
+					onEnd={commit}
 					accessibilityLabel="Tone"
 					accessibilityValue={{
 						min: 0,
 						max: 100,
 						now: Math.round(tone * 100),
 					}}
+					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+					onAccessibilityAction={stepTone}
 				/>
 			</View>
 		</View>
@@ -233,6 +277,7 @@ function InlineTextColorPicker({
 type TextStylePanelProps = {
 	layer: TextLayer;
 	onChange: (patch: TextLayerEdit) => void;
+	onPreview?: (patch: TextLayerEdit) => void;
 	pickerKey: TextColorKey | null;
 	onOpenPicker: (key: TextColorKey) => void;
 	onClosePicker: () => void;
@@ -247,6 +292,7 @@ type TextStylePanelProps = {
 function TextStylePanel({
 	layer,
 	onChange,
+	onPreview,
 	pickerKey,
 	onOpenPicker,
 	onClosePicker,
@@ -260,6 +306,7 @@ function TextStylePanel({
 				layer={layer}
 				colorKey={pickerKey}
 				onChange={onChange}
+				onPreview={onPreview}
 				onClose={onClosePicker}
 			/>
 		);

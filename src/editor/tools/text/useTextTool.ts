@@ -177,11 +177,17 @@ export function useTextTool({
 		commit,
 		finish,
 		style,
+		preview: edit ? changeLayer : undefined,
 		select,
 		canvasInput,
-		openPicker: (key: TextColorKey) =>
-			styledText && setPicker({ layerId: styledText.id, key }),
-		closePicker: () => setPicker(null),
+		openPicker: (key: TextColorKey) => {
+			if (styledText) setPicker({ layerId: styledText.id, key });
+			if (edit && Platform.OS === "web") inputRef.current?.focus();
+		},
+		closePicker: () => {
+			setPicker(null);
+			if (edit && Platform.OS === "web") inputRef.current?.focus();
+		},
 		changeText: (text: string) => changeLayer({ text }),
 		changeSelection: (selection: TextSelection) => change({ selection }),
 		changeFocus: (focused: boolean) => change({ focused }),

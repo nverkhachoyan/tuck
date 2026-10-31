@@ -1,6 +1,13 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import type { ComponentProps, ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { type ComponentProps, type ReactNode, useEffect, useRef } from "react";
+import {
+	Platform,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+	type ViewInstance,
+} from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/ui/Button";
@@ -26,6 +33,8 @@ const DOCK_MARGIN = 10;
 const KEYBOARD_GAP = 8;
 const BUTTON_SIZE = compactControls ? 36 : 44;
 const BUTTON_ICON_SIZE = compactControls ? 24 : 28;
+const BAR_BUTTON_SIZE = compactControls ? 32 : 36;
+const BAR_ICON_SIZE = 20;
 // A wide screen's inspector card along the right, which holds the layers.
 export const INSPECTOR_WIDTH = 352;
 // Minimum height of a wide screen's bottom tool card, sized for the tallest
@@ -71,17 +80,30 @@ export function Dock({
 	footer,
 	keyboardOverlap = 0,
 	rightInset = 0,
+	keepFocus = false,
 	children,
 }: {
 	panel: string;
 	footer?: ReactNode;
 	keyboardOverlap?: number;
 	rightInset?: number;
+	// While text is being typed, a press in the dock must not take the caret
+	// from the hidden input. Canceling the press's default leaves it there.
+	keepFocus?: boolean;
 	children: ReactNode;
 }) {
 	const { bottom } = useSafeAreaInsets();
+	const dockRef = useRef<ViewInstance>(null);
+	useEffect(() => {
+		if (!keepFocus || Platform.OS !== "web") return;
+		const node = dockRef.current as unknown as HTMLElement | null;
+		const keep = (event: MouseEvent) => event.preventDefault();
+		node?.addEventListener("mousedown", keep, true);
+		return () => node?.removeEventListener("mousedown", keep, true);
+	}, [keepFocus]);
 	return (
 		<View
+			ref={dockRef}
 			style={[
 				styles.bar,
 				keyboardOverlap > 0 && { bottom: keyboardOverlap },
@@ -140,7 +162,7 @@ export type ModeActionProps = {
  * and which of the two show live here, so the two layouts can't disagree.
  */
 export function ModeActions(props: ModeActionProps) {
-	const { cancel, done } = modeActionButtons(props);
+	const { cancel, done } = modeActionButtons(props, "bar");
 	return (
 		<View style={styles.modeActions}>
 			{props.onReset && <TextButton label="Reset" onPress={props.onReset} />}
@@ -150,14 +172,17 @@ export function ModeActions(props: ModeActionProps) {
 	);
 }
 
-function modeActionButtons({
-	onCancel,
-	cancelShortcut,
-	onDone,
-	doneLabel = "Done",
-	doneShortcut,
-	doneVariant,
-}: ModeActionProps) {
+function modeActionButtons(
+	{
+		onCancel,
+		cancelShortcut,
+		onDone,
+		doneLabel = "Done",
+		doneShortcut,
+		doneVariant,
+	}: ModeActionProps,
+	place: "dock" | "bar",
+) {
 	const isDoneWord = !doneLabel || doneLabel === "Done";
 	return {
 		cancel: onCancel ? (
@@ -165,6 +190,7 @@ function modeActionButtons({
 				icon="close-outline"
 				label="Cancel"
 				shortcut={cancelShortcut}
+				place={place}
 				onPress={onCancel}
 			/>
 		) : null,
@@ -184,6 +210,7 @@ function modeActionButtons({
 					icon="checkmark-outline"
 					label={doneLabel}
 					shortcut={doneShortcut}
+					place={place}
 					onPress={onDone}
 				/>
 			) : (
@@ -198,22 +225,22 @@ function modeActionButtons({
 }
 
 /**
- * A mode's last row: Cancel at the left, the mode's name in the middle, and
- * Done at the right, all within reach of the thumb that's using it. Without
- * `onCancel`, Cancel's place stays empty, so the name stays centered.
+ * A mode's last row: Cancel (and Reset, when the mode has one) at the left,
+ * the mode's name in the middle, and Done at the right, all within reach of
+ * the thumb that's using it. Without `onCancel`, the left end stays empty, so
+ * the name stays centered.
  */
 export function DockFooter({
 	title,
 	...actions
 }: { title: string } & ModeActionProps) {
-	const { cancel, done } = modeActionButtons(actions);
+	const { cancel, done } = modeActionButtons(actions, "dock");
 	return (
 		<View style={styles.footer}>
 			<View style={styles.footerEnd}>
-				{actions.onReset ? (
+				{cancel}
+				{actions.onReset && (
 					<TextButton label="Reset" onPress={actions.onReset} />
-				) : (
-					cancel
 				)}
 			</View>
 			<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
@@ -227,33 +254,37 @@ export function DockFooter({
 type DockIconName = ComponentProps<typeof Ionicons>["name"];
 
 /**
- * A glyph at one end of the footer, with no fill: the footer's ends are
- * where a mode's Done and Cancel always are, so their place names them.
+ * A glyph at one end of the footer or in the header's context bar, with no
+ * fill: the ends are where a mode's Done and Cancel always are, so their
+ * place names them.
  */
 function DockButton({
 	icon,
 	label,
 	shortcut,
+	place,
 	onPress,
 }: {
 	icon: DockIconName;
 	label: string;
 	shortcut?: string;
+	place: "dock" | "bar";
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
+	const inBar = place === "bar";
 	return (
 		<>
 			<Pressable
 				{...anchor}
-				hitSlop={8}
+				hitSlop={inBar ? 6 : 8}
 				onPress={onPress}
 				accessibilityRole="button"
 				accessibilityLabel={label}
 				style={(state) => {
 					const { pressed, hovered } = interaction(state);
 					return [
-						styles.button,
+						inBar ? styles.barButton : styles.button,
 						webTransition,
 						hovered && styles.hovered,
 						pressed && styles.pressed,
@@ -262,7 +293,7 @@ function DockButton({
 			>
 				<Ionicons
 					name={icon}
-					size={BUTTON_ICON_SIZE}
+					size={inBar ? BAR_ICON_SIZE : BUTTON_ICON_SIZE}
 					color={colors.textPrimary}
 				/>
 			</Pressable>
@@ -318,21 +349,27 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 8,
 	},
 	footerEnd: {
-		width: BUTTON_SIZE,
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: space.xxs,
 	},
 	footerEndRight: {
-		alignItems: "flex-end",
+		justifyContent: "flex-end",
 	},
 	modeActions: {
 		flexDirection: "row",
 		alignItems: "center",
+		flexShrink: 0,
 		gap: 6,
+		marginLeft: space.xs,
 	},
 	title: {
-		flex: 1,
 		...typography.bodyStrong,
 		color: colors.textPrimary,
 		textAlign: "center",
+		paddingHorizontal: space.xs,
+		flexShrink: 1,
 	},
 	button: {
 		width: BUTTON_SIZE,
@@ -340,6 +377,15 @@ const styles = StyleSheet.create({
 		borderRadius: BUTTON_SIZE / 2,
 		alignItems: "center",
 		justifyContent: "center",
+		flexShrink: 0,
+	},
+	barButton: {
+		width: BAR_BUTTON_SIZE,
+		height: BAR_BUTTON_SIZE,
+		borderRadius: BAR_BUTTON_SIZE / 2,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
 	},
 	hovered: {
 		backgroundColor: colors.hoverOverlay,

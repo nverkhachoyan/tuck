@@ -251,9 +251,15 @@ describe("layerActionsFor", () => {
 	const actions = (layer: Parameters<typeof layerActionsFor>[0]) =>
 		layerActionsFor(layer, specs, BUILT_IN_TOOLBAR);
 
-	test("a photo can be cut, adjusted, found, and redacted, in the toolbar's order", () => {
+	test("a photo can be cut, have its background removed, adjusted, found, and redacted", () => {
 		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
-		assert.deepEqual(actions(photo), ["cut", "adjust", "find", "redact"]);
+		assert.deepEqual(actions(photo), [
+			"cut",
+			"removeBg",
+			"adjust",
+			"find",
+			"redact",
+		]);
 		assert.deepEqual(actions({ ...photo, hidden: true }), ["adjust"]);
 	});
 

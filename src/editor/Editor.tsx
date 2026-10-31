@@ -338,14 +338,21 @@ export function Editor({
 	const hasImage = targetImage !== null;
 	const [cutVariant, setCutVariant] = useState<"cut" | "removeBg">("cut");
 	// The buttons that spin: Add photo while a photo is on its way, and the
-	// tools whose work is running.
-	const busy = addBusy ? [...busyTools, "photo"] : busyTools;
+	// tools whose work is running (including Remove BG grouped under Cut).
+	const busy = useMemo(() => {
+		const ids = [...busyTools];
+		if (addBusy) ids.push("photo");
+		if (busyTools.includes("removeBg") && !ids.includes("cut")) {
+			ids.push("cut");
+		}
+		return ids;
+	}, [busyTools, addBusy]);
 
 	const toolStarters = useMemo(
 		() => ({
 			...startTool,
 			cut: () => {
-				if (cutVariant === "removeBg") {
+				if (cutVariant === "removeBg" && startTool.removeBg) {
 					startTool.removeBg();
 				} else {
 					startTool.cut();
@@ -359,26 +366,27 @@ export function Editor({
 	// variant and flyout choices.
 	const toolEntries = useMemo(() => {
 		return toolbox.entries.map((entry): ToolEntry => {
-			if (entry.id === "cut") {
+			if (entry.id === "cut" && specs.removeBg) {
 				const isRemoveBg =
 					tool === "removeBg" || (tool !== "cut" && cutVariant === "removeBg");
 				return {
 					...entry,
-					label: isRemoveBg ? "Remove BG" : "Cut",
-					icon: isRemoveBg ? "auto-fix" : "scissors-cutting",
+					label: isRemoveBg ? specs.removeBg.label : entry.label,
+					icon: isRemoveBg ? specs.removeBg.icon : entry.icon,
+					key: isRemoveBg ? specs.removeBg.key : entry.key,
 					activeVariant: isRemoveBg ? "removeBg" : "cut",
 					variants: [
 						{
 							id: "cut",
 							label: "Cutout",
-							icon: "scissors-cutting",
-							shortcut: "B",
+							icon: entry.icon,
+							shortcut: entry.key,
 						},
 						{
 							id: "removeBg",
-							label: "Remove BG",
-							icon: "auto-fix",
-							shortcut: "G",
+							label: specs.removeBg.label,
+							icon: specs.removeBg.icon,
+							shortcut: specs.removeBg.key,
 						},
 					],
 					onSelectVariant: (variantId) => {
@@ -414,16 +422,24 @@ export function Editor({
 			}
 			return entry;
 		});
-	}, [toolbox.entries, controllers, tool, cutVariant, finishTool, startTool]);
+	}, [
+		toolbox.entries,
+		specs,
+		controllers,
+		tool,
+		cutVariant,
+		finishTool,
+		startTool,
+	]);
 
 	// What the dock offers for the selected layer: the tools that act on it,
 	// and the buttons tools add for it, each in the toolbar's order.
 	const layerTools =
 		selectedLayer && layerActionsFor(selectedLayer, specs, toolbox.toolbar);
 	const layerActions = layerTools && {
-		tools: toolEntries.filter((entry) => layerTools.includes(entry.id)),
-		busy,
-		startTool: toolStarters,
+		tools: toolbarEntries(specs, layerTools),
+		busy: busyTools,
+		startTool,
 		actions: toolbox.toolbar.flatMap((id) => {
 			const listed = controllers[id];
 			const action = listed?.definition.layerAction?.(
@@ -600,6 +616,7 @@ export function Editor({
 								}
 								keyboardOverlap={layout.keyboardOverlap}
 								rightInset={rightInset}
+								keepFocus={typing}
 							>
 								<DockContent
 									context={panels}

@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { readPreference, writePreference } from "@/platform/preferenceStore";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
@@ -12,6 +13,14 @@ import {
 
 export type EraserController = ReturnType<typeof useEraserTool>;
 
+const KEY = "eraserSettings";
+const EARLIER_KEY = "brushSettings";
+
+const parseSavedEraserSettings = (saved: unknown) =>
+	parseEraserSettings(
+		saved === undefined ? readPreference(EARLIER_KEY) : saved,
+	);
+
 /**
  * Controller for erasing drawing strokes and shapes.
  * - Manages eraser size index.
@@ -19,10 +28,15 @@ export type EraserController = ReturnType<typeof useEraserTool>;
  */
 export function useEraserTool({ documentSize }: Pick<ToolEnv, "documentSize">) {
 	const { drawStroke } = useStore((state) => state.actions);
-	const [settings, setSettings] = usePreference(
-		"eraserSettings",
-		parseEraserSettings,
-	);
+	const [settings, setSettings] = usePreference(KEY, parseSavedEraserSettings);
+	useEffect(() => {
+		if (
+			readPreference(KEY) === undefined &&
+			readPreference(EARLIER_KEY) !== undefined
+		) {
+			writePreference(KEY, settings);
+		}
+	}, [settings]);
 
 	const stepSize = (step: 1 | -1) => {
 		const next = stepEraserSize(settings, step);

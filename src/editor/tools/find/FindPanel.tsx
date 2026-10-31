@@ -96,9 +96,9 @@ export function FindBar() {
  * a tray. It has no backdrop: taps on the canvas toggle the regions found.
  */
 export function FindTray({ controller }: { controller: FindController }) {
-	const { bottomInset } = useEditorContext();
+	const { bottomInset, rightInset } = useEditorContext();
 	return (
-		<Tray bottomInset={bottomInset}>
+		<Tray bottomInset={bottomInset} rightInset={rightInset}>
 			<FindResults controller={controller} />
 		</Tray>
 	);
@@ -148,13 +148,14 @@ function FindResults({ controller }: { controller: FindController }) {
 
 /** The look Find redacts with, in a tray above the dock (see `ToolOptions`). */
 export function FindOptions() {
-	const { bottomInset, closeTray } = useEditorContext();
+	const { bottomInset, rightInset, closeTray } = useEditorContext();
 	const { look, changeLook } = useRedactLook();
 	const colorTarget = useColorTarget((color) => changeLook({ color }));
 	return (
 		<ToolOptions
 			closeLabel="Close redaction style"
 			bottomInset={bottomInset}
+			rightInset={rightInset}
 			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>
