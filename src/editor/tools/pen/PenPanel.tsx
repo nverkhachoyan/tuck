@@ -27,20 +27,20 @@ import {
 } from "./penSettings";
 import type { PenController } from "./usePenTool";
 
-type PenTipMeta = {
+export type PenTipMeta = {
 	tip: PenTipChoice;
 	title: string;
 	icon: ComponentProps<typeof MaterialCommunityIcons>["name"];
 };
 
-const TIPS: readonly PenTipMeta[] = [
+export const TIPS: readonly PenTipMeta[] = [
 	{ tip: "pen", title: "Pen", icon: "draw-pen" },
 	{ tip: "marker", title: "Highlighter", icon: "marker" },
 	{ tip: "ink", title: "Marker", icon: "brush" },
 	{ tip: "neon", title: "Neon", icon: "shimmer" },
 ] as const;
 
-const metaOf = (tip: PenTipChoice): PenTipMeta =>
+export const metaOf = (tip: PenTipChoice): PenTipMeta =>
 	TIPS.find((item) => item.tip === tip) ?? TIPS[0];
 
 /**

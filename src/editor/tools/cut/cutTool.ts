@@ -21,4 +21,9 @@ export const cutTool = defineTool<CutController>({
 	reset: (cut) => cut.reset,
 	announcement: (cut) => cut.news,
 	stepSize: (cut, step) => cut.stepSize(step),
+	variants: () => [
+		{ id: "cut", label: "Cutout", icon: "crop-free", shortcut: "B" },
+		{ id: "removeBg", label: "Remove BG", icon: "auto-fix", shortcut: "G" },
+	],
+	activeVariant: () => "cut",
 });

@@ -52,6 +52,7 @@ import { HeaderActions } from "./shell/HeaderActions";
 import { SaveErrorBanner } from "./shell/SaveErrorBanner";
 import { TrayHeight } from "./shell/ToolOptions";
 import { ToolsPanel } from "./shell/ToolsPanel";
+import type { ToolEntry } from "./shell/toolList";
 import { shortcutGroups, toolsByKey } from "./shortcuts";
 import { useStore } from "./store";
 import {
@@ -338,12 +339,45 @@ export function Editor({
 	// The buttons that spin: Add photo while a photo is on its way, and the
 	// tools whose work is running.
 	const busy = addBusy ? [...busyTools, "photo"] : busyTools;
+
+	// Tools entries on the rail and dock, updated with each tool's active
+	// variant and flyout choices.
+	const toolEntries = useMemo(() => {
+		return toolbox.entries.map((entry): ToolEntry => {
+			const openTool = controllers[entry.id];
+			const toolDef = openTool?.definition;
+			if (toolDef?.variants) {
+				const variants = toolDef.variants(openTool.controller);
+				const active = toolDef.activeVariant?.(openTool.controller);
+				const custom = toolDef.variantEntry?.(openTool.controller);
+				return {
+					...entry,
+					label: custom?.label ?? entry.label,
+					icon: custom?.icon ?? entry.icon,
+					activeVariant: active,
+					variants,
+					onSelectVariant: (variantId) => {
+						if (entry.id === "cut" && variantId === "removeBg") {
+							if (tool) finishTool();
+							startTool.removeBg();
+							return;
+						}
+						if (tool && tool !== entry.id) finishTool();
+						toolDef.selectVariant?.(openTool.controller, variantId);
+						startTool[entry.id]?.();
+					},
+				};
+			}
+			return entry;
+		});
+	}, [toolbox.entries, controllers, tool, finishTool, startTool]);
+
 	// What the dock offers for the selected layer: the tools that act on it,
 	// and the buttons tools add for it, each in the toolbar's order.
 	const layerTools =
 		selectedLayer && layerActionsFor(selectedLayer, specs, toolbox.toolbar);
 	const layerActions = layerTools && {
-		tools: toolbox.entries.filter((entry) => layerTools.includes(entry.id)),
+		tools: toolEntries.filter((entry) => layerTools.includes(entry.id)),
 		busy,
 		startTool,
 		actions: toolbox.toolbar.flatMap((id) => {
@@ -499,7 +533,7 @@ export function Editor({
 						{layersBeside && !wide && layersPanel}
 						{wide && (
 							<EditorRail
-								tools={toolbox.entries}
+								tools={toolEntries}
 								chosen={tool}
 								busy={busy}
 								hasImage={hasImage}
@@ -529,7 +563,7 @@ export function Editor({
 									panel={panel}
 									idle={
 										<ToolsPanel
-											tools={toolbox.entries}
+											tools={toolEntries}
 											busy={busy}
 											hasImage={hasImage}
 											startTool={startTool}
