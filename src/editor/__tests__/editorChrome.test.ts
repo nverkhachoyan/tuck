@@ -28,7 +28,9 @@ const nothing: ModeChromeInput = {
 };
 
 const TOOLS: [string, string][] = [
-	["draw", "Draw"],
+	["pen", "Pen"],
+	["shape", "Shape"],
+	["eraser", "Eraser"],
 	["redact", "Redact"],
 	["find", "Find"],
 	["adjust", "Adjust"],
@@ -58,12 +60,12 @@ describe("modeChrome", () => {
 	test("the open tool comes before the selected layer", () => {
 		const chrome = modeChrome({
 			...nothing,
-			tool: "draw",
+			tool: "pen",
 			stylingTool: "text",
 			layerName: "Text",
 		});
-		assert.equal(chrome.panel, "draw");
-		assert.equal(chrome.actions?.title, "Draw");
+		assert.equal(chrome.panel, "pen");
+		assert.equal(chrome.actions?.title, "Pen");
 	});
 
 	test("a tool's Done says the label the tool gives", () => {
@@ -140,7 +142,9 @@ describe("toolbarEntries", () => {
 			entries.map((entry) => [entry.id, entry.label, entry.key]),
 			[
 				["text", "Text", "T"],
-				["draw", "Draw", "D"],
+				["pen", "Pen", "D"],
+				["shape", "Shape", "S"],
+				["eraser", "Eraser", "X"],
 				["redact", "Redact", "R"],
 				["find", "Find", "F"],
 				["sticker", "Sticker", "A"],
@@ -210,20 +214,20 @@ describe("layerActionsFor", () => {
 		assert.deepEqual(actions({ ...photo, hidden: true }), ["redact", "adjust"]);
 	});
 
-	test("a drawing or a shape is drawn, and a redaction is redacted", () => {
+	test("a drawing or a shape is acted on by its tool and the eraser, and a redaction is redacted", () => {
 		const drawing = createDrawingLayer({
 			type: "pen",
 			color: "#FF3B30",
 			width: 10,
 			points: [0, 0, 10, 10],
 		});
-		assert.deepEqual(actions(drawing), ["draw"]);
+		assert.deepEqual(actions(drawing), ["pen", "eraser"]);
 		const shape = createShapeLayer(
 			"rectangle",
 			{ x: 0, y: 0, rotation: 0, width: 40, height: 20 },
 			{ color: "#FF3B30", strokeWidth: 4 },
 		);
-		assert.deepEqual(actions(shape), ["draw"]);
+		assert.deepEqual(actions(shape), ["shape", "eraser"]);
 		const redaction = createRedactionBox(
 			{ x: 0, y: 0, width: 40, height: 20 },
 			effect,

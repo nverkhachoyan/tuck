@@ -36,6 +36,7 @@ export function useEditorShortcuts({
 	openExport,
 	zoom,
 	done,
+	cancel,
 	startTool,
 	editSelected,
 	deleteSelected,
@@ -56,6 +57,7 @@ export function useEditorShortcuts({
 	openExport: () => void;
 	zoom: (to: "in" | "out" | "fit") => void;
 	done: () => void;
+	cancel: () => void;
 	startTool: ToolStarters;
 	editSelected: () => void;
 	deleteSelected: () => void;
@@ -89,6 +91,9 @@ export function useEditorShortcuts({
 				break;
 			case "zoom":
 				zoom(command.to);
+				break;
+			case "cancelTool":
+				cancel();
 				break;
 			case "doneWithTool":
 				done();
@@ -156,33 +161,37 @@ function isEditable(target: EventTarget | null) {
 
 /**
  * Keys on web for an open tool that takes them (see `takesKeys`), only while
- * `enabled`: Escape runs Done from anywhere, as it's Done in the other
- * tools, and Enter from the canvas, while controls keep their own. While
+ * `enabled`: Escape cancels, and Enter from the canvas commits. While
  * `typing`, Enter needs ⌘/Ctrl, as it does in the input.
  */
 export function useToolKeys({
 	enabled,
 	typing,
 	done,
+	cancel,
 }: {
 	enabled: boolean;
 	typing: boolean;
 	done: () => void;
+	cancel?: () => void;
 }) {
 	const onDone = useEffectEvent(done);
+	const onCancel = useEffectEvent(cancel ?? done);
 	useEffect(() => {
 		if (Platform.OS !== "web" || !enabled) return;
 		const handleKeyDown = (event: KeyboardEvent) => {
 			// A popover takes Escape first, in the capture phase, and marks it
-			// handled. Running Done here too would close the tool as the menu
-			// closed.
+			// handled.
 			if (event.defaultPrevented) return;
 			const enter =
 				event.key === "Enter" &&
 				(!typing || event.metaKey || event.ctrlKey) &&
 				!isInteractiveElement(event.target);
-			if (event.key === "Escape" || enter) {
+			if (enter) {
 				onDone();
+				event.preventDefault();
+			} else if (event.key === "Escape") {
+				onCancel();
 				event.preventDefault();
 			}
 		};

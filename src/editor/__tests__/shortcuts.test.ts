@@ -84,7 +84,9 @@ describe("shortcutFor", () => {
 
 	test("picks up a tool, or shows the layers, with a plain letter", () => {
 		assert.deepEqual(shortcutFor(press("t")), { type: "tool", tool: "text" });
-		assert.deepEqual(shortcutFor(press("d")), { type: "tool", tool: "draw" });
+		assert.deepEqual(shortcutFor(press("d")), { type: "tool", tool: "pen" });
+		assert.deepEqual(shortcutFor(press("s")), { type: "tool", tool: "shape" });
+		assert.deepEqual(shortcutFor(press("x")), { type: "tool", tool: "eraser" });
 		assert.deepEqual(shortcutFor(press("r")), {
 			type: "tool",
 			tool: "redact",
@@ -163,9 +165,9 @@ describe("shortcutGroups", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["T", "D", "R", "F", "A", "C", "E", "G", "B", "P", "L"],
+			["T", "D", "S", "X", "R", "F", "A", "C", "E", "G", "B", "P", "L"],
 		);
-		assert.equal(toolGroup.items[3].action, "Find faces or text to redact");
+		assert.equal(toolGroup.items[5].action, "Find faces or text to redact");
 	});
 
 	test("gives a tool that takes the keys a group of its own", () => {

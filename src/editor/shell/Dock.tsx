@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { compactControls } from "@/ui/density";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
+import { TextButton } from "@/ui/TextButton";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 
@@ -68,11 +69,13 @@ export function Dock({
 	panel,
 	footer,
 	keyboardOverlap = 0,
+	rightInset = 0,
 	children,
 }: {
 	panel: string;
 	footer?: ReactNode;
 	keyboardOverlap?: number;
+	rightInset?: number;
 	children: ReactNode;
 }) {
 	const { bottom } = useSafeAreaInsets();
@@ -83,6 +86,7 @@ export function Dock({
 				keyboardOverlap > 0 && { bottom: keyboardOverlap },
 				{
 					paddingBottom: dockBottom(bottom, keyboardOverlap) - keyboardOverlap,
+					paddingRight: rightInset,
 				},
 			]}
 		>
@@ -119,6 +123,7 @@ export function Inspector({ children }: { children: ReactNode }) {
 }
 
 export type ModeActionProps = {
+	onReset?: () => void;
 	onCancel?: () => void;
 	cancelShortcut?: string;
 	onDone: () => void;
@@ -136,6 +141,7 @@ export function ModeActions(props: ModeActionProps) {
 	const { cancel, done } = modeActionButtons(props);
 	return (
 		<View style={styles.modeActions}>
+			{props.onReset && <TextButton label="Reset" onPress={props.onReset} />}
 			{cancel}
 			{done}
 		</View>
@@ -149,6 +155,7 @@ function modeActionButtons({
 	doneLabel = "Done",
 	doneShortcut,
 }: ModeActionProps) {
+	const isDoneWord = !doneLabel || doneLabel === "Done";
 	return {
 		cancel: onCancel ? (
 			<DockButton
@@ -158,13 +165,15 @@ function modeActionButtons({
 				onPress={onCancel}
 			/>
 		) : null,
-		done: (
+		done: isDoneWord ? (
 			<DockButton
 				icon="checkmark-outline"
 				label={doneLabel}
 				shortcut={doneShortcut}
 				onPress={onDone}
 			/>
+		) : (
+			<TextButton label={doneLabel} shortcut={doneShortcut} onPress={onDone} />
 		),
 	};
 }
@@ -181,7 +190,13 @@ export function DockFooter({
 	const { cancel, done } = modeActionButtons(actions);
 	return (
 		<View style={styles.footer}>
-			<View style={styles.footerEnd}>{cancel}</View>
+			<View style={styles.footerEnd}>
+				{actions.onReset ? (
+					<TextButton label="Reset" onPress={actions.onReset} />
+				) : (
+					cancel
+				)}
+			</View>
 			<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
 				{title}
 			</Text>
@@ -292,6 +307,7 @@ const styles = StyleSheet.create({
 	modeActions: {
 		flexDirection: "row",
 		alignItems: "center",
+		gap: 6,
 	},
 	title: {
 		flex: 1,

@@ -166,6 +166,7 @@ export type ShortcutCommand =
 	| { type: "openShortcuts" }
 	| { type: "closeShortcuts" }
 	| { type: "stopEyedropper" }
+	| { type: "cancelTool" }
 	| { type: "doneWithTool" };
 
 /**
@@ -201,7 +202,8 @@ export function shortcutCommand(
 		return shortcut.type === "deselect" ? { type: "stopEyedropper" } : null;
 	}
 	if (state.mode.type === "tool") {
-		if (shortcut.type === "deselect") return { type: "doneWithTool" };
+		if (shortcut.type === "deselect") return { type: "cancelTool" };
+		if (shortcut.type === "edit") return { type: "doneWithTool" };
 		// [ and ] step a brush while a tool with one is open. A sub-tool with
 		// no size, like a box, leaves the size where it is.
 		if (shortcut.type === "brushSize" && specs[state.mode.tool]?.sized) {

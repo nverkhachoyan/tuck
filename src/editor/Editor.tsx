@@ -31,7 +31,11 @@ import type { EditorHost } from "./editorHost";
 import { openTray, takesKeys } from "./editorMode";
 import { LayerSelectionBar, useArrangeSelected } from "./LayerSelectionBar";
 import { maxNewImageShortSide } from "./layers/image/image";
-import { LayersPanel, layerListProps } from "./layers/panel/LayersPanel";
+import {
+	LAYERS_SIDEBAR_INSET,
+	LayersPanel,
+	layerListProps,
+} from "./layers/panel/LayersPanel";
 import {
 	ContextBarContent,
 	DockContent,
@@ -276,6 +280,7 @@ export function Editor({
 		wide,
 		done,
 		cancel,
+		onReset: resetEdit,
 	});
 
 	useEditorShortcuts({
@@ -290,6 +295,7 @@ export function Editor({
 		openExport: host.openExport,
 		zoom: (to) => canvasRef.current?.zoom(to),
 		done,
+		cancel,
 		startTool,
 		editSelected: () => {
 			if (selectedLayer) editLayer(selectedLayer);
@@ -303,7 +309,7 @@ export function Editor({
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
 	});
-	useToolKeys({ enabled: focused && draftOpen, typing, done });
+	useToolKeys({ enabled: focused && draftOpen, typing, done, cancel });
 
 	const layerList = layerListProps({
 		document,
@@ -322,6 +328,7 @@ export function Editor({
 			{...layerList}
 			layout={layersBeside ? "sidebar" : "sheet"}
 			open={layersOpen}
+			inert={draftOpen}
 		/>
 	);
 
@@ -349,6 +356,8 @@ export function Editor({
 
 	// What every tool's views read from the editor around them, and what the
 	// dock, the bar, the trays, and the inspector read besides.
+	const rightInset =
+		layersBeside && !wide && layersOpen ? LAYERS_SIDEBAR_INSET : 0;
 	const editorContext: EditorContextValue = {
 		customColor,
 		setCustomColor,
@@ -358,6 +367,7 @@ export function Editor({
 		toggleTray: () => dispatchMode({ type: "toggleToolOptions" }),
 		closeTray: () => dispatchMode({ type: "closeToolOptions" }),
 		bottomInset: dockInset,
+		rightInset,
 		wide,
 		cancel,
 	};
@@ -419,10 +429,9 @@ export function Editor({
 						}
 					>
 						<HeaderActions
-							onReset={resetEdit}
 							// A tall window's inspector already shows the layers.
 							layers={
-								!tool && !inspectorPinned
+								!inspectorPinned && (!tool || layersBeside)
 									? {
 											open: layersOpen,
 											onToggle: () => dispatchMode({ type: "toggleLayers" }),
@@ -433,6 +442,7 @@ export function Editor({
 							canRedo={canRedo}
 							onUndo={undo}
 							onRedo={redo}
+							onShortcuts={() => dispatchMode({ type: "openShortcuts" })}
 							onExport={draftOpen ? undefined : host.openExport}
 						/>
 					</EditorHeader>
@@ -495,6 +505,7 @@ export function Editor({
 								tool={tool}
 								finishTool={finishTool}
 								sheetAnchors={toolbox.sheetAnchors}
+								onShortcuts={() => dispatchMode({ type: "openShortcuts" })}
 							/>
 						)}
 
@@ -509,6 +520,7 @@ export function Editor({
 									modeActions ? <DockFooter {...modeActions} /> : undefined
 								}
 								keyboardOverlap={layout.keyboardOverlap}
+								rightInset={rightInset}
 							>
 								<DockContent
 									context={panels}

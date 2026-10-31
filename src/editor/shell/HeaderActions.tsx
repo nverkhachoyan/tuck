@@ -1,34 +1,31 @@
 import { StyleSheet, View } from "react-native";
 import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
-import { TextButton } from "@/ui/TextButton";
 import { LAYERS_KEY } from "../shortcuts";
 
 /**
- * The header's actions: Reset while the open tool has changes to take back,
- * the layers button when the inspector isn't already open, undo and redo,
- * and Export, unless it's hidden.
+ * The header's actions: layers toggle when the inspector isn't pinned,
+ * undo and redo, keyboard shortcuts help, and Export.
  */
 export function HeaderActions({
-	onReset,
 	layers,
 	canUndo,
 	canRedo,
 	onUndo,
 	onRedo,
+	onShortcuts,
 	onExport,
 }: {
-	onReset?: () => void;
 	layers?: { open: boolean; onToggle: () => void };
 	canUndo: boolean;
 	canRedo: boolean;
 	onUndo: () => void;
 	onRedo: () => void;
+	onShortcuts?: () => void;
 	onExport?: () => void;
 }) {
 	return (
 		<View style={styles.actions}>
-			{onReset && <TextButton label="Reset" onPress={onReset} />}
 			{layers && (
 				<IconButton
 					icon="layers-outline"
@@ -52,6 +49,14 @@ export function HeaderActions({
 				disabled={!canRedo}
 				onPress={onRedo}
 			/>
+			{onShortcuts && (
+				<IconButton
+					icon="help-circle-outline"
+					label="Keyboard shortcuts"
+					shortcut="?"
+					onPress={onShortcuts}
+				/>
+			)}
 			{onExport && (
 				<View style={styles.export}>
 					<Button

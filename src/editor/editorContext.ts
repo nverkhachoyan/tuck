@@ -20,6 +20,7 @@ export type EditorContextValue = {
 	toggleTray: () => void;
 	closeTray: () => void;
 	bottomInset: number;
+	rightInset?: number;
 	wide: boolean;
 	cancel: () => void;
 };

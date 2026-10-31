@@ -168,11 +168,11 @@ const EDITING_GROUPS: ShortcutGroup[] = [
 			{ keys: "mod+]", action: "Bring forward" },
 			{ keys: "mod+[", action: "Send backward" },
 			{ keys: "Delete", action: "Delete" },
-			{ keys: "Enter", action: "Edit the selected text" },
+			{ keys: "Enter", action: "Done, or edit selected" },
 			{ keys: "←↑→↓", action: "Nudge, with Shift for more" },
 			{ keys: "[", action: "Smaller brush" },
 			{ keys: "]", action: "Larger brush" },
-			{ keys: "Escape", action: "Done, or deselect" },
+			{ keys: "Escape", action: "Cancel, or deselect" },
 		],
 	},
 	{
