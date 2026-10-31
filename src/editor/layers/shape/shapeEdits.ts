@@ -5,9 +5,9 @@ import {
 	replaceLayer,
 } from "../../document/document.ts";
 import {
+	convertShape,
 	createShapeLayer,
 	isLineShape,
-	restyleShape,
 	type ShapeEdit,
 	type ShapeKind,
 	type ShapePlacement,
@@ -33,5 +33,5 @@ export function setShapeStyle(
 ): EditorDocument {
 	const target = findLayer(document, id);
 	if (target?.type !== "shape") return document;
-	return replaceLayer(document, target, restyleShape(target, edit));
+	return replaceLayer(document, target, convertShape(target, edit));
 }

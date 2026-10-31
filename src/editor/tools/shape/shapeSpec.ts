@@ -8,5 +8,5 @@ export const shapeSpec = {
 	icon: "shape-outline",
 	key: "S",
 	shortcut: "Shape",
-	actsOn: (layer) => layer.type === "shape",
+	actsOn: () => false,
 } as const satisfies ToolSpec;

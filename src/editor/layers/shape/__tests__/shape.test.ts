@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createShapeLayer, restyleShape } from "../shape.ts";
+import { convertShape, createShapeLayer, restyleShape } from "../shape.ts";
 
 const style = { color: "#FF3B30", strokeWidth: 12 };
 const rectangle = () =>
@@ -74,5 +74,50 @@ describe("restyleShape", () => {
 		const shape = rectangle();
 		assert.equal(restyleShape(shape, {}), shape);
 		assert.equal(restyleShape(shape, { ...style, shape: "rectangle" }), shape);
+	});
+});
+
+describe("convertShape", () => {
+	test("delegates to restyleShape within the same geometry family", () => {
+		const box = rectangle();
+		const converted = convertShape(box, { shape: "ellipse", color: "#0A84FF" });
+		assert.equal(converted.shape, "ellipse");
+		assert.equal(converted.color, "#0A84FF");
+		assert.equal("width" in converted && converted.width, 200);
+
+		const line = arrow();
+		const convertedLine = convertShape(line, { shape: "line", strokeWidth: 8 });
+		assert.equal(convertedLine.shape, "line");
+		assert.equal(convertedLine.strokeWidth, 8);
+		assert.equal("length" in convertedLine && convertedLine.length, 400);
+	});
+
+	test("converts BoxShape to LineShape, preserving base fields", () => {
+		const box = rectangle();
+		const converted = convertShape(box, { shape: "arrow", color: "#FFD60A" });
+		assert.equal(converted.shape, "arrow");
+		assert.equal(converted.color, "#FFD60A");
+		assert.equal(converted.strokeWidth, box.strokeWidth);
+		assert.equal(converted.id, box.id);
+		assert.deepEqual(converted.transform, box.transform);
+		assert.equal(converted.hidden, box.hidden);
+		assert.equal(converted.locked, box.locked);
+		assert.equal("length" in converted && converted.length, 200);
+		assert.equal("width" in converted, false);
+	});
+
+	test("converts LineShape to BoxShape, preserving base fields", () => {
+		const line = arrow();
+		const converted = convertShape(line, { shape: "rectangle" });
+		assert.equal(converted.shape, "rectangle");
+		assert.equal(converted.color, line.color);
+		assert.equal(converted.id, line.id);
+		assert.deepEqual(converted.transform, line.transform);
+		assert.equal("width" in converted && converted.width, 400);
+		assert.equal(
+			"height" in converted && converted.height,
+			Math.round(400 * 0.65),
+		);
+		assert.equal("length" in converted, false);
 	});
 });

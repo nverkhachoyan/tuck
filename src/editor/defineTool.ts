@@ -144,6 +144,7 @@ export type ToolDefinition<C> = {
 	sheetTitle?: string;
 	sheetDismissed?: (controller: C) => void;
 	layerAction?: (controller: C, layer: Layer) => LayerAction | null;
+	stylesLayer?: (layer: Layer) => boolean;
 	draft?: (controller: C) => { layer: Layer; isNew: boolean } | null;
 	edit?: {
 		owns: (layer: Layer) => boolean;

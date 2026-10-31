@@ -8,5 +8,5 @@ export const eraserSpec = {
 	icon: "eraser",
 	key: "X",
 	shortcut: "Eraser",
-	actsOn: (layer) => layer.type === "drawing" || layer.type === "shape",
+	actsOn: (layer) => layer.type === "drawing",
 } as const satisfies ToolSpec;

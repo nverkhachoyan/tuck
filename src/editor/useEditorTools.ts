@@ -16,6 +16,7 @@ import type { ImageLayer } from "./layers/image/image";
 import type { Layer } from "./layers/layer";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useStore } from "./store";
+import { selectSelectedLayer } from "./store/editorSlice";
 import type { ToolId } from "./toolSpec";
 
 /**
@@ -58,6 +59,7 @@ export function useEditorTools({
 	const { cancelSession, commitSession, selectLayer } = useStore(
 		(state) => state.actions,
 	);
+	const selectedLayer = useStore(selectSelectedLayer);
 	const tool = mode.type === "tool" ? mode.tool : null;
 	// Counts the open tool being started again, as the rail does, which
 	// ends its session and begins another.
@@ -120,8 +122,15 @@ export function useEditorTools({
 	// session has begun, or at once when it's already open on that photo.
 	// Starting a tool that's open, as the rail does, opens it again. An
 	// action runs on the photo and opens nothing.
+	const selectedImage =
+		selectedLayer?.type === "image" && !selectedLayer.hidden
+			? selectedLayer
+			: null;
 	const pendingStart = useRef<{ tool: ToolId; image: ImageLayer } | null>(null);
-	const startTool = (next: ToolId, image = targetImage) => {
+	const startTool = (
+		next: ToolId,
+		image = next === "adjust" && selectedImage ? selectedImage : targetImage,
+	) => {
 		const { definition, controller } = controllers[next];
 		if (definition.spec.target !== "none" && !image) return;
 		if (definition.run) {
@@ -154,6 +163,13 @@ export function useEditorTools({
 	// The tool that edits `layer` in place, if any.
 	const editorOf = (layer: Layer): ToolId | undefined =>
 		Object.keys(tools).find((id) => definitionOf(tools[id]).edit?.owns(layer));
+	// The tool that styles `layer`, if any.
+	const stylerOf = (layer: Layer): ToolId | undefined =>
+		Object.keys(tools).find(
+			(id) =>
+				definitionOf(tools[id]).stylesLayer?.(layer) ??
+				definitionOf(tools[id]).edit?.owns(layer),
+		);
 	// `layer`'s editor, set to edit it with what it places at `point` in the
 	// document, or at its end, then opened. Any other open tool finishes
 	// first.
@@ -233,6 +249,7 @@ export function useEditorTools({
 		busy,
 		editLayer,
 		editorOf,
+		stylerOf,
 		done: finishTool,
 		cancel: cancelTool,
 		finishTool,

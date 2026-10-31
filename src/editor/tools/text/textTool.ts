@@ -15,6 +15,7 @@ export const textTool = defineTool<TextController>({
 		Input: TextInput,
 		Draft: TextDraft,
 	},
+	stylesLayer: (layer) => layer.type === "text",
 	prepare: (text) => text.startNew(),
 	done: (text) => text.commit(),
 	canvasInput: (text) => text.canvasInput,

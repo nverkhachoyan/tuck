@@ -93,6 +93,22 @@ describe("modeChrome", () => {
 				inBar: false,
 			},
 		);
+		assert.deepEqual(
+			modeChrome({ ...nothing, stylingTool: "shape", layerName: "Shape" }),
+			{
+				panel: "shape",
+				actions: { title: "Shape", done: "deselect" },
+				inBar: false,
+			},
+		);
+		assert.deepEqual(
+			modeChrome({ ...nothing, stylingTool: "redact", layerName: "Redaction" }),
+			{
+				panel: "redact",
+				actions: { title: "Redact", done: "deselect" },
+				inBar: false,
+			},
+		);
 	});
 
 	test("another selected layer takes its name, with no Cancel", () => {
@@ -211,10 +227,16 @@ describe("layerActionsFor", () => {
 			"removeBg",
 			"cut",
 		]);
-		assert.deepEqual(actions({ ...photo, hidden: true }), ["redact", "adjust"]);
+		assert.deepEqual(actions({ ...photo, hidden: true }), ["adjust"]);
 	});
 
-	test("a drawing or a shape is acted on by its tool and the eraser, and a redaction is redacted", () => {
+	test("a sticker only offers adjust", () => {
+		const sticker = createImageLayer(canvas, "sticker.png", 100, 100, false);
+		sticker.sticker = true;
+		assert.deepEqual(actions(sticker), ["adjust"]);
+	});
+
+	test("a drawing offers pen and eraser, while shape and redaction are styled directly", () => {
 		const drawing = createDrawingLayer({
 			type: "pen",
 			color: "#FF3B30",
@@ -227,12 +249,12 @@ describe("layerActionsFor", () => {
 			{ x: 0, y: 0, rotation: 0, width: 40, height: 20 },
 			{ color: "#FF3B30", strokeWidth: 4 },
 		);
-		assert.deepEqual(actions(shape), ["shape", "eraser"]);
+		assert.deepEqual(actions(shape), []);
 		const redaction = createRedactionBox(
 			{ x: 0, y: 0, width: 40, height: 20 },
 			effect,
 		);
-		assert.deepEqual(actions(redaction), ["redact"]);
+		assert.deepEqual(actions(redaction), []);
 	});
 
 	test("text offers none of these", () => {

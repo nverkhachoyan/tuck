@@ -201,6 +201,7 @@ export function Editor({
 		busy: busyTools,
 		editLayer,
 		editorOf,
+		stylerOf,
 		done,
 		cancel,
 		finishTool,
@@ -226,8 +227,9 @@ export function Editor({
 	});
 
 	const openTool = tool ? controllers[tool] : undefined;
-	// The tool that edits the selected layer in place, whose panel styles it
-	// while nothing is open.
+	// The tool that edits the selected layer in place, or styles it while
+	// nothing is open.
+	const selectedStyler = (selectedLayer && stylerOf(selectedLayer)) ?? null;
 	const selectedEditor = (selectedLayer && editorOf(selectedLayer)) ?? null;
 	const ToolInput = openTool?.definition.views.Input;
 	const typing = tool !== null && specs[tool]?.takesKeys === "typing";
@@ -276,7 +278,7 @@ export function Editor({
 		tool,
 		controllers,
 		selectedLayer,
-		stylingTool: selectedEditor,
+		stylingTool: selectedStyler,
 		wide,
 		done,
 		cancel,

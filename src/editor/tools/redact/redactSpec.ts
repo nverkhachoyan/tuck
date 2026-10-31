@@ -8,5 +8,5 @@ export const redactSpec = {
 	icon: "blur",
 	key: "R",
 	shortcut: "Redact",
-	actsOn: (layer) => layer.type === "image" || layer.type === "redaction",
+	actsOn: (layer) => layer.type === "image" && !layer.hidden && !layer.sticker,
 } as const satisfies ToolSpec;

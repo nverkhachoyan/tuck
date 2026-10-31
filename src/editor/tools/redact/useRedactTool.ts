@@ -29,13 +29,17 @@ export type RedactController = ReturnType<typeof useRedactTool>;
  * redactions with them, and `finishStroke` adds what's brushed or dragged
  * out to the document.
  */
-export function useRedactTool({ documentSize }: Pick<ToolEnv, "documentSize">) {
+export function useRedactTool({
+	open,
+	documentSize,
+}: Pick<ToolEnv, "open" | "documentSize">) {
 	const [chosen, setChosen] = usePreference(
 		"redactSettings",
 		parseRedactSettings,
 	);
 	const { look, changeLook } = useRedactLook();
 	const selectedRedaction = useStore(selectSelectedRedaction);
+	const isStylingSelected = !open && selectedRedaction !== undefined;
 	const { setRedactionEffect, paintRedaction, addRedactionBox } = useStore(
 		(state) => state.actions,
 	);
@@ -98,5 +102,14 @@ export function useRedactTool({ documentSize }: Pick<ToolEnv, "documentSize">) {
 		}
 	};
 
-	return { settings, change, chooseTool, stepSize, canvasInput, finishStroke };
+	return {
+		settings,
+		change,
+		chooseTool,
+		stepSize,
+		canvasInput,
+		finishStroke,
+		isStylingSelected,
+		selectedRedaction,
+	};
 }

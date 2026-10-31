@@ -335,6 +335,16 @@ describe("targetImageLayer", () => {
 		assert.equal(targetImageLayer(document, sticker), sticker);
 	});
 
+	test("ignores a selected sticker image layer and keeps the photo anchor", () => {
+		const document = documentWithText();
+		const sticker = {
+			...createImageLayer(document, "file:///sticker.png", 200, 200, false),
+			sticker: true,
+		};
+		document.layers.push(sticker);
+		assert.equal(targetImageLayer(document, sticker), photoLayer(document));
+	});
+
 	test("ignores a selected hidden image layer", () => {
 		const document = documentWithText();
 		const sticker = {
