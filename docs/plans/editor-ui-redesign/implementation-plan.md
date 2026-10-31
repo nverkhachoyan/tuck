@@ -4,6 +4,19 @@ Companion to [design-plan.md](design-plan.md) (and grounded in [DESIGN.md](../..
 
 ---
 
+## Progress Checklist
+
+- [x] **Step 1: UI Primitives** — Upward popover placement, HSV tone helpers, shared color slider, and button trailing icon (`feat(ui): add upward popover placement, HSV tone helpers, and shared color slider`)
+- [ ] **Step 2: Bottom Card & Static Header** — Unify wide tools into floating bottom card, static header, medium stage centering, and keyboard semantics (`feat(editor): unify wide tools into floating bottom card and keep header static`)
+- [ ] **Step 3: Direct Selection Restyling** — 1-tap shape & redaction restyling, sticker filtering, and `convertShape` (`feat(editor): add 1-tap shape and redaction restyling and filter sticker actions`)
+- [ ] **Step 4: Cut Tool Semantics** — Commit selection with `Keep only ✓`, re-edit cutouts, and floating `Tap` modifier pill (`feat(cut): commit selection with Keep only, support restoring cutouts, and float Tap modifiers`)
+- [ ] **Step 5: Draw Phone Ergonomics** — First-class `Pen` & `Highlighter`, `▾` sub-tool chevrons, and composite `Style` badge (`feat(draw): split Pen and Highlighter in phone dock and show tip size on Style`)
+- [ ] **Step 6: Text Tool Ergonomics** — 1-tap cycling `Align` button and inline 100pt dock color swap (`feat(text): replace Align tab with 1-tap cycle button and swap custom color inline in dock`)
+- [ ] **Step 7: Crop Flattening & Stage Polish** — Flatten wide `CropCard`, dynamic stage height, and opaque-surface readouts (`feat(crop,adjust,find): flatten wide Crop card, size stage dynamically, and opaque-surface readouts`)
+- [ ] **Step 8: Docs & Final Polish** — Sync architecture/design docs, audit comments, and verify interactive lessons (`docs: sync architecture and design docs with unified bottom card shell`)
+
+---
+
 ## 1. Guiding Engineering Mandates
 
 ### 1.1 Structural Freedom: Let the Cleaner Architecture Emerge

@@ -1,6 +1,7 @@
 import {
 	type ReactNode,
 	type RefObject,
+	useContext,
 	useEffect,
 	useLayoutEffect,
 	useRef,
@@ -15,6 +16,7 @@ import {
 	type ViewStyle,
 } from "react-native";
 import type { PopoverProps } from "./Popover";
+import { PopoverPlacementContext } from "./popoverContext";
 import { type PopoverPlacement, placePopover } from "./popoverPlacement";
 import { colors, floatingShadow, radii, space } from "./theme";
 
@@ -33,29 +35,23 @@ const FOCUSABLE = [
 
 /**
  * A card anchored to a control and kept inside the window.
- * - Portaled to the page's body, so a scroll view or a transformed parent
- *   can't clip it, and positioned from the anchor's box.
- * - `placement` is `below` by default: under the control, or above it near
- *   the window's bottom. `beside` puts it at the control's right, top-aligned,
- *   and moves it up to stay inside the window.
- * - An outside press closes it, through a layer behind the card: a pressable
- *   wrapping the card would close it on any click inside.
- * - Escape closes it in the capture phase, before the editor's shortcuts,
- *   which listen as the key bubbles, so Escape doesn't also finish a tool.
- * - It's a dialog: focus moves into it, Tab stays inside, and focus returns
- *   to `anchor` when it closes, or to `restoreFocus` when that's given.
- * - `onDismiss` runs as it closes: nothing on the page waits for it.
+ * - Portaled to document.body, outside transformed ancestors.
+ * - `placement` defaults to `PopoverPlacementContext` or `below`.
+ * - Escape closes in the capture phase before editor shortcuts run.
+ * - Animates in with a 160ms ease toward anchor once measured.
  */
 export function Popover({
 	anchor,
 	open,
 	onClose,
 	label,
-	placement = "below",
+	placement,
 	restoreFocus,
 	onDismiss,
 	children,
 }: PopoverProps) {
+	const contextPlacement = useContext(PopoverPlacementContext);
+	const resolvedPlacement = placement ?? contextPlacement;
 	const wasOpen = useRef(open);
 	useEffect(() => {
 		if (wasOpen.current && !open) onDismiss?.();
@@ -67,7 +63,7 @@ export function Popover({
 			anchor={anchor}
 			label={label}
 			onClose={onClose}
-			placement={placement}
+			placement={resolvedPlacement}
 			restoreFocus={restoreFocus}
 		>
 			{children}
@@ -97,6 +93,11 @@ function PopoverFrame({
 	const restoreRef = useRef(restoreFocus);
 	restoreRef.current = restoreFocus;
 	const [position, setPosition] = useState<{ left: number; top: number }>();
+	const [anchorBox, setAnchorBox] = useState<{
+		x: number;
+		y: number;
+	} | null>(null);
+	const [entered, setEntered] = useState(false);
 	const placeRef = useRef<() => void>(() => {});
 
 	useLayoutEffect(() => {
@@ -106,6 +107,7 @@ function PopoverFrame({
 			if (!target || !card) return;
 			const box = target.getBoundingClientRect();
 			const size = card.getBoundingClientRect();
+			setAnchorBox({ x: box.left, y: box.top });
 			const next = placePopover(
 				{ x: box.left, y: box.top, width: box.width, height: box.height },
 				size,
@@ -127,6 +129,20 @@ function PopoverFrame({
 			window.removeEventListener("scroll", place, true);
 		};
 	}, [anchor, placement]);
+
+	useEffect(() => {
+		if (position && !entered) {
+			const prefersReduced =
+				typeof window !== "undefined" &&
+				window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+			if (prefersReduced) {
+				setEntered(true);
+			} else {
+				const frame = requestAnimationFrame(() => setEntered(true));
+				return () => cancelAnimationFrame(frame);
+			}
+		}
+	}, [position, entered]);
 
 	useEffect(() => {
 		const card = cardRef.current as unknown as HTMLElement | null;
@@ -176,6 +192,30 @@ function PopoverFrame({
 		return () => layer.removeEventListener("keydown", stop);
 	}, []);
 
+	const isAbove =
+		anchorBox && position ? position.top < anchorBox.y : placement === "above";
+	const isBeside = placement === "beside";
+	const motionOffset = isBeside
+		? [{ translateX: -4 }]
+		: [{ translateY: isAbove ? 4 : -4 }];
+
+	const prefersReduced =
+		typeof window !== "undefined" &&
+		window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+	const animatedStyle = position
+		? ({
+				opacity: entered ? 1 : 0,
+				transform:
+					entered || prefersReduced
+						? [{ translateY: 0 }, { translateX: 0 }]
+						: motionOffset,
+				transitionProperty: "opacity, transform",
+				transitionDuration: prefersReduced ? "0ms" : "160ms",
+				transitionTimingFunction: "cubic-bezier(0.2, 0, 0, 1)",
+			} as unknown as ViewStyle)
+		: styles.measuring;
+
 	return createPortal(
 		<View ref={layerRef} style={[styles.layer, fixed]}>
 			<Pressable
@@ -191,7 +231,7 @@ function PopoverFrame({
 				aria-label={label}
 				tabIndex={-1}
 				onLayout={() => placeRef.current()}
-				style={[styles.card, fixed, position ?? styles.measuring]}
+				style={[styles.card, fixed, position, animatedStyle]}
 			>
 				{children}
 			</View>

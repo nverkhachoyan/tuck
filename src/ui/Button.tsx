@@ -19,6 +19,7 @@ type ButtonSize = "large" | "medium" | "small";
 type ButtonProps = Omit<PressableProps, "style" | "children"> & {
 	label: string;
 	icon?: IconName;
+	iconPosition?: "start" | "end";
 	variant?: ButtonVariant;
 	size?: ButtonSize;
 	// On web, a hover shows the label with this key (see `useTooltip`).
@@ -28,6 +29,7 @@ type ButtonProps = Omit<PressableProps, "style" | "children"> & {
 export function Button({
 	label,
 	icon,
+	iconPosition = "start",
 	variant = "secondary",
 	size = "medium",
 	shortcut,
@@ -38,6 +40,29 @@ export function Button({
 	const labelColor =
 		variant === "primary" ? colors.onPrimary : colors.textPrimary;
 	const tone = TONES[variant];
+
+	const iconElement = icon && (
+		<View style={styles.icon}>
+			<Ionicons
+				name={icon}
+				size={size === "large" ? 20 : 18}
+				color={labelColor}
+			/>
+		</View>
+	);
+
+	const labelElement = (
+		<Text
+			numberOfLines={1}
+			style={[
+				styles.label,
+				size === "large" && styles.labelLarge,
+				{ color: labelColor },
+			]}
+		>
+			{label}
+		</Text>
+	);
 
 	return (
 		<>
@@ -60,25 +85,9 @@ export function Button({
 					];
 				}}
 			>
-				{icon && (
-					<View style={styles.icon}>
-						<Ionicons
-							name={icon}
-							size={size === "large" ? 20 : 18}
-							color={labelColor}
-						/>
-					</View>
-				)}
-				<Text
-					numberOfLines={1}
-					style={[
-						styles.label,
-						size === "large" && styles.labelLarge,
-						{ color: labelColor },
-					]}
-				>
-					{label}
-				</Text>
+				{iconPosition === "start" && iconElement}
+				{labelElement}
+				{iconPosition === "end" && iconElement}
 			</Pressable>
 			{tooltip}
 		</>

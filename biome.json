@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!**/.claude", "!**/pnpm-lock.yaml"]
+		"includes": ["**", "!**/.claude", "!**/.agents", "!**/pnpm-lock.yaml"]
 	},
 	"formatter": {
 		"enabled": true,
