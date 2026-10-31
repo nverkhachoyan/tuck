@@ -146,6 +146,9 @@ export function CropControls({ controller }: { controller: CropController }) {
 	const { bottom } = useSafeAreaInsets();
 	const { anchor } = controller;
 	if (wide) {
+		if (controller.tab !== "rotate" || !anchor.layer) {
+			return null;
+		}
 		return (
 			<View
 				style={[
@@ -153,16 +156,14 @@ export function CropControls({ controller }: { controller: CropController }) {
 					{ height: DIAL_STRIP + bottom, paddingBottom: bottom },
 				]}
 			>
-				{controller.tab === "rotate" && anchor.layer && (
-					<View style={styles.dial}>
-						<StraightenDial
-							value={controller.straighten}
-							onBegin={controller.straightenBegin}
-							onChange={controller.straightenChange}
-							onEnd={controller.straightenEnd}
-						/>
-					</View>
-				)}
+				<View style={styles.dial}>
+					<StraightenDial
+						value={controller.straighten}
+						onBegin={controller.straightenBegin}
+						onChange={controller.straightenChange}
+						onEnd={controller.straightenEnd}
+					/>
+				</View>
 			</View>
 		);
 	}
