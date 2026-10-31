@@ -9,5 +9,5 @@ export const findSpec = {
 	icon: "image-search-outline",
 	key: "F",
 	shortcut: "Find faces or text to redact",
-	actsOn: (layer) => layer.type === "image" && !layer.hidden,
+	actsOn: (layer) => layer.type === "image" && !layer.hidden && !layer.sticker,
 } as const satisfies ToolSpec;

@@ -94,7 +94,15 @@ export function redactLookItems<T extends RedactLook>({
 						onEyedropper={onEyedropper}
 					/>,
 				]
-			: []),
+			: [
+					<StrengthChoices
+						key="strength"
+						nowrap
+						effect={effect}
+						strength={settings.strength}
+						onPick={(strength) => onChange({ ...settings, strength })}
+					/>,
+				]),
 	];
 }
 

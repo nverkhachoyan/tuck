@@ -11,5 +11,5 @@ export const removeBgSpec = {
 	icon: "auto-fix",
 	key: "G",
 	shortcut: "Remove the background",
-	actsOn: (layer) => layer.type === "image" && !layer.hidden,
+	actsOn: (layer) => layer.type === "image" && !layer.hidden && !layer.sticker,
 } as const satisfies ToolSpec;

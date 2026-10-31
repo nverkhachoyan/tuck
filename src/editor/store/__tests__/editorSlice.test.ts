@@ -828,12 +828,15 @@ describe("editorSlice", () => {
 			const [shape] = shapes(store);
 			const steps = store.getState().past.length;
 			actions.setShapeStyle(shape.id, { ...style });
-			actions.setShapeStyle(shape.id, { shape: "line" });
 			assert.equal(store.getState().past.length, steps);
+
+			actions.setShapeStyle(shape.id, { shape: "line" });
+			assert.equal(shapes(store)[0].shape, "line");
+			assert.equal(store.getState().past.length, steps + 1);
 
 			actions.setShapeStyle(shape.id, { color: "#FFFFFF" });
 			assert.equal(shapes(store)[0].color, "#FFFFFF");
-			assert.equal(store.getState().past.length, steps + 1);
+			assert.equal(store.getState().past.length, steps + 2);
 		});
 
 		test("an eraser removes each shape it passes over, as one undo step", () => {

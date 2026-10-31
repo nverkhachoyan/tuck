@@ -7,6 +7,7 @@ export const shapeTool = defineTool<ShapeController>({
 	spec: shapeSpec,
 	useController: useShapeTool,
 	views: { Dock: ShapePanel, Bar: ShapeBar, Tray: ShapeTray },
+	stylesLayer: (layer) => layer.type === "shape",
 	canvasInput: (shape) => shape.canvasInput,
 	finishStroke: (shape, stroke) => shape.finishStroke(stroke),
 	deselectOnDone: true,

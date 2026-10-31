@@ -101,6 +101,51 @@ export function restyleShape(layer: ShapeLayer, edit: ShapeEdit): ShapeLayer {
 	return { ...layer, shape: kind, color, strokeWidth } as ShapeLayer;
 }
 
+/**
+ * Restyles `layer` by `patch`, converting across geometry families if the
+ * shape kind changes between box and line geometries.
+ */
+export function convertShape(layer: ShapeLayer, patch: ShapeEdit): ShapeLayer {
+	const nextShape = patch.shape ?? layer.shape;
+	const color = patch.color ?? layer.color;
+	const strokeWidth = patch.strokeWidth ?? layer.strokeWidth;
+
+	const wasLine = isLine(layer);
+	const willBeLine = isLineShape(nextShape);
+
+	if (wasLine === willBeLine) {
+		return restyleShape(layer, patch);
+	}
+
+	const base = {
+		type: "shape" as const,
+		id: layer.id,
+		color,
+		strokeWidth,
+		transform: layer.transform,
+		hidden: layer.hidden,
+		locked: layer.locked,
+	};
+
+	if (isLine(layer)) {
+		const width = layer.length;
+		const height = Math.max(24, Math.round(layer.length * 0.65));
+		return {
+			...base,
+			shape: nextShape as Exclude<ShapeKind, LineShapeKind>,
+			width,
+			height,
+		};
+	}
+
+	const length = Math.max(layer.width, layer.height);
+	return {
+		...base,
+		shape: nextShape as LineShapeKind,
+		length,
+	};
+}
+
 export function isShapeLayer(value: unknown): boolean {
 	if (!isFields(value) || value.type !== "shape") return false;
 	const shape = shapeKinds.find((kind) => kind === value.shape);

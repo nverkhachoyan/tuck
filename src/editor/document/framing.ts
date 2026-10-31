@@ -64,11 +64,14 @@ export function targetImageLayer(
 	document: EditorDocument,
 	selected: Layer | undefined,
 ): ImageLayer | null {
-	if (selected?.type === "image" && !selected.hidden) return selected;
+	if (selected?.type === "image" && !selected.hidden && !selected.sticker) {
+		return selected;
+	}
 	return (
 		framingAnchor(document).layer ??
 		document.layers.find(
-			(layer): layer is ImageLayer => layer.type === "image" && !layer.hidden,
+			(layer): layer is ImageLayer =>
+				layer.type === "image" && !layer.hidden && !layer.sticker,
 		) ??
 		null
 	);

@@ -50,7 +50,8 @@ export function LayerSelectionBar({
 	onDuplicate: () => void;
 	onDelete: (id: string) => void;
 }) {
-	const resizable = layer.type === "text" || layer.type === "image";
+	const resizable =
+		layer.type === "text" || (layer.type === "image" && !layer.sticker);
 	return (
 		<SelectionBar
 			canMoveForward={index < topIndex}

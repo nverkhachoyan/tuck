@@ -11,5 +11,5 @@ export const cutSpec = {
 	icon: "scissors-cutting",
 	key: "B",
 	shortcut: "Cut",
-	actsOn: (layer) => layer.type === "image" && !layer.hidden,
+	actsOn: (layer) => layer.type === "image" && !layer.hidden && !layer.sticker,
 } as const satisfies ToolSpec;
