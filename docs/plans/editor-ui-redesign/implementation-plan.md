@@ -13,7 +13,7 @@ Companion to [design-plan.md](design-plan.md) (and grounded in [DESIGN.md](../..
 - [x] **Step 5: Text Tool Ergonomics — 1-Tap Cycling Align & Inline Dock Color** (`feat(text): replace Align tab with 1-tap cycle button and swap custom color inline in dock`)
 - [x] **Step 6: Crop Flattening & Stage Polish** (`feat(crop,adjust,find): flatten wide Crop, size stage dynamically, and opaque-surface readouts`)
 - [x] **Step 7: Rail Tool Groups & Subtool Flyouts** (`feat(rail): add tool group corner markers and right-click/long-press subtool flyouts for Pen, Shape, and Cut`)
-- [ ] **Step 8: Docs & Final Polish** (`docs: sync architecture and design docs with top bar and split tools`)
+- [x] **Step 8: Docs & Final Polish** (`docs: sync architecture and design docs with top bar and split tools`)
 
 ---
 
