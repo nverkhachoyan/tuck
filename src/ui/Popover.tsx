@@ -1,7 +1,6 @@
 import {
 	type ReactNode,
 	type RefObject,
-	useContext,
 	useEffect,
 	useLayoutEffect,
 	useRef,
@@ -23,7 +22,6 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
-import { PopoverPlacementContext } from "./popoverContext";
 import {
 	type PopoverPlacement,
 	type PopoverRect,
@@ -47,7 +45,7 @@ const ENTRANCE_MS = 160;
 
 /**
  * A card anchored to a control and kept inside the window.
- * - `placement` defaults to `PopoverPlacementContext` or `below`.
+ * - `placement` defaults to `below` (under the control, or above near the window's bottom).
  * - Outside press closes the card.
  * - Animates in with a 160ms ease toward anchor once measured.
  */
@@ -56,13 +54,11 @@ export function Popover({
 	open,
 	onClose,
 	label,
-	placement,
+	placement = "below",
 	restoreFocus,
 	onDismiss,
 	children,
 }: PopoverProps) {
-	const contextPlacement = useContext(PopoverPlacementContext);
-	const resolvedPlacement = placement ?? contextPlacement;
 	useDismissElsewhere(open, onDismiss);
 	return (
 		<Modal
@@ -77,7 +73,7 @@ export function Popover({
 				anchor={anchor}
 				label={label}
 				onClose={onClose}
-				placement={resolvedPlacement}
+				placement={placement}
 				restoreFocus={restoreFocus}
 			>
 				{children}

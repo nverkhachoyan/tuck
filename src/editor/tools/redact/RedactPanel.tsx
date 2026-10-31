@@ -3,8 +3,7 @@ import type { ComponentProps } from "react";
 import { StyleSheet, View } from "react-native";
 import { colors, space } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../../editorContext";
-import { ColorChip } from "../../shell/ColorOptions";
-import { ColorSwatches, customSwatch } from "../../shell/ColorSwatches";
+import { ColorChip, ColorSwatchRow } from "../../shell/ColorOptions";
 import { BarGroup, BarSections, OptionSegments } from "../../shell/ContextBar";
 import {
 	EFFECTS,
@@ -43,7 +42,7 @@ function RedactStyleDock({
 }: {
 	controller: RedactController;
 }) {
-	const { customColor, onPickCustom } = useColorTarget((color) =>
+	const { customColor, onPickCustom, onEyedropper } = useColorTarget((color) =>
 		change({ ...settings, color }),
 	);
 	const { effect } = settings;
@@ -63,15 +62,12 @@ function RedactStyleDock({
 			</View>
 			<View style={styles.dockRow2}>
 				{effect === "solid" ? (
-					<ColorSwatches
+					<ColorSwatchRow
 						value={settings.color}
-						custom={customSwatch(
-							settings.color,
-							customColor,
-							(c) => change({ ...settings, color: c }),
-							() => onPickCustom(settings.color),
-						)}
-						onPick={(c) => c && change({ ...settings, color: c })}
+						customColor={customColor}
+						onPick={(color) => change({ ...settings, color })}
+						onPickCustom={onPickCustom}
+						onEyedropper={onEyedropper}
 					/>
 				) : (
 					<StrengthChoices
@@ -243,7 +239,7 @@ export function RedactOptions({
 }: {
 	controller: RedactController;
 }) {
-	const { bottomInset, closeTray } = useEditorContext();
+	const { bottomInset, rightInset, closeTray } = useEditorContext();
 	const { customColor, onPickCustom, onEyedropper } = useColorTarget((color) =>
 		change({ ...settings, color }),
 	);
@@ -253,6 +249,7 @@ export function RedactOptions({
 		<ToolOptions
 			closeLabel="Close redaction style"
 			bottomInset={bottomInset}
+			rightInset={rightInset}
 			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>

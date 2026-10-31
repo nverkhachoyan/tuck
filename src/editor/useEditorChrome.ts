@@ -54,15 +54,21 @@ export function useEditorChrome({
 	});
 	const onDone = { tool: done, deselect: () => selectLayer(null) };
 	const isDeselect = chrome.actions?.done === "deselect";
+	const doneKey =
+		tool && specs[tool]?.takesKeys === "typing" ? "mod+Enter" : "Enter";
 	const modeActions: ({ title: string } & ModeActionProps) | null =
 		chrome.actions && {
 			title: chrome.actions.title,
 			onReset,
 			onCancel: chrome.actions.cancel ? cancel : undefined,
-			cancelShortcut: "Escape",
+			cancelShortcut: chrome.actions.cancel ? "Escape" : undefined,
 			onDone: chrome.actions.done ? onDone[chrome.actions.done] : undefined,
 			doneLabel: isDeselect ? "Deselect" : chrome.actions.doneLabel,
-			doneShortcut: isDeselect || !chrome.actions.done ? undefined : "Enter",
+			doneShortcut: !chrome.actions.done
+				? undefined
+				: isDeselect
+					? "Escape"
+					: doneKey,
 			doneVariant: chrome.actions.doneVariant,
 		};
 	return { panel: chrome.panel, inBar: chrome.inBar, modeActions };

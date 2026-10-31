@@ -148,7 +148,7 @@ export function PenTray({
 }: {
 	controller: PenController;
 }) {
-	const { bottomInset, closeTray } = useEditorContext();
+	const { bottomInset, rightInset, closeTray } = useEditorContext();
 	const { customColor, onPickCustom, onEyedropper } = useColorTarget((color) =>
 		change(withPenColor(settings, color)),
 	);
@@ -158,6 +158,7 @@ export function PenTray({
 		<ToolOptions
 			closeLabel="Close pen options"
 			bottomInset={bottomInset}
+			rightInset={rightInset}
 			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>

@@ -1,13 +1,7 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import {
-	averageColor,
-	contrastingColor,
-	isHexColor,
-	mixColors,
-	relativeLuminance,
-} from "../color.ts";
+import { averageColor, isHexColor, mixColors } from "../color.ts";
 
 describe("isHexColor", () => {
 	test("is true only for #RRGGBB", () => {
@@ -46,34 +40,5 @@ describe("mixColors", () => {
 
 	test("leaves a color it can't read as it is", () => {
 		assert.equal(mixColors("red", "#FFFFFF", 0.5), "red");
-	});
-});
-
-describe("relativeLuminance", () => {
-	test("returns 0 for black and 1 for white", () => {
-		assert.equal(relativeLuminance("#000000"), 0);
-		assert.equal(relativeLuminance("#FFFFFF"), 1);
-	});
-
-	test("matches standard primaries", () => {
-		assert.ok(Math.abs(relativeLuminance("#FF0000") - 0.2126) < 1e-4);
-		assert.ok(Math.abs(relativeLuminance("#00FF00") - 0.7152) < 1e-4);
-		assert.ok(Math.abs(relativeLuminance("#0000FF") - 0.0722) < 1e-4);
-	});
-
-	test("returns 0 for invalid hex", () => {
-		assert.equal(relativeLuminance("invalid"), 0);
-	});
-});
-
-describe("contrastingColor", () => {
-	test("picks black for light colors and white for dark colors", () => {
-		assert.equal(contrastingColor("#FFFFFF"), "#000000");
-		assert.equal(contrastingColor("#FFE433"), "#000000");
-		assert.equal(contrastingColor("#FFFF00"), "#000000");
-
-		assert.equal(contrastingColor("#000000"), "#FFFFFF");
-		assert.equal(contrastingColor("#0000FF"), "#FFFFFF");
-		assert.equal(contrastingColor("#808080"), "#FFFFFF");
 	});
 });

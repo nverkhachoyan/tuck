@@ -161,13 +161,14 @@ describe("shortcutFor", () => {
 });
 
 describe("shortcutGroups", () => {
-	test("lists each tool's line in the toolbar's order, then the layers", () => {
+	test("lists each tool's line in the toolbar's order, including grouped tools, then the layers", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+			["C", "B", "G", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
-		assert.equal(toolGroup.items[7].action, "Find faces or text to redact");
+		assert.equal(toolGroup.items[2].action, "Remove the background");
+		assert.equal(toolGroup.items[8].action, "Find faces or text to redact");
 	});
 
 	test("gives a tool that takes the keys a group of its own", () => {
@@ -195,16 +196,20 @@ describe("shortcutGroups", () => {
 		]);
 	});
 
-	test("applies with ⌘/Ctrl+Enter while typing, and Enter otherwise", () => {
+	test("applies with ⌘/Ctrl+Enter while typing, Enter otherwise, and cancels with Escape", () => {
 		const groups = shortcutGroups(
 			toolbarEntries(BUILT_IN_SPECS, BUILT_IN_TOOLBAR),
 			BUILT_IN_SPECS,
 		);
-		const keys = (title: string) =>
-			groups
-				.find((group) => group.title === title)
-				?.items.map((item) => item.keys);
-		assert.deepEqual(keys("Text"), ["mod+Enter", "Escape"]);
-		assert.deepEqual(keys("Crop"), ["Enter", "Escape"]);
+		const items = (title: string) =>
+			groups.find((group) => group.title === title)?.items;
+		assert.deepEqual(items("Text"), [
+			{ keys: "mod+Enter", action: "Apply" },
+			{ keys: "Escape", action: "Cancel" },
+		]);
+		assert.deepEqual(items("Crop"), [
+			{ keys: "Enter", action: "Apply" },
+			{ keys: "Escape", action: "Cancel" },
+		]);
 	});
 });

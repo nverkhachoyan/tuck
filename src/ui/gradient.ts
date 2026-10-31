@@ -28,7 +28,7 @@ export function fadeTo(direction: string, hex: string): ViewStyle {
 
 // Around the hue circle and back to red, as a color picker's hue bar is.
 export const HUE_GRADIENT =
-	"linear-gradient(to right, #FF0000, #FFFF00, #00FF00, #00FFFF, #0000FF, #FF00FF, #FF00FF, #FF0000)";
+	"linear-gradient(to right, #FF0000, #FFFF00, #00FF00, #00FFFF, #0000FF, #FF00FF, #FF0000)";
 
 /**
  * An opaque gradient background from white through pure hue to black for 1D tone sliders.

@@ -1,4 +1,3 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
 	Children,
@@ -21,20 +20,18 @@ import {
 	View,
 	type ViewInstance,
 } from "react-native";
-import { Button } from "@/ui/Button";
 import { compactControls } from "@/ui/density";
 import { FadeGroup, FadeRow, MeasuredItem, Unmeasured } from "@/ui/FadeRow";
 import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
-import { TextButton } from "@/ui/TextButton";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
+import { type ModeActionProps, ModeActions } from "./Dock";
 
 // A segment's, an action's, and a chip's height: a touch target, or less
 // where controls are sized for a mouse.
 const ITEM_HEIGHT = compactControls ? 36 : 44;
-const ACTION_BUTTON_SIZE = compactControls ? 32 : 36;
 
 /**
  * The wide editor's header, between Back and the header's actions: the
@@ -43,29 +40,16 @@ const ACTION_BUTTON_SIZE = compactControls ? 32 : 36;
  */
 export function ContextBar({
 	title,
-	onReset,
-	onCancel,
-	cancelShortcut = "Escape",
-	onDone,
-	doneLabel = "Done",
-	doneShortcut = "Enter",
-	doneVariant,
 	keepFocus = false,
 	children,
+	...actions
 }: {
 	title: string;
-	onReset?: () => void;
-	onCancel?: () => void;
-	cancelShortcut?: string;
-	onDone?: () => void;
-	doneLabel?: string;
-	doneShortcut?: string;
-	doneVariant?: "primary" | "secondary";
 	// While text is being typed, a press in the bar must not take the caret
 	// from the hidden input. Canceling the press's default leaves it there.
 	keepFocus?: boolean;
 	children: ReactNode;
-}) {
+} & ModeActionProps) {
 	const barRef = useRef<ViewInstance>(null);
 	useEffect(() => {
 		if (!keepFocus || Platform.OS !== "web") return;
@@ -74,8 +58,6 @@ export function ContextBar({
 		node?.addEventListener("mousedown", keep, true);
 		return () => node?.removeEventListener("mousedown", keep, true);
 	}, [keepFocus]);
-
-	const isDoneWord = !doneLabel || doneLabel === "Done";
 
 	return (
 		<View
@@ -90,81 +72,9 @@ export function ContextBar({
 			<FadeRow style={styles.scroll} contentStyle={styles.scrollContent}>
 				{children}
 			</FadeRow>
-			<View style={styles.actions}>
-				{onReset && <TextButton label="Reset" onPress={onReset} />}
-				{onCancel && (
-					<BarActionButton
-						icon="close-outline"
-						label="Cancel"
-						shortcut={cancelShortcut}
-						onPress={onCancel}
-					/>
-				)}
-				{onDone &&
-					(doneVariant === "primary" ? (
-						<Button
-							size="small"
-							variant="primary"
-							label={doneLabel}
-							icon="checkmark-outline"
-							iconPosition="end"
-							shortcut={doneShortcut}
-							onPress={onDone}
-						/>
-					) : isDoneWord ? (
-						<BarActionButton
-							icon="checkmark-outline"
-							label={doneLabel}
-							shortcut={doneShortcut}
-							onPress={onDone}
-						/>
-					) : (
-						<TextButton
-							label={doneLabel}
-							shortcut={doneShortcut}
-							onPress={onDone}
-						/>
-					))}
-			</View>
+			<ModeActions {...actions} />
 			<View style={styles.divider} />
 		</View>
-	);
-}
-
-function BarActionButton({
-	icon,
-	label,
-	shortcut,
-	onPress,
-}: {
-	icon: ComponentProps<typeof Ionicons>["name"];
-	label: string;
-	shortcut?: string;
-	onPress: () => void;
-}) {
-	const { anchor, tooltip } = useTooltip(label, shortcut);
-	return (
-		<>
-			<Pressable
-				{...anchor}
-				hitSlop={6}
-				onPress={onPress}
-				accessibilityRole="button"
-				accessibilityLabel={label}
-				style={(state) => {
-					const { pressed, hovered } = interaction(state);
-					return [
-						styles.barActionButton,
-						webTransition,
-						hovered && styles.segmentHovered,
-						pressed && styles.segmentPressed,
-					];
-				}}
-			>
-				<Ionicons name={icon} size={20} color={colors.textPrimary} />
-			</Pressable>
-			{tooltip}
-		</>
 	);
 }
 
@@ -460,21 +370,6 @@ const styles = StyleSheet.create({
 	scrollContent: {
 		flexDirection: "row",
 		alignItems: "center",
-	},
-	actions: {
-		flexDirection: "row",
-		alignItems: "center",
-		flexShrink: 0,
-		gap: 6,
-		marginLeft: space.xs,
-	},
-	barActionButton: {
-		width: ACTION_BUTTON_SIZE,
-		height: ACTION_BUTTON_SIZE,
-		borderRadius: ACTION_BUTTON_SIZE / 2,
-		alignItems: "center",
-		justifyContent: "center",
-		flexShrink: 0,
 	},
 	divider: {
 		width: StyleSheet.hairlineWidth,

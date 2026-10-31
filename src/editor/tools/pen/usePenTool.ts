@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { readPreference, writePreference } from "@/platform/preferenceStore";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
@@ -8,6 +9,12 @@ import { parsePenSettings, penBrushFor, stepPenSize } from "./penSettings";
 
 export type PenController = ReturnType<typeof usePenTool>;
 
+const KEY = "penSettings";
+const EARLIER_KEY = "brushSettings";
+
+const parseSavedPenSettings = (saved: unknown) =>
+	parsePenSettings(saved === undefined ? readPreference(EARLIER_KEY) : saved);
+
 /**
  * Controller for freehand pen strokes.
  * - Manages pen tip, color, and size settings.
@@ -16,10 +23,15 @@ export type PenController = ReturnType<typeof usePenTool>;
  */
 export function usePenTool({ documentSize }: Pick<ToolEnv, "documentSize">) {
 	const { drawStroke } = useStore((state) => state.actions);
-	const [settings, setSettings] = usePreference(
-		"penSettings",
-		parsePenSettings,
-	);
+	const [settings, setSettings] = usePreference(KEY, parseSavedPenSettings);
+	useEffect(() => {
+		if (
+			readPreference(KEY) === undefined &&
+			readPreference(EARLIER_KEY) !== undefined
+		) {
+			writePreference(KEY, settings);
+		}
+	}, [settings]);
 
 	const stepSize = (step: 1 | -1) => {
 		const next = stepPenSize(settings, step);

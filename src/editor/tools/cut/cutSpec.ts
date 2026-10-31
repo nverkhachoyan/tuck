@@ -7,6 +7,7 @@ export const cutSpec = {
 	tray: true,
 	sized: true,
 	previews: true,
+	grouped: ["removeBg"],
 	label: "Cut",
 	icon: "scissors-cutting",
 	key: "B",

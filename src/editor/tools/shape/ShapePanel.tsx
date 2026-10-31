@@ -1,10 +1,14 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
-import { colors } from "@/ui/theme";
+import { colors, space } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../../editorContext";
 import { type ShapeKind, shapeKinds } from "../../layers/shape/shape";
-import { ColorChip, ColorOptions } from "../../shell/ColorOptions";
+import {
+	ColorChip,
+	ColorOptions,
+	ColorSwatchRow,
+} from "../../shell/ColorOptions";
 import { BarGroup, BarSections, OptionSegments } from "../../shell/ContextBar";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
@@ -67,12 +71,57 @@ export function ShapeBar({
 	);
 }
 
-/**
- * Dock buttons on phone:
- * - 4 shapes: 1-tap toggling between Rectangle, Ellipse, Line, Arrow.
- * - Style button showing current swatch, opening shared tray.
- */
-export function ShapePanel({
+function ShapeStyleDock({
+	controller: { settings, change },
+}: {
+	controller: ShapeController;
+}) {
+	const { customColor, onPickCustom, onEyedropper } = useColorTarget((color) =>
+		change({ ...settings, color }),
+	);
+	return (
+		<View style={styles.dockColumn}>
+			<View style={styles.dockRow}>
+				<ToolChoices nowrap>
+					{shapeKinds.map((shape) => (
+						<RingChoice
+							key={shape}
+							variant="highlight"
+							label={SHAPE_NAMES[shape]}
+							selected={settings.shape === shape}
+							onPress={() => change({ ...settings, shape })}
+						>
+							{(ink) => (
+								<MaterialCommunityIcons
+									name={SHAPE_ICONS[shape]}
+									size={22}
+									color={ink}
+								/>
+							)}
+						</RingChoice>
+					))}
+				</ToolChoices>
+				<View style={styles.dockRule} />
+				<SizeChip
+					index={settings.sizeIndex}
+					color={settings.color}
+					onPick={(sizeIndex) => change({ ...settings, sizeIndex })}
+				/>
+			</View>
+			<View style={styles.dockRow}>
+				<ColorSwatchRow
+					value={settings.color}
+					customColor={customColor}
+					onPick={(color) => change({ ...settings, color })}
+					onPickCustom={onPickCustom}
+					onEyedropper={onEyedropper}
+				/>
+			</View>
+		</View>
+	);
+}
+
+function ActiveShapePanel({
 	controller: { settings, change },
 }: {
 	controller: ShapeController;
@@ -110,6 +159,19 @@ export function ShapePanel({
 }
 
 /**
+ * Dock buttons on phone:
+ * - While drawing shapes: 4 shapes + Style button opening the shared tray.
+ * - When a shape is selected: direct shape kind, size, and color controls.
+ */
+export function ShapePanel({ controller }: { controller: ShapeController }) {
+	return controller.isStylingSelected ? (
+		<ShapeStyleDock controller={controller} />
+	) : (
+		<ActiveShapePanel controller={controller} />
+	);
+}
+
+/**
  * Tray rising above the phone dock with shape kind, color, and stroke width.
  */
 export function ShapeTray({
@@ -117,7 +179,7 @@ export function ShapeTray({
 }: {
 	controller: ShapeController;
 }) {
-	const { bottomInset, closeTray } = useEditorContext();
+	const { bottomInset, rightInset, closeTray } = useEditorContext();
 	const { customColor, onPickCustom, onEyedropper } = useColorTarget((color) =>
 		change({ ...settings, color }),
 	);
@@ -126,6 +188,7 @@ export function ShapeTray({
 		<ToolOptions
 			closeLabel="Close shape options"
 			bottomInset={bottomInset}
+			rightInset={rightInset}
 			onClose={closeTray}
 			dismissOnOutsidePress={false}
 		>
@@ -175,6 +238,23 @@ function ColorGlyph({ color }: { color: string }) {
 }
 
 const styles = StyleSheet.create({
+	dockColumn: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		gap: space.xs,
+	},
+	dockRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	dockRule: {
+		width: 1,
+		height: 24,
+		marginHorizontal: 10,
+		backgroundColor: colors.borderStrong,
+	},
 	colorTile: {
 		width: 22,
 		height: 22,

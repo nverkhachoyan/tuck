@@ -11,7 +11,6 @@ import {
 } from "react";
 import {
 	ActivityIndicator,
-	type GestureResponderEvent,
 	Platform,
 	Pressable,
 	ScrollView,
@@ -63,7 +62,7 @@ export function ToolButton({
 	disabled = false,
 	selected,
 	marked,
-	open = false,
+	open,
 	busy = false,
 	compact = false,
 	buttonRef,
@@ -106,26 +105,10 @@ export function ToolButton({
 			? colors.onHighlight
 			: colors.textPrimary;
 
-	const handlePress = (event: GestureResponderEvent) => {
-		if (hasFlyout && onFlyout) {
-			if (chosen) {
-				onFlyout();
-				return;
-			}
-			const ne = event?.nativeEvent as unknown as
-				| Record<string, number | undefined>
-				| undefined;
-			const x = ne?.locationX ?? ne?.offsetX;
-			const y = ne?.locationY ?? ne?.offsetY;
-			if (
-				typeof x === "number" &&
-				typeof y === "number" &&
-				x >= 30 &&
-				y >= 30
-			) {
-				onFlyout();
-				return;
-			}
+	const handlePress = () => {
+		if (hasFlyout && onFlyout && chosen) {
+			onFlyout();
+			return;
 		}
 		onPress();
 	};
@@ -172,6 +155,7 @@ export function ToolButton({
 					selected: chosen,
 					expanded: open,
 				}}
+				aria-expanded={open}
 				{...chosenOnWeb(
 					selected === undefined && marked === undefined ? undefined : chosen,
 				)}
@@ -386,7 +370,6 @@ const styles = StyleSheet.create({
 	smallTile: {
 		width: 32,
 		height: 32,
-		borderRadius: 7,
 	},
 	tilePressed: {
 		backgroundColor: colors.pressedOverlay,

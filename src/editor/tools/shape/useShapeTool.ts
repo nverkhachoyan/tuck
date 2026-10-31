@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { readPreference, writePreference } from "@/platform/preferenceStore";
 import { usePreference } from "@/platform/usePreference";
 import type { ToolStroke } from "../../canvas/canvasTool";
 import type { CanvasInput } from "../../canvasInputFor";
@@ -15,6 +16,12 @@ import {
 
 export type ShapeController = ReturnType<typeof useShapeTool>;
 
+const KEY = "shapeSettings";
+const EARLIER_KEY = "brushSettings";
+
+const parseSavedShapeSettings = (saved: unknown) =>
+	parseShapeSettings(saved === undefined ? readPreference(EARLIER_KEY) : saved);
+
 /**
  * Controller for vector geometric shapes.
  * - Manages shape kind, stroke width, and outline color.
@@ -28,9 +35,17 @@ export function useShapeTool({
 	const selectedShape = useStore(selectSelectedShape);
 	const { setShapeStyle, addShape } = useStore((state) => state.actions);
 	const [shapeSettings, setShapeSettings] = usePreference(
-		"shapeSettings",
-		parseShapeSettings,
+		KEY,
+		parseSavedShapeSettings,
 	);
+	useEffect(() => {
+		if (
+			readPreference(KEY) === undefined &&
+			readPreference(EARLIER_KEY) !== undefined
+		) {
+			writePreference(KEY, shapeSettings);
+		}
+	}, [shapeSettings]);
 
 	const isStylingSelected = !open && selectedShape !== undefined;
 	const restyledShape = open || isStylingSelected ? selectedShape : undefined;

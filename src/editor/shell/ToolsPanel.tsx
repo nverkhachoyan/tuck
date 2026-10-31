@@ -8,7 +8,7 @@ import {
 	type ViewInstance,
 } from "react-native";
 import { Highlight } from "@/ui/Highlight";
-import { interaction } from "@/ui/interaction";
+import { chosenOnWeb, interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { ToolButton, ToolGrid, ToolRow } from "./ToolButton";
@@ -63,6 +63,7 @@ export function ToolsPanel({
 					compact={compact}
 					selected={vertical ? undefined : open}
 					marked={vertical ? open : undefined}
+					open={hasFlyout ? flyoutOpenId === entry.id : undefined}
 					busy={busy.includes(entry.id)}
 					buttonRef={getRef(entry.id)}
 					hasFlyout={hasFlyout}
@@ -108,8 +109,9 @@ export function ToolsPanel({
 										setFlyoutOpenId(null);
 										activeFlyoutEntry.onSelectVariant?.(variant.id);
 									}}
-									accessibilityRole="menuitem"
+									accessibilityRole="button"
 									accessibilityState={{ selected: isSelected }}
+									{...chosenOnWeb(isSelected)}
 								>
 									{isSelected && <Highlight style={styles.flyoutHighlight} />}
 									<MaterialCommunityIcons
@@ -181,18 +183,16 @@ const styles = StyleSheet.create({
 		borderRadius: radii.small,
 	},
 	flyoutLabel: {
-		...typography.body,
-		fontSize: 13,
+		...typography.label,
 		color: colors.textPrimary,
 		flex: 1,
 	},
 	flyoutLabelSelected: {
+		...typography.labelStrong,
 		color: colors.onHighlight,
-		fontWeight: "600",
 	},
 	flyoutShortcut: {
 		...typography.caption,
-		fontSize: 11,
 		color: colors.textTertiary,
 		marginLeft: space.sm,
 	},

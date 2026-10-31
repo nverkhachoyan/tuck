@@ -1,4 +1,5 @@
-import { StyleSheet, View } from "react-native";
+import type { RefObject } from "react";
+import { StyleSheet, View, type ViewInstance } from "react-native";
 import { FadeGroup } from "@/ui/FadeRow";
 import { gradientBackground } from "@/ui/gradient";
 import { RING_TARGET, RingChoice } from "@/ui/RingChoice";
@@ -26,7 +27,11 @@ export function isCustomColor(value: string | null): value is string {
  * A swatch that opens a color picker: a rainbow, around a custom color
  * (`color`) once there is one. It's chosen whenever the value is custom.
  */
-export type CustomSwatch = { color: string | null; onPress: () => void };
+export type CustomSwatch = {
+	color: string | null;
+	onPress: () => void;
+	anchorRef?: RefObject<ViewInstance | null>;
+};
 
 /**
  * The custom swatch for a color now `value`. It shows the value when that's
@@ -89,19 +94,21 @@ export function ColorSwatches({
 				</RingChoice>
 			))}
 			{custom && (
-				<RingChoice
-					label="Custom color"
-					selected={isCustomColor(value)}
-					onPress={custom.onPress}
-				>
-					<View style={[styles.swatch, styles.rainbow]}>
-						{custom.color && (
-							<View
-								style={[styles.customDot, { backgroundColor: custom.color }]}
-							/>
-						)}
-					</View>
-				</RingChoice>
+				<View ref={custom.anchorRef} collapsable={false}>
+					<RingChoice
+						label="Custom color"
+						selected={isCustomColor(value)}
+						onPress={custom.onPress}
+					>
+						<View style={[styles.swatch, styles.rainbow]}>
+							{custom.color && (
+								<View
+									style={[styles.customDot, { backgroundColor: custom.color }]}
+								/>
+							)}
+						</View>
+					</RingChoice>
+				</View>
 			)}
 		</FadeGroup>
 	);

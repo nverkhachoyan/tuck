@@ -28,14 +28,16 @@ export function toolbarEntries(
 
 /**
  * The tools a selected `layer` offers in place of the toolbar: those in
- * `toolbar` whose spec acts on it, in its order.
+ * `toolbar` (and any grouped under them) whose spec acts on it, in order.
  */
 export function layerActionsFor(
 	layer: Layer,
 	specs: ToolSpecs,
 	toolbar: readonly string[],
 ): ToolId[] {
-	return toolbar.filter((id) => specs[id]?.actsOn(layer));
+	return toolbar
+		.flatMap((id) => [id, ...(specs[id]?.grouped ?? [])])
+		.filter((id) => specs[id]?.actsOn(layer));
 }
 
 // What the dock shows: a tool's panel, the selected layer's actions, or,

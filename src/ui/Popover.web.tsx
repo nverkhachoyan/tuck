@@ -1,7 +1,6 @@
 import {
 	type ReactNode,
 	type RefObject,
-	useContext,
 	useEffect,
 	useLayoutEffect,
 	useRef,
@@ -16,7 +15,6 @@ import {
 	type ViewStyle,
 } from "react-native";
 import type { PopoverProps } from "./Popover";
-import { PopoverPlacementContext } from "./popoverContext";
 import { type PopoverPlacement, placePopover } from "./popoverPlacement";
 import { colors, floatingShadow, radii, space } from "./theme";
 
@@ -29,6 +27,7 @@ const FOCUSABLE = [
 	"select:not([disabled])",
 	"textarea:not([disabled])",
 	'[role="button"]:not([aria-disabled="true"])',
+	'[role="radio"]:not([aria-disabled="true"])',
 	'[role="slider"]',
 	'[role="switch"]',
 ].join(", ");
@@ -36,7 +35,7 @@ const FOCUSABLE = [
 /**
  * A card anchored to a control and kept inside the window.
  * - Portaled to document.body, outside transformed ancestors.
- * - `placement` defaults to `PopoverPlacementContext` or `below`.
+ * - `placement` defaults to `below` (under the control, or above near the window's bottom).
  * - Escape closes in the capture phase before editor shortcuts run.
  * - Animates in with a 160ms ease toward anchor once measured.
  */
@@ -45,13 +44,11 @@ export function Popover({
 	open,
 	onClose,
 	label,
-	placement,
+	placement = "below",
 	restoreFocus,
 	onDismiss,
 	children,
 }: PopoverProps) {
-	const contextPlacement = useContext(PopoverPlacementContext);
-	const resolvedPlacement = placement ?? contextPlacement;
 	const wasOpen = useRef(open);
 	useEffect(() => {
 		if (wasOpen.current && !open) onDismiss?.();
@@ -63,7 +60,7 @@ export function Popover({
 			anchor={anchor}
 			label={label}
 			onClose={onClose}
-			placement={resolvedPlacement}
+			placement={placement}
 			restoreFocus={restoreFocus}
 		>
 			{children}

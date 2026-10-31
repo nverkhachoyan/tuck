@@ -239,10 +239,11 @@ export function useNormalizedDrag(
 				Math.min(1, Math.max(0, y / height)),
 			);
 		};
+		// On iOS a pan only activates once the finger moves, but a tap still
+		// begins and finalizes it.
 		return Gesture.Pan()
 			.runOnJS(true)
 			.minDistance(0)
-			.maxPointers(1)
 			.onBegin((event) => move(event.x, event.y))
 			.onUpdate((event) => move(event.x, event.y))
 			.onFinalize(() => handlers.current.onEnd?.());

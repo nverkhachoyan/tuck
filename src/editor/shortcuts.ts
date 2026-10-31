@@ -18,8 +18,11 @@ export function toolsByKey(
 ): ReadonlyMap<string, string> {
 	const map = new Map(tools.map((tool) => [tool.key, tool.id]));
 	if (specs) {
-		for (const [id, spec] of Object.entries(specs)) {
-			if (!map.has(spec.key)) map.set(spec.key, id);
+		for (const tool of tools) {
+			for (const id of specs[tool.id]?.grouped ?? []) {
+				const spec = specs[id];
+				if (spec && !map.has(spec.key)) map.set(spec.key, id);
+			}
 		}
 	}
 	return map;
@@ -127,9 +130,10 @@ function modifiedShortcut(press: KeyPress): Shortcut | null {
 
 /**
  * Every shortcut, as the help overlay lists them, in the notation tooltips
- * take ("mod+shift+Z"), with a line for each of `tools` in their order, and
- * a group for each tool whose spec in `specs` takes the keys, which Enter
- * (⌘/Ctrl+Enter while typing) and Escape apply.
+ * take ("mod+shift+Z"), with a line for each of `tools` (and any grouped
+ * under them) in their order, and a group for each tool whose spec in `specs`
+ * takes the keys, which Enter (⌘/Ctrl+Enter while typing) applies and Escape
+ * cancels.
  */
 export function shortcutGroups(
 	tools: readonly ToolEntry[],
@@ -140,7 +144,14 @@ export function shortcutGroups(
 		{
 			title: "Tools",
 			items: [
-				...tools.map((tool) => ({ keys: tool.key, action: tool.shortcut })),
+				...tools.flatMap((tool) => [
+					{ keys: tool.key, action: tool.shortcut },
+					...(specs[tool.id]?.grouped ?? []).flatMap((id) =>
+						specs[id]
+							? [{ keys: specs[id].key, action: specs[id].shortcut }]
+							: [],
+					),
+				]),
 				{ keys: LAYERS_KEY, action: "Show or hide layers" },
 			],
 		},
@@ -152,7 +163,7 @@ export function shortcutGroups(
 					keys: specs[tool.id]?.takesKeys === "typing" ? "mod+Enter" : "Enter",
 					action: "Apply",
 				},
-				{ keys: "Escape", action: "Apply" },
+				{ keys: "Escape", action: "Cancel" },
 			],
 		})),
 		HELP_GROUP,
