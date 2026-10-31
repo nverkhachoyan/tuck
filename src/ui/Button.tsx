@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ComponentProps } from "react";
 import {
+	ActivityIndicator,
 	Pressable,
 	type PressableProps,
 	StyleSheet,
@@ -22,6 +23,8 @@ type ButtonProps = Omit<PressableProps, "style" | "children"> & {
 	iconPosition?: "start" | "end";
 	variant?: ButtonVariant;
 	size?: ButtonSize;
+	// Swaps the icon for a spinner and ignores presses while keeping full contrast.
+	busy?: boolean;
 	// On web, a hover shows the label with this key (see `useTooltip`).
 	shortcut?: string;
 };
@@ -32,23 +35,31 @@ export function Button({
 	iconPosition = "start",
 	variant = "secondary",
 	size = "medium",
+	busy = false,
+	disabled = false,
 	shortcut,
 	...props
 }: ButtonProps) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
-	const enabled = !props.disabled;
+	const inactive = Boolean(disabled) || busy;
 	const labelColor =
-		variant === "primary" ? colors.onPrimary : colors.textPrimary;
+		variant === "primary" || variant === "danger"
+			? colors.onPrimary
+			: colors.textPrimary;
 	const tone = TONES[variant];
 
-	const iconElement = icon && (
-		<View style={styles.icon}>
-			<Ionicons
-				name={icon}
-				size={size === "large" ? 20 : 18}
-				color={labelColor}
-			/>
-		</View>
+	const iconElement = busy ? (
+		<ActivityIndicator size="small" color={labelColor} />
+	) : (
+		icon && (
+			<View style={styles.icon}>
+				<Ionicons
+					name={icon}
+					size={size === "large" ? 20 : 18}
+					color={labelColor}
+				/>
+			</View>
+		)
 	);
 
 	const labelElement = (
@@ -70,8 +81,10 @@ export function Button({
 				hitSlop={size === "small" ? 10 : 4}
 				accessibilityRole="button"
 				accessibilityLabel={label}
+				accessibilityState={{ disabled: inactive, busy: busy || undefined }}
 				{...(shortcut ? anchor : {})}
 				{...props}
+				disabled={inactive}
 				style={(state) => {
 					const { pressed, hovered } = interaction(state);
 					return [
@@ -79,9 +92,9 @@ export function Button({
 						styles[size],
 						tone.rest,
 						webTransition,
-						enabled && hovered && tone.hovered,
-						enabled && pressed && [tone.pressed, styles.pressed],
-						!enabled && styles.disabled,
+						!inactive && hovered && tone.hovered,
+						!inactive && pressed && [tone.pressed, styles.pressed],
+						disabled && !busy && styles.disabled,
 					];
 				}}
 			>

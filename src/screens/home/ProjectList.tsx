@@ -1,18 +1,21 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import type { ComponentProps, ReactNode } from "react";
-import { useRef, useState } from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+	ActivityIndicator,
 	Image,
 	type LayoutChangeEvent,
 	Platform,
 	Pressable,
 	ScrollView,
+	type ScrollViewInstance,
 	StyleSheet,
 	Text,
 	TextInput,
 	type TextInputInstance,
 	type TextStyle,
 	View,
+	type ViewInstance,
 } from "react-native";
 import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 import {
@@ -22,88 +25,222 @@ import {
 } from "@/projects/projectFile";
 import { CheckerFill } from "@/ui/CheckerFill";
 import { interaction } from "@/ui/interaction";
+import { Popover } from "@/ui/Popover";
 import { showAlert } from "@/ui/showAlert";
-import { colors, radii, space, typography, webTransition } from "@/ui/theme";
+import { useTooltip } from "@/ui/Tooltip";
+import {
+	colorScheme,
+	colors,
+	radii,
+	space,
+	typography,
+	webTransition,
+} from "@/ui/theme";
+import {
+	displayLabel,
+	formatDate,
+	GRID_GAP,
+	GRID_PADDING,
+	gridLayout,
+	HOME_MAX_WIDTH,
+} from "./projectGrid";
 
-// The home screen's content column. Wide enough for a laptop's project
-// prints to sit in a real row, and still a column on a larger display.
-export const HOME_MAX_WIDTH = 1080;
-const PADDING = 16;
-const GAP = 16;
-const MIN_CARD_WIDTH = 150;
-const MAX_COLUMNS = 5;
+export { HOME_MAX_WIDTH } from "./projectGrid";
+
 // Cards after this many appear together, so a long list doesn't trickle in.
 const STAGGERED = 8;
+const nightPrint = colorScheme === "dark";
+
+type ContextMenuState = {
+	project: ProjectSummary;
+	x: number;
+	y: number;
+	returnTo: RefObject<ViewInstance | null>;
+};
 
 type ProjectListProps = {
 	projects: ProjectSummary[];
 	editing: boolean;
 	disabled: boolean;
+	openingProjectId: string | null;
+	scrollTopKey: number;
+	bottomInset?: number;
 	onOpen: (id: string) => void;
 	onRename: (id: string, name: string) => void;
 	onDuplicate: (id: string) => void;
 	onDelete: (id: string) => void;
-	onStartEditing: () => void;
 	// Under the last row, the width of the grid.
 	footer?: ReactNode;
 };
 
 /**
  * The saved projects as prints on the table, each with its name and when it
- * was last changed, which open them. A long press offers Duplicate, Rename,
- * and Delete; with a mouse, hovering shows those buttons. `editing` (home's
- * Edit) puts each name in a field to rename it.
+ * was last changed, which open them.
+ * - Long-pressing (or right-clicking on web) offers Rename, Duplicate, and Delete.
+ * - Hovering with a mouse or tabbing with a keyboard reveals corner buttons on the print.
+ * - Choosing Rename focuses that card's name inline; `editing` (Home's Edit) opens every card's name field.
  */
 export function ProjectList({
 	projects,
 	editing,
 	disabled,
+	openingProjectId,
+	scrollTopKey,
+	bottomInset = 0,
 	onOpen,
 	onRename,
 	onDuplicate,
 	onDelete,
-	onStartEditing,
 	footer,
 }: ProjectListProps) {
+	const scrollRef = useRef<ScrollViewInstance>(null);
 	const [width, setWidth] = useState(0);
-	const inner = Math.min(width, HOME_MAX_WIDTH) - PADDING * 2;
-	const columns = Math.max(
-		1,
-		Math.min(MAX_COLUMNS, Math.floor((inner + GAP) / (MIN_CARD_WIDTH + GAP))),
-	);
-	const cardWidth = (inner - GAP * (columns - 1)) / columns;
+	const [renamingId, setRenamingId] = useState<string | null>(null);
+	const [menu, setMenu] = useState<ContextMenuState | null>(null);
+	const menuAnchorRef = useRef<ViewInstance | null>(null);
+	const skipMenuRestoreRef = useRef(false);
+
+	useEffect(() => {
+		if (scrollTopKey > 0) {
+			scrollRef.current?.scrollTo({ y: 0, animated: true });
+		}
+	}, [scrollTopKey]);
+
+	useEffect(() => {
+		if (editing || disabled) setRenamingId(null);
+		if (disabled) setMenu(null);
+	}, [editing, disabled]);
+
+	const { cardWidth } = gridLayout(width);
+
+	const openContextMenu = (
+		project: ProjectSummary,
+		x: number,
+		y: number,
+		returnTo: RefObject<ViewInstance | null>,
+	) => {
+		menuAnchorRef.current = {
+			getBoundingClientRect: () => ({
+				left: x,
+				top: y,
+				width: 0,
+				height: 0,
+			}),
+		} as unknown as ViewInstance;
+		skipMenuRestoreRef.current = false;
+		setMenu({ project, x, y, returnTo });
+	};
+
+	const closeContextMenu = () => setMenu(null);
 
 	return (
-		<ScrollView
-			style={styles.scroll}
-			contentContainerStyle={styles.grid}
-			showsVerticalScrollIndicator={false}
-			// So a name being typed stays above the keyboard, and a tap on
-			// another card's field moves straight to it.
-			automaticallyAdjustKeyboardInsets
-			keyboardShouldPersistTaps="handled"
-			onLayout={(event: LayoutChangeEvent) =>
-				setWidth(event.nativeEvent.layout.width)
-			}
-		>
-			{width > 0 &&
-				projects.map((project, index) => (
-					<ProjectCard
-						key={project.id}
-						project={project}
-						width={cardWidth}
-						order={Math.min(index, STAGGERED)}
-						editing={editing}
-						disabled={disabled}
-						onOpen={onOpen}
-						onRename={onRename}
-						onDuplicate={onDuplicate}
-						onDelete={onDelete}
-						onStartEditing={onStartEditing}
-					/>
-				))}
-			{width > 0 && footer && <View style={styles.footer}>{footer}</View>}
-		</ScrollView>
+		<>
+			<ScrollView
+				ref={scrollRef}
+				style={styles.scroll}
+				contentContainerStyle={
+					bottomInset > 0 ? { paddingBottom: bottomInset } : undefined
+				}
+				showsVerticalScrollIndicator={false}
+				// So a name being typed stays above the keyboard, and a tap on
+				// another card's field moves straight to it.
+				automaticallyAdjustKeyboardInsets
+				keyboardShouldPersistTaps="handled"
+			>
+				{/* Measured inside ScrollView so web scrollbar width never wraps a row. */}
+				<View
+					style={styles.grid}
+					onLayout={(event: LayoutChangeEvent) =>
+						setWidth(event.nativeEvent.layout.width)
+					}
+				>
+					{width > 0 &&
+						projects.map((project, index) => (
+							<ProjectCard
+								key={project.id}
+								project={project}
+								width={cardWidth}
+								order={Math.min(index, STAGGERED)}
+								editing={editing}
+								renaming={renamingId === project.id}
+								opening={openingProjectId === project.id}
+								disabled={disabled}
+								onOpen={onOpen}
+								onRename={onRename}
+								onDuplicate={onDuplicate}
+								onDelete={onDelete}
+								onStartRename={() => setRenamingId(project.id)}
+								onFinishRename={() =>
+									setRenamingId((current) =>
+										current === project.id ? null : current,
+									)
+								}
+								onContextMenu={openContextMenu}
+							/>
+						))}
+					{width > 0 && footer && <View style={styles.footer}>{footer}</View>}
+				</View>
+			</ScrollView>
+			{Platform.OS === "web" && menu && (
+				<Popover
+					anchor={menuAnchorRef}
+					open={true}
+					onClose={closeContextMenu}
+					label={`${
+						menu.project.status === "unavailable"
+							? "Unavailable project"
+							: displayLabel(menu.project.label)
+					} actions`}
+					restoreFocus={() => {
+						if (skipMenuRestoreRef.current) {
+							skipMenuRestoreRef.current = false;
+							return;
+						}
+						(menu.returnTo.current as unknown as HTMLElement | null)?.focus();
+					}}
+				>
+					<View style={styles.menuList}>
+						{menu.project.status !== "unavailable" && (
+							<>
+								<MenuRow
+									icon="create-outline"
+									label="Rename"
+									onPress={() => {
+										const id = menu.project.id;
+										skipMenuRestoreRef.current = true;
+										closeContextMenu();
+										setRenamingId(id);
+									}}
+								/>
+								<MenuRow
+									icon="copy-outline"
+									label="Duplicate"
+									onPress={() => {
+										const id = menu.project.id;
+										closeContextMenu();
+										onDuplicate(id);
+									}}
+								/>
+							</>
+						)}
+						<MenuRow
+							icon="trash-outline"
+							label="Delete"
+							danger
+							onPress={() => {
+								const id = menu.project.id;
+								const cardNode = menu.returnTo
+									.current as unknown as HTMLElement | null;
+								skipMenuRestoreRef.current = true;
+								cardNode?.focus();
+								closeContextMenu();
+								onDelete(id);
+							}}
+						/>
+					</View>
+				</Popover>
+			)}
+		</>
 	);
 }
 
@@ -112,27 +249,46 @@ function ProjectCard({
 	width,
 	order,
 	editing,
+	renaming,
+	opening,
 	disabled,
 	onOpen,
 	onRename,
 	onDuplicate,
 	onDelete,
-	onStartEditing,
+	onStartRename,
+	onFinishRename,
+	onContextMenu,
 }: {
 	project: ProjectSummary;
 	width: number;
 	order: number;
+	editing: boolean;
+	renaming: boolean;
+	opening: boolean;
+	onStartRename: () => void;
+	onFinishRename: () => void;
+	onContextMenu: (
+		project: ProjectSummary,
+		x: number,
+		y: number,
+		returnTo: RefObject<ViewInstance | null>,
+	) => void;
 } & Pick<
 	ProjectListProps,
 	"disabled" | "onOpen" | "onRename" | "onDuplicate" | "onDelete"
-> & {
-		editing: boolean;
-		onStartEditing: () => void;
-	}) {
+>) {
 	// Tracked around the card and its buttons together, so moving onto them
 	// doesn't hide them.
 	const [pointerOver, setPointerOver] = useState(false);
+	const [keyboardFocused, setKeyboardFocused] = useState(false);
+	const cardRootRef = useRef<ViewInstance>(null);
+	const cardButtonRef = useRef<ViewInstance>(null);
+	const nameInputRef = useRef<TextInputInstance>(null);
+
 	const unavailable = project.status === "unavailable";
+	const isNaming = (editing || renaming) && !unavailable;
+	const showCaptionField = editing || renaming;
 	const label = unavailable
 		? "Unavailable project"
 		: displayLabel(project.label);
@@ -140,30 +296,102 @@ function ProjectCard({
 		? "Needs a newer version of the app"
 		: formatDate(project.updatedAt);
 
+	const webFocusProps = (
+		Platform.OS === "web"
+			? {
+					onFocus: (event: { nativeEvent: { target?: unknown } }) => {
+						const target = event.nativeEvent.target;
+						if (
+							target instanceof HTMLElement &&
+							target.matches(":focus-visible")
+						) {
+							setKeyboardFocused(true);
+						}
+					},
+					onBlur: (event: { nativeEvent: { relatedTarget?: unknown } }) => {
+						const root = cardRootRef.current as unknown as HTMLElement | null;
+						const next = event.nativeEvent.relatedTarget;
+						if (!(next instanceof Node) || !root?.contains(next)) {
+							setKeyboardFocused(false);
+						}
+					},
+				}
+			: {}
+	) as object;
+
+	const webContextMenuProps = (
+		Platform.OS === "web" && !disabled
+			? {
+					onContextMenu: (event: {
+						preventDefault?: () => void;
+						clientX?: number;
+						clientY?: number;
+					}) => {
+						event.preventDefault?.();
+						const node = cardButtonRef.current as unknown as HTMLElement | null;
+						const rect = node?.getBoundingClientRect();
+						const x =
+							event.clientX && event.clientX > 0
+								? event.clientX
+								: (rect?.left ?? 0) + (rect?.width ?? 0) / 2;
+						const y =
+							event.clientY && event.clientY > 0
+								? event.clientY
+								: (rect?.top ?? 0) + 32;
+						onContextMenu(project, x, y, cardButtonRef);
+					},
+				}
+			: {}
+	) as object;
+
+	const lifted = pointerOver && !isNaming && !unavailable && !disabled;
+
 	return (
 		<Animated.View
+			ref={cardRootRef}
 			entering={FadeInDown.delay(order * 45).duration(420)}
 			style={{ width }}
 			onPointerEnter={(event) => {
 				if (event.nativeEvent.pointerType === "mouse") setPointerOver(true);
 			}}
 			onPointerLeave={() => setPointerOver(false)}
+			{...webFocusProps}
 		>
 			<Pressable
+				ref={cardButtonRef}
 				disabled={disabled || unavailable}
 				onPress={() => {
+					if (isNaming) {
+						nameInputRef.current?.focus();
+						return;
+					}
 					if (!editing) onOpen(project.id);
 				}}
-				onLongPress={() =>
+				onLongPress={() => {
+					if (Platform.OS === "web") {
+						if (pointerOver) return;
+						const node = cardButtonRef.current as unknown as HTMLElement | null;
+						const rect = node?.getBoundingClientRect();
+						onContextMenu(
+							project,
+							(rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+							(rect?.bottom ?? 0) - 8,
+							cardButtonRef,
+						);
+						return;
+					}
 					showAlert(label, detail, [
 						...(unavailable
 							? []
 							: [
 									{
+										text: "Rename",
+										onPress: onStartRename,
+									},
+									{
 										text: "Duplicate",
 										onPress: () => onDuplicate(project.id),
 									},
-									{ text: "Rename", onPress: onStartEditing },
 								]),
 						{
 							text: "Delete",
@@ -171,11 +399,18 @@ function ProjectCard({
 							onPress: () => onDelete(project.id),
 						},
 						{ text: "Cancel", style: "cancel" },
-					])
-				}
+					]);
+				}}
+				{...webContextMenuProps}
 				accessibilityRole="button"
 				accessibilityLabel={`${label}, ${detail}`}
-				accessibilityHint={editing ? undefined : "Opens the project"}
+				accessibilityState={{
+					disabled: disabled || unavailable,
+					busy: opening || undefined,
+				}}
+				accessibilityHint={
+					isNaming ? "Edits the project name" : "Opens the project"
+				}
 				style={styles.card}
 			>
 				{(state) => {
@@ -186,8 +421,10 @@ function ProjectCard({
 								style={[
 									styles.print,
 									{ height: width },
+									nightPrint && styles.printNight,
 									webTransition,
-									pressed && styles.printPressed,
+									lifted && styles.printLifted,
+									(pressed || opening) && !isNaming && styles.printPressed,
 								]}
 							>
 								<Thumbnail
@@ -195,8 +432,18 @@ function ProjectCard({
 									unavailable={unavailable}
 									size={width}
 								/>
+								{opening && (
+									<View style={styles.openingOverlay}>
+										<View style={styles.openingBadge}>
+											<ActivityIndicator
+												size="small"
+												color={colors.textPrimary}
+											/>
+										</View>
+									</View>
+								)}
 							</View>
-							{!editing && (
+							{!showCaptionField && (
 								<View style={styles.caption}>
 									<Text style={styles.label} numberOfLines={1}>
 										{label}
@@ -212,7 +459,7 @@ function ProjectCard({
 			</Pressable>
 			{/* Beside the card rather than in it, so a press on the field is the
 			    field's alone. */}
-			{editing && (
+			{showCaptionField && (
 				<View style={[styles.caption, styles.editingCaption]}>
 					{unavailable ? (
 						<Text style={styles.label} numberOfLines={1}>
@@ -220,9 +467,12 @@ function ProjectCard({
 						</Text>
 					) : (
 						<NameField
+							inputRef={nameInputRef}
 							label={label}
 							disabled={disabled}
+							autoFocus={renaming}
 							onRename={(name) => onRename(project.id, name)}
+							onDone={onFinishRename}
 						/>
 					)}
 					<Text style={styles.date} numberOfLines={1}>
@@ -230,17 +480,27 @@ function ProjectCard({
 					</Text>
 				</View>
 			)}
-			{(editing || pointerOver) && !disabled && (
+			{(editing || pointerOver || keyboardFocused) && !disabled && (
 				<Animated.View entering={ZoomIn.duration(160)} style={styles.badges}>
+					{!unavailable && !isNaming && (
+						<CardButton
+							icon="create-outline"
+							tooltipLabel="Rename"
+							label={`Rename ${label}`}
+							onPress={onStartRename}
+						/>
+					)}
 					{!unavailable && (
 						<CardButton
 							icon="copy-outline"
+							tooltipLabel="Duplicate"
 							label={`Duplicate ${label}`}
 							onPress={() => onDuplicate(project.id)}
 						/>
 					)}
 					<CardButton
 						icon="trash-outline"
+						tooltipLabel="Delete"
 						label={`Delete ${label}`}
 						danger
 						onPress={() => onDelete(project.id)}
@@ -254,6 +514,55 @@ function ProjectCard({
 /** A small round button over a card's corner. */
 function CardButton({
 	icon,
+	tooltipLabel,
+	label,
+	danger = false,
+	onPress,
+}: {
+	icon: ComponentProps<typeof Ionicons>["name"];
+	tooltipLabel: string;
+	label: string;
+	danger?: boolean;
+	onPress: () => void;
+}) {
+	const { anchor, tooltip } = useTooltip(tooltipLabel);
+	return (
+		<>
+			<Pressable
+				{...anchor}
+				hitSlop={6}
+				onPress={onPress}
+				accessibilityRole="button"
+				accessibilityLabel={label}
+				style={(state) => {
+					const { pressed, hovered } = interaction(state);
+					return [
+						styles.cardButton,
+						webTransition,
+						(hovered || pressed) &&
+							(danger ? styles.cardButtonDanger : styles.cardButtonHovered),
+					];
+				}}
+			>
+				{(state) => {
+					const { pressed, hovered } = interaction(state);
+					const activeDanger = danger && (hovered || pressed);
+					return (
+						<Ionicons
+							name={icon}
+							size={15}
+							color={activeDanger ? colors.onPrimary : colors.textPrimary}
+						/>
+					);
+				}}
+			</Pressable>
+			{tooltip}
+		</>
+	);
+}
+
+function MenuRow({
+	icon,
 	label,
 	danger = false,
 	onPress,
@@ -263,23 +572,27 @@ function CardButton({
 	danger?: boolean;
 	onPress: () => void;
 }) {
+	const ink = danger ? colors.danger : colors.textPrimary;
 	return (
 		<Pressable
-			hitSlop={6}
-			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={label}
+			onPress={onPress}
 			style={(state) => {
 				const { pressed, hovered } = interaction(state);
 				return [
-					styles.cardButton,
+					styles.menuRow,
 					webTransition,
-					(hovered || pressed) &&
-						(danger ? styles.cardButtonDanger : styles.cardButtonHovered),
+					hovered &&
+						(danger ? styles.menuRowDangerHovered : styles.menuRowHovered),
+					pressed && styles.menuRowPressed,
 				];
 			}}
 		>
-			<Ionicons name={icon} size={15} color={colors.textPrimary} />
+			<Ionicons name={icon} size={17} color={ink} />
+			<Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>
+				{label}
+			</Text>
 		</Pressable>
 	);
 }
@@ -289,46 +602,111 @@ function CardButton({
  * A blank name lists the project by its text again.
  */
 function NameField({
+	inputRef,
 	label,
 	disabled,
+	autoFocus = false,
 	onRename,
+	onDone,
 }: {
+	inputRef: RefObject<TextInputInstance | null>;
 	label: string;
 	disabled: boolean;
+	autoFocus?: boolean;
 	onRename: (name: string) => void;
+	onDone: () => void;
 }) {
-	const input = useRef<TextInputInstance>(null);
 	// What's typed, while the field has focus.
 	const [draft, setDraft] = useState<string | null>(null);
+	const [focused, setFocused] = useState(false);
+	const draftRef = useRef<string | null>(null);
 	const cancelled = useRef(false);
+	const labelRef = useRef(label);
+	labelRef.current = label;
+	const onRenameRef = useRef(onRename);
+	onRenameRef.current = onRename;
+
+	useEffect(() => {
+		if (!autoFocus) return;
+		const frame = requestAnimationFrame(() => {
+			const node = inputRef.current;
+			if (!node) return;
+			node.focus();
+			if (Platform.OS === "web") {
+				(node as unknown as HTMLInputElement).setSelectionRange?.(
+					0,
+					labelRef.current.length,
+				);
+			}
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [autoFocus, inputRef]);
+
+	// Commits an unblurred edit if Home's Done unmounts the field directly.
+	useEffect(() => {
+		return () => {
+			const typed = draftRef.current;
+			draftRef.current = null;
+			if (cancelled.current) return;
+			if (typed !== null && projectName(typed) !== labelRef.current) {
+				onRenameRef.current(typed);
+			}
+		};
+	}, []);
+
 	const finish = () => {
-		const typed = draft;
+		const typed = draftRef.current;
+		draftRef.current = null;
 		setDraft(null);
+		setFocused(false);
+		onDone();
 		if (cancelled.current) {
 			cancelled.current = false;
 			return;
 		}
 		if (typed !== null && projectName(typed) !== label) onRename(typed);
 	};
+
 	return (
 		<TextInput
-			ref={input}
+			ref={inputRef}
 			value={draft ?? label}
 			editable={!disabled}
-			onFocus={() => setDraft(label)}
-			onChangeText={setDraft}
+			hitSlop={8}
+			onFocus={() => {
+				setFocused(true);
+				draftRef.current = label;
+				setDraft(label);
+				if (Platform.OS !== "web") {
+					inputRef.current?.setSelection(0, label.length);
+				} else {
+					(
+						inputRef.current as unknown as HTMLInputElement | null
+					)?.setSelectionRange?.(0, label.length);
+				}
+			}}
+			onChangeText={(next) => {
+				draftRef.current = next;
+				setDraft(next);
+			}}
+			onSubmitEditing={() => inputRef.current?.blur()}
 			onBlur={finish}
 			onKeyPress={(event) => {
 				if (event.nativeEvent.key !== "Escape") return;
 				cancelled.current = true;
-				input.current?.blur();
+				inputRef.current?.blur();
 			}}
 			selectTextOnFocus
 			maxLength={NAME_MAX_LENGTH}
 			returnKeyType="done"
 			autoCorrect={false}
-			accessibilityLabel="Project name"
-			style={[styles.label, styles.nameField, fieldFocusStyle]}
+			accessibilityLabel={`Project name, ${label}`}
+			style={[
+				styles.label,
+				styles.nameField,
+				focused && styles.nameFieldFocused,
+				fieldFocusStyle,
+			]}
 		/>
 	);
 }
@@ -371,52 +749,14 @@ function Thumbnail({
 			)}
 			<Image
 				source={{ uri: url }}
+				alt=""
+				accessible={false}
 				resizeMode="cover"
 				onError={() => setFailed(true)}
 				style={StyleSheet.absoluteFill}
 			/>
 		</>
 	);
-}
-
-/**
- * A project listed by its text shows it in sentence case: meme text is
- * usually all capitals, which shouts in a list.
- */
-function displayLabel(label: string) {
-	if (label !== label.toUpperCase() || label === label.toLowerCase()) {
-		return label;
-	}
-	return label.charAt(0) + label.slice(1).toLowerCase();
-}
-
-/** Today's time, "Yesterday", or the date, with the year once it's past. */
-function formatDate(time: number) {
-	const date = new Date(time);
-	const now = new Date();
-	const days = Math.round(
-		(startOfDay(now) - startOfDay(date)) / (24 * 60 * 60 * 1000),
-	);
-	if (days === 0) {
-		return `Today, ${date.toLocaleTimeString(undefined, {
-			hour: "numeric",
-			minute: "2-digit",
-		})}`;
-	}
-	if (days === 1) return "Yesterday";
-	return date.toLocaleDateString(undefined, {
-		month: "short",
-		day: "numeric",
-		year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
-	});
-}
-
-function startOfDay(date: Date) {
-	return new Date(
-		date.getFullYear(),
-		date.getMonth(),
-		date.getDate(),
-	).getTime();
 }
 
 const styles = StyleSheet.create({
@@ -429,9 +769,9 @@ const styles = StyleSheet.create({
 		alignSelf: "center",
 		flexDirection: "row",
 		flexWrap: "wrap",
-		columnGap: GAP,
+		columnGap: GRID_GAP,
 		rowGap: 20,
-		padding: PADDING,
+		padding: GRID_PADDING,
 	},
 	card: {
 		gap: space.xs,
@@ -449,8 +789,31 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.surface,
 		boxShadow: `0 1px 1.5px ${colors.shadow}, 0 8px 18px -6px ${colors.shadow}`,
 	},
+	printNight: {
+		borderWidth: 1,
+		borderColor: colors.borderStrong,
+	},
+	printLifted: {
+		transform: [{ translateY: -2 }],
+		boxShadow: `0 2px 3px ${colors.shadow}, 0 12px 22px -6px ${colors.shadow}`,
+	},
 	printPressed: {
 		opacity: 0.8,
+	},
+	openingOverlay: {
+		...StyleSheet.absoluteFill,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	openingBadge: {
+		width: 34,
+		height: 34,
+		borderRadius: 17,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: colors.surface,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.borderStrong,
 	},
 	caption: {
 		gap: 2,
@@ -478,6 +841,11 @@ const styles = StyleSheet.create({
 		borderColor: colors.borderStrong,
 		backgroundColor: colors.surface,
 	},
+	nameFieldFocused: {
+		borderWidth: 2,
+		borderColor: colors.textPrimary,
+		paddingHorizontal: 7,
+	},
 	badges: {
 		position: "absolute",
 		top: 8,
@@ -501,5 +869,34 @@ const styles = StyleSheet.create({
 	cardButtonDanger: {
 		backgroundColor: colors.danger,
 		borderColor: colors.danger,
+	},
+	menuList: {
+		minWidth: 152,
+		gap: 2,
+	},
+	menuRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: space.xs,
+		minHeight: 36,
+		paddingHorizontal: space.sm,
+		paddingVertical: 6,
+		borderRadius: radii.small,
+	},
+	menuRowHovered: {
+		backgroundColor: colors.hoverOverlay,
+	},
+	menuRowDangerHovered: {
+		backgroundColor: colors.dangerSoft,
+	},
+	menuRowPressed: {
+		backgroundColor: colors.pressedOverlay,
+	},
+	menuLabel: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
+	},
+	menuLabelDanger: {
+		color: colors.danger,
 	},
 });

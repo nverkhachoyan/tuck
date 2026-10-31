@@ -10,6 +10,7 @@ import { createDocumentFromImage, type EditorDocument } from "@/editor/core";
 import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
 import { importSharedPhoto } from "@/photos/sharedPhoto";
+import { deleteTemporaryFile } from "@/platform/temporaryFile";
 import { copyName, type ProjectSummary } from "@/projects/projectFile";
 import { isProjectOpenElsewhere } from "@/projects/projectLifecycle";
 import { editorHref } from "@/projects/projectRoute";
@@ -26,6 +27,7 @@ import {
 } from "@/projects/projectService";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
+import { displayLabel } from "./projectGrid";
 
 // A null id edits a photo that couldn't be saved.
 type Opened = { id: string | null; document: EditorDocument } | null;
@@ -37,6 +39,8 @@ export type HomeStatus =
 	| "opening"
 	| "idle";
 
+export type HomeBusyAction = "choose" | "paste" | "project" | null;
+
 /**
  * One piece of work runs at a time, and `status` names it. Between them,
  * thumbnails that a session ending without Back left missing or outdated
@@ -45,6 +49,9 @@ export type HomeStatus =
 export function useHomeProjects() {
 	const router = useRouter();
 	const [status, setStatus] = useState<HomeStatus>("loading");
+	const [busyAction, setBusyAction] = useState<HomeBusyAction>(null);
+	const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
+	const [announcement, setAnnouncement] = useState<string | null>(null);
 	const [projects, setProjects] = useState<ProjectSummary[]>([]);
 	// Whether the list has loaded once, so its empty state can show.
 	const [listed, setListed] = useState(false);
@@ -134,9 +141,15 @@ export function useHomeProjects() {
 		}, [finishSession]),
 	);
 
-	const open = (failure: string, load: () => Promise<Opened>) => {
+	const open = (
+		failure: string,
+		load: () => Promise<Opened>,
+		target?: { action: HomeBusyAction; projectId?: string },
+	) => {
 		if (getSession().document) return;
 		return run("opening", async () => {
+			if (target) setBusyAction(target.action);
+			if (target?.projectId) setOpeningProjectId(target.projectId);
 			try {
 				const opened = await load();
 				if (opened) {
@@ -147,6 +160,9 @@ export function useHomeProjects() {
 				showAlert(failure, errorMessage(error));
 				// The list may be out of date, as when another tab deleted a project.
 				await refreshProjects();
+			} finally {
+				setBusyAction(null);
+				setOpeningProjectId(null);
 			}
 		});
 	};
@@ -163,72 +179,99 @@ export function useHomeProjects() {
 		});
 
 	const choosePhoto = () =>
-		open("Couldn't open photo", async () => {
-			const result = await pickPhoto();
-			if (result.status === "canceled") return null;
-			return openPhoto(result.photo);
-		});
+		open(
+			"Couldn't open photo",
+			async () => {
+				const result = await pickPhoto();
+				if (result.status === "canceled") return null;
+				return openPhoto(result.photo);
+			},
+			{ action: "choose" },
+		);
 
 	/** Opens a pasted or dropped image, as a chosen photo opens. */
 	const openImage = (uri: string) =>
-		open("Couldn't open image", async () => openPhoto(await importPhoto(uri)));
+		open("Couldn't open image", async () => openPhoto(await importPhoto(uri)), {
+			action: "choose",
+		});
 
 	/** Opens a photo shared from another app, as a chosen photo opens. */
 	const openSharedPhoto = (name: string) =>
-		open("Couldn't open the shared photo", async () =>
-			openPhoto(await importSharedPhoto(name)),
+		open(
+			"Couldn't open the shared photo",
+			async () => openPhoto(await importSharedPhoto(name)),
+			{ action: "choose" },
 		);
 
 	/** Reads the clipboard only from this user action, so iOS can prompt here. */
 	const pasteImage = () =>
-		open("Couldn't paste image", async () => {
-			const uri = await pasteClipboardImage();
-			if (!uri) {
-				showAlert(
-					"No image to paste",
-					"Copy a photo or screenshot first, then tap Paste.",
-				);
-				return null;
-			}
-			return openPhoto(await importPhoto(uri));
-		});
+		open(
+			"Couldn't paste image",
+			async () => {
+				const uri = await pasteClipboardImage();
+				if (!uri) {
+					showAlert(
+						"No image to paste",
+						"Copy a photo or screenshot first, then tap Paste.",
+					);
+					return null;
+				}
+				try {
+					return await openPhoto(await importPhoto(uri));
+				} finally {
+					deleteTemporaryFile(uri);
+				}
+			},
+			{ action: "paste" },
+		);
 
 	// After the alert closes, so it isn't nested inside the open that failed.
 	const openCopy = (id: string) =>
-		open("Couldn't open a copy", async () => {
-			const copyId = await copyOpenProject(id);
-			const document = await openProject(copyId);
-			if (!document) {
-				showAlert(
-					"Couldn't open project",
-					"It may have been saved by a newer version of the app.",
-				);
-			}
-			return document && { id: copyId, document };
-		});
-
-	const openSavedProject = (id: string) =>
-		open("Couldn't open project", async () => {
-			try {
-				const document = await openProject(id);
+		open(
+			"Couldn't open a copy",
+			async () => {
+				const copyId = await copyOpenProject(id);
+				const document = await openProject(copyId);
 				if (!document) {
 					showAlert(
 						"Couldn't open project",
 						"It may have been saved by a newer version of the app.",
 					);
 				}
-				return document && { id, document };
-			} catch (error) {
-				if (!isProjectOpenElsewhere(error)) throw error;
-				showAlert("Couldn't open project", errorMessage(error), [
-					{ text: "Cancel", style: "cancel" },
-					{ text: "Open a copy", onPress: () => void openCopy(id) },
-				]);
-				return null;
-			}
-		});
+				return document && { id: copyId, document };
+			},
+			{ action: "project", projectId: id },
+		);
 
-	const confirmDeleteProject = (id: string) =>
+	const openSavedProject = (id: string) =>
+		open(
+			"Couldn't open project",
+			async () => {
+				try {
+					const document = await openProject(id);
+					if (!document) {
+						showAlert(
+							"Couldn't open project",
+							"It may have been saved by a newer version of the app.",
+						);
+					}
+					return document && { id, document };
+				} catch (error) {
+					if (!isProjectOpenElsewhere(error)) throw error;
+					showAlert("Couldn't open project", errorMessage(error), [
+						{ text: "Cancel", style: "cancel" },
+						{ text: "Open a copy", onPress: () => void openCopy(id) },
+					]);
+					return null;
+				}
+			},
+			{ action: "project", projectId: id },
+		);
+
+	const confirmDeleteProject = (id: string) => {
+		const target = projects.find((project) => project.id === id);
+		const name =
+			target?.status === "ready" ? displayLabel(target.label) : "project";
 		showAlert(
 			"Delete project?",
 			"Its photos and edits will be removed from this device.",
@@ -239,16 +282,21 @@ export function useHomeProjects() {
 					style: "destructive",
 					onPress: () =>
 						run("loading", async () => {
+							setAnnouncement(null);
+							let deleted = false;
 							try {
 								await deleteProject(id);
+								deleted = true;
 							} catch (error) {
 								showAlert("Couldn't delete project", errorMessage(error));
 							}
 							await refreshProjects();
+							if (deleted) setAnnouncement(`Deleted ${name}`);
 						}),
 				},
 			],
 		);
+	};
 
 	// Changes a saved project in place, then lists them all again.
 	const changeProject = (failure: string, change: () => Promise<void>) =>
@@ -265,19 +313,28 @@ export function useHomeProjects() {
 		changeProject("Couldn't rename project", () => renameProject(id, name));
 
 	// Named for the original, as the first copy of it not yet listed.
-	const duplicateSavedProject = (id: string) => {
+	const duplicateSavedProject = async (id: string): Promise<boolean> => {
 		const original = projects.find((project) => project.id === id);
-		if (original?.status !== "ready") return;
+		if (original?.status !== "ready") return false;
 		const labels = projects.flatMap((project) =>
 			project.status === "ready" ? [project.label] : [],
 		);
-		return changeProject("Couldn't duplicate project", () =>
-			duplicateProject(id, copyName(original.label, labels)),
-		);
+		const nextName = copyName(original.label, labels);
+		let created = false;
+		await changeProject("Couldn't duplicate project", async () => {
+			setAnnouncement(null);
+			await duplicateProject(id, nextName);
+			created = true;
+		});
+		if (created) setAnnouncement(`Created ${displayLabel(nextName)}`);
+		return created;
 	};
 
 	return {
 		status,
+		busyAction,
+		openingProjectId,
+		announcement,
 		projects,
 		listed,
 		finishSession,
