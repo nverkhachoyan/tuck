@@ -24,10 +24,11 @@ const DOCK_MARGIN = 10;
 const KEYBOARD_GAP = 8;
 const BUTTON_SIZE = compactControls ? 36 : 44;
 const BUTTON_ICON_SIZE = compactControls ? 24 : 28;
-// A wide screen's inspector, along the right, which the dock becomes. Wide
-// enough for a row of five tools at their full spacing (see `ToolRow`), the
-// most a tool's panel shows.
+// A wide screen's inspector card along the right, which holds the layers.
 export const INSPECTOR_WIDTH = 352;
+// Minimum height of a wide screen's bottom tool card, sized for the tallest
+// tool card (Find's scopes and results, or Adjust's choices and dial).
+export const CARD_HEIGHT = 172;
 // Between a wide screen's panels, the rail and the inspector, and the edges
 // of the canvas they rest beside, and their corners. Closer and tighter
 // where controls are sized for a mouse.
@@ -102,11 +103,7 @@ export function Dock({
 	);
 }
 
-/**
- * The wide editor's column, a card down the right beside the canvas. It
- * holds the layers, and, above them, Find's results or Adjust's dial. A
- * tool's options live in the header's context bar, not in this card.
- */
+/** The wide editor's right-hand card beside the canvas, holding the layers. */
 export function Inspector({ children }: { children: ReactNode }) {
 	return (
 		<View style={styles.inspectorArea}>

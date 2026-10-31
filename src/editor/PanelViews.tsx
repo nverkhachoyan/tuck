@@ -10,13 +10,22 @@ import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Popover } from "@/ui/Popover";
+import { Surface } from "@/ui/Surface";
 import { colors } from "@/ui/theme";
 import type { OpenTool, ToolControllers } from "./defineTool";
 import type { DockPanel } from "./editorChrome";
 import { type EditorModeState, openTray } from "./editorMode";
 import { ContextBar } from "./shell/ContextBar";
-import type { ModeActionProps } from "./shell/Dock";
+import {
+	CARD_HEIGHT,
+	type ModeActionProps,
+	PANEL_GAP,
+	PANEL_RADIUS,
+} from "./shell/Dock";
 import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
+
+// The widest a tool's card gets, as wide as a tray.
+const CARD_MAX_WIDTH = 520;
 
 /**
  * What the panels read besides the editor's context (see
@@ -190,31 +199,39 @@ export function ToolSheet({
 	);
 }
 
-/** Whether `panel` has a section in the wide inspector, which opening it opens. */
-export function hasInspectorSection(
-	panel: DockPanel,
-	controllers: ToolControllers,
-): boolean {
-	return (
-		openToolIn(panel, controllers)?.definition.views.Inspector !== undefined
-	);
-}
-
-/** The open tool's inspector section over `layers`, or the layers alone. */
-export function InspectorContent({
-	context,
-	panel,
-	layers,
+/**
+ * The open tool's `Card` on a wide window, centered between `inset.left` and
+ * `inset.right` along the canvas's bottom. Uses `CARD_HEIGHT` as a minimum
+ * height to match the space reserved by `useEditorLayout`.
+ */
+export function ToolCard({
+	tool,
+	inset,
 }: {
-	context: PanelContext;
-	panel: DockPanel;
-	layers: ReactNode;
+	tool: OpenTool;
+	inset: { left: number; right: number };
 }) {
-	const open = openToolIn(panel, context.controllers);
-	if (!open) return layers;
-	const { definition, controller } = open;
-	const Section = definition.views.Inspector;
-	return Section ? <Section controller={controller}>{layers}</Section> : layers;
+	const { definition, controller } = tool;
+	const Card = definition.views.Card;
+	if (!Card) return null;
+	return (
+		<View
+			style={[
+				styles.cardArea,
+				{ paddingLeft: inset.left, paddingRight: inset.right },
+			]}
+		>
+			<Animated.View
+				entering={FadeIn.duration(160)}
+				exiting={FadeOut.duration(100)}
+				style={styles.cardColumn}
+			>
+				<Surface style={styles.card} contentStyle={styles.cardContent}>
+					<Card controller={controller} />
+				</Surface>
+			</Animated.View>
+		</View>
+	);
 }
 
 /**
@@ -271,6 +288,25 @@ const styles = StyleSheet.create({
 	},
 	canvas: {
 		flex: 1,
+	},
+	cardArea: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: PANEL_GAP,
+		alignItems: "center",
+		pointerEvents: "box-none",
+	},
+	cardColumn: {
+		width: "100%",
+		maxWidth: CARD_MAX_WIDTH,
+	},
+	card: {
+		borderRadius: PANEL_RADIUS,
+	},
+	cardContent: {
+		minHeight: CARD_HEIGHT,
+		justifyContent: "center",
 	},
 	// Over the whole screen, dock and all.
 	sheetArea: {

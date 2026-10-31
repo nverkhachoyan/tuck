@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	ActivityIndicator,
@@ -74,11 +74,7 @@ const SCOPES = [
 	{ scope: "both", label: "Both", icon: "image-search-outline" },
 ] as const;
 
-/**
- * Find's options in the wide editor's header: the effect what Done redacts
- * is drawn with, and its color when that's solid. Faces, text, and the
- * results sit in the inspector, above the layers they'll join.
- */
+/** Find's redaction style options in the wide editor's header bar. */
 export function FindBar() {
 	const { look, changeLook } = useRedactLook();
 	const colorTarget = useColorTarget((color) => changeLook({ color }));
@@ -100,19 +96,53 @@ export function FindBar() {
  * a tray. It has no backdrop: taps on the canvas toggle the regions found.
  */
 export function FindTray({ controller }: { controller: FindController }) {
-	const { bottomInset, cancel } = useEditorContext();
-	// The tray's own width, not the window's: the layers sidebar can narrow
+	const { bottomInset } = useEditorContext();
+	return (
+		<Tray bottomInset={bottomInset}>
+			<FindResults controller={controller} />
+		</Tray>
+	);
+}
+
+/** Find's scope choices and scan results in the wide editor's bottom card. */
+export function FindCard({ controller }: { controller: FindController }) {
+	const { state, find } = controller;
+	const scanned = state.status === "idle" ? null : state.scope;
+	return (
+		<>
+			<View style={styles.scopes}>
+				{SCOPES.map(({ scope, label, icon }) => (
+					<ToolButton
+						key={scope}
+						label={label}
+						icon={icon}
+						selected={scanned === scope}
+						busy={state.status === "working" && scanned === scope}
+						onPress={() => find(scope)}
+					/>
+				))}
+			</View>
+			<View style={styles.results}>
+				<FindResults controller={controller} />
+			</View>
+		</>
+	);
+}
+
+// How the scan is going and what it found: the tray's content, and the
+// card's.
+function FindResults({ controller }: { controller: FindController }) {
+	const { cancel } = useEditorContext();
+	// The results' own width, not the window's: the layers sidebar can narrow
 	// the canvas on web.
 	const [stacked, setStacked] = useState(false);
 	return (
-		<Tray bottomInset={bottomInset}>
-			<FindBody
-				controller={controller}
-				stacked={stacked}
-				onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
-				onCancel={cancel}
-			/>
-		</Tray>
+		<FindBody
+			controller={controller}
+			stacked={stacked}
+			onMeasure={(width) => setStacked(width < STACK_BELOW_WIDTH)}
+			onCancel={cancel}
+		/>
 	);
 }
 
@@ -134,42 +164,6 @@ export function FindOptions() {
 				{...colorTarget}
 			/>
 		</ToolOptions>
-	);
-}
-
-/**
- * Find on a wide screen: what to look for, and what was found, above the
- * layers. The bar holds the style, so this section has no Style button.
- */
-export function FindInspector({
-	controller,
-	children,
-}: {
-	controller: FindController;
-	children: ReactNode;
-}) {
-	const { cancel } = useEditorContext();
-	const { state, find } = controller;
-	const scanned = state.status === "idle" ? null : state.scope;
-	return (
-		<View style={styles.inspectorStack}>
-			<View style={styles.findSection}>
-				<View style={styles.scopes}>
-					{SCOPES.map(({ scope, label, icon }) => (
-						<ToolButton
-							key={scope}
-							label={label}
-							icon={icon}
-							selected={scanned === scope}
-							busy={state.status === "working" && scanned === scope}
-							onPress={() => find(scope)}
-						/>
-					))}
-				</View>
-				<FindBody controller={controller} stacked onCancel={cancel} />
-			</View>
-			{children}
-		</View>
 	);
 }
 
@@ -566,16 +560,14 @@ const styles = StyleSheet.create({
 		...typography.label,
 		color: colors.textPrimary,
 	},
-	inspectorStack: {
-		flexShrink: 1,
-	},
-	findSection: {
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
 	scopes: {
 		flexDirection: "row",
 		justifyContent: "center",
 		paddingTop: space.xs,
+		paddingBottom: space.xs,
+	},
+	results: {
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: colors.border,
 	},
 });
