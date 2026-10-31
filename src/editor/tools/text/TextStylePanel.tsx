@@ -1,12 +1,16 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ReactNode, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Chip } from "@/ui/Chip";
-import { ColorPicker } from "@/ui/ColorPicker";
+import { ColorSliderBar } from "@/ui/ColorPicker";
 import { FadeRow, MeasuredItem } from "@/ui/FadeRow";
+import { gradientBackground, HUE_GRADIENT, toneGradient } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
+import { type Hsv, hexToHsv, hsvToHex, hsvToTone, toneToHsv } from "@/ui/hsv";
+import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
-import { colors, typography, webTransition } from "@/ui/theme";
+import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../../editorContext";
 import { TEXT_FONTS } from "../../layers/text/fonts";
 import {
@@ -24,8 +28,7 @@ import {
 	BarSections,
 	OptionSegments,
 } from "../../shell/ContextBar";
-import { ToolOption, ToolOptions } from "../../shell/ToolOptions";
-import type { TextColorKey } from "./textSettings";
+import { NEXT_ALIGN, type TextColorKey } from "./textSettings";
 import type { TextController } from "./useTextTool";
 
 // The minimum comfortable touch target. Controls here are boxes this big,
@@ -44,7 +47,7 @@ const FONT_LABELS: Record<TextFont, string> = {
 	typewriter: "Typewriter",
 };
 
-type Tab = "font" | "color" | "outline" | "background" | "align";
+type Tab = "font" | "color" | "outline" | "background";
 
 // Short, so every tab fits across a phone.
 const TABS: { tab: Tab; label: string }[] = [
@@ -52,7 +55,6 @@ const TABS: { tab: Tab; label: string }[] = [
 	{ tab: "color", label: "Color" },
 	{ tab: "outline", label: "Outline" },
 	{ tab: "background", label: "Box" },
-	{ tab: "align", label: "Align" },
 ];
 
 const ALIGNS: { align: TextAlign; label: string; icon: AlignIcon }[] = [
@@ -65,6 +67,12 @@ type AlignIcon =
 	| "format-align-left"
 	| "format-align-center"
 	| "format-align-right";
+
+const ALIGN_ICONS: Record<TextAlign, AlignIcon> = {
+	left: "format-align-left",
+	center: "format-align-center",
+	right: "format-align-right",
+};
 
 const COLOR_NAMES: Record<TextColorKey, string> = {
 	color: "Text color",
@@ -80,13 +88,15 @@ const COLOR_TITLES: Record<TextColorKey, string> = {
 
 /** Text's dock panel: the style of the text being typed or selected. */
 export function TextDock({ controller: text }: { controller: TextController }) {
-	const { styledText } = text;
+	const { styledText, picker } = text;
 	return (
 		styledText && (
 			<TextStylePanel
 				layer={styledText}
 				onChange={text.style}
+				pickerKey={picker?.key ?? null}
 				onOpenPicker={text.openPicker}
+				onClosePicker={text.closePicker}
 			/>
 		)
 	);
@@ -113,33 +123,11 @@ export function TextToolBar({
 	);
 }
 
-/** The color picker the dock's custom swatch opened, over the canvas. */
-export function TextColorResults({
-	controller: text,
-}: {
-	controller: TextController;
-}) {
-	const { styledText, picker } = text;
-	return (
-		picker &&
-		styledText && (
-			<TextColorPicker
-				layer={styledText}
-				colorKey={picker.key}
-				onChange={text.style}
-				onClose={text.closePicker}
-			/>
-		)
-	);
-}
-
 /**
- * A picker for one of a text layer's colors, in a card over the canvas (see
- * `ToolOptions`), since the dock's panel has no room for one. The text
- * takes the color once the finger lifts; the custom color does too. The
- * eyedropper closes it, so the canvas is in view.
+ * In-place color picker inside the 100pt dock when a custom swatch is tapped.
+ * Keeps the virtual keyboard open while typing text by avoiding overlays.
  */
-function TextColorPicker({
+function InlineTextColorPicker({
 	layer,
 	colorKey,
 	onChange,
@@ -150,65 +138,167 @@ function TextColorPicker({
 	onChange: (patch: TextLayerEdit) => void;
 	onClose: () => void;
 }) {
-	const { bottomInset } = useEditorContext();
+	const initialHex = layer[colorKey] ?? layer.color;
+	const [hsv, setHsv] = useState<Hsv>(
+		() => hexToHsv(initialHex) ?? { hue: 0, saturation: 1, value: 1 },
+	);
 	const { onPickCustom, onEyedropper } = useColorTarget((color) =>
 		onChange({ [colorKey]: color }),
 	);
+
+	const pureHex = hsvToHex({ hue: hsv.hue, saturation: 1, value: 1 });
+	const currentHex = hsvToHex(hsv);
+	const tone = hsvToTone(hsv);
+
+	const changeHue = (fraction: number) => {
+		const hue = Math.min(360, Math.max(0, fraction * 360));
+		const next = { ...hsv, hue };
+		setHsv(next);
+		const hex = hsvToHex(next);
+		onChange({ [colorKey]: hex });
+		onPickCustom(hex);
+	};
+
+	const changeTone = (fraction: number) => {
+		const next = toneToHsv(hsv.hue, fraction);
+		setHsv(next);
+		const hex = hsvToHex(next);
+		onChange({ [colorKey]: hex });
+		onPickCustom(hex);
+	};
+
 	return (
-		<ToolOptions
-			closeLabel="Close color picker"
-			bottomInset={bottomInset}
-			onClose={onClose}
-		>
-			<ToolOption label={COLOR_NAMES[colorKey]}>
-				<ColorPicker
-					// An outline or box that's off starts from the text's fill.
-					value={layer[colorKey] ?? layer.color}
-					onChangeEnd={onPickCustom}
-					onEyedropper={() => {
-						onClose();
-						onEyedropper();
+		<View style={styles.inlinePickerContainer}>
+			<View style={styles.inlinePickerHeader}>
+				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel="Back to text style tabs"
+					onPress={onClose}
+					style={(state) => {
+						const { pressed, hovered } = interaction(state);
+						return [
+							styles.inlineHeaderBack,
+							webTransition,
+							hovered && styles.tabHovered,
+							pressed && styles.tabPressed,
+						];
+					}}
+				>
+					<Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
+					<Text style={styles.inlineHeaderBackText}>Back</Text>
+				</Pressable>
+				<Text style={styles.inlineHeaderTitle}>{COLOR_NAMES[colorKey]}</Text>
+				<View style={styles.inlineHeaderRight}>
+					{onEyedropper && (
+						<IconButton
+							icon="eyedrop-outline"
+							label="Pick a color from canvas"
+							onPress={() => {
+								onClose();
+								onEyedropper();
+							}}
+						/>
+					)}
+					<View style={styles.inlineHexBadge}>
+						<Text style={styles.inlineHexText}>{currentHex}</Text>
+					</View>
+				</View>
+			</View>
+			<View style={styles.inlineSliders}>
+				<ColorSliderBar
+					value={hsv.hue / 360}
+					thumbColor={pureHex}
+					background={styles.hues}
+					onMove={changeHue}
+					accessibilityLabel="Hue"
+					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
+				/>
+				<ColorSliderBar
+					value={tone}
+					thumbColor={currentHex}
+					background={toneGradient(pureHex)}
+					onMove={changeTone}
+					accessibilityLabel="Tone"
+					accessibilityValue={{
+						min: 0,
+						max: 100,
+						now: Math.round(tone * 100),
 					}}
 				/>
-			</ToolOption>
-		</ToolOptions>
+			</View>
+		</View>
 	);
 }
 
 type TextStylePanelProps = {
 	layer: TextLayer;
 	onChange: (patch: TextLayerEdit) => void;
-	// The custom swatch was tapped: open a picker for one of the colors.
+	pickerKey: TextColorKey | null;
 	onOpenPicker: (key: TextColorKey) => void;
+	onClosePicker: () => void;
 };
 
 /**
  * Styling for the selected text layer, or the text being typed: its font,
- * colors, and alignment. The text itself is edited on the canvas (tap the
- * selected layer, or Edit in the selection bar) and resized there (pinch or
- * the corner handles), and the actions every layer has float by it (see
- * `SelectionBar`). There's no Done button: tapping anywhere on the canvas
- * off the text deselects it, or finishes typing.
+ * colors, and alignment. The text itself is edited on the canvas and resized
+ * there. Tapping a custom color swatch swaps this panel in place to inline
+ * hue and tone sliders so the virtual keyboard stays open.
  */
 function TextStylePanel({
 	layer,
 	onChange,
+	pickerKey,
 	onOpenPicker,
+	onClosePicker,
 }: TextStylePanelProps) {
 	const { customColor } = useEditorContext();
 	const [tab, setTab] = useState<Tab>("font");
 
+	if (pickerKey) {
+		return (
+			<InlineTextColorPicker
+				layer={layer}
+				colorKey={pickerKey}
+				onChange={onChange}
+				onClose={onClosePicker}
+			/>
+		);
+	}
+
 	return (
 		<View style={styles.container}>
-			<View style={styles.tabs} accessibilityRole="tablist">
-				{TABS.map(({ tab: value, label }) => (
-					<Tab
-						key={value}
-						label={label}
-						active={tab === value}
-						onPress={() => setTab(value)}
+			<View style={styles.tabsHeader}>
+				<View style={styles.tabs} accessibilityRole="tablist">
+					{TABS.map(({ tab: value, label }) => (
+						<Tab
+							key={value}
+							label={label}
+							active={tab === value}
+							onPress={() => setTab(value)}
+						/>
+					))}
+				</View>
+				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel={`Align: ${layer.align}. Tap to cycle.`}
+					hitSlop={6}
+					onPress={() => onChange({ align: NEXT_ALIGN[layer.align] })}
+					style={(state) => {
+						const { pressed, hovered } = interaction(state);
+						return [
+							styles.alignCycleButton,
+							webTransition,
+							hovered && styles.tabHovered,
+							pressed && styles.tabPressed,
+						];
+					}}
+				>
+					<MaterialCommunityIcons
+						name={ALIGN_ICONS[layer.align]}
+						size={20}
+						color={colors.textPrimary}
 					/>
-				))}
+				</Pressable>
 			</View>
 
 			<View style={styles.content}>
@@ -339,7 +429,7 @@ function TabContent({
 	onChange: (patch: TextLayerEdit) => void;
 	onOpenPicker: (key: TextColorKey) => void;
 }) {
-	// The custom swatch opens the picker over the canvas: the dock has no room.
+	// The custom swatch opens the picker inline: swaps the 100pt dock.
 	const custom = (key: TextColorKey) =>
 		customSwatch(
 			layer[key],
@@ -348,13 +438,6 @@ function TabContent({
 			() => onOpenPicker(key),
 		);
 	switch (tab) {
-		case "align":
-			return (
-				<AlignPicker
-					value={layer.align}
-					onPick={(align) => onChange({ align })}
-				/>
-			);
 		case "font":
 			return (
 				<FontPicker value={layer.font} onPick={(font) => onChange({ font })} />
@@ -404,40 +487,6 @@ function SwatchRow({ children }: { children: ReactNode }) {
 		<FadeRow style={styles.bleed} contentStyle={styles.swatches}>
 			{children}
 		</FadeRow>
-	);
-}
-
-/** Left, center, and right, each drawn as it lines up text. */
-function AlignPicker({
-	value,
-	onPick,
-}: {
-	value: TextAlign;
-	onPick: (align: TextAlign) => void;
-}) {
-	return (
-		<View style={styles.aligns}>
-			{ALIGNS.map(({ align, label, icon }) => {
-				const selected = align === value;
-				return (
-					<Chip
-						key={align}
-						selected={selected}
-						onPress={() => onPick(align)}
-						accessibilityLabel={label}
-						hitSlop={4}
-						style={styles.target}
-						frameStyle={[styles.fontChip, styles.alignChip]}
-					>
-						<MaterialCommunityIcons
-							name={icon}
-							size={20}
-							color={selected ? colors.onHighlight : colors.textPrimary}
-						/>
-					</Chip>
-				);
-			})}
-		</View>
 	);
 }
 
@@ -521,8 +570,22 @@ const styles = StyleSheet.create({
 		paddingHorizontal: PADDING,
 		gap: 2,
 	},
-	tabs: {
+	tabsHeader: {
 		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
+	tabs: {
+		flex: 1,
+		flexDirection: "row",
+	},
+	alignCycleButton: {
+		width: 36,
+		height: 36,
+		borderRadius: 18,
+		alignItems: "center",
+		justifyContent: "center",
+		marginLeft: 4,
 	},
 	// Rounded so a browser's focus ring hugs what's drawn inside.
 	target: {
@@ -537,6 +600,9 @@ const styles = StyleSheet.create({
 	},
 	tabHovered: {
 		backgroundColor: colors.hoverOverlay,
+	},
+	tabPressed: {
+		backgroundColor: colors.pressedOverlay,
 	},
 	// As wide as its label, so the underline is too.
 	segment: {
@@ -565,16 +631,6 @@ const styles = StyleSheet.create({
 	swatches: {
 		paddingHorizontal: PADDING,
 	},
-	aligns: {
-		flexDirection: "row",
-		flexShrink: 0,
-		justifyContent: "center",
-		gap: 12,
-	},
-	alignChip: {
-		width: 56,
-		alignItems: "center",
-	},
 	fontChip: {
 		height: 34,
 	},
@@ -585,4 +641,52 @@ const styles = StyleSheet.create({
 	fontLabelSelected: {
 		color: colors.onHighlight,
 	},
+	inlinePickerContainer: {
+		flex: 1,
+		justifyContent: "center",
+		paddingHorizontal: PADDING,
+		gap: 6,
+	},
+	inlinePickerHeader: {
+		height: 30,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
+	inlineHeaderBack: {
+		flexDirection: "row",
+		alignItems: "center",
+		height: 30,
+		paddingRight: 6,
+		borderRadius: radii.small,
+		gap: 2,
+	},
+	inlineHeaderBackText: {
+		...typography.labelStrong,
+		color: colors.textPrimary,
+	},
+	inlineHeaderTitle: {
+		...typography.labelStrong,
+		color: colors.textSecondary,
+	},
+	inlineHeaderRight: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+	},
+	inlineHexBadge: {
+		paddingHorizontal: 6,
+		paddingVertical: 2,
+		borderRadius: radii.small,
+		backgroundColor: colors.surfaceHover,
+	},
+	inlineHexText: {
+		...typography.caption,
+		color: colors.textPrimary,
+		fontVariant: ["tabular-nums"],
+	},
+	inlineSliders: {
+		gap: 6,
+	},
+	hues: gradientBackground(HUE_GRADIENT),
 });

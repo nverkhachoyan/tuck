@@ -1,7 +1,7 @@
 import { defineTool } from "../../defineTool";
 import { textIndexAt } from "../../layers/text/textLayerLayout";
 import { TextDraft, TextInput } from "./TextEditing";
-import { TextColorResults, TextDock, TextToolBar } from "./TextStylePanel";
+import { TextDock, TextToolBar } from "./TextStylePanel";
 import { textSpec } from "./textSpec";
 import { type TextController, useTextTool } from "./useTextTool";
 
@@ -11,7 +11,6 @@ export const textTool = defineTool<TextController>({
 	views: {
 		Dock: TextDock,
 		Bar: TextToolBar,
-		Results: TextColorResults,
 		Input: TextInput,
 		Draft: TextDraft,
 	},
