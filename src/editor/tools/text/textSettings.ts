@@ -12,6 +12,13 @@ export type TextColorKey = "color" | "outlineColor" | "backgroundColor";
 
 const ALIGNS: TextAlign[] = ["left", "center", "right"];
 
+/** Cycling order for the 1-tap text align toggle: left -> center -> right -> left. */
+export const NEXT_ALIGN: Record<TextAlign, TextAlign> = {
+	left: "center",
+	center: "right",
+	right: "left",
+};
+
 /**
  * The style new text starts in, from what an earlier session saved, which
  * may be from an older build, or damaged: each part that isn't valid is the
