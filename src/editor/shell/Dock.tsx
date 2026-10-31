@@ -3,6 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Button } from "@/ui/Button";
 import { compactControls } from "@/ui/density";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
@@ -126,10 +127,11 @@ export type ModeActionProps = {
 	onReset?: () => void;
 	onCancel?: () => void;
 	cancelShortcut?: string;
-	onDone: () => void;
+	onDone?: () => void;
 	// What Done does, for its tooltip and screen readers, when it's more.
 	doneLabel?: string;
 	doneShortcut?: string;
+	doneVariant?: "primary" | "secondary";
 };
 
 /**
@@ -154,6 +156,7 @@ function modeActionButtons({
 	onDone,
 	doneLabel = "Done",
 	doneShortcut,
+	doneVariant,
 }: ModeActionProps) {
 	const isDoneWord = !doneLabel || doneLabel === "Done";
 	return {
@@ -165,16 +168,32 @@ function modeActionButtons({
 				onPress={onCancel}
 			/>
 		) : null,
-		done: isDoneWord ? (
-			<DockButton
-				icon="checkmark-outline"
-				label={doneLabel}
-				shortcut={doneShortcut}
-				onPress={onDone}
-			/>
-		) : (
-			<TextButton label={doneLabel} shortcut={doneShortcut} onPress={onDone} />
-		),
+		done: onDone ? (
+			doneVariant === "primary" ? (
+				<Button
+					size="small"
+					variant="primary"
+					label={doneLabel}
+					icon="checkmark-outline"
+					iconPosition="end"
+					shortcut={doneShortcut}
+					onPress={onDone}
+				/>
+			) : isDoneWord ? (
+				<DockButton
+					icon="checkmark-outline"
+					label={doneLabel}
+					shortcut={doneShortcut}
+					onPress={onDone}
+				/>
+			) : (
+				<TextButton
+					label={doneLabel}
+					shortcut={doneShortcut}
+					onPress={onDone}
+				/>
+			)
+		) : null,
 	};
 }
 

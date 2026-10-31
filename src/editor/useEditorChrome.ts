@@ -35,14 +35,21 @@ export function useEditorChrome({
 }) {
 	const { selectLayer } = useStore((state) => state.actions);
 	const open = tool && controllers[tool];
+	const toolDoneLabel = open
+		? open.definition.doneLabel
+			? open.definition.doneLabel(open.controller)
+			: undefined
+		: undefined;
+	const toolDoneVariant = open
+		? open.definition.doneVariant?.(open.controller)
+		: undefined;
 	const chrome = modeChrome({
 		specs,
 		tool,
 		stylingTool,
 		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
-		toolDoneLabel: open
-			? open.definition.doneLabel?.(open.controller)
-			: undefined,
+		toolDoneLabel,
+		toolDoneVariant,
 		wide,
 	});
 	const onDone = { tool: done, deselect: () => selectLayer(null) };
@@ -53,9 +60,10 @@ export function useEditorChrome({
 			onReset,
 			onCancel: chrome.actions.cancel ? cancel : undefined,
 			cancelShortcut: "Escape",
-			onDone: onDone[chrome.actions.done],
+			onDone: chrome.actions.done ? onDone[chrome.actions.done] : undefined,
 			doneLabel: isDeselect ? "Deselect" : chrome.actions.doneLabel,
-			doneShortcut: isDeselect ? undefined : "Enter",
+			doneShortcut: isDeselect || !chrome.actions.done ? undefined : "Enter",
+			doneVariant: chrome.actions.doneVariant,
 		};
 	return { panel: chrome.panel, inBar: chrome.inBar, modeActions };
 }

@@ -76,6 +76,25 @@ describe("modeChrome", () => {
 		);
 	});
 
+	test("a tool with null doneLabel has no Done action", () => {
+		const chrome = modeChrome({ ...nothing, tool: "cut", toolDoneLabel: null });
+		assert.equal(chrome.actions?.done, undefined);
+		assert.equal(chrome.actions?.doneLabel, undefined);
+		assert.equal(chrome.actions?.cancel, "tool");
+	});
+
+	test("a tool's Done takes doneVariant when given", () => {
+		assert.equal(
+			modeChrome({
+				...nothing,
+				tool: "cut",
+				toolDoneLabel: "Keep only",
+				toolDoneVariant: "primary",
+			}).actions?.doneVariant,
+			"primary",
+		);
+	});
+
 	test("only an open tool's Done takes its label", () => {
 		assert.equal(
 			modeChrome({ ...nothing, stylingTool: "text", toolDoneLabel: "Redact" })

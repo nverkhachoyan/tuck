@@ -71,7 +71,11 @@ export function useCutTool({
 	addImage,
 	close,
 	notify,
-}: Pick<ToolEnv, "image" | "documentSize" | "addImage" | "close" | "notify">) {
+	startTool,
+}: Pick<
+	ToolEnv,
+	"image" | "documentSize" | "addImage" | "close" | "notify" | "startTool"
+>) {
 	const layer = image ?? undefined;
 	const key = useStore((state) => state.key);
 	// The image as it was when Cut opened.
@@ -154,11 +158,6 @@ export function useCutTool({
 			setApplying(null);
 		}
 	};
-	// Its Undo would take back an earlier change if the session made none.
-	const notifyIfChanged = (message: string) => {
-		const { document, session } = useStore.getState();
-		if (document !== session?.document) notify(message);
-	};
 	const newLayer = (selection: ImageLayer) => {
 		const { mask, maskStrokes } = selection;
 		cancelSession();
@@ -166,10 +165,40 @@ export function useCutTool({
 		notify("Selection copied to a new layer");
 		close();
 	};
-	const keepOnly = () => {
-		notifyIfChanged(openedOnCut ? "Cut updated" : "Kept only the selection");
+	const restorePhoto = () => {
+		if (layer) setMask(layer.id, null);
 		commitSession();
 		close();
+		notify("Cutout restored to whole photo");
+	};
+	const keepOnly = () => {
+		const { document, session } = useStore.getState();
+		const changed = document !== session?.document;
+		commitSession();
+		close();
+		if (changed && layer) {
+			notify(openedOnCut ? "Cut updated" : "Kept only the selection", {
+				label: "Refine",
+				onPress: () => startTool("cut", layer),
+			});
+		}
+	};
+	const canCommit = selected !== undefined || (openedOnCut && !selected);
+	const doneLabel = selected
+		? "Keep only"
+		: openedOnCut && !selected
+			? "Restore photo"
+			: null;
+	const doneVariant: "primary" = "primary";
+	const commit = () => {
+		if (selected) {
+			keepOnly();
+		} else if (openedOnCut && !selected) {
+			restorePhoto();
+		} else {
+			cancelSession();
+			close();
+		}
 	};
 	const remove = (from: ImageLayer | null, selection: ImageLayer) =>
 		runAction("remove", "Couldn't remove the selection", async () => {
@@ -253,7 +282,11 @@ export function useCutTool({
 			layerId.current = image.id;
 			void cutOut.clear(image, false);
 		},
-		done: cancelSession,
+		canCommit,
+		doneLabel,
+		doneVariant,
+		commit,
+		done: commit,
 		finishStroke: (stroke: ToolStroke) => {
 			switch (stroke.type) {
 				case "cutBrush": {

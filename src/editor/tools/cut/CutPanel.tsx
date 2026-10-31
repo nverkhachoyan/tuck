@@ -2,7 +2,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
 import { StyleSheet, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
-import { colors, space } from "@/ui/theme";
+import { Surface } from "@/ui/Surface";
+import { colors, radii, space } from "@/ui/theme";
 import { useEditorContext } from "../../editorContext";
 import {
 	BarButton,
@@ -13,10 +14,8 @@ import {
 } from "../../shell/ContextBar";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
-	SIZE_DOTS,
 	SizeChip,
 	SizeChoices,
-	SizeDot,
 	ToolChoices,
 	ToolOption,
 	ToolOptions,
@@ -60,11 +59,6 @@ const BRUSH_EDGES = [
 // The Apply menu's actions, in the order the popover and the tray show them.
 const APPLY_ACTIONS = [
 	{ action: "newLayer", title: "New layer", icon: "layers-plus" },
-	{
-		action: "keepOnly",
-		title: "Keep only",
-		icon: "image-filter-center-focus-weak",
-	},
 	{ action: "remove", title: "Remove", icon: "selection-remove" },
 	{ action: "redact", title: "Redact", icon: "blur" },
 	{
@@ -79,26 +73,23 @@ const APPLY_ACTIONS = [
 }[];
 
 /**
- * Cut's tools, in place of the toolbar while cutting an image out. Each
- * spins while it works.
- * - Subjects adds every subject to the selection, and Tap the one under a
- *   finger. Both show only where this device can find subjects
- *   (`findAll`), and spin while they're finding one (`finding`).
- * - While Tap is in use, one button says whether taps add or subtract, and
- *   switches it. After a tap, Smaller and Larger step what it selected
- *   (`resize`).
- * - Add and Subtract paint the selection by hand, with their size in a tray
- *   over the canvas. Tapping the brush in use opens its size too.
- * - Invert selects what's unselected instead (`invert`), and once something
- *   is selected, Apply opens what can be done with it in the tray (`apply`).
+ * Cut's tools, in place of the toolbar while cutting an image out. Stable 6-button row:
+ * [Subjects] [Tap] [Add ▾] [Subtract ▾] [Invert] [Actions ▾].
  */
 export function CutPanel({ controller }: { controller: CutController }) {
 	const { trayOpen, toggleTray, closeTray } = useEditorContext();
-	const { settings, tool, finding, findAll, inverting, invert } = controller;
-	const { apply, change, resize, setTapMode, tray, showInTray } = controller;
-	const tapMode =
-		TAP_MODES.find(({ mode }) => mode === settings.tapMode) ?? TAP_MODES[0];
-	// Opens the tray on `content`, or closes it when that's what it shows.
+	const {
+		settings,
+		tool,
+		finding,
+		findAll,
+		inverting,
+		invert,
+		change,
+		tray,
+		showInTray,
+	} = controller;
+
 	const openTray = (content: CutTray) => {
 		if (trayOpen && tray === content) {
 			closeTray();
@@ -107,10 +98,15 @@ export function CutPanel({ controller }: { controller: CutController }) {
 		showInTray(content);
 		if (!trayOpen) toggleTray();
 	};
-	const pickTool = (choice: CutTool) => {
-		if (choice === tool && choice !== "tap") openTray("brush");
-		else change({ ...settings, tool: choice });
+
+	const pickBrush = (choice: "add" | "subtract") => {
+		if (tool === choice) {
+			openTray("brush");
+		} else {
+			change({ ...settings, tool: choice });
+		}
 	};
+
 	return (
 		<ToolRow>
 			{findAll && (
@@ -121,57 +117,78 @@ export function CutPanel({ controller }: { controller: CutController }) {
 					onPress={findAll}
 				/>
 			)}
-			{cutTools(findAll !== undefined).map(({ tool: choice, title, icon }) => (
-				<ToolButton
-					key={choice}
-					label={title}
-					icon={icon}
-					selected={tool === choice}
-					busy={choice === "tap" && finding === "one"}
-					onPress={() => pickTool(choice)}
-				/>
-			))}
-			{tool === "tap" && (
-				<ToolButton
-					label={tapMode.title}
-					icon={tapMode.icon}
-					onPress={() =>
-						setTapMode(tapMode.mode === "add" ? "subtract" : "add")
-					}
-				/>
-			)}
-			{resize && resizeButtons(resize, ToolButton)}
-			{isCutBrush(tool) && (
-				<ToolButton
-					label="Size"
-					icon="circle-medium"
-					glyph={
-						<SizeDot
-							size={SIZE_DOTS[cutSizeIndex(settings, tool)]}
-							color={tool === "add" ? colors.textPrimary : null}
-						/>
-					}
-					open={trayOpen && tray === "brush"}
-					onPress={() => openTray("brush")}
-				/>
-			)}
-			{invert && (
-				<ToolButton
-					label="Invert"
-					icon="select-inverse"
-					busy={inverting}
-					onPress={invert}
-				/>
-			)}
-			{apply.newLayer && (
-				<ToolButton
-					label="Apply"
-					icon="dots-horizontal"
-					open={trayOpen && tray === "apply"}
-					onPress={() => openTray("apply")}
-				/>
-			)}
+			<ToolButton
+				label="Tap"
+				icon="gesture-tap"
+				selected={tool === "tap"}
+				busy={finding === "one"}
+				onPress={() => change({ ...settings, tool: "tap" })}
+			/>
+			<ToolButton
+				label="Add"
+				icon="brush"
+				selected={tool === "add"}
+				open={trayOpen && tray === "brush" && tool === "add"}
+				onPress={() => pickBrush("add")}
+			/>
+			<ToolButton
+				label="Subtract"
+				icon="eraser"
+				selected={tool === "subtract"}
+				open={trayOpen && tray === "brush" && tool === "subtract"}
+				onPress={() => pickBrush("subtract")}
+			/>
+			<ToolButton
+				label="Invert"
+				icon="select-inverse"
+				busy={inverting}
+				disabled={!invert}
+				onPress={() => invert?.()}
+			/>
+			<ToolButton
+				label="Actions"
+				icon="dots-horizontal"
+				open={trayOpen && tray === "apply"}
+				onPress={() => openTray("apply")}
+			/>
 		</ToolRow>
+	);
+}
+
+/**
+ * Floating modifier pill shown above the dock when the Tap tool is active.
+ * Houses [+ Adds | − Subtracts] and [Smaller | Larger] stepping buttons.
+ */
+export function TapModifierPill({ controller }: { controller: CutController }) {
+	const { wide, bottomInset } = useEditorContext();
+	const { settings, tool, setTapMode, resize } = controller;
+	if (wide || tool !== "tap") return null;
+
+	return (
+		<View
+			style={[styles.pillArea, { bottom: bottomInset + 8 }]}
+			pointerEvents="box-none"
+		>
+			<Surface style={styles.pill} contentStyle={styles.pillContent}>
+				<OptionSegments
+					label="Tap mode"
+					options={TAP_MODES}
+					selected={TAP_MODES.findIndex(
+						({ mode }) => mode === settings.tapMode,
+					)}
+					onSelect={(index) => {
+						const next = TAP_MODES[index]?.mode;
+						if (next && next !== settings.tapMode) setTapMode(next);
+					}}
+				/>
+				{resize && (
+					<>
+						<View style={styles.divider} />
+						{resizeButtons(resize, BarButton)}
+					</>
+				)}
+			</Surface>
+		</View>
 	);
 }
 
@@ -271,7 +288,7 @@ export function CutBar({ controller }: { controller: CutController }) {
 						/>
 					)}
 					{apply.newLayer && (
-						<BarChip label="Apply" icon="dots-horizontal" text="Apply">
+						<BarChip label="Actions" icon="dots-horizontal" text="Actions">
 							<View style={styles.menu}>
 								{applyButtons(controller, BarButton)}
 							</View>
@@ -348,7 +365,7 @@ export function CutOptions({ controller }: { controller: CutController }) {
 	if (tray === "apply") {
 		return (
 			<ToolOptions
-				closeLabel="Close the Apply menu"
+				closeLabel="Close Actions"
 				bottomInset={bottomInset}
 				onClose={closeTray}
 			>
@@ -395,6 +412,30 @@ export function CutOptions({ controller }: { controller: CutController }) {
 }
 
 const styles = StyleSheet.create({
+	pillArea: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		alignItems: "center",
+		pointerEvents: "box-none",
+		zIndex: 5,
+	},
+	pill: {
+		borderRadius: radii.large,
+	},
+	pillContent: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingHorizontal: space.xs,
+		paddingVertical: 4,
+		gap: 4,
+	},
+	divider: {
+		width: 1,
+		height: 20,
+		backgroundColor: colors.borderStrong,
+		marginHorizontal: 4,
+	},
 	menu: {
 		gap: space.xs,
 		padding: space.xs,

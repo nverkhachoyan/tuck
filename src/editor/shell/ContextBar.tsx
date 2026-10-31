@@ -21,6 +21,7 @@ import {
 	View,
 	type ViewInstance,
 } from "react-native";
+import { Button } from "@/ui/Button";
 import { compactControls } from "@/ui/density";
 import { FadeGroup, FadeRow, MeasuredItem, Unmeasured } from "@/ui/FadeRow";
 import { Highlight } from "@/ui/Highlight";
@@ -48,6 +49,7 @@ export function ContextBar({
 	onDone,
 	doneLabel = "Done",
 	doneShortcut = "Enter",
+	doneVariant,
 	keepFocus = false,
 	children,
 }: {
@@ -55,9 +57,10 @@ export function ContextBar({
 	onReset?: () => void;
 	onCancel?: () => void;
 	cancelShortcut?: string;
-	onDone: () => void;
+	onDone?: () => void;
 	doneLabel?: string;
 	doneShortcut?: string;
+	doneVariant?: "primary" | "secondary";
 	// While text is being typed, a press in the bar must not take the caret
 	// from the hidden input. Canceling the press's default leaves it there.
 	keepFocus?: boolean;
@@ -97,20 +100,31 @@ export function ContextBar({
 						onPress={onCancel}
 					/>
 				)}
-				{isDoneWord ? (
-					<BarActionButton
-						icon="checkmark-outline"
-						label={doneLabel}
-						shortcut={doneShortcut}
-						onPress={onDone}
-					/>
-				) : (
-					<TextButton
-						label={doneLabel}
-						shortcut={doneShortcut}
-						onPress={onDone}
-					/>
-				)}
+				{onDone &&
+					(doneVariant === "primary" ? (
+						<Button
+							size="small"
+							variant="primary"
+							label={doneLabel}
+							icon="checkmark-outline"
+							iconPosition="end"
+							shortcut={doneShortcut}
+							onPress={onDone}
+						/>
+					) : isDoneWord ? (
+						<BarActionButton
+							icon="checkmark-outline"
+							label={doneLabel}
+							shortcut={doneShortcut}
+							onPress={onDone}
+						/>
+					) : (
+						<TextButton
+							label={doneLabel}
+							shortcut={doneShortcut}
+							onPress={onDone}
+						/>
+					))}
 			</View>
 			<View style={styles.divider} />
 		</View>
