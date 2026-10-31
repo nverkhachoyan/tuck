@@ -204,7 +204,7 @@ export function ToolButton({
 									(glyph ?? (
 										<MaterialCommunityIcons
 											name={icon}
-											size={small ? 20 : 24}
+											size={small ? 19 : 24}
 											color={ink}
 										/>
 									))
@@ -323,9 +323,9 @@ const styles = StyleSheet.create({
 	// Closer together where controls are sized for a mouse.
 	column: {
 		alignItems: "center",
-		gap: compactControls ? space.xs : ROW_GAP,
-		paddingTop: compactControls ? space.xs : space.sm,
-		paddingBottom: compactControls ? space.sm : space.md,
+		gap: compactControls ? 5 : ROW_GAP,
+		paddingTop: compactControls ? space.xxs : space.xs,
+		paddingBottom: compactControls ? space.xs : space.sm,
 	},
 	// Grows to fill the panel rather than flexing, which would hold it to the
 	// panel's width, so it never scrolls.
@@ -384,8 +384,9 @@ const styles = StyleSheet.create({
 		height: 44,
 	},
 	smallTile: {
-		width: 36,
-		height: 36,
+		width: 32,
+		height: 32,
+		borderRadius: 7,
 	},
 	tilePressed: {
 		backgroundColor: colors.pressedOverlay,
@@ -418,6 +419,7 @@ const styles = StyleSheet.create({
 	},
 	smallLabel: {
 		fontSize: 11,
+		lineHeight: 13,
 	},
 	labelSelected: {
 		color: colors.onHighlight,
