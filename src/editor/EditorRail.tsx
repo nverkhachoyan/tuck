@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { StyleSheet, View, type ViewInstance } from "react-native";
 import { Surface } from "@/ui/Surface";
+import { space } from "@/ui/theme";
 import { PANEL_GAP, PANEL_RADIUS } from "./shell/Dock";
 import { mapStarters, type ToolStarters, ToolsPanel } from "./shell/ToolsPanel";
 import type { ToolEntry } from "./shell/toolList";
@@ -69,5 +70,6 @@ const styles = StyleSheet.create({
 	},
 	railContent: {
 		flexShrink: 1,
+		paddingVertical: space.xs,
 	},
 });

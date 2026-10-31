@@ -324,7 +324,8 @@ const styles = StyleSheet.create({
 	column: {
 		alignItems: "center",
 		gap: compactControls ? space.xs : ROW_GAP,
-		paddingVertical: compactControls ? space.xs : ROW_GAP,
+		paddingTop: compactControls ? space.xs : space.sm,
+		paddingBottom: compactControls ? space.sm : space.md,
 	},
 	// Grows to fill the panel rather than flexing, which would hold it to the
 	// panel's width, so it never scrolls.
