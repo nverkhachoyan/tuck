@@ -42,6 +42,63 @@ describe("placePopover", () => {
 		);
 	});
 
+	test("hangs the card above the control, centered horizontally", () => {
+		assert.deepEqual(
+			placePopover(
+				{ x: 100, y: 300, width: 44, height: 44 },
+				card,
+				viewport,
+				"above",
+			),
+			{ left: 22, top: 172 },
+		);
+	});
+
+	test("flips below the control when above would pass the top", () => {
+		assert.deepEqual(
+			placePopover(
+				{ x: 100, y: 50, width: 44, height: 44 },
+				card,
+				viewport,
+				"above",
+			),
+			{ left: 22, top: 102 },
+		);
+	});
+
+	test("clamps to margin when fitting neither above nor below", () => {
+		assert.deepEqual(
+			placePopover(
+				{ x: 100, y: 30, width: 44, height: 44 },
+				card,
+				{ width: 800, height: 140 },
+				"above",
+			),
+			{ left: 22, top: 8 },
+		);
+	});
+
+	test("clamps horizontally to keep above card within the window", () => {
+		assert.deepEqual(
+			placePopover(
+				{ x: 10, y: 300, width: 44, height: 44 },
+				card,
+				viewport,
+				"above",
+			),
+			{ left: 8, top: 172 },
+		);
+		assert.deepEqual(
+			placePopover(
+				{ x: 750, y: 300, width: 44, height: 44 },
+				card,
+				viewport,
+				"above",
+			),
+			{ left: 592, top: 172 },
+		);
+	});
+
 	test("keeps the card inside the window when the control is at an edge", () => {
 		assert.deepEqual(
 			placePopover({ x: 760, y: 8, width: 44, height: 44 }, card, viewport),

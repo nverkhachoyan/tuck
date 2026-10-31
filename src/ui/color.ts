@@ -58,3 +58,25 @@ export function mixColors(from: string, to: string, amount: number): string {
 		[0, 1, 2].map((i) => start[i] + (end[i] - start[i]) * amount) as Rgb,
 	);
 }
+
+/**
+ * WCAG 2.1 relative luminance of a `#RRGGBB` color from 0.0 (black) to 1.0 (white).
+ * Returns 0 for invalid hex.
+ */
+export function relativeLuminance(hex: string): number {
+	const rgb = parseHex(hex);
+	if (!rgb) return 0;
+	const [r, g, b] = rgb.map((channel) => {
+		const s = channel / 255;
+		return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+	});
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Returns contrasting ink (`#000000` or `#FFFFFF`) for an arbitrary background color.
+ * Uses a 0.35 relative luminance threshold.
+ */
+export function contrastingColor(hex: string): "#000000" | "#FFFFFF" {
+	return relativeLuminance(hex) > 0.35 ? "#000000" : "#FFFFFF";
+}

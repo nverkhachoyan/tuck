@@ -2,17 +2,15 @@ import { parseHex, type Rgb, toHex } from "./color.ts";
 
 /**
  * A color as a color picker holds it: `hue` in degrees (0 to 360), and
- * `saturation` and `value` (brightness) from 0 to 1. Unlike hex, it keeps a
- * hue through white, grays, and black, where hex has none.
+ * `saturation` and `value` (brightness) from 0 to 1.
  */
 export type Hsv = { hue: number; saturation: number; value: number };
 
 const TYPED_HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /**
- * A hex color as someone might type it, as `#RRGGBB` in capitals, or null
- * if it isn't one. The `#` is optional, and three digits stand for six, as
- * in CSS (`#F80` is `#FF8800`).
+ * Parses user-typed hex text into `#RRGGBB` or null.
+ * Accepts optional leading `#` and 3-digit shorthand.
  */
 export function parseTypedHex(text: string): string | null {
 	const match = TYPED_HEX.exec(text.trim());
@@ -24,7 +22,7 @@ export function parseTypedHex(text: string): string | null {
 	return `#${digits.toUpperCase()}`;
 }
 
-/** `#RRGGBB`, in capitals like the swatches', for a color picker's color. */
+/** Converts HSV to `#RRGGBB` in uppercase. */
 export function hsvToHex({ hue, saturation, value }: Hsv): string {
 	const h = (((hue % 360) + 360) % 360) / 60;
 	const chroma = value * saturation;
@@ -46,9 +44,8 @@ export function hsvToHex({ hue, saturation, value }: Hsv): string {
 }
 
 /**
- * A `#RRGGBB` color in HSV, or null if it isn't one. A gray has no hue of
- * its own, so it takes `fallbackHue`: the picker's, so dragging to white or
- * black and back doesn't lose it.
+ * Converts `#RRGGBB` into HSV or null.
+ * Grays retain `fallbackHue` so white or black drags preserve chosen hue.
  */
 export function hexToHsv(hex: string, fallbackHue = 0): Hsv | null {
 	const rgb = parseHex(hex);
@@ -63,4 +60,31 @@ export function hexToHsv(hex: string, fallbackHue = 0): Hsv | null {
 		else hue = 60 * ((r - g) / chroma + 4);
 	}
 	return { hue, saturation: max === 0 ? 0 : chroma / max, value: max };
+}
+
+/**
+ * Maps a 1D tone along White -> Pure Hue -> Black (0 to 1) to an HSV color.
+ * - Tone <= 0.5: shades from White (0) to Pure Hue (0.5).
+ * - Tone > 0.5: shades from Pure Hue (0.5) to Black (1.0).
+ */
+export function toneToHsv(hue: number, tone: number): Hsv {
+	const t = Math.min(1, Math.max(0, tone));
+	if (t <= 0.5) {
+		return { hue, saturation: t * 2, value: 1 };
+	}
+	return { hue, saturation: 1, value: 1 - (t - 0.5) * 2 };
+}
+
+/**
+ * Projects an HSV color onto a 1D tone from White (0) through Pure Hue (0.5) to Black (1).
+ * Maps inverse Lightness (1 - L) so all grays and hues round-trip with toneToHsv.
+ */
+export function hsvToTone({ saturation, value }: Hsv): number {
+	const tone = 1 - value * (1 - saturation / 2);
+	return Math.min(1, Math.max(0, tone));
+}
+
+/** CSS linear-gradient string for the 1D tone bar across white, pure hue, and black. */
+export function toneGradientCss(pureHex: string): string {
+	return `linear-gradient(to right, #FFFFFF 0%, ${pureHex} 50%, #000000 100%)`;
 }

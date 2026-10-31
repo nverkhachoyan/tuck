@@ -1,6 +1,7 @@
 import {
 	type ReactNode,
 	type RefObject,
+	useContext,
 	useEffect,
 	useLayoutEffect,
 	useRef,
@@ -15,6 +16,14 @@ import {
 	View,
 	type ViewInstance,
 } from "react-native";
+import Animated, {
+	Easing,
+	useAnimatedStyle,
+	useReducedMotion,
+	useSharedValue,
+	withTiming,
+} from "react-native-reanimated";
+import { PopoverPlacementContext } from "./popoverContext";
 import {
 	type PopoverPlacement,
 	type PopoverRect,
@@ -23,52 +32,37 @@ import {
 import { colors, floatingShadow, radii, space } from "./theme";
 
 export type PopoverProps = {
-	/** The control the card hangs from. */
 	anchor: RefObject<ViewInstance | null>;
 	open: boolean;
 	onClose: () => void;
-	/** Names the dialog for screen readers. */
 	label: string;
-	/**
-	 * `below` hangs the card under the control. `beside` opens it to the
-	 * control's right, for a button in the rail.
-	 */
 	placement?: PopoverPlacement;
-	/**
-	 * Where focus goes when the card closes, instead of back to `anchor`.
-	 * Text editing uses it so the caret returns to the hidden input.
-	 */
 	restoreFocus?: () => void;
-	/**
-	 * Called once the card has gone and another screen can be shown, such as
-	 * the photo picker. On iOS that's when its modal finishes dismissing.
-	 */
 	onDismiss?: () => void;
 	children: ReactNode;
 };
 
+const DECELERATE = Easing.bezier(0.2, 0, 0, 1);
+const ENTRANCE_MS = 160;
+
 /**
  * A card anchored to a control and kept inside the window.
- * - `placement` is `below` by default: under the control, or above it near
- *   the window's bottom. `beside` puts it at the control's right, top-aligned,
- *   and moves it up to stay inside the window.
- * - An outside press closes it. It's a dialog for screen readers.
- * - On iOS its modal stays mounted while it closes, so `onDismiss` can wait
- *   for UIKit: a screen presented sooner goes down with the modal.
- * - On web, Escape closes it before the page's shortcuts see the key, and
- *   focus moves into it and back to `anchor` when it closes, or to
- *   `restoreFocus` when that's given (see `Popover.web.tsx`).
+ * - `placement` defaults to `PopoverPlacementContext` or `below`.
+ * - Outside press closes the card.
+ * - Animates in with a 160ms ease toward anchor once measured.
  */
 export function Popover({
 	anchor,
 	open,
 	onClose,
 	label,
-	placement = "below",
+	placement,
 	restoreFocus,
 	onDismiss,
 	children,
 }: PopoverProps) {
+	const contextPlacement = useContext(PopoverPlacementContext);
+	const resolvedPlacement = placement ?? contextPlacement;
 	useDismissElsewhere(open, onDismiss);
 	return (
 		<Modal
@@ -83,7 +77,7 @@ export function Popover({
 				anchor={anchor}
 				label={label}
 				onClose={onClose}
-				placement={placement}
+				placement={resolvedPlacement}
 				restoreFocus={restoreFocus}
 			>
 				{children}
@@ -125,18 +119,45 @@ function PopoverFrame({
 			setAnchorRect({ x, y, width, height });
 		});
 	}, [anchor]);
+
 	const restoreRef = useRef(restoreFocus);
 	restoreRef.current = restoreFocus;
-	// The modal took the keyboard. Hand it back when the card goes, the same
-	// moment the web card returns focus. The callback's identity changes with
-	// every render, so it's read from a ref and the effect runs once.
 	useEffect(() => {
 		return () => restoreRef.current?.();
 	}, []);
+
 	const position =
 		anchorRect && cardSize
 			? placePopover(anchorRect, cardSize, viewport, placement)
 			: undefined;
+
+	const reduceMotion = useReducedMotion();
+	const progress = useSharedValue(reduceMotion ? 1 : 0);
+	useEffect(() => {
+		if (position) {
+			progress.value = reduceMotion
+				? 1
+				: withTiming(1, { duration: ENTRANCE_MS, easing: DECELERATE });
+		}
+	}, [position, reduceMotion, progress]);
+
+	const animatedStyle = useAnimatedStyle(() => {
+		if (!position) return {};
+		const p = progress.value;
+		const isAbove = anchorRect
+			? position.top < anchorRect.y
+			: placement === "above";
+		const isBeside = placement === "beside";
+		return {
+			opacity: p,
+			transform: [
+				isBeside
+					? { translateX: (1 - p) * -4 }
+					: { translateY: (1 - p) * (isAbove ? 4 : -4) },
+			],
+		};
+	});
+
 	return (
 		<View style={styles.frame}>
 			{/* Behind the card, not around it: a press on the card would
@@ -146,7 +167,7 @@ function PopoverFrame({
 				onPress={onClose}
 				accessible={false}
 			/>
-			<View
+			<Animated.View
 				onLayout={(event) => {
 					const { width, height } = event.nativeEvent.layout;
 					setCardSize((size) =>
@@ -158,10 +179,14 @@ function PopoverFrame({
 				accessibilityViewIsModal
 				accessibilityLabel={label}
 				role="dialog"
-				style={[styles.card, position ?? styles.measuring]}
+				style={[
+					styles.card,
+					position ?? styles.measuring,
+					position ? animatedStyle : null,
+				]}
 			>
 				{children}
-			</View>
+			</Animated.View>
 		</View>
 	);
 }

@@ -3,9 +3,11 @@ import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
 	Platform,
+	type StyleProp,
 	StyleSheet,
 	TextInput,
 	View,
+	type ViewStyle,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { gradientBackground, HUE_GRADIENT } from "./gradient";
@@ -13,24 +15,19 @@ import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "./hsv";
 import { IconButton } from "./IconButton";
 import { colors, radii, typography } from "./theme";
 
-// As wide as a row of seven swatches, so a picker on its own in a card is
-// the size of one under them.
+// Standard widths and heights for color picker controls.
 const MIN_WIDTH = 290;
 const FIELD_HEIGHT = 120;
 const BAR_HEIGHT = 24;
 const THUMB = 24;
-// How far one step of a screen reader's adjust moves the hue, in degrees.
 const HUE_STEP = 10;
 
 /**
- * Any color, picked from a field of the hue's shades (saturation across,
- * brightness down) and a bar of hues under it. It fills its parent's width.
- *
- * `onChange` follows the finger, for a preview; `onChangeEnd` has the color
- * the finger left, for what's worth keeping, like a brush's color, so
- * dragging doesn't redraw the editor on every move. `value` can change
- * from outside too: the picker then shows it. With `onEyedropper`, a
- * button beside the hues sets out to pick a color from the canvas instead.
+ * 2D saturation/brightness field and 1D hue slider for picking colors.
+ * - `value`: current hex color `#RRGGBB`.
+ * - `onChange`: live color update during drag.
+ * - `onChangeEnd`: committed color when touch releases.
+ * - `onEyedropper`: optional canvas color picker callback.
  */
 export function ColorPicker({
 	value,
@@ -43,19 +40,13 @@ export function ColorPicker({
 	onChangeEnd: (color: string) => void;
 	onEyedropper?: () => void;
 }) {
-	// The picker keeps HSV, not just `value`: a gray has no hue, and dragging
-	// through white or black would otherwise lose it.
 	const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? RED);
-	// Only a change to `value` itself moves the picker: while a drag is under
-	// way, `value` is still the color before it, unless `onChange` feeds it.
 	const [lastValue, setLastValue] = useState(value);
 	if (value !== lastValue) {
 		setLastValue(value);
 		if (value !== hsvToHex(hsv)) setHsv(hexToHsv(value, hsv.hue) ?? hsv);
 	}
 
-	// A drag can move more than once between renders, so its moves build on
-	// the latest color rather than the rendered one.
 	const latest = useRef(hsv);
 	latest.current = hsv;
 	const change = (next: Hsv) => {
@@ -64,11 +55,10 @@ export function ColorPicker({
 		onChange?.(hsvToHex(next));
 	};
 	const end = () => onChangeEnd(hsvToHex(latest.current));
-	const field = useDrag(
+	const field = useNormalizedDrag(
 		(x, y) => change({ ...latest.current, saturation: x, value: 1 - y }),
 		end,
 	);
-	const bar = useDrag((x) => change({ ...latest.current, hue: x * 360 }), end);
 
 	const adjustHue = (event: AccessibilityActionEvent) => {
 		const step = event.nativeEvent.actionName === "increment" ? 1 : -1;
@@ -117,41 +107,86 @@ export function ColorPicker({
 						onPress={onEyedropper}
 					/>
 				)}
-				<GestureDetector gesture={bar.gesture}>
-					<View
-						onLayout={bar.onLayout}
-						accessible
-						accessibilityRole="adjustable"
-						accessibilityLabel="Hue"
-						accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
-						accessibilityActions={[
-							{ name: "increment" },
-							{ name: "decrement" },
-						]}
-						onAccessibilityAction={adjustHue}
-						style={[styles.bar, styles.hues]}
-					>
-						<View
-							style={[
-								styles.thumb,
-								styles.barThumb,
-								{ left: `${(hsv.hue / 360) * 100}%`, backgroundColor: pure },
-							]}
-						/>
-					</View>
-				</GestureDetector>
+				<ColorSliderBar
+					value={hsv.hue / 360}
+					thumbColor={pure}
+					background={styles.hues}
+					onMove={(x) => change({ ...latest.current, hue: x * 360 })}
+					onEnd={end}
+					accessibilityLabel="Hue"
+					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
+					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+					onAccessibilityAction={adjustHue}
+				/>
 				{Platform.OS === "web" && <HexField color={color} onPick={pickTyped} />}
 			</View>
 		</View>
 	);
 }
 
+export type ColorSliderBarProps = {
+	value: number;
+	thumbColor: string;
+	background: StyleProp<ViewStyle>;
+	onMove: (fraction: number) => void;
+	onEnd?: () => void;
+	accessibilityLabel: string;
+	accessibilityValue?: {
+		min?: number;
+		max?: number;
+		now?: number;
+		text?: string;
+	};
+	accessibilityActions?: { name: "increment" | "decrement" }[];
+	onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
+	style?: StyleProp<ViewStyle>;
+};
+
 /**
- * The color's hex code, to read or type over, on web: a desktop has the
- * keyboard for it, where on a phone the keyboard would cover the picker.
- * It picks what's typed on Enter or once it loses focus, and puts back the
- * picker's color if that isn't a color.
+ * 1D slider bar for hue or tone picking.
+ * Uses normalized drag gesture and places a circular thumb along the track.
  */
+export function ColorSliderBar({
+	value,
+	thumbColor,
+	background,
+	onMove,
+	onEnd,
+	accessibilityLabel,
+	accessibilityValue,
+	accessibilityActions,
+	onAccessibilityAction,
+	style,
+}: ColorSliderBarProps) {
+	const drag = useNormalizedDrag((x) => onMove(x), onEnd);
+	return (
+		<GestureDetector gesture={drag.gesture}>
+			<View
+				onLayout={drag.onLayout}
+				accessible
+				accessibilityRole="adjustable"
+				accessibilityLabel={accessibilityLabel}
+				accessibilityValue={accessibilityValue}
+				accessibilityActions={accessibilityActions}
+				onAccessibilityAction={onAccessibilityAction}
+				style={[styles.bar, background, style]}
+			>
+				<View
+					style={[
+						styles.thumb,
+						styles.barThumb,
+						{
+							left: `${Math.min(100, Math.max(0, value * 100))}%`,
+							backgroundColor: thumbColor,
+						},
+					]}
+				/>
+			</View>
+		</GestureDetector>
+	);
+}
+
+/** Editable hex code field for web viewports. */
 function HexField({
 	color,
 	onPick,
@@ -159,7 +194,6 @@ function HexField({
 	color: string;
 	onPick: (hex: string) => void;
 }) {
-	// What's typed, until it's picked; the picker's color otherwise.
 	const [typed, setTyped] = useState<string | null>(null);
 	const pick = () => {
 		if (typed === null) return;
@@ -187,11 +221,13 @@ function HexField({
 const RED: Hsv = { hue: 0, saturation: 1, value: 1 };
 
 /**
- * A drag across a view, reported as where the finger is, each from 0 to 1
- * across and down the view, from touch-down to lift. A tap counts too. It
- * runs on the JS thread: it only moves the picker's own state.
+ * Reports finger location across a view from (0, 0) to (1, 1).
+ * Runs on the JS thread and commits on pan finalize.
  */
-function useDrag(onMove: (x: number, y: number) => void, onEnd: () => void) {
+export function useNormalizedDrag(
+	onMove: (x: number, y: number) => void,
+	onEnd?: () => void,
+) {
 	const size = useRef({ width: 1, height: 1 });
 	const handlers = useRef({ onMove, onEnd });
 	handlers.current = { onMove, onEnd };
@@ -203,14 +239,13 @@ function useDrag(onMove: (x: number, y: number) => void, onEnd: () => void) {
 				Math.min(1, Math.max(0, y / height)),
 			);
 		};
-		// On iOS a pan only activates once the finger moves, but a tap still
-		// begins and finalizes it.
 		return Gesture.Pan()
 			.runOnJS(true)
 			.minDistance(0)
+			.maxPointers(1)
 			.onBegin((event) => move(event.x, event.y))
 			.onUpdate((event) => move(event.x, event.y))
-			.onFinalize(() => handlers.current.onEnd());
+			.onFinalize(() => handlers.current.onEnd?.());
 	}, []);
 	const onLayout = (event: LayoutChangeEvent) => {
 		const { width, height } = event.nativeEvent.layout;
@@ -235,8 +270,7 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFill,
 		borderRadius: radii.small,
 	},
-	// Explicitly white and black at no opacity: a gradient to `transparent`
-	// can pass through gray.
+	// Explicitly white and black at zero opacity to avoid gray midpoint.
 	whiteAcross: gradientBackground(
 		"linear-gradient(to right, #FFFFFF, rgba(255, 255, 255, 0))",
 	),
