@@ -115,7 +115,7 @@ export function Editor({
 			toolbar,
 			entries,
 			sheetAnchors,
-			toolsByKey: toolsByKey(entries),
+			toolsByKey: toolsByKey(entries, specs),
 			shortcutGroups: shortcutGroups(entries, specs),
 		};
 	});
@@ -336,14 +336,63 @@ export function Editor({
 	);
 
 	const hasImage = targetImage !== null;
+	const [cutVariant, setCutVariant] = useState<"cut" | "removeBg">("cut");
 	// The buttons that spin: Add photo while a photo is on its way, and the
 	// tools whose work is running.
 	const busy = addBusy ? [...busyTools, "photo"] : busyTools;
+
+	const toolStarters = useMemo(
+		() => ({
+			...startTool,
+			cut: () => {
+				if (cutVariant === "removeBg") {
+					startTool.removeBg();
+				} else {
+					startTool.cut();
+				}
+			},
+		}),
+		[startTool, cutVariant],
+	);
 
 	// Tools entries on the rail and dock, updated with each tool's active
 	// variant and flyout choices.
 	const toolEntries = useMemo(() => {
 		return toolbox.entries.map((entry): ToolEntry => {
+			if (entry.id === "cut") {
+				const isRemoveBg =
+					tool === "removeBg" || (tool !== "cut" && cutVariant === "removeBg");
+				return {
+					...entry,
+					label: isRemoveBg ? "Remove BG" : "Cut",
+					icon: isRemoveBg ? "auto-fix" : "scissors-cutting",
+					activeVariant: isRemoveBg ? "removeBg" : "cut",
+					variants: [
+						{
+							id: "cut",
+							label: "Cutout",
+							icon: "scissors-cutting",
+							shortcut: "B",
+						},
+						{
+							id: "removeBg",
+							label: "Remove BG",
+							icon: "auto-fix",
+							shortcut: "G",
+						},
+					],
+					onSelectVariant: (variantId) => {
+						setCutVariant(variantId as "cut" | "removeBg");
+						if (variantId === "removeBg") {
+							if (tool) finishTool();
+							startTool.removeBg();
+							return;
+						}
+						if (tool && tool !== "cut") finishTool();
+						startTool.cut();
+					},
+				};
+			}
 			const openTool = controllers[entry.id];
 			const toolDef = openTool?.definition;
 			if (toolDef?.variants) {
@@ -357,11 +406,6 @@ export function Editor({
 					activeVariant: active,
 					variants,
 					onSelectVariant: (variantId) => {
-						if (entry.id === "cut" && variantId === "removeBg") {
-							if (tool) finishTool();
-							startTool.removeBg();
-							return;
-						}
 						if (tool && tool !== entry.id) finishTool();
 						toolDef.selectVariant?.(openTool.controller, variantId);
 						startTool[entry.id]?.();
@@ -370,7 +414,7 @@ export function Editor({
 			}
 			return entry;
 		});
-	}, [toolbox.entries, controllers, tool, finishTool, startTool]);
+	}, [toolbox.entries, controllers, tool, cutVariant, finishTool, startTool]);
 
 	// What the dock offers for the selected layer: the tools that act on it,
 	// and the buttons tools add for it, each in the toolbar's order.
@@ -379,7 +423,7 @@ export function Editor({
 	const layerActions = layerTools && {
 		tools: toolEntries.filter((entry) => layerTools.includes(entry.id)),
 		busy,
-		startTool,
+		startTool: toolStarters,
 		actions: toolbox.toolbar.flatMap((id) => {
 			const listed = controllers[id];
 			const action = listed?.definition.layerAction?.(
@@ -537,7 +581,7 @@ export function Editor({
 								chosen={tool}
 								busy={busy}
 								hasImage={hasImage}
-								startTool={startTool}
+								startTool={toolStarters}
 								tool={tool}
 								finishTool={finishTool}
 								sheetAnchors={toolbox.sheetAnchors}
@@ -566,7 +610,7 @@ export function Editor({
 											tools={toolEntries}
 											busy={busy}
 											hasImage={hasImage}
-											startTool={startTool}
+											startTool={toolStarters}
 										/>
 									}
 								/>

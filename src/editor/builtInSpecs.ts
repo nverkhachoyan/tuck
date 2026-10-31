@@ -44,7 +44,6 @@ export const BUILT_IN_TOOLBAR: readonly (
 	"sticker",
 	"crop",
 	"adjust",
-	"removeBg",
 	"cut",
 	"photo",
 ];

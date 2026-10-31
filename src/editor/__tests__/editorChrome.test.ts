@@ -186,7 +186,6 @@ describe("toolbarEntries", () => {
 				["sticker", "Sticker", "A"],
 				["crop", "Crop", "C"],
 				["adjust", "Adjust", "E"],
-				["removeBg", "Remove BG", "G"],
 				["cut", "Cut", "B"],
 				["photo", "Add photo", "P"],
 			],
@@ -197,7 +196,7 @@ describe("toolbarEntries", () => {
 		const waiting = toolbarEntries(specs, BUILT_IN_TOOLBAR)
 			.filter((entry) => entry.needsImage)
 			.map((entry) => entry.id);
-		assert.deepEqual(waiting, ["find", "adjust", "removeBg", "cut"]);
+		assert.deepEqual(waiting, ["find", "adjust", "cut"]);
 	});
 
 	test("takes a made-up tool's button from its spec", () => {
@@ -254,13 +253,7 @@ describe("layerActionsFor", () => {
 
 	test("a photo can be redacted, found, adjusted, and cut, in the toolbar's order", () => {
 		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
-		assert.deepEqual(actions(photo), [
-			"redact",
-			"find",
-			"adjust",
-			"removeBg",
-			"cut",
-		]);
+		assert.deepEqual(actions(photo), ["redact", "find", "adjust", "cut"]);
 		assert.deepEqual(actions({ ...photo, hidden: true }), ["adjust"]);
 	});
 
