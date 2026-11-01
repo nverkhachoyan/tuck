@@ -4,8 +4,11 @@ import type { EditorDocument } from "./document/document";
 import { layerKindName } from "./layers/panel/LayerRow";
 import { useStore } from "./store";
 
-// Long enough to read it and reach Undo, short enough not to linger.
+// Long enough to read it and reach Undo, short enough not to linger. A
+// note with a second action (Refine) stays up longer: deciding on it takes
+// more than reaching for Undo.
 const SHOWN_MS = 5000;
+const ACTION_SHOWN_MS = 20000;
 
 type Notice = {
 	message: string;
@@ -18,7 +21,8 @@ type Notice = {
  * redaction), say so, with Undo, and the tool's own `action` if it gives one.
  * The note goes once anything else changes the document, since Undo would
  * then take back that change instead, after a few seconds, or once its
- * action is pressed.
+ * action is pressed. A note with a second action (Refine) stays up
+ * longer, since deciding on it takes more than reaching for Undo.
  */
 export function useEditNotice(document: EditorDocument) {
 	const { undo, deleteLayer, deleteLayerGroup, beginSession, commitSession } =
@@ -31,7 +35,10 @@ export function useEditNotice(document: EditorDocument) {
 
 	useEffect(() => {
 		if (!notice) return;
-		const timer = setTimeout(() => setNotice(null), SHOWN_MS);
+		const timer = setTimeout(
+			() => setNotice(null),
+			notice.action ? ACTION_SHOWN_MS : SHOWN_MS,
+		);
 		return () => clearTimeout(timer);
 	}, [notice]);
 
