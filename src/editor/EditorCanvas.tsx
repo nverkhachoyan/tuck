@@ -15,7 +15,10 @@ import {
 	View,
 	type ViewInstance,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+	GestureDetector,
+	useSimultaneousGestures,
+} from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { Canvas, Group } from "react-native-skia";
 import { Surface } from "@/ui/Surface";
@@ -511,19 +514,14 @@ export function EditorCanvas({
 		regions: regionGesture,
 		dial: dialGesture,
 	}[input.type];
-	// The view's gestures join at the top, one by one: a `Simultaneous` nested
-	// in another drops the outer one's relations, so the mode's gestures and
-	// the view's would race, the first to start cancelling the other. A tool
-	// that drags the selection shares one finger with it the same way, each
+	// The view's gestures join at the top, one by one: in RNGH v3,
+	// `useSimultaneousGestures` automatically inlines same-type child compositions.
+	// A tool that drags the selection shares one finger with it the same way, each
 	// standing aside where the other takes the drag (see `selectionDrag`).
-	const canvasGesture = useMemo(
-		() =>
-			Gesture.Simultaneous(
-				modeGesture,
-				...(dragsSelection ? [gesture] : []),
-				...viewGesture.toGestureArray(),
-			),
-		[modeGesture, dragsSelection, gesture, viewGesture],
+	const canvasGesture = useSimultaneousGestures(
+		modeGesture,
+		...(dragsSelection ? [gesture] : []),
+		viewGesture,
 	);
 
 	useImperativeHandle(

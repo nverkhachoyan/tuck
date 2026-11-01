@@ -74,8 +74,8 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ### Gestures and worklets
 
-- A `Pan` with `minDistance(0)` activates at touch-down on web but only on movement on iOS, so a tap never reaches `onEnd` there. Commit from `onFinalize`, and cancel on a second finger yourself (`numberOfPointers`, `onTouchesDown`) rather than with `maxPointers`.
-- `Gesture.Simultaneous` doesn't carry its relations into a nested `Simultaneous`: those gestures race silently. Add them at the top level as leaves (`Gesture.Simultaneous(composed, ...other.toGestureArray())`).
+- A pan with `minDistance: 0` (`usePanGesture`) activates at touch-down on web but only on movement on iOS, so a tap never reaches `onDeactivate` there. Commit from `onFinalize`, and cancel on a second finger yourself (`numberOfPointers`, `onTouchesDown`) rather than with `maxPointers`.
+- Gesture Handler 3 hooks API (`useSimultaneousGestures`) automatically inlines and flattens nested same-type compositions, preserving gesture relations without manual leaf flattening.
 - The worklets plugin turns a `"worklet"` function declaration into a constant, so it isn't hoisted: declare helpers above the worklets that use them, or the module throws as it loads.
 - A worklet can only call worklets: a new helper called from UI-thread geometry needs the `"worklet"` directive too.
 - `scheduleOnUI` on web runs a frame later, while a JS write to a shared value lands at once: call the worklet directly on web where that matters (`syncLiveTransform`). On native, a worklet that must read and write shared values atomically belongs in `scheduleOnUI`.

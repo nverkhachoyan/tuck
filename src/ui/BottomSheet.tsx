@@ -1,9 +1,9 @@
-import { type ReactNode, useMemo } from "react";
+import type { ReactNode } from "react";
 import { Platform, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import {
-	Gesture,
 	GestureDetector,
-	type LegacyPanGesture,
+	type PanGesture,
+	usePanGesture,
 } from "react-native-gesture-handler";
 import Animated, {
 	Easing,
@@ -54,29 +54,26 @@ export function BottomSheet({
 	const drag = useSharedValue(0);
 	const height = useSharedValue(0);
 
-	const swipe = useMemo(
-		() =>
-			Gesture.Pan()
-				.activeOffsetY([-8, 8])
-				.onUpdate((event) => {
-					drag.value = Math.max(0, event.translationY);
-				})
-				.onEnd((event, success) => {
-					const coast = event.translationY + event.velocityY * SWIPE_MOMENTUM;
-					if (success && coast > height.value / 3) {
-						drag.value = withTiming(
-							Math.max(drag.value, height.value),
-							SWIPE_SETTLE,
-							(finished) => {
-								if (finished) scheduleOnRN(onClose);
-							},
-						);
-					} else {
-						drag.value = withTiming(0, SWIPE_SETTLE);
-					}
-				}),
-		[drag, height, onClose],
-	);
+	const swipe = usePanGesture({
+		activeOffsetY: [-8, 8],
+		onUpdate: (event) => {
+			drag.value = Math.max(0, event.translationY);
+		},
+		onDeactivate: (event) => {
+			const coast = event.translationY + event.velocityY * SWIPE_MOMENTUM;
+			if (!event.canceled && coast > height.value / 3) {
+				drag.value = withTiming(
+					Math.max(drag.value, height.value),
+					SWIPE_SETTLE,
+					(finished) => {
+						if (finished) scheduleOnRN(onClose);
+					},
+				);
+			} else {
+				drag.value = withTiming(0, SWIPE_SETTLE);
+			}
+		},
+	});
 	const dragged = useAnimatedStyle(() => ({
 		transform: [{ translateY: drag.value }],
 	}));
@@ -123,7 +120,7 @@ export function PanelHeader({
 	title: string;
 	closeLabel: string;
 	onClose: () => void;
-	swipe?: LegacyPanGesture;
+	swipe?: PanGesture;
 }) {
 	const header = (
 		<View style={[styles.header, swipe && handleCursor]}>

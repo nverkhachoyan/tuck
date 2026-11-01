@@ -1,6 +1,10 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
-import { Gesture } from "react-native-gesture-handler";
+import {
+	useHoverGesture,
+	usePanGesture,
+	useSimultaneousGestures,
+} from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { createDoubleTap } from "./doubleTap.ts";
@@ -133,50 +137,50 @@ export function useCanvasTextGesture({
 	);
 	const cancelled = useSharedValue(false);
 
-	return useMemo(() => {
-		const cancel = () => {
-			"worklet";
+	const cancel = () => {
+		"worklet";
+		if (cancelled.value) return;
+		cancelled.value = true;
+		scheduleOnRN(onPress, "cancel", 0, 0);
+	};
+
+	// `minDistance(0)` begins at touch-down, and the second finger is
+	// watched for here rather than with `maxPointers`, which would end the
+	// pan without saying so.
+	const pan = usePanGesture({
+		minDistance: 0,
+		onTouchesDown: (event) => {
+			if (event.numberOfTouches === 1) cancelled.value = false;
+			else cancel();
+		},
+		onBegin: (event) => {
 			if (cancelled.value) return;
-			cancelled.value = true;
-			scheduleOnRN(onPress, "cancel", 0, 0);
-		};
+			scheduleOnRN(onPress, "begin", event.x, event.y);
+			if (event.numberOfPointers > 1) cancel();
+		},
+		onUpdate: (event) => {
+			if (event.numberOfPointers > 1) cancel();
+			if (cancelled.value) return;
+			scheduleOnRN(onPress, "move", event.x, event.y);
+		},
+		onFinalize: (event) => {
+			if (cancelled.value) return;
+			scheduleOnRN(onPress, "end", event.x, event.y);
+		},
+	});
 
-		// `minDistance(0)` begins at touch-down, and the second finger is
-		// watched for here rather than with `maxPointers`, which would end the
-		// pan without saying so.
-		const pan = Gesture.Pan()
-			.minDistance(0)
-			.onTouchesDown((event) => {
-				if (event.numberOfTouches === 1) cancelled.value = false;
-				else cancel();
-			})
-			.onBegin((event) => {
-				if (cancelled.value) return;
-				scheduleOnRN(onPress, "begin", event.x, event.y);
-				if (event.numberOfPointers > 1) cancel();
-			})
-			.onUpdate((event) => {
-				if (event.numberOfPointers > 1) cancel();
-				if (cancelled.value) return;
-				scheduleOnRN(onPress, "move", event.x, event.y);
-			})
-			.onFinalize((event) => {
-				if (cancelled.value) return;
-				scheduleOnRN(onPress, "end", event.x, event.y);
-			});
+	const hover = useHoverGesture({
+		enabled: hasFinePointer,
+		onBegin: (event) => {
+			scheduleOnRN(onHover, event.x, event.y);
+		},
+		onUpdate: (event) => {
+			scheduleOnRN(onHover, event.x, event.y);
+		},
+		onDeactivate: () => {
+			scheduleOnRN(onHoverEnd);
+		},
+	});
 
-		const hover = Gesture.Hover()
-			.enabled(hasFinePointer)
-			.onBegin((event) => {
-				scheduleOnRN(onHover, event.x, event.y);
-			})
-			.onUpdate((event) => {
-				scheduleOnRN(onHover, event.x, event.y);
-			})
-			.onEnd(() => {
-				scheduleOnRN(onHoverEnd);
-			});
-
-		return Gesture.Simultaneous(hover, pan);
-	}, [onPress, onHover, onHoverEnd, cancelled]);
+	return useSimultaneousGestures(hover, pan);
 }
