@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Platform,
 	Pressable,
@@ -185,6 +192,15 @@ function FlatLayerList({
 	const [scrollGesture, setScrollGesture] = useState<NativeGesture | null>(
 		null,
 	);
+	// The scroll view reports its gesture from an effect. On web that object
+	// is new every render, and storing each one re-renders forever. The
+	// handler tag stays put for the life of the scroll view.
+	const scrollTag = useRef<number | null>(null);
+	const takeScrollGesture = useCallback((gesture: NativeGesture) => {
+		if (scrollTag.current === gesture.handlerTag) return;
+		scrollTag.current = gesture.handlerTag;
+		setScrollGesture(gesture);
+	}, []);
 
 	useLayoutEffect(() => {
 		order.value = rows.map((layer) => layer.id);
@@ -192,7 +208,7 @@ function FlatLayerList({
 
 	return (
 		<ScrollView
-			onGestureUpdate_CAN_CAUSE_INFINITE_RERENDER={setScrollGesture}
+			onGestureUpdate_CAN_CAUSE_INFINITE_RERENDER={takeScrollGesture}
 			contentContainerStyle={[styles.column, styles.content]}
 		>
 			<View style={{ height: rows.length * ROW_HEIGHT }}>
