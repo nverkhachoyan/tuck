@@ -93,6 +93,7 @@ export const removeBgTool = defineTool<RemoveBgController>({
 	spec: removeBgSpec,
 	useController: useRemoveBg,
 	views: {},
+	available: () => isCutOutAvailable(),
 	run: (removeBg, image) => void removeBg.run(image),
 	busy: (removeBg) => removeBg.busy,
 });
