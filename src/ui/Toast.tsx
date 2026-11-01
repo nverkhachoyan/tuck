@@ -8,6 +8,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { Announcement } from "./Announcement";
+import { IconButton } from "./IconButton";
 import { TextButton } from "./TextButton";
 import { colors, floatingShadow, radii, space, typography } from "./theme";
 
@@ -16,7 +17,8 @@ const RISE = { duration: 160, easing: Easing.out(Easing.cubic) };
 /**
  * A short note that something happened, floating over the bottom of the
  * canvas, with an action to take it back, after `secondAction` when there's
- * one. `inset` keeps it clear of the dock
+ * one, and a dismiss ✕ on the right when `onDismiss` is given. `inset`
+ * keeps it clear of the dock
  * and any panel beside the canvas. It rises in as it mounts, and a screen
  * reader hears it too. Whoever shows it decides when it goes.
  */
@@ -25,12 +27,14 @@ export function Toast({
 	action,
 	onAction,
 	secondAction,
+	onDismiss,
 	inset,
 }: {
 	message: string;
 	action: string;
 	onAction: () => void;
 	secondAction?: { label: string; onPress: () => void };
+	onDismiss?: () => void;
 	inset: Pick<ViewStyle, "left" | "right" | "bottom">;
 }) {
 	const reduceMotion = useReducedMotion();
@@ -56,6 +60,9 @@ export function Toast({
 					/>
 				)}
 				<TextButton label={action} tone="strong" onPress={onAction} />
+				{onDismiss && (
+					<IconButton icon="close" label="Dismiss" onPress={onDismiss} />
+				)}
 			</Animated.View>
 		</View>
 	);

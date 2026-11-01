@@ -52,6 +52,8 @@ export function useEditNotice(document: EditorDocument) {
 
 	return {
 		message: notice?.message ?? null,
+		// Sends the note away without taking anything back.
+		dismiss: () => setNotice(null),
 		action: notice?.action && {
 			label: notice.action.label,
 			onPress: () => {

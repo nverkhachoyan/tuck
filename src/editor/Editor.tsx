@@ -640,6 +640,7 @@ export function Editor({
 							action="Undo"
 							onAction={editNotice.undo}
 							secondAction={editNotice.action}
+							onDismiss={editNotice.dismiss}
 							inset={{
 								left: layout.canvasInset.left,
 								right: layout.coveredRight ?? 0,
