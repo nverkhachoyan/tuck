@@ -348,14 +348,18 @@ export function zoomForViewport(
 
 /**
  * The part of the document shown in the frame's area, in document space:
- * all of it at the fit, less as the view zooms in.
+ * all of it at the fit, less as the view zooms in, or undefined before the
+ * view has been measured or when nothing of the document is visible.
  */
 export function visibleDocumentArea(
 	frame: ViewFrame,
 	viewport: DocumentViewport,
-): Rect {
+): Rect | undefined {
 	const { area, documentSize } = frame;
 	const { scale, offsetX, offsetY } = viewport;
+	if (scale <= 0 || area.width <= 0 || area.height <= 0) {
+		return undefined;
+	}
 	const left = Math.max(0, (area.x - offsetX) / scale);
 	const top = Math.max(0, (area.y - offsetY) / scale);
 	const right = Math.min(
@@ -366,5 +370,10 @@ export function visibleDocumentArea(
 		documentSize.height,
 		(area.y + area.height - offsetY) / scale,
 	);
-	return { x: left, y: top, width: right - left, height: bottom - top };
+	const width = right - left;
+	const height = bottom - top;
+	if (width <= 0 || height <= 0) {
+		return undefined;
+	}
+	return { x: left, y: top, width, height };
 }
