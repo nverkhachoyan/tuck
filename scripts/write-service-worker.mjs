@@ -20,12 +20,9 @@ const SITE_FILES = new Set([
 ]);
 
 const files = readdirSync("dist", { recursive: true, withFileTypes: true })
-	.filter((entry) => entry.isFile())
+	.filter((entry) => entry.isFile() && !entry.name.startsWith("."))
 	.map((entry) => join(entry.parentPath, entry.name).slice("dist/".length))
-	.filter(
-		(file) =>
-			!ON_USE.test(file) && !SITE_FILES.has(file) && !/(^|\/)\./.test(file),
-	)
+	.filter((file) => !ON_USE.test(file) && !SITE_FILES.has(file))
 	.sort();
 
 // A page is cached by the address it's served at (Vercel's `cleanUrls`), and
