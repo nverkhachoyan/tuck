@@ -4,10 +4,10 @@
   "license": "MIT",
   "packageManager": "pnpm@11.28.9",
   "scripts": {
-    "start": "expo start",
+    "start": "BROWSER=none expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
+    "web": "BROWSER=none expo start --web",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check .",
