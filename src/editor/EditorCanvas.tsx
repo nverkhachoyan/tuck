@@ -144,8 +144,8 @@ export type EditorCanvasHandle = {
 	// Zooms to show a document rectangle, with some room around it.
 	zoomToArea: (rect: Rect) => void;
 	// The part of the document in view, in document space, where a new layer
-	// goes.
-	visibleArea: () => Rect;
+	// goes, or undefined before the canvas has been measured.
+	visibleArea: () => Rect | undefined;
 };
 
 /**

@@ -324,9 +324,32 @@ describe("visibleDocumentArea", () => {
 		// At 0.4, the 432 × 800 area shows 1080 × 2000 of the document.
 		const zoomed = { scale: 0.4, offsetX: -400, offsetY: -200 };
 		const shown = visibleDocumentArea(frame, zoomed);
+		assert.ok(shown);
 		assert.equal(shown.x, 1000);
 		assert.equal(shown.width, 1080);
 		assert.equal(shown.y, 750);
 		assert.equal(shown.height, 2000);
+	});
+
+	test("is undefined before the view has been measured", () => {
+		const unmeasuredFrame: ViewFrame = {
+			...frame,
+			area: { x: 70, y: 0, width: -70, height: 0 },
+		};
+		assert.equal(
+			visibleDocumentArea(unmeasuredFrame, {
+				scale: 0,
+				offsetX: 0,
+				offsetY: 0,
+			}),
+			undefined,
+		);
+	});
+
+	test("is undefined when scale is zero", () => {
+		assert.equal(
+			visibleDocumentArea(frame, { scale: 0, offsetX: 0, offsetY: 0 }),
+			undefined,
+		);
 	});
 });
