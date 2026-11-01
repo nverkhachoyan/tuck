@@ -1,5 +1,5 @@
 import type { OwnTool, ToolEntry } from "./shell/toolList.ts";
-import type { ToolSpecs } from "./toolSpec.ts";
+import type { ToolId, ToolSpecs } from "./toolSpec.ts";
 
 // Nudge distances in screen pixels, so a nudge looks the same at any zoom.
 const NUDGE_PX = 1;
@@ -15,11 +15,13 @@ export const LAYERS_KEY = "L";
 export function toolsByKey(
 	tools: readonly Pick<ToolEntry, "id" | "key">[],
 	specs?: ToolSpecs,
+	isAvailable?: (id: ToolId) => boolean,
 ): ReadonlyMap<string, string> {
 	const map = new Map(tools.map((tool) => [tool.key, tool.id]));
 	if (specs) {
 		for (const tool of tools) {
 			for (const id of specs[tool.id]?.grouped ?? []) {
+				if (isAvailable && !isAvailable(id)) continue;
 				const spec = specs[id];
 				if (spec && !map.has(spec.key)) map.set(spec.key, id);
 			}
@@ -138,6 +140,7 @@ function modifiedShortcut(press: KeyPress): Shortcut | null {
 export function shortcutGroups(
 	tools: readonly ToolEntry[],
 	specs: ToolSpecs,
+	isAvailable?: (id: ToolId) => boolean,
 ): ShortcutGroup[] {
 	const keyTakers = tools.filter((tool) => specs[tool.id]?.takesKeys);
 	return [
@@ -146,11 +149,13 @@ export function shortcutGroups(
 			items: [
 				...tools.flatMap((tool) => [
 					{ keys: tool.key, action: tool.shortcut },
-					...(specs[tool.id]?.grouped ?? []).flatMap((id) =>
-						specs[id]
-							? [{ keys: specs[id].key, action: specs[id].shortcut }]
-							: [],
-					),
+					...(specs[tool.id]?.grouped ?? [])
+						.filter((id) => (isAvailable ? isAvailable(id) : true))
+						.flatMap((id) =>
+							specs[id]
+								? [{ keys: specs[id].key, action: specs[id].shortcut }]
+								: [],
+						),
 				]),
 				{ keys: LAYERS_KEY, action: "Show or hide layers" },
 			],

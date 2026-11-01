@@ -230,6 +230,32 @@ describe("toolbarEntries", () => {
 		]);
 	});
 
+	test("filters out tools that are unavailable", () => {
+		const ruler: ToolSpec = {
+			target: "photo",
+			tray: false,
+			sized: false,
+			label: "Ruler",
+			icon: "ruler",
+			key: "U",
+			shortcut: "Measure",
+			actsOn: () => true,
+		};
+		assert.deepEqual(
+			toolbarEntries({ ruler }, ["ruler", "photo"], (id) => id !== "ruler"),
+			[
+				{
+					id: "photo",
+					label: "Add photo",
+					icon: "image-plus-outline",
+					key: "P",
+					shortcut: "Add a photo",
+					needsImage: false,
+				},
+			],
+		);
+	});
+
 	test("supports optional variants on tool entries", () => {
 		const entries = toolbarEntries(specs, ["pen", "shape", "cut"]);
 		const withFlyout: ToolEntry = {
@@ -261,6 +287,19 @@ describe("layerActionsFor", () => {
 			"redact",
 		]);
 		assert.deepEqual(actions({ ...photo, hidden: true }), ["adjust"]);
+	});
+
+	test("filters out tools that are unavailable on this device", () => {
+		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
+		assert.deepEqual(
+			layerActionsFor(
+				photo,
+				specs,
+				BUILT_IN_TOOLBAR,
+				(id) => id !== "removeBg",
+			),
+			["cut", "adjust", "find", "redact"],
+		);
 	});
 
 	test("a sticker only offers adjust", () => {

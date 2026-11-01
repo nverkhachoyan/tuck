@@ -16,14 +16,17 @@ import type { ToolId, ToolSpecs } from "./toolSpec.ts";
 export function toolbarEntries(
 	specs: ToolSpecs,
 	toolbar: readonly string[],
+	isAvailable?: (id: ToolId) => boolean,
 ): ToolEntry[] {
-	return toolbar.map((id) => {
-		if (isOwnTool(id)) {
-			return { id, ...TOOLS[id], key: TOOL_KEYS[id], needsImage: false };
-		}
-		const { label, icon, key, shortcut, target } = specs[id];
-		return { id, label, icon, key, shortcut, needsImage: target !== "none" };
-	});
+	return toolbar
+		.filter((id) => (isAvailable ? isAvailable(id) : true))
+		.map((id) => {
+			if (isOwnTool(id)) {
+				return { id, ...TOOLS[id], key: TOOL_KEYS[id], needsImage: false };
+			}
+			const { label, icon, key, shortcut, target } = specs[id];
+			return { id, label, icon, key, shortcut, needsImage: target !== "none" };
+		});
 }
 
 /**
@@ -34,10 +37,12 @@ export function layerActionsFor(
 	layer: Layer,
 	specs: ToolSpecs,
 	toolbar: readonly string[],
+	isAvailable?: (id: ToolId) => boolean,
 ): ToolId[] {
 	return toolbar
 		.flatMap((id) => [id, ...(specs[id]?.grouped ?? [])])
-		.filter((id) => specs[id]?.actsOn(layer));
+		.filter((id) => specs[id]?.actsOn(layer))
+		.filter((id) => (isAvailable ? isAvailable(id) : true));
 }
 
 // What the dock shows: a tool's panel, the selected layer's actions, or,

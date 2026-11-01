@@ -130,9 +130,12 @@ export type NoticeAction = { label: string; onPress: () => void };
  * - `run`: what pressing it does on its target image, exactly when its spec
  *   is an `action`. Such a tool has no views and no canvas input.
  * - `busy`: whether its button spins, while what it runs is working.
+ * - `available`: whether this tool can run on this device; when false,
+ *   the toolbar, flyouts, shortcuts, and layer actions hide it.
  */
 export type ToolDefinition<C> = {
 	useController: (env: ToolEnv) => C;
+	available?: (controller?: C) => boolean;
 	prepare?: (controller: C) => void;
 	started?: (controller: C, image: ImageLayer) => void;
 	doneLabel?: (controller: C) => string | null | undefined;

@@ -76,4 +76,17 @@ describe("defineTool", () => {
 		grouped.selectVariant?.(controller, "b");
 		assert.equal(chosen, "b");
 	});
+
+	test("supports an optional available check", () => {
+		let ready = false;
+		const gated = defineTool({
+			spec,
+			useController,
+			views: { Dock: views.Dock },
+			available: () => ready,
+		});
+		assert.equal(gated.available?.(), false);
+		ready = true;
+		assert.equal(gated.available?.(), true);
+	});
 });

@@ -160,6 +160,19 @@ describe("shortcutFor", () => {
 	});
 });
 
+describe("toolsByKey", () => {
+	test("leaves out grouped tools that are unavailable", () => {
+		const withoutRemoveBg = toolsByKey(
+			entries,
+			BUILT_IN_SPECS,
+			(id) => id !== "removeBg",
+		);
+		assert.equal(withoutRemoveBg.has("G"), false);
+		assert.equal(withoutRemoveBg.get("C"), "crop");
+		assert.equal(withoutRemoveBg.get("B"), "cut");
+	});
+});
+
 describe("shortcutGroups", () => {
 	test("lists each tool's line in the toolbar's order, including grouped tools, then the layers", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
@@ -169,6 +182,18 @@ describe("shortcutGroups", () => {
 		);
 		assert.equal(toolGroup.items[2].action, "Remove the background");
 		assert.equal(toolGroup.items[8].action, "Find faces or text to redact");
+	});
+
+	test("leaves out grouped tools that are unavailable", () => {
+		const [toolGroup] = shortcutGroups(
+			entries,
+			BUILT_IN_SPECS,
+			(id) => id !== "removeBg",
+		);
+		assert.deepEqual(
+			toolGroup.items.map((item) => item.keys),
+			["C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+		);
 	});
 
 	test("gives a tool that takes the keys a group of its own", () => {

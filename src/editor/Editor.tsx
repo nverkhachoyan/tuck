@@ -101,7 +101,11 @@ export function Editor({
 		const specs = Object.fromEntries(
 			Object.entries(tools).map(([id, tool]) => [id, tool.spec]),
 		);
-		const entries = toolbarEntries(specs, toolbar);
+		const isAvailable = (id: string) => {
+			const tool = tools[id];
+			return tool ? (definitionOf(tool).available?.() ?? true) : true;
+		};
+		const entries = toolbarEntries(specs, toolbar, isAvailable);
 		// Where each tool with a sheet opens it on a wide window: beside its
 		// rail button.
 		const sheetAnchors = Object.fromEntries(
@@ -115,8 +119,8 @@ export function Editor({
 			toolbar,
 			entries,
 			sheetAnchors,
-			toolsByKey: toolsByKey(entries, specs),
-			shortcutGroups: shortcutGroups(entries, specs),
+			toolsByKey: toolsByKey(entries, specs, isAvailable),
+			shortcutGroups: shortcutGroups(entries, specs, isAvailable),
 		};
 	});
 	const { specs } = toolbox;
@@ -337,29 +341,47 @@ export function Editor({
 
 	const hasImage = targetImage !== null;
 	const [cutVariant, setCutVariant] = useState<"cut" | "removeBg">("cut");
+	const isToolAvailable = useCallback(
+		(id: string) => {
+			const openTool = controllers[id];
+			return openTool?.definition.available?.(openTool.controller) ?? true;
+		},
+		[controllers],
+	);
+
 	// The buttons that spin: Add photo while a photo is on its way, and the
 	// tools whose work is running (including Remove BG grouped under Cut).
 	const busy = useMemo(() => {
 		const ids = [...busyTools];
 		if (addBusy) ids.push("photo");
-		if (busyTools.includes("removeBg") && !ids.includes("cut")) {
+		const removeBgAvailable = isToolAvailable("removeBg");
+		if (
+			removeBgAvailable &&
+			busyTools.includes("removeBg") &&
+			!ids.includes("cut")
+		) {
 			ids.push("cut");
 		}
 		return ids;
-	}, [busyTools, addBusy]);
+	}, [busyTools, addBusy, isToolAvailable]);
 
 	const toolStarters = useMemo(
 		() => ({
 			...startTool,
 			cut: () => {
-				if (cutVariant === "removeBg" && startTool.removeBg) {
+				const removeBgAvailable = isToolAvailable("removeBg");
+				if (
+					removeBgAvailable &&
+					cutVariant === "removeBg" &&
+					startTool.removeBg
+				) {
 					startTool.removeBg();
 				} else {
 					startTool.cut();
 				}
 			},
 		}),
-		[startTool, cutVariant],
+		[startTool, cutVariant, isToolAvailable],
 	);
 
 	// Tools entries on the rail and dock, updated with each tool's active
@@ -367,6 +389,10 @@ export function Editor({
 	const toolEntries = useMemo(() => {
 		return toolbox.entries.map((entry): ToolEntry => {
 			if (entry.id === "cut" && specs.removeBg) {
+				const removeBgAvailable = isToolAvailable("removeBg");
+				if (!removeBgAvailable) {
+					return entry;
+				}
 				const isRemoveBg =
 					tool === "removeBg" || (tool !== "cut" && cutVariant === "removeBg");
 				return {
@@ -430,14 +456,16 @@ export function Editor({
 		cutVariant,
 		finishTool,
 		startTool,
+		isToolAvailable,
 	]);
 
 	// What the dock offers for the selected layer: the tools that act on it,
 	// and the buttons tools add for it, each in the toolbar's order.
 	const layerTools =
-		selectedLayer && layerActionsFor(selectedLayer, specs, toolbox.toolbar);
+		selectedLayer &&
+		layerActionsFor(selectedLayer, specs, toolbox.toolbar, isToolAvailable);
 	const layerActions = layerTools && {
-		tools: toolbarEntries(specs, layerTools),
+		tools: toolbarEntries(specs, layerTools, isToolAvailable),
 		busy: busyTools,
 		startTool,
 		actions: toolbox.toolbar.flatMap((id) => {
