@@ -15,7 +15,10 @@ import {
 	View,
 	type ViewInstance,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+	GestureDetector,
+	useSimultaneousGestures,
+} from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { Canvas, Group } from "react-native-skia";
 import { Surface } from "@/ui/Surface";
@@ -422,6 +425,12 @@ export function EditorCanvas({
 		[onResizeBox],
 	);
 
+	const isSelect = input.type === "select";
+	const isTool = input.type === "tool";
+	const isEditText = input.type === "editText";
+	const isRegions = input.type === "regions";
+	const isDial = input.type === "dial";
+
 	const gesture = useLayerTransformGesture({
 		live,
 		aspectLocked,
@@ -436,6 +445,7 @@ export function EditorCanvas({
 		onHoverEnd: handleHoverEnd,
 		standsAside: selectionDrag?.offSelection ?? dragAlone,
 		dragOnly: dragsSelection,
+		enabled: isSelect || dragsSelection,
 	});
 	// Two fingers transform the selected layer while it can, and a tool
 	// leaves them to the view.
@@ -456,9 +466,10 @@ export function EditorCanvas({
 	);
 
 	const textGesture = useEditTextGesture({
-		edit: input.type === "editText" ? input : null,
+		edit: isEditText ? input : null,
 		viewport,
 		onCursor: setCursor,
+		enabled: isEditText,
 	});
 
 	const { paintGesture, liveStroke } = useToolStroke({
@@ -474,6 +485,7 @@ export function EditorCanvas({
 		onToolStroke,
 		onSelectLayer,
 		onToolInteractionEnd,
+		enabled: isTool,
 	});
 	const cuttingOutId = cutImageId(tool);
 	const outlinedLayer = outlinedLayerFor(input, {
@@ -487,43 +499,36 @@ export function EditorCanvas({
 		},
 		[lookups, scale],
 	);
-	const idleGesture = useCanvasTap(handleIdleTap);
+	const idleGesture = useCanvasTap(handleIdleTap, isDial);
 	// With a dial, a sideways drag turns it, and a tap still puts the tool
 	// down.
 	const dialGesture = useDialDrag(
-		input.type === "dial" ? input.drag : null,
+		isDial ? input.drag : null,
 		idleGesture,
+		isDial,
 	);
 	const regionGesture = useRegionTap({
-		input: input.type === "regions" ? input : null,
+		input: isRegions ? input : null,
 		scale,
 		lookups,
 		targets,
 		document,
 		documentSize,
 		tapOnNothing,
+		enabled: isRegions,
 	});
 
-	const modeGesture = {
-		select: gesture,
-		tool: paintGesture,
-		editText: textGesture,
-		regions: regionGesture,
-		dial: dialGesture,
-	}[input.type];
-	// The view's gestures join at the top, one by one: a `Simultaneous` nested
-	// in another drops the outer one's relations, so the mode's gestures and
-	// the view's would race, the first to start cancelling the other. A tool
-	// that drags the selection shares one finger with it the same way, each
-	// standing aside where the other takes the drag (see `selectionDrag`).
-	const canvasGesture = useMemo(
-		() =>
-			Gesture.Simultaneous(
-				modeGesture,
-				...(dragsSelection ? [gesture] : []),
-				...viewGesture.toGestureArray(),
-			),
-		[modeGesture, dragsSelection, gesture, viewGesture],
+	// The canvas's gestures join at the top in a single, stable composition:
+	// in RNGH v3, `useSimultaneousGestures` automatically inlines same-type child compositions.
+	// Keeping the composed gesture structure constant avoids React useMemo dependency array size warnings
+	// in NativeDetector / HostGestureDetector on web, while inactive gestures remain disabled.
+	const canvasGesture = useSimultaneousGestures(
+		gesture,
+		paintGesture,
+		textGesture,
+		regionGesture,
+		dialGesture,
+		viewGesture,
 	);
 
 	useImperativeHandle(

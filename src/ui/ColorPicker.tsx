@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
@@ -9,7 +9,7 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import { gradientBackground, HUE_GRADIENT } from "./gradient";
 import { type Hsv, hexToHsv, hsvToHex, parseTypedHex } from "./hsv";
 import { IconButton } from "./IconButton";
@@ -231,23 +231,22 @@ export function useNormalizedDrag(
 	const size = useRef({ width: 1, height: 1 });
 	const handlers = useRef({ onMove, onEnd });
 	handlers.current = { onMove, onEnd };
-	const gesture = useMemo(() => {
-		const move = (x: number, y: number) => {
-			const { width, height } = size.current;
-			handlers.current.onMove(
-				Math.min(1, Math.max(0, x / width)),
-				Math.min(1, Math.max(0, y / height)),
-			);
-		};
-		// On iOS a pan only activates once the finger moves, but a tap still
-		// begins and finalizes it.
-		return Gesture.Pan()
-			.runOnJS(true)
-			.minDistance(0)
-			.onBegin((event) => move(event.x, event.y))
-			.onUpdate((event) => move(event.x, event.y))
-			.onFinalize(() => handlers.current.onEnd?.());
-	}, []);
+	const move = (x: number, y: number) => {
+		const { width, height } = size.current;
+		handlers.current.onMove(
+			Math.min(1, Math.max(0, x / width)),
+			Math.min(1, Math.max(0, y / height)),
+		);
+	};
+	// On iOS a pan only activates once the finger moves, but a tap still
+	// begins and finalizes it.
+	const gesture = usePanGesture({
+		runOnJS: true,
+		minDistance: 0,
+		onBegin: (event) => move(event.x, event.y),
+		onUpdate: (event) => move(event.x, event.y),
+		onFinalize: () => handlers.current.onEnd?.(),
+	});
 	const onLayout = (event: LayoutChangeEvent) => {
 		const { width, height } = event.nativeEvent.layout;
 		size.current = { width: Math.max(1, width), height: Math.max(1, height) };

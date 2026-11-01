@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Platform,
 	Pressable,
@@ -7,7 +14,7 @@ import {
 	View,
 	type ViewInstance,
 } from "react-native";
-import { LegacyScrollView, ScrollView } from "react-native-gesture-handler";
+import { type NativeGesture, ScrollView } from "react-native-gesture-handler";
 import Animated, {
 	Easing,
 	FadeInRight,
@@ -182,15 +189,26 @@ function FlatLayerList({
 	const rows = useMemo(() => layers.slice().reverse(), [layers]);
 	const order = useSharedValue(rows.map((layer) => layer.id));
 	const dragId = useSharedValue<string | null>(null);
-	const scrollRef = useRef<LegacyScrollView>(null);
+	const [scrollGesture, setScrollGesture] = useState<NativeGesture | null>(
+		null,
+	);
+	// The scroll view reports its gesture from an effect. On web that object
+	// is new every render, and storing each one re-renders forever. The
+	// handler tag stays put for the life of the scroll view.
+	const scrollTag = useRef<number | null>(null);
+	const takeScrollGesture = useCallback((gesture: NativeGesture) => {
+		if (scrollTag.current === gesture.handlerTag) return;
+		scrollTag.current = gesture.handlerTag;
+		setScrollGesture(gesture);
+	}, []);
 
 	useLayoutEffect(() => {
 		order.value = rows.map((layer) => layer.id);
 	}, [order, rows]);
 
 	return (
-		<LegacyScrollView
-			ref={scrollRef}
+		<ScrollView
+			onGestureUpdate_CAN_CAUSE_INFINITE_RERENDER={takeScrollGesture}
 			contentContainerStyle={[styles.column, styles.content]}
 		>
 			<View style={{ height: rows.length * ROW_HEIGHT }}>
@@ -202,7 +220,7 @@ function FlatLayerList({
 						count={rows.length}
 						order={order}
 						dragId={dragId}
-						scrollRef={scrollRef}
+						scrollGesture={scrollGesture}
 						selected={layer.id === selectedLayerId}
 						compact={compact}
 						{...rowActions}
@@ -215,7 +233,7 @@ function FlatLayerList({
 				</Text>
 			)}
 			<BackgroundRow value={background} onPick={onSetBackground} />
-		</LegacyScrollView>
+		</ScrollView>
 	);
 }
 
@@ -312,12 +330,11 @@ function BackgroundRow({
 function StaticLayerRow(
 	props: Omit<
 		Parameters<typeof LayerRow>[0],
-		"slot" | "count" | "order" | "dragId" | "scrollRef" | "staticRow"
+		"slot" | "count" | "order" | "dragId" | "scrollGesture" | "staticRow"
 	>,
 ) {
 	const order = useSharedValue<string[]>([]);
 	const dragId = useSharedValue<string | null>(null);
-	const scrollRef = useRef<LegacyScrollView>(null);
 	return (
 		<LayerRow
 			{...props}
@@ -325,7 +342,7 @@ function StaticLayerRow(
 			count={1}
 			order={order}
 			dragId={dragId}
-			scrollRef={scrollRef}
+			scrollGesture={null}
 			staticRow
 		/>
 	);

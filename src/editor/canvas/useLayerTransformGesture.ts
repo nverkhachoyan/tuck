@@ -1,5 +1,12 @@
-import { useMemo } from "react";
-import { Gesture } from "react-native-gesture-handler";
+import {
+	useCompetingGestures,
+	useHoverGesture,
+	usePanGesture,
+	usePinchGesture,
+	useRotationGesture,
+	useSimultaneousGestures,
+	useTapGesture,
+} from "react-native-gesture-handler";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { hapticTick } from "@/platform/haptics";
@@ -104,6 +111,7 @@ export function useLayerTransformGesture({
 	onHoverEnd,
 	standsAside = null,
 	dragOnly = false,
+	enabled = true,
 }: {
 	live: LiveTransform;
 	aspectLocked: SharedValue<boolean>;
@@ -121,6 +129,7 @@ export function useLayerTransformGesture({
 	// Whether one finger landing at a point is another gesture's. A worklet.
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
 	dragOnly?: boolean;
+	enabled?: boolean;
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
 	// variables captured by worklets are copied, so writes wouldn't persist.
@@ -155,360 +164,325 @@ export function useLayerTransformGesture({
 	// Whether this pan started off an anchored selection, which stays put.
 	const pinned = useSharedValue(false);
 
-	return useMemo(() => {
-		const toDocument = (screenX: number, screenY: number) => {
-			"worklet";
-			return viewPointToDocument(viewport, { x: screenX, y: screenY });
-		};
+	const toDocument = (screenX: number, screenY: number) => {
+		"worklet";
+		return viewPointToDocument(viewport, { x: screenX, y: screenY });
+	};
 
-		// Ticks when a value lands on its snap, not on every frame it stays there.
-		const settle = (
-			value: SharedValue<number>,
-			raw: number,
-			snapped: number | null,
-		) => {
-			"worklet";
-			if (snapped !== null && snapped !== value.value) scheduleOnRN(hapticTick);
-			value.value = snapped ?? raw;
-		};
+	// Ticks when a value lands on its snap, not on every frame it stays there.
+	const settle = (
+		value: SharedValue<number>,
+		raw: number,
+		snapped: number | null,
+	) => {
+		"worklet";
+		if (snapped !== null && snapped !== value.value) scheduleOnRN(hapticTick);
+		value.value = snapped ?? raw;
+	};
 
-		const moveTo = (x: number, y: number) => {
-			"worklet";
-			const tolerance = SNAP_PX / viewport.scale;
-			const lines = snapLines.value;
-			const extent = boundingBox(readLiveTransform(live), readLiveBox(live));
-			const snapX = snapSpan(
-				x,
-				extent.halfWidth,
-				lines.x.edges,
-				lines.x.centers,
-				tolerance,
+	const moveTo = (x: number, y: number) => {
+		"worklet";
+		const tolerance = SNAP_PX / viewport.scale;
+		const lines = snapLines.value;
+		const extent = boundingBox(readLiveTransform(live), readLiveBox(live));
+		const snapX = snapSpan(
+			x,
+			extent.halfWidth,
+			lines.x.edges,
+			lines.x.centers,
+			tolerance,
+		);
+		const snapY = snapSpan(
+			y,
+			extent.halfHeight,
+			lines.y.edges,
+			lines.y.centers,
+			tolerance,
+		);
+		settle(live.x, x, snapX?.center ?? null);
+		settle(live.y, y, snapY?.center ?? null);
+		live.guideX.value = snapX?.line ?? null;
+		live.guideY.value = snapY?.line ?? null;
+	};
+
+	// Scales the layer to `scale` across, from the scale it had when the
+	// gesture began, keeping its aspect ratio.
+	const scaleTo = (scale: number, fromScaleX: number, fromScaleY: number) => {
+		"worklet";
+		const scaleX = clampScale(scale);
+		live.scaleX.value = scaleX;
+		live.scaleY.value = fromScaleY * (scaleX / fromScaleX);
+	};
+
+	const rotateTo = (angle: number) => {
+		"worklet";
+		settle(live.rotation, angle, snapAngle(angle, Math.PI / 2, ROTATION_SNAP));
+	};
+
+	// Resizes the held box by dragging `handle` from `from` to `to`, in the
+	// frame it had when the drag began, snapping each side it moves.
+	const resizeTo = (handle: ResizeHandle, from: Point, to: Point) => {
+		"worklet";
+		const { transform: start, box } = panStart.value;
+		const minSize =
+			MIN_BOX_PX / (viewport.scale * Math.min(start.scaleX, start.scaleY));
+		const a = toLayerSpace(start, from);
+		const b = toLayerSpace(start, to);
+		const { offset, guideX, guideY } = snapSides(
+			start,
+			box,
+			handleSides(handle),
+			{ x: b.x - a.x, y: b.y - a.y },
+			snapLines.value,
+			SNAP_PX / viewport.scale,
+			minSize,
+		);
+		if (
+			(guideX !== null && guideX !== live.guideX.value) ||
+			(guideY !== null && guideY !== live.guideY.value)
+		) {
+			scheduleOnRN(hapticTick);
+		}
+		live.guideX.value = guideX;
+		live.guideY.value = guideY;
+		const next = aspectLocked.value
+			? resizeLockedByDrag(start, box, handle, offset, minSize)
+			: resizeByDrag(start, box, handle, offset, minSize);
+		live.x.value = next.transform.x;
+		live.y.value = next.transform.y;
+		if (live.resizeMode.value === "stretch") {
+			live.scaleX.value = start.scaleX * (next.box.halfWidth / box.halfWidth);
+			live.scaleY.value = start.scaleY * (next.box.halfHeight / box.halfHeight);
+		} else {
+			live.halfWidth.value = next.box.halfWidth;
+			live.halfHeight.value = next.box.halfHeight;
+		}
+		resizedBox.value = live.resizeMode.value === "box";
+	};
+
+	// Drags a line's end, as `handle` grabbed it, from `from` to `to`, in the
+	// frame it had when the drag began. Its other end stays put, and it
+	// settles on quarter turns as a rotation does.
+	const dragEndTo = (handle: ResizeHandle, from: Point, to: Point) => {
+		"worklet";
+		const { transform: start, box } = panStart.value;
+		const line = dragLineEnd(
+			start,
+			box.halfWidth,
+			handleSides(handle).x < 0 ? -1 : 1,
+			{ x: to.x - from.x, y: to.y - from.y },
+			MIN_BOX_PX / viewport.scale,
+		);
+		settle(live.rotation, line.rotation, line.snapped ? line.rotation : null);
+		live.x.value = line.x;
+		live.y.value = line.y;
+		live.halfWidth.value = line.width / 2 / start.scaleX;
+		resizedBox.value = true;
+	};
+
+	// Drags `handle` by the pan's travel: the knob rotates, a line's end
+	// moves, a box with a resize mode resizes, and anything else scales.
+	const dragHandleBy = (handle: Handle, dx: number, dy: number) => {
+		"worklet";
+		const start = panStart.value.transform;
+		const center = { x: start.x, y: start.y };
+		const from = toDocument(downX.value, downY.value);
+		const to = toDocument(downX.value + dx, downY.value + dy);
+		if (handle === "rotate") {
+			rotateTo(rotateByDrag(center, from, to, start.rotation));
+		} else if (live.resizeMode.value === "endpoints") {
+			dragEndTo(handle, from, to);
+		} else if (live.resizeMode.value !== "none") {
+			resizeTo(handle, from, to);
+		} else {
+			scaleTo(
+				scaleByDrag(center, from, to, start.scaleX),
+				start.scaleX,
+				start.scaleY,
 			);
-			const snapY = snapSpan(
-				y,
-				extent.halfHeight,
-				lines.y.edges,
-				lines.y.centers,
-				tolerance,
-			);
-			settle(live.x, x, snapX?.center ?? null);
-			settle(live.y, y, snapY?.center ?? null);
-			live.guideX.value = snapX?.line ?? null;
-			live.guideY.value = snapY?.line ?? null;
-		};
+		}
+	};
 
-		// Scales the layer to `scale` across, from the scale it had when the
-		// gesture began, keeping its aspect ratio.
-		const scaleTo = (scale: number, fromScaleX: number, fromScaleY: number) => {
-			"worklet";
-			const scaleX = clampScale(scale);
-			live.scaleX.value = scaleX;
-			live.scaleY.value = fromScaleY * (scaleX / fromScaleX);
-		};
+	// The first gesture to start holds the selected layer, if there is one.
+	const gestureStarted = () => {
+		"worklet";
+		if (activeCount.value === 0) {
+			moved.value = false;
+			resizedBox.value = false;
+			live.heldId.value = live.activeId.value;
+		}
+		activeCount.value += 1;
+	};
 
-		const rotateTo = (angle: number) => {
-			"worklet";
-			settle(
-				live.rotation,
-				angle,
-				snapAngle(angle, Math.PI / 2, ROTATION_SNAP),
-			);
-		};
+	// Whether `live` still holds the layer the gestures started on.
+	const holding = () => {
+		"worklet";
+		const id = live.heldId.value;
+		return id !== null && id === live.activeId.value;
+	};
 
-		// Resizes the held box by dragging `handle` from `from` to `to`, in the
-		// frame it had when the drag began, snapping each side it moves.
-		const resizeTo = (handle: ResizeHandle, from: Point, to: Point) => {
-			"worklet";
-			const { transform: start, box } = panStart.value;
-			const minSize =
-				MIN_BOX_PX / (viewport.scale * Math.min(start.scaleX, start.scaleY));
-			const a = toLayerSpace(start, from);
-			const b = toLayerSpace(start, to);
-			const { offset, guideX, guideY } = snapSides(
-				start,
-				box,
-				handleSides(handle),
-				{ x: b.x - a.x, y: b.y - a.y },
-				snapLines.value,
-				SNAP_PX / viewport.scale,
-				minSize,
-			);
+	const gestureEnded = () => {
+		"worklet";
+		activeCount.value = Math.max(0, activeCount.value - 1);
+		if (activeCount.value > 0) return;
+		const id = live.heldId.value;
+		if (moved.value && id !== null && holding()) {
+			if (resizedBox.value) {
+				scheduleOnRN(onResize, id, readLiveTransform(live), readLiveBox(live));
+			} else {
+				scheduleOnRN(onCommit, id, readLiveTransform(live));
+			}
+		}
+		live.heldId.value = null;
+	};
+
+	// Picks up the layer under the pan's touch-down point, or, off the
+	// selection, pins an anchored one where it is.
+	const pickUp = () => {
+		"worklet";
+		const target = findLayerAt(
+			layers.value,
+			toDocument(downX.value, downY.value),
+		);
+		const activeId = live.activeId.value;
+		if (target?.id === activeId) return;
+		if (onSelect && !dragOnly && target) {
+			holdLayer(live, target.id, target);
+			scheduleOnRN(onSelect, target.id);
+		} else {
+			pinned.value =
+				layers.value.find((layer) => layer.id === activeId)?.anchored ?? false;
+		}
+	};
+
+	const tap = useTapGesture({
+		enabled: enabled && !dragOnly,
+		maxDistance: 10,
+		onDeactivate: (event) => {
+			if (!event.canceled) scheduleOnRN(onTap, event.x, event.y);
+		},
+	});
+
+	// Starts on activation (after the finger moves), not touch-down, so a tap
+	// on an unselected layer stays a plain select.
+	// Dragging only, a second finger is the view's (10 is the default).
+	const pan = usePanGesture({
+		enabled,
+		maxPointers: dragOnly ? 1 : 10,
+		onBegin: (event) => {
+			aside.value = standsAside?.(event.x, event.y) ?? false;
+			downX.value = event.x;
+			downY.value = event.y;
+			travel.value = startTravel(event);
+			dragHandle.value =
+				live.activeId.value === null
+					? null
+					: handleUnder(
+							readLiveTransform(live),
+							readLiveBox(live),
+							live.resizeMode.value,
+							toDocument(event.x, event.y),
+							viewport.scale,
+						);
+		},
+		onActivate: (event) => {
+			travel.value = continueTravel(travel.value, event);
+			if (aside.value) return;
+			gestureStarted();
+			pinned.value = false;
+			// Unless it grabbed a handle or more than one finger is at work.
 			if (
-				(guideX !== null && guideX !== live.guideX.value) ||
-				(guideY !== null && guideY !== live.guideY.value)
+				dragHandle.value === null &&
+				activeCount.value === 1 &&
+				event.numberOfPointers === 1
 			) {
-				scheduleOnRN(hapticTick);
+				pickUp();
 			}
-			live.guideX.value = guideX;
-			live.guideY.value = guideY;
-			const next = aspectLocked.value
-				? resizeLockedByDrag(start, box, handle, offset, minSize)
-				: resizeByDrag(start, box, handle, offset, minSize);
-			live.x.value = next.transform.x;
-			live.y.value = next.transform.y;
-			if (live.resizeMode.value === "stretch") {
-				live.scaleX.value = start.scaleX * (next.box.halfWidth / box.halfWidth);
-				live.scaleY.value =
-					start.scaleY * (next.box.halfHeight / box.halfHeight);
-			} else {
-				live.halfWidth.value = next.box.halfWidth;
-				live.halfHeight.value = next.box.halfHeight;
-			}
-			resizedBox.value = live.resizeMode.value === "box";
-		};
-
-		// Drags a line's end, as `handle` grabbed it, from `from` to `to`, in the
-		// frame it had when the drag began. Its other end stays put, and it
-		// settles on quarter turns as a rotation does.
-		const dragEndTo = (handle: ResizeHandle, from: Point, to: Point) => {
-			"worklet";
-			const { transform: start, box } = panStart.value;
-			const line = dragLineEnd(
-				start,
-				box.halfWidth,
-				handleSides(handle).x < 0 ? -1 : 1,
-				{ x: to.x - from.x, y: to.y - from.y },
-				MIN_BOX_PX / viewport.scale,
+			panStart.value = {
+				transform: readLiveTransform(live),
+				box: readLiveBox(live),
+			};
+			snapLines.value = snapLinesFor(
+				documentSize,
+				layers.value.filter((target) => target.id !== live.heldId.value),
 			);
-			settle(live.rotation, line.rotation, line.snapped ? line.rotation : null);
-			live.x.value = line.x;
-			live.y.value = line.y;
-			live.halfWidth.value = line.width / 2 / start.scaleX;
-			resizedBox.value = true;
-		};
+		},
+		onUpdate: (event) => {
+			travel.value = continueTravel(travel.value, event);
+			const { dx, dy } = travel.value;
+			if (aside.value || !holding()) return;
 
-		// Drags `handle` by the pan's travel: the knob rotates, a line's end
-		// moves, a box with a resize mode resizes, and anything else scales.
-		const dragHandleBy = (handle: Handle, dx: number, dy: number) => {
-			"worklet";
-			const start = panStart.value.transform;
-			const center = { x: start.x, y: start.y };
-			const from = toDocument(downX.value, downY.value);
-			const to = toDocument(downX.value + dx, downY.value + dy);
-			if (handle === "rotate") {
-				rotateTo(rotateByDrag(center, from, to, start.rotation));
-			} else if (live.resizeMode.value === "endpoints") {
-				dragEndTo(handle, from, to);
-			} else if (live.resizeMode.value !== "none") {
-				resizeTo(handle, from, to);
+			const handle = dragHandle.value;
+			if (handle !== null) {
+				dragHandleBy(handle, dx, dy);
+			} else if (pinned.value) {
+				return;
 			} else {
-				scaleTo(
-					scaleByDrag(center, from, to, start.scaleX),
-					start.scaleX,
-					start.scaleY,
-				);
+				const start = panStart.value.transform;
+				moveTo(start.x + dx / viewport.scale, start.y + dy / viewport.scale);
 			}
-		};
+			moved.value = true;
+		},
+		onDeactivate: () => {
+			if (!aside.value) gestureEnded();
+		},
+		onFinalize: () => {
+			dragHandle.value = null;
+			live.guideX.value = null;
+			live.guideY.value = null;
+		},
+	});
 
-		// The first gesture to start holds the selected layer, if there is one.
-		const gestureStarted = () => {
-			"worklet";
-			if (activeCount.value === 0) {
-				moved.value = false;
-				resizedBox.value = false;
-				live.heldId.value = live.activeId.value;
-			}
-			activeCount.value += 1;
-		};
-
-		// Whether `live` still holds the layer the gestures started on.
-		const holding = () => {
-			"worklet";
-			const id = live.heldId.value;
-			return id !== null && id === live.activeId.value;
-		};
-
-		const gestureEnded = () => {
-			"worklet";
-			activeCount.value = Math.max(0, activeCount.value - 1);
-			if (activeCount.value > 0) return;
-			const id = live.heldId.value;
-			if (moved.value && id !== null && holding()) {
-				if (resizedBox.value) {
-					scheduleOnRN(
-						onResize,
-						id,
-						readLiveTransform(live),
-						readLiveBox(live),
-					);
-				} else {
-					scheduleOnRN(onCommit, id, readLiveTransform(live));
-				}
-			}
-			live.heldId.value = null;
-		};
-
-		// Picks up the layer under the pan's touch-down point, or, off the
-		// selection, pins an anchored one where it is.
-		const pickUp = () => {
-			"worklet";
-			const target = findLayerAt(
-				layers.value,
-				toDocument(downX.value, downY.value),
+	// Pinch and rotate stand aside while a handle is being dragged, so a
+	// second finger can't fight the handle over the same values.
+	const pinch = usePinchGesture({
+		enabled: enabled && !dragOnly,
+		onActivate: () => {
+			gestureStarted();
+			startScaleX.value = live.scaleX.value;
+			startScaleY.value = live.scaleY.value;
+		},
+		onUpdate: (event) => {
+			if (!holding() || dragHandle.value !== null) return;
+			scaleTo(
+				startScaleX.value * event.scale,
+				startScaleX.value,
+				startScaleY.value,
 			);
-			const activeId = live.activeId.value;
-			if (target?.id === activeId) return;
-			if (onSelect && !dragOnly && target) {
-				holdLayer(live, target.id, target);
-				scheduleOnRN(onSelect, target.id);
-			} else {
-				pinned.value =
-					layers.value.find((layer) => layer.id === activeId)?.anchored ??
-					false;
-			}
-		};
+			moved.value = true;
+		},
+		onDeactivate: gestureEnded,
+	});
 
-		const tap = Gesture.Tap()
-			.maxDistance(10)
-			.onEnd((event, success) => {
-				if (success) scheduleOnRN(onTap, event.x, event.y);
-			});
+	const rotate = useRotationGesture({
+		enabled: enabled && !dragOnly,
+		onActivate: () => {
+			gestureStarted();
+			startRotation.value = live.rotation.value;
+		},
+		onUpdate: (event) => {
+			if (!holding() || dragHandle.value !== null) return;
+			rotateTo(startRotation.value + event.rotation);
+			moved.value = true;
+		},
+		onDeactivate: gestureEnded,
+	});
 
-		// Starts on activation (after the finger moves), not touch-down, so a tap
-		// on an unselected layer stays a plain select.
-		// Dragging only, a second finger is the view's (10 is the default).
-		const pan = Gesture.Pan()
-			.maxPointers(dragOnly ? 1 : 10)
-			.onBegin((event) => {
-				aside.value = standsAside?.(event.x, event.y) ?? false;
-				downX.value = event.x;
-				downY.value = event.y;
-				travel.value = startTravel(event);
-				dragHandle.value =
-					live.activeId.value === null
-						? null
-						: handleUnder(
-								readLiveTransform(live),
-								readLiveBox(live),
-								live.resizeMode.value,
-								toDocument(event.x, event.y),
-								viewport.scale,
-							);
-			})
-			.onStart((event) => {
-				travel.value = continueTravel(travel.value, event);
-				if (aside.value) return;
-				gestureStarted();
-				pinned.value = false;
-				// Unless it grabbed a handle or more than one finger is at work.
-				if (
-					dragHandle.value === null &&
-					activeCount.value === 1 &&
-					event.numberOfPointers === 1
-				) {
-					pickUp();
-				}
-				panStart.value = {
-					transform: readLiveTransform(live),
-					box: readLiveBox(live),
-				};
-				snapLines.value = snapLinesFor(
-					documentSize,
-					layers.value.filter((target) => target.id !== live.heldId.value),
-				);
-			})
-			.onUpdate((event) => {
-				travel.value = continueTravel(travel.value, event);
-				const { dx, dy } = travel.value;
-				if (aside.value || !holding()) return;
+	// Only a mouse hovers; the canvas turns positions into cursors.
+	const hover = useHoverGesture({
+		enabled: enabled && hasFinePointer,
+		onBegin: (event) => {
+			scheduleOnRN(onHover, event.x, event.y);
+		},
+		onUpdate: (event) => {
+			scheduleOnRN(onHover, event.x, event.y);
+		},
+		onDeactivate: () => {
+			scheduleOnRN(onHoverEnd);
+		},
+	});
 
-				const handle = dragHandle.value;
-				if (handle !== null) {
-					dragHandleBy(handle, dx, dy);
-				} else if (pinned.value) {
-					return;
-				} else {
-					const start = panStart.value.transform;
-					moveTo(start.x + dx / viewport.scale, start.y + dy / viewport.scale);
-				}
-				moved.value = true;
-			})
-			.onEnd(() => {
-				if (!aside.value) gestureEnded();
-			})
-			.onFinalize(() => {
-				dragHandle.value = null;
-				live.guideX.value = null;
-				live.guideY.value = null;
-			});
-
-		// Pinch and rotate stand aside while a handle is being dragged, so a
-		// second finger can't fight the handle over the same values.
-		const pinch = Gesture.Pinch()
-			.onStart(() => {
-				gestureStarted();
-				startScaleX.value = live.scaleX.value;
-				startScaleY.value = live.scaleY.value;
-			})
-			.onUpdate((event) => {
-				if (!holding() || dragHandle.value !== null) return;
-				scaleTo(
-					startScaleX.value * event.scale,
-					startScaleX.value,
-					startScaleY.value,
-				);
-				moved.value = true;
-			})
-			.onEnd(gestureEnded);
-
-		const rotate = Gesture.Rotation()
-			.onStart(() => {
-				gestureStarted();
-				startRotation.value = live.rotation.value;
-			})
-			.onUpdate((event) => {
-				if (!holding() || dragHandle.value !== null) return;
-				rotateTo(startRotation.value + event.rotation);
-				moved.value = true;
-			})
-			.onEnd(gestureEnded);
-
-		// Only a mouse hovers; the canvas turns positions into cursors.
-		const hover = Gesture.Hover()
-			.enabled(hasFinePointer)
-			.onBegin((event) => {
-				scheduleOnRN(onHover, event.x, event.y);
-			})
-			.onUpdate((event) => {
-				scheduleOnRN(onHover, event.x, event.y);
-			})
-			.onEnd(() => {
-				scheduleOnRN(onHoverEnd);
-			});
-
-		return dragOnly
-			? Gesture.Simultaneous(hover, pan)
-			: Gesture.Simultaneous(
-					hover,
-					Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotate)),
-				);
-	}, [
-		live,
-		aspectLocked,
-		layers,
-		viewport,
-		documentSize,
-		onTap,
-		onSelect,
-		onCommit,
-		onResize,
-		onHover,
-		onHoverEnd,
-		standsAside,
-		dragOnly,
-		aside,
-		pinned,
-		downX,
-		downY,
-		travel,
-		dragHandle,
-		panStart,
-		activeCount,
-		moved,
-		resizedBox,
-		snapLines,
-		startScaleX,
-		startScaleY,
-		startRotation,
-	]);
+	const panPinchRotate = useSimultaneousGestures(pan, pinch, rotate);
+	const raceTap = useCompetingGestures(tap, panPinchRotate);
+	return useSimultaneousGestures(hover, raceTap);
 }

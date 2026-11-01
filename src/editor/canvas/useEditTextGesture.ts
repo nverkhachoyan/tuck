@@ -39,10 +39,12 @@ export function useEditTextGesture({
 	edit,
 	viewport,
 	onCursor,
+	enabled = true,
 }: {
 	edit: EditText | null;
 	viewport: DocumentViewport;
 	onCursor: (cursor: "default" | "text") => void;
+	enabled?: boolean;
 }) {
 	const { scale } = viewport;
 	const toIndex = useCallback(
@@ -65,5 +67,6 @@ export function useEditTextGesture({
 		onDone: edit?.onDone ?? ignore,
 		onCursor,
 		tapSlop: TAP_SLOP_PX,
+		enabled: enabled && Boolean(edit),
 	});
 }

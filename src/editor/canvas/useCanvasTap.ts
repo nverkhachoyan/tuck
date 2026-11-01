@@ -1,5 +1,4 @@
-import { useMemo } from "react";
-import { Gesture } from "react-native-gesture-handler";
+import { useTapGesture } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 import { TAP_SLOP_PX } from "./strokeIntent";
 
@@ -9,14 +8,13 @@ import { TAP_SLOP_PX } from "./strokeIntent";
  */
 export function useCanvasTap(
 	onTap: (screenX: number, screenY: number) => void,
+	enabled: boolean = true,
 ) {
-	return useMemo(
-		() =>
-			Gesture.Tap()
-				.maxDistance(TAP_SLOP_PX)
-				.onEnd((event, success) => {
-					if (success) scheduleOnRN(onTap, event.x, event.y);
-				}),
-		[onTap],
-	);
+	return useTapGesture({
+		enabled,
+		maxDistance: TAP_SLOP_PX,
+		onDeactivate: (event) => {
+			if (!event.canceled) scheduleOnRN(onTap, event.x, event.y);
+		},
+	});
 }

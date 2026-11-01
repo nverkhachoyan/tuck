@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, type RefObject, useMemo, useState } from "react";
+import { type ComponentProps, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	Image,
@@ -12,9 +12,9 @@ import {
 	type ViewStyle,
 } from "react-native";
 import {
-	Gesture,
 	GestureDetector,
-	type LegacyScrollView,
+	type NativeGesture,
+	usePanGesture,
 } from "react-native-gesture-handler";
 import Animated, {
 	type SharedValue,
@@ -50,7 +50,7 @@ export function LayerRow({
 	count,
 	order,
 	dragId,
-	scrollRef,
+	scrollGesture,
 	selected,
 	compact,
 	onSelect,
@@ -65,7 +65,7 @@ export function LayerRow({
 	count: number;
 	order: SharedValue<string[]>;
 	dragId: SharedValue<string | null>;
-	scrollRef: RefObject<LegacyScrollView | null>;
+	scrollGesture: NativeGesture | null;
 	selected: boolean;
 	compact: boolean;
 	/** A group-expanded list keeps its rows in normal flow, not drag slots. */
@@ -79,42 +79,39 @@ export function LayerRow({
 	const [hovered, setHovered] = useState(false);
 
 	// The scroll view waits for the handle, so dragging it never scrolls.
-	const pan = useMemo(
-		() =>
-			Gesture.Pan()
-				.minDistance(0)
-				.blocksExternalGesture(scrollRef)
-				.onStart(() => {
-					if (dragId.value !== null) return;
-					dragId.value = id;
-					startSlot.value = order.value.indexOf(id);
-					dragTop.value = startSlot.value * ROW_HEIGHT;
-				})
-				.onUpdate((event) => {
-					if (dragId.value !== id) return;
-					const next = dragRow(
-						startSlot.value,
-						event.translationY,
-						ROW_HEIGHT,
-						count,
-					);
-					dragTop.value = next.top;
-					const current = order.value.indexOf(id);
-					if (next.slot !== current) {
-						order.value = moveItem(order.value, current, next.slot);
-						scheduleOnRN(hapticTick);
-					}
-				})
-				.onFinalize(() => {
-					if (dragId.value !== id) return;
-					dragId.value = null;
-					const end = order.value.indexOf(id);
-					if (end !== startSlot.value) {
-						scheduleOnRN(onMove, id, layerIndexForSlot(end, count));
-					}
-				}),
-		[id, count, order, dragId, startSlot, dragTop, scrollRef, onMove],
-	);
+	const pan = usePanGesture({
+		minDistance: 0,
+		block: scrollGesture ?? undefined,
+		onActivate: () => {
+			if (dragId.value !== null) return;
+			dragId.value = id;
+			startSlot.value = order.value.indexOf(id);
+			dragTop.value = startSlot.value * ROW_HEIGHT;
+		},
+		onUpdate: (event) => {
+			if (dragId.value !== id) return;
+			const next = dragRow(
+				startSlot.value,
+				event.translationY,
+				ROW_HEIGHT,
+				count,
+			);
+			dragTop.value = next.top;
+			const current = order.value.indexOf(id);
+			if (next.slot !== current) {
+				order.value = moveItem(order.value, current, next.slot);
+				scheduleOnRN(hapticTick);
+			}
+		},
+		onFinalize: () => {
+			if (dragId.value !== id) return;
+			dragId.value = null;
+			const end = order.value.indexOf(id);
+			if (end !== startSlot.value) {
+				scheduleOnRN(onMove, id, layerIndexForSlot(end, count));
+			}
+		},
+	});
 
 	const position = useAnimatedStyle(() => {
 		const dragging = dragId.value === id;

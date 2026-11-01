@@ -23,6 +23,7 @@ export function useRegionTap({
 	document,
 	documentSize,
 	tapOnNothing,
+	enabled = true,
 }: {
 	input: {
 		imageId: string;
@@ -35,6 +36,7 @@ export function useRegionTap({
 	document: EditorDocument;
 	documentSize: Size;
 	tapOnNothing: (point: Point | null) => void;
+	enabled?: boolean;
 }) {
 	const handleRegionTap = useCallback(
 		(screenX: number, screenY: number) => {
@@ -59,5 +61,5 @@ export function useRegionTap({
 		},
 		[input, scale, lookups, targets, document, documentSize, tapOnNothing],
 	);
-	return useCanvasTap(handleRegionTap);
+	return useCanvasTap(handleRegionTap, enabled && Boolean(input));
 }

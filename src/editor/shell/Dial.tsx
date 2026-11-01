@@ -8,7 +8,12 @@ import {
 	View,
 	type ViewProps,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+	GestureDetector,
+	useCompetingGestures,
+	usePanGesture,
+	useTapGesture,
+} from "react-native-gesture-handler";
 import Animated, {
 	type DerivedValue,
 	useAnimatedReaction,
@@ -77,42 +82,42 @@ export function Dial({
 	);
 
 	// A drag starts after a couple of pixels, leaving a double tap to reset.
-	const gesture = useMemo(() => {
-		const pan = Gesture.Pan()
-			.minDistance(2)
-			.onStart(() => {
-				dragging.value = true;
-				start.value = value.value;
-				onBegin();
-			})
-			// The ruler moves under the indicator, so dragging it left raises
-			// the value.
-			.onUpdate((event) => {
-				onChange(
-					draggedDialValue(
-						start.value,
-						-event.translationX,
-						value.value,
-						scale,
-						max,
-					),
-				);
-			})
-			.onFinalize(() => {
-				if (!dragging.value) return;
-				dragging.value = false;
-				onEnd();
-			});
-		const reset = Gesture.Tap()
-			.numberOfTaps(2)
-			.onEnd((_event, success) => {
-				if (!success) return;
-				onBegin();
-				onChange(0);
-				onEnd();
-			});
-		return Gesture.Race(pan, reset);
-	}, [value, start, dragging, max, scale, onBegin, onChange, onEnd]);
+	const pan = usePanGesture({
+		minDistance: 2,
+		onActivate: () => {
+			dragging.value = true;
+			start.value = value.value;
+			onBegin();
+		},
+		// The ruler moves under the indicator, so dragging it left raises
+		// the value.
+		onUpdate: (event) => {
+			onChange(
+				draggedDialValue(
+					start.value,
+					-event.translationX,
+					value.value,
+					scale,
+					max,
+				),
+			);
+		},
+		onFinalize: () => {
+			if (!dragging.value) return;
+			dragging.value = false;
+			onEnd();
+		},
+	});
+	const reset = useTapGesture({
+		numberOfTaps: 2,
+		onDeactivate: (event) => {
+			if (event.canceled) return;
+			onBegin();
+			onChange(0);
+			onEnd();
+		},
+	});
+	const gesture = useCompetingGestures(pan, reset);
 
 	const ruler = useAnimatedStyle(() => ({
 		transform: [{ translateX: width / 2 - (value.value / step) * pxPerStep }],

@@ -1,5 +1,8 @@
-import { useMemo } from "react";
-import { Gesture } from "react-native-gesture-handler";
+import {
+	useHoverGesture,
+	usePanGesture,
+	useSimultaneousGestures,
+} from "react-native-gesture-handler";
 import {
 	type DerivedValue,
 	type SharedValue,
@@ -52,99 +55,85 @@ export function useCropGesture({
 	const startY = useSharedValue(0);
 	const snapped = useSharedValue(0);
 
-	return useMemo(() => {
-		// The box's handle under a point on screen.
-		const handleAt = (x: number, y: number) => {
-			"worklet";
-			const { scale, offsetX, offsetY } = viewport.value;
-			const { box } = crop.value;
-			return cropHandleAt(
+	// The box's handle under a point on screen.
+	const handleAt = (x: number, y: number) => {
+		"worklet";
+		const { scale, offsetX, offsetY } = viewport.value;
+		const { box } = crop.value;
+		return cropHandleAt(
+			{
+				left: box.x * scale + offsetX,
+				top: box.y * scale + offsetY,
+				right: (box.x + box.width) * scale + offsetX,
+				bottom: (box.y + box.height) * scale + offsetY,
+			},
+			{ x, y },
+			handleMetrics.hitRadius,
+		);
+	};
+
+	// One finger: a second would move the reported point to between them.
+	const pan = usePanGesture({
+		minDistance: 0,
+		maxPointers: 1,
+		onBegin: (event) => {
+			handle.value = handleAt(event.x, event.y);
+			startBox.value = crop.value.box;
+			startX.value = event.x;
+			startY.value = event.y;
+			snapped.value = 0;
+		},
+		onActivate: () => {
+			if (handle.value !== null) dragging.value = true;
+		},
+		onUpdate: (event) => {
+			const grabbed = handle.value;
+			if (grabbed === null) return;
+			const { scale } = viewport.value;
+			const state = crop.value;
+			const result = dragCrop(
+				startBox.value,
+				grabbed,
+				(event.x - startX.value) / scale,
+				(event.y - startY.value) / scale,
 				{
-					left: box.x * scale + offsetX,
-					top: box.y * scale + offsetY,
-					right: (box.x + box.width) * scale + offsetX,
-					bottom: (box.y + box.height) * scale + offsetY,
+					photo,
+					angle: cropAngle(state),
+					ratio: ratio.value,
+					minSize: MIN_BOX_PX / scale,
+					// The crop tool fits the content with an inset around it.
+					// Using the whole visible view here leaves that inset as room
+					// to drag an edge outward before the view refits after the
+					// gesture.
+					bounds: viewRectToDocument(viewport.value, viewSize),
+					tolerance: SNAP_PX / scale,
 				},
-				{ x, y },
-				handleMetrics.hitRadius,
 			);
-		};
+			// Ticks as a snap lands, not while it holds.
+			if (result.snapped & ~snapped.value) scheduleOnRN(hapticTick);
+			snapped.value = result.snapped;
+			crop.value = { ...state, box: result.box };
+		},
+		onFinalize: () => {
+			if (handle.value === null) return;
+			handle.value = null;
+			dragging.value = false;
+			scheduleOnRN(onEnd);
+		},
+	});
 
-		// One finger: a second would move the reported point to between them.
-		const pan = Gesture.Pan()
-			.minDistance(0)
-			.maxPointers(1)
-			.onBegin((event) => {
-				handle.value = handleAt(event.x, event.y);
-				startBox.value = crop.value.box;
-				startX.value = event.x;
-				startY.value = event.y;
-				snapped.value = 0;
-			})
-			.onStart(() => {
-				if (handle.value !== null) dragging.value = true;
-			})
-			.onUpdate((event) => {
-				const grabbed = handle.value;
-				if (grabbed === null) return;
-				const { scale } = viewport.value;
-				const state = crop.value;
-				const result = dragCrop(
-					startBox.value,
-					grabbed,
-					(event.x - startX.value) / scale,
-					(event.y - startY.value) / scale,
-					{
-						photo,
-						angle: cropAngle(state),
-						ratio: ratio.value,
-						minSize: MIN_BOX_PX / scale,
-						// The crop tool fits the content with an inset around it.
-						// Using the whole visible view here leaves that inset as room
-						// to drag an edge outward before the view refits after the
-						// gesture.
-						bounds: viewRectToDocument(viewport.value, viewSize),
-						tolerance: SNAP_PX / scale,
-					},
-				);
-				// Ticks as a snap lands, not while it holds.
-				if (result.snapped & ~snapped.value) scheduleOnRN(hapticTick);
-				snapped.value = result.snapped;
-				crop.value = { ...state, box: result.box };
-			})
-			.onFinalize(() => {
-				if (handle.value === null) return;
-				handle.value = null;
-				dragging.value = false;
-				scheduleOnRN(onEnd);
-			});
+	const hover = useHoverGesture({
+		enabled: hasFinePointer,
+		onBegin: (event) => {
+			scheduleOnRN(onHover, handleAt(event.x, event.y));
+		},
+		onUpdate: (event) => {
+			scheduleOnRN(onHover, handleAt(event.x, event.y));
+		},
+		onDeactivate: () => {
+			scheduleOnRN(onHover, null);
+		},
+	});
 
-		const hover = Gesture.Hover()
-			.enabled(hasFinePointer)
-			.onBegin((event) => {
-				scheduleOnRN(onHover, handleAt(event.x, event.y));
-			})
-			.onUpdate((event) => {
-				scheduleOnRN(onHover, handleAt(event.x, event.y));
-			})
-			.onEnd(() => {
-				scheduleOnRN(onHover, null);
-			});
-
-		return Gesture.Simultaneous(hover, pan);
-	}, [
-		crop,
-		viewport,
-		viewSize,
-		photo,
-		ratio,
-		dragging,
-		onEnd,
-		onHover,
-		handle,
-		startBox,
-		startX,
-		startY,
-		snapped,
-	]);
+	return useSimultaneousGestures(hover, pan);
 }

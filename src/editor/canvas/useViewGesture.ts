@@ -1,5 +1,8 @@
-import { useMemo } from "react";
-import { Gesture } from "react-native-gesture-handler";
+import {
+	usePanGesture,
+	usePinchGesture,
+	useSimultaneousGestures,
+} from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import type { LiveTransform } from "./liveTransform";
@@ -56,85 +59,73 @@ export function useViewGesture({
 	const activeCount = useSharedValue(0);
 	const moved = useSharedValue(false);
 
-	return useMemo(() => {
-		const started = () => {
-			"worklet";
-			if (activeCount.value === 0) moved.value = false;
-			activeCount.value += 1;
-		};
-		const ended = () => {
-			"worklet";
-			activeCount.value = Math.max(0, activeCount.value - 1);
-			if (activeCount.value === 0 && moved.value) {
-				scheduleOnRN(onCommit, readShownViewport(shown));
-			}
-		};
-		const show = (viewport: DocumentViewport) => {
-			"worklet";
-			showViewport(shown, viewport);
-			moved.value = true;
-		};
+	const started = () => {
+		"worklet";
+		if (activeCount.value === 0) moved.value = false;
+		activeCount.value += 1;
+	};
+	const ended = () => {
+		"worklet";
+		activeCount.value = Math.max(0, activeCount.value - 1);
+		if (activeCount.value === 0 && moved.value) {
+			scheduleOnRN(onCommit, readShownViewport(shown));
+		}
+	};
+	const show = (viewport: DocumentViewport) => {
+		"worklet";
+		showViewport(shown, viewport);
+		moved.value = true;
+	};
 
-		const pinch = Gesture.Pinch()
-			.enabled(twoFingers)
-			.onStart((event) => {
-				lastScale.value = event.scale;
-				started();
-			})
-			.onUpdate((event) => {
-				const factor = event.scale / lastScale.value;
-				lastScale.value = event.scale;
-				if (live.heldId.value !== null) return;
-				show(
-					zoomViewportAbout(frame, readShownViewport(shown), factor, {
-						x: event.focalX,
-						y: event.focalY,
-					}),
-				);
-			})
-			.onEnd(ended);
+	const pinch = usePinchGesture({
+		enabled: twoFingers,
+		onActivate: (event) => {
+			lastScale.value = event.scale;
+			started();
+		},
+		onUpdate: (event) => {
+			const factor = event.scale / lastScale.value;
+			lastScale.value = event.scale;
+			if (live.heldId.value !== null) return;
+			show(
+				zoomViewportAbout(frame, readShownViewport(shown), factor, {
+					x: event.focalX,
+					y: event.focalY,
+				}),
+			);
+		},
+		onDeactivate: ended,
+	});
 
-		// The fingers' midpoint jumps as one lands or lifts, which `travel`
-		// leaves out.
-		const pan = Gesture.Pan()
-			.enabled(twoFingers || dragAlone !== null)
-			.minPointers(dragAlone ? 1 : 2)
-			.onBegin((event) => {
-				alone.value = dragAlone?.(event.x, event.y) ?? false;
-			})
-			.onStart((event) => {
-				travel.value = startTravel(event);
-				started();
-			})
-			.onUpdate((event) => {
-				const before = travel.value;
-				const after = continueTravel(before, event);
-				travel.value = after;
-				const allowed = event.numberOfPointers < 2 ? alone.value : twoFingers;
-				if (!allowed || live.heldId.value !== null) return;
-				show(
-					panViewport(
-						frame,
-						readShownViewport(shown),
-						after.dx - before.dx,
-						after.dy - before.dy,
-					),
-				);
-			})
-			.onEnd(ended);
+	// The fingers' midpoint jumps as one lands or lifts, which `travel`
+	// leaves out.
+	const pan = usePanGesture({
+		enabled: twoFingers || dragAlone !== null,
+		minPointers: dragAlone ? 1 : 2,
+		onBegin: (event) => {
+			alone.value = dragAlone?.(event.x, event.y) ?? false;
+		},
+		onActivate: (event) => {
+			travel.value = startTravel(event);
+			started();
+		},
+		onUpdate: (event) => {
+			const before = travel.value;
+			const after = continueTravel(before, event);
+			travel.value = after;
+			const allowed = event.numberOfPointers < 2 ? alone.value : twoFingers;
+			if (!allowed || live.heldId.value !== null) return;
+			show(
+				panViewport(
+					frame,
+					readShownViewport(shown),
+					after.dx - before.dx,
+					after.dy - before.dy,
+				),
+			);
+		},
+		onDeactivate: ended,
+	});
 
-		return Gesture.Simultaneous(pinch, pan);
-	}, [
-		shown,
-		frame,
-		live,
-		twoFingers,
-		dragAlone,
-		onCommit,
-		lastScale,
-		travel,
-		alone,
-		activeCount,
-		moved,
-	]);
+	return useSimultaneousGestures(pinch, pan);
 }
