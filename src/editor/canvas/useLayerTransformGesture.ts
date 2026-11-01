@@ -111,6 +111,7 @@ export function useLayerTransformGesture({
 	onHoverEnd,
 	standsAside = null,
 	dragOnly = false,
+	enabled = true,
 }: {
 	live: LiveTransform;
 	aspectLocked: SharedValue<boolean>;
@@ -128,6 +129,7 @@ export function useLayerTransformGesture({
 	// Whether one finger landing at a point is another gesture's. A worklet.
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
 	dragOnly?: boolean;
+	enabled?: boolean;
 }) {
 	// Gesture-start snapshots. These must be shared values: plain `let`
 	// variables captured by worklets are copied, so writes wouldn't persist.
@@ -354,6 +356,7 @@ export function useLayerTransformGesture({
 	};
 
 	const tap = useTapGesture({
+		enabled: enabled && !dragOnly,
 		maxDistance: 10,
 		onDeactivate: (event) => {
 			if (!event.canceled) scheduleOnRN(onTap, event.x, event.y);
@@ -364,6 +367,7 @@ export function useLayerTransformGesture({
 	// on an unselected layer stays a plain select.
 	// Dragging only, a second finger is the view's (10 is the default).
 	const pan = usePanGesture({
+		enabled,
 		maxPointers: dragOnly ? 1 : 10,
 		onBegin: (event) => {
 			aside.value = standsAside?.(event.x, event.y) ?? false;
@@ -432,6 +436,7 @@ export function useLayerTransformGesture({
 	// Pinch and rotate stand aside while a handle is being dragged, so a
 	// second finger can't fight the handle over the same values.
 	const pinch = usePinchGesture({
+		enabled: enabled && !dragOnly,
 		onActivate: () => {
 			gestureStarted();
 			startScaleX.value = live.scaleX.value;
@@ -450,6 +455,7 @@ export function useLayerTransformGesture({
 	});
 
 	const rotate = useRotationGesture({
+		enabled: enabled && !dragOnly,
 		onActivate: () => {
 			gestureStarted();
 			startRotation.value = live.rotation.value;
@@ -464,7 +470,7 @@ export function useLayerTransformGesture({
 
 	// Only a mouse hovers; the canvas turns positions into cursors.
 	const hover = useHoverGesture({
-		enabled: hasFinePointer,
+		enabled: enabled && hasFinePointer,
 		onBegin: (event) => {
 			scheduleOnRN(onHover, event.x, event.y);
 		},
@@ -478,8 +484,5 @@ export function useLayerTransformGesture({
 
 	const panPinchRotate = useSimultaneousGestures(pan, pinch, rotate);
 	const raceTap = useCompetingGestures(tap, panPinchRotate);
-	const fullGesture = useSimultaneousGestures(hover, raceTap);
-	const dragGesture = useSimultaneousGestures(hover, pan);
-
-	return dragOnly ? dragGesture : fullGesture;
+	return useSimultaneousGestures(hover, raceTap);
 }

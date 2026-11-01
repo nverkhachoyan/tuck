@@ -8,8 +8,10 @@ import { TAP_SLOP_PX } from "./strokeIntent";
  */
 export function useCanvasTap(
 	onTap: (screenX: number, screenY: number) => void,
+	enabled: boolean = true,
 ) {
 	return useTapGesture({
+		enabled,
 		maxDistance: TAP_SLOP_PX,
 		onDeactivate: (event) => {
 			if (!event.canceled) scheduleOnRN(onTap, event.x, event.y);

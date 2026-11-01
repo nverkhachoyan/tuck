@@ -36,6 +36,7 @@ export type CanvasTextGestureOptions = {
 	onDone: () => void;
 	onCursor?: (cursor: "default" | "text") => void;
 	tapSlop?: number;
+	enabled?: boolean;
 };
 
 /**
@@ -55,6 +56,7 @@ export function useCanvasTextGesture({
 	onDone,
 	onCursor,
 	tapSlop = 6,
+	enabled = true,
 }: CanvasTextGestureOptions) {
 	// The press under way: where it landed, and the index a drag selects
 	// from, or null when it's off the text or selected a word.
@@ -148,6 +150,7 @@ export function useCanvasTextGesture({
 	// watched for here rather than with `maxPointers`, which would end the
 	// pan without saying so.
 	const pan = usePanGesture({
+		enabled,
 		minDistance: 0,
 		onTouchesDown: (event) => {
 			if (event.numberOfTouches === 1) cancelled.value = false;
@@ -170,7 +173,7 @@ export function useCanvasTextGesture({
 	});
 
 	const hover = useHoverGesture({
-		enabled: hasFinePointer,
+		enabled: enabled && hasFinePointer,
 		onBegin: (event) => {
 			scheduleOnRN(onHover, event.x, event.y);
 		},

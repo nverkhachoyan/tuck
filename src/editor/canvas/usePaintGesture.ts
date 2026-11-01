@@ -39,6 +39,7 @@ export function usePaintGesture({
 	standsAside = null,
 	straighten = false,
 	shiftHeld = null,
+	enabled = true,
 }: {
 	viewport: DocumentViewport;
 	points: SharedValue<number[]>;
@@ -49,6 +50,7 @@ export function usePaintGesture({
 	// The highlighter: hold still, or hold Shift on web, and it draws a line.
 	straighten?: boolean;
 	shiftHeld?: SharedValue<boolean> | null;
+	enabled?: boolean;
 }) {
 	const cancelled = useSharedValue(false);
 	const aside = useSharedValue(false);
@@ -129,6 +131,7 @@ export function usePaintGesture({
 	// it's cancelled: the first finger starts afresh, and fingers that land
 	// together arrive as one touch-down, before the pan begins.
 	return usePanGesture({
+		enabled,
 		minDistance: 0,
 		onTouchesDown: (event) => {
 			if (event.numberOfTouches === 1) cancelled.value = false;

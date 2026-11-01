@@ -17,12 +17,16 @@ const FAIL_PX = 16;
  * A second finger holds the value, leaving the view's pinch to it. Without
  * a `drag`, just the tap.
  */
-export function useDialDrag(drag: DialDrag | null, tap: TapGesture) {
+export function useDialDrag(
+	drag: DialDrag | null,
+	tap: TapGesture,
+	enabled: boolean = true,
+) {
 	const start = useSharedValue(0);
 	const dragging = useSharedValue(false);
 
 	const pan = usePanGesture({
-		enabled: Boolean(drag),
+		enabled: enabled && Boolean(drag),
 		activeOffsetX: [-ACTIVE_PX, ACTIVE_PX],
 		failOffsetY: [-FAIL_PX, FAIL_PX],
 		onActivate: () => {
@@ -50,6 +54,5 @@ export function useDialDrag(drag: DialDrag | null, tap: TapGesture) {
 		},
 	});
 
-	const competing = useCompetingGestures(pan, tap);
-	return drag ? competing : tap;
+	return useCompetingGestures(pan, tap);
 }

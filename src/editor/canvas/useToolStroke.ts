@@ -40,6 +40,7 @@ export function useToolStroke({
 	onToolStroke,
 	onSelectLayer,
 	onToolInteractionEnd,
+	enabled = true,
 }: {
 	tool: CanvasTool | null;
 	viewport: DocumentViewport;
@@ -53,6 +54,7 @@ export function useToolStroke({
 	onToolStroke?: (stroke: ToolStroke) => void;
 	onSelectLayer?: (id: string | null) => void;
 	onToolInteractionEnd?: () => void;
+	enabled?: boolean;
 }) {
 	const strokePoints = useSharedValue<number[]>([]);
 	const strokeId = useSharedValue(0);
@@ -104,6 +106,7 @@ export function useToolStroke({
 			tool.brush.type === "pen" &&
 			tool.brush.tip === "marker",
 		shiftHeld,
+		enabled: enabled && Boolean(tool),
 	});
 	const liveStroke = useMemo<LiveStroke | null>(
 		() =>
