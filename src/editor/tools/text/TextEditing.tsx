@@ -99,5 +99,6 @@ export function TextInput({
 const styles = StyleSheet.create({
 	input: {
 		height: HEADER_HEIGHT,
+		overflow: "hidden",
 	},
 });

@@ -122,6 +122,8 @@ export function HiddenTextInput({
 			<TextInput
 				ref={input}
 				value={value}
+				caretHidden
+				selectionColor="transparent"
 				onChangeText={onChangeText}
 				onSelectionChange={(event) =>
 					onSelectionChange(event.nativeEvent.selection)
@@ -170,6 +172,7 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		height: 44,
+		overflow: "hidden",
 		pointerEvents: "none",
 	},
 	// Hidden, and out of the way of what's under it. At least 16px, or
