@@ -64,6 +64,14 @@ const applySavedTheme = `try {
 	}
 } catch (error) {}`;
 
+// Nothing works until CanvasKit has loaded, and `index.web.ts` only asks for
+// it once the scripts have downloaded and run. Preload from script so the fetch
+// runs in the page's main-world context, allowing Chromium to reuse the
+// response when the service worker is active without a cross-world mismatch warning.
+const preloadCanvasKit = `try {
+	window.__canvaskit = fetch("/canvaskit.wasm", { credentials: "same-origin" });
+} catch (error) {}`;
+
 /**
  * The browser paints the space outside React Native Web's root. Make that
  * surface match the app, including below Safari's translucent browser chrome.
@@ -94,15 +102,8 @@ export default function Root({ children }: { children: ReactNode }) {
 				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant script, which must run before the first paint. */}
 				<script dangerouslySetInnerHTML={{ __html: applySavedTheme }} />
 				<style>{pageStyle}</style>
-				{/* Nothing works until CanvasKit has loaded, and `index.web.ts` only
-				    asks for it once the scripts have downloaded and run. */}
-				<link
-					rel="preload"
-					href="/canvaskit.wasm"
-					as="fetch"
-					type="application/wasm"
-					crossOrigin="anonymous"
-				/>
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant script preloading CanvasKit before the bundles download. */}
+				<script dangerouslySetInnerHTML={{ __html: preloadCanvasKit }} />
 				<link rel="manifest" href="/manifest.webmanifest" />
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
 				<link rel="apple-touch-icon" href="/apple-touch-icon.png" />

@@ -9,7 +9,7 @@
 			"headers": [
 				{
 					"key": "Content-Security-Policy",
-					"value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-HQmbeRI43Hv9eoC/s34JI9oeKn1KeHnLMEi/dqRWEuw=' 'sha256-67fhrP0+BkBqmgGGXTtgiVO/9EQs3QruYNU/7fnRkI8='; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+					"value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-HQmbeRI43Hv9eoC/s34JI9oeKn1KeHnLMEi/dqRWEuw=' 'sha256-67fhrP0+BkBqmgGGXTtgiVO/9EQs3QruYNU/7fnRkI8=' 'sha256-BdAf7zsJ4uUNm9a0tU2T0NdBMbNJcjs3jP31S+YlVUw='; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 				},
 				{ "key": "X-Content-Type-Options", "value": "nosniff" },
 				{

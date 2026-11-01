@@ -12,6 +12,27 @@ import { registerServiceWorker } from "@/platform/serviceWorker";
 (globalThis as { __EXPO_ROUTER_HYDRATE__?: boolean }).__EXPO_ROUTER_HYDRATE__ =
 	false;
 
+// Reuse the CanvasKit WASM fetch preloaded by +html.tsx before the scripts
+// ran, so CanvasKitInit doesn't trigger a duplicate fetch or cross-world mismatch.
+const canvaskit = (globalThis as unknown as { __canvaskit?: Promise<Response> })
+	.__canvaskit;
+if (canvaskit) {
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+		const url =
+			typeof input === "string"
+				? input
+				: input instanceof URL
+					? input.href
+					: input.url;
+		if (url === "/canvaskit.wasm" || url.endsWith("/canvaskit.wasm")) {
+			globalThis.fetch = originalFetch;
+			return canvaskit.then((response) => response.clone());
+		}
+		return originalFetch(input, init);
+	}) as typeof fetch;
+}
+
 // On web, Skia's module binds to CanvasKit (its WASM build) the moment it's
 // first evaluated, and Expo Router evaluates every route at startup. So the
 // app's code may only load once CanvasKit has: nothing may import Skia above
