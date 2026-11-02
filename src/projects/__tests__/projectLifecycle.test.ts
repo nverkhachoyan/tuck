@@ -19,7 +19,9 @@ import {
 import {
 	createProjectLifecycle,
 	isProjectOpenElsewhere,
+	type PrepareProjectPreviews,
 	type ProjectStorage,
+	type RemoveProjectPreviews,
 } from "../projectLifecycle.ts";
 
 type Write = (
@@ -37,6 +39,8 @@ function createHarness(
 	// When a read should see something other than the saved file, such as a
 	// file another tab is in the middle of replacing.
 	read?: (id: string, files: Map<string, string>) => Promise<string | null>,
+	preparePreviews?: PrepareProjectPreviews,
+	removePreviews?: RemoveProjectPreviews,
 ) {
 	const files = new Map<string, string>();
 	// Each project's image files; a project with none has no entry.
@@ -97,11 +101,15 @@ function createHarness(
 		},
 	};
 	return {
-		projects: createProjectLifecycle(storage),
+		projects: createProjectLifecycle(storage, preparePreviews, removePreviews),
 		// A new session over the same storage, as after a reload or the app
 		// being killed: whatever was open was never closed.
 		restart() {
-			this.projects = createProjectLifecycle(storage);
+			this.projects = createProjectLifecycle(
+				storage,
+				preparePreviews,
+				removePreviews,
+			);
 		},
 		files,
 		images,
@@ -332,6 +340,70 @@ describe("closing and reopening", () => {
 			harness.projects.openProject("missing"),
 			/no longer exists/,
 		);
+	});
+
+	test("opening and closing does not rewrite original.jpg and unused-file sweep leaves preview cache untouched", async () => {
+		const previewCache = new Map<string, string>();
+		const harness = createHarness(
+			undefined,
+			undefined,
+			async (id, doc, imageFile) => {
+				for (const layer of doc.layers) {
+					if (layer.type === "image") {
+						const file = imageFile(layer.uri);
+						if (file) {
+							previewCache.set(`${id}:${file}`, `preview-blob:${id}/${file}`);
+						}
+					}
+				}
+			},
+		);
+
+		const { id, document } = await harness.projects.createProject(photo);
+		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
+		assert.equal(previewCache.has(`${id}:${PHOTO_FILE}`), true);
+
+		// Record the stored original image
+		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
+
+		// Add an edit and close
+		const edited = addText(document, "HELLO");
+		await harness.projects.closeProject(id, edited);
+
+		// original.jpg must still be in project storage, untouched
+		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
+		// previewCache was not touched by closeProject / removeUnusedImages
+		assert.equal(previewCache.has(`${id}:${PHOTO_FILE}`), true);
+
+		// Reopen project
+		const reopened = await harness.projects.openProject(id);
+		assert.ok(reopened);
+		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
+
+		// Close unchanged
+		await harness.projects.closeProject(id, reopened);
+		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
+		assert.equal(previewCache.has(`${id}:${PHOTO_FILE}`), true);
+	});
+
+	test("deleting a project cleans up its cached previews", async () => {
+		const previewCache = new Map<string, string>();
+		const harness = createHarness(
+			undefined,
+			undefined,
+			async (id) => {
+				previewCache.set(id, "preview");
+			},
+			async (id) => {
+				previewCache.delete(id);
+			},
+		);
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.closeProject(id, addText(document, "TEXT"));
+		assert.equal(previewCache.has(id), true);
+
+		await harness.projects.deleteProject(id);
+		assert.equal(previewCache.has(id), false);
 	});
 });
 
