@@ -65,8 +65,9 @@ const NEW_IMAGE_HEADROOM = 1.5;
 /**
  * The longest a new image layer's shorter side is worth being, in pixels:
  * enough to cover the canvas turned either way, with `NEW_IMAGE_HEADROOM` to
- * spare. Past that, pixels only cost memory: the editor and export each hold
- * every image decoded in full.
+ * spare. Past that, pixels only cost memory: while the canvas decodes a
+ * preview texture capped by PREVIEW_LONG_SIDE, export decodes the stored image
+ * in full.
  */
 export function maxNewImageShortSide(canvas: Size): number {
 	return Math.ceil(Math.max(canvas.width, canvas.height) * NEW_IMAGE_HEADROOM);

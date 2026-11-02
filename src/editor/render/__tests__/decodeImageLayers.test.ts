@@ -105,4 +105,39 @@ describe("decodeImageLayers", () => {
 		await nextTask();
 		assert.equal(first.disposals(), 1);
 	});
+
+	test("preview mapping resolves preview URIs without mutating original document layers", async () => {
+		const document = createDocumentFromImage(
+			"file:///projects/1/original.jpg",
+			100,
+			80,
+			true,
+		);
+		const originalUri = (document.layers[0] as ImageLayer).uri;
+		const previewResolver = (uri: string) =>
+			uri === originalUri ? "file:///cache/previews/1/original.jpg" : null;
+
+		const mappedLayers = document.layers.map((layer) =>
+			layer.type === "image"
+				? { ...layer, uri: previewResolver(layer.uri) ?? layer.uri }
+				: layer,
+		);
+
+		const previewImage = fakeImage();
+		const cache = createImageCache(async (uri) => {
+			assert.equal(uri, "file:///cache/previews/1/original.jpg");
+			return previewImage.image;
+		});
+
+		const result = await decodeImageLayers(mappedLayers, cache);
+		assert.equal(
+			result.images.get("file:///cache/previews/1/original.jpg"),
+			previewImage.image,
+		);
+		assert.equal(
+			(document.layers[0] as ImageLayer).uri,
+			"file:///projects/1/original.jpg",
+		);
+		result.release();
+	});
 });

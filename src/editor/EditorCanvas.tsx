@@ -63,6 +63,7 @@ import {
 import type { EditorDocument } from "./document/document";
 import type { Box, Point, Rect, Transform } from "./document/geometry";
 import { EditorScene, type SceneDraft } from "./EditorScene";
+import { useEditorContext } from "./editorContext";
 import type { Layer } from "./layers/layer";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
@@ -245,6 +246,7 @@ export function EditorCanvas({
 		}),
 		[documentSize, size, bottomInset, leftInset, rightInset],
 	);
+	const { previewUri } = useEditorContext();
 	const {
 		zoom,
 		viewport,
@@ -568,6 +570,7 @@ export function EditorCanvas({
 										input.type === "regions" ? input.regions : NO_REGIONS
 									}
 									onImageError={handleImageError}
+									previewUri={previewUri}
 								/>
 							</Group>
 						)}

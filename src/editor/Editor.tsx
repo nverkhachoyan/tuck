@@ -496,6 +496,7 @@ export function Editor({
 		rightInset,
 		wide,
 		cancel,
+		previewUri: host.previewUri,
 	};
 	const panels: PanelContext = {
 		controllers,

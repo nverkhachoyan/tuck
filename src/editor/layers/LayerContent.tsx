@@ -19,12 +19,14 @@ import { TextLayerView } from "./text/TextLayerView";
  */
 export function LayerContent({
 	layer,
+	uri,
 	stroke,
 	matrix,
 	selectionColor,
 	onImageError,
 }: {
 	layer: Layer;
+	uri?: string;
 	stroke?: ReactNode;
 	matrix?: { value: ColorMatrix };
 	selectionColor?: string;
@@ -35,6 +37,7 @@ export function LayerContent({
 			return (
 				<AsyncImage
 					layer={layer}
+					uri={uri ?? layer.uri}
 					matrix={matrix}
 					liveMask={stroke}
 					selectionColor={selectionColor}
@@ -66,18 +69,20 @@ export function LayerContent({
  */
 function AsyncImage({
 	layer,
+	uri,
 	matrix,
 	liveMask,
 	selectionColor,
 	onError,
 }: {
 	layer: ImageLayer;
+	uri: string;
 	matrix?: { value: ColorMatrix };
 	liveMask?: ReactNode;
 	selectionColor?: string;
 	onError: (error: unknown) => void;
 }) {
-	const image = useDecodedImage(layer.uri, onError);
+	const image = useDecodedImage(uri, onError);
 	const mask = useDecodedImage(layer.mask ?? null, onError);
 	if (!image || (mask === undefined && !selectionColor)) return null;
 	return (

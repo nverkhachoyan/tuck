@@ -70,6 +70,7 @@ export type LiveStroke = {
  */
 export function StrokeTarget({
 	layer,
+	uri,
 	stroke,
 	live,
 	matrix,
@@ -77,6 +78,7 @@ export function StrokeTarget({
 	onImageError,
 }: {
 	layer: Layer;
+	uri?: string;
 	stroke: LiveStroke | null;
 	live: LiveTransform;
 	matrix?: DerivedValue<ColorMatrix>;
@@ -102,6 +104,7 @@ export function StrokeTarget({
 		return (
 			<LayerContent
 				layer={layer}
+				uri={uri}
 				// Into the image's own pixels: out of the layer's space, then
 				// unflipped, as `ImageLayerView` flips its cut with it.
 				stroke={
@@ -127,6 +130,7 @@ export function StrokeTarget({
 	return (
 		<LayerContent
 			layer={layer}
+			uri={uri}
 			stroke={
 				stroke &&
 				tool?.type === "draw" && (

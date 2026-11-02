@@ -28,8 +28,8 @@ function afterSkiaDraws(free: () => void) {
 }
 
 /**
- * Image layers' decoded images, one copy per file: the canvas, the crop tool,
- * duplicated photos, and export (while the editor stays mounted under it)
- * all draw the same one.
+ * Image layers' decoded images, one copy per file: the canvas and the crop tool
+ * draw preview textures (when oversized) while export decodes the stored file,
+ * each sharing decodes of identical URIs.
  */
 export const decodedImages = createImageCache(decodeImage, afterSkiaDraws);
