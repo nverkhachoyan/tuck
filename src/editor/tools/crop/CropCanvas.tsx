@@ -21,6 +21,7 @@ import {
 	rebaseTransform,
 	turnsWithPhoto,
 } from "../../document/framing";
+import { useEditorContext } from "../../editorContext";
 import { LayerContent } from "../../layers/LayerContent";
 import type { Layer } from "../../layers/layer";
 import { toTransformList } from "../../layers/layerTransform";
@@ -52,6 +53,7 @@ const CURSORS: Record<CropHandle, CanvasCursor> = {
  * doesn't reach. With no locked photo, nothing is drawn for the anchor.
  */
 export function CropCanvas({ controller }: { controller: CropController }) {
+	const { previewUri } = useEditorContext();
 	const {
 		document,
 		anchor,
@@ -145,6 +147,7 @@ export function CropCanvas({ controller }: { controller: CropController }) {
 									<Group key={layer.id} transform={photoTransform}>
 										<LayerContent
 											layer={unflipped}
+											uri={previewUri?.(unflipped.uri) ?? unflipped.uri}
 											onImageError={handleImageError}
 										/>
 									</Group>
@@ -152,6 +155,11 @@ export function CropCanvas({ controller }: { controller: CropController }) {
 									<CropLayer
 										key={layer.id}
 										layer={layer}
+										uri={
+											layer.type === "image"
+												? (previewUri?.(layer.uri) ?? layer.uri)
+												: undefined
+										}
 										anchor={anchor}
 										crop={crop}
 										turn={turnsWithPhoto(layer, turnLayers)}
@@ -179,12 +187,14 @@ export function CropCanvas({ controller }: { controller: CropController }) {
  */
 function CropLayer({
 	layer,
+	uri,
 	anchor,
 	crop,
 	turn,
 	onImageError,
 }: {
 	layer: Layer;
+	uri?: string;
 	anchor: PhotoPlacement;
 	crop: SharedValue<CropState>;
 	turn: boolean;
@@ -210,7 +220,7 @@ function CropLayer({
 
 	return (
 		<Group transform={transform}>
-			<LayerContent layer={layer} onImageError={onImageError} />
+			<LayerContent layer={layer} uri={uri} onImageError={onImageError} />
 		</Group>
 	);
 }

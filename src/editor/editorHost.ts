@@ -43,4 +43,5 @@ export type EditorHost = {
 	focused: boolean;
 	leave: () => void;
 	openExport: () => void;
+	previewUri?: (uri: string) => string | null;
 };

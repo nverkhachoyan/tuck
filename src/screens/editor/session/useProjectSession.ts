@@ -8,6 +8,7 @@ import {
 	useSession,
 } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
+import { getPreviewUri } from "@/photos/previewCache";
 import {
 	isProjectOpenElsewhere,
 	NEWER_VERSION_MESSAGE,
@@ -96,7 +97,9 @@ async function switchToProject(routeId: string, stillWanted: () => boolean) {
 	const { document, key: projectId } = getSession();
 	if (document) {
 		if (projectId !== null) {
-			await closeProject(projectId, document, renderThumbnail);
+			await closeProject(projectId, document, (doc) =>
+				renderThumbnail(doc, (uri) => getPreviewUri(projectId, uri)),
+			);
 		}
 		// The home screen may have ended the same session meanwhile.
 		if (getSession().document === document) {

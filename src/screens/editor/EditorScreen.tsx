@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Editor, type EditorHost, getSession, useSession } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
+import { getPreviewUri } from "@/photos/previewCache";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
 import {
@@ -92,6 +93,10 @@ function OpenProject({ document }: { document: EditorDocument }) {
 		focused,
 		leave: () => leaveEditor(router),
 		openExport: () => router.push(exportHref(projectId)),
+		previewUri:
+			projectId !== null
+				? (uri: string) => getPreviewUri(projectId, uri)
+				: undefined,
 	};
 	return <Editor document={document} host={host} />;
 }

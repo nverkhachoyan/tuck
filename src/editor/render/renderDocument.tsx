@@ -105,16 +105,38 @@ export async function sampleColor(
 	}
 }
 
+let globalPreviewResolver: ((uri: string) => string | null) | null = null;
+
+/** Sets the global preview resolver used by renderThumbnail when no local one is passed. */
+export function setPreviewResolver(
+	resolver: ((uri: string) => string | null) | null,
+) {
+	globalPreviewResolver = resolver;
+}
+
 /**
  * A small image of the document, as a data URL for a project's thumbnail: a
  * JPEG, or a PNG when some of the canvas is transparent.
+ * Decodes preview URIs instead of full camera photos when available.
  */
 export async function renderThumbnail(
 	document: EditorDocument,
+	resolvePreview?: (uri: string) => string | null,
 ): Promise<string> {
 	const shortSide = Math.min(document.width, document.height);
+	const resolver = resolvePreview ?? globalPreviewResolver;
+	const thumbnailDoc = resolver
+		? {
+				...document,
+				layers: document.layers.map((layer) =>
+					layer.type === "image"
+						? { ...layer, uri: resolver(layer.uri) ?? layer.uri }
+						: layer,
+				),
+			}
+		: document;
 	const image = await renderDocument(
-		document,
+		thumbnailDoc,
 		Math.min(1, THUMBNAIL_SIZE / shortSide),
 	);
 	try {

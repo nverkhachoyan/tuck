@@ -62,6 +62,8 @@ type EditorSceneProps = {
 	regions: readonly CanvasRegion[];
 	// An image layer's file couldn't be read or decoded. Must be stable.
 	onImageError: (error: unknown) => void;
+	// Resolves an image layer's display URI to a cached preview texture.
+	previewUri?: (uri: string) => string | null;
 };
 
 /**
@@ -90,6 +92,7 @@ export function EditorScene({
 	cuttingOutId,
 	regions,
 	onImageError,
+	previewUri,
 }: EditorSceneProps) {
 	const draftId = draft && !draft.isNew ? draft.layer.id : null;
 	const canvas = rect(0, 0, document.width, document.height);
@@ -118,6 +121,11 @@ export function EditorScene({
 							) : (
 								<StrokeTarget
 									layer={layer}
+									uri={
+										layer.type === "image"
+											? (previewUri?.(layer.uri) ?? layer.uri)
+											: undefined
+									}
 									stroke={stroke?.targetId === layer.id ? stroke : null}
 									live={live}
 									matrix={

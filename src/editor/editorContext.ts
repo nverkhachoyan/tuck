@@ -23,6 +23,7 @@ export type EditorContextValue = {
 	rightInset?: number;
 	wide: boolean;
 	cancel: () => void;
+	previewUri?: (uri: string) => string | null;
 };
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

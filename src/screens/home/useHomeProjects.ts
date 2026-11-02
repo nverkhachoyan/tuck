@@ -9,6 +9,7 @@ import {
 import { createDocumentFromImage, type EditorDocument } from "@/editor/core";
 import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
+import { getPreviewUri } from "@/photos/previewCache";
 import { importSharedPhoto } from "@/photos/sharedPhoto";
 import { deleteTemporaryFile } from "@/platform/temporaryFile";
 import { copyName, type ProjectSummary } from "@/projects/projectFile";
@@ -87,7 +88,9 @@ export function useHomeProjects() {
 		for (const project of list) {
 			if (pass !== thumbnailPass.current) return;
 			if (project.status !== "ready" || !project.thumbnailOutdated) continue;
-			const thumbnail = await updateThumbnail(project.id, renderThumbnail);
+			const thumbnail = await updateThumbnail(project.id, (doc) =>
+				renderThumbnail(doc, (uri) => getPreviewUri(project.id, uri)),
+			);
 			if (!thumbnail || pass !== thumbnailPass.current) continue;
 			setProjects((current) =>
 				current.map((listed) =>
@@ -118,7 +121,9 @@ export function useHomeProjects() {
 		return run(document && projectId ? "saving" : "loading", async () => {
 			if (document && projectId) {
 				try {
-					await closeProject(projectId, document, renderThumbnail);
+					await closeProject(projectId, document, (doc) =>
+						renderThumbnail(doc, (uri) => getPreviewUri(projectId, uri)),
+					);
 				} catch (error) {
 					showAlert("Couldn't save your edits", errorMessage(error));
 					return "saveFailed";
