@@ -56,7 +56,7 @@ export async function importPhoto(
 }
 
 // Looks the same as 1, at about half the size on disk. Export uses 0.95.
-const JPEG_QUALITY = 0.92;
+export const JPEG_QUALITY = 0.92;
 
 /**
  * Skia can't decode HEIC, the default on iPhone, so every photo is re-encoded

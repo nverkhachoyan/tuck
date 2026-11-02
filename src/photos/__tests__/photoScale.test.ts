@@ -1,7 +1,11 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { MAX_PHOTO_PIXELS, photoScale } from "../photoScale.ts";
+import {
+	MAX_PHOTO_PIXELS,
+	PREVIEW_LONG_SIDE,
+	photoScale,
+} from "../photoScale.ts";
 
 const MP = 1_000_000;
 
@@ -56,5 +60,44 @@ describe("photoScale", () => {
 		const camera = { width: 8000, height: 6000 };
 		assert.equal(photoScale(camera, 24 * MP, 3000), 0.5);
 		assert.equal(photoScale(camera, 24 * MP, 5000), Math.sqrt(0.5));
+	});
+
+	test("caps preview size to PREVIEW_LONG_SIDE without shrinking smaller photos", () => {
+		assert.equal(
+			photoScale(
+				{ width: 5712, height: 4284 },
+				Number.POSITIVE_INFINITY,
+				Number.POSITIVE_INFINITY,
+				PREVIEW_LONG_SIDE,
+			),
+			4096 / 5712,
+		);
+		assert.equal(
+			photoScale(
+				{ width: 4284, height: 5712 },
+				Number.POSITIVE_INFINITY,
+				Number.POSITIVE_INFINITY,
+				PREVIEW_LONG_SIDE,
+			),
+			4096 / 5712,
+		);
+		assert.equal(
+			photoScale(
+				{ width: 2000, height: 1500 },
+				Number.POSITIVE_INFINITY,
+				Number.POSITIVE_INFINITY,
+				PREVIEW_LONG_SIDE,
+			),
+			1,
+		);
+		assert.equal(
+			photoScale(
+				{ width: 4096, height: 3072 },
+				Number.POSITIVE_INFINITY,
+				Number.POSITIVE_INFINITY,
+				PREVIEW_LONG_SIDE,
+			),
+			1,
+		);
 	});
 });

@@ -42,6 +42,16 @@ export type ProjectStorage = {
 	listProjectIds(): Promise<string[]>;
 };
 
+/** Prepares preview textures for an open project's images before canvas decoding. */
+export type PrepareProjectPreviews = (
+	id: string,
+	document: EditorDocument,
+	imageFile: (url: string) => string | undefined,
+) => Promise<unknown>;
+
+/** Removes cached preview textures when a project is deleted. */
+export type RemoveProjectPreviews = (id: string) => Promise<unknown>;
+
 // The contract's shared messages, so both storage implementations and the
 // lifecycle word them the same.
 export const MISSING_IMAGE_MESSAGE = "One of this project's photos is missing.";
@@ -123,7 +133,11 @@ function fileFor(
 	};
 }
 
-export function createProjectLifecycle(storage: ProjectStorage) {
+export function createProjectLifecycle(
+	storage: ProjectStorage,
+	preparePreviews?: PrepareProjectPreviews,
+	removePreviews?: RemoveProjectPreviews,
+) {
 	const openProjects = new Map<string, OpenProject>();
 
 	// Closing a project saves or removes it; everything else waits for that, so
@@ -232,14 +246,14 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	}
 
 	/** Starts a project from a picked photo, which moves into it. */
-	function createProject(photo: {
+	async function createProject(photo: {
 		uri: string;
 		width: number;
 		height: number;
 		opaque: boolean;
 	}): Promise<{ id: string; document: EditorDocument }> {
 		const { uri, width, height, opaque } = photo;
-		return startProject(async (id) => {
+		const started = await startProject(async (id) => {
 			// `PHOTO_FILE` is a JPEG, so a PNG gets a name of its own.
 			const file = opaque ? PHOTO_FILE : newImageFile(opaque);
 			const url = await storage.storeImage(id, file, uri);
@@ -248,6 +262,13 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				document: createDocumentFromImage(url, width, height, opaque),
 			};
 		});
+		const project = openProjects.get(started.id);
+		if (project && preparePreviews) {
+			await preparePreviews(started.id, started.document, (url) =>
+				project.images.get(url),
+			);
+		}
+		return started;
 	}
 
 	function createBlankProject(canvas: {
@@ -329,7 +350,7 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				saved.document,
 				(file) => urls.get(file) ?? file,
 			);
-			openProjects.set(id, {
+			const project: OpenProject = {
 				images: new Map([...urls].map(([file, url]) => [url, file])),
 				createdAt: saved.createdAt,
 				reopened: true,
@@ -338,7 +359,11 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 				thumbnail: saved.thumbnail ?? null,
 				name: saved.name ?? null,
 				writing: Promise.resolve(),
-			});
+			};
+			openProjects.set(id, project);
+			if (preparePreviews) {
+				await preparePreviews(id, document, (url) => project.images.get(url));
+			}
 			setAutosaveError(null);
 			opened = true;
 			return document;
@@ -536,7 +561,12 @@ export function createProjectLifecycle(storage: ProjectStorage) {
 	}
 
 	function deleteProject(id: string): Promise<void> {
-		return withClosedProject(id, () => storage.removeProject(id));
+		return withClosedProject(id, async () => {
+			await storage.removeProject(id);
+			if (removePreviews) {
+				await removePreviews(id);
+			}
+		});
 	}
 
 	/**
