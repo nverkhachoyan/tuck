@@ -1,4 +1,5 @@
 import { type SkImage, Skia } from "react-native-skia";
+import { measurePerfSpan } from "../../platform/perf.ts";
 import { createImageCache } from "./imageCache";
 
 /**
@@ -6,9 +7,11 @@ import { createImageCache } from "./imageCache";
  * only covers decoding, this rejects when the file can't be read either.
  */
 export async function decodeImage(uri: string): Promise<SkImage> {
-	const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
-	if (!image) throw new Error("Couldn't decode the image.");
-	return image;
+	return measurePerfSpan("tuck:image-decode", async () => {
+		const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
+		if (!image) throw new Error("Couldn't decode the image.");
+		return image;
+	});
 }
 
 /**

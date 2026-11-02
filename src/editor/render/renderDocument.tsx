@@ -7,6 +7,7 @@ import {
 	ImageFormat,
 	type SkImage,
 } from "react-native-skia";
+import { measurePerfSpan } from "@/platform/perf";
 import { averageColor } from "@/ui/color";
 import { type EditorDocument, hasTransparency } from "../document/document";
 import type { Rect } from "../document/geometry";
@@ -30,26 +31,28 @@ export async function renderDocument(
 	document: EditorDocument,
 	scale = 1,
 ): Promise<SkImage> {
-	const decoded = await decodeImageLayers(document.layers, decodedImages);
-	try {
-		const result = await drawOffscreen(
-			<Group transform={[{ scale }]}>
-				<DocumentRenderScene document={document} images={decoded.images} />
-			</Group>,
-			{
-				width: Math.round(document.width * scale),
-				height: Math.round(document.height * scale),
-			},
-		);
-		if (!result) {
-			throw new Error("Could not render exported image");
+	return measurePerfSpan("tuck:render-document", async () => {
+		const decoded = await decodeImageLayers(document.layers, decodedImages);
+		try {
+			const result = await drawOffscreen(
+				<Group transform={[{ scale }]}>
+					<DocumentRenderScene document={document} images={decoded.images} />
+				</Group>,
+				{
+					width: Math.round(document.width * scale),
+					height: Math.round(document.height * scale),
+				},
+			);
+			if (!result) {
+				throw new Error("Could not render exported image");
+			}
+			return result;
+		} finally {
+			// Camera photos are large; let go of them right away, so the ones the
+			// editor isn't drawing are freed instead of waiting for garbage collection.
+			decoded.release();
 		}
-		return result;
-	} finally {
-		// Camera photos are large; let go of them right away, so the ones the
-		// editor isn't drawing are freed instead of waiting for garbage collection.
-		decoded.release();
-	}
+	});
 }
 
 // How far around a point the eyedropper averages, in document pixels: a
@@ -116,8 +119,8 @@ export async function renderThumbnail(
 	);
 	try {
 		return hasTransparency(document)
-			? `data:image/png;base64,${image.encodeToBase64(ImageFormat.PNG)}`
-			: `data:image/jpeg;base64,${image.encodeToBase64(ImageFormat.JPEG, 80)}`;
+			? `data:image/png;base64,${measurePerfSpan("tuck:export-encode", () => image.encodeToBase64(ImageFormat.PNG))}`
+			: `data:image/jpeg;base64,${measurePerfSpan("tuck:export-encode", () => image.encodeToBase64(ImageFormat.JPEG, 80))}`;
 	} finally {
 		image.dispose();
 	}

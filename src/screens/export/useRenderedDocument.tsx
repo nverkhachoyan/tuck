@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, ImageFormat, type SkImage } from "react-native-skia";
 import { drawOffscreen, renderDocument } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
+import { measurePerfSpan } from "@/platform/perf";
 
 // The largest the preview's own copy is, in pixels: the export sheet's strip
 // at 3x.
@@ -88,7 +89,7 @@ async function previewOf(image: SkImage): Promise<string | null> {
 	);
 	if (!small) return null;
 	try {
-		return `data:image/png;base64,${small.encodeToBase64(ImageFormat.PNG)}`;
+		return `data:image/png;base64,${measurePerfSpan("tuck:export-encode", () => small.encodeToBase64(ImageFormat.PNG))}`;
 	} finally {
 		small.dispose();
 	}
