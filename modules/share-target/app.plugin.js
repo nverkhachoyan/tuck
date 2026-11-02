@@ -1,6 +1,15 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const plist = require("@expo/plist").default;
+function getPlist() {
+	try {
+		return require("@expo/plist").default;
+	} catch {
+		return require(
+			require.resolve("@expo/plist", { paths: [require.resolve("expo")] }),
+		).default;
+	}
+}
+const plist = getPlist();
 const {
 	AndroidConfig,
 	withAndroidManifest,
