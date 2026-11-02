@@ -45,8 +45,10 @@ import {
 	ToolStage,
 	ToolTrays,
 } from "./PanelViews";
+import { decodedImages } from "./render/decodedImages";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { EyedropperHint } from "./shell/ColorOptions";
+import { DevHud } from "./shell/DevHud";
 import { Dock, DockFooter } from "./shell/Dock";
 import { HeaderActions } from "./shell/HeaderActions";
 import { SaveErrorBanner } from "./shell/SaveErrorBanner";
@@ -696,6 +698,7 @@ export function Editor({
 							onClose={() => dispatchMode({ type: "closeShortcuts" })}
 						/>
 					)}
+					{__DEV__ && <DevHud getSnapshot={decodedImages.snapshot} />}
 				</View>
 			</EditorContext.Provider>
 		</TrayHeight.Provider>

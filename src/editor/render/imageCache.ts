@@ -3,10 +3,24 @@ import type { SkImage } from "react-native-skia";
 /** A decoded image, kept in memory until its holder calls `release`. */
 export type HeldImage = { decoded: Promise<SkImage>; release: () => void };
 
-export type ImageCache = { acquire: (uri: string) => HeldImage };
+/** A point-in-time snapshot of the cache's size and memory usage. */
+export type ImageCacheSnapshot = {
+	count: number;
+	bytes: number;
+};
+
+export type ImageCache = {
+	acquire: (uri: string) => HeldImage;
+	snapshot: () => ImageCacheSnapshot;
+};
 
 // `releases` counts the releases so far, so only the latest one frees.
-type Entry = { decoded: Promise<SkImage>; users: number; releases: number };
+type Entry = {
+	decoded: Promise<SkImage>;
+	resolved?: SkImage;
+	users: number;
+	releases: number;
+};
 
 /**
  * Decoded images by URI, shared by everyone holding the same one and freed
@@ -50,6 +64,12 @@ export function createImageCache(
 			if (!entry) {
 				const decoded = decode(uri);
 				const created: Entry = { decoded, users: 0, releases: 0 };
+				decoded.then(
+					(image) => {
+						created.resolved = image;
+					},
+					() => {},
+				);
 				// A failed decode is tried again by the next user.
 				decoded.catch(() => {
 					if (entries.get(uri) === created) entries.delete(uri);
@@ -59,6 +79,26 @@ export function createImageCache(
 			}
 			entry.users += 1;
 			return { decoded: entry.decoded, release: () => release(uri, entry) };
+		},
+		snapshot() {
+			let bytes = 0;
+			for (const entry of entries.values()) {
+				if (entry.resolved) {
+					const w =
+						typeof entry.resolved.width === "function"
+							? entry.resolved.width()
+							: 0;
+					const h =
+						typeof entry.resolved.height === "function"
+							? entry.resolved.height()
+							: 0;
+					bytes += w * h * 4;
+				}
+			}
+			return {
+				count: entries.size,
+				bytes,
+			};
 		},
 	};
 }

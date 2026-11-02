@@ -107,4 +107,38 @@ describe("createImageCache", () => {
 		await nextTask();
 		assert.deepEqual(disposed, ["photo.jpg"]);
 	});
+
+	test("reports count and estimated bytes through snapshot", async () => {
+		const cache = createImageCache(async (uri) => {
+			const size =
+				uri === "large.jpg" ? { w: 1000, h: 500 } : { w: 100, h: 80 };
+			return {
+				width: () => size.w,
+				height: () => size.h,
+				dispose: () => {},
+			} as unknown as SkImage;
+		});
+
+		assert.deepEqual(cache.snapshot(), { count: 0, bytes: 0 });
+
+		const first = cache.acquire("small.jpg");
+		await first.decoded;
+
+		// 100 * 80 * 4 = 32,000 bytes
+		assert.deepEqual(cache.snapshot(), { count: 1, bytes: 32_000 });
+
+		const second = cache.acquire("large.jpg");
+		await second.decoded;
+
+		// 32,000 + (1000 * 500 * 4 = 2,000,000) = 2,032,000 bytes
+		assert.deepEqual(cache.snapshot(), { count: 2, bytes: 2_032_000 });
+
+		first.release();
+		await nextTask();
+		assert.deepEqual(cache.snapshot(), { count: 1, bytes: 2_000_000 });
+
+		second.release();
+		await nextTask();
+		assert.deepEqual(cache.snapshot(), { count: 0, bytes: 0 });
+	});
 });
