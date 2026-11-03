@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useWindowDimensions, type ViewInstance } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { compactControls } from "@/ui/density";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
 import { editorFrame } from "./editorFrame";
@@ -39,6 +40,7 @@ export function useEditorLayout({
 	cardOpen: boolean;
 }) {
 	const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+	const { bottom: safeBottom } = useSafeAreaInsets();
 	const { wide, layersBeside, inspectorPinned } = editorFrame(
 		windowWidth,
 		windowHeight,
@@ -53,11 +55,12 @@ export function useEditorLayout({
 	const dockInset = wide ? 0 : barInset;
 	// An open tray's height: the canvas fits above it as well as the dock. A
 	// wide window's card stands in the same place, with a gap above and below,
-	// and the keyboard covers the bottom while typing.
+	// and like the rail and inspector, clear of the home indicator. The
+	// keyboard covers the bottom while typing.
 	const [trayHeight, setTrayHeight] = useState(0);
 	const coveredBottom = wide
 		? Math.max(
-				cardOpen ? CARD_INSET : 0,
+				safeBottom + (cardOpen ? CARD_INSET : 0),
 				keyboardOverlap > 0 ? keyboardOverlap + PANEL_GAP : 0,
 			)
 		: dockInset + trayHeight;

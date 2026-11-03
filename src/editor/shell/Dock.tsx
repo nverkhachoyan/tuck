@@ -132,8 +132,9 @@ export function Dock({
 
 /** The wide editor's right-hand card beside the canvas, holding the layers. */
 export function Inspector({ children }: { children: ReactNode }) {
+	const { bottom } = useSafeAreaInsets();
 	return (
-		<View style={styles.inspectorArea}>
+		<View style={[styles.inspectorArea, { bottom: bottom + PANEL_GAP }]}>
 			<Surface
 				resting
 				style={styles.inspectorCard}
@@ -328,7 +329,6 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		top: PANEL_GAP,
 		right: PANEL_GAP,
-		bottom: PANEL_GAP,
 		width: INSPECTOR_WIDTH,
 		pointerEvents: "box-none",
 	},

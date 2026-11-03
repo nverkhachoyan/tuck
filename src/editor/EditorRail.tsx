@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import { StyleSheet, View, type ViewInstance } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Surface } from "@/ui/Surface";
 import { space } from "@/ui/theme";
 import { PANEL_GAP, PANEL_RADIUS } from "./shell/Dock";
@@ -36,8 +37,9 @@ export function EditorRail({
 		if (tool) finishTool();
 		start();
 	};
+	const { bottom } = useSafeAreaInsets();
 	return (
-		<View style={styles.railArea}>
+		<View style={[styles.railArea, { bottom: bottom + PANEL_GAP }]}>
 			<Surface resting style={styles.rail} contentStyle={styles.railContent}>
 				<ToolsPanel
 					tools={tools}
@@ -60,7 +62,6 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		top: PANEL_GAP,
 		left: PANEL_GAP,
-		bottom: PANEL_GAP,
 		width: RAIL_WIDTH,
 		pointerEvents: "box-none",
 	},
