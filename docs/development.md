@@ -26,6 +26,14 @@ To load a fresh bundle in the development build, `xcrun simctl terminate <udid> 
 - `CI=1 pnpm expo start` turns off Metro's file watching: edits never reach the app. Start the dev server without `CI` when changing code.
 - A flaky `expo start --tunnel` can leave the app running a stale or half-updated bundle with no error. If behavior contradicts the code, check Metro's output for "Tunnel connection has been closed", and prefer LAN mode (`pnpm expo start`).
 
+## Working from a Linux machine
+
+Everything but iOS can run on Linux: Metro, the checks, the web app, and Android with its emulator. A Mac builds the iOS development build and runs the simulator, which loads its JavaScript from the Linux machine's Metro, so JavaScript changes reach it with Fast Refresh and only native changes need the Mac.
+
+- **Metro:** `REACT_NATIVE_PACKAGER_HOSTNAME=$(hostname) pnpm start`. The simulator and a phone reach it by that name over the network or Tailscale; App Transport Security accepts a bare hostname as local networking, not a `100.x` address.
+- **iOS builds:** `TUCK_MAC=<the Mac's SSH host> pnpm ios:remote` after changing native code (arguments go to `expo run:ios`, such as `--device <udid>`). It copies the working tree, minus what git ignores, to `~/Dev/tuck-remote` on the Mac, builds there, and opens the booted simulator against the Linux Metro. The Mac needs SSH from the Linux machine, Node and pnpm on a login shell's `PATH` (the build runs in `zsh -lc`), and GNU rsync (`brew install rsync`): Apple's `openrsync` deletes ignored files on `--delete`, `node_modules` and `ios/` among them.
+- **Android:** install the SDK's command-line tools in `~/Android/Sdk`, with JDK 17, `ANDROID_HOME`, and the SDK's `platform-tools` and `emulator` on `PATH`. The x86_64 Google Play image runs at full speed under KVM with `-gpu host`; from an SSH session, start the emulator with the desktop's display (`DISPLAY=:0`).
+
 ## Devices
 
 - **iOS 27** stops an app built with its SDK at launch unless it adopts the scene life cycle, which Expo 58's template does (see architecture.md). The simulators run iOS 26.5, so only a device shows it. Launch on a device with `xcrun devicectl device process launch --device <udid> --terminate-existing --payload-url <dev client URL> com.nverk.tuck`, and read crash reports with `xcrun devicectl device info files --domain-type systemCrashLogs`: an exit code of 0 there can still be a crash.

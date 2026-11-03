@@ -7,6 +7,7 @@
     "start": "BROWSER=none expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:remote": "sh scripts/ios-remote.sh",
     "web": "BROWSER=none expo start --web",
     "lint": "biome lint .",
     "format": "biome format --write .",
