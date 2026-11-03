@@ -406,7 +406,7 @@ function ProjectCard({
 				accessibilityLabel={`${label}, ${detail}`}
 				accessibilityState={{
 					disabled: disabled || unavailable,
-					busy: opening || undefined,
+					busy: opening,
 				}}
 				accessibilityHint={
 					isNaming ? "Edits the project name" : "Opens the project"
