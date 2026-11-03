@@ -187,7 +187,7 @@ export function Editor({
 		enabled: focused && !draftOpen,
 		maxShortSide: maxNewImageShortSide(document),
 		onImage: async ({ uri, width, height, opaque }, kind) => {
-			const url = await host.addImage(uri, opaque);
+			const url = await host.addImage(uri, opaque, { width, height });
 			const area = canvasRef.current?.visibleArea();
 			const add = kind === "sticker" ? addStickerLayer : addImageLayer;
 			add(url, width, height, opaque, area);

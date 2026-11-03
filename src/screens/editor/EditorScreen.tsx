@@ -82,8 +82,8 @@ function OpenProject({ document }: { document: EditorDocument }) {
 		importPhoto,
 		// The image moves into the project, so autosave knows its file.
 		// Without a project, it's used where the picker left it.
-		addImage: async (uri, opaque) =>
-			projectId === null ? uri : addImage(projectId, uri, opaque),
+		addImage: async (uri, opaque, size) =>
+			projectId === null ? uri : addImage(projectId, uri, opaque, size),
 		title,
 		saveProblem:
 			projectId === null

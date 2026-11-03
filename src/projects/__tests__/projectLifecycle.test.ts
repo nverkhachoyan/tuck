@@ -386,6 +386,28 @@ describe("closing and reopening", () => {
 		assert.equal(previewCache.has(`${id}:${PHOTO_FILE}`), true);
 	});
 
+	test("a photo added with its size gets a preview, and a mask doesn't", async () => {
+		const prepared: string[] = [];
+		const harness = createHarness(
+			undefined,
+			undefined,
+			async (_id, doc, imageFile) => {
+				for (const layer of doc.layers) {
+					if (layer.type === "image") prepared.push(imageFile(layer.uri) ?? "");
+				}
+			},
+		);
+		const { id } = await harness.projects.createBlankProject(canvas);
+
+		const url = await harness.projects.addImage(id, "picked", true, {
+			width: 5712,
+			height: 4284,
+		});
+		await harness.projects.addImage(id, "mask", false);
+
+		assert.deepEqual(prepared, [url.slice(`blob:${id}/`.length)]);
+	});
+
 	test("deleting a project cleans up its cached previews", async () => {
 		const previewCache = new Map<string, string>();
 		const harness = createHarness(
