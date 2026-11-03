@@ -263,8 +263,12 @@ function useExportActions(state: RenderState, format: ExportFormat) {
 				setSaved(true);
 			} else {
 				showAlert(
-					"Photos access needed",
-					"Allow this app to add photos in Settings to save your edit.",
+					Platform.OS === "android"
+						? "Permission needed"
+						: "Photos access needed",
+					Platform.OS === "android"
+						? "Allow this app to access photos and media in Settings to save your edit."
+						: "Allow this app to add photos in Settings to save your edit.",
 					[
 						{ text: "Cancel", style: "cancel" },
 						{ text: "Open settings", onPress: () => Linking.openSettings() },
