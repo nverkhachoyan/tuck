@@ -40,6 +40,11 @@ export function mapDetectionRects(
 	});
 }
 
+// Text recognizers can leave a line's first or last letter out of its box
+// (ML Kit drops a whole "W"), so text reaches a wide letter further each way:
+// about 1.1 line heights on a line without descenders.
+const TEXT_PAD_X = 1.1;
+
 function padRect(
 	region: DetectionRect,
 	layer: ImageLayer,
@@ -47,9 +52,7 @@ function padRect(
 ): DetectionRect | null {
 	if (region.width <= 0 || region.height <= 0) return null;
 	const padX =
-		feature === "faces"
-			? region.width * 0.14
-			: Math.max(2, region.height * 0.12);
+		feature === "faces" ? region.width * 0.14 : region.height * TEXT_PAD_X;
 	const padY =
 		feature === "faces"
 			? region.height * 0.18
