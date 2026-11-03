@@ -106,8 +106,9 @@ const editText = (layer: Layer): CanvasInput => ({
 
 describe("inputRules", () => {
 	test("selecting moves the selection, and one finger pans only when zoomed", () => {
-		assert.deepEqual(inputRules({ type: "select" }, false), {
+		assert.deepEqual(inputRules({ type: "select" }, false, shape), {
 			selection: "transforms",
+			twoFingers: "selection",
 			oneFinger: null,
 			cursor: "hover",
 		});
@@ -117,11 +118,18 @@ describe("inputRules", () => {
 		);
 	});
 
+	test("selecting with nothing selected leaves two fingers to the view", () => {
+		for (const zoomed of [false, true]) {
+			assert.equal(inputRules({ type: "select" }, zoomed).twoFingers, "view");
+		}
+	});
+
 	test("a tool, picking a color too, keeps one finger and a crosshair", () => {
 		for (const input of [pen, pick]) {
 			for (const zoomed of [false, true]) {
 				assert.deepEqual(inputRules(input, zoomed, shape), {
 					selection: "still",
+					twoFingers: "view",
 					oneFinger: null,
 					cursor: "crosshair",
 				});
@@ -137,6 +145,7 @@ describe("inputRules", () => {
 			for (const zoomed of [false, true]) {
 				assert.deepEqual(inputRules(input, zoomed, layer), {
 					selection: "drags",
+					twoFingers: "view",
 					oneFinger: null,
 					cursor: "hover",
 				});
@@ -160,6 +169,7 @@ describe("inputRules", () => {
 	test("editing text keeps one finger, and the cursor follows the text", () => {
 		assert.deepEqual(inputRules(editText(drawing), true), {
 			selection: "still",
+			twoFingers: "view",
 			oneFinger: null,
 			cursor: "hover",
 		});
@@ -168,6 +178,7 @@ describe("inputRules", () => {
 	test("toggling regions pans with one finger anywhere", () => {
 		assert.deepEqual(inputRules(regions, false), {
 			selection: "still",
+			twoFingers: "view",
 			oneFinger: "anywhere",
 			cursor: "pointer",
 		});
@@ -177,6 +188,7 @@ describe("inputRules", () => {
 		for (const zoomed of [false, true]) {
 			assert.deepEqual(inputRules(dial, zoomed), {
 				selection: "still",
+				twoFingers: "view",
 				oneFinger: null,
 				cursor: "ew-resize",
 			});
