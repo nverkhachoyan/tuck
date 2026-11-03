@@ -1,3 +1,4 @@
+import { type ProcessMemory, readProcessMemory } from "process-memory";
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import type { ImageCacheSnapshot } from "../render/imageCache.ts";
@@ -11,13 +12,15 @@ export type DevHudProps = {
 
 /**
  * Dev-only performance overlay showing frame time, count of decoded images,
- * and estimated bitmap bytes.
+ * and estimated bitmap bytes, and on iOS the process footprint and how much
+ * more memory it may take before Jetsam.
  */
 export function DevHud({ getSnapshot }: DevHudProps) {
 	const [metrics, setMetrics] = useState({
 		frameTime: 0,
 		count: 0,
 		bytes: 0,
+		memory: null as ProcessMemory | null,
 	});
 
 	useEffect(() => {
@@ -47,6 +50,7 @@ export function DevHud({ getSnapshot }: DevHudProps) {
 					frameTime: avgFrameTime,
 					count: snapshot.count,
 					bytes: snapshot.bytes,
+					memory: readProcessMemory(),
 				});
 				totalTime = 0;
 				frameCount = 0;
@@ -67,6 +71,12 @@ export function DevHud({ getSnapshot }: DevHudProps) {
 				{metrics.count === 1 ? "image" : "images"} ·{" "}
 				{formatBytes(metrics.bytes)}
 			</Text>
+			{metrics.memory && (
+				<Text style={styles.text}>
+					footprint {formatBytes(metrics.memory.footprint)} ·{" "}
+					{formatBytes(metrics.memory.available)} left
+				</Text>
+			)}
 		</View>
 	);
 }
