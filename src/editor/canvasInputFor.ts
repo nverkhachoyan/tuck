@@ -47,6 +47,8 @@ export type InputRules = {
 	// with one finger that lands on it or its handles, which the tool's
 	// drags elsewhere leave be.
 	selection: "still" | "transforms" | "drags";
+	// What two fingers move: the selected layer, or the view.
+	twoFingers: "selection" | "view";
 	// Where one finger pans the view: anywhere, where taps don't drag; off
 	// the selection and its handles, while zoomed in; or nowhere.
 	oneFinger: "anywhere" | "offSelection" | null;
@@ -67,20 +69,46 @@ export function inputRules(
 		case "select":
 			return {
 				selection: "transforms",
+				twoFingers: selected ? "selection" : "view",
 				oneFinger: zoomed ? "offSelection" : null,
 				cursor: "hover",
 			};
 		case "tool":
 			return drags(input.tool, selected)
-				? { selection: "drags", oneFinger: null, cursor: "hover" }
-				: { selection: "still", oneFinger: null, cursor: "crosshair" };
+				? {
+						selection: "drags",
+						twoFingers: "view",
+						oneFinger: null,
+						cursor: "hover",
+					}
+				: {
+						selection: "still",
+						twoFingers: "view",
+						oneFinger: null,
+						cursor: "crosshair",
+					};
 		case "editText":
-			return { selection: "still", oneFinger: null, cursor: "hover" };
+			return {
+				selection: "still",
+				twoFingers: "view",
+				oneFinger: null,
+				cursor: "hover",
+			};
 		case "regions":
-			return { selection: "still", oneFinger: "anywhere", cursor: "pointer" };
+			return {
+				selection: "still",
+				twoFingers: "view",
+				oneFinger: "anywhere",
+				cursor: "pointer",
+			};
 		// One finger turns the dial, so two move the view.
 		case "dial":
-			return { selection: "still", oneFinger: null, cursor: "ew-resize" };
+			return {
+				selection: "still",
+				twoFingers: "view",
+				oneFinger: null,
+				cursor: "ew-resize",
+			};
 	}
 }
 

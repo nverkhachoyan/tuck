@@ -449,13 +449,11 @@ export function EditorCanvas({
 		dragOnly: dragsSelection,
 		enabled: isSelect || dragsSelection,
 	});
-	// Two fingers transform the selected layer while it can, and a tool
-	// leaves them to the view.
 	const viewGesture = useViewGesture({
 		shown,
 		frame,
 		live,
-		twoFingers: rules.selection !== "transforms",
+		twoFingers: rules.twoFingers === "view",
 		dragAlone,
 		onCommit: commitViewport,
 	});
