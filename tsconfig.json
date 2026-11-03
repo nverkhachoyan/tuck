@@ -5,7 +5,8 @@
 		"allowImportingTsExtensions": true,
 		"paths": {
 			"@/*": ["./src/*"],
-			"image-analysis": ["./modules/image-analysis"]
+			"image-analysis": ["./modules/image-analysis"],
+			"process-memory": ["./modules/process-memory"]
 		}
 	},
 	"extends": "expo/tsconfig.base",
