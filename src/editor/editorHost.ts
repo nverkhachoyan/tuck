@@ -25,7 +25,8 @@ export type ImageSizeLimits = {
  * - `importPhoto`: makes an image at a URI (a dropped file's, on web) ready
  *   the same way.
  * - `addImage`: keeps an image the document gains, giving the URI the
- *   document should use.
+ *   document should use. A photo layer's image comes with its size, so the
+ *   canvas can draw a smaller preview of it.
  * - `title`: what the app calls the document.
  * - `saveProblem`: why edits aren't being kept, if they aren't, with
  *   `retrySave` when trying again might help.
@@ -36,7 +37,11 @@ export type ImageSizeLimits = {
 export type EditorHost = {
 	pickPhoto: (limits: ImageSizeLimits) => Promise<PickedImageResult>;
 	importPhoto: (uri: string, limits: ImageSizeLimits) => Promise<PickedImage>;
-	addImage: (uri: string, opaque: boolean) => Promise<string>;
+	addImage: (
+		uri: string,
+		opaque: boolean,
+		size?: { width: number; height: number },
+	) => Promise<string>;
 	title: string;
 	saveProblem: string | null;
 	retrySave?: () => void;

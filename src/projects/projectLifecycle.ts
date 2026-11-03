@@ -434,12 +434,15 @@ export function createProjectLifecycle(
 
 	/**
 	 * Moves a picked photo into an open project as a file of its own, and
-	 * returns its URL there, for a new image layer's `uri` or `mask`.
+	 * returns its URL there, for a new image layer's `uri` or `mask`. Given
+	 * the photo's size, it also gets a preview, as a project's photos do when
+	 * it opens; a mask is left without one.
 	 */
 	async function addImage(
 		id: string,
 		uri: string,
 		opaque: boolean,
+		size?: { width: number; height: number },
 	): Promise<string> {
 		const project = openProjects.get(id);
 		if (!project) throw new Error("This project isn't open.");
@@ -452,6 +455,13 @@ export function createProjectLifecycle(
 			throw new Error("This project was closed.");
 		}
 		project.images.set(url, file);
+		if (size && preparePreviews) {
+			await preparePreviews(
+				id,
+				createDocumentFromImage(url, size.width, size.height, opaque),
+				(imageUrl) => project.images.get(imageUrl),
+			);
+		}
 		return url;
 	}
 
