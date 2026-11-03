@@ -207,6 +207,7 @@ export function FadeRow({
 					<ScrollView
 						horizontal
 						showsHorizontalScrollIndicator={false}
+						keyboardShouldPersistTaps="handled"
 						contentContainerStyle={contentStyle}
 						scrollEventThrottle={32}
 						onLayout={(event) => {

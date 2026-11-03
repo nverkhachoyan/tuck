@@ -28,7 +28,7 @@ const CARD_INSET = CARD_HEIGHT + 2 * PANEL_GAP;
  * they cover.
  * - `layersOpen`: opens the side panel when the window isn't tall enough to pin it.
  * - `cardOpen`: reserves a constant `CARD_INSET` at the bottom on wide screens so the photo doesn't shift as card content changes.
- * - `typing`: floats the dock above the keyboard (`stageRef`) and fits the document above it.
+ * - `typing`: fits the document above the keyboard (`stageRef`), floating the phone's dock above it too.
  */
 export function useEditorLayout({
 	typing,
@@ -55,10 +55,14 @@ export function useEditorLayout({
 	const dockInset = wide ? 0 : barInset;
 	// An open tray's height: the canvas fits above it as well as the dock. A
 	// wide window's card stands in the same place, with a gap above and below,
-	// and like the rail and inspector, clear of the home indicator.
+	// and like the rail and inspector, clear of the home indicator. The
+	// keyboard covers the bottom while typing.
 	const [trayHeight, setTrayHeight] = useState(0);
 	const coveredBottom = wide
-		? safeBottom + (cardOpen ? CARD_INSET : 0)
+		? Math.max(
+				safeBottom + (cardOpen ? CARD_INSET : 0),
+				keyboardOverlap > 0 ? keyboardOverlap + PANEL_GAP : 0,
+			)
 		: dockInset + trayHeight;
 	return {
 		wide,

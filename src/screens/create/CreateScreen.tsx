@@ -392,7 +392,7 @@ function PresetPrint({
 			onPress={onPress}
 			accessibilityRole="button"
 			accessibilityLabel={`${name}, ${width} by ${height}, ${ratio}`}
-			accessibilityState={{ disabled, busy: creating || undefined }}
+			accessibilityState={{ disabled, busy: creating }}
 			style={[styles.preset, spread ? styles.presetSpread : styles.presetPhone]}
 		>
 			{(state) => {

@@ -81,7 +81,7 @@ export function Button({
 				hitSlop={size === "small" ? 10 : 4}
 				accessibilityRole="button"
 				accessibilityLabel={label}
-				accessibilityState={{ disabled: inactive, busy: busy || undefined }}
+				accessibilityState={{ disabled: inactive, busy }}
 				{...(shortcut ? anchor : {})}
 				{...props}
 				disabled={inactive}
