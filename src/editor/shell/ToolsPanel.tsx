@@ -185,7 +185,10 @@ const styles = StyleSheet.create({
 	flyoutLabel: {
 		...typography.label,
 		color: colors.textPrimary,
-		flex: 1,
+		// Sized by its text, unlike `flex: 1`, so the longest label sets the
+		// flyout's width rather than its `minWidth`.
+		flexGrow: 1,
+		flexShrink: 1,
 	},
 	flyoutLabelSelected: {
 		...typography.labelStrong,
