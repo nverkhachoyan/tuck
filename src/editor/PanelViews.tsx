@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Popover } from "@/ui/Popover";
 import { Surface } from "@/ui/Surface";
@@ -212,13 +213,18 @@ export function ToolCard({
 	inset: { left: number; right: number };
 }) {
 	const { definition, controller } = tool;
+	const { bottom } = useSafeAreaInsets();
 	const Card = definition.views.Card;
 	if (!Card) return null;
 	return (
 		<View
 			style={[
 				styles.cardArea,
-				{ paddingLeft: inset.left, paddingRight: inset.right },
+				{
+					bottom: bottom + PANEL_GAP,
+					paddingLeft: inset.left,
+					paddingRight: inset.right,
+				},
 			]}
 		>
 			<Animated.View
@@ -293,7 +299,6 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		left: 0,
 		right: 0,
-		bottom: PANEL_GAP,
 		alignItems: "center",
 		pointerEvents: "box-none",
 	},
