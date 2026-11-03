@@ -44,7 +44,7 @@ describe("mapDetectionRects", () => {
 		);
 		close(mapped.transform.x, 275);
 		close(mapped.transform.y, 60);
-		close(mapped.width, 48);
+		close(mapped.width, 84);
 		close(mapped.height, 42);
 		close(mapped.transform.rotation, Math.PI / 2);
 	});
@@ -76,7 +76,7 @@ describe("mapDetectionRects", () => {
 			{ width: 500, height: 500 },
 			"text",
 		);
-		close(mapped.width, 48);
+		close(mapped.width, 84);
 		close(mapped.height, 42);
 		close(mapped.transform.rotation, rotation);
 	});
@@ -92,8 +92,8 @@ describe("mapDetectionRects", () => {
 			{ width: 90, height: 100 },
 			"text",
 		);
-		close(mapped.transform.x, 83.8);
-		close(mapped.width, 12.4);
+		close(mapped.transform.x, 74);
+		close(mapped.width, 32);
 		close(mapped.height, 25.6);
 
 		assert.deepEqual(
@@ -136,6 +136,25 @@ describe("mapDetectionRects", () => {
 		);
 		close(mapped.transform.rotation, Math.PI / 2);
 		assert.ok(mapped.width > 0 && mapped.height > 0);
+	});
+
+	test("text reaches a wide letter past each end of its line", () => {
+		const flat = image({
+			width: 1000,
+			transform: { x: 500, y: 40, scaleX: 1, scaleY: 1, rotation: 0 },
+		});
+		// "Wendy: Wait for me at the gate" from ML Kit, which left out the W.
+		const line = { x: 106, y: 20, width: 619, height: 47 };
+		const [mapped] = mapDetectionRects(
+			flat,
+			[line],
+			{ width: 1000, height: 80 },
+			"text",
+		);
+		const left = mapped.transform.x - mapped.width / 2;
+		const right = mapped.transform.x + mapped.width / 2;
+		assert.ok(left <= 106 - 47, `left edge ${left} misses the W`);
+		assert.ok(right >= 725 + 47, `right edge ${right} misses a last letter`);
 	});
 
 	test("ignores zero or negative size regions", () => {
