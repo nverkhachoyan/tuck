@@ -47,7 +47,33 @@ Cut's Subject, Tap (MobileSAM on every platform), Add and Subtract, Invert, and 
 Not yet planned. Weigh each on its own before starting one.
 
 * **Labelled arrows** for marking up screenshots, editing their label in place with `@tuck/skia-text-input` and Text's tool slots (`draft`, `edit.owns`, `views.Input`). The label sits along the arrow, not in a box, so it's the test that `createCaretLayout` and the slots don't assume a text layer; if they don't fit, change them with both tools on them.
-* **Preview photos.** Every render decodes a photo at up to 25 million pixels (`MAX_PHOTO_PIXELS`): about 98 MB on the GPU for a 24MP photo, per layer, while a phone canvas shows about 1,300 pixels across. Editing on a 2,048-pixel copy and keeping the full photo for export, the eyedropper, and Cut's renders would cut that by eight. Measure first: one, three, and five 24MP photos then an export, on a 4–6 GB iPhone, a mid-range Android phone, and a Chrome tab. Only if one runs out or comes close, prototype swapping in the full photo past the preview's zoom, since a soft preview over small text would mislead a redaction.
+* **Preview photos.** Editing draws a display preview of each photo at up to 4,096 pixels on its long side (`PREVIEW_LONG_SIDE`, [#40](https://github.com/nverkhachoyan/tuck/issues/40)), about 45 MB per 24MP layer, and export decodes the stored file at full size. A 2,048-pixel preview would cut editing by four again. [#39](https://github.com/nverkhachoyan/tuck/issues/39) measured three 24MP photos on an iPhone 17 Pro Max: memory levels off, and export is the highest point. The open question was whether a 4–6 GB iPhone, a mid-range Android phone, or a Chrome tab runs out or comes close with one, three, and five photos then an export. Only if one does, prototype the smaller preview with the full photo swapped in past its zoom, since a soft preview over small text would mislead a redaction.
+
+  Measured 2026-11-02 at `a8e04d5` (previews at 4,096 pixels) with five 6000×4000 noisy JPEGs (about 10 MB each): open one, add a pen stroke, add photos to three then five layers, export at full size as JPEG, back to the projects; three passes. Numbers are MB, read about 25 seconds after each step settled; a range is a reading 8 seconds after the step, then the settled one.
+
+  | Step | Android: app PSS (native heap) | Android: emulator GPU | Chrome: renderer PSS | Chrome: GPU memory |
+  | --- | --- | --- | --- | --- |
+  | Launch, home | 115 (22) | 770 | 577 | 329 |
+  | Pass 1: 1 photo | 281 → 146 (52) | 836 | 622 | 586 |
+  | 3 photos | 179 (81) | 1,000 | 623 | 776 |
+  | 5 photos | 342 (240) | 1,281 → 995 | 703 | 907 |
+  | Export | 364 (249) | 1,225 | 1,210 | 1,038 |
+  | Home | 385 (281) | 1,288 | 1,319 | 1,011 |
+  | Pass 2: 1 photo | 545 (431) | 1,200 | 1,361 | 1,202 |
+  | 3 photos | 933 → 837 (729) | 1,625 → 1,371 | 1,334 | 1,448 |
+  | 5 photos | 964 → 427 (322) | 1,637 | 1,333 | 1,571 |
+  | Export | 440 (313) | 1,247 | 1,225 | 1,705 |
+  | Home | 419 (293) | 1,238 | 1,336 | 1,680 |
+  | Pass 3: 1 photo | 545 (439) | | 536 * | 390 * |
+  | 3 photos | 830 (740) | | 600 * | 592 * |
+  | 5 photos | 1,128 (1,036) | | 718 * | 679 * |
+  | Export | 377 (276) | | 1,314 * | 844 * |
+
+  * **Android:** a Release build on a 4 GB Pixel-sized AVD (Android 36.1, Google Play image), memory from `dumpsys meminfo`. The emulator reports no Graphics row (gfxstream keeps GPU memory on the host), so "emulator GPU" is the qemu process's VRAM and GTT on the host, which includes the emulator's own surfaces. No low-memory kill or trim reached the app; the device kept at least 1.3 GB available (of 3.9 GB), at the 1.1 GB peak in pass 3. Opening or adding each photo took about 3 seconds, and saving the 6000×4000 export about 3 seconds. Native heap swings by hundreds of MB and falls back after collection, and the app settles near 400 MB between passes (385, 419) instead of the 115 it launched at: a cache, not a leak. The emulator itself crashed once in its GL translator (a host segfault, not the app) and the pass was rerun.
+  * **Chrome:** the production web export in Chromium 154 on Linux, 1440×900, ANGLE on OpenGL on an AMD Radeon 890M (integrated, shared memory); renderer PSS from `/proc`, GPU memory as the GPU process's VRAM and GTT from `fdinfo`. JS heap stayed between 13 and 25 MB. Passes 1 and 2 ran in one tab; * marks pass 3, after a reload. The first export adds about 500 MB to the renderer, which stays until the tab reloads, and GPU memory back at the projects grew from 1.0 to 1.7 GB across two passes without levelling off (still 1.67 GB after a minute idle). Headless Chromium couldn't draw the Skia canvas on this machine, so this ran in a desktop window over CDP. The test blocked downloads, so the export's timing isn't recorded.
+  * **iOS:** not measured here. #39's iPhone 17 Pro Max has a Jetsam limit of about 3.4 GB; a 4–6 GB iPhone with five photos still needs the real phone (the Dev HUD's footprint, see docs/development.md).
+
+  Verdict: nothing ran out on Android at 4 GB or in Chrome, and the decoded photos alone don't come close; what does is Chrome holding GPU memory and the export's buffers across projects in one tab, which on an 8 GB laptop with an integrated GPU would. The smaller preview isn't needed yet; look into that retention first ([#60](https://github.com/nverkhachoyan/tuck/issues/60)), and measure a 4–6 GB iPhone.
 * **A Select tool** that picks layers and objects by finger or cursor (the name was kept free for it).
 * **Publishing `@tuck/skia-text-input`**, once someone asks or Tuck isn't its only user and the API has held still. Remove `"private": true`, create the `tuck` npm organization (or rename), and `pnpm --dir packages/skia-text-input publish --access public`; `prepack` builds `lib/`. Not built until needed: right-to-left text, input method composition on the canvas, grapheme-aware word selection, up and down arrows by wrapped line, touch drag handles and the edit menu, and a screen reader reading the drawn text.
 * **Each layer type's bounds in its own folder**, if `canvas/layerBounds.ts`'s switch grows.
