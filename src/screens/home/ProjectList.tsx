@@ -836,6 +836,8 @@ const styles = StyleSheet.create({
 		height: 30,
 		marginHorizontal: -2,
 		paddingHorizontal: 8,
+		// Android pads a TextInput vertically, which cuts the text at this height.
+		paddingVertical: 0,
 		borderRadius: radii.small,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderColor: colors.borderStrong,
