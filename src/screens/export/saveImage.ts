@@ -1,6 +1,7 @@
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
 import type { SkImage } from "react-native-skia";
 import { type ExportFormat, encodeImage, exportFormats } from "./exportFormat";
 
@@ -10,11 +11,12 @@ export type SaveImageResult =
 	| { status: "saved" }
 	| { status: "permission-denied" };
 
-export const saveLabels = {
-	idle: "Save to Photos",
-	busy: "Saving…",
-	done: "Saved to Photos",
-};
+// Android saves to the gallery (`DCIM/`): its Photos is Google's app, which
+// may not be installed.
+export const saveLabels =
+	Platform.OS === "android"
+		? { idle: "Save to gallery", busy: "Saving…", done: "Saved to gallery" }
+		: { idle: "Save to Photos", busy: "Saving…", done: "Saved to Photos" };
 
 /**
  * Asks only for add-only access: saving never needs to read the library.
@@ -56,7 +58,7 @@ export async function shareImage(
 	return true;
 }
 
-// Earlier exports are done with by the next one: saved into Photos, or read
+// Earlier exports are done with by the next one: saved into the library, or read
 // by the app they were shared to.
 function writeImage(image: SkImage, format: ExportFormat): File {
 	for (const entry of Paths.cache.list()) {
