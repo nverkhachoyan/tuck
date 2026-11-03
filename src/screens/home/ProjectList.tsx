@@ -380,26 +380,33 @@ function ProjectCard({
 						);
 						return;
 					}
-					showAlert(label, detail, [
-						...(unavailable
-							? []
-							: [
-									{
-										text: "Rename",
-										onPress: onStartRename,
-									},
-									{
-										text: "Duplicate",
-										onPress: () => onDuplicate(project.id),
-									},
-								]),
-						{
-							text: "Delete",
-							style: "destructive",
-							onPress: () => onDelete(project.id),
-						},
-						{ text: "Cancel", style: "cancel" },
-					]);
+					// Android shows only the first three buttons, so Cancel is
+					// dropped there; back or a tap outside closes the menu instead.
+					showAlert(
+						label,
+						detail,
+						[
+							...(unavailable
+								? []
+								: [
+										{
+											text: "Rename",
+											onPress: onStartRename,
+										},
+										{
+											text: "Duplicate",
+											onPress: () => onDuplicate(project.id),
+										},
+									]),
+							{
+								text: "Delete",
+								style: "destructive",
+								onPress: () => onDelete(project.id),
+							},
+							{ text: "Cancel", style: "cancel" },
+						],
+						{ cancelable: true },
+					);
 				}}
 				{...webContextMenuProps}
 				accessibilityRole="button"
