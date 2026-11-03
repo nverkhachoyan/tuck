@@ -1221,6 +1221,29 @@ describe("editorSlice", () => {
 			);
 		});
 
+		test("a previewing session that changed nothing keeps the undo steps", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			const { document: before, past } = store.getState();
+			actions.beginSession(true);
+			actions.cancelSession();
+			assert.equal(store.getState().document, before);
+			assert.deepEqual(store.getState().past, past);
+			assert.equal(selectCanUndo(store.getState()), true);
+		});
+
+		test("a previewing session undone to its start keeps the undo steps", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const { past } = store.getState();
+			actions.beginSession(true);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.undo();
+			actions.cancelSession();
+			assert.deepEqual(store.getState().past, past);
+		});
+
 		test("a canceled session keeps the steps undone within it", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;

@@ -77,11 +77,12 @@ export type EditorSnapshot = {
 	selectedLayerId: string | null;
 };
 
-// While a tool is open, where it started, and the redo step that was next
-// then. Undo stops at the start, and redo at that step, so a tool never
-// steps into changes from before it opened. A tool that only `previews` its
-// changes until Done leaves the app seeing where it started.
+// While a tool is open, where it started, and the undo and redo steps that
+// were next then. Undo stops at the start, and redo at that step, so a tool
+// never steps into changes from before it opened. A tool that only
+// `previews` its changes until Done leaves the app seeing where it started.
 export type EditorSession = EditorSnapshot & {
+	undoStop: EditorSnapshot | undefined;
 	redoStop: EditorSnapshot | undefined;
 	previews: boolean;
 };
@@ -523,13 +524,14 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		},
 
 		beginSession: (previews = false) => {
-			const { document, selectedLayerId, future, session } = get();
+			const { document, selectedLayerId, past, future, session } = get();
 			if (!document || session) return;
 			set(
 				{
 					session: {
 						document,
 						selectedLayerId,
+						undoStop: past.at(-1),
 						redoStop: future[0],
 						previews,
 					},
@@ -632,17 +634,13 @@ function snapshotOf({
 }
 
 /**
- * The undo steps from before `session`. Its first change recorded where it
- * started, and undo can't go past that, so the last step holding the
- * session's starting document is where it began. Without one, the session
- * took so many steps that everything before it was dropped.
+ * The undo steps from before `session`, up to the one that was last when it
+ * started. Undo can't go past the start, so that step stays unless the
+ * session took so many steps that everything before it was dropped.
  */
 function pastBefore(
 	past: EditorSnapshot[],
-	session: EditorSnapshot,
+	{ undoStop }: EditorSession,
 ): EditorSnapshot[] {
-	for (let index = past.length - 1; index >= 0; index--) {
-		if (past[index].document === session.document) return past.slice(0, index);
-	}
-	return [];
+	return undoStop ? past.slice(0, past.indexOf(undoStop) + 1) : [];
 }
