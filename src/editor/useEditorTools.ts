@@ -22,7 +22,9 @@ import type { ToolId } from "./toolSpec";
 /**
  * All of the editor's tools (`tools`, which must not change while it's
  * mounted), their undo session, and their starters, Done, and Cancel. Every
- * close but Cancel runs the open tool's Done: Android's back button too. Each
+ * other close (`putDownTool`: Back, Android's back button, picking up
+ * another tool) runs the open tool's Done, except for a tool that only
+ * previews its changes, which it drops as Cancel does. Each
  * tool's controller comes from its definition's `useController`, given what
  * `env` and the mode say of it. `editorOf` finds the tool that edits a layer
  * in place (its definition's `edit`), and `editLayer` starts it. The order below
@@ -117,6 +119,13 @@ export function useEditorTools({
 		cancelSession();
 		closeTool();
 	};
+	// What a preview shows isn't an edit until the tool's own Done, so any
+	// other close drops it (Cut's selection).
+	const putDownTool = () => {
+		if (!tool) return;
+		if (definitionOf(tools[tool]).spec.previews) cancelTool();
+		else finishTool();
+	};
 	// A tool that needs a photo works in or on `image`: the selected one, or
 	// else the main one. Its `started` runs from the effect below, once its
 	// session has begun, or at once when it's already open on that photo.
@@ -157,7 +166,7 @@ export function useEditorTools({
 	);
 	latestOpenOn.current = (next, image) => {
 		if (!controllers[next]) return;
-		if (tool && tool !== next) finishTool();
+		if (tool && tool !== next) putDownTool();
 		startTool(next, image);
 	};
 	// The tool that edits `layer` in place, if any.
@@ -176,7 +185,7 @@ export function useEditorTools({
 	const editLayer = (layer: Layer, point?: Point) => {
 		const id = editorOf(layer);
 		if (id === undefined) return;
-		if (tool && tool !== id) finishTool();
+		if (tool && tool !== id) putDownTool();
 		const { definition, controller } = controllers[id];
 		const at = point ? toLayerSpace(layer.transform, point) : null;
 		definition.edit?.start(controller, layer, at);
@@ -196,8 +205,8 @@ export function useEditorTools({
 		definition.started?.(controller, pending.image);
 	});
 
-	// Android's back button puts the open tool down, as Done does.
-	const onBack = useEffectEvent(finishTool);
+	// Android's back button puts the open tool down.
+	const onBack = useEffectEvent(putDownTool);
 	useEffect(() => {
 		if (!tool) return;
 		const subscription = BackHandler.addEventListener(
@@ -252,7 +261,7 @@ export function useEditorTools({
 		stylerOf,
 		done: finishTool,
 		cancel: cancelTool,
-		finishTool,
+		putDownTool,
 		stepToolSize,
 		resetEdit,
 		announcements,
@@ -261,8 +270,9 @@ export function useEditorTools({
 
 /**
  * A tool's changes as one session: one undo step, or none if canceled.
- * Closing the tool any way, leaving the editor included, keeps them, and
- * each change of `reopened` starts a new session for the same tool. Called
+ * Closing the tool any way, leaving the editor included, keeps them, unless
+ * it only `previews` them, and each change of `reopened` starts a new
+ * session for the same tool. Called
  * ahead of the tool hooks, so the session has begun before a tool's own
  * effects change the document.
  */
@@ -271,11 +281,13 @@ export function useToolSession(
 	reopened: number,
 	previews: boolean,
 ) {
-	const { beginSession, commitSession } = useStore((state) => state.actions);
+	const { beginSession, commitSession, cancelSession } = useStore(
+		(state) => state.actions,
+	);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `reopened` ends the session and begins another.
 	useEffect(() => {
 		if (!tool) return;
 		beginSession(previews);
-		return commitSession;
-	}, [tool, reopened, previews, beginSession, commitSession]);
+		return previews ? cancelSession : commitSession;
+	}, [tool, reopened, previews, beginSession, commitSession, cancelSession]);
 }

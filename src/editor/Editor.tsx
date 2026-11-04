@@ -211,7 +211,7 @@ export function Editor({
 		stylerOf,
 		done,
 		cancel,
-		finishTool,
+		putDownTool,
 		stepToolSize,
 		resetEdit,
 		announcements,
@@ -274,9 +274,9 @@ export function Editor({
 
 	const selectedPlace = useArrangeSelected(document, selectedLayer);
 
-	// Back puts the open tool down as Done does.
+	// Back puts the open tool down.
 	const leave = () => {
-		finishTool();
+		putDownTool();
 		host.leave();
 	};
 
@@ -420,11 +420,11 @@ export function Editor({
 					onSelectVariant: (variantId) => {
 						setCutVariant(variantId as "cut" | "removeBg");
 						if (variantId === "removeBg") {
-							if (tool) finishTool();
+							if (tool) putDownTool();
 							startTool.removeBg();
 							return;
 						}
-						if (tool && tool !== "cut") finishTool();
+						if (tool && tool !== "cut") putDownTool();
 						startTool.cut();
 					},
 				};
@@ -442,7 +442,7 @@ export function Editor({
 					activeVariant: active,
 					variants,
 					onSelectVariant: (variantId) => {
-						if (tool && tool !== entry.id) finishTool();
+						if (tool && tool !== entry.id) putDownTool();
 						toolDef.selectVariant?.(openTool.controller, variantId);
 						startTool[entry.id]?.();
 					},
@@ -456,7 +456,7 @@ export function Editor({
 		controllers,
 		tool,
 		cutVariant,
-		finishTool,
+		putDownTool,
 		startTool,
 		isToolAvailable,
 	]);
@@ -630,7 +630,7 @@ export function Editor({
 								hasImage={hasImage}
 								startTool={toolStarters}
 								tool={tool}
-								finishTool={finishTool}
+								putDownTool={putDownTool}
 								sheetAnchors={toolbox.sheetAnchors}
 							/>
 						)}
@@ -685,7 +685,7 @@ export function Editor({
 							tool={controllers[id]}
 							open={tool === id}
 							anchor={wide ? anchor : undefined}
-							onClose={finishTool}
+							onClose={putDownTool}
 						/>
 					))}
 
