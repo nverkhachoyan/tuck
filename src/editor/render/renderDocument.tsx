@@ -18,6 +18,7 @@ import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";
 import { drawOffscreen } from "./drawOffscreen";
 import { keptBounds } from "./keptBounds";
+import { offscreenPhotos } from "./offscreenPhotos";
 
 // A thumbnail's shorter side, in pixels: a project card's print on a phone
 // at 3x.
@@ -32,7 +33,11 @@ export async function renderDocument(
 	scale = 1,
 ): Promise<SkImage> {
 	return measurePerfSpan("tuck:render-document", async () => {
-		const decoded = await decodeImageLayers(document.layers, decodedImages);
+		const decoded = await decodeImageLayers(
+			document.layers,
+			decodedImages,
+			offscreenPhotos,
+		);
 		try {
 			const result = await drawOffscreen(
 				<Group transform={[{ scale }]}>
@@ -80,7 +85,11 @@ export async function sampleColor(
 	const size = SAMPLE_RADIUS * 2 + 1;
 	const left = Math.floor(point.x) - SAMPLE_RADIUS;
 	const top = Math.floor(point.y) - SAMPLE_RADIUS;
-	const decoded = await decodeImageLayers(document.layers, decodedImages);
+	const decoded = await decodeImageLayers(
+		document.layers,
+		decodedImages,
+		offscreenPhotos,
+	);
 	try {
 		const image = await drawOffscreen(
 			<Group transform={[{ translateX: -left }, { translateY: -top }]}>
@@ -196,7 +205,11 @@ async function renderKept(
 	maxSide: number,
 	content: (images: Map<string, SkImage>, mask?: SkImage) => ReactNode,
 ): Promise<{ image: SkImage; rect: Rect }> {
-	const decoded = await decodeImageLayers([layer], decodedImages);
+	const decoded = await decodeImageLayers(
+		[layer],
+		decodedImages,
+		offscreenPhotos,
+	);
 	const mask =
 		layer.mask === undefined ? undefined : decoded.images.get(layer.mask);
 	// The layer's pixels from `left`, `top`, at `scale`.
