@@ -68,7 +68,11 @@ import { useEditNotice } from "./useEditNotice";
 import { useEditorChrome } from "./useEditorChrome";
 import { useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
-import { useEditorShortcuts, useToolKeys } from "./useEditorShortcuts";
+import {
+	offersShortcutsHelp,
+	useEditorShortcuts,
+	useToolKeys,
+} from "./useEditorShortcuts";
 import { useEditorTools } from "./useEditorTools";
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
@@ -569,7 +573,11 @@ export function Editor({
 							canRedo={canRedo}
 							onUndo={undo}
 							onRedo={redo}
-							onShortcuts={() => dispatchMode({ type: "openShortcuts" })}
+							onShortcuts={
+								offersShortcutsHelp
+									? () => dispatchMode({ type: "openShortcuts" })
+									: undefined
+							}
 							onExport={draftOpen ? undefined : host.openExport}
 						/>
 					</EditorHeader>
