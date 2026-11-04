@@ -13,6 +13,16 @@ import { type Shortcut, shortcutFor } from "./shortcuts";
 import type { ToolSpecs } from "./toolSpec";
 
 /**
+ * Whether the editor offers its shortcuts help: on web, when a mouse or
+ * trackpad suggests a keyboard. Native apps don't listen for keys, and a
+ * phone's browser has no keyboard; ? still opens it on web either way.
+ */
+export const offersShortcutsHelp =
+	Platform.OS === "web" &&
+	typeof matchMedia === "function" &&
+	matchMedia("(any-pointer: fine)").matches;
+
+/**
  * The editor's keyboard shortcuts on web (see `shortcutFor`), only while
  * `enabled`: while the editor is focused, so they can't change the document
  * from Export, and not while a text input keeps its own keys. Keys typed into
