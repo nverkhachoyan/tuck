@@ -41,8 +41,8 @@ export type CutTray = "brush" | "apply";
  * and redacting the selection, each undefined where it can't be done.
  * - The selection is the image's cut while Cut is open. An image that isn't
  *   cut opens selecting nothing.
- * - Done (`done`) only puts Cut down, leaving the image as it was: nothing
- *   happens to a selection until an action is chosen.
+ * - Nothing happens to a selection until an action is chosen: closing Cut
+ *   any other way (✕, Back, another tool) leaves the image as it was.
  * - A mask found after Cut was put down, or moved to another image, isn't
  *   wanted any more. Masks are kept through the host's `addImage`.
  * - A tap adds what's under it, or subtracts it, as `settings.tapMode`

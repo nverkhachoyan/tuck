@@ -20,7 +20,7 @@ export function EditorRail({
 	hasImage,
 	startTool,
 	tool,
-	finishTool,
+	putDownTool,
 	sheetAnchors,
 }: {
 	tools: readonly ToolEntry[];
@@ -29,12 +29,12 @@ export function EditorRail({
 	hasImage: boolean;
 	startTool: ToolStarters;
 	tool: ToolId | null;
-	finishTool: () => void;
+	putDownTool: () => void;
 	sheetAnchors?: Readonly<Record<string, RefObject<ViewInstance | null>>>;
 }) {
-	// A tool picked from the rail while another is open finishes that one.
+	// A tool picked from the rail while another is open puts that one down.
 	const fromRail = (start: () => void) => () => {
-		if (tool) finishTool();
+		if (tool) putDownTool();
 		start();
 	};
 	const { bottom } = useSafeAreaInsets();
