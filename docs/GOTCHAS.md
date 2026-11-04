@@ -25,3 +25,19 @@ Seen October 30, 2026, in the wide editor's tool card (`PanelViews.tsx`, `useEdi
 * **Where to look:** the stack is the microtask `updateHandlers` queues in the legacy `GestureDetector`, which sets config for each attached gesture's tag. `EditorCanvas` rebuilds its composed gesture whenever the frame or a tool's canvas input changes, and opening a tool changes both. The canvas has since moved to Gesture Handler 3's hooks (`useGesture`), and Metro loads the package's `src` (its `react-native` field), not `lib/module`. The legacy detector's `updateHandlers` microtask is no longer on this path.
 * **Kept:** the constant reserve (`CARD_INSET`), since it makes one frame change in the opening commit, as the inspector's width did, and the photo doesn't resize as Find's status text changes.
 * **To dig further:** log `createGestureHandler`, `dropGestureHandler`, and `setGestureHandlerConfig` with `performance.now()` and a stack in `lib/module` (a temporary edit), open Find with the pane hidden, then draw it, and compare tag 1's order of calls. Re-check with the pane drawing, since a hidden one batches frames.
+
+## An offscreen surface's dispose left its WebGL context alive
+
+Fixed November 3, 2026, in `editor/render/drawOffscreen.web.ts` ([#60](https://github.com/nverkhachoyan/tuck/issues/60)).
+
+* **Seen:** in Chrome, GPU memory back at the projects grew with each project opened, edited with five 24MP photos, and exported (1.0 GB, then 1.7 GB), and didn't fall while the tab stayed open.
+* **Cause:** `drawOffscreen` made its shared surface with `Skia.Surface.MakeOffscreen`, which on web makes a WebGL context and a Skia GPU context for each surface. The surface's `dispose` deletes only the surface. The context stays registered with CanvasKit, so it's never collected, and keeps its drawing buffer (183 MB for a 6000×4000 export) and every texture drawn into it, including the export's photos. A new surface came after each 10-second idle and each growth, so each export and thumbnail left one behind, until Chrome dropped the oldest past 16.
+* **Fix:** `drawOffscreen.web.ts` makes its own surface on an `OffscreenCanvas` and frees it as Skia's web canvas does when it unmounts: abandon and delete the GPU context, lose the WebGL context, and unregister it from CanvasKit.
+* **The rule:** on web, a Skia object that wraps a WebGL context needs that context freed too. Check what a library's `dispose` actually frees before keeping one around.
+
+How it was found:
+
+1. The kernel's numbers (the GPU process's VRAM and GTT in `/proc/<pid>/fdinfo`) are no good for this. The driver keeps memory it has freed and gives it back late, so they stayed high after a reload and even on `about:blank`.
+2. Chrome's memory-infra dump is reliable: over CDP on the browser target, `Tracing.start` with `disabled-by-default-memory-infra` and no triggers, then `Tracing.requestMemoryDump` with `levelOfDetail: "detailed"`, then `Tracing.end`. The renderer's `webgl/offscreen_context_*` entries list each live context and its drawing buffer, and the GPU process's `gpu/shared_images` shows what they share with it.
+3. Load photos without the file picker with `DOM.setFileInputFiles` on the app's `input[type=file]` (it exists once "Open a photo" or "Add photo" has been clicked). Then click through with `element.click()`.
+4. What stays after the fix and isn't a leak: CanvasKit's WASM heap (`CanvasKit.HEAPU8.buffer.byteLength`), which WebAssembly can grow but never shrink, holds the export's peak until the tab reloads, and Chrome's transfer memory for uploads (`gpu/transfer_memory`) stays as a pool. Neither grows after the first pass.
