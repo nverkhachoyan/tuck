@@ -89,7 +89,10 @@ async function previewOf(image: SkImage): Promise<string | null> {
 	);
 	if (!small) return null;
 	try {
-		return `data:image/png;base64,${measurePerfSpan("tuck:export-encode", () => small.encodeToBase64(ImageFormat.PNG))}`;
+		const base64 = await measurePerfSpan("tuck:export-encode", () =>
+			small.encodeToBase64(ImageFormat.PNG),
+		);
+		return `data:image/png;base64,${base64}`;
 	} finally {
 		small.dispose();
 	}

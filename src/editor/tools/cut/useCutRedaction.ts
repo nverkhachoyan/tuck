@@ -36,7 +36,7 @@ export function useCutRedaction({
 			const { image, rect } = await renderCutShape(layer, MASK_MAX_SIDE);
 			let bytes: Uint8Array;
 			try {
-				bytes = image.encodeToBytes(ImageFormat.PNG);
+				bytes = await image.encodeToBytes(ImageFormat.PNG);
 			} finally {
 				image.dispose();
 			}

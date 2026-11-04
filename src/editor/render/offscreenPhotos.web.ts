@@ -19,7 +19,7 @@ async function decodePhoto(uri: string): Promise<SkImage> {
 		}).catch(() => {
 			throw new Error("Couldn't decode the image.");
 		});
-		const image = Skia.Image.MakeImageFromNativeBuffer(bitmap);
+		const image = Skia.Image.MakeFromNativeBuffer(bitmap);
 		// CanvasKit closes only a `VideoFrame` it's handed, not a bitmap.
 		const dispose = image.dispose.bind(image);
 		image.dispose = () => {

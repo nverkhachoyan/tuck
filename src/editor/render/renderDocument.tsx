@@ -99,7 +99,7 @@ export async function sampleColor(
 		);
 		if (!image) return null;
 		try {
-			const pixels = image.readPixels(0, 0, {
+			const pixels = await image.readPixels(0, 0, {
 				width: size,
 				height: size,
 				colorType: ColorType.RGBA_8888,
@@ -149,9 +149,13 @@ export async function renderThumbnail(
 		Math.min(1, THUMBNAIL_SIZE / shortSide),
 	);
 	try {
-		return hasTransparency(document)
-			? `data:image/png;base64,${measurePerfSpan("tuck:export-encode", () => image.encodeToBase64(ImageFormat.PNG))}`
-			: `data:image/jpeg;base64,${measurePerfSpan("tuck:export-encode", () => image.encodeToBase64(ImageFormat.JPEG, 80))}`;
+		const png = hasTransparency(document);
+		const base64 = await measurePerfSpan("tuck:export-encode", () =>
+			png
+				? image.encodeToBase64(ImageFormat.PNG)
+				: image.encodeToBase64(ImageFormat.JPEG, 80),
+		);
+		return `data:image/${png ? "png" : "jpeg"};base64,${base64}`;
 	} finally {
 		image.dispose();
 	}
@@ -243,7 +247,7 @@ async function renderKept(
 		if (!preview) throw new Error("Couldn't draw the cut-out");
 		let pixels: Float32Array | Uint8Array | null;
 		try {
-			pixels = preview.readPixels(0, 0, {
+			pixels = await preview.readPixels(0, 0, {
 				width,
 				height,
 				colorType: ColorType.RGBA_8888,

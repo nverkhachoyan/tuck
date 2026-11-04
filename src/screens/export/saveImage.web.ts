@@ -5,8 +5,10 @@ import type { SaveImageResult } from "./saveImage";
 // Browsers can't reach the photo library or write files, so saving downloads
 // the image and sharing hands the Web Share API a file.
 //
-// Both must reach the browser API without awaiting anything first: downloads
-// and `navigator.share` need the user's tap to still count as the cause.
+// Both must reach the browser API without awaiting anything slow first:
+// downloads and `navigator.share` need the user's tap to still count as the
+// cause. CanvasKit encodes synchronously, so the encode's promise is already
+// settled when it's awaited.
 
 // Not "to Downloads": the browser may ask where, or save somewhere else.
 export const saveLabels = {
@@ -20,7 +22,9 @@ export async function saveImage(
 	format: ExportFormat,
 ): Promise<SaveImageResult> {
 	const url = URL.createObjectURL(
-		new Blob([encode(image, format)], { type: exportFormats[format].mimeType }),
+		new Blob([await encode(image, format)], {
+			type: exportFormats[format].mimeType,
+		}),
 	);
 	const link = window.document.createElement("a");
 	link.href = url;
@@ -44,7 +48,7 @@ export async function shareImage(
 	format: ExportFormat,
 ): Promise<boolean> {
 	if (!canShareImages()) return false;
-	const file = new File([encode(image, format)], fileName(format), {
+	const file = new File([await encode(image, format)], fileName(format), {
 		type: exportFormats[format].mimeType,
 	});
 	try {
@@ -59,10 +63,10 @@ export async function shareImage(
 	return true;
 }
 
-function encode(image: SkImage, format: ExportFormat) {
+async function encode(image: SkImage, format: ExportFormat) {
 	// CanvasKit copies the bytes into a plain ArrayBuffer; Skia's type only
 	// says ArrayBufferLike, which Blob won't take since it could be shared.
-	return encodeImage(image, format) as Uint8Array<ArrayBuffer>;
+	return (await encodeImage(image, format)) as Uint8Array<ArrayBuffer>;
 }
 
 function fileName(format: ExportFormat) {

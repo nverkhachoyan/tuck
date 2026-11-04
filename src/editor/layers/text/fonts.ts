@@ -68,7 +68,7 @@ async function loadSkiaFonts() {
 			const asset = Asset.fromModule(source);
 			await asset.downloadAsync();
 			const data = await Skia.Data.fromURI(asset.localUri ?? asset.uri);
-			const typeface = Skia.Typeface.MakeFreeTypeFaceFromData(data);
+			const typeface = Skia.Typeface.MakeFromData(data);
 			if (!typeface) {
 				throw new Error(`Could not load the ${family} font`);
 			}

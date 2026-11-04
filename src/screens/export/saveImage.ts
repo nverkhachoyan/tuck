@@ -34,7 +34,7 @@ export async function saveImage(
 		return { status: "permission-denied" };
 	}
 
-	await MediaLibrary.Asset.create(writeImage(image, format).uri);
+	await MediaLibrary.Asset.create((await writeImage(image, format)).uri);
 	return { status: "saved" };
 }
 
@@ -51,7 +51,7 @@ export async function shareImage(
 	if (!(await Sharing.isAvailableAsync())) return false;
 
 	const { mimeType, uti } = exportFormats[format];
-	await Sharing.shareAsync(writeImage(image, format).uri, {
+	await Sharing.shareAsync((await writeImage(image, format)).uri, {
 		mimeType,
 		UTI: uti,
 	});
@@ -60,14 +60,14 @@ export async function shareImage(
 
 // Earlier exports are done with by the next one: saved into the library, or read
 // by the app they were shared to.
-function writeImage(image: SkImage, format: ExportFormat): File {
+async function writeImage(image: SkImage, format: ExportFormat): Promise<File> {
 	for (const entry of Paths.cache.list()) {
 		if (entry instanceof File && isExportFile(entry.name)) entry.delete();
 	}
 	const { extension } = exportFormats[format];
 	const file = new File(Paths.cache, `export-${Date.now()}.${extension}`);
 	file.create({ overwrite: true });
-	file.writeSync(encodeImage(image, format));
+	file.writeSync(await encodeImage(image, format));
 	return file;
 }
 

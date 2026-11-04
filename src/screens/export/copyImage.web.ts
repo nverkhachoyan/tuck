@@ -7,9 +7,13 @@ export function copyImage(image: SkImage): Promise<void> {
 	}
 	// Construct this in the click's synchronous turn: Safari otherwise rejects
 	// clipboard writes. The blob itself may resolve immediately afterwards.
-	const bytes = image.encodeToBytes(ImageFormat.PNG) as Uint8Array<ArrayBuffer>;
 	const item = new ClipboardItem({
-		"image/png": Promise.resolve(new Blob([bytes], { type: "image/png" })),
+		"image/png": image
+			.encodeToBytes(ImageFormat.PNG)
+			.then(
+				(bytes) =>
+					new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "image/png" }),
+			),
 	});
 	return navigator.clipboard.write([item]);
 }

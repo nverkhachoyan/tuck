@@ -48,7 +48,7 @@ export async function cutOutSticker(layer: ImageLayer): Promise<StickerImage> {
 	const image = await renderCutOut(layer, SAVED_STICKER_MAX_SIDE);
 	try {
 		return {
-			uri: writeTemporaryPng(image.encodeToBytes(ImageFormat.PNG)),
+			uri: writeTemporaryPng(await image.encodeToBytes(ImageFormat.PNG)),
 			width: image.width(),
 			height: image.height(),
 			opaque: false,

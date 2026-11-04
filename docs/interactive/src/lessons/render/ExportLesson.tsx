@@ -90,12 +90,12 @@ export default function ExportLesson() {
 			// What the export screen does: render, then encode as the format the
 			// document calls for.
 			const image = await renderDocument(document, chosen.scale);
-			const bytes = encodeImage(image, format);
+			const bytes = await encodeImage(image, format);
 			const milliseconds = performance.now() - started;
 			const otherFormat: ExportFormat = format === "png" ? "jpeg" : "png";
 			const other = {
 				format: otherFormat,
-				bytes: encodeImage(image, otherFormat).byteLength,
+				bytes: (await encodeImage(image, otherFormat)).byteLength,
 			};
 			const width = image.width();
 			const height = image.height();
