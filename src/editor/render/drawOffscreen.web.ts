@@ -35,6 +35,10 @@ export async function drawOffscreen(
 		if (!surface) return null;
 		const canvas = surface.getCanvas();
 		canvas.clear(Skia.Color("transparent"));
+		// Flushing makes the surface's WebGL context current. A photo from
+		// `offscreenPhotos` uploads into the current context as it's drawn,
+		// and since the last drawing here an onscreen canvas may have taken it.
+		surface.flush();
 		canvas.drawPicture(picture);
 		surface.flush();
 		const snapshot = surface.makeImageSnapshot(

@@ -85,6 +85,33 @@ describe("decodeImageLayers", () => {
 		assert.equal(mask.disposals(), 1);
 	});
 
+	test("takes photos from the photo cache and masks from the other", async () => {
+		const document = createDocumentFromImage("photo.jpg", 100, 80, true);
+		document.layers[0] = withMask(document.layers[0] as ImageLayer, "mask.png");
+		const photo = fakeImage();
+		const mask = fakeImage();
+		const photoUris: string[] = [];
+		const otherUris: string[] = [];
+		const photos = createImageCache(async (uri) => {
+			photoUris.push(uri);
+			return photo.image;
+		});
+		const cache = createImageCache(async (uri) => {
+			otherUris.push(uri);
+			return mask.image;
+		});
+
+		const result = await decodeImageLayers(document.layers, cache, photos);
+		assert.deepEqual(photoUris, ["photo.jpg"]);
+		assert.deepEqual(otherUris, ["mask.png"]);
+		assert.equal(result.images.get("photo.jpg"), photo.image);
+		assert.equal(result.images.get("mask.png"), mask.image);
+		result.release();
+		await nextTask();
+		assert.equal(photo.disposals(), 1);
+		assert.equal(mask.disposals(), 1);
+	});
+
 	test("releases earlier images when a later decode fails", async () => {
 		const document = createDocumentFromImage("first.jpg", 100, 80, true);
 		const first = fakeImage();

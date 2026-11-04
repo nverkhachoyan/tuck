@@ -10,13 +10,16 @@ export type DecodedImageLayers = {
 };
 
 /**
- * Holds every file the visible layers draw (see `layerFiles`) decoded from
- * `cache`, decoding only those nobody else holds. If any decode fails, the images
- * already held are released before the error is returned.
+ * Holds every file the visible layers draw (see `layerFiles`) decoded, decoding
+ * only those nobody else holds. If any decode fails, the images already held
+ * are released before the error is returned.
+ * - `cache`: masks, and photos too unless `photos` is given.
+ * - `photos`: image layers' photos (`uri`).
  */
 export async function decodeImageLayers(
 	layers: Layer[],
 	cache: ImageCache,
+	photos: ImageCache = cache,
 ): Promise<DecodedImageLayers> {
 	const images = new Map<string, SkImage>();
 	const held: HeldImage[] = [];
@@ -29,7 +32,9 @@ export async function decodeImageLayers(
 			if (layer.hidden) continue;
 			for (const uri of layerFiles(layer)) {
 				if (images.has(uri)) continue;
-				const image = cache.acquire(uri);
+				const from =
+					layer.type === "image" && uri === layer.uri ? photos : cache;
+				const image = from.acquire(uri);
 				held.push(image);
 				images.set(uri, await image.decoded);
 			}
