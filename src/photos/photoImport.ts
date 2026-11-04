@@ -105,7 +105,7 @@ const SCAN_PIXELS = 1 << 20;
  * opaque.
  */
 async function isOpaque(uri: string): Promise<boolean> {
-	const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
+	const image = Skia.Image.MakeFromEncoded(await Skia.Data.fromURI(uri));
 	if (!image) return true;
 	try {
 		const { width, height, alphaType } = image.getImageInfo();
@@ -113,7 +113,7 @@ async function isOpaque(uri: string): Promise<boolean> {
 		const rows = Math.max(1, Math.floor(SCAN_PIXELS / width));
 		for (let y = 0; y < height; y += rows) {
 			// Web's Skia reads only RGBA, not the alpha channel alone.
-			const pixels = image.readPixels(0, y, {
+			const pixels = await image.readPixels(0, y, {
 				width,
 				height: Math.min(rows, height - y),
 				colorType: ColorType.RGBA_8888,

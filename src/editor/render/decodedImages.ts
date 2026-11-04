@@ -8,7 +8,7 @@ import { createImageCache } from "./imageCache";
  */
 export async function decodeImage(uri: string): Promise<SkImage> {
 	return measurePerfSpan("tuck:image-decode", async () => {
-		const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
+		const image = Skia.Image.MakeFromEncoded(await Skia.Data.fromURI(uri));
 		if (!image) throw new Error("Couldn't decode the image.");
 		return image;
 	});

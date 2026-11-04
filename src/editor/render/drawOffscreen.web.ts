@@ -18,12 +18,12 @@ let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 /**
  * Draws `element` into an image `size` pixels across, offscreen, as Skia's
- * `drawAsImage` does, but into one surface kept between drawings. On web,
- * each of `drawAsImage`'s surfaces holds a WebGL context of its own, and a
- * browser keeps only so many: a few quick changes of export size lost the
- * oldest, the editor's or the export preview's canvas among them. The image
- * comes back on the CPU, as `drawAsImage`'s does, so it doesn't depend on
- * the surface.
+ * `drawAsImage` does, but into one surface kept between drawings and freed
+ * once idle. Skia's offscreen surfaces share a WebGL context that lives as
+ * long as the page, and `drawAsImage` never disposes its surface, so an
+ * export's render target (a camera photo's is hundreds of megabytes) would
+ * wait for garbage collection. The image comes back on the CPU, as
+ * `drawAsImage`'s does, so it doesn't depend on the surface.
  */
 export async function drawOffscreen(
 	element: ReactElement,
@@ -45,7 +45,7 @@ export async function drawOffscreen(
 			Skia.XYWHRect(0, 0, size.width, size.height),
 		);
 		try {
-			return snapshot.makeNonTextureImage();
+			return await snapshot.makeRasterImage();
 		} finally {
 			snapshot.dispose();
 		}
@@ -76,12 +76,11 @@ function surfaceFor(width: number, height: number): JsiSkSurface | null {
 }
 
 /**
- * A GPU surface on a WebGL context of its own, which `free` gives back.
- * Skia's `Skia.Surface.MakeOffscreen` makes one too, but its `dispose`
- * frees only the surface: the context stays registered with CanvasKit, so
- * it's never collected, and keeps its drawing buffer and every texture
- * drawn into it (the export's photos) until the browser drops it as the
- * oldest. This frees what Skia's own web canvas frees when it unmounts.
+ * A GPU surface on a WebGL context of its own, which `free` gives back with
+ * every texture drawn into it (the export's photos). Skia's
+ * `Skia.Surface.MakeOffscreen` draws on its shared context instead, which
+ * is never freed. This frees what Skia's own web canvas frees when it
+ * unmounts.
  */
 function makeOffscreen(width: number, height: number): Offscreen | null {
 	const offscreen = new OffscreenCanvas(width, height);
