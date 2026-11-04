@@ -1,27 +1,29 @@
 import type { ReactElement } from "react";
-import {
-	drawAsPicture,
-	type SkImage,
-	Skia,
-	type SkSurface,
-} from "react-native-skia";
+import { drawAsPicture, type SkImage, Skia } from "react-native-skia";
+import { JsiSkSurface } from "react-native-skia/lib/module/skia/web/JsiSkSurface";
 
 // How long the shared surface outlives its last drawing, so its GPU memory
-// (a camera photo's is tens of megabytes) goes once export is done.
+// (a camera photo's is hundreds of megabytes) goes once export is done.
 const IDLE_MS = 10_000;
 
+// A surface with the WebGL context it draws with, all freed together.
+type Offscreen = {
+	surface: JsiSkSurface;
+	free: () => void;
+};
+
 // One offscreen surface for every drawing, grown as larger ones come.
-let shared: SkSurface | null = null;
+let shared: Offscreen | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
 /**
  * Draws `element` into an image `size` pixels across, offscreen, as Skia's
  * `drawAsImage` does, but into one surface kept between drawings. On web,
- * each of `drawAsImage`'s surfaces holds a WebGL context of its own until
- * it's garbage collected, and a browser keeps only so many: a few quick
- * changes of export size lost the oldest, the editor's or the export
- * preview's canvas among them. The image comes back on the CPU, as
- * `drawAsImage`'s does, so it doesn't depend on the surface.
+ * each of `drawAsImage`'s surfaces holds a WebGL context of its own, and a
+ * browser keeps only so many: a few quick changes of export size lost the
+ * oldest, the editor's or the export preview's canvas among them. The image
+ * comes back on the CPU, as `drawAsImage`'s does, so it doesn't depend on
+ * the surface.
  */
 export async function drawOffscreen(
 	element: ReactElement,
@@ -47,22 +49,58 @@ export async function drawOffscreen(
 		picture.dispose();
 		clearTimeout(idleTimer);
 		idleTimer = setTimeout(() => {
-			shared?.dispose();
+			shared?.free();
 			shared = null;
 		}, IDLE_MS);
 	}
 }
 
 // The shared surface, made or grown to hold `width` by `height`.
-function surfaceFor(width: number, height: number): SkSurface | null {
-	if (shared && shared.width() >= width && shared.height() >= height) {
-		return shared;
+function surfaceFor(width: number, height: number): JsiSkSurface | null {
+	if (
+		shared &&
+		shared.surface.width() >= width &&
+		shared.surface.height() >= height
+	) {
+		return shared.surface;
 	}
-	const grown = Skia.Surface.MakeOffscreen(
-		Math.max(width, shared?.width() ?? 0),
-		Math.max(height, shared?.height() ?? 0),
-	);
-	shared?.dispose();
-	shared = grown;
-	return shared;
+	const grownWidth = Math.max(width, shared?.surface.width() ?? 0);
+	const grownHeight = Math.max(height, shared?.surface.height() ?? 0);
+	shared?.free();
+	shared = makeOffscreen(grownWidth, grownHeight);
+	return shared?.surface ?? null;
+}
+
+/**
+ * A GPU surface on a WebGL context of its own, which `free` gives back.
+ * Skia's `Skia.Surface.MakeOffscreen` makes one too, but its `dispose`
+ * frees only the surface: the context stays registered with CanvasKit, so
+ * it's never collected, and keeps its drawing buffer and every texture
+ * drawn into it (the export's photos) until the browser drops it as the
+ * oldest. This frees what Skia's own web canvas frees when it unmounts.
+ */
+function makeOffscreen(width: number, height: number): Offscreen | null {
+	const offscreen = new OffscreenCanvas(width, height);
+	const handle = CanvasKit.GetWebGLContext(offscreen);
+	if (!handle) return null;
+	const gl = offscreen.getContext("webgl2") ?? offscreen.getContext("webgl");
+	const grContext = CanvasKit.MakeWebGLContext(handle);
+	const surface =
+		grContext && CanvasKit.MakeRenderTarget(grContext, width, height);
+	const free = () => {
+		surface?.delete();
+		grContext?.releaseResourcesAndAbandonContext();
+		grContext?.delete();
+		// The context's GPU memory goes now rather than when it's collected.
+		gl?.getExtension("WEBGL_lose_context")?.loseContext();
+		CanvasKit.deleteContext(handle);
+		// Making the deleted handle current clears CanvasKit's references to
+		// the context, as Skia's web canvas does when it unmounts.
+		CanvasKit.MakeWebGLContext(handle);
+	};
+	if (!surface) {
+		free();
+		return null;
+	}
+	return { surface: new JsiSkSurface(CanvasKit, surface), free };
 }
