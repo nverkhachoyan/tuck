@@ -20,7 +20,7 @@ The refactors from October 24 to 29 were checked on web at 390, 1024, and 1440 p
 
 ## 2. Bugs to look into
 
-* [#79: Memory grows each time a project is opened and closed](https://github.com/nverkhachoyan/tuck/issues/79)
+* None open. [#79](https://github.com/nverkhachoyan/tuck/issues/79), the memory each closed project left behind, was a cycle in worklets' serialization cache, patched in `patches/react-native-worklets@0.13.0.patch`.
 
 ## 3. Smart selection
 

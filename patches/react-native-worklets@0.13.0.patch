@@ -1,0 +1,170 @@
+diff --git a/src/memory/serializable.native.ts b/src/memory/serializable.native.ts
+index 78a98750434e1c8f181caaaeabf6743f2085c3ee..525db3919e1ff1d7dde739922110ede7ffc16f62 100644
+--- a/src/memory/serializable.native.ts
++++ b/src/memory/serializable.native.ts
+@@ -60,6 +60,43 @@ function isTurboModuleLike(object: object): object is Record<string, unknown> {
+   return proto !== null && isHostObject(proto);
+ }
+ 
++// Clones that hold a remote function (see cloneNonWorkletFunction), directly
++// or inside. A remote function keeps the function it wraps alive from native
++// code, and that function's closure can reach the cloned value again (a
++// component's callback reaches its worklets through the React fiber). A
++// strong cache entry would close that loop through native memory, out of the
++// garbage collector's sight, so these clones are cached weakly.
++const holdsRemoteFunction = new WeakSet<object>();
++// Whether the value being cloned holds a remote function so far.
++let sawRemoteFunction = false;
++
++function trackRemoteFunctions<TClone extends object>(
++  build: () => TClone
++): [TClone, boolean] {
++  const outer = sawRemoteFunction;
++  sawRemoteFunction = false;
++  let holdsRemote = false;
++  try {
++    const clone = build();
++    holdsRemote = sawRemoteFunction;
++    if (holdsRemote) {
++      holdsRemoteFunction.add(clone);
++    }
++    return [clone, holdsRemote];
++  } finally {
++    sawRemoteFunction = outer || holdsRemote;
++  }
++}
++
++function cacheClone(value: object, clone: object, holdsRemote: boolean) {
++  serializableMappingCache.set(
++    value,
++    (holdsRemote && globalThis.WeakRef
++      ? new WeakRef(clone)
++      : clone) as SerializableRef
++  );
++}
++
+ function getFromCache(value: object) {
+   const cached = serializableMappingCache.get(value);
+   if (cached === serializableMappingFlag) {
+@@ -147,9 +184,15 @@ export function createSerializable<TValue>(
+       // WeakRef is installed on runtimes only with Hermes microtaskQueue enabled.
+       const deref = cached.deref();
+       if (deref !== undefined) {
++        if (holdsRemoteFunction.has(deref)) {
++          sawRemoteFunction = true;
++        }
+         return deref as SerializableRef<TValue>;
+       }
+     } else {
++      if (holdsRemoteFunction.has(cached as object)) {
++        sawRemoteFunction = true;
++      }
+       return cached as SerializableRef<TValue>;
+     }
+   }
+@@ -167,6 +210,7 @@ export function createSerializable<TValue>(
+     }
+     if ((value as unknown as RemoteFunction).__remoteFunction) {
+       // Remote functions are already serialized.
++      sawRemoteFunction = true;
+       return value as unknown as SerializableRef<TValue>;
+     }
+     if (!isWorkletFunction(value)) {
+@@ -392,18 +436,20 @@ function cloneArray<T extends unknown[]>(
+   shouldPersistRemote: boolean,
+   depth: number
+ ): SerializableRef<T> {
+-  const clonedElements = value.map((element, index) =>
+-    __DEV__
+-      ? withPathSegment(`[${index}]`, () =>
+-          createSerializable(element, shouldPersistRemote, depth + 1)
+-        )
+-      : createSerializable(element, shouldPersistRemote, depth + 1)
+-  );
+-  const clone = WorkletsModule.createSerializableArray(
+-    clonedElements,
+-    shouldPersistRemote
+-  ) as SerializableRef<T>;
+-  serializableMappingCache.set(value, clone);
++  const [clone, holdsRemote] = trackRemoteFunctions(() => {
++    const clonedElements = value.map((element, index) =>
++      __DEV__
++        ? withPathSegment(`[${index}]`, () =>
++            createSerializable(element, shouldPersistRemote, depth + 1)
++          )
++        : createSerializable(element, shouldPersistRemote, depth + 1)
++    );
++    return WorkletsModule.createSerializableArray(
++      clonedElements,
++      shouldPersistRemote
++    ) as SerializableRef<T>;
++  });
++  cacheClone(value, clone, holdsRemote);
+   serializableMappingCache.set(clone);
+ 
+   freezeObjectInDev(value);
+@@ -423,6 +469,8 @@ function cloneNonWorkletFunction<TArgs extends unknown[], TReturn>(
+     serializableMappingCache.set(fun, new WeakRef(clone));
+   }
+   serializableMappingCache.set(clone);
++  holdsRemoteFunction.add(clone);
++  sawRemoteFunction = true;
+   freezeObjectInDev(fun);
+ 
+   return clone;
+@@ -466,6 +514,7 @@ function cloneWorklet<TValue extends WorkletFunction>(
+     delete (value as WorkletFunction).__stackDetails;
+   }
+   const buildClone = (): SerializableRef<TValue> => {
++    const [clone, holdsRemote] = trackRemoteFunctions(() => {
+     const clonedProps: Record<string, unknown> = cloneObjectProperties(
+       value,
+       shouldPersistRemote,
+@@ -482,13 +531,14 @@ function cloneWorklet<TValue extends WorkletFunction>(
+         )
+       : createSerializable(value.__initData, true, depth + 1);
+ 
+-    const clone = WorkletsModule.createSerializableWorklet(
++    return WorkletsModule.createSerializableWorklet(
+       clonedProps,
+       // TODO: Check after refactor if we can remove shouldPersistRemote parameter (imho it's redundant here since worklets are always persistent)
+       // retain all worklets
+       true
+     ) as SerializableRef<TValue>;
+-    serializableMappingCache.set(value, clone);
++    });
++    cacheClone(value, clone, holdsRemote);
+     serializableMappingCache.set(clone);
+ 
+     freezeObjectInDev(value);
+@@ -523,17 +573,19 @@ function clonePlainJSObject<TValue extends object>(
+   shouldPersistRemote: boolean,
+   depth: number
+ ): SerializableRef<TValue> {
+-  const clonedProps: Record<string, unknown> = cloneObjectProperties(
+-    value,
+-    shouldPersistRemote,
+-    depth
+-  );
+-  const clone = WorkletsModule.createSerializableObject(
+-    clonedProps,
+-    shouldPersistRemote,
+-    value
+-  ) as SerializableRef<TValue>;
+-  serializableMappingCache.set(value, clone);
++  const [clone, holdsRemote] = trackRemoteFunctions(() => {
++    const clonedProps: Record<string, unknown> = cloneObjectProperties(
++      value,
++      shouldPersistRemote,
++      depth
++    );
++    return WorkletsModule.createSerializableObject(
++      clonedProps,
++      shouldPersistRemote,
++      value
++    ) as SerializableRef<TValue>;
++  });
++  cacheClone(value, clone, holdsRemote);
+   serializableMappingCache.set(clone);
+ 
+   freezeObjectInDev(value);
