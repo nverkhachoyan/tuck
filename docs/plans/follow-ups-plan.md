@@ -1,8 +1,8 @@
 # Follow-ups
 
-Everything still open from finished plans, gathered October 29, 2026. Each section stands alone, so they can go in any order. Finished plans are removed once built; what building them found lives in git history (the last ones as of `281f08e`: Cut and Remove BG, the dependency upgrade, the editor's layer folders, and the text input package).
+Everything still open from finished plans, gathered October 29, 2026 and brought up to date November 5. Each section stands alone, so they can go in any order. Finished plans are removed once built; what building them found lives in git history (the last ones as of `281f08e`: Cut and Remove BG, the dependency upgrade, the editor's layer folders, and the text input package; then, after `1c2b056`, the editor UI redesign, the Gesture Handler 3 migration, the performance plan, and the UI/UX brainstorm that led to the redesign).
 
-Cut and Remove BG's open items are issues: [#13](https://github.com/nverkhachoyan/tuck/issues/13), [#14](https://github.com/nverkhachoyan/tuck/issues/14), [#15](https://github.com/nverkhachoyan/tuck/issues/15), [#16](https://github.com/nverkhachoyan/tuck/issues/16), and [#17](https://github.com/nverkhachoyan/tuck/issues/17). As other entries here become issues, replace them with a link.
+Open work that has its own issue is linked rather than described here. As other entries become issues, replace them with a link.
 
 ## 1. Checks only a device can make
 
@@ -14,13 +14,13 @@ The refactors from October 24 to 29 were checked on web at 390, 1024, and 1440 p
 * **The phone's trays.** The bar's chips share `SizeChoices`, `ColorChip`, and `AlignPicker` with the phone's trays. Look at each tray on the iPhone simulator for anything that moved.
 * **Find on native.** Vision and ML Kit find different faces than MediaPipe. Run Find on the Solvay photo on the iOS simulator and the Android emulator, and check that the tray's words ("28 found", "26 of 28 chosen", "No faces found") fit what they find.
 * **After Expo 58, still unchecked:** the share extension, saving to Photos, the web app offline after a cold load with the service worker cleared, and renders of a project with every layer kind compared against Expo 57 screenshots (Skia 2.11 changed how `Mask`s composite and antialiasing defaults).
+* **After Skia 3:** React Native Skia 3.9.0 is merged (`1c2b056`); its device checks are [#18](https://github.com/nverkhachoyan/tuck/issues/18).
+* **Performance on a phone:** redaction filters and export encoding, [#46](https://github.com/nverkhachoyan/tuck/issues/46), and the rest of the preview/export split, [#40](https://github.com/nverkhachoyan/tuck/issues/40).
 * **Screen readers.** The iOS Simulator has no VoiceOver, so these wait for a device. With VoiceOver on an iPhone, check Find's Review row as one adjustable control, and swipe through the export sheet to check that it never reaches the editor behind it. Do the same with TalkBack on an Android phone.
 
 ## 2. Bugs to look into
 
-* [#19: A rail click right after a header ✓ or ✕ is lost](https://github.com/nverkhachoyan/tuck/issues/19)
-* [#20: A photo dropped just after a reload lands off the canvas](https://github.com/nverkhachoyan/tuck/issues/20)
-* [#21: iOS shows selection handles at the hidden text input](https://github.com/nverkhachoyan/tuck/issues/21)
+* [#79: Memory grows each time a project is opened and closed](https://github.com/nverkhachoyan/tuck/issues/79)
 
 ## 3. Smart selection
 
@@ -37,12 +37,7 @@ Cut's Subject, Tap (MobileSAM on every platform), Add and Subtract, Invert, and 
 * **Adjust only the selection.**
 * **Remove an object.** Fill the hole Remove leaves with an inpainting model: MI-GAN (MIT, made for phones, about 30 MB) or LaMa (Apache 2.0, about 200 MB). It's the biggest piece here, so research it first.
 
-## 4. Upgrades waiting
-
-* [#18: Upgrade to React Native Skia 3](https://github.com/nverkhachoyan/tuck/issues/18) (unblocked upstream by [wcandillon/react-native-skia#4367](https://github.com/wcandillon/react-native-skia/pull/4367), closing [wcandillon/react-native-skia#4355](https://github.com/wcandillon/react-native-skia/issues/4355))
-* [#22: Migrate gestures to Gesture Handler 3's hooks API](https://github.com/nverkhachoyan/tuck/issues/22)
-
-## 5. Later
+## 4. Later
 
 Not yet planned. Weigh each on its own before starting one.
 
@@ -75,6 +70,8 @@ Not yet planned. Weigh each on its own before starting one.
 
   Verdict: nothing ran out on Android at 4 GB or in Chrome, and the decoded photos alone don't come close; what does is Chrome holding GPU memory and the export's buffers across projects in one tab, which on an 8 GB laptop with an integrated GPU would. The smaller preview isn't needed yet. The GPU memory was offscreen WebGL contexts left alive after each export, fixed in [#60](https://github.com/nverkhachoyan/tuck/issues/60); the renderer's share was CanvasKit's WASM heap keeping the export's peak, fixed in [#74](https://github.com/nverkhachoyan/tuck/issues/74): export decodes photos with the browser, which took the heap after a full-size export of the five photos from 983 to 415 MB (128 at launch, 266 while editing them, in a dev build). Still to do: measure a 4–6 GB iPhone.
 * **A Select tool** that picks layers and objects by finger or cursor (the name was kept free for it).
+* **Find and Redact together.** When Find finds nothing, or misses one face or plate, it says "Draw a box over it with Redact instead", and the user has to finish Find and open Redact. Offer Redact from Find's tray instead, and consider opening Find already scanning its last scope. From the UI/UX brainstorm the editor redesign came from (in git history as of `1c2b056`, `docs/brainstorm/`).
+* **Layer row polish**, from the same brainstorm: a Duplicate action in `LayerRow` (it's only in the selection bar and ⌘D now), a way to tell several "Drawing" rows apart, and the Layers toggle staying reachable on wide windows under 960 points tall while a tool is open.
 * **Publishing `@tuck/skia-text-input`**, once someone asks or Tuck isn't its only user and the API has held still. Remove `"private": true`, create the `tuck` npm organization (or rename), and `pnpm --dir packages/skia-text-input publish --access public`; `prepack` builds `lib/`. Not built until needed: right-to-left text, input method composition on the canvas, grapheme-aware word selection, up and down arrows by wrapped line, touch drag handles and the edit menu, and a screen reader reading the drawn text.
 * **Each layer type's bounds in its own folder**, if `canvas/layerBounds.ts`'s switch grows.
 * More adjustments: highlights, shadows, exposure, vignette, and sharpen, one at a time, only where they feel as good as the four there are.
