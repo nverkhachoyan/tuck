@@ -5,3 +5,6 @@ packages:
 allowBuilds:
   protobufjs: false
   tesseract.js: false
+
+patchedDependencies:
+  react-native-worklets@0.13.0: patches/react-native-worklets@0.13.0.patch

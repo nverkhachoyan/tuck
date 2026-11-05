@@ -83,6 +83,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - The worklets plugin turns a `"worklet"` function declaration into a constant, so it isn't hoisted: declare helpers above the worklets that use them, or the module throws as it loads.
 - A worklet can only call worklets: a new helper called from UI-thread geometry needs the `"worklet"` directive too.
 - `scheduleOnUI` on web runs a frame later, while a JS write to a shared value lands at once: call the worklet directly on web where that matters (`syncLiveTransform`). On native, a worklet that must read and write shared values atomically belongs in `scheduleOnUI`.
+- Worklets 0.13 caches each serialized worklet and object strongly, keyed by the original. A worklet that calls a component's callback (`scheduleOnRN(setZoom)`) holds it from native memory, and the callback reaches the worklet again through the React fiber, so neither runtime can collect the cycle: every closed editor stayed in memory. `patches/react-native-worklets@0.13.0.patch` caches those clones weakly. On a worklets upgrade, carry the patch or check upstream fixed it, and open and close a project several times measuring the heap (docs/development.md).
 
 ### Tooling
 
