@@ -7,15 +7,18 @@ What this brainstorm starts from, read from the code at `e0b07fb`.
 - **A drawing is a layer** (`DrawingLayer` in `editor/layers/drawing/drawing.ts`): a list of strokes in the layer's own space, a transform, and an optional `blend: "multiply"`. Each stroke is a `Brush` (a pen with a color, width, and tip, or an eraser with a width) plus flattened points.
 - **A shape is a layer too** (`ShapeLayer`, `editor/layers/shape/shape.ts`): one rectangle, ellipse, line, or arrow, with its own color and stroke width.
 - **Groups exist, but they're flat labels** (`LayerGroup` in `document/document.ts`): a name and a list of layer ids. The layers keep their own places in the document's paint order, and a group only shows as one row in the Layers panel, which hides, locks, or deletes all of its layers. Today only Find's detected redactions (`addRedactionBoxes`) create one. Nothing on the canvas knows about groups.
+  - Once a document has any group, the Layers panel switches from `FlatLayerList` to `GroupedLayerList` (`layers/panel/LayersPanel.tsx`), whose rows (`StaticLayerRow`) can't be dragged to reorder. So today a document Find has added redactions to can't reorder its layers by dragging.
 
 ## Which drawing a stroke goes into
 
 All of it is `drawStroke` in `editor/layers/drawing/drawingEdits.ts`:
 
-1. A **pen stroke** joins the selected drawing when it's unlocked and blends the same way (a highlighter only joins a multiplying drawing; a pen or the see-through marker only joins a normal one). Otherwise it starts a new drawing on top, which the store then selects (`selectionAfter` in `store/editorSlice.ts`), so the next stroke joins it.
-2. Pen, Shape, and Eraser all set `deselectOnDone: true`, so **Done lets go of the drawing**. The next time Pen opens, nothing is selected, and its first stroke starts a new drawing. So, in practice, **each Draw session makes its own layer**, and switching between pen and highlighter in one session makes one per switch.
+Pen's tips, by the names the UI gives them (`TIPS` in `tools/pen/PenPanel.tsx`): **Pen** (no tip), **Highlighter** (tip `marker`, which multiplies), **Marker** (tip `ink`, see-through at 45%), and **Neon**. A drawing "blends" one of two ways: a highlighter drawing multiplies onto what's under it, and an ink drawing (Pen, Marker, Neon) draws normally.
+
+1. A **pen stroke** joins the selected drawing when it's unlocked (hidden doesn't matter) and blends the same way: a Highlighter stroke joins only a highlighter drawing, and Pen, Marker, and Neon join only an ink drawing. Otherwise it starts a new drawing on top, which the store then selects (`selectionAfter` in `store/editorSlice.ts`), so the next stroke joins it.
+2. Pen, Shape, and Eraser (and Redact and Find) set `deselectOnDone: true`, so **Done lets go of the drawing**. The next time Pen opens, nothing is selected, and its first stroke starts a new drawing. So, in practice, **each Pen session makes its own layer**, each switch between Highlighter and the other tips in a session makes another, and every shape is a layer of its own.
 3. An **eraser stroke** joins the selected drawing whatever its blend. With no drawing selected it has no drawing to join and changes nothing. The store test `an eraser only erases the selected drawing` makes that rule explicit.
-   - Switching from Pen straight to Eraser in the rail or dock (`startTool` in `useEditorTools.ts`) commits Pen's session but doesn't run its Done, so the drawing stays selected and the eraser works on it. Only Done, or reopening the eraser later, loses it. So erasing what you *just* drew works; erasing anything older doesn't.
+   - Switching from Pen straight to Eraser in the rail or dock (`startTool` in `useEditorTools.ts`) commits Pen's session but doesn't run its Done, so the drawing stays selected and the eraser works on it. Pressing Done is what loses it. So erasing what you *just* drew works; erasing anything older doesn't.
 4. An eraser stroke also **removes every unlocked, visible shape it crosses, whole**, whatever is selected (`erasesShape` in `layers/shape/shapeGeometry.ts`).
 
 So drawings and shapes follow two different rules: the eraser reaches every shape but only one drawing.
@@ -24,7 +27,7 @@ So drawings and shapes follow two different rules: the eraser reaches every shap
 
 - An eraser stroke is stored in the drawing like a pen stroke. `DrawingLayerView` draws it as a `blendMode: "clear"` path.
 - Every drawing is drawn inside a Skia `Group layer` (a saved layer), so the clear only removes that drawing's earlier strokes, not the photo or anything else under it. That saved layer is also why a highlighter needs its own drawing: the group multiplies onto what's under it once, as a whole.
-- While a finger is down, the live stroke is drawn into one layer, `LiveStroke.targetId` (`canvas/useToolStroke.ts`). That's the selected drawing when the tool can add to it (`canAddTo` in `canvas/canvasTool.ts`), or else nothing for an eraser (`NewLayerStroke` draws no eraser). **An eraser with no drawing selected shows nothing at all while you drag.**
+- While a finger is down, the live stroke is drawn into one layer, `LiveStroke.targetId` (the type is in `canvas/LiveStrokeOverlay.tsx`, its value comes from `canvas/useToolStroke.ts`, and `EditorScene.tsx` hands the stroke to that layer alone). That's the selected drawing when the tool can add to it (`canAddTo` in `canvas/canvasTool.ts`), or else nothing for an eraser (`NewLayerStroke` draws no eraser). **An eraser with no drawing selected shows nothing at all while you drag.**
 
 ## What follows from that
 
@@ -47,6 +50,7 @@ Smaller problems in the model, which matter for some options below:
 - **Document layers draw straight onto the canvas** (docs/architecture.md, "Straight onto the canvas"). A redaction's backdrop blur reads only the layer it's drawn in, and a highlighter's multiply blends only onto that layer. A container that composites its children in a saved layer would break both. Any "group" has to stay a logical grouping, which Photoshop calls a pass-through group, not a compositing one.
 - **Each drawing is itself a saved layer**, which is what limits a clear-blend eraser to that drawing's strokes. Putting the highlighter and the pen into one container would make the highlighter multiply onto the pen's ink only, not onto the photo.
 - **Plain TypeScript for the model.** `document/` and the lowercase `.ts` files in `layers/` stay free of React and Skia, and run in Node's tests. Geometry the UI thread needs is marked `"worklet"`.
-- **Saved projects** (`projects/projectFile.ts`, version 5) must keep opening. A change that only stops *writing* something (eraser strokes, say) needs no version bump. A change to what's written does.
+- **Saved projects** (`projects/projectFile.ts`, version 5) must keep opening. A change that only stops *writing* something (eraser strokes, say) needs no version bump. A change to what's written does, with an upgrade for older projects. Projects are local only, so that's routine work, not a reason to avoid a change.
+- **Drawings scale uniformly and never mirror.** Their resize mode is `"none"` (`canvas/layerTargets.ts`), scaling keeps the aspect ratio (`useLayerTransformGesture.ts`), and cropping's flips turn layers rather than mirroring them (`rebaseTransform` in `document/framing.ts`). `addStroke` relies on this when it divides a width by `scaleX`.
 - **One undo step per tool session** (`beginSession`/`commitSession`), and each stroke is a step inside it.
 - **Tuck's product principles** (PRODUCT.md): seconds, not sessions; a utility, not a studio; nothing is final until export.
