@@ -17,6 +17,7 @@ import {
 	eraseWholeStrokes,
 	type MarkPatch,
 	restyleDrawing,
+	separateDrawing,
 } from "../layers/drawing/drawingEdits.ts";
 import type { Adjustments } from "../layers/image/adjustments.ts";
 import {
@@ -390,6 +391,17 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			setDocument("editor/addShape", (document) =>
 				addShape(document, shape, placement, style),
 			),
+
+		// One undo step; the first piece keeps the id, and stays selected.
+		separateSelectedDrawing: () => {
+			const id = get().selectedLayerId;
+			if (!id) return;
+			setDocument(
+				"editor/separateSelectedDrawing",
+				(document) => separateDrawing(document, id),
+				id,
+			);
+		},
 
 		// One undo step a change, and none for the same style.
 		restyleDrawing: (id: string, patch: MarkPatch) =>

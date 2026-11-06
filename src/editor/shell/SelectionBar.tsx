@@ -15,7 +15,7 @@ export type ArrangeMove = "front" | "forward" | "backward" | "back";
 /**
  * The actions every selected layer shares, in a small bar the canvas floats
  * by it (see `EditorCanvas`): Edit for text, Free resize for text and images,
- * Arrange, Duplicate, and Delete. Arrange shows its moves in the bar's
+ * Separate for a drawing in pieces, Arrange, Duplicate, and Delete. Arrange shows its moves in the bar's
  * place, until Back. What only one kind of layer does stays in the dock.
  */
 export function SelectionBar({
@@ -24,6 +24,7 @@ export function SelectionBar({
 	onEdit,
 	stretched,
 	onToggleStretch,
+	onSeparate,
 	onArrange,
 	onDuplicate,
 	onDelete,
@@ -33,6 +34,7 @@ export function SelectionBar({
 	onEdit?: () => void;
 	stretched?: boolean;
 	onToggleStretch?: () => void;
+	onSeparate?: () => void;
 	onArrange: (move: ArrangeMove) => void;
 	onDuplicate: () => void;
 	onDelete: () => void;
@@ -86,6 +88,13 @@ export function SelectionBar({
 							label="Free resize"
 							selected={stretched}
 							onPress={onToggleStretch}
+						/>
+					)}
+					{onSeparate && (
+						<BarButton
+							icon="call-split"
+							label="Separate"
+							onPress={onSeparate}
 						/>
 					)}
 					<BarButton

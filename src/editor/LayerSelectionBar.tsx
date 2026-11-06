@@ -1,4 +1,5 @@
 import type { EditorDocument } from "./document/document";
+import { drawingPieces } from "./layers/drawing/drawingEdits";
 import type { Layer } from "./layers/layer";
 import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
 import { useStore } from "./store";
@@ -29,7 +30,8 @@ export function useArrangeSelected(
 
 /**
  * The selection bar for `layer`, at `index` in the stack: Edit for a layer
- * a tool edits in place (`onEdit`), and Free resize for text and images.
+ * a tool edits in place (`onEdit`), Free resize for text and images, and
+ * Separate for an unlocked drawing in more than one piece.
  */
 export function LayerSelectionBar({
 	layer,
@@ -50,8 +52,13 @@ export function LayerSelectionBar({
 	onDuplicate: () => void;
 	onDelete: (id: string) => void;
 }) {
+	const { separateSelectedDrawing } = useStore((state) => state.actions);
 	const resizable =
 		layer.type === "text" || (layer.type === "image" && !layer.sticker);
+	const inPieces =
+		layer.type === "drawing" &&
+		!layer.locked &&
+		drawingPieces(layer).length > 1;
 	return (
 		<SelectionBar
 			canMoveForward={index < topIndex}
@@ -61,6 +68,7 @@ export function LayerSelectionBar({
 			onToggleStretch={
 				resizable ? () => onSetResizable(layer.id, !layer.resizable) : undefined
 			}
+			onSeparate={inPieces ? separateSelectedDrawing : undefined}
 			onArrange={onArrange}
 			onDuplicate={onDuplicate}
 			onDelete={() => onDelete(layer.id)}
