@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import {
 	type DerivedValue,
 	type SharedValue,
+	useAnimatedReaction,
 	useDerivedValue,
 } from "react-native-reanimated";
 import {
@@ -16,6 +17,7 @@ import {
 	Skia,
 	type SkPath,
 } from "react-native-skia";
+import { scheduleOnRN } from "react-native-worklets";
 import { colors } from "@/ui/theme";
 import { type Point, rectFromCorners } from "../document/geometry";
 import { identityTransform } from "../layers/base";
@@ -59,6 +61,8 @@ import { shapeFromDrag } from "./shapeDrag";
  * - `reaches`: the layers it's drawn into as it's painted.
  * - `startsLayer`: drawn over everything instead, as it will start a layer.
  * - `erasePath`: the Eraser's line, built once for every drawing it reaches.
+ * - `nearDrawings`: the drawings the Eraser's line has come near, by id,
+ *   which it joins as it's painted; the rest stay without a saved layer.
  * - `crossed`: the shapes the Eraser has crossed, dimmed until it lifts.
  * - `crossedStrokes`: the Stroke eraser's strokes touched so far, by
  *   drawing id, dimmed until it lifts.
@@ -72,6 +76,7 @@ export type LiveStroke = {
 	reaches: (layer: Layer) => boolean;
 	startsLayer: boolean;
 	erasePath: DerivedValue<SkPath> | null;
+	nearDrawings: SharedValue<Record<string, boolean>> | null;
 	crossed: SharedValue<string[]> | null;
 	crossedStrokes: SharedValue<Record<string, number[]>> | null;
 	hoveredStroke: DerivedValue<HoveredStroke | null> | null;
@@ -173,35 +178,84 @@ export function StrokeTarget({
 			/>
 		);
 	}
+	if (stroke?.nearDrawings && layer.type === "drawing") {
+		return (
+			<ErasedDrawing
+				layer={layer}
+				stroke={stroke}
+				opacity={dimmed ? DIMMED_OPACITY : undefined}
+				onImageError={onImageError}
+			/>
+		);
+	}
 	return (
 		<LayerContent
 			layer={layer}
 			uri={uri}
 			stroke={
 				stroke &&
-				(tool?.type === "draw" || tool?.type === "erase") && (
+				tool?.type === "draw" && (
 					<Group transform={toInverseTransformList(layer.transform)}>
-						{tool.type === "draw" ? (
-							<LivePath
-								key={stroke.landedId}
-								stroke={stroke}
-								brush={tool.brush}
-								full={tool.brush.tip === "marker"}
-							/>
-						) : (
-							stroke.erasePath && (
-								<BrushStroke
-									path={stroke.erasePath}
-									brush={{ type: "eraser", width: tool.width }}
-								/>
-							)
-						)}
+						<LivePath
+							key={stroke.landedId}
+							stroke={stroke}
+							brush={tool.brush}
+							full={tool.brush.tip === "marker"}
+						/>
 					</Group>
 				)
 			}
 			matrix={matrix}
 			selectionColor={selectionColor}
 			opacity={dimmed ? DIMMED_OPACITY : undefined}
+			onImageError={onImageError}
+		/>
+	);
+}
+
+/**
+ * A drawing the Eraser can reach, which its live line joins once it has
+ * come near (`nearDrawings`), and leaves once the stroke lands: until then
+ * the drawing keeps drawing without a saved layer, if it needs none.
+ */
+function ErasedDrawing({
+	layer,
+	stroke,
+	opacity,
+	onImageError,
+}: {
+	layer: DrawingLayer;
+	stroke: LiveStroke;
+	opacity: number | undefined;
+	onImageError: (error: unknown) => void;
+}) {
+	const [near, setNear] = useState(false);
+	const { id } = layer;
+	const { nearDrawings, erasePath, tool } = stroke;
+	useAnimatedReaction(
+		() => stroke.id.value > stroke.landedId && nearDrawings?.value[id] === true,
+		(now, before) => {
+			if (now !== before) scheduleOnRN(setNear, now);
+		},
+		[id, stroke],
+	);
+	return (
+		<LayerContent
+			layer={layer}
+			liveInside
+			stroke={
+				near &&
+				erasePath &&
+				tool.type === "erase" && (
+					<Group transform={toInverseTransformList(layer.transform)}>
+						<BrushStroke
+							path={erasePath}
+							brush={{ type: "eraser", width: tool.width }}
+						/>
+					</Group>
+				)
+			}
+			opacity={opacity}
 			onImageError={onImageError}
 		/>
 	);

@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
 	createDrawingLayer,
+	inkRect,
 	isDrawingLayer,
 	layerBlend,
+	needsOwnLayer,
 	pruneErased,
 	type Stroke,
 	visibleReach,
@@ -94,4 +96,37 @@ test("pruneErased keeps a neon stroke whose glow pokes past the eraser", () => {
 test("pruneErased leaves a pen drawn after the eraser, and an eraser over nothing goes", () => {
 	const later = line([0, 0, 100, 0]);
 	assert.deepEqual(pruneErased([eraser([-10, 0, 110, 0], 20), later]), [later]);
+});
+
+test("only a drawing that multiplies or erases needs a saved layer", () => {
+	const ink = createDrawingLayer(pen);
+	assert.equal(needsOwnLayer(ink), false);
+	assert.equal(
+		needsOwnLayer(createDrawingLayer({ ...pen, tip: "marker" })),
+		true,
+	);
+	assert.equal(
+		needsOwnLayer({
+			...ink,
+			strokes: [...ink.strokes, { type: "eraser", width: 4, points: [0, 0] }],
+		}),
+		true,
+	);
+	// The see-through marker composites the same on the canvas.
+	assert.equal(
+		needsOwnLayer(createDrawingLayer({ ...pen, tip: "ink" })),
+		false,
+	);
+});
+
+test("a drawing's ink rectangle covers its box, its square ends, and its glow", () => {
+	// A line from -5 to 5 across, 8 wide: the box reaches 9 by 4.
+	const round = inkRect(createDrawingLayer(pen));
+	assert.deepEqual(round, { x: -11, y: -6, width: 22, height: 12 });
+	const square = inkRect(createDrawingLayer({ ...pen, tip: "marker" }));
+	const neon = inkRect(createDrawingLayer({ ...pen, tip: "neon" }));
+	for (const wider of [square, neon]) {
+		assert.ok(wider.x < round.x && wider.width > round.width);
+		assert.ok(-wider.y >= visibleReach({ ...pen, tip: "neon" }) - 1);
+	}
 });
