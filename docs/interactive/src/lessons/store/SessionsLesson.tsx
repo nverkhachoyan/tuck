@@ -116,7 +116,9 @@ export function SessionsLesson() {
 					Redo a change or two, or make new ones, then press{" "}
 					<strong>Done</strong>. <code>commitSession</code> drops the tool's
 					steps from <code>past</code> and keeps one: the document from where
-					the tool started. The whole tool is now one undo step.
+					the tool started. The whole tool is now one undo step. Pen and the
+					Eraser are the exceptions: a spec's <code>undoSteps</code> keeps one
+					step per mark, or per swipe.
 				</p>
 			),
 			done: ({ log }) =>
@@ -211,8 +213,9 @@ export function SessionsLesson() {
 			<p className="lede">
 				While a tool is open, every change it makes is an undo step of its own,
 				so you can step back and forth inside it. When it closes, Done turns all
-				of them into one step, and Cancel returns to where it started. The store
-				does this with a <code>session</code>: a note of where the tool began.
+				of them into one step (Pen keeps one per mark, and the Eraser one per
+				swipe), and Cancel returns to where it started. The store does this with
+				a <code>session</code>: a note of where the tool began.
 			</p>
 
 			<div className="playground">
@@ -301,14 +304,14 @@ export function SessionsLesson() {
 										<button
 											type="button"
 											className="button-small primary"
-											onClick={actions.commitSession}
+											onClick={() => actions.commitSession()}
 										>
 											Done
 										</button>
 										<button
 											type="button"
 											className="button-small"
-											onClick={actions.cancelSession}
+											onClick={() => actions.cancelSession()}
 										>
 											Cancel
 										</button>

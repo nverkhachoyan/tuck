@@ -83,7 +83,7 @@ export function useEditNotice(document: EditorDocument) {
 			if (session && session.document === current) {
 				commitSession();
 				undo();
-				beginSession();
+				beginSession(session.previews, session.steps);
 			} else {
 				undo();
 			}
