@@ -135,7 +135,7 @@ function modifiedShortcut(press: KeyPress): Shortcut | null {
  * take ("mod+shift+Z"), with a line for each of `tools` (and any grouped
  * under them) in their order, and a group for each tool whose spec in `specs`
  * takes the keys, which Enter (⌘/Ctrl+Enter while typing) applies and Escape
- * cancels.
+ * cancels (or, while typing, applies too).
  */
 export function shortcutGroups(
 	tools: readonly ToolEntry[],

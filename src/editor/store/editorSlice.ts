@@ -87,7 +87,7 @@ export type EditorSnapshot = {
 /**
  * How many undo steps a tool's session leaves once it's done: one for the
  * whole session, one for each change (the Eraser's swipes), or one for each
- * mark (Pen's).
+ * mark (Pen's strokes, a shape or a redaction, see `stepsByMark`).
  */
 export type SessionSteps = "one" | "each" | "marks";
 
@@ -113,7 +113,7 @@ export type EditorState = {
 	future: EditorSnapshot[];
 	// While a tool is open, where it started: Cancel returns there (and redo
 	// undoes the cancel), and its changes become one undo step when it's done,
-	// except Pen's, one per mark, and the Eraser's, one per swipe.
+	// unless its spec keeps more (`undoSteps`).
 	session: EditorSession | null;
 };
 

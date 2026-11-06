@@ -18,14 +18,18 @@ export type ToolId = string;
  *   open the editor's shortcuts, paste, and drop are off, Escape cancels,
  *   Enter runs Done, Export hides, and the layers can't be changed. "typing"
  *   for one that types into a hidden input (its definition's `views.Input`):
- *   Enter is a new line and ⌘/Ctrl+Enter runs Done, the dock rides the
- *   keyboard, and a press in the context bar or dock keeps the input's focus.
- * - `previews`: whether what it does to the document until Done is only a
- *   preview, as Cut's selection is: meanwhile the app (autosave,
+ *   Escape runs Done, Enter is a new line and ⌘/Ctrl+Enter runs Done, the
+ *   dock rides the keyboard, and a press in the context bar or dock keeps
+ *   the input's focus.
+ * - `previews`: whether only Done keeps what it does, and any other close
+ *   (Escape, Back, another tool) drops it: what it does to the document
+ *   until Done is only a preview (Cut's selection), or it changes nothing
+ *   until Done (Find's chosen regions). Meanwhile the app (autosave,
  *   thumbnails) sees the document from before it opened.
  * - `undoSteps`: what its changes become once it's done, when that isn't one
- *   undo step: one per change ("each", the Eraser's swipes) or one per mark
- *   ("marks", Pen's).
+ *   undo step: one per change ("each", the Eraser's swipes) or one per mark,
+ *   a run of changes to the same selection ("marks": Pen's strokes, a shape
+ *   or redaction with its resizes and restyles).
  * - `cancels`: whether its panel offers Cancel, for a draft, a preview, or
  *   settings tried out (Crop, Cut, Find, Adjust). Any other tool's work is
  *   in the document as it's made, and undo takes it back.

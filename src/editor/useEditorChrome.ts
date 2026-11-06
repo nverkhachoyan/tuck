@@ -56,8 +56,8 @@ export function useEditorChrome({
 	const isDeselect = chrome.actions?.done === "deselect";
 	const doneKey =
 		tool && specs[tool]?.takesKeys === "typing" ? "mod+Enter" : "Enter";
-	// Escape cancels only Crop's draft and Cut's preview; any other tool it
-	// puts down with its work kept.
+	// Escape cancels only Crop's draft, Cut's preview, and Find's chosen
+	// regions; any other tool it puts down with its work kept.
 	const escapeCancels =
 		tool !== null &&
 		(specs[tool]?.takesKeys === true || specs[tool]?.previews === true);

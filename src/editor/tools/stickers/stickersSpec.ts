@@ -2,7 +2,6 @@ import type { ToolSpec } from "../../toolSpec.ts";
 
 export const stickersSpec = {
 	target: "none",
-	undoSteps: "each",
 	tray: false,
 	sized: false,
 	label: "Sticker",

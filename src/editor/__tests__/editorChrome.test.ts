@@ -347,16 +347,22 @@ describe("layerActionsFor", () => {
 });
 
 describe("undo steps", () => {
-	test("the tools with no Cancel keep their steps apart, Pen's per mark", () => {
+	test("the tools with no Cancel keep their steps apart, per mark or per swipe", () => {
 		const kept = Object.entries(specs).flatMap(([id, spec]) =>
 			spec.undoSteps ? [[id, spec.undoSteps]] : [],
 		);
 		assert.deepEqual(Object.fromEntries(kept), {
 			pen: "marks",
 			eraser: "each",
-			shape: "each",
-			redact: "each",
-			sticker: "each",
+			shape: "marks",
+			redact: "marks",
 		});
+	});
+
+	test("only Cut and Find drop their work on any close but Done", () => {
+		const dropping = Object.entries(specs)
+			.filter(([, spec]) => spec.previews)
+			.map(([id]) => id);
+		assert.deepEqual(dropping.sort(), ["cut", "find"]);
 	});
 });
