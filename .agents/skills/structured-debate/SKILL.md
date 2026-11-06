@@ -21,7 +21,7 @@ Before starting Step 0, resolve the following inputs from the user's request:
 3. **Positions (`A`, `B`, `C`):**
    - If the user provides explicit positions (`A = ...`, `B = ...`, `C = ...`), use them verbatim.
    - If the user provides only the grounding document or question, derive 3 distinct, non-overlapping positions from the document (typically two contrasting action scopes plus a disciplined status-quo/defer option as Position C).
-4. **Debate Directory:** Defaults to `docs/brainstorming/debate/` unless the user specifies another directory.
+4. **Debate Directory:** Defaults to `docs/brainstorming/debate/` unless the user specifies another directory. After a `brainstorm`, use its folder, and treat its documents as the grounding.
 
 ## 2. Directory Layout & Isolation Rules
 
@@ -99,3 +99,8 @@ Write `<debate-dir>/synthesis.md` containing:
 *Rules for Synthesis:*
 - Do **not** ask the debater subagents to judge the outcome.
 - Do **not** decide by counting the number of arguments; weight verifiable evidence and concessions against `brief.md`'s criteria.
+
+## 4. Next
+
+Suggest `debate-judge` for an independent ruling. This skill is the second of
+Brainstorm -> Debate -> Judge -> Plan from direction.
