@@ -4,19 +4,11 @@ import { FadeGroup } from "@/ui/FadeRow";
 import { gradientBackground } from "@/ui/gradient";
 import { RING_TARGET, RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
+import { SWATCHES } from "./swatches";
 
 const SWATCH_SIZE = 26;
 // The custom color's dot, inside the custom swatch's rainbow.
 const CUSTOM_DOT = 14;
-
-const SWATCHES = [
-	{ color: "#FFFFFF", name: "White" },
-	{ color: "#000000", name: "Black" },
-	{ color: "#FF3B30", name: "Red" },
-	{ color: "#FFD60A", name: "Yellow" },
-	{ color: "#34C759", name: "Green" },
-	{ color: "#0A84FF", name: "Blue" },
-];
 
 /** Whether `value` is a color, but not one of the swatches'. */
 export function isCustomColor(value: string | null): value is string {
