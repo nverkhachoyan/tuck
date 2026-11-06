@@ -60,12 +60,19 @@ const cutBrush: CanvasTool = {
 const pickSubject: CanvasTool = { type: "pickSubject", layerId: "photo" };
 
 describe("restyles", () => {
-	test("a redaction's or a shape's tool changes that kind of layer", () => {
+	test("a drawing's, redaction's, or shape's tool changes that kind of layer", () => {
 		assert.equal(restyles(redactBox, redaction), true);
 		assert.equal(restyles(redactBrush, redaction), true);
 		assert.equal(restyles(drawShape, shape), true);
 		assert.equal(restyles(redactBox, shape), false);
-		assert.equal(restyles(pen, drawing), false);
+		assert.equal(restyles(pen, drawing), true);
+		assert.equal(
+			restyles(
+				{ type: "erase", mode: "eraser", width: 30, scope: null },
+				drawing,
+			),
+			false,
+		);
 		assert.equal(restyles(redactBox, undefined), false);
 	});
 });

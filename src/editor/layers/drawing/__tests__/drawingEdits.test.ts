@@ -22,6 +22,7 @@ import {
 	eraseStroke,
 	eraseWholeStrokes,
 	removedLayers,
+	restyleDrawing,
 } from "../drawingEdits.ts";
 
 const blank = () => createBlankDocument(400, 300, "#ffffff");
@@ -439,5 +440,85 @@ describe("eraseWholeStrokes", () => {
 		const path = [0, 100, 400, 100];
 		assert.equal(eraseWholeStrokes(document, path, 20, null), document);
 		assert.equal(eraseWholeStrokes(document, path, 20, brushed.id), document);
+	});
+});
+
+describe("restyleDrawing", () => {
+	const twoPensAndAnEraser = () => {
+		const first = drawStroke(blank(), null, pen);
+		const { id } = top<DrawingLayer>(first);
+		const joined = drawStroke(first, id, {
+			...pen,
+			color: "#00ff00",
+			points: [100, 100, 160, 100],
+		});
+		return eraseStroke(joined, eraserOf(10, [130, 90, 130, 110]), null);
+	};
+
+	test("recolors every pen stroke and no eraser", () => {
+		const document = twoPensAndAnEraser();
+		const { id } = top<DrawingLayer>(document);
+		const after = top<DrawingLayer>(
+			restyleDrawing(document, id, { color: "#0000ff" }),
+		);
+		assert.deepEqual(
+			after.strokes.map((stroke) =>
+				stroke.type === "pen" ? stroke.color : "eraser",
+			),
+			["#0000ff", "#0000ff", "eraser"],
+		);
+		assert.deepEqual(
+			after.strokes[2],
+			top<DrawingLayer>(document).strokes[2],
+			"the eraser stays",
+		);
+	});
+
+	test("a highlighter tip multiplies, and back to the pen it doesn't", () => {
+		const document = drawStroke(blank(), null, pen);
+		const { id } = top<DrawingLayer>(document);
+		const highlight = restyleDrawing(document, id, { tip: "marker" });
+		const marked = top<DrawingLayer>(highlight);
+		assert.equal(marked.blend, "multiply");
+		const [first] = marked.strokes;
+		assert.equal(first.type === "pen" && first.tip, "marker");
+		const back = top<DrawingLayer>(
+			restyleDrawing(highlight, id, { tip: null }),
+		);
+		assert.equal(back.blend, undefined);
+		assert.equal("tip" in back.strokes[0], false);
+	});
+
+	test("a width is in document units, divided by the drawing's scale", () => {
+		const drawn = drawStroke(blank(), null, pen);
+		const scaled = {
+			...drawn,
+			layers: drawn.layers.map((layer) => ({
+				...layer,
+				transform: { ...layer.transform, scaleX: 2, scaleY: 2 },
+			})),
+		};
+		const { id } = top<DrawingLayer>(scaled);
+		const after = top<DrawingLayer>(restyleDrawing(scaled, id, { width: 20 }));
+		assert.equal(after.strokes[0].width, 10);
+		assert.ok(
+			drawingBox(after).halfHeight >= 5,
+			"it recenters around the wider ink",
+		);
+	});
+
+	test("a locked drawing, a missing one, and an unchanged patch change nothing", () => {
+		const document = drawStroke(blank(), null, pen);
+		const { id } = top<DrawingLayer>(document);
+		assert.equal(restyleDrawing(document, id, { color: pen.color }), document);
+		assert.equal(
+			restyleDrawing(document, "missing", { color: "#000000" }),
+			document,
+		);
+		const locked = {
+			...document,
+			layers: document.layers.map((layer) => ({ ...layer, locked: true })),
+		};
+		assert.equal(restyleDrawing(locked, id, { color: "#000000" }), locked);
 	});
 });

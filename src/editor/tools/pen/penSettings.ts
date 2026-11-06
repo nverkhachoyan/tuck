@@ -1,6 +1,12 @@
 import { isHexColor } from "../../../ui/color.ts";
 import type { Size } from "../../document/geometry.ts";
-import type { PenBrush, PenTip } from "../../layers/drawing/drawing.ts";
+import {
+	type DrawingLayer,
+	markStyle,
+	type PenBrush,
+	type PenTip,
+} from "../../layers/drawing/drawing.ts";
+import type { MarkPatch } from "../../layers/drawing/drawingEdits.ts";
 
 export type PenTipChoice = "pen" | PenTip;
 
@@ -105,4 +111,48 @@ export function penBrushFor(settings: PenSettings, size: Size): PenBrush {
 	return settings.tip === "pen"
 		? { type: "pen", color, width }
 		: { type: "pen", color, width, tip: settings.tip };
+}
+
+/**
+ * `settings` showing the mark `layer`'s style: its tip, its color (kept as
+ * the highlight color for a highlight), and the size nearest its width.
+ * The same settings for a drawing with no pen strokes.
+ */
+export function withSelectedMark(
+	settings: PenSettings,
+	layer: DrawingLayer,
+	size: Size,
+): PenSettings {
+	const style = markStyle(layer);
+	if (!style) return settings;
+	const tip: PenTipChoice = style.tip ?? "pen";
+	const share = (style.width * layer.transform.scaleX) / shortSide(size);
+	const widths = PEN_SIZES[tip];
+	let index = 0;
+	widths.forEach((width, candidate) => {
+		if (Math.abs(width - share) < Math.abs(widths[index] - share)) {
+			index = candidate;
+		}
+	});
+	const colored = withPenColor({ ...settings, tip }, style.color);
+	return { ...colored, sizes: { ...colored.sizes, [tip]: index } };
+}
+
+/**
+ * What changed from `before` to `after`, as a restyle of a mark: the tip,
+ * the color, and the width (in document units) when the size changed.
+ */
+export function markPatch(
+	before: PenSettings,
+	after: PenSettings,
+	size: Size,
+): MarkPatch {
+	const patch: MarkPatch = {};
+	if (after.tip !== before.tip) {
+		patch.tip = after.tip === "pen" ? null : after.tip;
+	}
+	if (penColor(after) !== penColor(before)) patch.color = penColor(after);
+	const width = penBrushFor(after, size).width;
+	if (width !== penBrushFor(before, size).width) patch.width = width;
+	return patch;
 }

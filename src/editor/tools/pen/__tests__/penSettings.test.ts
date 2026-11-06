@@ -1,8 +1,10 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { createDrawingLayer } from "../../../layers/drawing/drawing.ts";
 import {
 	defaultPenSettings,
+	markPatch,
 	PEN_SIZES,
 	parsePenSettings,
 	penBrushFor,
@@ -10,6 +12,7 @@ import {
 	stepPenSize,
 	withPenColor,
 	withPenSize,
+	withSelectedMark,
 } from "../penSettings.ts";
 
 describe("penBrushFor", () => {
@@ -117,5 +120,40 @@ describe("parsePenSettings", () => {
 		assert.equal(parsed.color, "#123456");
 		assert.equal(parsed.highlightColor, "#654321");
 		assert.equal(parsed.sizes.neon, 3);
+	});
+});
+
+describe("withSelectedMark and markPatch", () => {
+	const size = { width: 1000, height: 2000 };
+
+	test("shows a highlight's tip, its color as the highlight color, and the nearest size", () => {
+		const layer = createDrawingLayer({
+			type: "pen",
+			color: "#30D158",
+			width: 41,
+			tip: "marker",
+			points: [0, 0, 10, 0],
+		});
+		const settings = withSelectedMark(defaultPenSettings, layer, size);
+		assert.equal(settings.tip, "marker");
+		assert.equal(settings.highlightColor, "#30D158");
+		assert.equal(settings.color, defaultPenSettings.color);
+		// 41 of a 1000 short side is nearest 0.04.
+		assert.equal(PEN_SIZES.marker[settings.sizes.marker], 0.04);
+	});
+
+	test("lists only what changed", () => {
+		const before = defaultPenSettings;
+		assert.deepEqual(markPatch(before, before, size), {});
+		assert.deepEqual(markPatch(before, withPenColor(before, "#0A84FF"), size), {
+			color: "#0A84FF",
+		});
+		const bigger = withPenSize(before, before.sizes.pen + 1);
+		assert.deepEqual(Object.keys(markPatch(before, bigger, size)), ["width"]);
+		assert.equal(
+			markPatch(before, { ...before, tip: "neon" }, size).tip,
+			"neon",
+		);
+		assert.equal(markPatch({ ...before, tip: "neon" }, before, size).tip, null);
 	});
 });

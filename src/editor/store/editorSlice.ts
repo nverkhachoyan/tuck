@@ -15,6 +15,8 @@ import {
 	drawStroke,
 	eraseStroke,
 	eraseWholeStrokes,
+	type MarkPatch,
+	restyleDrawing,
 } from "../layers/drawing/drawingEdits.ts";
 import type { Adjustments } from "../layers/image/adjustments.ts";
 import {
@@ -387,6 +389,12 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		) =>
 			setDocument("editor/addShape", (document) =>
 				addShape(document, shape, placement, style),
+			),
+
+		// One undo step a change, and none for the same style.
+		restyleDrawing: (id: string, patch: MarkPatch) =>
+			setDocument("editor/restyleDrawing", (document) =>
+				restyleDrawing(document, id, patch),
 			),
 
 		setShapeStyle: (id: string, edit: ShapeEdit) =>

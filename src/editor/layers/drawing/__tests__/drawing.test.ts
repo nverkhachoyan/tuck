@@ -6,6 +6,7 @@ import {
 	inkRect,
 	isDrawingLayer,
 	layerBlend,
+	markStyle,
 	needsOwnLayer,
 	pruneErased,
 	type Stroke,
@@ -129,4 +130,19 @@ test("a drawing's ink rectangle covers its box, its square ends, and its glow", 
 		assert.ok(wider.x < round.x && wider.width > round.width);
 		assert.ok(-wider.y >= visibleReach({ ...pen, tip: "neon" }) - 1);
 	}
+});
+
+test("a mark's style is its last pen stroke's", () => {
+	const layer = createDrawingLayer(pen);
+	layer.strokes.push(
+		{ ...pen, color: "#00ff00", width: 3, tip: "neon" },
+		{ type: "eraser", width: 4, points: [0, 0] },
+	);
+	assert.deepEqual(markStyle(layer), {
+		type: "pen",
+		color: "#00ff00",
+		width: 3,
+		tip: "neon",
+	});
+	assert.equal(markStyle({ ...layer, strokes: [] }), null);
 });
