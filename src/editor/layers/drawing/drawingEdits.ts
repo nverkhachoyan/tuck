@@ -2,6 +2,7 @@ import {
 	addLayerOnTop,
 	type EditorDocument,
 	findLayer,
+	replaceLayer,
 	withLayers,
 } from "../../document/document.ts";
 import { toLayerSpace } from "../../document/geometry.ts";
@@ -19,6 +20,7 @@ import {
 	createDrawingLayer,
 	type DrawingLayer,
 	layerBlend,
+	type PenTip,
 	pruneErased,
 	type Stroke,
 	strokeBlend,
@@ -204,6 +206,70 @@ export function eraseWholeStrokes(
 		}
 	}
 	return changed ? withLayers(document, layers) : document;
+}
+
+/** What restyling a mark changes; `tip: null` is the round pen. */
+export type MarkPatch = {
+	color?: string;
+	tip?: PenTip | null;
+	width?: number;
+};
+
+/**
+ * Every pen stroke of the drawing `id` restyled with `patch`:
+ * - `width` is in document units, divided by the layer's scale;
+ * - a new tip sets the layer's blend (a highlight multiplies);
+ * - eraser strokes stay as they are, so what was erased stays erased;
+ * - the drawing recenters, since widths move its box.
+ * The same document when nothing changes, or the drawing is locked or gone.
+ */
+export function restyleDrawing(
+	document: EditorDocument,
+	id: string,
+	patch: MarkPatch,
+): EditorDocument {
+	const target = findLayer(document, id);
+	if (target?.type !== "drawing" || target.locked) return document;
+	const width =
+		patch.width === undefined
+			? undefined
+			: patch.width / target.transform.scaleX;
+	let changed = false;
+	const strokes = target.strokes.map((stroke): Stroke => {
+		if (stroke.type !== "pen") return stroke;
+		const color = patch.color ?? stroke.color;
+		const tip = patch.tip === undefined ? stroke.tip : (patch.tip ?? undefined);
+		const nextWidth = width ?? stroke.width;
+		if (
+			color === stroke.color &&
+			tip === stroke.tip &&
+			nextWidth === stroke.width
+		) {
+			return stroke;
+		}
+		changed = true;
+		const { tip: _, ...rest } = stroke;
+		return tip === undefined
+			? { ...rest, color, width: nextWidth }
+			: { ...rest, color, width: nextWidth, tip };
+	});
+	if (!changed) return document;
+	const blend =
+		patch.tip === undefined
+			? layerBlend(target)
+			: strokeBlend({
+					type: "pen",
+					color: "",
+					width: 1,
+					tip: patch.tip ?? undefined,
+				});
+	const { blend: __, ...rest } = target;
+	const restyled: DrawingLayer = recenterDrawing({
+		...rest,
+		strokes,
+		...(blend ? { blend } : {}),
+	});
+	return replaceLayer(document, target, restyled);
 }
 
 /** The layers in `before` that `after` no longer has, bottom to top. */

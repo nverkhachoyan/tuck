@@ -108,6 +108,23 @@ export function visibleReach(stroke: Brush): number {
 }
 
 /**
+ * A mark's style: its last pen stroke's tip, color, and width, in the
+ * layer's own space. Null for a drawing with no pen strokes.
+ */
+export function markStyle(layer: DrawingLayer): PenBrush | null {
+	for (let i = layer.strokes.length - 1; i >= 0; i--) {
+		const stroke = layer.strokes[i];
+		if (stroke.type === "pen") {
+			const { color, width, tip } = stroke;
+			return tip === undefined
+				? { type: "pen", color, width }
+				: { type: "pen", color, width, tip };
+		}
+	}
+	return null;
+}
+
+/**
  * Whether a drawing needs a saved layer of its own to draw right: to keep
  * an eraser's clear to its own ink, or to multiply as a whole. Plain ink
  * draws the same straight onto the canvas, since each stroke is

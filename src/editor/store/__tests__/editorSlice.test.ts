@@ -954,6 +954,34 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().past.length, steps + 2);
 		});
 
+		test("restyling a drawing is one undo step, and the same style isn't one", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke({
+				type: "pen",
+				color: "#FF3B30",
+				width: 8,
+				points: [0, 0, 100, 100],
+			});
+			const [drawing] =
+				store
+					.getState()
+					.document?.layers.filter((layer) => layer.type === "drawing") ?? [];
+			const steps = store.getState().past.length;
+			actions.restyleDrawing(drawing.id, { color: "#FF3B30" });
+			assert.equal(store.getState().past.length, steps);
+			actions.restyleDrawing(drawing.id, { color: "#0A84FF" });
+			assert.equal(store.getState().past.length, steps + 1);
+			actions.undo();
+			const after = store.getState().document?.layers.at(-1);
+			assert.equal(
+				after?.type === "drawing" && after.strokes[0].type === "pen"
+					? after.strokes[0].color
+					: null,
+				"#FF3B30",
+			);
+		});
+
 		test("an eraser removes each shape it passes over, as one undo step", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;

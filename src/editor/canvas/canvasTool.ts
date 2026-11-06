@@ -85,9 +85,9 @@ export type CanvasLookups = {
 // it shows and changes.
 const CANVAS_TOOLS: Record<
 	CanvasTool["type"],
-	{ dragsOut: boolean; restyles: "redaction" | "shape" | null }
+	{ dragsOut: boolean; restyles: "drawing" | "redaction" | "shape" | null }
 > = {
-	draw: { dragsOut: false, restyles: null },
+	draw: { dragsOut: false, restyles: "drawing" },
 	erase: { dragsOut: false, restyles: null },
 	drawShape: { dragsOut: true, restyles: "shape" },
 	pickColor: { dragsOut: false, restyles: null },

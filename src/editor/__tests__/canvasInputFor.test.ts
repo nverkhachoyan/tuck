@@ -238,9 +238,10 @@ describe("outlinedLayerFor", () => {
 			outlinedLayerFor(redactBox, { ...none, selectedLayer: locked }),
 			locked,
 		);
+		// Pen shows and restyles a selected mark.
 		assert.equal(
 			outlinedLayerFor(pen, { ...none, selectedLayer: drawing }),
-			null,
+			drawing,
 		);
 	});
 

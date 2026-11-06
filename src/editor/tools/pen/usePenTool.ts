@@ -12,7 +12,14 @@ import {
 	sameStyle,
 } from "../../layers/drawing/marks";
 import { useStore } from "../../store";
-import { parsePenSettings, penBrushFor, stepPenSize } from "./penSettings";
+import {
+	markPatch,
+	type PenSettings,
+	parsePenSettings,
+	penBrushFor,
+	stepPenSize,
+	withSelectedMark,
+} from "./penSettings";
 
 export type PenController = ReturnType<typeof usePenTool>;
 
@@ -32,7 +39,9 @@ const parseSavedPenSettings = (saved: unknown) =>
 
 /**
  * Controller for freehand pen strokes.
- * - Manages pen tip, color, and size settings.
+ * - Manages pen tip, color, and size settings. Opened from a mark's
+ *   actions, they show the mark's style, and changing them restyles it
+ *   (one undo step each), as Shape does a selected shape.
  * - Groups finished strokes into marks: opened from a mark's actions
  *   (`on`), strokes join it while they match its style; otherwise each joins
  *   the last stroke's mark when `continuesMark` says so, or starts one.
@@ -44,16 +53,29 @@ export function usePenTool({
 	open,
 	on,
 }: Pick<ToolEnv, "documentSize" | "open" | "on">) {
-	const { drawStroke } = useStore((state) => state.actions);
-	const [settings, setSettings] = usePreference(KEY, parseSavedPenSettings);
+	const { drawStroke, restyleDrawing } = useStore((state) => state.actions);
+	const [penSettings, setPenSettings] = usePreference(
+		KEY,
+		parseSavedPenSettings,
+	);
+	const mark = on?.type === "drawing" ? on : null;
+	const settings = useMemo(
+		() =>
+			mark ? withSelectedMark(penSettings, mark, documentSize) : penSettings,
+		[penSettings, mark, documentSize],
+	);
+	const setSettings = (next: PenSettings) => {
+		setPenSettings(next);
+		if (mark) restyleDrawing(mark.id, markPatch(settings, next, documentSize));
+	};
 	useEffect(() => {
 		if (
 			readPreference(KEY) === undefined &&
 			readPreference(EARLIER_KEY) !== undefined
 		) {
-			writePreference(KEY, settings);
+			writePreference(KEY, penSettings);
 		}
-	}, [settings]);
+	}, [penSettings]);
 
 	const stepSize = (step: 1 | -1) => {
 		const next = stepPenSize(settings, step);
@@ -84,11 +106,10 @@ export function usePenTool({
 		const lastMark = document?.layers.find(
 			(layer) => layer.id === last.current?.markId,
 		);
-		const opened = on?.type === "drawing" ? on : null;
-		const openedPen = opened && lastPenOf(opened);
+		const openedPen = mark && lastPenOf(mark);
 		let joinId: string | null = null;
-		if (opened && openedPen && sameStyle(openedPen, pen)) {
-			joinId = opened.id;
+		if (mark && openedPen && sameStyle(openedPen, pen)) {
+			joinId = mark.id;
 		} else if (
 			lastMark?.type === "drawing" &&
 			continuesMark(lastMark, last.current, pen, stroke.startedAt)
