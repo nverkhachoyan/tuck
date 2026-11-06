@@ -248,7 +248,7 @@ Depth means content on a table. The canvas and project thumbnails are prints, an
 ### Shadow Vocabulary
 - **Print contact** (`0 1px 1.5px` in `shadow`): the tight shadow where a print touches the table.
 - **Print lift** (`0 8px 14–18px` in `shadow`, the project cards' with a −6px spread): the soft shadow that raises a print. On the canvas, both shadows are drawn in Skia in screen pixels, so they look the same at any zoom. At night a 1px edge is added, since a shadow barely shows on graphite.
-- **Floating** (`0 10px 28px` in `shadow`): sheets, the selection bar, tooltips, and any other panel over the canvas. The selection bar shows Separate (`call-split`) before Arrange for a drawing in pieces that don't touch.
+- **Floating** (`0 10px 28px` in `shadow`): sheets, the selection bar, tooltips, and any other panel over the canvas. The selection bar shows Separate (`call-split`) before Arrange for a drawing in pieces that don't touch. In the Layers panel, a mark's row shows its ink fitted in the 36pt thumbnail square (a highlight over white, since it multiplies), with the draw icon until the picture is ready, and is named from its kind and color: "Red pen", "Yellow highlight", "Blue marker", "Green neon", or just "Pen" for a custom color; one that mixes tips or colors stays "Drawing", as the selection's footer and the toasts always say.
 
 ### Named Rules
 **The Print Rule.** Only prints and floating panels cast shadows. A bar, row, or button with a shadow is a bug.

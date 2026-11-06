@@ -1,9 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ComponentProps, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	Image,
+	PixelRatio,
 	Platform,
 	Pressable,
 	StyleSheet,
@@ -28,9 +29,12 @@ import { IconButton } from "@/ui/IconButton";
 import { chosenOnWeb } from "@/ui/interaction";
 import { colors, radii, typography } from "@/ui/theme";
 import { assertNever } from "../../document/assertNever";
+import { renderMarkThumbnail } from "../../render/markThumbnail";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
+import type { DrawingLayer } from "../drawing/drawing";
 import type { Layer } from "../layer";
 import type { RedactionEffect } from "../redaction/redaction";
+import { markName } from "./layerListEntries";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 export const ROW_HEIGHT = 52;
@@ -218,7 +222,7 @@ function LayerThumbnail({ layer }: { layer: Layer }) {
 		case "text":
 			return <IconThumbnail icon="format-text" />;
 		case "drawing":
-			return <IconThumbnail icon="draw" />;
+			return <MarkThumbnail layer={layer} />;
 		case "redaction":
 			return <IconThumbnail icon={REDACTION_ICONS[layer.effect.type]} />;
 		case "shape":
@@ -254,10 +258,31 @@ function IconThumbnail({ icon }: { icon: IconName }) {
 	);
 }
 
+// A mark's picture of its ink, with the "draw" icon until it's ready, or if
+// it can't be drawn.
+function MarkThumbnail({ layer }: { layer: DrawingLayer }) {
+	const [picture, setPicture] = useState<string | null>(null);
+	useEffect(() => {
+		let current = true;
+		const pixels = styles.thumbnail.width * PixelRatio.get();
+		renderMarkThumbnail(layer, pixels).then((uri) => {
+			if (current) setPicture(uri);
+		});
+		return () => {
+			current = false;
+		};
+	}, [layer]);
+	return picture ? (
+		<Image source={{ uri: picture }} style={styles.thumbnail} />
+	) : (
+		<IconThumbnail icon="draw" />
+	);
+}
+
 function layerLabel(layer: Layer): string {
-	return layer.type === "text"
-		? layer.text.replace(/\s+/g, " ")
-		: layerKindName(layer);
+	if (layer.type === "text") return layer.text.replace(/\s+/g, " ");
+	if (layer.type === "drawing") return markName(layer);
+	return layerKindName(layer);
 }
 
 /** What kind of layer `layer` is, as the selection's footer names it. */
