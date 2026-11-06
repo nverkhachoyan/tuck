@@ -10,6 +10,7 @@ import { hapticTick } from "@/platform/haptics";
 import type { EditorDocument } from "../document/document";
 import type { Point, Size } from "../document/geometry";
 import { strokePath } from "../layers/drawing/DrawingLayerView";
+import { visibleReach } from "../layers/drawing/drawing";
 import type { Layer } from "../layers/layer";
 import { hitTestDrawing, segmentsNear, strokesHitBy } from "../layers/strokes";
 import {
@@ -124,6 +125,35 @@ export function useToolStroke({
 	const strokeErasing = tool?.type === "erase" && tool.mode === "stroke";
 	const crossed = useSharedValue<string[]>([]);
 	const crossedStrokes = useSharedValue<Record<string, number[]>>({});
+	const nearDrawings = useSharedValue<Record<string, boolean>>({});
+	// The drawings the Eraser can join, with how far their ink reaches past
+	// their box's middle, in their own units.
+	const eraseTargets = useMemo(
+		() =>
+			tool?.type === "erase" && tool.mode === "eraser"
+				? targets.flatMap((target) => {
+						const layer = document.layers.find((each) => each.id === target.id);
+						if (layer?.type !== "drawing" || !strokeReaches(tool, layer)) {
+							return [];
+						}
+						let reach = 0;
+						for (const stroke of layer.strokes) {
+							if (stroke.type === "pen") {
+								reach = Math.max(reach, visibleReach(stroke));
+							}
+						}
+						return [
+							{
+								id: target.id,
+								transform: target.transform,
+								box: target.box,
+								reach,
+							},
+						];
+					})
+				: [],
+		[tool, targets, document],
+	);
 	// Shapes the Eraser removes: unlocked ones (a locked layer's target has
 	// no strokes), and none when it's scoped to one drawing.
 	const crossable = useMemo(
@@ -163,14 +193,41 @@ export function useToolStroke({
 	// The same tests as `erasesShape` and `eraseWholeStrokes`, on each piece
 	// of line as it's added.
 	const onSegment = useMemo(() => {
-		if (crossable.length === 0 && strokeTargets.length === 0) return null;
+		if (
+			crossable.length === 0 &&
+			strokeTargets.length === 0 &&
+			eraseTargets.length === 0
+		) {
+			return null;
+		}
 		return (points: number[]) => {
 			"worklet";
 			if (points.length === 0) {
 				crossed.value = [];
 				crossedStrokes.value = {};
+				nearDrawings.value = {};
 				return;
 			}
+			// A drawing joins the live eraser a width ahead of it, so it
+			// clears from the first frame the line reaches ink.
+			let near: Record<string, boolean> | null = null;
+			for (const target of eraseTargets) {
+				if (nearDrawings.value[target.id] || near?.[target.id]) continue;
+				const ahead =
+					(eraserWidth * 1.5) / target.transform.scaleX + target.reach;
+				const { halfWidth, halfHeight } = target.box;
+				const inside = (point: Point) => {
+					"worklet";
+					return (
+						Math.abs(point.x) <= halfWidth + ahead &&
+						Math.abs(point.y) <= halfHeight + ahead
+					);
+				};
+				if (segmentsNear(points, target.transform, ahead, inside)) {
+					near = { ...(near ?? {}), [target.id]: true };
+				}
+			}
+			if (near) nearDrawings.value = { ...nearDrawings.value, ...near };
 			let touched = false;
 			const next = { ...crossedStrokes.value };
 			for (const target of strokeTargets) {
@@ -212,6 +269,8 @@ export function useToolStroke({
 		strokeTargets,
 		crossedStrokes,
 		touchReach,
+		eraseTargets,
+		nearDrawings,
 	]);
 	const paintGesture = usePaintGesture({
 		viewport,
@@ -295,6 +354,8 @@ export function useToolStroke({
 				selectedId === null,
 			erasePath:
 				tool.type === "erase" && tool.mode === "eraser" ? erasePath : null,
+			nearDrawings:
+				tool.type === "erase" && tool.mode === "eraser" ? nearDrawings : null,
 			crossed: tool.type === "erase" ? crossed : null,
 			crossedStrokes:
 				tool.type === "erase" && tool.mode === "stroke" ? crossedStrokes : null,
@@ -308,6 +369,7 @@ export function useToolStroke({
 		landedStrokeId,
 		selectedLayer,
 		erasePath,
+		nearDrawings,
 		crossed,
 		crossedStrokes,
 		hoveredStroke,

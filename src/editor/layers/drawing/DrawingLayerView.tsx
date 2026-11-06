@@ -12,9 +12,11 @@ import type { MaskStroke } from "../strokes";
 import {
 	type Brush,
 	type DrawingLayer,
+	inkRect,
 	layerBlend,
 	NEON_GLOW,
 	NEON_GLOW_BLUR,
+	needsOwnLayer,
 } from "./drawing";
 
 // A marker's ink is see-through, so what it highlights shows through it.
@@ -67,27 +69,56 @@ export function pathFor(stroke: MaskStroke): SkPath {
 }
 
 /**
- * Draws a drawing layer in its own space. Its strokes share a layer of
- * their own, so an eraser clears only what they drew, not what's under
- * them. `children` joins that layer too: a stroke still being drawn.
- * `opacity` fades the whole layer as it's laid down, so a dimmed highlight
- * still multiplies onto what's under it. `wrapStroke` wraps each pen
- * stroke, by its index, inside the layer, as the canvas does to dim
- * strokes while keeping the layer's blend and its erasers.
+ * Draws a drawing layer in its own space.
+ * - Its strokes share a saved layer only when it needs one
+ *   (`needsOwnLayer`: an eraser clears only what they drew, and a highlight
+ *   multiplies as a whole), or while dimmed or joined by a live stroke.
+ * - That layer is clipped to its ink (`inkRect`), so it costs the
+ *   drawing's size, not the canvas's; `liveInside` says `children` stay
+ *   within it (a live eraser), and otherwise they may reach past it.
+ * - `children` joins the layer: a stroke still being drawn.
+ * - `opacity` fades the whole layer as it's laid down, so a dimmed
+ *   highlight still multiplies onto what's under it.
+ * - `wrapStroke` wraps each pen stroke, by its index, as the canvas does to
+ *   dim strokes while keeping the layer's blend and its erasers.
  */
 export function DrawingLayerView({
 	layer,
 	opacity = 1,
 	wrapStroke,
+	liveInside = false,
 	children,
 }: {
 	layer: DrawingLayer;
 	opacity?: number;
 	wrapStroke?: (index: number, stroke: ReactNode) => ReactNode;
+	liveInside?: boolean;
 	children?: ReactNode;
 }) {
 	const multiply = layerBlend(layer) === "multiply";
-	return (
+	const strokes = layer.strokes.map((stroke, index) => {
+		const drawn = (
+			<BrushStroke
+				// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
+				key={index}
+				path={pathFor(stroke)}
+				brush={stroke}
+				full={multiply}
+			/>
+		);
+		return wrapStroke && stroke.type === "pen" ? (
+			// biome-ignore lint/suspicious/noArrayIndexKey: as above
+			<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
+		) : (
+			drawn
+		);
+	});
+	const live =
+		children !== undefined && children !== null && children !== false;
+	if (!needsOwnLayer(layer) && opacity === 1 && !live) {
+		return <Group>{strokes}</Group>;
+	}
+	const layered = (
 		<Group
 			layer={
 				multiply ? (
@@ -99,25 +130,16 @@ export function DrawingLayerView({
 				)
 			}
 		>
-			{layer.strokes.map((stroke, index) => {
-				const drawn = (
-					<BrushStroke
-						// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
-						key={index}
-						path={pathFor(stroke)}
-						brush={stroke}
-						full={multiply}
-					/>
-				);
-				return wrapStroke && stroke.type === "pen" ? (
-					// biome-ignore lint/suspicious/noArrayIndexKey: as above
-					<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
-				) : (
-					drawn
-				);
-			})}
+			{strokes}
 			{children}
 		</Group>
+	);
+	// The clip is outside the layer: a Group saves its layer before its own
+	// clip, which wouldn't bound it.
+	return live && !liveInside ? (
+		layered
+	) : (
+		<Group clip={inkRect(layer)}>{layered}</Group>
 	);
 }
 

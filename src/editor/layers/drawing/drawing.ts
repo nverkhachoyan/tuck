@@ -1,6 +1,7 @@
 import { isFields } from "../../document/values.ts";
 import { createLayerId, identityTransform, type LayerBase } from "../base.ts";
 import {
+	drawingBox,
 	isMaskStroke,
 	nearLine,
 	recenterDrawing,
@@ -104,6 +105,51 @@ export function visibleReach(stroke: Brush): number {
 		return stroke.width * (NEON_GLOW / 2 + 3 * NEON_GLOW_BLUR);
 	}
 	return stroke.width * Math.SQRT1_2;
+}
+
+/**
+ * Whether a drawing needs a saved layer of its own to draw right: to keep
+ * an eraser's clear to its own ink, or to multiply as a whole. Plain ink
+ * draws the same straight onto the canvas, since each stroke is
+ * source-over and the layer would composite at full strength, and each
+ * saved layer costs a render pass however small (measured in step 3 of
+ * docs/plans/drawing-layers).
+ */
+export function needsOwnLayer(layer: DrawingLayer): boolean {
+	return (
+		layerBlend(layer) === "multiply" ||
+		layer.strokes.some((stroke) => stroke.type === "eraser")
+	);
+}
+
+// Past what a stroke's box covers, for antialiasing, in the layer's units.
+const EDGE = 2;
+
+/**
+ * The rectangle a drawing's ink can reach in its own space: its strokes'
+ * box, padded by how far past half its width a pen reaches (square ends,
+ * a neon glow), and a little for antialiasing. A saved layer clipped to it
+ * costs the drawing's size rather than the canvas's.
+ */
+export function inkRect(layer: DrawingLayer): {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+} {
+	const { halfWidth, halfHeight } = drawingBox(layer);
+	let pad = EDGE;
+	for (const stroke of layer.strokes) {
+		if (stroke.type === "pen") {
+			pad = Math.max(pad, visibleReach(stroke) - stroke.width / 2 + EDGE);
+		}
+	}
+	return {
+		x: -halfWidth - pad,
+		y: -halfHeight - pad,
+		width: 2 * (halfWidth + pad),
+		height: 2 * (halfHeight + pad),
+	};
 }
 
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
