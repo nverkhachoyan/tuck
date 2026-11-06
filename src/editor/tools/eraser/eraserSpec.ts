@@ -8,7 +8,7 @@ export const eraserSpec = {
 	icon: "eraser",
 	key: "X",
 	shortcut: "Eraser",
-	// Erase on a selected drawing waits for the Eraser to keep to it: opened
-	// from the toolbar, it reaches every drawing.
-	actsOn: () => false,
+	// From a drawing's actions it erases that drawing alone; from the
+	// toolbar, every drawing it reaches.
+	actsOn: (layer) => layer.type === "drawing" && !layer.locked,
 } as const satisfies ToolSpec;

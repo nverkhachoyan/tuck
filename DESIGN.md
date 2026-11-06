@@ -290,7 +290,7 @@ Home lays saved projects on the light table as prints: a 3px-cornered thumbnail 
 ### Selection Over the Photo
 A selected layer gets a 1.5px selection-blue outline over its 3.5px dark halo, with handles sized for touch on phones and for a fine pointer on web. Snap guides and detection candidates use the same blue. A detected region's check mark is sized to the region: its radius is a fifth of the region's shorter side on screen, from 4px up to 8px, and a region under 12px across has no mark, leaving its fill and outline (thicker and blue when chosen) to show whether it's chosen.
 
-While the Eraser is open on web, a 1.5px selection-blue ring the size of the eraser follows a mouse over the canvas, showing what a drag will clear; it hides off the canvas and while dragging. A shape the Eraser's swath crosses dims to a third of its strength until the finger lifts, when it goes whole. The dimming is only on screen, never in the file.
+While the Eraser is open on web, a 1.5px selection-blue ring the size of the eraser follows a mouse over the canvas, showing what a drag will clear; it hides off the canvas and while dragging. A shape the Eraser's swath crosses dims to a third of its strength until the finger lifts, when it goes whole. Opened from a selected drawing's Erase, the Eraser keeps to that drawing: it keeps its outline, and every other drawing and shape dims to a third, so what's out of reach reads as such; the photo, text, stickers, and redactions stay as they are. The dimming is only on screen, never in the file.
 
 ### Wordmark
 "Tuck" in Anton, in black on a full highlighter swipe, identical in both palettes. The app icon and favicon are a black T on the same swipe, on white.

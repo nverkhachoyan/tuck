@@ -67,6 +67,7 @@ describe("editorModeReducer", () => {
 			type: "tool",
 			tool: "redact",
 			layerId: null,
+			on: null,
 			optionsOpen: false,
 		});
 		assert.equal(state.sheet, null);
@@ -80,6 +81,7 @@ describe("editorModeReducer", () => {
 			type: "tool",
 			tool: "adjust",
 			layerId: "photo",
+			on: null,
 			optionsOpen: false,
 		});
 		assert.equal(adjusting.sheet, null);
@@ -94,9 +96,19 @@ describe("editorModeReducer", () => {
 			type: "tool",
 			tool: "cut",
 			layerId: "photo",
+			on: null,
 			optionsOpen: true,
 		});
 		assert.equal(cutting.sheet, null);
+	});
+
+	test("a tool keeps the layer whose actions opened it", () => {
+		const state = run(initialEditorMode, {
+			type: "startTool",
+			start: { tool: "eraser", layerId: null, on: "ink" },
+		});
+		assert.equal(state.mode.type === "tool" && state.mode.on, "ink");
+		assert.equal(drawing.mode.type === "tool" && drawing.mode.on, null);
 	});
 
 	test("typing and cropping close the layers sheet", () => {
@@ -114,6 +126,7 @@ describe("editorModeReducer", () => {
 			type: "tool",
 			tool: "crop",
 			layerId: null,
+			on: null,
 			optionsOpen: false,
 		});
 		assert.equal(cropping.sheet, null);
@@ -136,6 +149,7 @@ describe("editorModeReducer", () => {
 			type: "tool",
 			tool: "pen",
 			layerId: null,
+			on: null,
 			optionsOpen: true,
 		});
 		assert.deepEqual(run(open, { type: "closeToolOptions" }), drawing);
@@ -159,6 +173,7 @@ describe("editorModeReducer", () => {
 			type: "tool",
 			tool: "pen",
 			layerId: null,
+			on: null,
 			optionsOpen: false,
 		});
 		assert.equal(fromTray.eyedropper, picker);
@@ -217,6 +232,7 @@ describe("editorModeReducer", () => {
 			type: "tool",
 			tool: "sticker",
 			layerId: null,
+			on: null,
 			optionsOpen: false,
 		});
 		assert.equal(stickers.sheet, null);
@@ -271,6 +287,7 @@ describe("a made-up tool's mode", () => {
 			type: "tool",
 			tool: "ruler",
 			layerId: "photo",
+			on: null,
 			optionsOpen: false,
 		});
 	});
@@ -353,6 +370,7 @@ describe("settle", () => {
 				type: "tool",
 				tool: "pen",
 				layerId: null,
+				on: null,
 				optionsOpen: false,
 			},
 		);
@@ -368,6 +386,7 @@ describe("openTray", () => {
 				type: "tool",
 				tool: "pen",
 				layerId: null,
+				on: null,
 				optionsOpen: false,
 			}),
 			null,
@@ -377,6 +396,7 @@ describe("openTray", () => {
 				type: "tool",
 				tool: "pen",
 				layerId: null,
+				on: null,
 				optionsOpen: true,
 			}),
 			"pen",
@@ -386,6 +406,7 @@ describe("openTray", () => {
 				type: "tool",
 				tool: "adjust",
 				layerId: "photo",
+				on: null,
 				optionsOpen: false,
 			}),
 			null,
@@ -395,6 +416,7 @@ describe("openTray", () => {
 				type: "tool",
 				tool: "cut",
 				layerId: "photo",
+				on: null,
 				optionsOpen: true,
 			}),
 			"cut",

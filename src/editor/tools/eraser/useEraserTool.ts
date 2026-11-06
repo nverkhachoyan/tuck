@@ -33,14 +33,18 @@ const erasedName = (layer: Layer) =>
  * Controller for erasing drawings and shapes.
  * - Manages eraser size index.
  * - Erases on drag via canvasInput, through every unlocked drawing and
- *   shape the swipe crosses.
+ *   shape the swipe crosses, or only the drawing whose actions opened it
+ *   (`on`).
+ * - Closes once that drawing is erased away.
  * - Says when a swipe removes a whole drawing or shape (`news`), naming the
  *   topmost one that went; Undo brings back the whole swipe.
  */
 export function useEraserTool({
 	documentSize,
 	notify,
-}: Pick<ToolEnv, "documentSize" | "notify">) {
+	on,
+	close,
+}: Pick<ToolEnv, "documentSize" | "notify" | "on" | "close">) {
 	const { eraseStroke } = useStore((state) => state.actions);
 	const [settings, setSettings] = usePreference(KEY, parseSavedEraserSettings);
 	const [news, setNews] = useState<string | null>(null);
@@ -58,16 +62,17 @@ export function useEraserTool({
 		if (next !== settings) setSettings(next);
 	};
 
+	const scope = on?.id ?? null;
 	const canvasInput = useMemo(
 		(): CanvasInput => ({
 			type: "tool",
 			tool: {
 				type: "erase",
 				width: eraserBrushFor(settings, documentSize).width,
-				scope: null,
+				scope,
 			},
 		}),
-		[settings, documentSize],
+		[settings, documentSize, scope],
 	);
 
 	const finishStroke = (stroke: ToolStroke) => {
@@ -78,8 +83,8 @@ export function useEraserTool({
 			stroke.scope,
 		);
 		const after = useStore.getState().document;
-		const removed =
-			before && after ? removedLayers(before, after).at(-1) : undefined;
+		const gone = before && after ? removedLayers(before, after) : [];
+		const removed = gone.at(-1);
 		// Cleared by a swipe that removes nothing, so the next removal is
 		// announced even when it's named the same.
 		if (!removed) {
@@ -89,6 +94,11 @@ export function useEraserTool({
 		const name = erasedName(removed);
 		notify(`${name} erased`);
 		setNews(`${name} removed`);
+		// Erased away, the drawing it kept to leaves nothing to erase. The
+		// notice is the editor's, so it outlives the tool.
+		if (stroke.scope !== null && gone.some(({ id }) => id === stroke.scope)) {
+			close();
+		}
 	};
 
 	return {

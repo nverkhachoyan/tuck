@@ -70,17 +70,31 @@ export function pathFor(stroke: MaskStroke): SkPath {
  * Draws a drawing layer in its own space. Its strokes share a layer of
  * their own, so an eraser clears only what they drew, not what's under
  * them. `children` joins that layer too: a stroke still being drawn.
+ * `opacity` fades the whole layer as it's laid down, so a dimmed highlight
+ * still multiplies onto what's under it.
  */
 export function DrawingLayerView({
 	layer,
+	opacity = 1,
 	children,
 }: {
 	layer: DrawingLayer;
+	opacity?: number;
 	children?: ReactNode;
 }) {
 	const multiply = layerBlend(layer) === "multiply";
 	return (
-		<Group layer={multiply ? <Paint blendMode="multiply" /> : true}>
+		<Group
+			layer={
+				multiply ? (
+					<Paint blendMode="multiply" opacity={opacity} />
+				) : opacity < 1 ? (
+					<Paint opacity={opacity} />
+				) : (
+					true
+				)
+			}
+		>
 			{layer.strokes.map((stroke, index) => (
 				<BrushStroke
 					// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end

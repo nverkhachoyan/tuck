@@ -585,6 +585,7 @@ export function EditorCanvas({
 									outlinedLayer={outlinedLayer}
 									adjusting={input.type === "dial" ? input.adjusting : null}
 									cuttingOutId={cuttingOutId}
+									dimExcept={tool?.type === "erase" ? tool.scope : null}
 									regions={
 										input.type === "regions" ? input.regions : NO_REGIONS
 									}

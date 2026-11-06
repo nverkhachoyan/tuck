@@ -71,13 +71,17 @@ export type LiveStroke = {
 	crossed: SharedValue<string[]> | null;
 };
 
-// How far a shape the Eraser crosses fades before it goes.
-const CROSSED_OPACITY = 1 / 3;
+/**
+ * How far a mark out of reach fades: a shape the Eraser crosses, before it
+ * goes, and every other drawing and shape while the Eraser keeps to one.
+ */
+const DIMMED_OPACITY = 0.33;
 
 /**
  * A layer's content, with `stroke` joining it as it's painted when it
  * reaches the layer. A redaction or a shape follows the live values while
- * selected, and a shape the Eraser crosses dims.
+ * selected, and a shape the Eraser crosses dims. `dimmed` fades a drawing
+ * or shape out of reach.
  */
 export function StrokeTarget({
 	layer,
@@ -86,6 +90,7 @@ export function StrokeTarget({
 	live,
 	matrix,
 	selectionColor,
+	dimmed = false,
 	onImageError,
 }: {
 	layer: Layer;
@@ -94,6 +99,7 @@ export function StrokeTarget({
 	live: LiveTransform;
 	matrix?: DerivedValue<ColorMatrix>;
 	selectionColor: string | undefined;
+	dimmed?: boolean;
 	onImageError: (error: unknown) => void;
 }) {
 	const tool = stroke?.tool;
@@ -111,6 +117,10 @@ export function StrokeTarget({
 		);
 	}
 	if (layer.type === "shape") {
+		// A dimmed shape is out of the Eraser's reach, so it never crosses.
+		if (dimmed) {
+			return <LiveShape layer={layer} live={live} opacity={DIMMED_OPACITY} />;
+		}
 		return stroke?.crossed ? (
 			<CrossedShape layer={layer} live={live} stroke={stroke} />
 		) : (
@@ -172,6 +182,7 @@ export function StrokeTarget({
 			}
 			matrix={matrix}
 			selectionColor={selectionColor}
+			opacity={dimmed ? DIMMED_OPACITY : undefined}
 			onImageError={onImageError}
 		/>
 	);
@@ -189,10 +200,10 @@ function CrossedShape({
 }) {
 	const { id } = layer;
 	const { crossed } = stroke;
-	const opacity = useDerivedValue(
+	const opacity = useDerivedValue<number>(
 		() =>
 			stroke.id.value > stroke.landedId && crossed?.value.includes(id)
-				? CROSSED_OPACITY
+				? DIMMED_OPACITY
 				: 1,
 		[id, stroke],
 	);

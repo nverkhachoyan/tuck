@@ -244,6 +244,22 @@ describe("outlinedLayerFor", () => {
 		);
 	});
 
+	test("the Eraser outlines the drawing it keeps to, and nothing unscoped", () => {
+		const layers = [photo, drawing];
+		const erase = (scope: string | null): CanvasInput => ({
+			type: "tool",
+			tool: { type: "erase", width: 20, scope },
+		});
+		assert.equal(
+			outlinedLayerFor(erase(drawing.id), { layers, selectedLayer: drawing }),
+			drawing,
+		);
+		assert.equal(
+			outlinedLayerFor(erase(null), { layers, selectedLayer: undefined }),
+			null,
+		);
+	});
+
 	test("editing text outlines the text, and selecting outlines nothing", () => {
 		assert.equal(outlinedLayerFor(editText(drawing), none), drawing);
 		assert.equal(outlinedLayerFor({ type: "select" }, none), null);

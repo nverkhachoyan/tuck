@@ -534,6 +534,28 @@ describe("editorSlice", () => {
 			assert.equal(drawings(store)[0], drawing);
 		});
 
+		test("erasing a selected drawing leaves others, and it stays selected", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 100, 100, 0]));
+			actions.selectLayer(null);
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			const [other, selected] = drawings(store);
+			assert.equal(store.getState().selectedLayerId, selected.id);
+			actions.eraseStroke(eraser([0, 50, 100, 50], 20), selected.id);
+			const [otherAfter, selectedAfter] = drawings(store);
+			assert.equal(otherAfter, other);
+			assert.deepEqual(
+				selectedAfter.strokes.map((stroke) => stroke.type),
+				["pen", "eraser"],
+			);
+			assert.equal(store.getState().selectedLayerId, selected.id);
+
+			actions.eraseStroke(eraser([0, 0, 100, 100], 40), selected.id);
+			assert.deepEqual(drawings(store), [other], "erased away");
+			assert.equal(store.getState().selectedLayerId, null);
+		});
+
 		test("an eraser never reaches a brushed redaction", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;

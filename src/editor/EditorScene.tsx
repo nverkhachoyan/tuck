@@ -58,6 +58,9 @@ type EditorSceneProps = {
 	adjusting: LiveAdjustment | null;
 	// The image being cut, which shows its cut as a selection.
 	cuttingOutId: string | null;
+	// While set, every drawing and shape but this one draws dimmed, as out
+	// of reach. On screen only.
+	dimExcept: string | null;
 	// What a `regions` input shows over the canvas.
 	regions: readonly CanvasRegion[];
 	// An image layer's file couldn't be read or decoded. Must be stable.
@@ -90,6 +93,7 @@ export function EditorScene({
 	outlinedLayer,
 	adjusting,
 	cuttingOutId,
+	dimExcept,
 	regions,
 	onImageError,
 	previewUri,
@@ -141,6 +145,11 @@ export function EditorScene({
 									}
 									selectionColor={
 										cuttingOutId === layer.id ? colors.selection : undefined
+									}
+									dimmed={
+										dimExcept !== null &&
+										layer.id !== dimExcept &&
+										(layer.type === "drawing" || layer.type === "shape")
 									}
 									onImageError={onImageError}
 								/>

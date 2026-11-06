@@ -209,6 +209,7 @@ export function Editor({
 	const {
 		controllers,
 		startTool,
+		layerStarters,
 		busy: busyTools,
 		editLayer,
 		editorOf,
@@ -473,7 +474,8 @@ export function Editor({
 	const layerActions = layerTools && {
 		tools: toolbarEntries(specs, layerTools, isToolAvailable),
 		busy: busyTools,
-		startTool,
+		// Opened from the layer, a tool keeps to it and keeps it selected.
+		startTool: layerStarters,
 		actions: toolbox.toolbar.flatMap((id) => {
 			const listed = controllers[id];
 			const action = listed?.definition.layerAction?.(

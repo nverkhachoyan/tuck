@@ -308,14 +308,15 @@ describe("layerActionsFor", () => {
 		assert.deepEqual(actions(sticker), ["adjust"]);
 	});
 
-	test("a drawing offers pen, not erase, while shape and redaction are styled directly", () => {
+	test("a drawing offers pen and eraser, while shape and redaction are styled directly", () => {
 		const drawing = createDrawingLayer({
 			type: "pen",
 			color: "#FF3B30",
 			width: 10,
 			points: [0, 0, 10, 10],
 		});
-		assert.deepEqual(actions(drawing), ["pen"]);
+		assert.deepEqual(actions(drawing), ["pen", "eraser"]);
+		assert.deepEqual(actions({ ...drawing, locked: true }), ["pen"]);
 		const shape = createShapeLayer(
 			"rectangle",
 			{ x: 0, y: 0, rotation: 0, width: 40, height: 20 },

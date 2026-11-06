@@ -133,8 +133,8 @@ export function canvasInputFor({
 /**
  * The layer outlined for `input`: the image being cut out or adjusted
  * where it could be mistaken for another, the text being
- * edited, or a redaction or shape whose style the tool changes, unless its
- * handles already show it.
+ * edited, the drawing the Eraser keeps to, or a redaction or shape whose
+ * style the tool changes, unless its handles already show it.
  */
 export function outlinedLayerFor(
 	input: CanvasInput,
@@ -150,6 +150,10 @@ export function outlinedLayerFor(
 		case "tool": {
 			const cutId = cutImageId(input.tool);
 			if (cutId !== null) return outlinedImage(layers, cutId);
+			const { tool } = input;
+			if (tool.type === "erase" && tool.scope !== null) {
+				return layers.find((layer) => layer.id === tool.scope) ?? null;
+			}
 			return restyles(input.tool, selectedLayer) &&
 				!drags(input.tool, selectedLayer)
 				? selectedLayer
