@@ -75,6 +75,12 @@ export function useEditorTools({
 
 	const closeTool = () => dispatchMode({ type: "endTool" });
 	const openImageId = mode.type === "tool" ? mode.layerId : null;
+	// The layer whose actions opened the tool, while it's still there.
+	const openOnId = mode.type === "tool" ? mode.on : null;
+	const openOn =
+		openOnId === null
+			? null
+			: (document.layers.find((layer) => layer.id === openOnId) ?? null);
 	const controllers: ToolControllers = {};
 	for (const [id, listed] of Object.entries(tools)) {
 		const definition = definitionOf(listed);
@@ -92,6 +98,7 @@ export function useEditorTools({
 			documentSize,
 			open,
 			image,
+			on: open ? openOn : null,
 			close: closeTool,
 			notify,
 			view,
@@ -104,7 +111,8 @@ export function useEditorTools({
 		controllers[id] = { definition, controller };
 	}
 	// Done does what the tool's own Done does, then closes it, and lets go of
-	// the selection if the tool asks. Its session ends at once rather than
+	// the selection if the tool asks, unless a layer's actions opened it: that
+	// layer stays selected, with its actions. Its session ends at once rather than
 	// when the tool unmounts, so the app sees its changes right away, as Back
 	// needs when it saves before leaving.
 	const finishTool = () => {
@@ -113,7 +121,7 @@ export function useEditorTools({
 		definition.done?.(controller);
 		commitSession();
 		closeTool();
-		if (definition.deselectOnDone) selectLayer(null);
+		if (definition.deselectOnDone && openOnId === null) selectLayer(null);
 	};
 	const cancelTool = () => {
 		cancelSession();
@@ -130,7 +138,8 @@ export function useEditorTools({
 	// else the main one. Its `started` runs from the effect below, once its
 	// session has begun, or at once when it's already open on that photo.
 	// Starting a tool that's open, as the rail does, opens it again. An
-	// action runs on the photo and opens nothing.
+	// action runs on the photo and opens nothing. `on` is the layer whose
+	// actions opened it, which stays selected.
 	const selectedImage =
 		selectedLayer?.type === "image" && !selectedLayer.hidden
 			? selectedLayer
@@ -139,6 +148,7 @@ export function useEditorTools({
 	const startTool = (
 		next: ToolId,
 		image = next === "adjust" && selectedImage ? selectedImage : targetImage,
+		on: string | null = null,
 	) => {
 		const { definition, controller } = controllers[next];
 		if (definition.spec.target !== "none" && !image) return;
@@ -146,7 +156,7 @@ export function useEditorTools({
 			if (image) definition.run(controller, image);
 			return;
 		}
-		if (definition.startsUnselected) selectLayer(null);
+		if (definition.startsUnselected && on === null) selectLayer(null);
 		definition.prepare?.(controller);
 		if (definition.started && image) {
 			const openOnImage =
@@ -156,7 +166,7 @@ export function useEditorTools({
 			if (openOnImage) definition.started(controller, image);
 			else pendingStart.current = { tool: next, image };
 		}
-		const start = { tool: next, layerId: image?.id ?? null };
+		const start = { tool: next, layerId: image?.id ?? null, on };
 		if (next === tool) setReopened((count) => count + 1);
 		dispatchMode({ type: "startTool", start });
 	};
@@ -228,6 +238,14 @@ export function useEditorTools({
 		),
 		photo: addPhoto,
 	};
+	// The same from the selected layer's actions, which opens each tool on
+	// that layer (see `ToolEnv`'s `on`).
+	const layerStarters: ToolStarters = Object.fromEntries(
+		Object.keys(tools).map((next) => [
+			next,
+			() => startTool(next, undefined, selectedLayer?.id ?? null),
+		]),
+	);
 
 	// The tools whose buttons spin, while what they run is working.
 	const busy = Object.keys(controllers).filter((id) => {
@@ -256,6 +274,7 @@ export function useEditorTools({
 	return {
 		controllers,
 		startTool: starters,
+		layerStarters,
 		busy,
 		editLayer,
 		editorOf,

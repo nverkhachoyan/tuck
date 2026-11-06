@@ -15,7 +15,8 @@ import { TextLayerView } from "./text/TextLayerView";
  * A layer's content in its own space, loading images asynchronously.
  * `stroke` is one still being drawn on a drawing layer, or on an image's
  * cut, which `selectionColor` shows as a selection; `matrix` colors an
- * image in place of its adjustments (see `ImageLayerView`).
+ * image in place of its adjustments (see `ImageLayerView`); `opacity`
+ * fades a drawing.
  */
 export function LayerContent({
 	layer,
@@ -23,11 +24,13 @@ export function LayerContent({
 	stroke,
 	matrix,
 	selectionColor,
+	opacity,
 	onImageError,
 }: {
 	layer: Layer;
 	uri?: string;
 	stroke?: ReactNode;
+	opacity?: number;
 	matrix?: { value: ColorMatrix };
 	selectionColor?: string;
 	onImageError: (error: unknown) => void;
@@ -47,7 +50,11 @@ export function LayerContent({
 		case "text":
 			return <TextLayerView layer={layer} />;
 		case "drawing":
-			return <DrawingLayerView layer={layer}>{stroke}</DrawingLayerView>;
+			return (
+				<DrawingLayerView layer={layer} opacity={opacity}>
+					{stroke}
+				</DrawingLayerView>
+			);
 		case "redaction":
 			return layer.shape === "mask" ? (
 				<AsyncMaskedRedaction layer={layer} onError={onImageError} />

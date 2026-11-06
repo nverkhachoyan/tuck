@@ -32,6 +32,8 @@ type ToolViews<C> = {
  * - `image`: what its spec's target gives: the target photo for "photo",
  *   the image it started on while it's open for "image", and null for
  *   "none".
+ * - `on`: the layer whose actions opened the tool, while it's open and
+ *   still in the document; null when the toolbar opened it.
  * - `close`: puts the tool down, keeping its changes.
  * - `notify`: shows `message` in the edit notice, with Undo, and `action`
  *   beside it when given.
@@ -49,6 +51,7 @@ export type ToolEnv = {
 	documentSize: Size;
 	open: boolean;
 	image: ImageLayer | null;
+	on: Layer | null;
 	close: () => void;
 	notify: (message: string, action?: NoticeAction) => void;
 	view: {
@@ -111,9 +114,11 @@ export type NoticeAction = { label: string; onPress: () => void };
  * - `doneLabel`: what Done says, when it isn't "Done".
  * - `done`: what Done does before the tool closes.
  * - `deselectOnDone`: whether Done lets go of the selected layer, so a
- *   stray drag can't move what the tool just made.
+ *   stray drag can't move what the tool just made; not when the layer's
+ *   actions opened it.
  * - `startsUnselected`: whether opening it lets go of the selected layer
- *   first, as the Eraser does, since it works on every layer it reaches.
+ *   first, as the Eraser does, since it works on every layer it reaches;
+ *   not when a layer's actions open it, which keep to that layer.
  * - `reset`: what the header's Reset does while it's open, or undefined to
  *   hide Reset.
  * - `announcement`: what the editor announces for it.

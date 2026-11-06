@@ -10,14 +10,17 @@ import type { ToolId, ToolSpecs } from "./toolSpec.ts";
 export type Eyedropper = { apply: (color: string) => void };
 
 /**
- * A tool's mode. `layerId` is the image it started on, for a tool whose
- * spec's target is "image", and null for the rest; `optionsOpen` is whether
- * its tray is open, and stays false for a tool without one.
+ * A tool's mode.
+ * - `layerId`: the image it started on, for a tool whose spec's target is
+ *   "image", and null for the rest.
+ * - `on`: the layer whose actions opened it, or null when the toolbar did.
+ * - `optionsOpen`: whether its tray is open; false for a tool without one.
  */
 export type ToolMode = {
 	type: "tool";
 	tool: ToolId;
 	layerId: string | null;
+	on: string | null;
 	optionsOpen: boolean;
 };
 
@@ -27,8 +30,15 @@ export type ToolMode = {
  */
 export type EditorMode = { type: "idle" } | ToolMode;
 
-/** A tool to start, with the image it would work on, if any. */
-export type ToolStart = { tool: ToolId; layerId: string | null };
+/**
+ * A tool to start, with the image it would work on, if any, and the layer
+ * whose actions opened it (`on`), if any.
+ */
+export type ToolStart = {
+	tool: ToolId;
+	layerId: string | null;
+	on?: string | null;
+};
 
 /**
  * The mode, and what sits over it. The eyedropper waits for a tap on the
@@ -225,6 +235,7 @@ function toolMode(start: ToolStart, specs: ToolSpecs): ToolMode {
 		type: "tool",
 		tool: start.tool,
 		layerId: isImageTool ? start.layerId : null,
+		on: start.on ?? null,
 		optionsOpen: false,
 	};
 }
