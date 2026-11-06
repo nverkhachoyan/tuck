@@ -46,7 +46,7 @@ export function useEditorShortcuts({
 	openExport,
 	zoom,
 	done,
-	cancel,
+	putDown,
 	startTool,
 	editSelected,
 	deleteSelected,
@@ -67,7 +67,7 @@ export function useEditorShortcuts({
 	openExport: () => void;
 	zoom: (to: "in" | "out" | "fit") => void;
 	done: () => void;
-	cancel: () => void;
+	putDown: () => void;
 	startTool: ToolStarters;
 	editSelected: () => void;
 	deleteSelected: () => void;
@@ -102,8 +102,8 @@ export function useEditorShortcuts({
 			case "zoom":
 				zoom(command.to);
 				break;
-			case "cancelTool":
-				cancel();
+			case "putDownTool":
+				putDown();
 				break;
 			case "doneWithTool":
 				done();
@@ -171,7 +171,7 @@ function isEditable(target: EventTarget | null) {
 
 /**
  * Keys on web for an open tool that takes them (see `takesKeys`), only while
- * `enabled`: Escape cancels, and Enter from the canvas commits. While
+ * `enabled`: Escape calls `cancel`, and Enter from the canvas commits. While
  * `typing`, Enter needs ⌘/Ctrl, as it does in the input.
  */
 export function useToolKeys({

@@ -309,7 +309,7 @@ export function Editor({
 		openExport: host.openExport,
 		zoom: (to) => canvasRef.current?.zoom(to),
 		done,
-		cancel,
+		putDown: putDownTool,
 		startTool,
 		editSelected: () => {
 			if (selectedLayer) editLayer(selectedLayer);
@@ -323,7 +323,14 @@ export function Editor({
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
 	});
-	useToolKeys({ enabled: focused && draftOpen, typing, done, cancel });
+	// Escape keeps what's typed, as it does from the text input itself; it
+	// cancels only Crop.
+	useToolKeys({
+		enabled: focused && draftOpen,
+		typing,
+		done,
+		cancel: typing ? done : cancel,
+	});
 
 	const layerList = layerListProps({
 		document,

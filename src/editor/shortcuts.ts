@@ -168,7 +168,10 @@ export function shortcutGroups(
 					keys: specs[tool.id]?.takesKeys === "typing" ? "mod+Enter" : "Enter",
 					action: "Apply",
 				},
-				{ keys: "Escape", action: "Cancel" },
+				{
+					keys: "Escape",
+					action: specs[tool.id]?.takesKeys === "typing" ? "Done" : "Cancel",
+				},
 			],
 		})),
 		HELP_GROUP,
@@ -195,7 +198,7 @@ const EDITING_GROUPS: ShortcutGroup[] = [
 			{ keys: "←↑→↓", action: "Nudge, with Shift for more" },
 			{ keys: "[", action: "Smaller brush" },
 			{ keys: "]", action: "Larger brush" },
-			{ keys: "Escape", action: "Cancel, or deselect" },
+			{ keys: "Escape", action: "Put the tool down, or deselect" },
 		],
 	},
 	{

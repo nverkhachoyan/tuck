@@ -497,7 +497,7 @@ describe("shortcutCommand", () => {
 	});
 
 	test("Escape puts Stickers down, as any tool, and A or the other keys wait", () => {
-		assert.deepEqual(command(stickers, null, esc), { type: "cancelTool" });
+		assert.deepEqual(command(stickers, null, esc), { type: "putDownTool" });
 		for (const key of [sticker, pen, layers, remove]) {
 			assert.equal(command(stickers, "layer", key), null);
 		}
@@ -521,9 +521,9 @@ describe("shortcutCommand", () => {
 		}
 	});
 
-	test("with a tool open, Escape is Cancel, Enter is Done, and other keys pass", () => {
+	test("with a tool open, Escape puts it down, Enter is Done, and other keys pass", () => {
 		assert.deepEqual(command(drawing, "layer", esc), {
-			type: "cancelTool",
+			type: "putDownTool",
 		});
 		assert.deepEqual(command(drawing, "layer", edit), {
 			type: "doneWithTool",
