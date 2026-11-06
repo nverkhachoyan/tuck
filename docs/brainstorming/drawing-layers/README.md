@@ -3,6 +3,11 @@
 A brainstorm on how Tuck's Pen, Shape, and Eraser should relate to layers,
 started November 5, 2026.
 
+**The agreed direction is [ux-direction.md](ux-direction.md):** ink grouped
+into marks rather than Pen sessions, an Eraser and a Stroke eraser that reach
+every mark, Erase on a selected mark, and Undo per mark and swipe. Where it
+differs from the short answer below and the documents it summarizes, it wins.
+
 ## The problem
 
 Each Pen session makes its own drawing layer, and the eraser only erases the
