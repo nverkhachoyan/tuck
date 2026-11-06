@@ -56,4 +56,55 @@ None; nothing is committed but this file.
 
 ## Result
 
-Not measured yet.
+Measured 2026-11-05 on the M1 Mac, without the iPhone, in place of the
+plan above:
+
+- **Test page:** generated, not recorded: a 1170×2532 white page of words of three to five wavy pen strokes (5 wide), one mark in four with an eraser stroke through it, one in ten a single highlighter stroke (34 wide, multiplying). The bench (local branch `bench/marks`, not merged) adds the page from buttons in the dev HUD.
+- **Actions:** scripted rather than by hand, five seconds each: the view panned in a loop (`pan`), a live pen stroke growing a point a frame (`pen`), a live eraser sweeping the page in rows with every drawing reached (`erase`). Moving a mark redraws the same scene as panning, so it wasn't run apart.
+- **Frame rate:** a Reanimated frame callback on the thread that draws (the UI thread on iOS, the page's main thread on web), averaged over the run; "worst" is the slowest quarter second.
+- **Web:** the production export (`pnpm build:web`, `web-export`) in headless Chrome 157 on ANGLE Metal (M1), at 1440×900 ×2 and 390×844 ×3, driven over CDP. 60 Hz.
+- **iOS:** the iPhone 17 Pro simulator (iOS 26.5), development build, `pan` only (the HUD's row ran off the screen). The simulator draws with the Mac's GPU, so it shows how cost grows with the count, not how a phone copes.
+- A blank page held 60 fps everywhere.
+
+Besides the plan's fallback 1 (`lite`), the bench tried bounding each
+drawing's saved layer (`bounded`): wrapping its `Group layer` in a `Group`
+clipped to its box, padded by its ink's reach, so Skia allocates and
+composites a layer the size of the drawing instead of the whole canvas.
+Today's layer has no bounds, so every drawing costs a full-canvas offscreen
+pass however little ink it has. Bounding keeps "each drawing is a saved
+layer" as it is.
+
+Web, 1440×900 ×2, average fps (pan / pen / erase):
+
+| Marks | As built | Fallback 1 | Bounded | Bounded + fallback 1 |
+| --- | --- | --- | --- | --- |
+| 50 | 11 / 11 / 10 | 42 / 33 / 33 | 59 / 60 / 60 | 60 / 60 / 58 |
+| 100 | 6 / 6 / 5 | 24 / 24 / 18 | 60 / 60 / 59 | 60 / 60 / 58 |
+| 200 | 4 / 3 / 3 | 10 / 10 / 7 | 59 / 60 / 46 | 59 / 60 / 43 |
+| 400 | 2 / 2 / 1 | 7 / 7 / 4 | 37 / 34 / 26 | 35 / 36 / 25 |
+| 800 | 1 / 1 / 0.5 | 3 / 3 / 2 | 19 / 17 / 14 | 20 / 19 / 15 |
+
+Web, 390×844 ×3: as built 23 / 26 / 15 at 50 marks and 7 / 5 / 3 at 200;
+bounded 60 / 60 / 60 at 50, 60 / 60 / 49 at 200, and 38 / 34 / 26 at 400.
+
+iOS simulator, `pan`, average (worst):
+
+| Marks | As built | Bounded | Bounded + fallback 1 |
+| --- | --- | --- | --- |
+| 50 | 40 (20) | 60 (56) | |
+| 200 | 9 (7) | 37 (30) | 58 (48) |
+| 400 | | | 34 (29) |
+
+What it says:
+
+- **As built, saved layers don't scale at all:** 50 marks already drop below 30 fps on web and 40 on the simulator. Today's session-sized drawings are few, so it doesn't show yet; marks would.
+- **Bounding is the fix, and keeps the direction's model:** on web it holds 60 through 200 marks for panning and drawing, and fallback 1 adds nothing on top. Past 400, what's left grows with the number of drawings, not the pixels (the same rates at both canvas sizes).
+- **On iOS each saved layer costs something even when small** (a render pass on Metal): bounded alone reaches 37 at 200, bounded with fallback 1 58.
+- **The live eraser is the slowest action:** 200 bounded marks erase at 46 to 49 on web, since its path is drawn into every drawing. Fallback 2 (draw it only where its box reaches) is aimed at exactly this.
+
+Decision for step 4, pending your OK on fallback 1 and a check on a phone:
+
+1. Bound each drawing's saved layer to its box, as a change of its own before step 4. A drawing taking a live pen stroke draws unbounded while it does, since the stroke can reach past its box.
+2. Fallback 1, a saved layer only for a drawing that multiplies or has an eraser stroke (or is dimmed), for iOS. It needs your OK, as it changes "each drawing is a saved layer".
+3. Fallback 2, the live eraser only in drawings its box reaches.
+4. Then step 4 as written. A Release build on an iPhone should confirm 200 marks with 1 and 2 before marks ship.

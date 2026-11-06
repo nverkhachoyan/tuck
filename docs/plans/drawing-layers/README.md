@@ -25,7 +25,7 @@ they don't say, which the steps rely on:
 | --- | --- | --- | --- |
 | [1. The Eraser reaches every mark](01-eraser-reach.md) | M | — | An Eraser that works without selecting, shows its swath, never brings ink back, and says when a whole mark or shape goes. A drawing's actions lose Erase until step 2. |
 | [2. Erase on a selected mark](02-erase-on-mark.md) | S | 1 | Erase back in a drawing's actions, narrowed to it, with everything else dimmed. |
-| [3. Measure saved layers](03-measure-marks.md) | S | 1 | Nothing ships; it decides whether step 4 goes ahead as written. |
+| [3. Measure saved layers](03-measure-marks.md) | S | 1 | Nothing ships; it decides whether step 4 goes ahead as written. Measured on web and the simulator: bound each saved layer, then fallbacks 1 and 2, before step 4. |
 | [4. Marks](04-marks.md) | M | 3 | Strokes grouped by pause, distance, and style rather than by session. Toolbar Pen starts fresh; a mark's Pen adds to it. |
 | [5. Restyle a mark](05-restyle.md) | S | 4 | A selected mark's Pen shows and changes its tip, color, and size. |
 | [6. Separate](06-separate.md) | S | 4 | Separate in the floating bar for a mark with pieces that don't touch. |
