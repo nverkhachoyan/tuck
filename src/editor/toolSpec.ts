@@ -23,6 +23,9 @@ export type ToolId = string;
  * - `previews`: whether what it does to the document until Done is only a
  *   preview, as Cut's selection is: meanwhile the app (autosave,
  *   thumbnails) sees the document from before it opened.
+ * - `undoSteps`: what its changes become once it's done, when that isn't one
+ *   undo step: one per change ("each", the Eraser's swipes) or one per mark
+ *   ("marks", Pen's).
  * - `action`: whether pressing it runs its definition's `run` on its target
  *   and opens no mode, as Remove BG does.
  * - `grouped`: other tools folded into this button's flyout on the toolbar,
@@ -38,6 +41,7 @@ export type ToolSpec = {
 	sized: boolean;
 	takesKeys?: true | "typing";
 	previews?: true;
+	undoSteps?: "each" | "marks";
 	action?: true;
 	grouped?: readonly ToolId[];
 	label: string;

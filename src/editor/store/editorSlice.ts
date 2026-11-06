@@ -84,14 +84,23 @@ export type EditorSnapshot = {
 	selectedLayerId: string | null;
 };
 
+/**
+ * How many undo steps a tool's session leaves once it's done: one for the
+ * whole session, one for each change (the Eraser's swipes), or one for each
+ * mark (Pen's).
+ */
+export type SessionSteps = "one" | "each" | "marks";
+
 // While a tool is open, where it started, and the undo and redo steps that
 // were next then. Undo stops at the start, and redo at that step, so a tool
 // never steps into changes from before it opened. A tool that only
-// `previews` its changes until Done leaves the app seeing where it started.
+// `previews` its changes until Done leaves the app seeing where it started;
+// `steps` is what its changes become when it's done.
 export type EditorSession = EditorSnapshot & {
 	undoStop: EditorSnapshot | undefined;
 	redoStop: EditorSnapshot | undefined;
 	previews: boolean;
+	steps: SessionSteps;
 };
 
 export type EditorState = {
@@ -103,7 +112,8 @@ export type EditorState = {
 	past: EditorSnapshot[];
 	future: EditorSnapshot[];
 	// While a tool is open, where it started: Cancel returns there (and redo
-	// undoes the cancel), and its changes become one undo step when it's done.
+	// undoes the cancel), and its changes become one undo step when it's done,
+	// except Pen's, one per mark, and the Eraser's, one per swipe.
 	session: EditorSession | null;
 };
 
@@ -568,7 +578,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			);
 		},
 
-		beginSession: (previews = false) => {
+		beginSession: (previews = false, steps: SessionSteps = "one") => {
 			const { document, selectedLayerId, past, future, session } = get();
 			if (!document || session) return;
 			set(
@@ -579,6 +589,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 						undoStop: past.at(-1),
 						redoStop: future[0],
 						previews,
+						steps,
 					},
 				},
 				false,
@@ -586,19 +597,30 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			);
 		},
 
-		// The session's steps become one, from where it started.
+		// The session's steps become one from where it started, or stay one
+		// per change or per mark (`steps`). Each kept step undoes to the
+		// selection the session started with, not a mark drawn along the way.
 		commitSession: () => {
-			const { document, session, past } = get();
-			if (!session) return;
+			const { document, selectedLayerId, session, past } = get();
+			if (!document || !session) return;
 			if (document === session.document) {
 				set({ session: null }, false, "editor/commitSession");
 				return;
 			}
+			const own = pastIn(past, session);
+			const kept =
+				session.steps === "one"
+					? [snapshotOf(session)]
+					: (session.steps === "each"
+							? own
+							: stepsByMark(own, { document, selectedLayerId })
+						).map((step) => ({
+							document: step.document,
+							selectedLayerId: session.selectedLayerId,
+						}));
 			set(
 				{
-					past: [...pastBefore(past, session), snapshotOf(session)].slice(
-						-MAX_HISTORY,
-					),
+					past: [...pastBefore(past, session), ...kept].slice(-MAX_HISTORY),
 					future: [],
 					session: null,
 				},
@@ -676,6 +698,35 @@ function snapshotOf({
 	selectedLayerId,
 }: EditorSnapshot): EditorSnapshot {
 	return { document, selectedLayerId };
+}
+
+/**
+ * The undo steps `session` took: those after the one that was last when it
+ * started (or all of them, if it took so many that one was dropped).
+ */
+function pastIn(
+	past: EditorSnapshot[],
+	{ undoStop }: EditorSession,
+): EditorSnapshot[] {
+	return undoStop ? past.slice(past.indexOf(undoStop) + 1) : past;
+}
+
+/**
+ * A session's undo `steps`, each the snapshot from before a change, kept one
+ * per mark: a step whose change went to the same mark as the step before it
+ * (the selection after each, which Pen leaves on the mark a stroke went to)
+ * joins that step. A, A, B keeps two; A, B, A keeps three. `current` is the
+ * snapshot after the last change.
+ */
+export function stepsByMark(
+	steps: EditorSnapshot[],
+	current: EditorSnapshot,
+): EditorSnapshot[] {
+	const markAfter = (index: number) =>
+		(index + 1 < steps.length ? steps[index + 1] : current).selectedLayerId;
+	return steps.filter(
+		(_, index) => index === 0 || markAfter(index) !== markAfter(index - 1),
+	);
 }
 
 /**

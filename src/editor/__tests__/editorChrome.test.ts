@@ -342,3 +342,15 @@ describe("layerActionsFor", () => {
 		]);
 	});
 });
+
+describe("undo steps", () => {
+	test("only Pen keeps a step per mark and the Eraser one per swipe", () => {
+		const kept = Object.entries(specs).flatMap(([id, spec]) =>
+			spec.undoSteps ? [[id, spec.undoSteps]] : [],
+		);
+		assert.deepEqual(kept, [
+			["pen", "marks"],
+			["eraser", "each"],
+		]);
+	});
+});

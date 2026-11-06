@@ -4,6 +4,7 @@ export const eraserSpec = {
 	target: "none",
 	tray: false,
 	sized: true,
+	undoSteps: "each",
 	label: "Eraser",
 	icon: "eraser",
 	key: "X",

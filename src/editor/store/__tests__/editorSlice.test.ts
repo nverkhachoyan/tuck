@@ -26,6 +26,7 @@ import {
 	selectSelectedRedaction,
 	selectSelectedShape,
 	selectSelectedTextLayer,
+	stepsByMark,
 } from "../editorSlice.ts";
 
 const photo = () =>
@@ -1286,6 +1287,154 @@ describe("editorSlice", () => {
 			actions.undo();
 			assert.equal(store.getState().document, before);
 			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		const drawingsIn = (store: ReturnType<typeof createTestStore>) =>
+			(store.getState().document?.layers ?? []).filter(
+				(layer): layer is DrawingLayer => layer.type === "drawing",
+			);
+
+		test("a Pen session keeps one undo step per mark", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.selectLayer(null);
+			const steps = store.getState().past.length;
+			actions.beginSession(false, "marks");
+			actions.drawStroke(pen([0, 0, 10, 0]));
+			const a = store.getState().selectedLayerId;
+			actions.drawStroke(pen([10, 0, 20, 0]), a);
+			actions.drawStroke(pen([20, 0, 30, 0]), a);
+			actions.drawStroke(pen([200, 200, 210, 200]));
+			const b = store.getState().selectedLayerId;
+			actions.drawStroke(pen([210, 200, 220, 200]), b);
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 2);
+
+			actions.undo();
+			assert.deepEqual(
+				drawingsIn(store).map((drawing) => drawing.strokes.length),
+				[3],
+			);
+			assert.equal(store.getState().selectedLayerId, null);
+			actions.undo();
+			assert.equal(drawingsIn(store).length, 0);
+			actions.redo();
+			assert.equal(drawingsIn(store).length, 1);
+			actions.redo();
+			assert.deepEqual(
+				drawingsIn(store).map((drawing) => drawing.strokes.length),
+				[3, 2],
+			);
+		});
+
+		test("an Eraser session keeps one undo step per swipe", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			for (const x of [0, 200, 400]) {
+				actions.drawStroke(pen([x, 0, x, 100]));
+			}
+			actions.selectLayer(null);
+			const steps = store.getState().past.length;
+			actions.beginSession(false, "each");
+			for (const x of [0, 200, 400]) {
+				actions.eraseStroke(
+					{ type: "eraser", width: 40, points: [x, 0, x, 100] },
+					null,
+				);
+			}
+			assert.equal(drawingsIn(store).length, 0);
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 3);
+			actions.undo();
+			assert.equal(drawingsIn(store).length, 1);
+		});
+
+		test("undo after a kept session restores the starting selection", () => {
+			const { store, text } = storeWithText();
+			const actions = store.getState().actions;
+			assert.equal(store.getState().selectedLayerId, text.id);
+			actions.beginSession(false, "marks");
+			actions.drawStroke(pen([0, 0, 10, 0]));
+			actions.drawStroke(pen([200, 0, 210, 0]));
+			actions.commitSession();
+			actions.undo();
+			assert.equal(store.getState().selectedLayerId, text.id);
+		});
+
+		test("restyling the mark it opened on joins that mark's step", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 10, 0]));
+			const mark = store.getState().selectedLayerId ?? "";
+			const steps = store.getState().past.length;
+			actions.beginSession(false, "marks");
+			actions.restyleDrawing(mark, { color: "#0A84FF" });
+			actions.drawStroke({ ...pen([10, 0, 20, 0]), color: "#0A84FF" }, mark);
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 1);
+		});
+
+		test("canceling a kept session still restores its start as one redo step", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const before = store.getState().document;
+			actions.beginSession(false, "marks");
+			actions.drawStroke(pen([0, 0, 10, 0]));
+			actions.drawStroke(pen([200, 0, 210, 0]));
+			actions.cancelSession();
+			assert.equal(store.getState().document, before);
+			actions.redo();
+			assert.equal(drawingsIn(store).length, 2);
+		});
+
+		test("a kept session that changed nothing leaves the history alone", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const { past } = store.getState();
+			actions.beginSession(false, "each");
+			actions.commitSession();
+			assert.equal(store.getState().past, past);
+		});
+
+		test("a kept session longer than the history keeps what fits", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.beginSession(false, "marks");
+			for (let i = 0; i < MAX_HISTORY + 5; i++) {
+				actions.drawStroke(pen([i * 3, 0, i * 3 + 1, 0]));
+			}
+			actions.commitSession();
+			assert.equal(store.getState().past.length, MAX_HISTORY);
+		});
+
+		test("undo and redo stop at the session's start while it's open", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.beginSession(false, "each");
+			actions.drawStroke(pen([0, 0, 10, 0]));
+			actions.undo();
+			assert.equal(selectCanUndo(store.getState()), false);
+			actions.redo();
+			assert.equal(selectCanRedo(store.getState()), false);
+			actions.commitSession();
+		});
+
+		test("stepsByMark merges a mark's consecutive steps, and keeps a return to an earlier mark apart", () => {
+			const snapshot = (selectedLayerId: string | null) => ({
+				document: createBlankDocument(10, 10, "#ffffff"),
+				selectedLayerId,
+			});
+			// The steps before each change; the mark after each is the next
+			// snapshot's selection, and the last's is `current`'s.
+			const steps = [
+				snapshot(null),
+				snapshot("a"),
+				snapshot("a"),
+				snapshot("b"),
+			];
+			assert.deepEqual(stepsByMark(steps, snapshot("b")), [steps[0], steps[2]]);
+			const back = [snapshot(null), snapshot("a"), snapshot("b")];
+			assert.equal(stepsByMark(back, snapshot("a")).length, 3);
 		});
 
 		test("the app sees where a previewing session started, until it's committed", () => {

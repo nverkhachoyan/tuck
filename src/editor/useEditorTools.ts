@@ -16,7 +16,7 @@ import type { ImageLayer } from "./layers/image/image";
 import type { Layer } from "./layers/layer";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useStore } from "./store";
-import { selectSelectedLayer } from "./store/editorSlice";
+import { type SessionSteps, selectSelectedLayer } from "./store/editorSlice";
 import type { ToolId } from "./toolSpec";
 
 /**
@@ -67,10 +67,12 @@ export function useEditorTools({
 	// ends its session and begins another.
 	const [reopened, setReopened] = useState(0);
 
+	const openSpec = tool === null ? null : definitionOf(tools[tool]).spec;
 	useToolSession(
 		tool,
 		reopened,
-		tool !== null && definitionOf(tools[tool]).spec.previews === true,
+		openSpec?.previews === true,
+		openSpec?.undoSteps ?? "one",
 	);
 
 	const closeTool = () => dispatchMode({ type: "endTool" });
@@ -289,17 +291,18 @@ export function useEditorTools({
 }
 
 /**
- * A tool's changes as one session: one undo step, or none if canceled.
- * Closing the tool any way, leaving the editor included, keeps them, unless
- * it only `previews` them, and each change of `reopened` starts a new
- * session for the same tool. Called
- * ahead of the tool hooks, so the session has begun before a tool's own
- * effects change the document.
+ * A tool's changes as one session: one undo step (or one per change or
+ * mark, as `steps` says), or none if canceled. Closing the tool any way,
+ * leaving the editor included, keeps them, unless it only `previews` them,
+ * and each change of `reopened` starts a new session for the same tool.
+ * Called ahead of the tool hooks, so the session has begun before a tool's
+ * own effects change the document.
  */
 export function useToolSession(
 	tool: ToolId | null,
 	reopened: number,
 	previews: boolean,
+	steps: SessionSteps,
 ) {
 	const { beginSession, commitSession, cancelSession } = useStore(
 		(state) => state.actions,
@@ -307,7 +310,15 @@ export function useToolSession(
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `reopened` ends the session and begins another.
 	useEffect(() => {
 		if (!tool) return;
-		beginSession(previews);
+		beginSession(previews, steps);
 		return previews ? cancelSession : commitSession;
-	}, [tool, reopened, previews, beginSession, commitSession, cancelSession]);
+	}, [
+		tool,
+		reopened,
+		previews,
+		steps,
+		beginSession,
+		commitSession,
+		cancelSession,
+	]);
 }
