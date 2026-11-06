@@ -316,7 +316,7 @@ describe("layerActionsFor", () => {
 			points: [0, 0, 10, 10],
 		});
 		assert.deepEqual(actions(drawing), ["pen", "eraser"]);
-		assert.deepEqual(actions({ ...drawing, locked: true }), ["pen"]);
+		assert.deepEqual(actions({ ...drawing, locked: true }), []);
 		const shape = createShapeLayer(
 			"rectangle",
 			{ x: 0, y: 0, rotation: 0, width: 40, height: 20 },

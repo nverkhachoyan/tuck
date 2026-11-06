@@ -86,11 +86,14 @@ export function useToolStroke({
 	const strokeId = useSharedValue(0);
 	const [landedStrokeId, setLandedStrokeId] = useState(0);
 	const handleStroke = useCallback(
-		(points: number[], id: number) => {
+		(points: number[], id: number, startedAt: number, endedAt: number) => {
 			if (!tool || points.length < 2) return;
 			setLandedStrokeId(id);
 			onToolInteractionEnd?.();
-			const intent = strokeIntent(tool, points, scale, documentSize);
+			const intent = strokeIntent(tool, points, scale, documentSize, {
+				startedAt,
+				endedAt,
+			});
 			switch (intent.type) {
 				case "finish":
 					onToolStroke?.(intent.stroke);

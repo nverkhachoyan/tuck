@@ -49,7 +49,13 @@ export function usePaintGesture({
 	viewport: DocumentViewport;
 	points: SharedValue<number[]>;
 	strokeId: SharedValue<number>;
-	onStroke: (points: number[], id: number) => void;
+	// When the finger landed and lifted, in milliseconds since the epoch.
+	onStroke: (
+		points: number[],
+		id: number,
+		startedAt: number,
+		endedAt: number,
+	) => void;
 	// Whether one finger landing at a point is another gesture's. A worklet.
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
 	// The highlighter: hold still, or hold Shift on web, and it draws a line.
@@ -65,6 +71,7 @@ export function usePaintGesture({
 	const generation = useSharedValue(0);
 	const anchorX = useSharedValue(0);
 	const anchorY = useSharedValue(0);
+	const startedAt = useSharedValue(0);
 	const tick = Platform.OS !== "web";
 
 	// Rounded as the model rounds strokes, so a saved stroke is what was drawn.
@@ -152,6 +159,7 @@ export function usePaintGesture({
 			aside.value = standsAside?.(event.x, event.y) ?? false;
 			straight.value = false;
 			moved.value = false;
+			startedAt.value = Date.now();
 			strokeId.value += 1;
 			points.value =
 				cancelled.value || aside.value ? [] : toDocument(event.x, event.y);
@@ -181,7 +189,13 @@ export function usePaintGesture({
 		onFinalize: () => {
 			generation.value += 1;
 			if (!cancelled.value && !aside.value) {
-				scheduleOnRN(onStroke, points.value, strokeId.value);
+				scheduleOnRN(
+					onStroke,
+					points.value,
+					strokeId.value,
+					startedAt.value,
+					Date.now(),
+				);
 			}
 		},
 	});

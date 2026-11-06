@@ -396,6 +396,42 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
+	test("reads a version 5 session drawing of mixed tips as one drawing, before marks", () => {
+		const document = documentWithText();
+		const session = drawingLayer();
+		session.strokes.push(
+			{
+				type: "pen",
+				color: "#FFD60A",
+				width: 40,
+				points: [0, 40, 80, 40],
+				tip: "marker",
+			},
+			{
+				type: "pen",
+				color: "#0A84FF",
+				width: 8,
+				points: [0, 80, 60, 80],
+				tip: "neon",
+			},
+		);
+		document.layers.push(session);
+		const saved = mapImageUris(document, () => "original.jpg");
+		const json = JSON.stringify({
+			version: 5,
+			createdAt: 1,
+			updatedAt: 2,
+			document: saved,
+		});
+		const project = parseSavedProject(json);
+		assert.deepEqual(project?.document, saved);
+		assert.equal(
+			project?.document.layers.filter((layer) => layer.type === "drawing")
+				.length,
+			1,
+		);
+	});
+
 	test("reads redactions: boxes, brushed strokes, and masks, solid, blurred, and pixelated", () => {
 		const document = documentWithText();
 		const strokes = createRedactionStrokes(

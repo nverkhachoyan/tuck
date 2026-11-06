@@ -45,11 +45,17 @@ export type CanvasTool =
 /**
  * A finished stroke with a tool: the tool, with what the stroke made, in
  * document space: a brush's points, a redaction's box, a shape's placement,
- * or the point picked. An eraser's also has how far a touch reaches in
+ * or the point picked. A pen's also has when it began and ended, which
+ * decide the mark it joins; an eraser's, how far a touch reaches in
  * document units, which the Stroke eraser hits strokes within.
  */
 export type ToolStroke =
-	| (Extract<CanvasTool, { type: "draw" | "redactBrush" | "cutBrush" }> & {
+	| (Extract<CanvasTool, { type: "draw" }> & {
+			points: number[];
+			startedAt: number;
+			endedAt: number;
+	  })
+	| (Extract<CanvasTool, { type: "redactBrush" | "cutBrush" }> & {
 			points: number[];
 	  })
 	| (Extract<CanvasTool, { type: "erase" }> & {

@@ -56,7 +56,23 @@ describe("drawStroke", () => {
 		assert.equal(drawing.strokes.length, 1);
 	});
 
-	test("joins the selected drawing", () => {
+	test("starts a new drawing for no mark, a locked one, a missing one, or another blend", () => {
+		const first = drawStroke(blank(), null, pen);
+		const { id } = top<DrawingLayer>(first);
+		assert.equal(drawStroke(first, null, pen).layers.length, 2);
+		assert.equal(drawStroke(first, "missing", pen).layers.length, 2);
+		const locked = {
+			...first,
+			layers: first.layers.map((layer) => ({ ...layer, locked: true })),
+		};
+		assert.equal(drawStroke(locked, id, pen).layers.length, 2);
+		assert.equal(
+			drawStroke(first, id, { ...pen, tip: "marker" }).layers.length,
+			2,
+		);
+	});
+
+	test("joins the drawing it's given", () => {
 		const first = drawStroke(blank(), null, pen);
 		const { id } = top<DrawingLayer>(first);
 		const next = drawStroke(first, id, { ...pen, points: [] });

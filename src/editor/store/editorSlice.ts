@@ -290,10 +290,14 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			addOnTop("editor/duplicateSelectedLayer", duplicateLayer(layer));
 		},
 
-		// A new drawing is selected, so the next stroke joins it too.
-		drawStroke: (stroke: Stroke & { type: "pen" }) =>
+		// Joins the mark `joinId` (see `continuesMark`) or starts one on top.
+		// The mark it lands in is selected, so Pen can ask about it next.
+		drawStroke: (
+			stroke: Stroke & { type: "pen" },
+			joinId: string | null = null,
+		) =>
 			setDocument("editor/drawStroke", (document) =>
-				drawStroke(document, get().selectedLayerId, stroke),
+				drawStroke(document, joinId, stroke),
 			),
 
 		// Each swipe is one step; a drawing it erases away, selected or not,

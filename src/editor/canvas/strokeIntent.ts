@@ -29,13 +29,14 @@ export type StrokeIntent =
 /**
  * What a stroke of at least one point pair means for `tool`: its `points`
  * are flat pairs in document space, measured against the tap slop at the
- * view's `scale`.
+ * view's `scale`; `times` are when it began and ended, which a pen's keeps.
  */
 export function strokeIntent(
 	tool: CanvasTool,
 	points: number[],
 	scale: number,
 	documentSize: Size,
+	times: { startedAt: number; endedAt: number } = { startedAt: 0, endedAt: 0 },
 ): StrokeIntent {
 	const end = { x: points[points.length - 2], y: points[points.length - 1] };
 	if (tool.type === "pickColor") {
@@ -52,6 +53,9 @@ export function strokeIntent(
 		return staysWithin(points, TAP_SLOP_PX / scale)
 			? { type: "finish", stroke: { ...tool, point: start } }
 			: { type: "none" };
+	}
+	if (tool.type === "draw") {
+		return { type: "finish", stroke: { ...tool, points, ...times } };
 	}
 	if (tool.type === "erase") {
 		const reach = HIT_PADDING_PX / scale;
