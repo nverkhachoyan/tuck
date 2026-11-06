@@ -1,6 +1,7 @@
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import {
 	BackdropFilter,
+	Group,
 	ImageFilter,
 	Path,
 	Picture,
@@ -117,14 +118,17 @@ function LiveFilteredBox({
 /**
  * A shape that follows the live values while it's selected, as `LiveLayer`
  * places it: its box's size as its sides are dragged, or its length as an
- * end is.
+ * end is. `opacity` dims it while the Eraser crosses it.
  */
 export function LiveShape({
 	layer,
 	live,
+	opacity = 1,
 }: {
 	layer: ShapeLayer;
 	live: LiveTransform;
+	// A shape has no blend, so fading it as a group is safe.
+	opacity?: number | DerivedValue<number>;
 }) {
 	const { id, shape, strokeWidth } = layer;
 	const { halfWidth, halfHeight } = shapeBox(layer);
@@ -132,7 +136,11 @@ export function LiveShape({
 		const box = liveBoxOf(live, id, { halfWidth, halfHeight });
 		return shapePath(shape, box.halfWidth, box.halfHeight, strokeWidth);
 	}, [id, shape, halfWidth, halfHeight, strokeWidth]);
-	return <Path path={path} color={layer.color} />;
+	return (
+		<Group opacity={opacity}>
+			<Path path={path} color={layer.color} />
+		</Group>
+	);
 }
 
 /**

@@ -436,7 +436,7 @@ describe("editorSlice", () => {
 	});
 
 	describe("drawing", () => {
-		const pen = (points: number[]): Stroke => ({
+		const pen = (points: number[]): Stroke & { type: "pen" } => ({
 			type: "pen",
 			color: "#FF3B30",
 			width: 10,
@@ -471,21 +471,87 @@ describe("editorSlice", () => {
 			assert.equal(drawings(store).length, 2);
 		});
 
-		test("an eraser only erases the selected drawing", () => {
+		const eraser = (
+			points: number[],
+			width = 30,
+		): Stroke & { type: "eraser" } => ({
+			type: "eraser",
+			width,
+			points,
+		});
+
+		test("an eraser erases every drawing it crosses, with nothing selected", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;
-			const eraser: Stroke = { type: "eraser", width: 30, points: [0, 0] };
 			actions.selectLayer(null);
 			const before = store.getState().document;
-			actions.drawStroke(eraser);
-			assert.equal(store.getState().document, before);
+			actions.eraseStroke(eraser([0, 0]), null);
+			assert.equal(store.getState().document, before, "nothing to erase");
 
 			actions.drawStroke(pen([0, 0, 100, 100]));
-			actions.drawStroke(eraser);
+			actions.selectLayer(null);
+			actions.drawStroke(pen([0, 100, 100, 0]));
+			actions.selectLayer(null);
+			const steps = store.getState().past.length;
+			actions.eraseStroke(eraser([0, 50, 100, 50], 20), null);
 			assert.deepEqual(
-				drawings(store)[0].strokes.map((stroke) => stroke.type),
-				["pen", "eraser"],
+				drawings(store).map((drawing) =>
+					drawing.strokes.map((stroke) => stroke.type),
+				),
+				[
+					["pen", "eraser"],
+					["pen", "eraser"],
+				],
 			);
+			assert.equal(store.getState().past.length, steps + 1, "one step a swipe");
+			assert.equal(store.getState().selectedLayerId, null);
+		});
+
+		test("an eraser leaves locked and hidden drawings", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.selectLayer(null);
+			actions.drawStroke(pen([0, 100, 100, 0]));
+			const [locked, hidden] = drawings(store);
+			actions.setLayerLocked(locked.id, true);
+			actions.setLayerHidden(hidden.id, true);
+			const before = store.getState().document;
+			actions.eraseStroke(eraser([0, 50, 100, 50]), null);
+			assert.equal(store.getState().document, before);
+		});
+
+		test("erasing a selected drawing away clears the selection", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			const [drawing] = drawings(store);
+			assert.equal(store.getState().selectedLayerId, drawing.id);
+			actions.eraseStroke(eraser([0, 0, 100, 100], 40), null);
+			assert.equal(drawings(store).length, 0);
+			assert.equal(store.getState().selectedLayerId, null);
+			actions.undo();
+			assert.equal(drawings(store)[0], drawing);
+		});
+
+		test("an eraser never reaches a brushed redaction", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.paintRedaction(
+				{ type: "pen", width: 20, points: [0, 50, 100, 50] },
+				{ type: "solid", color: "#000000" },
+			);
+			const redaction = store.getState().document?.layers.at(-1);
+			assert.equal(
+				redaction?.type === "redaction" && redaction.shape,
+				"strokes",
+			);
+			const before = store.getState().document;
+			actions.eraseStroke(eraser([0, 50, 100, 50], 40), null);
+			assert.equal(store.getState().document, before);
+			if (redaction)
+				actions.eraseStroke(eraser([0, 50, 100, 50], 40), redaction.id);
+			assert.equal(store.getState().document, before);
 		});
 
 		test("each stroke is an undo step, back to no drawing at all", () => {
@@ -847,12 +913,10 @@ describe("editorSlice", () => {
 			const [box, arrow] = shapes(store);
 			const steps = store.getState().past.length;
 			// Across the rectangle's top edge, at y = 250, and nowhere near the arrow.
-			const eraser: Stroke = {
-				type: "eraser",
-				width: 20,
-				points: [400, 200, 400, 300],
-			};
-			actions.drawStroke(eraser);
+			actions.eraseStroke(
+				{ type: "eraser", width: 20, points: [400, 200, 400, 300] },
+				null,
+			);
 			assert.deepEqual(shapes(store), [arrow]);
 			assert.equal(store.getState().past.length, steps + 1);
 			// The arrow was selected, and still is.
@@ -866,11 +930,10 @@ describe("editorSlice", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;
 			actions.addShape("line", place, style);
-			actions.drawStroke({
-				type: "eraser",
-				width: 20,
-				points: [400, 300],
-			});
+			actions.eraseStroke(
+				{ type: "eraser", width: 20, points: [400, 300] },
+				null,
+			);
 			assert.deepEqual(shapes(store), []);
 			assert.equal(store.getState().selectedLayerId, null);
 		});
@@ -884,15 +947,14 @@ describe("editorSlice", () => {
 			actions.setLayerLocked(locked.id, true);
 			actions.setLayerHidden(hidden.id, true);
 			const before = store.getState().document;
-			actions.drawStroke({
-				type: "eraser",
-				width: 20,
-				points: [400, 300],
-			});
+			actions.eraseStroke(
+				{ type: "eraser", width: 20, points: [400, 300] },
+				null,
+			);
 			assert.equal(store.getState().document, before);
 		});
 
-		test("an eraser erases in the selected drawing and removes shapes together", () => {
+		test("one swipe erases a drawing and removes a shape together, unselected", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;
 			actions.addShape("line", place, style);
@@ -902,12 +964,12 @@ describe("editorSlice", () => {
 				width: 10,
 				points: [0, 0, 100, 100],
 			});
+			actions.selectLayer(null);
 			const steps = store.getState().past.length;
-			actions.drawStroke({
-				type: "eraser",
-				width: 20,
-				points: [50, 50, 400, 300],
-			});
+			actions.eraseStroke(
+				{ type: "eraser", width: 20, points: [50, 50, 400, 300] },
+				null,
+			);
 			assert.deepEqual(shapes(store), []);
 			const drawing = store
 				.getState()
@@ -1109,7 +1171,7 @@ describe("editorSlice", () => {
 		});
 	});
 	describe("sessions", () => {
-		const pen = (points: number[]): Stroke => ({
+		const pen = (points: number[]): Stroke & { type: "pen" } => ({
 			type: "pen",
 			color: "#FF3B30",
 			width: 10,

@@ -94,6 +94,35 @@ describe("findLayerAt", () => {
 		assert.equal(findLayerAt(targets, { x: 10, y: 2 })?.id, "redaction");
 		assert.equal(findLayerAt(targets, { x: 10, y: 30 })?.id, "photo");
 	});
+
+	// The line's left half erased.
+	const erased = [
+		...line.strokes,
+		{ type: "eraser" as const, width: 30, points: [-60, 0, 0, 0] },
+	];
+
+	test("passes through erased ink to the layer under it", () => {
+		const targets = [
+			target("photo", 0, 0),
+			{ ...target("drawing", 0, 0, { strokes: erased }), hitPadding: 14 },
+		];
+		assert.equal(findLayerAt(targets, { x: -30, y: 0 })?.id, "photo");
+		assert.equal(findLayerAt(targets, { x: 30, y: 0 })?.id, "drawing");
+	});
+
+	test("passes through where a brushed redaction was uncovered", () => {
+		const targets = [
+			target("photo", 0, 0),
+			target("redaction", 0, 0, {
+				strokes: [
+					{ type: "pen", width: 10, points: [-50, 0, 50, 0] },
+					{ type: "eraser", width: 30, points: [-60, 0, 0, 0] },
+				],
+			}),
+		];
+		assert.equal(findLayerAt(targets, { x: -30, y: 0 })?.id, "photo");
+		assert.equal(findLayerAt(targets, { x: 30, y: 0 })?.id, "redaction");
+	});
 });
 
 describe("hitsLayer", () => {

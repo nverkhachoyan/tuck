@@ -13,12 +13,13 @@ import {
 	Rect,
 	rect,
 	Skia,
+	type SkPath,
 } from "react-native-skia";
 import { colors } from "@/ui/theme";
 import { type Point, rectFromCorners } from "../document/geometry";
 import { identityTransform } from "../layers/base";
 import { BrushStroke, strokePath } from "../layers/drawing/DrawingLayerView";
-import type { Brush } from "../layers/drawing/drawing";
+import type { PenBrush } from "../layers/drawing/drawing";
 import type { ColorMatrix } from "../layers/image/adjustments";
 import { MaskStrokePath } from "../layers/image/ImageLayerView";
 import type { CutStroke } from "../layers/image/image";
@@ -38,7 +39,7 @@ import type {
 	RedactionStrokes,
 } from "../layers/redaction/redaction";
 import { shapePath } from "../layers/shape/ShapeLayerView";
-import { isLineShape } from "../layers/shape/shape";
+import { isLineShape, type ShapeLayer } from "../layers/shape/shape";
 import { lineReach } from "../layers/shape/shapeGeometry";
 import type { CanvasTool } from "./canvasTool";
 import { LiveRedaction, LiveShape } from "./LiveLayerContent";
@@ -47,26 +48,36 @@ import { SELECTION_STROKE_PX, useScreenPixels } from "./SelectionOverlay";
 import { shapeFromDrag } from "./shapeDrag";
 
 /**
- * A stroke being painted with a tool: its points so far in document space,
- * and its id. It's drawn into `targetId`'s layer, or over everything when
- * it will start a new one; a box runs from its first point to its last.
- * Once the document has it (`landedId`), the scene stops drawing it live in
- * the same update that draws it from the document. Clearing `points`
- * instead would blink: a shared value redraws the canvas before the
- * canvas's own renderer has the new document.
+ * A stroke being painted with a tool, drawn live until the document has it:
+ * - `points` so far in document space, and its `id`; a box runs from its
+ *   first point to its last.
+ * - `landedId`: once the document has the stroke, the scene stops drawing
+ *   it live in the same update that draws it from the document. Clearing
+ *   `points` instead would blink: a shared value redraws the canvas before
+ *   the canvas's own renderer has the new document.
+ * - `reaches`: the layers it's drawn into as it's painted.
+ * - `startsLayer`: drawn over everything instead, as it will start a layer.
+ * - `erasePath`: the Eraser's line, built once for every drawing it reaches.
+ * - `crossed`: the shapes the Eraser has crossed, dimmed until it lifts.
  */
 export type LiveStroke = {
 	tool: CanvasTool;
 	points: SharedValue<number[]>;
 	id: SharedValue<number>;
 	landedId: number;
-	targetId: string | null;
+	reaches: (layer: Layer) => boolean;
+	startsLayer: boolean;
+	erasePath: DerivedValue<SkPath> | null;
+	crossed: SharedValue<string[]> | null;
 };
 
+// How far a shape the Eraser crosses fades before it goes.
+const CROSSED_OPACITY = 1 / 3;
+
 /**
- * A layer's content, with `stroke` joining it as it's painted when the
- * layer is its target. A redaction or a shape follows the live values while
- * selected.
+ * A layer's content, with `stroke` joining it as it's painted when it
+ * reaches the layer. A redaction or a shape follows the live values while
+ * selected, and a shape the Eraser crosses dims.
  */
 export function StrokeTarget({
 	layer,
@@ -99,7 +110,13 @@ export function StrokeTarget({
 			<LiveRedaction layer={layer} live={live} onImageError={onImageError} />
 		);
 	}
-	if (layer.type === "shape") return <LiveShape layer={layer} live={live} />;
+	if (layer.type === "shape") {
+		return stroke?.crossed ? (
+			<CrossedShape layer={layer} live={live} stroke={stroke} />
+		) : (
+			<LiveShape layer={layer} live={live} />
+		);
+	}
 	if (stroke && tool?.type === "cutBrush" && layer.type === "image") {
 		return (
 			<LayerContent
@@ -133,14 +150,23 @@ export function StrokeTarget({
 			uri={uri}
 			stroke={
 				stroke &&
-				tool?.type === "draw" && (
+				(tool?.type === "draw" || tool?.type === "erase") && (
 					<Group transform={toInverseTransformList(layer.transform)}>
-						<LivePath
-							key={stroke.landedId}
-							stroke={stroke}
-							brush={tool.brush}
-							full={tool.brush.type === "pen" && tool.brush.tip === "marker"}
-						/>
+						{tool.type === "draw" ? (
+							<LivePath
+								key={stroke.landedId}
+								stroke={stroke}
+								brush={tool.brush}
+								full={tool.brush.tip === "marker"}
+							/>
+						) : (
+							stroke.erasePath && (
+								<BrushStroke
+									path={stroke.erasePath}
+									brush={{ type: "eraser", width: tool.width }}
+								/>
+							)
+						)}
 					</Group>
 				)
 			}
@@ -151,10 +177,29 @@ export function StrokeTarget({
 	);
 }
 
-/**
- * A stroke that will start a new layer, over everything as it's painted.
- * An eraser has nothing to erase until there's a layer.
- */
+/** A shape at a third of its strength while the Eraser has crossed it. */
+function CrossedShape({
+	layer,
+	live,
+	stroke,
+}: {
+	layer: ShapeLayer;
+	live: LiveTransform;
+	stroke: LiveStroke;
+}) {
+	const { id } = layer;
+	const { crossed } = stroke;
+	const opacity = useDerivedValue(
+		() =>
+			stroke.id.value > stroke.landedId && crossed?.value.includes(id)
+				? CROSSED_OPACITY
+				: 1,
+		[id, stroke],
+	);
+	return <LiveShape layer={layer} live={live} opacity={opacity} />;
+}
+
+/** A stroke that will start a new layer, over everything as it's painted. */
 export function NewLayerStroke({
 	stroke,
 	viewScale,
@@ -165,7 +210,6 @@ export function NewLayerStroke({
 	const { tool } = stroke;
 	switch (tool.type) {
 		case "draw": {
-			if (tool.brush.type !== "pen") return null;
 			const path = (
 				<LivePath
 					stroke={stroke}
@@ -191,7 +235,9 @@ export function NewLayerStroke({
 			);
 		case "drawShape":
 			return <LiveNewShape stroke={stroke} tool={tool} />;
-		// The cut's tools always have their image.
+		// The cut's tools always have their image, and the Eraser has nothing
+		// to erase until there's a layer.
+		case "erase":
 		case "pickColor":
 		case "cutBrush":
 		case "pickSubject":
@@ -225,7 +271,7 @@ function LivePath({
 	full = false,
 }: {
 	stroke: LiveStroke;
-	brush: Brush;
+	brush: PenBrush;
 	full?: boolean;
 }) {
 	const path = useDerivedValue(() => strokePath(unlanded(stroke)));

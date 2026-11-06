@@ -8,5 +8,7 @@ export const eraserSpec = {
 	icon: "eraser",
 	key: "X",
 	shortcut: "Eraser",
-	actsOn: (layer) => layer.type === "drawing",
+	// Erase on a selected drawing waits for the Eraser to keep to it: opened
+	// from the toolbar, it reaches every drawing.
+	actsOn: () => false,
 } as const satisfies ToolSpec;

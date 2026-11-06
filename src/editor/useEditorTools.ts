@@ -146,6 +146,7 @@ export function useEditorTools({
 			if (image) definition.run(controller, image);
 			return;
 		}
+		if (definition.startsUnselected) selectLayer(null);
 		definition.prepare?.(controller);
 		if (definition.started && image) {
 			const openOnImage =

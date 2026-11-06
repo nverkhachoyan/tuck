@@ -112,6 +112,8 @@ export type NoticeAction = { label: string; onPress: () => void };
  * - `done`: what Done does before the tool closes.
  * - `deselectOnDone`: whether Done lets go of the selected layer, so a
  *   stray drag can't move what the tool just made.
+ * - `startsUnselected`: whether opening it lets go of the selected layer
+ *   first, as the Eraser does, since it works on every layer it reaches.
  * - `reset`: what the header's Reset does while it's open, or undefined to
  *   hide Reset.
  * - `announcement`: what the editor announces for it.
@@ -142,6 +144,7 @@ export type ToolDefinition<C> = {
 	doneVariant?: (controller: C) => "primary" | "secondary" | undefined;
 	done?: (controller: C) => void;
 	deselectOnDone?: boolean;
+	startsUnselected?: boolean;
 	reset?: (controller: C) => (() => void) | undefined;
 	announcement?: (controller: C) => string | null;
 	busy?: (controller: C) => boolean;

@@ -3,15 +3,21 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createDrawingLayer } from "../../layers/drawing/drawing.ts";
 import {
+	createImageLayer,
+	createStickerLayer,
+} from "../../layers/image/image.ts";
+import {
 	createRedactionBox,
 	createRedactionStrokes,
 } from "../../layers/redaction/redaction.ts";
 import { createShapeLayer } from "../../layers/shape/shape.ts";
+import { createTextLayer } from "../../layers/text/text.ts";
 import {
 	type CanvasTool,
 	canAddTo,
 	cutImageId,
 	restyles,
+	strokeReaches,
 } from "../canvasTool.ts";
 
 const pen: CanvasTool = {
@@ -86,6 +92,54 @@ describe("canAddTo", () => {
 		assert.equal(canAddTo(pen, multiplying), false);
 		assert.equal(canAddTo(marker, drawing), true);
 		assert.equal(canAddTo(marker, multiplying), false);
+	});
+});
+
+describe("strokeReaches", () => {
+	const erase: CanvasTool = { type: "erase", width: 30, scope: null };
+	const canvas = { width: 400, height: 300 };
+
+	test("the Eraser reaches unlocked drawings, and nothing else", () => {
+		assert.equal(strokeReaches(erase, drawing), true);
+		assert.equal(
+			strokeReaches(erase, { ...drawing, blend: "multiply" as const }),
+			true,
+		);
+		assert.equal(strokeReaches(erase, { ...drawing, locked: true }), false);
+		for (const layer of [
+			redaction,
+			strokes,
+			shape,
+			createImageLayer(canvas, "photo.jpg", 400, 300, true),
+			createStickerLayer(canvas, "sticker.png", 100, 100, false),
+			createTextLayer(canvas, "Total"),
+		]) {
+			assert.equal(strokeReaches(erase, layer), false, layer.type);
+		}
+	});
+
+	test("a scoped Eraser reaches only its drawing", () => {
+		const other = createDrawingLayer({
+			type: "pen",
+			color: "#FF3B30",
+			width: 10,
+			points: [40, 40, 60, 60],
+		});
+		const scoped: CanvasTool = { type: "erase", width: 30, scope: drawing.id };
+		assert.equal(strokeReaches(scoped, drawing), true);
+		assert.equal(strokeReaches(scoped, other), false);
+		const onRedaction: CanvasTool = {
+			type: "erase",
+			width: 30,
+			scope: strokes.id,
+		};
+		assert.equal(strokeReaches(onRedaction, strokes), false);
+	});
+
+	test("other tools reach what they can add to", () => {
+		assert.equal(strokeReaches(pen, drawing), true);
+		assert.equal(strokeReaches(redactBrush, strokes), true);
+		assert.equal(strokeReaches(pen, strokes), false);
 	});
 });
 

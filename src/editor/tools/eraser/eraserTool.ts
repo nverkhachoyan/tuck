@@ -10,5 +10,7 @@ export const eraserTool = defineTool<EraserController>({
 	canvasInput: (eraser) => eraser.canvasInput,
 	finishStroke: (eraser, stroke) => eraser.finishStroke(stroke),
 	deselectOnDone: true,
+	startsUnselected: true,
+	announcement: (eraser) => eraser.news,
 	stepSize: (eraser, step) => eraser.stepSize(step),
 });

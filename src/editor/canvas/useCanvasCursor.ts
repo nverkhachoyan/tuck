@@ -1,4 +1,7 @@
 import { useCallback, useState } from "react";
+import { Platform } from "react-native";
+import { useHoverGesture } from "react-native-gesture-handler";
+import { useSharedValue } from "react-native-reanimated";
 import type { Layer } from "../layers/layer";
 import { type CanvasCursor, cursorForHandle } from "./canvasCursor";
 import type { CanvasLookups } from "./canvasTool";
@@ -67,4 +70,34 @@ export function useCanvasCursor({
 	);
 	const handleHoverEnd = useCallback(() => setCursor("default"), []);
 	return { cursor, setCursor, handleHover, handleHoverEnd };
+}
+
+/**
+ * Where the Eraser's ring is drawn on web: the pointer over the canvas, in
+ * the canvas view's pixels, while a mouse hovers there (`shown`). It follows
+ * the pointer whatever the tool, since a hover begins only as the pointer
+ * enters: the Eraser opened from its key, over the canvas, still shows its
+ * ring. The canvas draws it only for the Eraser, and hides it during a drag.
+ */
+export function useEraserRing() {
+	const x = useSharedValue(0);
+	const y = useSharedValue(0);
+	const shown = useSharedValue(false);
+	const hover = useHoverGesture({
+		enabled: Platform.OS === "web",
+		onBegin: (event) => {
+			x.value = event.x;
+			y.value = event.y;
+			shown.value = true;
+		},
+		onUpdate: (event) => {
+			x.value = event.x;
+			y.value = event.y;
+			shown.value = true;
+		},
+		onFinalize: () => {
+			shown.value = false;
+		},
+	});
+	return { hover, x, y, shown };
 }

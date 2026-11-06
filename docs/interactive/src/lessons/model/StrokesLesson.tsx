@@ -13,6 +13,7 @@ import {
 	type DrawingLayer,
 	type Stroke,
 } from "@src/editor/layers/drawing/drawing.ts";
+import { eraseStroke } from "@src/editor/layers/drawing/drawingEdits.ts";
 import {
 	addStroke,
 	drawingBox,
@@ -91,6 +92,24 @@ export function StrokesLesson() {
 			const before = current.layer;
 			// An eraser can't start a drawing: there's nothing to erase yet.
 			if (!before && drawn.type !== "pen") return current;
+			if (before && drawn.type === "eraser") {
+				// As the editor's Eraser does, kept to this drawing: it may
+				// prune strokes it clears, or remove the drawing.
+				const erased = eraseStroke(
+					{ ...PHOTO, layers: [before] },
+					drawn,
+					before.id,
+				).layers.find((each) => each.type === "drawing");
+				const kept = erased?.type === "drawing" ? erased : null;
+				if (kept === before) return current;
+				return {
+					...current,
+					layer: kept,
+					last: null,
+					erased: true,
+					probe: null,
+				};
+			}
 			const after = before
 				? addStroke(before, drawn)
 				: createDrawingLayer(drawn as Stroke & { type: "pen" });
@@ -111,7 +130,6 @@ export function StrokesLesson() {
 					scale: before?.transform.scaleX ?? 1,
 				},
 				drewTransformed: current.drewTransformed || transformed,
-				erased: current.erased || drawn.type === "eraser",
 				probe: null,
 			};
 		});
@@ -196,9 +214,11 @@ export function StrokesLesson() {
 			body: (
 				<p>
 					Switch to the eraser and erase through the ink. An eraser is stored as
-					a stroke too, so it moves with the drawing and can be undone. And{" "}
-					<code>drawingBox</code> only counts pens, so erasing never shrinks the
-					box.
+					a stroke too, so it moves with the drawing and can be undone. A stroke
+					erased in part keeps its place in <code>drawingBox</code>, which only
+					counts pens. Erase one stroke away entirely and{" "}
+					<code>pruneErased</code> drops it, with any eraser left with nothing
+					to clear, so the box shrinks; erase everything and the drawing goes.
 				</p>
 			),
 			done: (s) => s.erased,
@@ -210,7 +230,9 @@ export function StrokesLesson() {
 					Draw a loop, switch to <strong>Probe</strong>, and press its middle.
 					The point is inside the drawing's box, but not near its ink. The
 					editor's <code>findLayerAt</code> asks both, so a tap inside a circle
-					drawn around something reaches what's under it.
+					drawn around something reaches what's under it. Probe where you
+					erased, too: <code>hitTestDrawing</code> skips ink a later eraser
+					cleared, so that tap passes through as well.
 				</p>
 			),
 			done: (s) => s.probedLoop,
@@ -247,6 +269,16 @@ export function StrokesLesson() {
 			label: "drawStroke",
 			file: "src/editor/layers/drawing/drawingEdits.ts",
 			name: "drawStroke",
+		},
+		{
+			label: "eraseStroke",
+			file: "src/editor/layers/drawing/drawingEdits.ts",
+			name: "eraseStroke",
+		},
+		{
+			label: "pruneErased",
+			file: "src/editor/layers/drawing/drawing.ts",
+			name: "pruneErased",
 		},
 		{
 			label: "findLayerAt",
