@@ -13,6 +13,7 @@ import {
 	nearLine,
 	recenterDrawing,
 	segmentsNear,
+	strokesHitBy,
 } from "../strokes.ts";
 import {
 	createDrawingLayer,
@@ -50,6 +51,36 @@ export function drawStroke(
 	return addLayerOnTop(document, createDrawingLayer(stroke));
 }
 
+// Whether a path in document space stays clear of a drawing's box, padded
+// by `reach` in the layer's space.
+function missesBox(
+	layer: DrawingLayer,
+	points: number[],
+	reach: number,
+): boolean {
+	const box = drawingBox(layer);
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+	for (let i = 0; i < points.length; i += 2) {
+		const local = toLayerSpace(layer.transform, {
+			x: points[i],
+			y: points[i + 1],
+		});
+		minX = Math.min(minX, local.x);
+		maxX = Math.max(maxX, local.x);
+		minY = Math.min(minY, local.y);
+		maxY = Math.max(maxY, local.y);
+	}
+	return (
+		maxX < -box.halfWidth - reach ||
+		minX > box.halfWidth + reach ||
+		maxY < -box.halfHeight - reach ||
+		minY > box.halfHeight + reach
+	);
+}
+
 // Whether an eraser stroke in document space passes over any of a
 // drawing's pens, generously: within its half width plus how far each
 // pen's ink reaches, so nothing cleared live comes back once it lands.
@@ -62,29 +93,7 @@ function erasesDrawing(
 	const pens = layer.strokes.filter((pen) => pen.type === "pen");
 	if (pens.length === 0) return false;
 	const reach = half + Math.max(...pens.map(visibleReach));
-	const box = drawingBox(layer);
-	let minX = Infinity;
-	let minY = Infinity;
-	let maxX = -Infinity;
-	let maxY = -Infinity;
-	for (let i = 0; i < stroke.points.length; i += 2) {
-		const local = toLayerSpace(transform, {
-			x: stroke.points[i],
-			y: stroke.points[i + 1],
-		});
-		minX = Math.min(minX, local.x);
-		maxX = Math.max(maxX, local.x);
-		minY = Math.min(minY, local.y);
-		maxY = Math.max(maxY, local.y);
-	}
-	if (
-		maxX < -box.halfWidth - reach ||
-		minX > box.halfWidth + reach ||
-		maxY < -box.halfHeight - reach ||
-		minY > box.halfHeight + reach
-	) {
-		return false;
-	}
+	if (missesBox(layer, stroke.points, reach)) return false;
 	return segmentsNear(stroke.points, transform, half, (point) =>
 		pens.some((pen) => nearLine(pen.points, point, half + visibleReach(pen))),
 	);
@@ -130,6 +139,63 @@ export function eraseStroke(
 			layer.type === "shape" &&
 			scope === null &&
 			erasesShape(layer, stroke.points, stroke.width)
+		) {
+			changed = true;
+		} else {
+			layers.push(layer);
+		}
+	}
+	return changed ? withLayers(document, layers) : document;
+}
+
+/**
+ * A Stroke eraser's path in document space, `reach` the touch's in document
+ * units, through every unlocked, visible drawing it passes over, or only
+ * `scope`'s when given:
+ * - each pen stroke whose remaining ink it touches (`strokesHitBy`), and
+ *   `removes` allows, goes whole; strokes left pointless are dropped
+ *   (`pruneErased`), and a drawing left with no ink is removed;
+ * - with no `scope`, each unlocked, visible shape it passes over goes
+ *   whole, as with `eraseStroke`;
+ * - it writes no eraser stroke, and never touches another layer type.
+ * The same document when nothing changed.
+ */
+export function eraseWholeStrokes(
+	document: EditorDocument,
+	points: number[],
+	reach: number,
+	scope: string | null,
+	removes: (stroke: Stroke) => boolean = () => true,
+): EditorDocument {
+	if (points.length < 2) return document;
+	let changed = false;
+	const layers: Layer[] = [];
+	for (const layer of document.layers) {
+		if (layer.locked || layer.hidden) {
+			layers.push(layer);
+			continue;
+		}
+		if (layer.type === "drawing" && (scope === null || layer.id === scope)) {
+			const hit = missesBox(layer, points, reach / layer.transform.scaleX)
+				? []
+				: strokesHitBy(layer.strokes, layer.transform, points, reach).filter(
+						(index) => removes(layer.strokes[index]),
+					);
+			if (hit.length === 0) {
+				layers.push(layer);
+				continue;
+			}
+			changed = true;
+			const strokes = pruneErased(
+				layer.strokes.filter((_, index) => !hit.includes(index)),
+			);
+			if (strokes.some((kept) => kept.type === "pen")) {
+				layers.push(recenterDrawing({ ...layer, strokes }));
+			}
+		} else if (
+			layer.type === "shape" &&
+			scope === null &&
+			erasesShape(layer, points, reach * 2)
 		) {
 			changed = true;
 		} else {

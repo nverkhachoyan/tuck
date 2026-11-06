@@ -17,14 +17,20 @@ import type { Handle } from "./handleGeometry.ts";
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
- * pen, erases `width` across through every unlocked drawing (or only
- * `scope`'s, when it names one) and shape, drags out a shape or a redaction's box, paints a redaction's
- * strokes, picks a color where the finger lifts, paints the cut of the image
- * `layerId`, or picks the subject to cut out of it with a tap.
+ * pen; erases through every unlocked drawing (or only `scope`'s, when it
+ * names one) and shape, `width` across ("eraser") or taking each stroke it
+ * touches whole ("stroke"); drags out a shape or a redaction's box; paints a
+ * redaction's strokes; picks a color where the finger lifts; paints the cut
+ * of the image `layerId`; or picks the subject to cut out of it with a tap.
  */
 export type CanvasTool =
 	| { type: "draw"; brush: PenBrush }
-	| { type: "erase"; width: number; scope: string | null }
+	| {
+			type: "erase";
+			mode: "eraser" | "stroke";
+			width: number;
+			scope: string | null;
+	  }
 	| { type: "drawShape"; shape: ShapeKind; style: ShapeStyle }
 	| { type: "pickColor" }
 	| { type: "redactBox"; effect: RedactionEffect }
@@ -39,14 +45,16 @@ export type CanvasTool =
 /**
  * A finished stroke with a tool: the tool, with what the stroke made, in
  * document space: a brush's points, a redaction's box, a shape's placement,
- * or the point picked.
+ * or the point picked. An eraser's also has how far a touch reaches in
+ * document units, which the Stroke eraser hits strokes within.
  */
 export type ToolStroke =
-	| (Extract<
-			CanvasTool,
-			{ type: "draw" | "erase" | "redactBrush" | "cutBrush" }
-	  > & {
+	| (Extract<CanvasTool, { type: "draw" | "redactBrush" | "cutBrush" }> & {
 			points: number[];
+	  })
+	| (Extract<CanvasTool, { type: "erase" }> & {
+			points: number[];
+			reach: number;
 	  })
 	| (Extract<CanvasTool, { type: "redactBox" }> & { rect: Rect })
 	| (Extract<CanvasTool, { type: "drawShape" }> & {

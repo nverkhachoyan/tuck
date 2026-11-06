@@ -472,6 +472,9 @@ export function EditorCanvas({
 		enabled: isEditText,
 	});
 
+	// On web, the Eraser's size follows the pointer, hidden while it drags,
+	// and the Stroke eraser lights up the stroke under it.
+	const ring = useEraserRing();
 	const { paintGesture, liveStroke } = useToolStroke({
 		tool,
 		viewport,
@@ -485,13 +488,14 @@ export function EditorCanvas({
 		onToolStroke,
 		onSelectLayer,
 		onToolInteractionEnd,
+		hover: ring,
 		enabled: isTool,
 	});
-	// On web, the Eraser's size follows the pointer, hidden while it drags.
-	// The worklets below take only shared values and numbers.
-	const ring = useEraserRing();
+	// The worklets below take only shared values and numbers. The Stroke
+	// eraser has no size, so no ring.
 	const ringShown = ring.shown;
-	const eraserRadius = tool?.type === "erase" ? tool.width / 2 : 0;
+	const eraserRadius =
+		tool?.type === "erase" && tool.mode === "eraser" ? tool.width / 2 : 0;
 	const ringRadius = useDerivedValue(
 		() => eraserRadius * shown.scale.value,
 		[eraserRadius],

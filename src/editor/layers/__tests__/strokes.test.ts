@@ -14,6 +14,7 @@ import {
 	hitTestDrawing,
 	recenterDrawing,
 	straightStroke,
+	strokesHitBy,
 } from "../strokes.ts";
 
 const pen = (points: number[], width = 10): Stroke & { type: "pen" } => ({
@@ -211,5 +212,40 @@ describe("duplicateLayer", () => {
 		assert.equal(copy.transform.x - line.transform.x, 20);
 		assert.equal(copy.transform.y - line.transform.y, 20);
 		assert.equal(copy.strokes, line.strokes);
+	});
+});
+
+describe("strokesHitBy", () => {
+	const still = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+
+	test("names the strokes a path crosses, and not the rest", () => {
+		const strokes = [pen([0, 0, 100, 0]), pen([0, 50, 100, 50])];
+		assert.deepEqual(strokesHitBy(strokes, still, [50, -20, 50, 20], 5), [0]);
+		assert.deepEqual(
+			strokesHitBy(strokes, still, [50, -20, 50, 70], 5).sort(),
+			[0, 1],
+		);
+		assert.deepEqual(strokesHitBy(strokes, still, [50, 20, 50, 30], 5), []);
+	});
+
+	test("names a stroke an eraser cut in two from either half, but not where it's erased", () => {
+		const strokes = [pen([0, 0, 100, 0]), eraser([50, -20, 50, 20], 20)];
+		assert.deepEqual(strokesHitBy(strokes, still, [20, -10, 20, 10], 2), [0]);
+		assert.deepEqual(strokesHitBy(strokes, still, [80, -10, 80, 10], 2), [0]);
+		assert.deepEqual(strokesHitBy(strokes, still, [50, -10, 50, 10], 1), []);
+	});
+
+	test("a tap takes a dot under it", () => {
+		const strokes = [pen([30, 30])];
+		assert.deepEqual(strokesHitBy(strokes, still, [33, 30], 5), [0]);
+		assert.deepEqual(strokesHitBy(strokes, still, [60, 30], 5), []);
+	});
+
+	test("follows the layer's transform", () => {
+		const moved = { ...still, x: 200, scaleX: 2, scaleY: 2 };
+		const strokes = [pen([0, 0, 50, 0])];
+		// The line runs from x 200 to 300 in the document.
+		assert.deepEqual(strokesHitBy(strokes, moved, [280, -10, 280, 10], 4), [0]);
+		assert.deepEqual(strokesHitBy(strokes, moved, [320, -10, 320, 10], 4), []);
 	});
 });

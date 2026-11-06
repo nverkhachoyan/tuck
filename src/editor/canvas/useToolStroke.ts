@@ -1,10 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
-import { useDerivedValue, useSharedValue } from "react-native-reanimated";
+import { Platform } from "react-native";
+import {
+	type SharedValue,
+	useDerivedValue,
+	useSharedValue,
+} from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
+import { hapticTick } from "@/platform/haptics";
 import type { EditorDocument } from "../document/document";
 import type { Point, Size } from "../document/geometry";
 import { strokePath } from "../layers/drawing/DrawingLayerView";
 import type { Layer } from "../layers/layer";
-import { hitTestDrawing, segmentsNear } from "../layers/strokes";
+import { hitTestDrawing, segmentsNear, strokesHitBy } from "../layers/strokes";
 import {
 	type CanvasLookups,
 	type CanvasTool,
@@ -12,12 +19,21 @@ import {
 	strokeReaches,
 	type ToolStroke,
 } from "./canvasTool";
-import { findLayerAt, type LayerTarget } from "./hitTest";
-import type { LiveStroke } from "./LiveStrokeOverlay";
+import { findLayerAt, HIT_PADDING_PX, type LayerTarget } from "./hitTest";
+import type { HoveredStroke, LiveStroke } from "./LiveStrokeOverlay";
 import { strokeIntent } from "./strokeIntent";
 import { usePaintGesture } from "./usePaintGesture";
 import { useShiftHeld } from "./useShiftHeld";
-import type { DocumentViewport } from "./viewport";
+import { type DocumentViewport, viewPointToDocument } from "./viewport";
+
+/** Where a mouse hovers over the canvas, in view points, while `shown`. */
+export type CanvasHover = {
+	x: SharedValue<number>;
+	y: SharedValue<number>;
+	shown: SharedValue<boolean>;
+};
+
+const tick = Platform.OS !== "web";
 
 /**
  * A tool's stroke: the points drawn live, the gesture that gathers them, and
@@ -25,7 +41,10 @@ import type { DocumentViewport } from "./viewport";
  * paints into the selected layer if the tool can add to it, or drags out a
  * shape or a redaction's box. Picking a color, where the finger lifts is the
  * point. The Eraser reaches every drawing it can change at once, and notes
- * each shape it crosses as it goes (`crossed`), on the UI thread.
+ * each shape it crosses as it goes (`crossed`), on the UI thread. The
+ * Stroke eraser notes each stroke it touches the same way
+ * (`crossedStrokes`), with a haptic tick off web, and on web the stroke
+ * under a `hover` before any button is down (`hoveredStroke`).
  *
  * The last stroke handed to the document changes in the same render as the
  * document, or the one after, so the scene stops drawing the stroke live
@@ -44,6 +63,7 @@ export function useToolStroke({
 	onToolStroke,
 	onSelectLayer,
 	onToolInteractionEnd,
+	hover = null,
 	enabled = true,
 }: {
 	tool: CanvasTool | null;
@@ -58,6 +78,7 @@ export function useToolStroke({
 	onToolStroke?: (stroke: ToolStroke) => void;
 	onSelectLayer?: (id: string | null) => void;
 	onToolInteractionEnd?: () => void;
+	hover?: CanvasHover | null;
 	enabled?: boolean;
 }) {
 	const strokePoints = useSharedValue<number[]>([]);
@@ -99,8 +120,10 @@ export function useToolStroke({
 		],
 	);
 	const shiftHeld = useShiftHeld();
-	const erasing = tool?.type === "erase";
+	const erasing = tool?.type === "erase" && tool.mode === "eraser";
+	const strokeErasing = tool?.type === "erase" && tool.mode === "stroke";
 	const crossed = useSharedValue<string[]>([]);
+	const crossedStrokes = useSharedValue<Record<string, number[]>>({});
 	// Shapes the Eraser removes: unlocked ones (a locked layer's target has
 	// no strokes), and none when it's scoped to one drawing.
 	const crossable = useMemo(
@@ -115,15 +138,57 @@ export function useToolStroke({
 				: [],
 		[tool, targets, document],
 	);
-	const eraserWidth = tool?.type === "erase" ? tool.width : 0;
-	// The same test as `erasesShape`, on each piece of line as it's added.
+	// The drawings whose strokes the Stroke eraser takes (a locked layer's
+	// target has no strokes).
+	const strokeTargets = useMemo(
+		() =>
+			tool?.type === "erase" && tool.mode === "stroke"
+				? targets.flatMap((target) => {
+						const layer = document.layers.find((each) => each.id === target.id);
+						return layer && strokeReaches(tool, layer) && target.strokes
+							? [{ ...target, strokes: target.strokes }]
+							: [];
+					})
+				: [],
+		[tool, targets, document],
+	);
+	// How far a touch reaches, in document units, for the Stroke eraser.
+	const touchReach = scale > 0 ? HIT_PADDING_PX / scale : 0;
+	const eraserWidth =
+		tool?.type === "erase"
+			? tool.mode === "stroke"
+				? touchReach * 2
+				: tool.width
+			: 0;
+	// The same tests as `erasesShape` and `eraseWholeStrokes`, on each piece
+	// of line as it's added.
 	const onSegment = useMemo(() => {
-		if (crossable.length === 0) return null;
+		if (crossable.length === 0 && strokeTargets.length === 0) return null;
 		return (points: number[]) => {
 			"worklet";
 			if (points.length === 0) {
 				crossed.value = [];
+				crossedStrokes.value = {};
 				return;
+			}
+			let touched = false;
+			const next = { ...crossedStrokes.value };
+			for (const target of strokeTargets) {
+				const before = next[target.id] ?? [];
+				const fresh = strokesHitBy(
+					target.strokes,
+					target.transform,
+					points,
+					touchReach,
+				).filter((index) => !before.includes(index));
+				if (fresh.length > 0) {
+					next[target.id] = [...before, ...fresh];
+					touched = true;
+				}
+			}
+			if (touched) {
+				crossedStrokes.value = next;
+				if (tick) scheduleOnRN(hapticTick);
 			}
 			const hits: string[] = [];
 			for (const target of crossable) {
@@ -140,7 +205,14 @@ export function useToolStroke({
 			}
 			if (hits.length > 0) crossed.value = [...crossed.value, ...hits];
 		};
-	}, [crossable, crossed, eraserWidth]);
+	}, [
+		crossable,
+		crossed,
+		eraserWidth,
+		strokeTargets,
+		crossedStrokes,
+		touchReach,
+	]);
 	const paintGesture = usePaintGesture({
 		viewport,
 		points: strokePoints,
@@ -155,6 +227,44 @@ export function useToolStroke({
 		onSegment,
 		enabled: enabled && Boolean(tool),
 	});
+	// On web, the topmost stroke a click would take, while nothing's down.
+	const hoverX = hover?.x ?? null;
+	const hoverY = hover?.y ?? null;
+	const hoverShown = hover?.shown ?? null;
+	const hoveredStroke = useDerivedValue((): HoveredStroke | null => {
+		if (!strokeErasing || !hoverX || !hoverY || !hoverShown?.value) {
+			return null;
+		}
+		if (strokeId.value > landedStrokeId && strokePoints.value.length > 0) {
+			return null;
+		}
+		const point = viewPointToDocument(viewport, {
+			x: hoverX.value,
+			y: hoverY.value,
+		});
+		for (let i = strokeTargets.length - 1; i >= 0; i--) {
+			const target = strokeTargets[i];
+			const hits = strokesHitBy(
+				target.strokes,
+				target.transform,
+				[point.x, point.y],
+				touchReach,
+			);
+			if (hits.length > 0) {
+				return { id: target.id, index: hits[hits.length - 1] };
+			}
+		}
+		return null;
+	}, [
+		strokeErasing,
+		hoverX,
+		hoverY,
+		hoverShown,
+		landedStrokeId,
+		viewport,
+		strokeTargets,
+		touchReach,
+	]);
 	// Built once a frame for every drawing the Eraser reaches.
 	const erasePath = useDerivedValue(
 		() =>
@@ -183,8 +293,13 @@ export function useToolStroke({
 				tool.type !== "erase" &&
 				tool.type !== "cutBrush" &&
 				selectedId === null,
-			erasePath: tool.type === "erase" ? erasePath : null,
+			erasePath:
+				tool.type === "erase" && tool.mode === "eraser" ? erasePath : null,
 			crossed: tool.type === "erase" ? crossed : null,
+			crossedStrokes:
+				tool.type === "erase" && tool.mode === "stroke" ? crossedStrokes : null,
+			hoveredStroke:
+				tool.type === "erase" && tool.mode === "stroke" ? hoveredStroke : null,
 		};
 	}, [
 		tool,
@@ -194,6 +309,8 @@ export function useToolStroke({
 		selectedLayer,
 		erasePath,
 		crossed,
+		crossedStrokes,
+		hoveredStroke,
 	]);
 	return { paintGesture, liveStroke };
 }

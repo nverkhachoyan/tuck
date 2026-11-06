@@ -556,6 +556,33 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().selectedLayerId, null);
 		});
 
+		test("a stroke eraser swipe is one undo step", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 100, 100]));
+			actions.selectLayer(null);
+			actions.drawStroke(pen([0, 100, 100, 0]));
+			actions.selectLayer(null);
+			const steps = store.getState().past.length;
+			actions.eraseWholeStrokes([0, 50, 100, 50], 4, null);
+			assert.equal(drawings(store).length, 0);
+			assert.equal(store.getState().past.length, steps + 1);
+			actions.undo();
+			assert.equal(drawings(store).length, 2);
+		});
+
+		test("a stroke eraser never reaches a brushed redaction", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.paintRedaction(
+				{ type: "pen", width: 20, points: [0, 50, 100, 50] },
+				{ type: "solid", color: "#000000" },
+			);
+			const before = store.getState().document;
+			actions.eraseWholeStrokes([50, 0, 50, 100], 10, null);
+			assert.equal(store.getState().document, before);
+		});
+
 		test("an eraser never reaches a brushed redaction", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;

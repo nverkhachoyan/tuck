@@ -11,7 +11,11 @@ import type { Framing } from "../document/framing.ts";
 import type { Rect, Transform } from "../document/geometry.ts";
 import { createLayerId } from "../layers/base.ts";
 import type { Stroke } from "../layers/drawing/drawing.ts";
-import { drawStroke, eraseStroke } from "../layers/drawing/drawingEdits.ts";
+import {
+	drawStroke,
+	eraseStroke,
+	eraseWholeStrokes,
+} from "../layers/drawing/drawingEdits.ts";
 import type { Adjustments } from "../layers/image/adjustments.ts";
 import {
 	type CutStroke,
@@ -297,6 +301,16 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		eraseStroke: (stroke: Stroke & { type: "eraser" }, scope: string | null) =>
 			setDocument("editor/eraseStroke", (document) =>
 				eraseStroke(document, stroke, scope),
+			),
+
+		// The same for the Stroke eraser, which takes whole strokes.
+		eraseWholeStrokes: (
+			points: number[],
+			reach: number,
+			scope: string | null,
+		) =>
+			setDocument("editor/eraseWholeStrokes", (document) =>
+				eraseWholeStrokes(document, points, reach, scope),
 			),
 
 		// On top and selected, so restyling it right after (see

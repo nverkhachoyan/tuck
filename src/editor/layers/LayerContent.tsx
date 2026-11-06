@@ -16,7 +16,7 @@ import { TextLayerView } from "./text/TextLayerView";
  * `stroke` is one still being drawn on a drawing layer, or on an image's
  * cut, which `selectionColor` shows as a selection; `matrix` colors an
  * image in place of its adjustments (see `ImageLayerView`); `opacity`
- * fades a drawing.
+ * fades a drawing, and `wrapStroke` wraps each of its pen strokes.
  */
 export function LayerContent({
 	layer,
@@ -25,12 +25,14 @@ export function LayerContent({
 	matrix,
 	selectionColor,
 	opacity,
+	wrapStroke,
 	onImageError,
 }: {
 	layer: Layer;
 	uri?: string;
 	stroke?: ReactNode;
 	opacity?: number;
+	wrapStroke?: (index: number, stroke: ReactNode) => ReactNode;
 	matrix?: { value: ColorMatrix };
 	selectionColor?: string;
 	onImageError: (error: unknown) => void;
@@ -51,7 +53,11 @@ export function LayerContent({
 			return <TextLayerView layer={layer} />;
 		case "drawing":
 			return (
-				<DrawingLayerView layer={layer} opacity={opacity}>
+				<DrawingLayerView
+					layer={layer}
+					opacity={opacity}
+					wrapStroke={wrapStroke}
+				>
 					{stroke}
 				</DrawingLayerView>
 			);

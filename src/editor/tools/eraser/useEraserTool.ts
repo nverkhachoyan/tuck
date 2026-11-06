@@ -9,6 +9,7 @@ import type { Layer } from "../../layers/layer";
 import { SHAPE_NAMES } from "../../shell/shapeIcons";
 import { useStore } from "../../store";
 import {
+	type EraserMode,
 	eraserBrushFor,
 	parseEraserSettings,
 	stepEraserSize,
@@ -31,7 +32,7 @@ const erasedName = (layer: Layer) =>
 
 /**
  * Controller for erasing drawings and shapes.
- * - Manages eraser size index.
+ * - Manages its mode (Eraser or Stroke eraser) and eraser size index.
  * - Erases on drag via canvasInput, through every unlocked drawing and
  *   shape the swipe crosses, or only the drawing whose actions opened it
  *   (`on`).
@@ -45,7 +46,7 @@ export function useEraserTool({
 	on,
 	close,
 }: Pick<ToolEnv, "documentSize" | "notify" | "on" | "close">) {
-	const { eraseStroke } = useStore((state) => state.actions);
+	const { eraseStroke, eraseWholeStrokes } = useStore((state) => state.actions);
 	const [settings, setSettings] = usePreference(KEY, parseSavedEraserSettings);
 	const [news, setNews] = useState<string | null>(null);
 	useEffect(() => {
@@ -57,7 +58,9 @@ export function useEraserTool({
 		}
 	}, [settings]);
 
+	// The Stroke eraser has no size.
 	const stepSize = (step: 1 | -1) => {
+		if (settings.mode === "stroke") return;
 		const next = stepEraserSize(settings, step);
 		if (next !== settings) setSettings(next);
 	};
@@ -68,6 +71,7 @@ export function useEraserTool({
 			type: "tool",
 			tool: {
 				type: "erase",
+				mode: settings.mode,
 				width: eraserBrushFor(settings, documentSize).width,
 				scope,
 			},
@@ -78,10 +82,14 @@ export function useEraserTool({
 	const finishStroke = (stroke: ToolStroke) => {
 		if (stroke.type !== "erase") return;
 		const before = useStore.getState().document;
-		eraseStroke(
-			{ type: "eraser", width: stroke.width, points: stroke.points },
-			stroke.scope,
-		);
+		if (stroke.mode === "stroke") {
+			eraseWholeStrokes(stroke.points, stroke.reach, stroke.scope);
+		} else {
+			eraseStroke(
+				{ type: "eraser", width: stroke.width, points: stroke.points },
+				stroke.scope,
+			);
+		}
 		const after = useStore.getState().document;
 		const gone = before && after ? removedLayers(before, after) : [];
 		const removed = gone.at(-1);
@@ -101,9 +109,14 @@ export function useEraserTool({
 		}
 	};
 
+	const setMode = (mode: EraserMode) => {
+		if (mode !== settings.mode) setSettings({ ...settings, mode });
+	};
+
 	return {
 		settings,
 		change: setSettings,
+		setMode,
 		stepSize,
 		canvasInput,
 		finishStroke,

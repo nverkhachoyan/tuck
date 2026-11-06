@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, Fragment, type ReactNode } from "react";
 import {
 	BlurMask,
 	Group,
@@ -71,15 +71,19 @@ export function pathFor(stroke: MaskStroke): SkPath {
  * their own, so an eraser clears only what they drew, not what's under
  * them. `children` joins that layer too: a stroke still being drawn.
  * `opacity` fades the whole layer as it's laid down, so a dimmed highlight
- * still multiplies onto what's under it.
+ * still multiplies onto what's under it. `wrapStroke` wraps each pen
+ * stroke, by its index, inside the layer, as the canvas does to dim
+ * strokes while keeping the layer's blend and its erasers.
  */
 export function DrawingLayerView({
 	layer,
 	opacity = 1,
+	wrapStroke,
 	children,
 }: {
 	layer: DrawingLayer;
 	opacity?: number;
+	wrapStroke?: (index: number, stroke: ReactNode) => ReactNode;
 	children?: ReactNode;
 }) {
 	const multiply = layerBlend(layer) === "multiply";
@@ -95,15 +99,23 @@ export function DrawingLayerView({
 				)
 			}
 		>
-			{layer.strokes.map((stroke, index) => (
-				<BrushStroke
-					// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
-					key={index}
-					path={pathFor(stroke)}
-					brush={stroke}
-					full={multiply}
-				/>
-			))}
+			{layer.strokes.map((stroke, index) => {
+				const drawn = (
+					<BrushStroke
+						// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
+						key={index}
+						path={pathFor(stroke)}
+						brush={stroke}
+						full={multiply}
+					/>
+				);
+				return wrapStroke && stroke.type === "pen" ? (
+					// biome-ignore lint/suspicious/noArrayIndexKey: as above
+					<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
+				) : (
+					drawn
+				);
+			})}
 			{children}
 		</Group>
 	);

@@ -96,7 +96,12 @@ describe("canAddTo", () => {
 });
 
 describe("strokeReaches", () => {
-	const erase: CanvasTool = { type: "erase", width: 30, scope: null };
+	const erase: CanvasTool = {
+		type: "erase",
+		mode: "eraser",
+		width: 30,
+		scope: null,
+	};
 	const canvas = { width: 400, height: 300 };
 
 	test("the Eraser reaches unlocked drawings, and nothing else", () => {
@@ -125,11 +130,17 @@ describe("strokeReaches", () => {
 			width: 10,
 			points: [40, 40, 60, 60],
 		});
-		const scoped: CanvasTool = { type: "erase", width: 30, scope: drawing.id };
+		const scoped: CanvasTool = {
+			type: "erase",
+			mode: "eraser",
+			width: 30,
+			scope: drawing.id,
+		};
 		assert.equal(strokeReaches(scoped, drawing), true);
 		assert.equal(strokeReaches(scoped, other), false);
 		const onRedaction: CanvasTool = {
 			type: "erase",
+			mode: "eraser",
 			width: 30,
 			scope: strokes.id,
 		};
