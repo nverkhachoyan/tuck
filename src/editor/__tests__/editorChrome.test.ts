@@ -28,26 +28,29 @@ const nothing: ModeChromeInput = {
 	wide: false,
 };
 
-const TOOLS: [string, string][] = [
-	["pen", "Pen"],
-	["shape", "Shape"],
-	["eraser", "Eraser"],
-	["redact", "Redact"],
-	["find", "Find"],
-	["adjust", "Adjust"],
-	["cut", "Cut"],
+const TOOLS: [string, string, boolean][] = [
+	["pen", "Pen", false],
+	["shape", "Shape", false],
+	["eraser", "Eraser", false],
+	["redact", "Redact", false],
+	["sticker", "Sticker", false],
+	["text", "Text", false],
+	["find", "Find", true],
+	["adjust", "Adjust", true],
+	["cut", "Cut", true],
+	["crop", "Crop", true],
 ];
 
 describe("modeChrome", () => {
-	test("a tool's Cancel and Done are the tool's", () => {
-		for (const [tool, title] of TOOLS) {
+	test("a tool's Done is the tool's, and only a draft, a preview, or settings tried out have Cancel", () => {
+		for (const [tool, title, cancels] of TOOLS) {
 			assert.deepEqual(
 				modeChrome({ ...nothing, tool }),
 				{
 					panel: tool,
 					actions: {
 						title,
-						cancel: "tool",
+						...(cancels ? { cancel: "tool" } : {}),
 						done: "tool",
 						doneLabel: undefined,
 					},
@@ -344,13 +347,16 @@ describe("layerActionsFor", () => {
 });
 
 describe("undo steps", () => {
-	test("only Pen keeps a step per mark and the Eraser one per swipe", () => {
+	test("the tools with no Cancel keep their steps apart, Pen's per mark", () => {
 		const kept = Object.entries(specs).flatMap(([id, spec]) =>
 			spec.undoSteps ? [[id, spec.undoSteps]] : [],
 		);
-		assert.deepEqual(kept, [
-			["pen", "marks"],
-			["eraser", "each"],
-		]);
+		assert.deepEqual(Object.fromEntries(kept), {
+			pen: "marks",
+			eraser: "each",
+			shape: "each",
+			redact: "each",
+			sticker: "each",
+		});
 	});
 });

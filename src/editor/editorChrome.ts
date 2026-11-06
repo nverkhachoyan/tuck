@@ -88,8 +88,8 @@ export type ModeChromeInput = {
 /**
  * The editor's chrome for the mode, the same for the dock and the bar.
  * - `tool`: the open tool, which comes first. Its title is its spec's label
- *   in `specs`, its Cancel and Done are the tool's, and Done says
- *   `toolDoneLabel` when the tool gives one.
+ *   in `specs`, its Done is the tool's, saying `toolDoneLabel` when the tool
+ *   gives one, and it has Cancel only when its spec `cancels`.
  * - `stylingTool`: the tool that edits the selected layer in place (its
  *   definition's `edit`), whose panel styles it with nothing open, titled
  *   with its label, with no Cancel, and Done lets go of the layer.
@@ -115,7 +115,7 @@ export function modeChrome({
 		const hasDone = toolDoneLabel !== null;
 		return chrome(tool, {
 			title: specs[tool]?.label ?? tool,
-			cancel: "tool",
+			...(specs[tool]?.cancels ? { cancel: "tool" as const } : {}),
 			done: hasDone ? "tool" : undefined,
 			doneLabel: toolDoneLabel ?? undefined,
 			...(toolDoneVariant ? { doneVariant: toolDoneVariant } : {}),

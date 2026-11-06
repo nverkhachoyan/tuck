@@ -2,6 +2,7 @@ import type { ToolSpec } from "../../toolSpec.ts";
 
 export const redactSpec = {
 	target: "none",
+	undoSteps: "each",
 	tray: true,
 	sized: true,
 	label: "Redact",

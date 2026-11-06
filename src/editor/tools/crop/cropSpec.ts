@@ -3,6 +3,7 @@ import type { ToolSpec } from "../../toolSpec.ts";
 // Crops the canvas whether or not it has a photo, and acts on no one layer.
 export const cropSpec = {
 	target: "none",
+	cancels: true,
 	tray: false,
 	sized: false,
 	takesKeys: true,

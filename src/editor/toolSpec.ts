@@ -26,6 +26,9 @@ export type ToolId = string;
  * - `undoSteps`: what its changes become once it's done, when that isn't one
  *   undo step: one per change ("each", the Eraser's swipes) or one per mark
  *   ("marks", Pen's).
+ * - `cancels`: whether its panel offers Cancel, for a draft, a preview, or
+ *   settings tried out (Crop, Cut, Find, Adjust). Any other tool's work is
+ *   in the document as it's made, and undo takes it back.
  * - `action`: whether pressing it runs its definition's `run` on its target
  *   and opens no mode, as Remove BG does.
  * - `grouped`: other tools folded into this button's flyout on the toolbar,
@@ -42,6 +45,7 @@ export type ToolSpec = {
 	takesKeys?: true | "typing";
 	previews?: true;
 	undoSteps?: "each" | "marks";
+	cancels?: true;
 	action?: true;
 	grouped?: readonly ToolId[];
 	label: string;

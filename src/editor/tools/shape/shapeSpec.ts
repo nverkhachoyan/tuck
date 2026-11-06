@@ -2,6 +2,7 @@ import type { ToolSpec } from "../../toolSpec.ts";
 
 export const shapeSpec = {
 	target: "none",
+	undoSteps: "each",
 	tray: true,
 	sized: true,
 	label: "Shape",

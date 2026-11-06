@@ -3,6 +3,7 @@ import type { ToolSpec } from "../../toolSpec.ts";
 // E adjusts, since A is the stickers'.
 export const adjustSpec = {
 	target: "image",
+	cancels: true,
 	tray: false,
 	sized: false,
 	label: "Adjust",
