@@ -14,6 +14,9 @@ import type { ResizeMode } from "./handleGeometry.ts";
  * selects it. Built on the JS thread whenever the document or the view's
  * scale changes (see `layerTargets.ts`), and hit-tested on either thread.
  */
+// Minimum comfortable touch padding around a layer, in screen pixels.
+export const HIT_PADDING_PX = 14;
+
 export type LayerTarget = {
 	id: string;
 	transform: Transform;

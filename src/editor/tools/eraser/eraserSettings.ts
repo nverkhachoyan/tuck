@@ -1,11 +1,19 @@
 import type { Size } from "../../document/geometry.ts";
 import type { Brush } from "../../layers/drawing/drawing.ts";
 
+/**
+ * What the Eraser does: clear ink where it passes ("eraser"), or take each
+ * stroke it touches whole ("stroke").
+ */
+export type EraserMode = "eraser" | "stroke";
+
 export type EraserSettings = {
+	mode: EraserMode;
 	sizeIndex: number;
 };
 
 export const defaultEraserSettings: EraserSettings = {
+	mode: "eraser",
 	sizeIndex: 3,
 };
 
@@ -15,12 +23,12 @@ const shortSide = (size: Size) => Math.min(size.width, size.height);
 
 /**
  * Parses saved eraser preferences.
- * - Restores size index.
- * - Falls back to defaultEraserSettings when values are invalid or absent.
+ * - Restores the mode and the size index, each on its own.
+ * - Falls back to defaultEraserSettings' for what's invalid or absent.
  */
 export function parseEraserSettings(saved: unknown): EraserSettings {
 	if (typeof saved !== "object" || saved === null) return defaultEraserSettings;
-	const { sizeIndex, sizes } = saved as Record<string, unknown>;
+	const { mode, sizeIndex, sizes } = saved as Record<string, unknown>;
 	const savedSizes = (
 		typeof sizes === "object" && sizes !== null ? sizes : {}
 	) as Record<string, unknown>;
@@ -36,7 +44,10 @@ export function parseEraserSettings(saved: unknown): EraserSettings {
 					savedSizes.eraser < ERASER_SIZES.length
 				? savedSizes.eraser
 				: defaultEraserSettings.sizeIndex;
-	return { sizeIndex: parsedSize };
+	return {
+		mode: mode === "stroke" ? "stroke" : "eraser",
+		sizeIndex: parsedSize,
+	};
 }
 
 export function stepEraserSize(
@@ -48,7 +59,7 @@ export function stepEraserSize(
 		Math.max(0, settings.sizeIndex + step),
 	);
 	if (next === settings.sizeIndex) return settings;
-	return { sizeIndex: next };
+	return { ...settings, sizeIndex: next };
 }
 
 export function eraserBrushFor(settings: EraserSettings, size: Size): Brush {

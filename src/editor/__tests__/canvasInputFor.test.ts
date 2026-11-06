@@ -248,7 +248,7 @@ describe("outlinedLayerFor", () => {
 		const layers = [photo, drawing];
 		const erase = (scope: string | null): CanvasInput => ({
 			type: "tool",
-			tool: { type: "erase", width: 20, scope },
+			tool: { type: "erase", mode: "eraser", width: 20, scope },
 		});
 		assert.equal(
 			outlinedLayerFor(erase(drawing.id), { layers, selectedLayer: drawing }),

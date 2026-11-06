@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
 	type DerivedValue,
 	type SharedValue,
@@ -19,7 +20,7 @@ import { colors } from "@/ui/theme";
 import { type Point, rectFromCorners } from "../document/geometry";
 import { identityTransform } from "../layers/base";
 import { BrushStroke, strokePath } from "../layers/drawing/DrawingLayerView";
-import type { PenBrush } from "../layers/drawing/drawing";
+import type { DrawingLayer, PenBrush } from "../layers/drawing/drawing";
 import type { ColorMatrix } from "../layers/image/adjustments";
 import { MaskStrokePath } from "../layers/image/ImageLayerView";
 import type { CutStroke } from "../layers/image/image";
@@ -59,6 +60,9 @@ import { shapeFromDrag } from "./shapeDrag";
  * - `startsLayer`: drawn over everything instead, as it will start a layer.
  * - `erasePath`: the Eraser's line, built once for every drawing it reaches.
  * - `crossed`: the shapes the Eraser has crossed, dimmed until it lifts.
+ * - `crossedStrokes`: the Stroke eraser's strokes touched so far, by
+ *   drawing id, dimmed until it lifts.
+ * - `hoveredStroke`: on web, the stroke a Stroke eraser click would take.
  */
 export type LiveStroke = {
 	tool: CanvasTool;
@@ -69,7 +73,12 @@ export type LiveStroke = {
 	startsLayer: boolean;
 	erasePath: DerivedValue<SkPath> | null;
 	crossed: SharedValue<string[]> | null;
+	crossedStrokes: SharedValue<Record<string, number[]>> | null;
+	hoveredStroke: DerivedValue<HoveredStroke | null> | null;
 };
+
+/** A drawing's stroke, by its index in the drawing's strokes. */
+export type HoveredStroke = { id: string; index: number };
 
 /**
  * How far a mark out of reach fades: a shape the Eraser crosses, before it
@@ -125,6 +134,16 @@ export function StrokeTarget({
 			<CrossedShape layer={layer} live={live} stroke={stroke} />
 		) : (
 			<LiveShape layer={layer} live={live} />
+		);
+	}
+	if (stroke?.crossedStrokes && layer.type === "drawing") {
+		return (
+			<StrokeErasedDrawing
+				layer={layer}
+				stroke={stroke}
+				opacity={dimmed ? DIMMED_OPACITY : undefined}
+				onImageError={onImageError}
+			/>
 		);
 	}
 	if (stroke && tool?.type === "cutBrush" && layer.type === "image") {
@@ -186,6 +205,67 @@ export function StrokeTarget({
 			onImageError={onImageError}
 		/>
 	);
+}
+
+/**
+ * A drawing the Stroke eraser reaches, each stroke it has touched, or a
+ * click would take, at a third of its strength.
+ */
+function StrokeErasedDrawing({
+	layer,
+	stroke,
+	opacity,
+	onImageError,
+}: {
+	layer: DrawingLayer;
+	stroke: LiveStroke;
+	opacity: number | undefined;
+	onImageError: (error: unknown) => void;
+}) {
+	const { id } = layer;
+	const count = layer.strokes.length;
+	const { crossedStrokes, hoveredStroke } = stroke;
+	const dimmedStrokes = useDerivedValue((): readonly number[] => {
+		const touched =
+			stroke.id.value > stroke.landedId
+				? (crossedStrokes?.value[id] ?? NO_STROKES)
+				: NO_STROKES;
+		const hovered = hoveredStroke?.value;
+		return hovered && hovered.id === id && hovered.index < count
+			? [...touched, hovered.index]
+			: touched;
+	}, [id, count, stroke]);
+	return (
+		<LayerContent
+			layer={layer}
+			opacity={opacity}
+			wrapStroke={(index, drawn) => (
+				<DimmedStroke index={index} dimmed={dimmedStrokes}>
+					{drawn}
+				</DimmedStroke>
+			)}
+			onImageError={onImageError}
+		/>
+	);
+}
+
+const NO_STROKES: readonly number[] = [];
+
+// A stroke at a third of its strength while `dimmed` lists its index.
+function DimmedStroke({
+	index,
+	dimmed,
+	children,
+}: {
+	index: number;
+	dimmed: DerivedValue<readonly number[]>;
+	children: ReactNode;
+}) {
+	const opacity = useDerivedValue<number>(
+		() => (dimmed.value.includes(index) ? DIMMED_OPACITY : 1),
+		[index],
+	);
+	return <Group opacity={opacity}>{children}</Group>;
 }
 
 /** A shape at a third of its strength while the Eraser has crossed it. */

@@ -52,6 +52,19 @@ describe("strokeIntent", () => {
 		});
 	});
 
+	test("finishes a Stroke eraser's tap with its one point and a touch's reach", () => {
+		const erase: CanvasTool = {
+			type: "erase",
+			mode: "stroke",
+			width: 30,
+			scope: null,
+		};
+		assert.deepEqual(strokeIntent(erase, [100, 200], 2, size), {
+			type: "finish",
+			stroke: { ...erase, points: [100, 200], reach: 7 },
+		});
+	});
+
 	test("takes a tap off the document as a tap away, with any tool", () => {
 		for (const tool of [pen, box, rectangle]) {
 			assert.deepEqual(strokeIntent(tool, [-20, 50, -18, 51], 1, size), {

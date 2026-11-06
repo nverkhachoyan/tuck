@@ -17,7 +17,12 @@ import { addShape } from "../../shape/shapeEdits.ts";
 import { drawingBox } from "../../strokes.ts";
 import { createTextLayer } from "../../text/text.ts";
 import type { DrawingLayer, Stroke } from "../drawing.ts";
-import { drawStroke, eraseStroke, removedLayers } from "../drawingEdits.ts";
+import {
+	drawStroke,
+	eraseStroke,
+	eraseWholeStrokes,
+	removedLayers,
+} from "../drawingEdits.ts";
 
 const blank = () => createBlankDocument(400, 300, "#ffffff");
 const pen: Stroke & { type: "pen" } = {
@@ -287,5 +292,136 @@ describe("eraseStroke", () => {
 		const missed = eraseStroke(document, { ...eraser, points: [0, 0] }, null);
 		assert.equal(missed, document);
 		assert.equal(eraseStroke(blank(), eraser, null).layers.length, 0);
+	});
+});
+
+describe("eraseWholeStrokes", () => {
+	// One drawing of two strokes: a stroke down from (10, 10), and another
+	// across at y 200.
+	const twoStrokes = () => {
+		const first = drawStroke(blank(), null, pen);
+		const { id } = top<DrawingLayer>(first);
+		return drawStroke(first, id, { ...pen, points: [100, 200, 300, 200] });
+	};
+	const pens = (layer: Layer | undefined) =>
+		(layer as DrawingLayer).strokes.filter((stroke) => stroke.type === "pen");
+
+	test("takes each stroke it touches whole, and leaves the rest", () => {
+		const document = twoStrokes();
+		const erased = eraseWholeStrokes(document, [200, 190, 200, 210], 4, null);
+		const left = pens(top(erased));
+		assert.equal(left.length, 1);
+		assert.deepEqual(
+			toDocumentSpace(top<DrawingLayer>(erased).transform, {
+				x: left[0].points[0],
+				y: left[0].points[1],
+			}),
+			{ x: 10, y: 10 },
+		);
+		assert.equal(
+			eraseWholeStrokes(document, [200, 100, 200, 120], 4, null),
+			document,
+			"nothing touched",
+		);
+	});
+
+	test("touches only remaining ink, and drops erasers left over nothing", () => {
+		const document = eraseStroke(
+			twoStrokes(),
+			eraserOf(30, [200, 180, 200, 220]),
+			null,
+		);
+		assert.equal(top<DrawingLayer>(document).strokes.at(-1)?.type, "eraser");
+		assert.equal(
+			eraseWholeStrokes(document, [200, 195, 200, 205], 1, null),
+			document,
+			"the ink there is erased",
+		);
+		const erased = eraseWholeStrokes(document, [120, 190, 120, 210], 4, null);
+		assert.deepEqual(
+			top<DrawingLayer>(erased).strokes.map((stroke) => stroke.type),
+			["pen"],
+		);
+	});
+
+	test("removes a drawing it empties, with the shapes it crosses", () => {
+		const drawn = twoSessions();
+		const document = addShape(drawn, "rectangle", place, style);
+		const [a, b, shape] = document.layers;
+		// Through the first stroke's start only, then around everything to
+		// the rectangle's right side.
+		const erased = eraseWholeStrokes(
+			document,
+			[5, 5, 12, 12, 0, 0, 400, -40, 400, 150, 240, 150],
+			4,
+			null,
+		);
+		assert.deepEqual(
+			removedLayers(document, erased).map((layer) => layer.id),
+			[a.id, shape.id],
+		);
+		assert.equal(layerOf(erased, b.id), b);
+	});
+
+	test("with a scope, touches only that drawing and no shape", () => {
+		const drawn = twoSessions();
+		const document = addShape(drawn, "rectangle", place, style);
+		const [a, b, shape] = document.layers;
+		const path = [35, 20, 35, 50, 150, 120, 150, 180];
+		const erased = eraseWholeStrokes(document, path, 4, b.id);
+		assert.equal(layerOf(erased, a.id), a);
+		assert.equal(layerOf(erased, b.id), undefined);
+		assert.equal(layerOf(erased, shape.id), shape);
+	});
+
+	test("takes only what `removes` allows", () => {
+		const document = twoStrokes();
+		const path = [200, 190, 200, 210];
+		assert.equal(
+			eraseWholeStrokes(document, path, 4, null, () => false),
+			document,
+		);
+	});
+
+	test("leaves locked and hidden drawings", () => {
+		const document = twoSessions();
+		const [a, b] = document.layers;
+		const kept = {
+			...document,
+			layers: [
+				{ ...a, locked: true },
+				{ ...b, hidden: true },
+			],
+		};
+		assert.equal(eraseWholeStrokes(kept, [0, 35, 70, 35], 4, null), kept);
+	});
+
+	test("never reaches a redaction, a photo, a sticker, or text", () => {
+		const canvas = { width: 400, height: 300 };
+		const area = { x: 50, y: 50, width: 300, height: 200 };
+		const effect = { type: "solid", color: "#000000" } as const;
+		const brushed = createRedactionStrokes(
+			{ type: "pen", width: 20, points: [100, 100, 300, 100] },
+			effect,
+		);
+		const box = createRedactionBox(
+			{ x: 90, y: 80, width: 220, height: 40 },
+			effect,
+		);
+		const photo = createImageLayer(canvas, "photo.jpg", 400, 300, true);
+		const sticker = createStickerLayer(
+			canvas,
+			"sticker.png",
+			100,
+			100,
+			false,
+			area,
+		);
+		const text = createTextLayer(canvas, "Total", {}, area);
+		const protectedLayers: Layer[] = [photo, brushed, box, sticker, text];
+		const document = { ...blank(), layers: protectedLayers };
+		const path = [0, 100, 400, 100];
+		assert.equal(eraseWholeStrokes(document, path, 20, null), document);
+		assert.equal(eraseWholeStrokes(document, path, 20, brushed.id), document);
 	});
 });

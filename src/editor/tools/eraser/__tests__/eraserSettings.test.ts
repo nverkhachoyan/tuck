@@ -24,12 +24,13 @@ describe("eraserBrushFor", () => {
 
 describe("stepEraserSize", () => {
 	test("steps size index clamped to range", () => {
-		const atMin = { sizeIndex: 0 };
+		const atMin = { mode: "eraser" as const, sizeIndex: 0 };
 		assert.equal(stepEraserSize(atMin, -1).sizeIndex, 0);
 		assert.equal(stepEraserSize(atMin, 1).sizeIndex, 1);
 
 		const maxIdx = ERASER_SIZES.length - 1;
-		const atMax = { sizeIndex: maxIdx };
+		const atMax = { mode: "stroke" as const, sizeIndex: maxIdx };
+		assert.equal(stepEraserSize(atMax, -1).mode, "stroke");
 		assert.equal(stepEraserSize(atMax, 1).sizeIndex, maxIdx);
 		assert.equal(stepEraserSize(atMax, -1).sizeIndex, maxIdx - 1);
 	});
@@ -44,5 +45,17 @@ describe("parseEraserSettings", () => {
 	test("restores valid saved settings or legacy eraser size", () => {
 		assert.equal(parseEraserSettings({ sizeIndex: 1 }).sizeIndex, 1);
 		assert.equal(parseEraserSettings({ sizes: { eraser: 4 } }).sizeIndex, 4);
+	});
+
+	test("the mode round-trips, and a saved size without one is the Eraser", () => {
+		assert.deepEqual(parseEraserSettings({ mode: "stroke", sizeIndex: 2 }), {
+			mode: "stroke",
+			sizeIndex: 2,
+		});
+		assert.deepEqual(parseEraserSettings({ sizeIndex: 2 }), {
+			mode: "eraser",
+			sizeIndex: 2,
+		});
+		assert.equal(parseEraserSettings({ mode: "lasso" }).mode, "eraser");
 	});
 });

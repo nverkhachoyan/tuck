@@ -5,6 +5,7 @@ import {
 } from "../document/geometry.ts";
 import { isLineShape } from "../layers/shape/shape.ts";
 import type { CanvasTool, ToolStroke } from "./canvasTool.ts";
+import { HIT_PADDING_PX } from "./hitTest.ts";
 import { shapeFromDrag } from "./shapeDrag.ts";
 
 // A box or a line dragged no further than this either way, in screen
@@ -51,6 +52,10 @@ export function strokeIntent(
 		return staysWithin(points, TAP_SLOP_PX / scale)
 			? { type: "finish", stroke: { ...tool, point: start } }
 			: { type: "none" };
+	}
+	if (tool.type === "erase") {
+		const reach = HIT_PADDING_PX / scale;
+		return { type: "finish", stroke: { ...tool, points, reach } };
 	}
 	if (tool.type !== "redactBox" && tool.type !== "drawShape") {
 		return { type: "finish", stroke: { ...tool, points } };

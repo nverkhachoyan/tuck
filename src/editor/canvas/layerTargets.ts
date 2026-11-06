@@ -4,11 +4,8 @@ import { isLine } from "../layers/shape/shape";
 import { shapeOutline } from "../layers/shape/shapeGeometry";
 import type { MaskStroke } from "../layers/strokes";
 import type { ResizeMode } from "./handleGeometry";
-import type { LayerTarget } from "./hitTest";
+import { HIT_PADDING_PX, type LayerTarget } from "./hitTest";
 import { layerBounds } from "./layerBounds";
-
-// Minimum comfortable touch padding around a layer, in screen pixels.
-export const HIT_PADDING_PX = 14;
 
 /**
  * The document's visible layers, bottom to top. `viewScale` is screen pixels

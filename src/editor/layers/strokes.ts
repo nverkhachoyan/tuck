@@ -321,3 +321,35 @@ export function hitTestDrawing(
 	}
 	return false;
 }
+
+/**
+ * The indexes of a layer's pen strokes that a path through `points`
+ * (document space) passes within `reach` (document units) of, counting only
+ * ink no later eraser cleared. One point is a tap. Checked at steps no
+ * longer than `reach`, as `segmentsNear` does, so the canvas and the edit
+ * agree on what a swipe takes. A stroke an eraser cut in two is one index.
+ */
+export function strokesHitBy(
+	strokes: MaskStroke[],
+	transform: Transform,
+	points: number[],
+	reach: number,
+): number[] {
+	"worklet";
+	const hit: number[] = [];
+	if (points.length < 2) return hit;
+	const padding = reach / transform.scaleX;
+	segmentsNear(points, transform, padding, (point) => {
+		for (let i = 0; i < strokes.length; i++) {
+			if (
+				strokes[i].type === "pen" &&
+				!hit.includes(i) &&
+				hitsPen(strokes, i, point, padding)
+			) {
+				hit.push(i);
+			}
+		}
+		return false;
+	});
+	return hit;
+}
