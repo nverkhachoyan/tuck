@@ -480,6 +480,22 @@ describe("editorSlice", () => {
 			points,
 		});
 
+		test("separating is one undo step, and selects the first piece", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.drawStroke(pen([0, 0, 50, 0]));
+			const id = store.getState().selectedLayerId;
+			actions.drawStroke(pen([300, 300, 350, 300]), id);
+			const steps = store.getState().past.length;
+			actions.separateSelectedDrawing();
+			assert.equal(drawings(store).length, 2);
+			assert.equal(store.getState().selectedLayerId, id);
+			assert.equal(store.getState().past.length, steps + 1);
+			actions.undo();
+			assert.equal(drawings(store).length, 1);
+			assert.equal(store.getState().selectedLayerId, id);
+		});
+
 		test("an eraser erases every drawing it crosses, with nothing selected", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;

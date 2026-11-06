@@ -18,11 +18,13 @@ import { drawingBox } from "../../strokes.ts";
 import { createTextLayer } from "../../text/text.ts";
 import type { DrawingLayer, Stroke } from "../drawing.ts";
 import {
+	drawingPieces,
 	drawStroke,
 	eraseStroke,
 	eraseWholeStrokes,
 	removedLayers,
 	restyleDrawing,
+	separateDrawing,
 } from "../drawingEdits.ts";
 
 const blank = () => createBlankDocument(400, 300, "#ffffff");
@@ -520,5 +522,97 @@ describe("restyleDrawing", () => {
 			layers: document.layers.map((layer) => ({ ...layer, locked: true })),
 		};
 		assert.equal(restyleDrawing(locked, id, { color: "#000000" }), locked);
+	});
+});
+
+describe("drawingPieces and separateDrawing", () => {
+	// One drawing holding `strokes` in document space, as drawn in a row.
+	const drawingOf = (...strokes: Stroke[]) => {
+		const [first, ...rest] = strokes;
+		let document = drawStroke(blank(), null, first as Stroke & { type: "pen" });
+		const { id } = top<DrawingLayer>(document);
+		for (const stroke of rest) {
+			document =
+				stroke.type === "pen"
+					? drawStroke(document, id, stroke)
+					: eraseStroke(document, stroke, id);
+		}
+		return document;
+	};
+	const across = { ...pen, points: [50, 100, 150, 100] };
+	const down = { ...pen, points: [100, 50, 100, 150] };
+	const farAway = { ...pen, points: [300, 250, 350, 250] };
+
+	test("crossing strokes, and a chain of touching ones, are one piece; apart they're two", () => {
+		assert.deepEqual(drawingPieces(top(drawingOf(across, down))), [[0, 1]]);
+		const chain = drawingOf(
+			{ ...pen, points: [0, 0, 50, 0] },
+			{ ...pen, points: [50, 0, 100, 0] },
+			{ ...pen, points: [100, 0, 150, 0] },
+		);
+		assert.equal(drawingPieces(top(chain)).length, 1);
+		assert.deepEqual(drawingPieces(top(drawingOf(across, farAway))), [
+			[0],
+			[1],
+		]);
+	});
+
+	test("strokes that touched only where an eraser cleared are two pieces", () => {
+		const crossed = drawingOf(across, down, eraserOf(60, [100, 100]));
+		assert.equal(drawingPieces(top(crossed)).length, 2);
+	});
+
+	test("a stroke erased through its middle stays one piece", () => {
+		const cut = drawingOf(across, eraserOf(20, [100, 80, 100, 120]));
+		assert.equal(drawingPieces(top(cut)).length, 1);
+	});
+
+	test("separating keeps the stack, the first id, the transform and blend, and draws the same", () => {
+		const under = drawStroke(blank(), null, {
+			...pen,
+			points: [0, 280, 20, 280],
+		});
+		const document = (() => {
+			let next = drawStroke(under, null, across);
+			const { id } = top<DrawingLayer>(next);
+			next = drawStroke(next, id, farAway);
+			next = eraseStroke(next, eraserOf(10, [60, 90, 60, 110]), id);
+			return drawStroke(next, null, { ...pen, points: [0, 0, 10, 10] });
+		})();
+		const original = document.layers[1] as DrawingLayer;
+		const split = separateDrawing(document, original.id);
+		assert.equal(split.layers.length, 4);
+		assert.equal(split.layers[0], document.layers[0]);
+		assert.equal(split.layers[3], document.layers[2]);
+		const [first, second] = split.layers.slice(1, 3) as DrawingLayer[];
+		assert.equal(first.id, original.id);
+		assert.notEqual(second.id, original.id);
+		assert.deepEqual(
+			first.strokes.map((stroke) => stroke.type),
+			["pen", "eraser"],
+			"the eraser goes with the piece it's over",
+		);
+		assert.deepEqual(
+			second.strokes.map((stroke) => stroke.type),
+			["pen"],
+		);
+		const inDocument = (layer: DrawingLayer, index: number) =>
+			toDocumentSpace(layer.transform, {
+				x: layer.strokes[index].points[0],
+				y: layer.strokes[index].points[1],
+			});
+		assert.deepEqual(inDocument(first, 0), inDocument(original, 0));
+		assert.deepEqual(inDocument(second, 0), inDocument(original, 1));
+	});
+
+	test("a drawing in one piece, or a locked one, stays as it is", () => {
+		const one = drawingOf(across, down);
+		assert.equal(separateDrawing(one, top<DrawingLayer>(one).id), one);
+		const two = drawingOf(across, farAway);
+		const locked = {
+			...two,
+			layers: two.layers.map((layer) => ({ ...layer, locked: true })),
+		};
+		assert.equal(separateDrawing(locked, top<DrawingLayer>(locked).id), locked);
 	});
 });

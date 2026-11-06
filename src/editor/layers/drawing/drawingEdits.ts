@@ -5,7 +5,8 @@ import {
 	replaceLayer,
 	withLayers,
 } from "../../document/document.ts";
-import { toLayerSpace } from "../../document/geometry.ts";
+import { type Point, toLayerSpace } from "../../document/geometry.ts";
+import { createLayerId } from "../base.ts";
 import type { Layer } from "../layer.ts";
 import { erasesShape } from "../shape/shapeGeometry.ts";
 import {
@@ -206,6 +207,209 @@ export function eraseWholeStrokes(
 		}
 	}
 	return changed ? withLayers(document, layers) : document;
+}
+
+// The point on the line through `points` nearest `point`.
+function nearestOnLine(points: number[], point: Point): Point {
+	let best = { x: points[0], y: points[1] };
+	let bestDistance = Number.POSITIVE_INFINITY;
+	const last = Math.max(0, points.length - 4);
+	for (let i = 0; i <= last; i += 2) {
+		const end = Math.min(i + 2, points.length - 2);
+		const fromX = points[i];
+		const fromY = points[i + 1];
+		const dx = points[end] - fromX;
+		const dy = points[end + 1] - fromY;
+		const lengthSquared = dx * dx + dy * dy;
+		const along =
+			lengthSquared === 0
+				? 0
+				: Math.max(
+						0,
+						Math.min(
+							1,
+							((point.x - fromX) * dx + (point.y - fromY) * dy) / lengthSquared,
+						),
+					);
+		const x = fromX + along * dx;
+		const y = fromY + along * dy;
+		const distance = (x - point.x) ** 2 + (y - point.y) ** 2;
+		if (distance < bestDistance) {
+			bestDistance = distance;
+			best = { x, y };
+		}
+	}
+	return best;
+}
+
+// Each point along a stroke's line, at steps no longer than `step`.
+function alongLine(
+	points: number[],
+	step: number,
+	visit: (point: Point) => boolean,
+): boolean {
+	if (visit({ x: points[0], y: points[1] })) return true;
+	for (let i = 2; i < points.length; i += 2) {
+		const fromX = points[i - 2];
+		const fromY = points[i - 1];
+		const dx = points[i] - fromX;
+		const dy = points[i + 1] - fromY;
+		const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / step));
+		for (let s = 1; s <= steps; s++) {
+			if (visit({ x: fromX + (dx * s) / steps, y: fromY + (dy * s) / steps })) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+// Whether an eraser after `strokes[index]` clears the middle of the ink at
+// `point`.
+function erasedAfter(strokes: Stroke[], index: number, point: Point): boolean {
+	for (let i = index + 1; i < strokes.length; i++) {
+		const stroke = strokes[i];
+		if (
+			stroke.type === "eraser" &&
+			nearLine(stroke.points, point, stroke.width / 2)
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// The box around a stroke's line, padded by `pad`.
+function strokeBounds(points: number[], pad: number) {
+	let minX = Number.POSITIVE_INFINITY;
+	let minY = Number.POSITIVE_INFINITY;
+	let maxX = Number.NEGATIVE_INFINITY;
+	let maxY = Number.NEGATIVE_INFINITY;
+	for (let i = 0; i < points.length; i += 2) {
+		minX = Math.min(minX, points[i]);
+		maxX = Math.max(maxX, points[i]);
+		minY = Math.min(minY, points[i + 1]);
+		maxY = Math.max(maxY, points[i + 1]);
+	}
+	return {
+		minX: minX - pad,
+		minY: minY - pad,
+		maxX: maxX + pad,
+		maxY: maxY + pad,
+	};
+}
+
+// Whether two pen strokes' visible ink meets somewhere no later eraser
+// cleared: sampled along `a` at a quarter of its width, against the nearest
+// point on `b`.
+function inkTouches(strokes: Stroke[], a: number, b: number): boolean {
+	const first = strokes[a];
+	const second = strokes[b];
+	const reach = visibleReach(first) + visibleReach(second);
+	const boxA = strokeBounds(first.points, visibleReach(first));
+	const boxB = strokeBounds(second.points, visibleReach(second));
+	if (
+		boxA.maxX < boxB.minX ||
+		boxB.maxX < boxA.minX ||
+		boxA.maxY < boxB.minY ||
+		boxB.maxY < boxA.minY
+	) {
+		return false;
+	}
+	return alongLine(first.points, Math.max(first.width / 4, 0.5), (point) => {
+		const near = nearestOnLine(second.points, point);
+		if (Math.hypot(near.x - point.x, near.y - point.y) > reach) return false;
+		return !erasedAfter(strokes, a, point) && !erasedAfter(strokes, b, near);
+	});
+}
+
+// A drawing's strokes never change in place, so its pieces are worked out
+// once.
+const pieces = new WeakMap<Stroke[], number[][]>();
+
+/**
+ * The indexes of a drawing's pen strokes, grouped into pieces: strokes
+ * whose visible ink meets where no later eraser cleared it are one piece,
+ * and so are chains of them. A stroke the Eraser broke in two stays one
+ * stroke, so its halves stay in one piece. In the order they were drawn.
+ */
+export function drawingPieces(layer: DrawingLayer): number[][] {
+	const cached = pieces.get(layer.strokes);
+	if (cached) return cached;
+	const { strokes } = layer;
+	const pens = strokes.flatMap((stroke, index) =>
+		stroke.type === "pen" ? [index] : [],
+	);
+	const parent = new Map(pens.map((index) => [index, index]));
+	const root = (index: number): number => {
+		let at = index;
+		while (parent.get(at) !== at) at = parent.get(at) ?? at;
+		return at;
+	};
+	for (let i = 0; i < pens.length; i++) {
+		for (let j = i + 1; j < pens.length; j++) {
+			const a = root(pens[i]);
+			const b = root(pens[j]);
+			if (a !== b && inkTouches(strokes, pens[i], pens[j])) {
+				parent.set(Math.max(a, b), Math.min(a, b));
+			}
+		}
+	}
+	const groups = new Map<number, number[]>();
+	for (const index of pens) {
+		const key = root(index);
+		groups.set(key, [...(groups.get(key) ?? []), index]);
+	}
+	const result = [...groups.values()];
+	pieces.set(layer.strokes, result);
+	return result;
+}
+
+// Whether an eraser stroke passes over a pen stroke drawn before it.
+function erases(strokes: Stroke[], eraser: number, pen: number): boolean {
+	if (pen > eraser) return false;
+	const { points, width } = strokes[eraser];
+	const reach = width / 2 + visibleReach(strokes[pen]);
+	return alongLine(points, Math.max(width / 4, 0.5), (point) =>
+		nearLine(strokes[pen].points, point, reach),
+	);
+}
+
+/**
+ * The drawing `id` split into one drawing per piece (`drawingPieces`), in
+ * its place in the stack, in the order the pieces were drawn:
+ * - each keeps its transform, blend, and visibility, and holds its pen
+ *   strokes and every eraser stroke over one of them, in their order, so
+ *   it draws as it did;
+ * - the first keeps the id, so the selection and its row stay put.
+ * The same document for a drawing in one piece, a locked one, or none.
+ */
+export function separateDrawing(
+	document: EditorDocument,
+	id: string,
+): EditorDocument {
+	const target = findLayer(document, id);
+	if (target?.type !== "drawing" || target.locked) return document;
+	const groups = drawingPieces(target);
+	if (groups.length < 2) return document;
+	const { strokes } = target;
+	const split = groups.map((group, n): DrawingLayer => {
+		const kept = strokes.filter(
+			(stroke, index) =>
+				group.includes(index) ||
+				(stroke.type === "eraser" &&
+					group.some((pen) => erases(strokes, index, pen))),
+		);
+		return recenterDrawing({
+			...target,
+			id: n === 0 ? target.id : createLayerId("drawing"),
+			strokes: kept,
+		});
+	});
+	return withLayers(
+		document,
+		document.layers.flatMap((layer) => (layer === target ? split : [layer])),
+	);
 }
 
 /** What restyling a mark changes; `tip: null` is the round pen. */
