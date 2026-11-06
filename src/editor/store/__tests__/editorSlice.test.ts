@@ -457,16 +457,16 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().document?.layers.at(-1), drawing);
 			assert.equal(store.getState().selectedLayerId, drawing.id);
 
-			actions.drawStroke(pen([100, 100, 200, 0]));
+			actions.drawStroke(pen([100, 100, 200, 0]), drawing.id);
 			assert.equal(drawings(store).length, 1);
 			assert.equal(drawings(store)[0].strokes.length, 2);
+			assert.equal(store.getState().selectedLayerId, drawing.id);
 		});
 
-		test("a stroke with another layer selected starts a new drawing", () => {
-			const { store, text } = storeWithText();
+		test("a stroke with no mark to join starts a new drawing", () => {
+			const { store } = storeWithText();
 			const actions = store.getState().actions;
 			actions.drawStroke(pen([0, 0, 100, 100]));
-			actions.selectLayer(text.id);
 			actions.drawStroke(pen([0, 0, 100, 100]));
 			assert.equal(drawings(store).length, 2);
 		});

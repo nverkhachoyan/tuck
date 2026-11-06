@@ -75,10 +75,21 @@ describe("strokeIntent", () => {
 	});
 
 	test("paints a brush's strokes, even from off the document", () => {
-		assert.deepEqual(strokeIntent(pen, [10, 10, 100, 100], 1, size), {
-			type: "finish",
-			stroke: { ...pen, points: [10, 10, 100, 100] },
-		});
+		assert.deepEqual(
+			strokeIntent(pen, [10, 10, 100, 100], 1, size, {
+				startedAt: 1000,
+				endedAt: 1400,
+			}),
+			{
+				type: "finish",
+				stroke: {
+					...pen,
+					points: [10, 10, 100, 100],
+					startedAt: 1000,
+					endedAt: 1400,
+				},
+			},
+		);
 		assert.deepEqual(strokeIntent(brush, [-20, 50, 100, 50], 1, size), {
 			type: "finish",
 			stroke: { ...brush, points: [-20, 50, 100, 50] },

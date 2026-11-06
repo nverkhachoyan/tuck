@@ -26,25 +26,26 @@ import {
 } from "./drawing.ts";
 
 /**
- * A pen stroke in document space joins the selected drawing when it
- * composites the same way, or starts a new one on top.
+ * A pen stroke in document space joins the mark `joinId` when it's an
+ * unlocked drawing that composites the same way, or starts a new mark on
+ * top. Which mark to join is the caller's (`continuesMark`).
  */
 export function drawStroke(
 	document: EditorDocument,
-	selectedLayerId: string | null,
+	joinId: string | null,
 	stroke: Stroke & { type: "pen" },
 ): EditorDocument {
 	if (stroke.points.length < 2) return document;
-	const selected = findLayer(document, selectedLayerId);
+	const joined = findLayer(document, joinId);
 	if (
-		selected?.type === "drawing" &&
-		!selected.locked &&
-		strokeBlend(stroke) === layerBlend(selected)
+		joined?.type === "drawing" &&
+		!joined.locked &&
+		strokeBlend(stroke) === layerBlend(joined)
 	) {
 		return withLayers(
 			document,
 			document.layers.map((layer) =>
-				layer === selected ? addStroke(selected, stroke) : layer,
+				layer === joined ? addStroke(joined, stroke) : layer,
 			),
 		);
 	}

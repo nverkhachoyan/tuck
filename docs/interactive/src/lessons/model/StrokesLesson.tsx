@@ -176,11 +176,13 @@ export function StrokesLesson() {
 			title: "Draw a stroke",
 			body: (
 				<p>
-					Draw anywhere. With no drawing selected, <code>drawStroke</code> calls{" "}
-					<code>createDrawingLayer</code>. Its transform starts at the canvas's
-					top-left corner, then <code>recenterDrawing</code> moves the origin to
-					the middle of the ink and shifts every point to match: see the dashed
-					arrow. Turning and handles then go around what you drew.
+					Draw anywhere. A drawing is a mark: a word, an arrow, a circle. With
+					no mark to continue (<code>continuesMark</code> decides),{" "}
+					<code>drawStroke</code> calls <code>createDrawingLayer</code>. Its
+					transform starts at the canvas's top-left corner, then{" "}
+					<code>recenterDrawing</code> moves the origin to the middle of the ink
+					and shifts every point to match: see the dashed arrow. Turning and
+					handles then go around what you drew.
 				</p>
 			),
 			done: (s) => s.layer !== null,

@@ -11,6 +11,7 @@ export const penTool = defineTool<PenController>({
 	canvasInput: (pen) => pen.canvasInput,
 	finishStroke: (pen, stroke) => pen.finishStroke(stroke),
 	deselectOnDone: true,
+	startsUnselected: true,
 	stepSize: (pen, step) => pen.stepSize(step),
 	variants: () =>
 		TIPS.map((t) => ({ id: t.tip, label: t.title, icon: t.icon })),
