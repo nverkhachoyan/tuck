@@ -1,6 +1,6 @@
 import { isHexColor } from "../../../ui/color.ts";
 import type { Size } from "../../document/geometry.ts";
-import type { Brush, PenTip } from "../../layers/drawing/drawing.ts";
+import type { PenBrush, PenTip } from "../../layers/drawing/drawing.ts";
 
 export type PenTipChoice = "pen" | PenTip;
 
@@ -98,7 +98,7 @@ export function stepPenSize(settings: PenSettings, step: 1 | -1): PenSettings {
 	return withPenSize(settings, next);
 }
 
-export function penBrushFor(settings: PenSettings, size: Size): Brush {
+export function penBrushFor(settings: PenSettings, size: Size): PenBrush {
 	const color = penColor(settings);
 	const width =
 		PEN_SIZES[settings.tip][settings.sizes[settings.tip]] * shortSide(size);

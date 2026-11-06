@@ -1,5 +1,5 @@
-import { type Box, toLayerSpace } from "../../document/geometry.ts";
-import { hitTestDrawing, type MaskStroke } from "../strokes.ts";
+import type { Box } from "../../document/geometry.ts";
+import { hitTestDrawing, type MaskStroke, segmentsNear } from "../strokes.ts";
 import { isLine, type LineShapeKind, type ShapeLayer } from "./shape.ts";
 
 // An arrow's head, in its line's thickness: how far back from the tip it
@@ -114,34 +114,17 @@ function outlineStrokes(layer: ShapeLayer): MaskStroke[] {
 
 /**
  * Whether an eraser `width` across, drawn through `points` (flattened x, y
- * pairs in document space), passes over what a shape draws. It's checked at
- * steps no longer than the eraser's reach, so a quick stroke, whose points
- * land far apart, can't skip over a thin line.
+ * pairs in document space), passes over what a shape draws (see
+ * `segmentsNear`).
  */
 export function erasesShape(
 	layer: ShapeLayer,
 	points: number[],
 	width: number,
 ): boolean {
-	const { transform } = layer;
 	const outline = { strokes: shapeOutline(layer) };
-	const reach = width / 2 / transform.scaleX;
-	const at = (i: number) =>
-		toLayerSpace(transform, { x: points[i], y: points[i + 1] });
-	let from = at(0);
-	if (hitTestDrawing(outline, from, reach)) return true;
-	for (let i = 2; i < points.length; i += 2) {
-		const to = at(i);
-		const steps = Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / reach);
-		for (let step = 1; step <= steps; step++) {
-			const along = step / steps;
-			const point = {
-				x: from.x + (to.x - from.x) * along,
-				y: from.y + (to.y - from.y) * along,
-			};
-			if (hitTestDrawing(outline, point, reach)) return true;
-		}
-		from = to;
-	}
-	return false;
+	const reach = width / 2 / layer.transform.scaleX;
+	return segmentsNear(points, layer.transform, reach, (point) =>
+		hitTestDrawing(outline, point, reach),
+	);
 }

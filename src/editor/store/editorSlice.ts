@@ -11,7 +11,7 @@ import type { Framing } from "../document/framing.ts";
 import type { Rect, Transform } from "../document/geometry.ts";
 import { createLayerId } from "../layers/base.ts";
 import type { Stroke } from "../layers/drawing/drawing.ts";
-import { drawStroke } from "../layers/drawing/drawingEdits.ts";
+import { drawStroke, eraseStroke } from "../layers/drawing/drawingEdits.ts";
 import type { Adjustments } from "../layers/image/adjustments.ts";
 import {
 	type CutStroke,
@@ -287,9 +287,16 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		},
 
 		// A new drawing is selected, so the next stroke joins it too.
-		drawStroke: (stroke: Stroke) =>
+		drawStroke: (stroke: Stroke & { type: "pen" }) =>
 			setDocument("editor/drawStroke", (document) =>
 				drawStroke(document, get().selectedLayerId, stroke),
+			),
+
+		// Each swipe is one step; a drawing it erases away, selected or not,
+		// leaves the selection.
+		eraseStroke: (stroke: Stroke & { type: "eraser" }, scope: string | null) =>
+			setDocument("editor/eraseStroke", (document) =>
+				eraseStroke(document, stroke, scope),
 			),
 
 		// On top and selected, so restyling it right after (see

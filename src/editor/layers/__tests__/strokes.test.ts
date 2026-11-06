@@ -160,6 +160,26 @@ describe("hitTestDrawing", () => {
 		const layer = addStroke(square, eraser([0, 0, 50, 50]));
 		assert.ok(!hitTestDrawing(layer, { x: 25, y: 25 }, 0));
 	});
+
+	// The top side erased from x -30 to 30, by an eraser narrower than the
+	// tap's padding.
+	const gap = addStroke(square, eraser([-30, -100, 30, -100], 20));
+
+	test("misses ink that was erased, even with a padding wider than the eraser", () => {
+		assert.ok(!hitTestDrawing(gap, { x: 0, y: -100 }, 14));
+		assert.ok(!hitTestDrawing(gap, { x: 0, y: -90 }, 14));
+	});
+
+	test("hits the ink left beside an erased gap", () => {
+		assert.ok(hitTestDrawing(gap, { x: 25, y: -100 }, 14));
+		assert.ok(!hitTestDrawing(gap, { x: 25, y: -100 }, 0));
+		assert.ok(hitTestDrawing(gap, { x: -100, y: 0 }, 0));
+	});
+
+	test("hits a pen drawn over ink an earlier eraser cleared", () => {
+		const redrawn = addStroke(gap, pen([-30, -100, 30, -100]));
+		assert.ok(hitTestDrawing(redrawn, { x: 0, y: -100 }, 14));
+	});
 });
 
 describe("straightStroke", () => {

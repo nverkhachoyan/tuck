@@ -1,7 +1,7 @@
 import type { Point, Rect } from "../document/geometry.ts";
 import {
-	type Brush,
 	layerBlend,
+	type PenBrush,
 	strokeBlend,
 } from "../layers/drawing/drawing.ts";
 import type { CutStroke } from "../layers/image/image.ts";
@@ -17,12 +17,14 @@ import type { Handle } from "./handleGeometry.ts";
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
- * brush, drags out a shape or a redaction's box, paints a redaction's
+ * pen, erases `width` across through every unlocked drawing (or only
+ * `scope`'s, when it names one) and shape, drags out a shape or a redaction's box, paints a redaction's
  * strokes, picks a color where the finger lifts, paints the cut of the image
  * `layerId`, or picks the subject to cut out of it with a tap.
  */
 export type CanvasTool =
-	| { type: "draw"; brush: Brush }
+	| { type: "draw"; brush: PenBrush }
+	| { type: "erase"; width: number; scope: string | null }
 	| { type: "drawShape"; shape: ShapeKind; style: ShapeStyle }
 	| { type: "pickColor" }
 	| { type: "redactBox"; effect: RedactionEffect }
@@ -40,7 +42,10 @@ export type CanvasTool =
  * or the point picked.
  */
 export type ToolStroke =
-	| (Extract<CanvasTool, { type: "draw" | "redactBrush" | "cutBrush" }> & {
+	| (Extract<
+			CanvasTool,
+			{ type: "draw" | "erase" | "redactBrush" | "cutBrush" }
+	  > & {
 			points: number[];
 	  })
 	| (Extract<CanvasTool, { type: "redactBox" }> & { rect: Rect })
@@ -69,6 +74,7 @@ const CANVAS_TOOLS: Record<
 	{ dragsOut: boolean; restyles: "redaction" | "shape" | null }
 > = {
 	draw: { dragsOut: false, restyles: null },
+	erase: { dragsOut: false, restyles: null },
 	drawShape: { dragsOut: true, restyles: "shape" },
 	pickColor: { dragsOut: false, restyles: null },
 	redactBox: { dragsOut: true, restyles: "redaction" },
@@ -102,11 +108,11 @@ export function canAddTo(tool: CanvasTool, layer: Layer): boolean {
 		case "draw":
 			return (
 				layer.type === "drawing" &&
-				(tool.brush.type === "eraser" ||
-					strokeBlend(tool.brush) === layerBlend(layer))
+				strokeBlend(tool.brush) === layerBlend(layer)
 			);
 		case "redactBrush":
 			return layer.type === "redaction" && layer.shape === "strokes";
+		case "erase":
 		case "redactBox":
 		case "drawShape":
 		case "pickColor":
@@ -114,6 +120,20 @@ export function canAddTo(tool: CanvasTool, layer: Layer): boolean {
 		case "pickSubject":
 			return false;
 	}
+}
+
+/**
+ * Whether `tool`'s stroke, as it's painted, can change `layer`: for the
+ * Eraser, an unlocked drawing (only its scope, when it has one); for the
+ * others, a layer it can join (`canAddTo`).
+ */
+export function strokeReaches(tool: CanvasTool, layer: Layer): boolean {
+	if (tool.type !== "erase") return canAddTo(tool, layer);
+	return (
+		layer.type === "drawing" &&
+		!layer.locked &&
+		(tool.scope === null || layer.id === tool.scope)
+	);
 }
 
 /** The image a cut paints or picks a subject in, or null. */

@@ -126,7 +126,13 @@ export function EditorScene({
 											? (previewUri?.(layer.uri) ?? layer.uri)
 											: undefined
 									}
-									stroke={stroke?.targetId === layer.id ? stroke : null}
+									stroke={
+										stroke &&
+										(stroke.reaches(layer) ||
+											(layer.type === "shape" && stroke.crossed))
+											? stroke
+											: null
+									}
 									live={live}
 									matrix={
 										adjusting?.layerId === layer.id
@@ -148,7 +154,7 @@ export function EditorScene({
 					{draft.render(viewScale)}
 				</Group>
 			)}
-			{stroke?.targetId === null && (
+			{stroke?.startsLayer && (
 				<NewLayerStroke
 					key={stroke.landedId}
 					stroke={stroke}

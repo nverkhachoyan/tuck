@@ -20,7 +20,7 @@ import {
 	useSimultaneousGestures,
 } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
-import { Canvas, Group } from "react-native-skia";
+import { Canvas, Circle, Group } from "react-native-skia";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
 import { cursorStyle } from "./canvas/canvasCursor";
@@ -39,7 +39,7 @@ import {
 } from "./canvas/liveTransform";
 import type { CanvasRegion } from "./canvas/RegionOutline";
 import { SelectionBarFrame } from "./canvas/SelectionBarFrame";
-import { useCanvasCursor } from "./canvas/useCanvasCursor";
+import { useCanvasCursor, useEraserRing } from "./canvas/useCanvasCursor";
 import { useCanvasTap } from "./canvas/useCanvasTap";
 import { useCanvasZoom } from "./canvas/useCanvasZoom";
 import { useDialDrag } from "./canvas/useDialDrag";
@@ -487,6 +487,26 @@ export function EditorCanvas({
 		onToolInteractionEnd,
 		enabled: isTool,
 	});
+	// On web, the Eraser's size follows the pointer, hidden while it drags.
+	// The worklets below take only shared values and numbers.
+	const ring = useEraserRing();
+	const ringShown = ring.shown;
+	const eraserRadius = tool?.type === "erase" ? tool.width / 2 : 0;
+	const ringRadius = useDerivedValue(
+		() => eraserRadius * shown.scale.value,
+		[eraserRadius],
+	);
+	const strokeId = liveStroke?.id ?? null;
+	const strokePoints = liveStroke?.points ?? null;
+	const landedId = liveStroke?.landedId ?? 0;
+	const ringOpacity = useDerivedValue(() => {
+		const dragging =
+			strokeId !== null &&
+			strokePoints !== null &&
+			strokeId.value > landedId &&
+			strokePoints.value.length > 0;
+		return ringShown.value && !dragging && eraserRadius > 0 ? 1 : 0;
+	}, [strokeId, strokePoints, landedId, eraserRadius]);
 	const cuttingOutId = cutImageId(tool);
 	const outlinedLayer = outlinedLayerFor(input, {
 		layers: document.layers,
@@ -525,6 +545,7 @@ export function EditorCanvas({
 	const canvasGesture = useSimultaneousGestures(
 		gesture,
 		paintGesture,
+		ring.hover,
 		textGesture,
 		regionGesture,
 		dialGesture,
@@ -571,6 +592,17 @@ export function EditorCanvas({
 									previewUri={previewUri}
 								/>
 							</Group>
+						)}
+						{eraserRadius > 0 && (
+							<Circle
+								cx={ring.x}
+								cy={ring.y}
+								r={ringRadius}
+								opacity={ringOpacity}
+								style="stroke"
+								strokeWidth={ERASER_RING_PX}
+								color={colors.selection}
+							/>
 						)}
 					</Canvas>
 					{/* At the bottom, clear of new text at the center and the editor's
@@ -619,6 +651,9 @@ export function EditorCanvas({
 		</View>
 	);
 }
+
+// The Eraser's ring's line, in screen pixels.
+const ERASER_RING_PX = 1.5;
 
 const styles = StyleSheet.create({
 	container: {

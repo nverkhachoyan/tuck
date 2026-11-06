@@ -9,16 +9,20 @@ import {
 } from "react-native-skia";
 import { mixColors } from "@/ui/color";
 import type { MaskStroke } from "../strokes";
-import { type Brush, type DrawingLayer, layerBlend } from "./drawing";
+import {
+	type Brush,
+	type DrawingLayer,
+	layerBlend,
+	NEON_GLOW,
+	NEON_GLOW_BLUR,
+} from "./drawing";
 
 // A marker's ink is see-through, so what it highlights shows through it.
 const MARKER_OPACITY = 0.45;
-// A neon stroke's parts, as shares of its width: a blurred glow, the tube
-// over it, and the tube's bright core. The glow's sigma is a share too, so
-// it scales with the stroke, and the glow fades out about where the width
-// ends. The core is its color most of the way to white.
-const NEON_GLOW = 0.55;
-const NEON_GLOW_BLUR = 0.16;
+// A neon stroke's parts, as shares of its width: a blurred glow
+// (`NEON_GLOW`, with `NEON_GLOW_BLUR` its sigma, so it scales with the
+// stroke and fades out about where the width ends), the tube over it, and
+// the tube's bright core. The core is its color most of the way to white.
 const NEON_TUBE = 0.2;
 const NEON_CORE = 0.08;
 const NEON_CORE_WHITE = 0.75;

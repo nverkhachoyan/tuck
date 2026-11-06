@@ -43,7 +43,7 @@ type Extent = { minX: number; minY: number; maxX: number; maxY: number };
 
 /**
  * What a layer's pen strokes cover in its own space, or null if it has
- * none. Erasing never shrinks it.
+ * none. Erasing shrinks it only by removing whole strokes (`pruneErased`).
  */
 function penExtent(strokes: MaskStroke[]): Extent | null {
 	let minX = Infinity;
@@ -155,7 +155,12 @@ function segmentDistanceSquared(from: Point, to: Point, point: Point): number {
 	return x * x + y * y;
 }
 
-function nearLine(points: number[], point: Point, reach: number): boolean {
+/** Whether `point` is within `reach` of the line through `points`. */
+export function nearLine(
+	points: number[],
+	point: Point,
+	reach: number,
+): boolean {
 	"worklet";
 	const reachSquared = reach * reach;
 	// A dot is a line from its point to itself.
@@ -195,9 +200,112 @@ export function straightStroke(points: number[]): number[] {
 }
 
 /**
+ * Whether a line drawn through `points` (flattened x, y pairs in document
+ * space) passes anywhere `test` says, in the layer's own space. It's checked
+ * at steps no longer than `reach`, so a quick stroke, whose points land far
+ * apart, can't skip over a thin line.
+ */
+export function segmentsNear(
+	points: number[],
+	transform: Transform,
+	reach: number,
+	test: (point: Point) => boolean,
+): boolean {
+	"worklet";
+	let from = toLayerSpace(transform, { x: points[0], y: points[1] });
+	if (test(from)) return true;
+	for (let i = 2; i < points.length; i += 2) {
+		const to = toLayerSpace(transform, { x: points[i], y: points[i + 1] });
+		const steps = Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / reach);
+		for (let step = 1; step <= steps; step++) {
+			const along = step / steps;
+			const point = {
+				x: from.x + (to.x - from.x) * along,
+				y: from.y + (to.y - from.y) * along,
+			};
+			if (test(point)) return true;
+		}
+		from = to;
+	}
+	return false;
+}
+
+// Whether an eraser from `strokes[from]` on clears the middle of the ink at
+// `point`.
+function erasedAt(strokes: MaskStroke[], from: number, point: Point): boolean {
+	"worklet";
+	for (let i = from; i < strokes.length; i++) {
+		const stroke = strokes[i];
+		if (
+			stroke.type === "eraser" &&
+			nearLine(stroke.points, point, stroke.width / 2)
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// Whether the pen `strokes[index]` drew anything still showing within
+// `padding` of `point`: its line is sampled where it passes that close, and
+// a sample counts unless a later eraser cleared it.
+function hitsPen(
+	strokes: MaskStroke[],
+	index: number,
+	point: Point,
+	padding: number,
+): boolean {
+	"worklet";
+	const { points, width } = strokes[index];
+	const reach = width / 2 + padding;
+	if (!nearLine(points, point, reach)) return false;
+	let erased = false;
+	for (let i = index + 1; i < strokes.length && !erased; i++) {
+		erased = strokes[i].type === "eraser";
+	}
+	if (!erased) return true;
+	const gap = Math.max(width / 4, reach / 8);
+	const last = Math.max(0, points.length - 4);
+	for (let i = 0; i <= last; i += 2) {
+		const end = Math.min(i + 2, points.length - 2);
+		const fromX = points[i];
+		const fromY = points[i + 1];
+		const dx = points[end] - fromX;
+		const dy = points[end + 1] - fromY;
+		const length = Math.hypot(dx, dy);
+		if (length === 0) {
+			const near = Math.hypot(point.x - fromX, point.y - fromY) <= reach;
+			if (near && !erasedAt(strokes, index + 1, { x: fromX, y: fromY })) {
+				return true;
+			}
+			continue;
+		}
+		// The part of this segment within `reach` of the point.
+		const ux = dx / length;
+		const uy = dy / length;
+		const along = (point.x - fromX) * ux + (point.y - fromY) * uy;
+		const across = (point.x - fromX) * uy - (point.y - fromY) * ux;
+		const chordSquared = reach * reach - across * across;
+		if (chordSquared < 0) continue;
+		const chord = Math.sqrt(chordSquared);
+		const start = Math.max(0, along - chord);
+		const stop = Math.min(length, along + chord);
+		if (start > stop) continue;
+		const steps = Math.max(1, Math.ceil((stop - start) / gap));
+		for (let step = 0; step <= steps; step++) {
+			const at = start + ((stop - start) * step) / steps;
+			const sample = { x: fromX + ux * at, y: fromY + uy * at };
+			if (!erasedAt(strokes, index + 1, sample)) return true;
+		}
+	}
+	return false;
+}
+
+/**
  * Whether a point in a layer's own space is within `padding` of what one
- * of its pens drew. Unlike a box, this lets a tap inside a circle drawn
- * around something reach the layer under it.
+ * of its pens drew and no later eraser cleared. Unlike a box, this lets a
+ * tap inside a circle drawn around something, or where its ink was erased,
+ * reach the layer under it.
  */
 export function hitTestDrawing(
 	layer: { strokes: MaskStroke[] },
@@ -205,9 +313,11 @@ export function hitTestDrawing(
 	padding: number,
 ): boolean {
 	"worklet";
-	return layer.strokes.some(
-		(stroke) =>
-			stroke.type === "pen" &&
-			nearLine(stroke.points, point, stroke.width / 2 + padding),
-	);
+	const { strokes } = layer;
+	for (let i = 0; i < strokes.length; i++) {
+		if (strokes[i].type === "pen" && hitsPen(strokes, i, point, padding)) {
+			return true;
+		}
+	}
+	return false;
 }

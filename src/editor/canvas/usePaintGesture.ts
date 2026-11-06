@@ -27,6 +27,10 @@ const STILL_MS = 500;
  * A stroke that starts where `standsAside` says, which is decided where the
  * finger lands, is left alone to lift, and handed to no one.
  *
+ * `onSegment`, a worklet, hears each piece of line as it's added: the first
+ * point alone, then each new point with the one before it. An empty list
+ * starts over, for a new stroke or a cancelled one.
+ *
  * When `straighten` is set, a highlighter holds still for half a second and
  * the stroke becomes the line from where it began. Shift held at its first
  * move (`shiftHeld`) does that from the start. It then follows as that line.
@@ -39,6 +43,7 @@ export function usePaintGesture({
 	standsAside = null,
 	straighten = false,
 	shiftHeld = null,
+	onSegment = null,
 	enabled = true,
 }: {
 	viewport: DocumentViewport;
@@ -50,6 +55,7 @@ export function usePaintGesture({
 	// The highlighter: hold still, or hold Shift on web, and it draws a line.
 	straighten?: boolean;
 	shiftHeld?: SharedValue<boolean> | null;
+	onSegment?: ((points: number[]) => void) | null;
 	enabled?: boolean;
 }) {
 	const cancelled = useSharedValue(false);
@@ -73,6 +79,7 @@ export function usePaintGesture({
 		cancelled.value = true;
 		generation.value += 1;
 		points.value = [];
+		onSegment?.([]);
 	};
 
 	const markStraight = () => {
@@ -104,15 +111,19 @@ export function usePaintGesture({
 	const extendStroke = (x: number, y: number) => {
 		"worklet";
 		const gap = MIN_POINT_GAP_PX / viewport.scale;
-		points.modify((line) => {
-			const dx = x - line[line.length - 2];
-			const dy = y - line[line.length - 1];
-			// Empty when it began before its first finger's touch-down reset it.
-			if (line.length === 0 || dx * dx + dy * dy >= gap * gap) {
-				line.push(x, y);
-			}
-			return line;
+		const line = points.value;
+		const lastX = line[line.length - 2];
+		const lastY = line[line.length - 1];
+		const dx = x - lastX;
+		const dy = y - lastY;
+		// Empty when it began before its first finger's touch-down reset it.
+		const first = line.length === 0;
+		if (!first && dx * dx + dy * dy < gap * gap) return;
+		points.modify((value) => {
+			value.push(x, y);
+			return value;
 		});
+		onSegment?.(first ? [x, y] : [lastX, lastY, x, y]);
 	};
 
 	// Waits for stillness afresh once the finger strays from where it last
@@ -144,6 +155,8 @@ export function usePaintGesture({
 			strokeId.value += 1;
 			points.value =
 				cancelled.value || aside.value ? [] : toDocument(event.x, event.y);
+			onSegment?.([]);
+			if (points.value.length > 0) onSegment?.(points.value);
 			anchorX.value = event.x;
 			anchorY.value = event.y;
 			if (event.numberOfPointers > 1) cancel();

@@ -356,6 +356,46 @@ describe("parseSavedProject", () => {
 		assert.deepEqual(project?.document, saved);
 	});
 
+	test("reads a version 5 drawing from before the Eraser reached every drawing, unpruned", () => {
+		const document = documentWithText();
+		// Two Pen sessions, each erased in its own Eraser session, the second
+		// with a pen stroke its eraser covers entirely.
+		const first = drawingLayer();
+		first.strokes.push(
+			{
+				type: "pen",
+				color: "#FFD60A",
+				width: 40,
+				points: [0, 0, 80, 0],
+				tip: "marker",
+			},
+			{ type: "eraser", width: 30, points: [10, 10, 40, 40] },
+		);
+		const second = drawingLayer();
+		second.strokes.push(
+			{
+				type: "pen",
+				color: "#0A84FF",
+				width: 8,
+				points: [200, 0, 260, 0],
+				tip: "neon",
+			},
+			{ type: "pen", color: "#000000", width: 4, points: [300, 0, 320, 0] },
+			{ type: "eraser", width: 60, points: [290, 0, 330, 0] },
+		);
+		document.layers.push(first, second);
+		const saved = mapImageUris(document, () => "original.jpg");
+		const json = JSON.stringify({
+			version: 5,
+			createdAt: 1,
+			updatedAt: 2,
+			document: saved,
+		});
+		const project = parseSavedProject(json);
+		assert.equal(PROJECT_VERSION, 5);
+		assert.deepEqual(project?.document, saved);
+	});
+
 	test("reads redactions: boxes, brushed strokes, and masks, solid, blurred, and pixelated", () => {
 		const document = documentWithText();
 		const strokes = createRedactionStrokes(
