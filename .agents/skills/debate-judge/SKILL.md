@@ -79,3 +79,10 @@ Specific facts or findings that would flip the recommendation.
 ## Missed by the debate
 Anything important none of the agents raised (keep this short).
 ```
+
+## 4. Next
+
+The judgments inform a decision; they don't make it. Once the person decides,
+the decisions go in a direction document (in the debate's folder), which
+`plan-from-direction` turns into an implementation plan. This skill is the
+third of Brainstorm -> Debate -> Judge -> Plan from direction.
