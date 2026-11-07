@@ -166,7 +166,8 @@ export function Editor({
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
 	// what's found. While adjusting, the canvas holds still. While cutting
 	// out, taps pick a subject, or strokes paint the cut. A tap away from what
-	// the tool works on puts it down, as Done does.
+	// the tool works on puts it down, as Back does: Cut's and Find's previews
+	// are dropped, and any other tool's work is kept.
 	const tool = mode.type === "tool" ? mode.tool : null;
 	// A tool that keeps a draft until Done takes the keys: Export would leave
 	// the draft out, and an edit to the layers would change the document
@@ -608,7 +609,7 @@ export function Editor({
 							onToolInteractionEnd={() =>
 								dispatchMode({ type: "closeToolOptions" })
 							}
-							onTapAway={done}
+							onTapAway={putDownTool}
 							bottomInset={layout.canvasInset.bottom}
 							leftInset={layout.canvasInset.left}
 							rightInset={layout.canvasInset.right}

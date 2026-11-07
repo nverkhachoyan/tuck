@@ -28,7 +28,7 @@ export type ToolId = string;
  *   thumbnails) sees the document from before it opened.
  * - `undoSteps`: what its changes become once it's done, when that isn't one
  *   undo step: one per change ("each", the Eraser's swipes) or one per mark,
- *   a run of changes to the same selection ("marks": Pen's strokes, a shape
+ *   a run of changes to the same layer ("marks": Pen's strokes, a shape
  *   or redaction with its resizes and restyles).
  * - `cancels`: whether its panel offers Cancel, for a draft, a preview, or
  *   settings tried out (Crop, Cut, Find, Adjust). Any other tool's work is

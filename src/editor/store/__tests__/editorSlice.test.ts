@@ -1327,6 +1327,42 @@ describe("editorSlice", () => {
 			);
 		});
 
+		test("a mark's step follows the layer it changed, not a tap that moved the selection", () => {
+			const style = { color: "#FF3B30", strokeWidth: 12 };
+			const place = { x: 400, y: 300, rotation: 0, width: 200, height: 100 };
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const steps = store.getState().past.length;
+			actions.beginSession(false, "marks");
+			actions.addShape("rectangle", place, style);
+			const a = store.getState().selectedLayerId ?? "";
+			actions.setShapeStyle(a, { color: "#0A84FF" });
+			// Deselecting before the next box leaves A's restyle with A.
+			actions.selectLayer(null);
+			actions.addShape("ellipse", { ...place, x: 100 }, style);
+			// Selecting A again and restyling it is a step apart from B.
+			actions.selectLayer(a);
+			actions.setShapeStyle(a, { strokeWidth: 4 });
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 3);
+
+			const shapesNow = () =>
+				(store.getState().document?.layers ?? []).flatMap((layer) =>
+					layer.type === "shape"
+						? [[layer.shape, layer.color, layer.strokeWidth]]
+						: [],
+				);
+			actions.undo();
+			assert.deepEqual(shapesNow(), [
+				["rectangle", "#0A84FF", 12],
+				["ellipse", "#FF3B30", 12],
+			]);
+			actions.undo();
+			assert.deepEqual(shapesNow(), [["rectangle", "#0A84FF", 12]]);
+			actions.undo();
+			assert.deepEqual(shapesNow(), []);
+		});
+
 		test("an Eraser session keeps one undo step per swipe", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;
