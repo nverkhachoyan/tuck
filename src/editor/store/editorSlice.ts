@@ -720,6 +720,8 @@ function pastIn(
  * - A change's mark is the layer it added, changed, or removed, read from the
  *   documents, since a tap that selects or deselects between changes moves
  *   the selection without a step of its own.
+ * - A change to several layers at once (a group hidden) is a mark of its
+ *   own, joining neither neighbor.
  * - A change that touched no layer (a reorder) takes the selection after it.
  */
 export function stepsByMark(
@@ -728,26 +730,29 @@ export function stepsByMark(
 ): EditorSnapshot[] {
 	const markOf = (index: number) => {
 		const after = index + 1 < steps.length ? steps[index + 1] : current;
-		return (
-			changedLayer(steps[index].document.layers, after.document.layers) ??
-			after.selectedLayerId
+		const changed = changedLayers(
+			steps[index].document.layers,
+			after.document.layers,
 		);
+		if (changed.length === 0) return after.selectedLayerId;
+		return changed.length === 1 ? changed[0] : steps[index];
 	};
 	return steps.filter(
 		(_, index) => index === 0 || markOf(index) !== markOf(index - 1),
 	);
 }
 
-/** The id of the first layer added, changed, or removed from `before` to `after`. */
-function changedLayer(
+/** The ids of the layers added, changed, or removed from `before` to `after`. */
+function changedLayers(
 	before: readonly Layer[],
 	after: readonly Layer[],
-): string | undefined {
+): string[] {
 	const byId = new Map(before.map((layer) => [layer.id, layer]));
-	const changed = after.find((layer) => byId.get(layer.id) !== layer);
-	if (changed) return changed.id;
 	const kept = new Set(after.map((layer) => layer.id));
-	return before.find((layer) => !kept.has(layer.id))?.id;
+	return [
+		...after.filter((layer) => byId.get(layer.id) !== layer),
+		...before.filter((layer) => !kept.has(layer.id)),
+	].map((layer) => layer.id);
 }
 
 /**

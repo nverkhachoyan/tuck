@@ -778,6 +778,23 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
+		test("a change to several layers at once is a mark of its own", () => {
+			const { store, group } = storeWithGroup();
+			const actions = store.getState().actions;
+			const steps = store.getState().past.length;
+			const first = redactions(store)[0];
+			actions.beginSession(false, "marks");
+			actions.setLayerGroupHidden(group.id, true);
+			// Locking the group's first box doesn't join the hiding.
+			actions.setLayerLocked(first.id, true);
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 2);
+
+			actions.undo();
+			assert.ok(redactions(store).every((layer) => layer.hidden));
+			assert.ok(redactions(store).every((layer) => !layer.locked));
+		});
+
 		test("a group's boxes lock and hide together, clearing a selection among them", () => {
 			const { store, text, group, boxes } = storeWithGroup();
 			const actions = store.getState().actions;
