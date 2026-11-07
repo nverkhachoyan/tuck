@@ -113,6 +113,8 @@ export type NoticeAction = { label: string; onPress: () => void };
  *   finger lifts.
  * - `doneLabel`: what Done says, when it isn't "Done".
  * - `done`: what Done does before the tool closes.
+ * - `holds`: whether it holds work only Done keeps, so a tap away leaves
+ *   it open: what it picked (see its spec's `picks`).
  * - `deselectOnDone`: whether Done lets go of the selected layer, so a
  *   stray drag can't move what the tool just made; not when the layer's
  *   actions opened it.
@@ -148,6 +150,7 @@ export type ToolDefinition<C> = {
 	doneLabel?: (controller: C) => string | null | undefined;
 	doneVariant?: (controller: C) => "primary" | "secondary" | undefined;
 	done?: (controller: C) => void;
+	holds?: (controller: C) => boolean;
 	deselectOnDone?: boolean;
 	startsUnselected?: boolean;
 	reset?: (controller: C) => (() => void) | undefined;

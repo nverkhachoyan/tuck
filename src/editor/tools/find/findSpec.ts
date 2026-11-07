@@ -4,7 +4,7 @@ import type { ToolSpec } from "../../toolSpec.ts";
 export const findSpec = {
 	target: "photo",
 	cancels: true,
-	previews: true,
+	picks: true,
 	tray: true,
 	sized: false,
 	label: "Find",

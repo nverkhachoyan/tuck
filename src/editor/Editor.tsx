@@ -62,6 +62,7 @@ import {
 	selectCanUndo,
 	selectSelectedLayer,
 } from "./store/editorSlice";
+import { escapeCancels } from "./toolSpec";
 import { useAddImage } from "./useAddImage";
 import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
@@ -166,8 +167,8 @@ export function Editor({
 	// brushed redaction, or a new one. While finding, taps on the canvas pick
 	// what's found. While adjusting, the canvas holds still. While cutting
 	// out, taps pick a subject, or strokes paint the cut. A tap away from what
-	// the tool works on puts it down, as Back does: Cut's and Find's previews
-	// are dropped, and any other tool's work is kept.
+	// the tool works on puts it down, as Escape does, keeping its work, but
+	// leaves Cut's changed preview or Find's picks open for Done or Cancel.
 	const tool = mode.type === "tool" ? mode.tool : null;
 	// A tool that keeps a draft until Done takes the keys: Export would leave
 	// the draft out, and an edit to the layers would change the document
@@ -218,6 +219,8 @@ export function Editor({
 		done,
 		cancel,
 		putDownTool,
+		leaveTool,
+		tapAway,
 		stepToolSize,
 		resetEdit,
 		announcements,
@@ -280,9 +283,9 @@ export function Editor({
 
 	const selectedPlace = useArrangeSelected(document, selectedLayer);
 
-	// Back puts the open tool down.
+	// Back puts the open tool down, applying what it picked.
 	const leave = () => {
-		putDownTool();
+		leaveTool();
 		host.leave();
 	};
 
@@ -324,13 +327,11 @@ export function Editor({
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
 	});
-	// Escape keeps what's typed, as it does from the text input itself; it
-	// cancels only Crop.
 	useToolKeys({
 		enabled: focused && draftOpen,
 		typing,
 		done,
-		cancel: typing ? done : cancel,
+		cancel: tool !== null && escapeCancels(specs[tool]) ? cancel : done,
 	});
 
 	const layerList = layerListProps({
@@ -609,7 +610,7 @@ export function Editor({
 							onToolInteractionEnd={() =>
 								dispatchMode({ type: "closeToolOptions" })
 							}
-							onTapAway={putDownTool}
+							onTapAway={tapAway}
 							bottomInset={layout.canvasInset.bottom}
 							leftInset={layout.canvasInset.left}
 							rightInset={layout.canvasInset.right}

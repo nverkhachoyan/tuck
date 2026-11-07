@@ -15,7 +15,7 @@ import { createRedactionBox } from "../layers/redaction/redaction.ts";
 import { createShapeLayer } from "../layers/shape/shape.ts";
 import { createTextLayer } from "../layers/text/text.ts";
 import type { ToolEntry } from "../shell/toolList.ts";
-import type { ToolSpec, ToolSpecs } from "../toolSpec.ts";
+import { escapeCancels, type ToolSpec, type ToolSpecs } from "../toolSpec.ts";
 
 const specs: ToolSpecs = BUILT_IN_SPECS;
 
@@ -360,9 +360,19 @@ describe("undo steps", () => {
 	});
 
 	test("only Cut and Find drop their work on any close but Done", () => {
-		const dropping = Object.entries(specs)
-			.filter(([, spec]) => spec.previews)
+		const dropping = (flag: "previews" | "picks") =>
+			Object.entries(specs)
+				.filter(([, spec]) => spec[flag])
+				.map(([id]) => id);
+		// Cut's preview is in the document, and Find's picks only in the tool.
+		assert.deepEqual(dropping("previews"), ["cut"]);
+		assert.deepEqual(dropping("picks"), ["find"]);
+	});
+
+	test("Escape cancels Crop, Cut, and Find, and keeps any other tool's work", () => {
+		const cancels = Object.entries(specs)
+			.filter(([, spec]) => escapeCancels(spec))
 			.map(([id]) => id);
-		assert.deepEqual(dropping.sort(), ["cut", "find"]);
+		assert.deepEqual(cancels.sort(), ["crop", "cut", "find"]);
 	});
 });

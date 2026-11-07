@@ -1,5 +1,5 @@
 import type { OwnTool, ToolEntry } from "./shell/toolList.ts";
-import type { ToolId, ToolSpecs } from "./toolSpec.ts";
+import { escapeCancels, type ToolId, type ToolSpecs } from "./toolSpec.ts";
 
 // Nudge distances in screen pixels, so a nudge looks the same at any zoom.
 const NUDGE_PX = 1;
@@ -170,7 +170,7 @@ export function shortcutGroups(
 				},
 				{
 					keys: "Escape",
-					action: specs[tool.id]?.takesKeys === "typing" ? "Done" : "Cancel",
+					action: escapeCancels(specs[tool.id]) ? "Cancel" : "Done",
 				},
 			],
 		})),

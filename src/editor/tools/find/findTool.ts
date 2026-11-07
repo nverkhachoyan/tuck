@@ -25,5 +25,6 @@ export const findTool = defineTool<FindController>({
 	doneLabel: (find) => findDoneLabel(find.selectedCount),
 	doneVariant: (find) => (find.selectedCount > 0 ? "primary" : undefined),
 	done: (find) => find.redact(),
+	holds: (find) => find.selectedCount > 0,
 	deselectOnDone: true,
 });
