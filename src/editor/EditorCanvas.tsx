@@ -183,9 +183,10 @@ export type EditorCanvasHandle = {
  * (`input.drag`), and the image it changes is drawn live, outlined when
  * there are other images (`input.adjusting`).
  *
- * A tap away from what a tool works on calls `onTapAway`: off the document
- * while painting, off the searched image while finding, and anywhere while
- * adjusting. A drag from off the document still paints.
+ * A tap away from what a tool works on calls `onTapAway`, then selects
+ * what's under it: off the document while painting, off the searched image
+ * while finding, and anywhere while adjusting. Without `onTapAway` it does
+ * nothing. A drag from off the document still paints.
  *
  * `selectionBar` floats by a layer that can be moved, following it on the
  * UI thread, and steps aside while a gesture moves it.
@@ -325,7 +326,8 @@ export function EditorCanvas({
 
 	const tapAway = useCallback(
 		(point: Point) => {
-			onTapAway?.();
+			if (!onTapAway) return;
+			onTapAway();
 			onSelectLayer?.(findLayerAt(targets, point)?.id ?? null);
 		},
 		[onTapAway, onSelectLayer, targets],

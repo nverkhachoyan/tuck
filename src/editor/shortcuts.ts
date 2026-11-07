@@ -1,5 +1,5 @@
 import type { OwnTool, ToolEntry } from "./shell/toolList.ts";
-import type { ToolId, ToolSpecs } from "./toolSpec.ts";
+import { escapeCancels, type ToolId, type ToolSpecs } from "./toolSpec.ts";
 
 // Nudge distances in screen pixels, so a nudge looks the same at any zoom.
 const NUDGE_PX = 1;
@@ -135,7 +135,7 @@ function modifiedShortcut(press: KeyPress): Shortcut | null {
  * take ("mod+shift+Z"), with a line for each of `tools` (and any grouped
  * under them) in their order, and a group for each tool whose spec in `specs`
  * takes the keys, which Enter (⌘/Ctrl+Enter while typing) applies and Escape
- * cancels.
+ * cancels (or, while typing, applies too).
  */
 export function shortcutGroups(
 	tools: readonly ToolEntry[],
@@ -168,7 +168,10 @@ export function shortcutGroups(
 					keys: specs[tool.id]?.takesKeys === "typing" ? "mod+Enter" : "Enter",
 					action: "Apply",
 				},
-				{ keys: "Escape", action: "Cancel" },
+				{
+					keys: "Escape",
+					action: escapeCancels(specs[tool.id]) ? "Cancel" : "Done",
+				},
 			],
 		})),
 		HELP_GROUP,
@@ -195,7 +198,7 @@ const EDITING_GROUPS: ShortcutGroup[] = [
 			{ keys: "←↑→↓", action: "Nudge, with Shift for more" },
 			{ keys: "[", action: "Smaller brush" },
 			{ keys: "]", action: "Larger brush" },
-			{ keys: "Escape", action: "Cancel, or deselect" },
+			{ keys: "Escape", action: "Put the tool down, or deselect" },
 		],
 	},
 	{

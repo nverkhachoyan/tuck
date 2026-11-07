@@ -15,7 +15,7 @@ import { createRedactionBox } from "../layers/redaction/redaction.ts";
 import { createShapeLayer } from "../layers/shape/shape.ts";
 import { createTextLayer } from "../layers/text/text.ts";
 import type { ToolEntry } from "../shell/toolList.ts";
-import type { ToolSpec, ToolSpecs } from "../toolSpec.ts";
+import { escapeCancels, type ToolSpec, type ToolSpecs } from "../toolSpec.ts";
 
 const specs: ToolSpecs = BUILT_IN_SPECS;
 
@@ -28,26 +28,29 @@ const nothing: ModeChromeInput = {
 	wide: false,
 };
 
-const TOOLS: [string, string][] = [
-	["pen", "Pen"],
-	["shape", "Shape"],
-	["eraser", "Eraser"],
-	["redact", "Redact"],
-	["find", "Find"],
-	["adjust", "Adjust"],
-	["cut", "Cut"],
+const TOOLS: [string, string, boolean][] = [
+	["pen", "Pen", false],
+	["shape", "Shape", false],
+	["eraser", "Eraser", false],
+	["redact", "Redact", false],
+	["sticker", "Sticker", false],
+	["text", "Text", false],
+	["find", "Find", true],
+	["adjust", "Adjust", true],
+	["cut", "Cut", true],
+	["crop", "Crop", true],
 ];
 
 describe("modeChrome", () => {
-	test("a tool's Cancel and Done are the tool's", () => {
-		for (const [tool, title] of TOOLS) {
+	test("a tool's Done is the tool's, and only a draft, a preview, or settings tried out have Cancel", () => {
+		for (const [tool, title, cancels] of TOOLS) {
 			assert.deepEqual(
 				modeChrome({ ...nothing, tool }),
 				{
 					panel: tool,
 					actions: {
 						title,
-						cancel: "tool",
+						...(cancels ? { cancel: "tool" } : {}),
 						done: "tool",
 						doneLabel: undefined,
 					},
@@ -344,13 +347,32 @@ describe("layerActionsFor", () => {
 });
 
 describe("undo steps", () => {
-	test("only Pen keeps a step per mark and the Eraser one per swipe", () => {
+	test("the tools with no Cancel keep their steps apart, per mark or per swipe", () => {
 		const kept = Object.entries(specs).flatMap(([id, spec]) =>
 			spec.undoSteps ? [[id, spec.undoSteps]] : [],
 		);
-		assert.deepEqual(kept, [
-			["pen", "marks"],
-			["eraser", "each"],
-		]);
+		assert.deepEqual(Object.fromEntries(kept), {
+			pen: "marks",
+			eraser: "each",
+			shape: "marks",
+			redact: "marks",
+		});
+	});
+
+	test("only Cut and Find drop their work on any close but Done", () => {
+		const dropping = (flag: "previews" | "picks") =>
+			Object.entries(specs)
+				.filter(([, spec]) => spec[flag])
+				.map(([id]) => id);
+		// Cut's preview is in the document, and Find's picks only in the tool.
+		assert.deepEqual(dropping("previews"), ["cut"]);
+		assert.deepEqual(dropping("picks"), ["find"]);
+	});
+
+	test("Escape cancels Crop, Cut, and Find, and keeps any other tool's work", () => {
+		const cancels = Object.entries(specs)
+			.filter(([, spec]) => escapeCancels(spec))
+			.map(([id]) => id);
+		assert.deepEqual(cancels.sort(), ["crop", "cut", "find"]);
 	});
 });

@@ -3,6 +3,8 @@ import type { ToolSpec } from "../../toolSpec.ts";
 // A hidden photo can't be searched.
 export const findSpec = {
 	target: "photo",
+	cancels: true,
+	picks: true,
 	tray: true,
 	sized: false,
 	label: "Find",

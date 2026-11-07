@@ -778,6 +778,23 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().selectedLayerId, text.id);
 		});
 
+		test("a change to several layers at once is a mark of its own", () => {
+			const { store, group } = storeWithGroup();
+			const actions = store.getState().actions;
+			const steps = store.getState().past.length;
+			const first = redactions(store)[0];
+			actions.beginSession(false, "marks");
+			actions.setLayerGroupHidden(group.id, true);
+			// Locking the group's first box doesn't join the hiding.
+			actions.setLayerLocked(first.id, true);
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 2);
+
+			actions.undo();
+			assert.ok(redactions(store).every((layer) => layer.hidden));
+			assert.ok(redactions(store).every((layer) => !layer.locked));
+		});
+
 		test("a group's boxes lock and hide together, clearing a selection among them", () => {
 			const { store, text, group, boxes } = storeWithGroup();
 			const actions = store.getState().actions;
@@ -1325,6 +1342,42 @@ describe("editorSlice", () => {
 				drawingsIn(store).map((drawing) => drawing.strokes.length),
 				[3, 2],
 			);
+		});
+
+		test("a mark's step follows the layer it changed, not a tap that moved the selection", () => {
+			const style = { color: "#FF3B30", strokeWidth: 12 };
+			const place = { x: 400, y: 300, rotation: 0, width: 200, height: 100 };
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const steps = store.getState().past.length;
+			actions.beginSession(false, "marks");
+			actions.addShape("rectangle", place, style);
+			const a = store.getState().selectedLayerId ?? "";
+			actions.setShapeStyle(a, { color: "#0A84FF" });
+			// Deselecting before the next box leaves A's restyle with A.
+			actions.selectLayer(null);
+			actions.addShape("ellipse", { ...place, x: 100 }, style);
+			// Selecting A again and restyling it is a step apart from B.
+			actions.selectLayer(a);
+			actions.setShapeStyle(a, { strokeWidth: 4 });
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 3);
+
+			const shapesNow = () =>
+				(store.getState().document?.layers ?? []).flatMap((layer) =>
+					layer.type === "shape"
+						? [[layer.shape, layer.color, layer.strokeWidth]]
+						: [],
+				);
+			actions.undo();
+			assert.deepEqual(shapesNow(), [
+				["rectangle", "#0A84FF", 12],
+				["ellipse", "#FF3B30", 12],
+			]);
+			actions.undo();
+			assert.deepEqual(shapesNow(), [["rectangle", "#0A84FF", 12]]);
+			actions.undo();
+			assert.deepEqual(shapesNow(), []);
 		});
 
 		test("an Eraser session keeps one undo step per swipe", () => {

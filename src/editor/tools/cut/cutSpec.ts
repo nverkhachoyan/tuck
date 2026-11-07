@@ -4,6 +4,7 @@ import type { ToolSpec } from "../../toolSpec.ts";
 // be cut. Until Done, its cut is only a selection.
 export const cutSpec = {
 	target: "image",
+	cancels: true,
 	tray: true,
 	sized: true,
 	previews: true,

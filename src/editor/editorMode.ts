@@ -176,7 +176,7 @@ export type ShortcutCommand =
 	| { type: "openShortcuts" }
 	| { type: "closeShortcuts" }
 	| { type: "stopEyedropper" }
-	| { type: "cancelTool" }
+	| { type: "putDownTool" }
 	| { type: "doneWithTool" };
 
 /**
@@ -205,14 +205,14 @@ export function shortcutCommand(
 	// The view zooms whatever's in use, and Export takes it as it is, as the
 	// header's button does.
 	if (shortcut.type === "zoom" || shortcut.type === "export") return shortcut;
-	// Escape stops picking a color, or puts the tool down; the rest pick up
-	// another tool or act on a selection, which holds still while a tool is
-	// in use.
+	// Escape stops picking a color, or puts the tool down, keeping its work
+	// as Back does; the rest pick up another tool or act on a selection,
+	// which holds still while a tool is in use.
 	if (state.eyedropper) {
 		return shortcut.type === "deselect" ? { type: "stopEyedropper" } : null;
 	}
 	if (state.mode.type === "tool") {
-		if (shortcut.type === "deselect") return { type: "cancelTool" };
+		if (shortcut.type === "deselect") return { type: "putDownTool" };
 		if (shortcut.type === "edit") return { type: "doneWithTool" };
 		// [ and ] step a brush while a tool with one is open. A sub-tool with
 		// no size, like a box, leaves the size where it is.

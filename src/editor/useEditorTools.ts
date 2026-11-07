@@ -17,14 +17,16 @@ import type { Layer } from "./layers/layer";
 import type { ToolStarters } from "./shell/ToolsPanel";
 import { useStore } from "./store";
 import { type SessionSteps, selectSelectedLayer } from "./store/editorSlice";
-import type { ToolId } from "./toolSpec";
+import { dropsWork, type ToolId } from "./toolSpec";
 
 /**
  * All of the editor's tools (`tools`, which must not change while it's
  * mounted), their undo session, and their starters, Done, and Cancel. Every
- * other close (`putDownTool`: Back, Android's back button, picking up
- * another tool) runs the open tool's Done, except for a tool that only
- * previews its changes, which it drops as Cancel does. Each
+ * other close (`putDownTool`: Escape, a tap away, Android's back button,
+ * picking up another tool) runs the open tool's Done, except for a tool
+ * that only `previews` or `picks` what it does, which it drops as Cancel
+ * does. Leaving the editor (`leaveTool`) runs Done for one that picks, and
+ * a tap away (`tapAway`) does nothing while the tool holds work. Each
  * tool's controller comes from its definition's `useController`, given what
  * `env` and the mode say of it. `editorOf` finds the tool that edits a layer
  * in place (its definition's `edit`), and `editLayer` starts it. The order below
@@ -125,17 +127,39 @@ export function useEditorTools({
 		closeTool();
 		if (definition.deselectOnDone && openOnId === null) selectLayer(null);
 	};
+	// What a tool picks was never in the document, so dropping the picks
+	// keeps the session's other changes, such as a layer hidden meanwhile.
 	const cancelTool = () => {
-		cancelSession();
+		if (!tool) return;
+		if (definitionOf(tools[tool]).spec.picks) commitSession();
+		else cancelSession();
 		closeTool();
 	};
-	// What a preview shows isn't an edit until the tool's own Done, so any
-	// other close drops it (Cut's selection).
+	// What a preview shows or a tool picks isn't an edit until the tool's
+	// own Done, so any other close drops it (Cut's selection, Find's regions).
 	const putDownTool = () => {
 		if (!tool) return;
-		if (definitionOf(tools[tool]).spec.previews) cancelTool();
+		if (dropsWork(definitionOf(tools[tool]).spec)) cancelTool();
 		else finishTool();
 	};
+	// Leaving the editor applies what a tool picked rather than dropping it
+	// out of sight, so no face chosen in Find is left unredacted.
+	const leaveTool = () => {
+		if (tool && definitionOf(tools[tool]).spec.picks) finishTool();
+		else putDownTool();
+	};
+	// A tap away puts the tool down, unless that would drop what it holds: a
+	// preview that has changed the document, or what it picked.
+	const previewChanged = useStore(
+		(state) =>
+			state.session?.previews === true &&
+			state.document !== state.session.document,
+	);
+	const current = tool === null ? null : controllers[tool];
+	const holding =
+		current !== null &&
+		(previewChanged || current.definition.holds?.(current.controller) === true);
+	const tapAway = holding ? undefined : putDownTool;
 	// A tool that needs a photo works in or on `image`: the selected one, or
 	// else the main one. Its `started` runs from the effect below, once its
 	// session has begun, or at once when it's already open on that photo.
@@ -284,6 +308,8 @@ export function useEditorTools({
 		done: finishTool,
 		cancel: cancelTool,
 		putDownTool,
+		leaveTool,
+		tapAway,
 		stepToolSize,
 		resetEdit,
 		announcements,

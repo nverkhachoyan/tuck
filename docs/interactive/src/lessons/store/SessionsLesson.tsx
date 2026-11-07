@@ -66,7 +66,7 @@ export function SessionsLesson() {
 				),
 		},
 		{
-			title: "Open the Redact tool",
+			title: "Open the tool",
 			body: (
 				<p>
 					Opening a tool calls <code>beginSession</code>. It records where the
@@ -116,9 +116,9 @@ export function SessionsLesson() {
 					Redo a change or two, or make new ones, then press{" "}
 					<strong>Done</strong>. <code>commitSession</code> drops the tool's
 					steps from <code>past</code> and keeps one: the document from where
-					the tool started. The whole tool is now one undo step. Pen and the
-					Eraser are the exceptions: a spec's <code>undoSteps</code> keeps one
-					step per mark, or per swipe.
+					the tool started. The whole tool is now one undo step, as Crop and
+					Adjust leave theirs. A spec's <code>undoSteps</code> keeps more: one
+					step per mark for Pen, Shape, and Redact, or per swipe for the Eraser.
 				</p>
 			),
 			done: ({ log }) =>
@@ -213,9 +213,9 @@ export function SessionsLesson() {
 			<p className="lede">
 				While a tool is open, every change it makes is an undo step of its own,
 				so you can step back and forth inside it. When it closes, Done turns all
-				of them into one step (Pen keeps one per mark, and the Eraser one per
-				swipe), and Cancel returns to where it started. The store does this with
-				a <code>session</code>: a note of where the tool began.
+				of them into one step (unless its spec keeps one per mark or per swipe),
+				and Cancel returns to where it started. The store does this with a{" "}
+				<code>session</code>: a note of where the tool began.
 			</p>
 
 			<div className="playground">
@@ -260,7 +260,7 @@ export function SessionsLesson() {
 							</div>
 
 							<h2 className="tool-heading">
-								The Redact tool{" "}
+								A tool{" "}
 								<span className={session ? "tool-state open" : "tool-state"}>
 									{session ? "open" : "closed"}
 								</span>
@@ -457,7 +457,8 @@ export function SessionsLesson() {
 						<p>
 							Cancel is undo for a whole tool, so it leaves the tool's work
 							where redo can find it: one press brings it all back as a single
-							step.
+							step. Only Crop, Cut, Find, and Adjust show it; any other tool's
+							work is undone a step at a time.
 						</p>
 					</div>
 				</div>

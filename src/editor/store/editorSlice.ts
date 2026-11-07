@@ -87,7 +87,7 @@ export type EditorSnapshot = {
 /**
  * How many undo steps a tool's session leaves once it's done: one for the
  * whole session, one for each change (the Eraser's swipes), or one for each
- * mark (Pen's).
+ * mark (Pen's strokes, a shape or a redaction, see `stepsByMark`).
  */
 export type SessionSteps = "one" | "each" | "marks";
 
@@ -113,7 +113,7 @@ export type EditorState = {
 	future: EditorSnapshot[];
 	// While a tool is open, where it started: Cancel returns there (and redo
 	// undoes the cancel), and its changes become one undo step when it's done,
-	// except Pen's, one per mark, and the Eraser's, one per swipe.
+	// unless its spec keeps more (`undoSteps`).
 	session: EditorSession | null;
 };
 
@@ -714,19 +714,45 @@ function pastIn(
 /**
  * A session's undo `steps`, each the snapshot from before a change, kept one
  * per mark: a step whose change went to the same mark as the step before it
- * (the selection after each, which Pen leaves on the mark a stroke went to)
  * joins that step. A, A, B keeps two; A, B, A keeps three. `current` is the
  * snapshot after the last change.
+ *
+ * - A change's mark is the layer it added, changed, or removed, read from the
+ *   documents, since a tap that selects or deselects between changes moves
+ *   the selection without a step of its own.
+ * - A change to several layers at once (a group hidden) is a mark of its
+ *   own, joining neither neighbor.
+ * - A change that touched no layer (a reorder) takes the selection after it.
  */
 export function stepsByMark(
 	steps: EditorSnapshot[],
 	current: EditorSnapshot,
 ): EditorSnapshot[] {
-	const markAfter = (index: number) =>
-		(index + 1 < steps.length ? steps[index + 1] : current).selectedLayerId;
+	const markOf = (index: number) => {
+		const after = index + 1 < steps.length ? steps[index + 1] : current;
+		const changed = changedLayers(
+			steps[index].document.layers,
+			after.document.layers,
+		);
+		if (changed.length === 0) return after.selectedLayerId;
+		return changed.length === 1 ? changed[0] : steps[index];
+	};
 	return steps.filter(
-		(_, index) => index === 0 || markAfter(index) !== markAfter(index - 1),
+		(_, index) => index === 0 || markOf(index) !== markOf(index - 1),
 	);
+}
+
+/** The ids of the layers added, changed, or removed from `before` to `after`. */
+function changedLayers(
+	before: readonly Layer[],
+	after: readonly Layer[],
+): string[] {
+	const byId = new Map(before.map((layer) => [layer.id, layer]));
+	const kept = new Set(after.map((layer) => layer.id));
+	return [
+		...after.filter((layer) => byId.get(layer.id) !== layer),
+		...before.filter((layer) => !kept.has(layer.id)),
+	].map((layer) => layer.id);
 }
 
 /**

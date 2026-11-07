@@ -221,7 +221,7 @@ describe("shortcutGroups", () => {
 		]);
 	});
 
-	test("applies with ⌘/Ctrl+Enter while typing, Enter otherwise, and cancels with Escape", () => {
+	test("applies with ⌘/Ctrl+Enter while typing, Enter otherwise, and Escape keeps text but cancels Crop", () => {
 		const groups = shortcutGroups(
 			toolbarEntries(BUILT_IN_SPECS, BUILT_IN_TOOLBAR),
 			BUILT_IN_SPECS,
@@ -230,7 +230,7 @@ describe("shortcutGroups", () => {
 			groups.find((group) => group.title === title)?.items;
 		assert.deepEqual(items("Text"), [
 			{ keys: "mod+Enter", action: "Apply" },
-			{ keys: "Escape", action: "Cancel" },
+			{ keys: "Escape", action: "Done" },
 		]);
 		assert.deepEqual(items("Crop"), [
 			{ keys: "Enter", action: "Apply" },
