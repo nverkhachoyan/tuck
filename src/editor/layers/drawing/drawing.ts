@@ -129,8 +129,7 @@ export function markStyle(layer: DrawingLayer): PenBrush | null {
  * an eraser's clear to its own ink, or to multiply as a whole. Plain ink
  * draws the same straight onto the canvas, since each stroke is
  * source-over and the layer would composite at full strength, and each
- * saved layer costs a render pass however small (measured in step 3 of
- * docs/plans/drawing-layers).
+ * saved layer costs a render pass however small (measured in #88).
  */
 export function needsOwnLayer(layer: DrawingLayer): boolean {
 	return (
