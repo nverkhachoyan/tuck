@@ -5,7 +5,7 @@ import type { Brush, DrawingLayer, Stroke } from "./drawing.ts";
 /**
  * How strokes group into marks: one drawing per word, arrow, or circle,
  * by pause, distance, and style rather than by Pen session. Starting
- * defaults, to tune on a phone (step 4 of docs/plans/drawing-layers):
+ * defaults, to tune on a phone (#96):
  * - `MARK_PAUSE_MS` with `MARK_GAP`: a stroke begun this soon after the
  *   last, within this many stroke widths of its ink, continues its mark.
  * - `MARK_NEAR_PAUSE_MS` with `MARK_NEAR_GAP`: a longer pause, but closer.

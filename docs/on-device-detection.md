@@ -14,7 +14,7 @@ On iOS and Android, don't install a third-party package. Write one local Expo mo
 
 No single dependency covers all three features. The closest, `react-native-nitro-vision-kit`, does background removal and text but not faces, needs iOS 18 for text, and has no web version. On web, MediaPipe covers faces and background removal but has no text recognition.
 
-This widens the background-removal module first planned (`modules/image-segmentation/`) into `modules/image-analysis/`, covering all three features. They need the same development build, so faces and text cost little extra alongside background removal.
+So one module, `modules/image-analysis/`, covers all three features. They need the same development build, so faces and text cost little extra alongside background removal.
 
 ## Dependencies
 
@@ -64,7 +64,7 @@ Tried on three photos with 9 to 36 faces, 3000 pixels wide (September 2026), Vis
 
 * **iOS:** `VNGenerateForegroundInstanceMaskRequest` separates every prominent subject (people, animals, objects) and returns a mask. It needs iOS 17, and only runs on a real device.
 * **Android:** ML Kit subject segmentation returns a foreground confidence mask, or one per subject. It's in beta, needs Android API 24, and wants images of at least 512×512 pixels.
-* **Web:** MediaPipe's Interactive Segmenter with the **MagicTouch** model (6.2 MB) returns a confidence mask for the object at a point. It needs that point: let the user tap the subject, or start from the image's center so it's still one tap. Its quality hasn't been tried on real photos yet. If its edges aren't good enough, run **BiRefNet-lite** (MIT) with `onnxruntime-web` instead, a 115 MB download (fp16).
+* **Web:** MediaPipe's Interactive Segmenter with the **MagicTouch** model (6.2 MB) returns a confidence mask for the object at a point. It needs that point: let the user tap the subject, or start from the image's center so it's still one tap. If its edges aren't good enough, run **BiRefNet-lite** (MIT) with `onnxruntime-web` instead, a 115 MB download (fp16).
 
 Built (September 2026) with MagicTouch version 1 (`magic_touch.tflite`, 6.2 MB) through `InteractiveSegmenterLegacy`, with the point at the photo's center. `@mediapipe/tasks-vision` 1.0 also has a new `InteractiveSegmenter` for version 2 of MagicTouch (`interactive_segmentation.task`), which takes strokes, including a lasso, but is a 30 MB download; try it if version 1's edges aren't good enough. On two animal portraits, version 1 found each subject in under half a second with soft edges and a faint fringe of the background's color.
 
