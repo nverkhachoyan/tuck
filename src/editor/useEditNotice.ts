@@ -12,6 +12,7 @@ const ACTION_SHOWN_MS = 20000;
 
 type Notice = {
 	message: string;
+	before?: EditorDocument | null;
 	after: EditorDocument | null;
 	action?: NoticeAction;
 };
@@ -19,19 +20,27 @@ type Notice = {
 /**
  * Deleting a layer or a group of layers, and what a tool notifies (Find's
  * redaction), say so, with Undo, and the tool's own `action` if it gives one.
- * The note goes once anything else changes the document, since Undo would
- * then take back that change instead, after a few seconds, or once its
- * action is pressed. A note with a second action (Refine) stays up
- * longer, since deciding on it takes more than reaching for Undo.
+ * The note goes once anything else changes the document or drops the deletion's
+ * undo step (as finishing a tool does when a mark was drawn and deleted in one
+ * run), since Undo would then take back another change instead, after a few
+ * seconds, or once its action is pressed. A note with a second action (Refine)
+ * stays up longer, since deciding on it takes more than reaching for Undo.
  */
 export function useEditNotice(document: EditorDocument) {
 	const { undo, deleteLayer, deleteLayerGroup, beginSession, commitSession } =
 		useStore((state) => state.actions);
+	const previous = useStore((state) => state.past.at(-1)?.document ?? null);
 	const [notice, setNotice] = useState<Notice | null>(null);
 
 	useEffect(() => {
-		if (notice && document !== notice.after) setNotice(null);
-	}, [document, notice]);
+		if (!notice) return;
+		if (
+			document !== notice.after ||
+			(notice.before !== undefined && previous !== notice.before)
+		) {
+			setNotice(null);
+		}
+	}, [document, previous, notice]);
 
 	useEffect(() => {
 		if (!notice) return;
@@ -47,7 +56,7 @@ export function useEditNotice(document: EditorDocument) {
 		const before = useStore.getState().document;
 		remove();
 		const after = useStore.getState().document;
-		if (after !== before) setNotice({ message, after });
+		if (after !== before) setNotice({ message, before, after });
 	};
 
 	return {

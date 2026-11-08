@@ -5,6 +5,7 @@ import {
 	type EditorModeAction,
 	type EditorModeState,
 	type ShortcutCommand,
+	type ShortcutSelection,
 	shortcutCommand,
 } from "./editorMode";
 import type { ArrangeMove } from "./shell/SelectionBar";
@@ -60,7 +61,7 @@ export function useEditorShortcuts({
 	toolsByKey: ReadonlyMap<string, string>;
 	enabled: boolean;
 	modeState: EditorModeState;
-	selection: "editable" | "layer" | null;
+	selection: ShortcutSelection;
 	dispatchMode: (action: EditorModeAction) => void;
 	undo: () => void;
 	redo: () => void;

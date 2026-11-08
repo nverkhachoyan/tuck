@@ -180,16 +180,22 @@ export type ShortcutCommand =
 	| { type: "doneWithTool" };
 
 /**
- * What `shortcut` does with `state` open and `selection` selected (a layer
- * a tool edits in place is "editable"): a command for the screen to carry
- * out, "held" for a key used up doing nothing, or null for a key left to
- * the browser. The screen doesn't ask while a tool that takes its own keys
- * is open (see `takesKeys`). Whether the open tool has a brush is its
- * spec's in `specs`.
+ * What's selected, as shortcuts see it: a layer a tool edits in place
+ * ("editable"), one of the kind the open tool draws and shows selected
+ * ("drawn": a shape in Shape, a mark in Pen), any other layer, or nothing.
+ */
+export type ShortcutSelection = "editable" | "drawn" | "layer" | null;
+
+/**
+ * What `shortcut` does with `state` open and `selection` selected: a command
+ * for the screen to carry out, "held" for a key used up doing nothing, or
+ * null for a key left to the browser. The screen doesn't ask while a tool
+ * that takes its own keys is open (see `takesKeys`). Whether the open tool
+ * has a brush is its spec's in `specs`.
  */
 export function shortcutCommand(
 	state: EditorModeState,
-	selection: "editable" | "layer" | null,
+	selection: ShortcutSelection,
 	shortcut: Shortcut,
 	specs: ToolSpecs,
 ): ShortcutCommand | "held" | null {
@@ -207,7 +213,8 @@ export function shortcutCommand(
 	if (shortcut.type === "zoom" || shortcut.type === "export") return shortcut;
 	// Escape stops picking a color, or puts the tool down, keeping its work
 	// as Back does; the rest pick up another tool or act on a selection,
-	// which holds still while a tool is in use.
+	// which holds still while a tool is in use, except that what the tool
+	// draws can be deleted as soon as it's drawn.
 	if (state.eyedropper) {
 		return shortcut.type === "deselect" ? { type: "stopEyedropper" } : null;
 	}
@@ -219,6 +226,7 @@ export function shortcutCommand(
 		if (shortcut.type === "brushSize" && specs[state.mode.tool]?.sized) {
 			return shortcut;
 		}
+		if (shortcut.type === "delete" && selection === "drawn") return shortcut;
 		return null;
 	}
 	if (shortcut.type === "brushSize") return null;

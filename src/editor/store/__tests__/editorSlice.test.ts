@@ -1473,8 +1473,10 @@ describe("editorSlice", () => {
 		});
 
 		test("stepsByMark merges a mark's consecutive steps, and keeps a return to an earlier mark apart", () => {
+			// Each a different canvas, so no mark ends as it began.
+			let shade = 0;
 			const snapshot = (selectedLayerId: string | null) => ({
-				document: createBlankDocument(10, 10, "#ffffff"),
+				document: createBlankDocument(10, 10, `#0000${shade++}0`),
 				selectedLayerId,
 			});
 			// The steps before each change; the mark after each is the next
@@ -1488,6 +1490,61 @@ describe("editorSlice", () => {
 			assert.deepEqual(stepsByMark(steps, snapshot("b")), [steps[0], steps[2]]);
 			const back = [snapshot(null), snapshot("a"), snapshot("b")];
 			assert.equal(stepsByMark(back, snapshot("a")).length, 3);
+		});
+
+		test("a shape drawn, restyled, and deleted in a kept session leaves no undo step", () => {
+			const style = { color: "#FF3B30", strokeWidth: 12 };
+			const place = { x: 400, y: 300, rotation: 0, width: 200, height: 100 };
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const { past } = store.getState();
+			actions.beginSession(false, "marks");
+			actions.addShape("rectangle", place, style);
+			const shape = store.getState().selectedLayerId ?? "";
+			actions.setShapeStyle(shape, { color: "#0A84FF" });
+			actions.deleteLayer(shape);
+			actions.commitSession();
+			assert.deepEqual(store.getState().past, past);
+		});
+
+		test("a mark deleted in a kept session keeps the marks drawn before it", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const steps = store.getState().past.length;
+			actions.beginSession(false, "marks");
+			actions.drawStroke(pen([0, 0, 10, 0]));
+			actions.drawStroke(pen([200, 0, 210, 0]));
+			actions.deleteLayer(store.getState().selectedLayerId ?? "");
+			actions.commitSession();
+			assert.equal(store.getState().past.length, steps + 1);
+			actions.undo();
+			assert.equal(drawingsIn(store).length, 0);
+		});
+
+		test("a mark drawn and deleted between edits to another mark doesn't split it", () => {
+			const style = { color: "#FF3B30", strokeWidth: 12 };
+			const place = { x: 400, y: 300, rotation: 0, width: 200, height: 100 };
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const { past } = store.getState();
+			actions.beginSession(false, "marks");
+			actions.addShape("rectangle", place, style);
+			const first = store.getState().selectedLayerId ?? "";
+			actions.addShape("ellipse", place, style);
+			const second = store.getState().selectedLayerId ?? "";
+			actions.deleteLayer(second);
+			actions.setShapeStyle(first, { color: "#0A84FF" });
+			actions.commitSession();
+			assert.equal(store.getState().past.length, past.length + 1);
+			actions.beginSession(false, "marks");
+			actions.addShape("rectangle", place, style);
+			const third = store.getState().selectedLayerId ?? "";
+			actions.addShape("ellipse", place, style);
+			const fourth = store.getState().selectedLayerId ?? "";
+			actions.deleteLayer(fourth);
+			actions.deleteLayer(third);
+			actions.commitSession();
+			assert.equal(store.getState().past.length, past.length + 1);
 		});
 
 		test("the app sees where a previewing session started, until it's committed", () => {
