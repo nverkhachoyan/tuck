@@ -16,6 +16,7 @@ import { Toast } from "@/ui/Toast";
 import { space } from "@/ui/theme";
 import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
 import { BUILT_IN_TOOLS } from "./builtInTools";
+import { restyles } from "./canvas/canvasTool";
 import { definitionOf, type ToolList } from "./defineTool";
 import type { EditorDocument } from "./document/document";
 import { targetImageLayer, visibleImageLayer } from "./document/framing";
@@ -301,12 +302,23 @@ export function Editor({
 		onReset: resetEdit,
 	});
 
+	// A shape in Shape, a mark in Pen: what the open tool draws, and shows
+	// selected, so Delete takes it without putting the tool down.
+	const drawnSelected =
+		canvasInput.input.type === "tool" &&
+		restyles(canvasInput.input.tool, selectedLayer);
 	useEditorShortcuts({
 		specs,
 		toolsByKey: toolbox.toolsByKey,
 		enabled: focused && !draftOpen,
 		modeState,
-		selection: selectedEditor ? "editable" : selectedLayer ? "layer" : null,
+		selection: drawnSelected
+			? "drawn"
+			: selectedEditor
+				? "editable"
+				: selectedLayer
+					? "layer"
+					: null,
 		dispatchMode,
 		undo,
 		redo,

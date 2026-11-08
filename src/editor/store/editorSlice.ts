@@ -723,6 +723,7 @@ function pastIn(
  * - A change to several layers at once (a group hidden) is a mark of its
  *   own, joining neither neighbor.
  * - A change that touched no layer (a reorder) takes the selection after it.
+ * - A mark that ends as it began (a shape drawn, then deleted) keeps no step.
  */
 export function stepsByMark(
 	steps: EditorSnapshot[],
@@ -737,8 +738,26 @@ export function stepsByMark(
 		if (changed.length === 0) return after.selectedLayerId;
 		return changed.length === 1 ? changed[0] : steps[index];
 	};
-	return steps.filter(
+	const marks = steps.filter(
 		(_, index) => index === 0 || markOf(index) !== markOf(index - 1),
+	);
+	return marks.filter((step, index) => {
+		const end = index + 1 < marks.length ? marks[index + 1] : current;
+		return !sameDocument(step.document, end.document);
+	});
+}
+
+// Whether two documents hold the same layers in the same order, groups, and
+// canvas, though they may be different objects. Every layer edit rebuilds
+// the groups, so they're compared by what they hold.
+function sameDocument(a: EditorDocument, b: EditorDocument): boolean {
+	return (
+		a.width === b.width &&
+		a.height === b.height &&
+		a.background === b.background &&
+		a.layers.length === b.layers.length &&
+		a.layers.every((layer, index) => layer === b.layers[index]) &&
+		JSON.stringify(a.groups ?? []) === JSON.stringify(b.groups ?? [])
 	);
 }
 

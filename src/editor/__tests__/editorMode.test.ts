@@ -11,6 +11,7 @@ import {
 	type ModeTargets,
 	openTray,
 	type ShortcutCommand,
+	type ShortcutSelection,
 	settle as settleWith,
 	shortcutCommand,
 	takesKeys,
@@ -31,7 +32,7 @@ const settle = (state: State, targets: ModeTargets) =>
 	settleWith(state, targets, specs);
 const command = (
 	state: State,
-	selection: "editable" | "layer" | null,
+	selection: ShortcutSelection,
 	shortcut: Shortcut,
 ): ShortcutCommand | "held" | null =>
 	shortcutCommand(state, selection, shortcut, specs);
@@ -501,6 +502,24 @@ describe("shortcutCommand", () => {
 		for (const key of [sticker, pen, layers, remove]) {
 			assert.equal(command(stickers, "layer", key), null);
 		}
+	});
+
+	test("Delete takes what the open tool drew, and leaves any other layer", () => {
+		const shapes = run(initialEditorMode, {
+			type: "startTool",
+			start: { tool: "shape", layerId: null },
+		});
+		for (const state of [drawing, shapes]) {
+			assert.equal(command(state, "drawn", remove), remove);
+			assert.equal(command(state, "layer", remove), null);
+			assert.equal(command(state, "editable", remove), null);
+			assert.equal(command(state, null, remove), null);
+		}
+		const both = run(drawing, {
+			type: "startEyedropper",
+			eyedropper: eyedropper(),
+		});
+		assert.equal(command(both, "drawn", remove), null);
 	});
 
 	test("zoom runs over the eyedropper and a tool", () => {
