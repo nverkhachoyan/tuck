@@ -738,13 +738,27 @@ export function stepsByMark(
 		if (changed.length === 0) return after.selectedLayerId;
 		return changed.length === 1 ? changed[0] : steps[index];
 	};
-	const marks = steps.filter(
-		(_, index) => index === 0 || markOf(index) !== markOf(index - 1),
-	);
-	return marks.filter((step, index) => {
-		const end = index + 1 < marks.length ? marks[index + 1] : current;
-		return !sameDocument(step.document, end.document);
-	});
+	const runs: { step: EditorSnapshot; mark: ReturnType<typeof markOf> }[] = [];
+	for (let i = 0; i < steps.length; i++) {
+		const step = steps[i];
+		const mark = markOf(i);
+		const last = runs.at(-1);
+		if (
+			last &&
+			last.mark !== mark &&
+			sameDocument(last.step.document, step.document)
+		) {
+			runs.pop();
+		}
+		if (runs.at(-1)?.mark !== mark) {
+			runs.push({ step, mark });
+		}
+	}
+	const last = runs.at(-1);
+	if (last && sameDocument(last.step.document, current.document)) {
+		runs.pop();
+	}
+	return runs.map(({ step }) => step);
 }
 
 // Whether two documents hold the same layers in the same order, groups, and

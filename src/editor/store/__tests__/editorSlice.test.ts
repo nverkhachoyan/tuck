@@ -1521,6 +1521,32 @@ describe("editorSlice", () => {
 			assert.equal(drawingsIn(store).length, 0);
 		});
 
+		test("a mark drawn and deleted between edits to another mark doesn't split it", () => {
+			const style = { color: "#FF3B30", strokeWidth: 12 };
+			const place = { x: 400, y: 300, rotation: 0, width: 200, height: 100 };
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			const { past } = store.getState();
+			actions.beginSession(false, "marks");
+			actions.addShape("rectangle", place, style);
+			const first = store.getState().selectedLayerId ?? "";
+			actions.addShape("ellipse", place, style);
+			const second = store.getState().selectedLayerId ?? "";
+			actions.deleteLayer(second);
+			actions.setShapeStyle(first, { color: "#0A84FF" });
+			actions.commitSession();
+			assert.equal(store.getState().past.length, past.length + 1);
+			actions.beginSession(false, "marks");
+			actions.addShape("rectangle", place, style);
+			const third = store.getState().selectedLayerId ?? "";
+			actions.addShape("ellipse", place, style);
+			const fourth = store.getState().selectedLayerId ?? "";
+			actions.deleteLayer(fourth);
+			actions.deleteLayer(third);
+			actions.commitSession();
+			assert.equal(store.getState().past.length, past.length + 1);
+		});
+
 		test("the app sees where a previewing session started, until it's committed", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;
