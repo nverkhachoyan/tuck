@@ -327,13 +327,13 @@ export function useToolStroke({
 		strokeTargets,
 		touchReach,
 	]);
-	// Built once a frame for every drawing the Eraser reaches.
+	// Built once a frame for every drawing the Eraser reaches. It stays once
+	// the stroke lands: emptying it would redraw the canvas before the canvas
+	// has the document that erases the same ink, and each drawing drops the
+	// line itself, in a render (`ErasedDrawing`).
 	const erasePath = useDerivedValue(
-		() =>
-			strokePath(
-				erasing && strokeId.value > landedStrokeId ? strokePoints.value : [],
-			),
-		[erasing, landedStrokeId],
+		() => strokePath(erasing ? strokePoints.value : []),
+		[erasing],
 	);
 	const liveStroke = useMemo<LiveStroke | null>(() => {
 		if (!tool) return null;
