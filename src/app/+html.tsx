@@ -19,16 +19,19 @@ const nightInk = "#F3F3F1";
 const PREVIEW_IMAGE = { url: `${SITE_URL}/og.jpg`, width: 1200, height: 630 };
 
 const palette = (background: string, ink: string, scheme: string) =>
-	`--background: ${background}; --ink: ${ink}; color-scheme: ${scheme};`;
+	`--background: ${background}; --ink: ${ink}; --prerender: ${scheme === "dark" ? "hidden" : "visible"}; color-scheme: ${scheme};`;
 
 // The page in the day palette, or the night one: the system's when Settings
 // leaves it to the system, or forced by the attribute the script below sets.
 // Keyboard focus is in the palette's ink, like every other control, rather
-// than the browser's blue, which the app keeps for marks over the photo.
+// than the browser's blue, which the app keeps for marks over the photo. The
+// prerendered screen is always in the day palette, so in the night one it stays
+// hidden until `index.web.ts` sees it replaced.
 const pageStyle = `html { ${palette(dayBackground, dayInk, "light")} }
 @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { ${palette(nightBackground, nightInk, "dark")} } }
 html[data-theme="dark"] { ${palette(nightBackground, nightInk, "dark")} }
 html, body, #root { background-color: var(--background); }
+#root:not([data-rendered]) { visibility: var(--prerender); }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .fallback { position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background-color: var(--background); color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; }
 .fallback h1 { margin: 0; font-size: 17px; font-weight: 600; }

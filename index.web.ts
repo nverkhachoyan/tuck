@@ -33,6 +33,16 @@ if (canvaskit) {
 	}) as typeof fetch;
 }
 
+// `+html.tsx` hides the day-palette prerender from a night-palette page until
+// something replaces it: the app, its error screen, or the load failure.
+const root = document.getElementById("root");
+if (root) {
+	new MutationObserver((_, observer) => {
+		root.dataset.rendered = "";
+		observer.disconnect();
+	}).observe(root, { childList: true });
+}
+
 // On web, Skia's module binds to CanvasKit (its WASM build) the moment it's
 // first evaluated, and Expo Router evaluates every route at startup. So the
 // app's code may only load once CanvasKit has: nothing may import Skia above
