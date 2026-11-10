@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
-import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
+import type { DerivedValue } from "react-native-reanimated";
 import { Fill, Group, Rect, rect, Shadow } from "react-native-skia";
 import { colorScheme, colors } from "@/ui/theme";
 import { CanvasBackground } from "./canvas/Checkerboard";
+import type { LiveTransform } from "./canvas/liveTransform";
+import { type CanvasRegion, RegionOutline } from "./canvas/RegionOutline";
 import {
 	type LiveStroke,
 	NewLayerStroke,
-	StrokeTarget,
-} from "./canvas/LiveStrokeOverlay";
-import type { LiveTransform } from "./canvas/liveTransform";
-import { type CanvasRegion, RegionOutline } from "./canvas/RegionOutline";
+	SceneLayer,
+} from "./canvas/SceneLayer";
 import {
 	SelectionHandles,
 	SelectionOutline,
@@ -119,42 +119,31 @@ export function EditorScene({
 						key={layer.id}
 						clip={layer.type === "image" && layer.locked ? canvas : undefined}
 					>
-						<LiveLayer layer={layer} live={live}>
-							{draft && layer.id === draftId ? (
-								draft.render(viewScale)
-							) : (
-								<StrokeTarget
-									layer={layer}
-									uri={
-										layer.type === "image"
-											? (previewUri?.(layer.uri) ?? layer.uri)
-											: undefined
-									}
-									stroke={
-										stroke &&
-										(stroke.reaches(layer) ||
-											(layer.type === "shape" && stroke.crossed))
-											? stroke
-											: null
-									}
-									live={live}
-									matrix={
-										adjusting?.layerId === layer.id
-											? adjusting.matrix
-											: undefined
-									}
-									selectionColor={
-										cuttingOutId === layer.id ? colors.selection : undefined
-									}
-									dimmed={
-										dimExcept !== null &&
-										layer.id !== dimExcept &&
-										(layer.type === "drawing" || layer.type === "shape")
-									}
-									onImageError={onImageError}
-								/>
-							)}
-						</LiveLayer>
+						<SceneLayer
+							layer={layer}
+							uri={
+								layer.type === "image"
+									? (previewUri?.(layer.uri) ?? layer.uri)
+									: undefined
+							}
+							draft={
+								draft && layer.id === draftId ? draft.render(viewScale) : null
+							}
+							stroke={stroke}
+							live={live}
+							matrix={
+								adjusting?.layerId === layer.id ? adjusting.matrix : undefined
+							}
+							selectionColor={
+								cuttingOutId === layer.id ? colors.selection : undefined
+							}
+							dimmed={
+								dimExcept !== null &&
+								layer.id !== dimExcept &&
+								(layer.type === "drawing" || layer.type === "shape")
+							}
+							onImageError={onImageError}
+						/>
 					</Group>
 				),
 			)}
@@ -220,32 +209,4 @@ export function EditorScene({
 			)}
 		</Group>
 	);
-}
-
-/**
- * Positions a layer's content with its transform, except while a gesture is
- * moving it: then the gesture-driven values win over the document.
- */
-function LiveLayer({
-	layer,
-	live,
-	children,
-}: {
-	layer: Layer;
-	live: LiveTransform;
-	children: ReactNode;
-}) {
-	const transform = useDerivedValue(() => {
-		const active = live.activeId.value === layer.id;
-		const t = layer.transform;
-		return toTransformList({
-			x: active ? live.x.value : t.x,
-			y: active ? live.y.value : t.y,
-			rotation: active ? live.rotation.value : t.rotation,
-			scaleX: active ? live.scaleX.value : t.scaleX,
-			scaleY: active ? live.scaleY.value : t.scaleY,
-		});
-	}, [layer.id, layer.transform]);
-
-	return <Group transform={transform}>{children}</Group>;
 }
