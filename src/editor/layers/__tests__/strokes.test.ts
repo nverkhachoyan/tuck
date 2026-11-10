@@ -14,6 +14,7 @@ import {
 	hitTestDrawing,
 	recenterDrawing,
 	straightStroke,
+	strokeBoxes,
 	strokesHitBy,
 } from "../strokes.ts";
 
@@ -247,5 +248,45 @@ describe("strokesHitBy", () => {
 		// The line runs from x 200 to 300 in the document.
 		assert.deepEqual(strokesHitBy(strokes, moved, [280, -10, 280, 10], 4), [0]);
 		assert.deepEqual(strokesHitBy(strokes, moved, [320, -10, 320, 10], 4), []);
+	});
+
+	test("names the same strokes with boxes as without", () => {
+		// A small linear congruential generator, so a failure repeats.
+		let seed = 7;
+		const random = () => {
+			seed = (seed * 1103515245 + 12345) % 2147483648;
+			return seed / 2147483648;
+		};
+		const line = (count: number) =>
+			Array.from({ length: count * 2 }, () => Math.round(random() * 400) - 200);
+		let hits = 0;
+		for (let run = 0; run < 200; run++) {
+			const strokes = Array.from({ length: 12 }, () =>
+				random() < 0.25
+					? eraser(line(1 + Math.floor(random() * 4)), 5 + random() * 30)
+					: pen(line(1 + Math.floor(random() * 6)), 1 + random() * 20),
+			);
+			const scale = 0.5 + random() * 2;
+			const transform = {
+				x: random() * 100,
+				y: random() * 100,
+				rotation: random() * Math.PI,
+				scaleX: scale,
+				scaleY: scale,
+			};
+			const boxes = strokeBoxes(strokes);
+			const tap = line(1);
+			const swipe = line(2 + Math.floor(random() * 4));
+			const reach = 2 + random() * 12;
+			for (const points of [tap, swipe]) {
+				const hit = strokesHitBy(strokes, transform, points, reach);
+				assert.deepEqual(
+					strokesHitBy(strokes, transform, points, reach, boxes),
+					hit,
+				);
+				hits += hit.length;
+			}
+		}
+		assert.ok(hits > 100);
 	});
 });

@@ -12,7 +12,12 @@ import type { Point, Size } from "../document/geometry";
 import { strokePath } from "../layers/drawing/DrawingLayerView";
 import { visibleReach } from "../layers/drawing/drawing";
 import type { Layer } from "../layers/layer";
-import { hitTestDrawing, segmentsNear, strokesHitBy } from "../layers/strokes";
+import {
+	hitTestDrawing,
+	segmentsNear,
+	strokeBoxes,
+	strokesHitBy,
+} from "../layers/strokes";
 import {
 	type CanvasLookups,
 	type CanvasTool,
@@ -172,14 +177,20 @@ export function useToolStroke({
 		[tool, targets, document],
 	);
 	// The drawings whose strokes the Stroke eraser takes (a locked layer's
-	// target has no strokes).
+	// target has no strokes), with each stroke's box.
 	const strokeTargets = useMemo(
 		() =>
 			tool?.type === "erase" && tool.mode === "stroke"
 				? targets.flatMap((target) => {
 						const layer = document.layers.find((each) => each.id === target.id);
 						return layer && strokeReaches(tool, layer) && target.strokes
-							? [{ ...target, strokes: target.strokes }]
+							? [
+									{
+										...target,
+										strokes: target.strokes,
+										boxes: strokeBoxes(target.strokes),
+									},
+								]
 							: [];
 					})
 				: [],
@@ -240,6 +251,7 @@ export function useToolStroke({
 					target.transform,
 					points,
 					touchReach,
+					target.boxes,
 				).filter((index) => !before.includes(index));
 				if (fresh.length > 0) {
 					next[target.id] = [...before, ...fresh];
@@ -311,6 +323,7 @@ export function useToolStroke({
 				target.transform,
 				[point.x, point.y],
 				touchReach,
+				target.boxes,
 			);
 			if (hits.length > 0) {
 				return { id: target.id, index: hits[hits.length - 1] };
