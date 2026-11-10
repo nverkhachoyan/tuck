@@ -39,7 +39,7 @@ type StrokesLayer = { transform: Transform; strokes: MaskStroke[] };
 // projects bigger.
 const round = (value: number) => Math.round(value * 100) / 100;
 
-type Extent = { minX: number; minY: number; maxX: number; maxY: number };
+export type Extent = { minX: number; minY: number; maxX: number; maxY: number };
 
 /**
  * What a layer's pen strokes cover in its own space, or null if it has
@@ -81,6 +81,22 @@ export function drawingBox(layer: { strokes: MaskStroke[] }): Box {
 		boxes.set(layer.strokes, box);
 	}
 	return box;
+}
+
+const strokeExtents = new WeakMap<MaskStroke[], (Extent | null)[]>();
+
+/**
+ * What each stroke's ink covers in the layer's own space, by index, or null
+ * for an eraser: cheap to test before `strokesHitBy` walks a stroke. Built
+ * on the JS thread, since worklets can't read the cache.
+ */
+export function strokeBoxes(strokes: MaskStroke[]): (Extent | null)[] {
+	let extents = strokeExtents.get(strokes);
+	if (!extents) {
+		extents = strokes.map((stroke) => penExtent([stroke]));
+		strokeExtents.set(strokes, extents);
+	}
+	return extents;
 }
 
 /**
@@ -328,12 +344,15 @@ export function hitTestDrawing(
  * ink no later eraser cleared. One point is a tap. Checked at steps no
  * longer than `reach`, as `segmentsNear` does, so the canvas and the edit
  * agree on what a swipe takes. A stroke an eraser cut in two is one index.
+ * `boxes` (`strokeBoxes`) skips a stroke whose box the point misses, with
+ * the same result.
  */
 export function strokesHitBy(
 	strokes: MaskStroke[],
 	transform: Transform,
 	points: number[],
 	reach: number,
+	boxes?: (Extent | null)[],
 ): number[] {
 	"worklet";
 	const hit: number[] = [];
@@ -341,6 +360,16 @@ export function strokesHitBy(
 	const padding = reach / transform.scaleX;
 	segmentsNear(points, transform, padding, (point) => {
 		for (let i = 0; i < strokes.length; i++) {
+			const box = boxes?.[i];
+			if (
+				box &&
+				(point.x < box.minX - padding ||
+					point.x > box.maxX + padding ||
+					point.y < box.minY - padding ||
+					point.y > box.maxY + padding)
+			) {
+				continue;
+			}
 			if (
 				strokes[i].type === "pen" &&
 				!hit.includes(i) &&
