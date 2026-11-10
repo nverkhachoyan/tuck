@@ -9,13 +9,51 @@ import {
 } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
 import { getPreviewUri } from "@/photos/previewCache";
-import {
-	isProjectOpenElsewhere,
-	NEWER_VERSION_MESSAGE,
-} from "@/projects/projectLifecycle";
-import { projectRouteId, UNSAVED_PROJECT } from "@/projects/projectRoute";
-import { closeProject, openProject } from "@/projects/projectService";
+import { deleteTemporaryFile } from "@/platform/temporaryFile";
+import { isProjectOpenElsewhere } from "@/projects/projectLifecycle";
+import { projectRouteId } from "@/projects/projectRoute";
+import { projects } from "@/projects/projectService";
 import { errorMessage } from "@/ui/errorMessage";
+import { createProjectSession } from "./projectSession";
+
+/** The app's one project session controller, shared by every screen. */
+export const projectSession = createProjectSession({
+	projects,
+	editor: { getSession, openDocument, closeDocument },
+	renderThumbnail,
+	getPreviewUri,
+	deleteTemporaryFile,
+});
+
+export const {
+	hasOpenSession,
+	hasSavedSession,
+	startFromPhoto,
+	startBlank,
+	open: openProjectSession,
+	openCopy: openProjectCopy,
+	end: endSession,
+	updateThumbnail: updateProjectThumbnail,
+	addImage: addSessionImage,
+	title: sessionTitle,
+} = projectSession;
+
+/** Reads the open document outside React renders, as when the app backgrounds. */
+export const latestSessionDocument = () => getSession().document;
+
+/** The project id of the open session, or null for an unsaved session. */
+export function useSessionProjectId(): string | null {
+	return useSession((session) => session.key);
+}
+
+/** The open document when its route id matches `routeId`, or null otherwise. */
+export function useRouteDocument(routeId: string): EditorDocument | null {
+	return useSession((session) =>
+		session.document !== null && projectRouteId(session.key) === routeId
+			? session.document
+			: null,
+	);
+}
 
 type ProjectSession =
 	| { status: "open"; document: EditorDocument }
@@ -35,11 +73,7 @@ type ProjectSession =
  * another project waits until the user comes back to it.
  */
 export function useProjectSession(routeId: string): ProjectSession {
-	const document = useSession((session) =>
-		session.document !== null && projectRouteId(session.key) === routeId
-			? session.document
-			: null,
-	);
+	const document = useRouteDocument(routeId);
 	const focused = useIsFocused();
 	const [failure, setFailure] = useState<{
 		routeId: string;
@@ -62,7 +96,7 @@ export function useProjectSession(routeId: string): ProjectSession {
 	useEffect(() => {
 		if (document || !focused || failed || opening.current) return;
 		opening.current = true;
-		void switchToProject(routeId, () => wanted.current)
+		void openProjectSession(routeId, () => wanted.current)
 			.catch((error: unknown) => {
 				setFailure({
 					routeId,
@@ -87,35 +121,4 @@ export function useProjectSession(routeId: string): ProjectSession {
 		};
 	}
 	return { status: "opening" };
-}
-
-async function switchToProject(routeId: string, stillWanted: () => boolean) {
-	if (routeId === UNSAVED_PROJECT) {
-		throw new Error("This photo couldn't be saved, so it can't be reopened.");
-	}
-
-	const { document, key: projectId } = getSession();
-	if (document) {
-		if (projectId !== null) {
-			await closeProject(projectId, document, (doc) =>
-				renderThumbnail(doc, (uri) => getPreviewUri(projectId, uri)),
-			);
-		}
-		// The home screen may have ended the same session meanwhile.
-		if (getSession().document === document) {
-			closeDocument();
-		}
-	}
-
-	const opened = await openProject(routeId);
-	if (!opened) {
-		throw new Error(NEWER_VERSION_MESSAGE);
-	}
-	// Left before it opened: close it again, rather than leave it open
-	// behind the screen the user went to.
-	if (!stillWanted() || getSession().document) {
-		await closeProject(routeId, opened);
-		return;
-	}
-	openDocument(opened, routeId);
 }
