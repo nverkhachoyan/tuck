@@ -1,7 +1,9 @@
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { AlphaType, ColorType, Skia } from "react-native-skia";
-import { MAX_PHOTO_PIXELS, photoScale } from "./photoScale";
+import { JPEG_QUALITY, previewSize, scaledPhotoSize } from "./photoScale";
+
+export { JPEG_QUALITY } from "./photoScale";
 
 export type PickedPhoto = {
 	uri: string;
@@ -9,6 +11,8 @@ export type PickedPhoto = {
 	height: number;
 	// A JPEG if every pixel is opaque, else a PNG, which keeps transparency.
 	opaque: boolean;
+	// A smaller copy for the canvas when the photo exceeds `PREVIEW_LONG_SIDE`.
+	preview?: string;
 };
 
 export type PickPhotoResult =
@@ -55,13 +59,12 @@ export async function importPhoto(
 	return reencode(uri, options);
 }
 
-// Looks the same as 1, at about half the size on disk. Export uses 0.95.
-export const JPEG_QUALITY = 0.92;
-
 /**
  * Skia can't decode HEIC, the default on iPhone, so every photo is re-encoded
  * for the editor, and oversized ones shrink on the way. JPEG can't hold
- * transparency, so an image with any becomes a PNG.
+ * transparency, so an image with any becomes a PNG. When the photo exceeds
+ * `PREVIEW_LONG_SIDE`, its canvas preview is resized from the same bitmap
+ * before releasing it.
  */
 async function reencode(
 	uri: string,
@@ -70,25 +73,38 @@ async function reencode(
 	const opaque = await isOpaque(uri);
 	let image = await ImageManipulator.manipulate(uri).renderAsync();
 	// The rendered size already has the photo's EXIF rotation applied.
-	const scale = photoScale(image, MAX_PHOTO_PIXELS, maxShortSide, maxLongSide);
-	if (scale < 1) {
+	const target = scaledPhotoSize(image, maxShortSide, maxLongSide);
+	if (target.width < image.width || target.height < image.height) {
 		const full = image;
 		image = await ImageManipulator.manipulate(full)
-			.resize({ width: Math.floor(full.width * scale) })
+			.resize({ width: target.width })
 			.renderAsync();
 		full.release();
 	}
+	const saveOptions = opaque
+		? { format: SaveFormat.JPEG, compress: JPEG_QUALITY }
+		: { format: SaveFormat.PNG };
 	try {
-		const {
-			width,
-			height,
-			uri: encoded,
-		} = await image.saveAsync(
-			opaque
-				? { format: SaveFormat.JPEG, compress: JPEG_QUALITY }
-				: { format: SaveFormat.PNG },
-		);
-		return { uri: encoded, width, height, opaque };
+		const { width, height, uri: encoded } = await image.saveAsync(saveOptions);
+		const previewTarget = previewSize({ width, height });
+		if (!previewTarget) {
+			return { uri: encoded, width, height, opaque };
+		}
+		const resized = await ImageManipulator.manipulate(image)
+			.resize({ width: previewTarget.width })
+			.renderAsync();
+		try {
+			const preview = await resized.saveAsync(saveOptions);
+			return {
+				uri: encoded,
+				width,
+				height,
+				opaque,
+				preview: preview.uri,
+			};
+		} finally {
+			resized.release();
+		}
 	} finally {
 		image.release();
 	}

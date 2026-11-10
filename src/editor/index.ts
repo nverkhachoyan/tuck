@@ -5,11 +5,7 @@ export { Editor } from "./Editor";
 export type { EditorHost } from "./editorHost";
 export { LoadFonts, resetFailedFonts } from "./layers/text/fonts";
 export { drawOffscreen } from "./render/drawOffscreen";
-export {
-	renderDocument,
-	renderThumbnail,
-	setPreviewResolver,
-} from "./render/renderDocument";
+export { renderDocument, renderThumbnail } from "./render/renderDocument";
 export {
 	closeDocument,
 	getSession,

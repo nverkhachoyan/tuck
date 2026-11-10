@@ -5,6 +5,7 @@ import { Editor, type EditorHost, getSession, useSession } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
 import { getPreviewUri } from "@/photos/previewCache";
+import { deleteTemporaryFile } from "@/platform/temporaryFile";
 import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
 import {
@@ -82,8 +83,13 @@ function OpenProject({ document }: { document: EditorDocument }) {
 		importPhoto,
 		// The image moves into the project, so autosave knows its file.
 		// Without a project, it's used where the picker left it.
-		addImage: async (uri, opaque, size) =>
-			projectId === null ? uri : addImage(projectId, uri, opaque, size),
+		addImage: async (uri, opaque, preview) => {
+			if (projectId !== null) {
+				return addImage(projectId, uri, opaque, preview);
+			}
+			if (preview) deleteTemporaryFile(preview);
+			return uri;
+		},
 		title,
 		saveProblem:
 			projectId === null

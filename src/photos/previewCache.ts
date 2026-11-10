@@ -1,55 +1,48 @@
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import type { EditorDocument, ImageLayer } from "../editor/core";
-import { JPEG_QUALITY } from "./photoImport";
-import { PREVIEW_LONG_SIDE, photoScale } from "./photoScale";
+import { JPEG_QUALITY, previewSize } from "./photoScale";
 import previewStorage, { type PreviewStorage } from "./previewStorage";
 
-// Previews keyed by projectId and image file name or URI in memory for synchronous canvas lookups.
+// Previews keyed by projectId and image URI in memory for synchronous canvas lookups.
 const memoryPreviews = new Map<string, string>();
 
-const cacheKey = (projectId: string, fileOrUri: string) =>
-	`${projectId}:${fileOrUri}`;
+const cacheKey = (projectId: string, uri: string) => `${projectId}:${uri}`;
 
 /**
  * Whether an image with these dimensions needs a preview texture.
  * Only images exceeding PREVIEW_LONG_SIDE on their long side need one.
  */
 export function needsPreview(size: { width: number; height: number }): boolean {
-	return Math.max(size.width, size.height) > PREVIEW_LONG_SIDE;
+	return previewSize(size) !== null;
 }
 
 /**
  * Synchronous lookup of an already-prepared preview URI for a project's image.
  * Returns null if the image does not have or need a preview texture.
  */
-export function getPreviewUri(
-	projectId: string,
-	fileOrUri: string,
-): string | null {
-	return memoryPreviews.get(cacheKey(projectId, fileOrUri)) ?? null;
+export function getPreviewUri(projectId: string, uri: string): string | null {
+	return memoryPreviews.get(cacheKey(projectId, uri)) ?? null;
 }
 
 /**
- * Loads a preview URI from storage into the memory cache.
+ * Stores a preview created during photo import and records it in memory for
+ * the project's image URL.
  */
-export async function loadPreviewUri(
+export async function storePreview(
 	projectId: string,
 	file: string,
+	uri: string,
+	tempUri: string,
 	storage: PreviewStorage = previewStorage,
-): Promise<string | null> {
-	const cached = getPreviewUri(projectId, file);
-	if (cached) return cached;
-	const stored = await storage.getPreviewUri(projectId, file);
-	if (stored) {
-		memoryPreviews.set(cacheKey(projectId, file), stored);
-	}
-	return stored;
+): Promise<string> {
+	const previewUri = await storage.savePreview(projectId, file, tempUri);
+	memoryPreviews.set(cacheKey(projectId, uri), previewUri);
+	return previewUri;
 }
 
 /**
- * Generates or retrieves a preview texture for a specific image file in a project.
- * Returns null if the image long side is <= PREVIEW_LONG_SIDE.
- * Never modifies or rewrites the stored source file.
+ * Loads a stored preview for a project's image, or generates one when opening
+ * a project saved without a preview. Never modifies the stored source file.
  */
 export async function ensurePreview(
 	options: {
@@ -63,27 +56,19 @@ export async function ensurePreview(
 	storage: PreviewStorage = previewStorage,
 ): Promise<string | null> {
 	const { projectId, file, uri, width, height, opaque } = options;
-	if (!needsPreview({ width, height })) {
+	const target = previewSize({ width, height });
+	if (!target) {
 		return null;
 	}
 
 	const existing = await storage.getPreviewUri(projectId, file);
 	if (existing) {
-		memoryPreviews.set(cacheKey(projectId, file), existing);
 		memoryPreviews.set(cacheKey(projectId, uri), existing);
 		return existing;
 	}
 
-	const scale = photoScale(
-		{ width, height },
-		Number.POSITIVE_INFINITY,
-		Number.POSITIVE_INFINITY,
-		PREVIEW_LONG_SIDE,
-	);
-	const targetWidth = Math.floor(width * scale);
-
 	const rendered = await ImageManipulator.manipulate(uri)
-		.resize({ width: targetWidth })
+		.resize({ width: target.width })
 		.renderAsync();
 
 	try {
@@ -92,27 +77,22 @@ export async function ensurePreview(
 				? { format: SaveFormat.JPEG, compress: JPEG_QUALITY }
 				: { format: SaveFormat.PNG },
 		);
-		const previewUri = await storage.savePreview(projectId, file, saved.uri);
-		memoryPreviews.set(cacheKey(projectId, file), previewUri);
-		memoryPreviews.set(cacheKey(projectId, uri), previewUri);
-		return previewUri;
+		return await storePreview(projectId, file, uri, saved.uri, storage);
 	} finally {
 		rendered.release();
 	}
 }
 
 /**
- * Builds or loads preview textures for all oversized image layers in an open project.
- * Builds once per file exceeding PREVIEW_LONG_SIDE.
- * Released before Skia canvas decoding.
+ * Loads or builds preview textures for all oversized image layers in a
+ * reopened project before Skia canvas decoding.
  */
 export async function prepareProjectPreviews(
 	projectId: string,
 	document: EditorDocument,
 	imageFile: (uri: string) => string | undefined,
 	storage: PreviewStorage = previewStorage,
-): Promise<Map<string, string>> {
-	const previews = new Map<string, string>();
+): Promise<void> {
 	const seenFiles = new Set<string>();
 
 	for (const layer of document.layers) {
@@ -122,9 +102,7 @@ export async function prepareProjectPreviews(
 		if (!file || seenFiles.has(file)) continue;
 		seenFiles.add(file);
 
-		if (!needsPreview(imageLayer)) continue;
-
-		const previewUri = await ensurePreview(
+		await ensurePreview(
 			{
 				projectId,
 				file,
@@ -135,16 +113,7 @@ export async function prepareProjectPreviews(
 			},
 			storage,
 		);
-
-		if (previewUri) {
-			previews.set(file, previewUri);
-			previews.set(imageLayer.uri, previewUri);
-			memoryPreviews.set(cacheKey(projectId, file), previewUri);
-			memoryPreviews.set(cacheKey(projectId, imageLayer.uri), previewUri);
-		}
 	}
-
-	return previews;
 }
 
 /**

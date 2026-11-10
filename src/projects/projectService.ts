@@ -1,6 +1,7 @@
 import {
 	prepareProjectPreviews,
 	removeProjectPreviews,
+	storePreview,
 } from "../photos/previewCache";
 import { createProjectLifecycle } from "./projectLifecycle";
 import storage from "./projectStorage";
@@ -10,6 +11,7 @@ export const projects = createProjectLifecycle(
 	storage,
 	prepareProjectPreviews,
 	removeProjectPreviews,
+	storePreview,
 );
 
 export const {

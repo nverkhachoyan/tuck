@@ -63,7 +63,6 @@ import {
 import type { EditorDocument } from "./document/document";
 import type { Box, Point, Rect, Transform } from "./document/geometry";
 import { EditorScene, type SceneDraft } from "./EditorScene";
-import { useEditorContext } from "./editorContext";
 import type { Layer } from "./layers/layer";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
@@ -103,6 +102,8 @@ type EditorCanvasProps = {
 	// Whether a press on the canvas keeps the focus of the input taking the
 	// keyboard, as while text is typed (see `useKeepTextFocus`).
 	keepFocus?: boolean;
+	// The smaller preview for an image layer's URI, when there is one.
+	previewUri?: (uri: string) => string | null;
 	onSelectLayer?: (id: string | null) => void;
 	// A tap on the layer that's already selected, in document space (the
 	// editor edits it there, when a tool edits it in place).
@@ -198,6 +199,7 @@ export function EditorCanvas({
 	input = SELECT,
 	draft = null,
 	keepFocus = false,
+	previewUri,
 	onSelectLayer,
 	onTapSelectedLayer,
 	onCommitTransform,
@@ -247,7 +249,6 @@ export function EditorCanvas({
 		}),
 		[documentSize, size, bottomInset, leftInset, rightInset],
 	);
-	const { previewUri } = useEditorContext();
 	const {
 		zoom,
 		viewport,
