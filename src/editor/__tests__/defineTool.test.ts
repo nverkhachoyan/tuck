@@ -51,7 +51,7 @@ describe("defineTool", () => {
 			views: { Dock: views.Dock },
 			variants: () => [
 				{ id: "a", label: "Option A", icon: "pencil" },
-				{ id: "b", label: "Option B", icon: "brush" },
+				{ id: "b", label: "Option B", icon: "brush", tool: "other" },
 			],
 			activeVariant: (c) => c.current,
 			selectVariant: (_c, id) => {
@@ -66,7 +66,7 @@ describe("defineTool", () => {
 		const controller = grouped.useController({} as never);
 		assert.deepEqual(grouped.variants?.(controller), [
 			{ id: "a", label: "Option A", icon: "pencil" },
-			{ id: "b", label: "Option B", icon: "brush" },
+			{ id: "b", label: "Option B", icon: "brush", tool: "other" },
 		]);
 		assert.equal(grouped.activeVariant?.(controller), "a");
 		assert.deepEqual(grouped.variantEntry?.(controller), {

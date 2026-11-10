@@ -22,6 +22,7 @@ import { useStore } from "../../store";
 import { removedMask } from "./cutMask";
 import {
 	type CutTapMode,
+	type CutVariant,
 	cutCanvasTool,
 	cutToolInUse,
 	parseCutSettings,
@@ -66,6 +67,7 @@ export type CutTray = "brush" | "apply";
  *   tapped.
  */
 export function useCutTool({
+	open,
 	image,
 	documentSize,
 	addImage,
@@ -74,7 +76,13 @@ export function useCutTool({
 	startTool,
 }: Pick<
 	ToolEnv,
-	"image" | "documentSize" | "addImage" | "close" | "notify" | "startTool"
+	| "open"
+	| "image"
+	| "documentSize"
+	| "addImage"
+	| "close"
+	| "notify"
+	| "startTool"
 >) {
 	const layer = image ?? undefined;
 	const key = useStore((state) => state.key);
@@ -231,9 +239,11 @@ export function useCutTool({
 	);
 
 	return {
+		open,
 		layer,
 		settings,
 		change,
+		setVariant: (variant: CutVariant) => change({ ...settings, variant }),
 		tool,
 		canvasInput,
 		// A sub-tool with no size, like Tap, leaves the settings alone.

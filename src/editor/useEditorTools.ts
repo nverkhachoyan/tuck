@@ -173,7 +173,9 @@ export function useEditorTools({
 	const pendingStart = useRef<{ tool: ToolId; image: ImageLayer } | null>(null);
 	const startTool = (
 		next: ToolId,
-		image = next === "adjust" && selectedImage ? selectedImage : targetImage,
+		image = definitionOf(tools[next]).spec.stickers && selectedImage
+			? selectedImage
+			: targetImage,
 		on: string | null = null,
 	) => {
 		const { definition, controller } = controllers[next];

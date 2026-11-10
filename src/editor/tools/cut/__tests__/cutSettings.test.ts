@@ -17,6 +17,7 @@ import {
 describe("parseCutSettings", () => {
 	test("reads back what was saved", () => {
 		const settings = {
+			variant: "removeBg",
 			tool: "subtract",
 			addSize: 0,
 			subtractSize: 4,
@@ -31,6 +32,7 @@ describe("parseCutSettings", () => {
 		assert.deepEqual(parseCutSettings("tap"), defaultCutSettings);
 		assert.deepEqual(
 			parseCutSettings({
+				variant: "other",
 				tool: "lasso",
 				addSize: 1.5,
 				subtractSize: 99,
@@ -50,6 +52,7 @@ describe("parseCutSettings", () => {
 				soft: false,
 			}),
 			{
+				variant: "cut",
 				tool: "subtract",
 				addSize: 0,
 				subtractSize: 4,
@@ -135,6 +138,7 @@ describe("cutBrush", () => {
 
 	test("adds with a pen and subtracts with an eraser, each its own size", () => {
 		const settings = {
+			variant: "cut",
 			tool: "add",
 			addSize: 0,
 			subtractSize: 4,

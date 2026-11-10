@@ -12,6 +12,8 @@ export type ToolId = string;
  *   to work in, and is put down when the last one goes; "image" works on
  *   the image it started on, and is put down when that one is hidden or
  *   gone. A tool with a target waits for an image before its button shows.
+ * - `stickers`: whether a selected sticker counts as the image it opens on
+ *   when `target` is "image" (Adjust).
  * - `tray`: whether it has a tray of options on the phone.
  * - `sized`: whether `[` and `]` step its brush.
  * - `takesKeys`: whether it keeps a draft of its own until Done. While it's
@@ -49,6 +51,7 @@ export type ToolId = string;
  */
 export type ToolSpec = {
 	target: "none" | "photo" | "image";
+	stickers?: true;
 	tray: boolean;
 	sized: boolean;
 	takesKeys?: true | "typing";
