@@ -185,7 +185,7 @@ export function SessionsLesson() {
 		},
 		{
 			label: "pastBefore",
-			file: "src/editor/store/editorSlice.ts",
+			file: "src/editor/store/history.ts",
 			name: "pastBefore",
 		},
 		{
@@ -200,7 +200,7 @@ export function SessionsLesson() {
 		},
 		{
 			label: "EditorSession",
-			file: "src/editor/store/editorSlice.ts",
+			file: "src/editor/store/history.ts",
 			name: "EditorSession",
 		},
 	];
