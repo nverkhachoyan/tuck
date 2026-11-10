@@ -56,6 +56,12 @@ Get the numbers steps 3 and 5 depend on, in headless Chrome on the local web app
 
 Remove the timing code afterward. Write the numbers into this file under each step. Native costs differ (each `quadTo` is a JSI call on iOS), so add the commit-cost and eraser cases to [#95](https://github.com/nverkhachoyan/tuck/issues/95) and [#97](https://github.com/nverkhachoyan/tuck/issues/97) as a comment.
 
+Measured November 9, 2026, in headless Chrome 157 on the M1 Mac against the development server (`pnpm expo start --web`, development build), 1280×860, at 60 fps. Strokes were drawn as 30-point squiggles 40 px long, each starting 3–4 px right of the last, so all 200 joined one mark and every landing recentered it.
+
+- **Commit cost:** every landing rebuilt every path, as predicted: 20,100 `pathFor` misses over 200 landings (1 + 2 + … + 200). The rebuild cost 0.27 ms per landing at strokes 1–20, 1.31 ms at 91–110, and 2.03 ms (p50 2.0, max 2.6) at 181–200. The worst frame within 250 ms of each landing was 16.8 ms in every band with the inspector closed: no landing dropped a frame. Below the 4 ms threshold, so step 3 becomes an issue.
+- **Stroke eraser hover** (180 mouse moves at 60 Hz along the 200-stroke mark, main-thread time from `Performance.getMetrics`): 8.6 ms per move over ink after steps 1 and 2, 8.6–9.0 ms before them, and 1.4–1.5 ms off ink either way. Frame times: p50 16.7 ms, p95 16.8 ms, at most one 33 ms frame in 360. A CPU profile puts nearly all of it in CanvasKit replaying the drawing, because in a mark this dense the hovered stroke changes on almost every move, and each change redraws all 200 strokes; hit-testing doesn't show in the top 25. A mouse resting on one stroke with sub-pixel jitter costs 1.4 ms per move after the steps and 1.6 ms before. In an 8-stroke drawing, 30 moves over one stroke reran the per-stroke opacity mappers 240 times before step 2 and 16 times after.
+- **Wide inspector thumbnails:** with the layers inspector pinned, `renderMarkThumbnail` took 10 ms per landing (wall time, asynchronous: picture, offscreen draw, readback, PNG) at strokes 1–20, 23 ms at 91–110, and 33 ms (max 42) at 181–200. The first thumbnail of a 200-stroke mark took 60 ms, with the offscreen surface made. One landing in the 181–200 band had a 33 ms frame; none did with the inspector closed.
+
 ### Step 1: Box check in `strokesHitBy` (land now)
 
 Files: `layers/strokes.ts`, `canvas/useToolStroke.ts`, `layers/__tests__/strokes.test.ts`.
@@ -64,6 +70,8 @@ Files: `layers/strokes.ts`, `canvas/useToolStroke.ts`, `layers/__tests__/strokes
 - Give `strokesHitBy` an optional `boxes` parameter. When given, `hitsPen` skips any stroke whose box, padded by `padding`, doesn't hold the sample, before `nearLine` walks it. Without it, behavior is unchanged, so `eraseWholeStrokes` (`drawingEdits.ts:185`) keeps working as is and still agrees with the canvas.
 - In `useToolStroke.ts`, compute the boxes in the `strokeTargets` memo (a worklet can't read the JS `WeakMap`) and pass them from both `onSegment` and `hoveredStroke`. Keep `"worklet"` on anything the UI thread calls, declared above its callers.
 - Test: for random strokes with erasers, `strokesHitBy` gives the same indexes with and without boxes, for taps and swipes.
+
+Built in `6904b35`. On web it barely shows in step 0's dense mark, where most strokes' boxes hold the sample anyway; its saving grows as ink spreads out, and on a phone, where hit-testing runs on the UI thread.
 
 Commit: `perf(eraser): skip strokes whose box a stroke-erase sample misses`
 
@@ -76,6 +84,8 @@ Files: `canvas/useToolStroke.ts`, `canvas/LiveStrokeOverlay.tsx`.
 - Leave `DimmedStroke` and paint order alone. Its mappers now rerun when a stroke gets dimmed or undimmed, not on every move.
 - Check in the browser: hover over and off strokes and swipe across them with the Stroke eraser; dimming, the click-to-take preview, and erasers drawn after the dimmed strokes all look as before.
 - If step 0 or #97 still shows the per-stroke mappers costing frames once this lands, the next option keeps paint order: wrap contiguous runs of undimmed strokes in one group each. Not part of this step.
+
+Built in `eaaf70d` and checked in headless Chrome (hover, held swipe, and an eraser drawn after the dimmed strokes). Step 0 found what's left is CanvasKit redrawing the drawing when the hovered stroke changes, not the mappers, so grouping runs of undimmed strokes wouldn't help on web; #97 decides for phones.
 
 Commit: `perf(eraser): redo the Stroke eraser's dimming only when what's dimmed changes`
 
