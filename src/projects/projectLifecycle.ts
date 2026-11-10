@@ -42,7 +42,15 @@ export type ProjectStorage = {
 	listProjectIds(): Promise<string[]>;
 };
 
-/** Prepares preview textures for an open project's images before canvas decoding. */
+/** Stores a preview texture created when an image is imported into a project. */
+export type StoreProjectPreview = (
+	id: string,
+	file: string,
+	url: string,
+	preview: string,
+) => Promise<unknown>;
+
+/** Prepares preview textures for a reopened project's images before canvas decoding. */
 export type PrepareProjectPreviews = (
 	id: string,
 	document: EditorDocument,
@@ -137,6 +145,7 @@ export function createProjectLifecycle(
 	storage: ProjectStorage,
 	preparePreviews?: PrepareProjectPreviews,
 	removePreviews?: RemoveProjectPreviews,
+	storePreview?: StoreProjectPreview,
 ) {
 	const openProjects = new Map<string, OpenProject>();
 
@@ -245,30 +254,27 @@ export function createProjectLifecycle(
 			});
 	}
 
-	/** Starts a project from a picked photo, which moves into it. */
-	async function createProject(photo: {
+	/** Starts a project from a picked photo, which moves into it with its preview. */
+	function createProject(photo: {
 		uri: string;
 		width: number;
 		height: number;
 		opaque: boolean;
+		preview?: string;
 	}): Promise<{ id: string; document: EditorDocument }> {
-		const { uri, width, height, opaque } = photo;
-		const started = await startProject(async (id) => {
+		const { uri, width, height, opaque, preview } = photo;
+		return startProject(async (id) => {
 			// `PHOTO_FILE` is a JPEG, so a PNG gets a name of its own.
 			const file = opaque ? PHOTO_FILE : newImageFile(opaque);
 			const url = await storage.storeImage(id, file, uri);
+			if (preview && storePreview) {
+				await storePreview(id, file, url, preview);
+			}
 			return {
 				images: new Map([[url, file]]),
 				document: createDocumentFromImage(url, width, height, opaque),
 			};
 		});
-		const project = openProjects.get(started.id);
-		if (project && preparePreviews) {
-			await preparePreviews(started.id, started.document, (url) =>
-				project.images.get(url),
-			);
-		}
-		return started;
 	}
 
 	function createBlankProject(canvas: {
@@ -433,16 +439,15 @@ export function createProjectLifecycle(
 	}
 
 	/**
-	 * Moves a picked photo into an open project as a file of its own, and
-	 * returns its URL there, for a new image layer's `uri` or `mask`. Given
-	 * the photo's size, it also gets a preview, as a project's photos do when
-	 * it opens; a mask is left without one.
+	 * Moves a picked photo into an open project as a file of its own, with its
+	 * canvas preview when it has one, and returns its URL there, for a new
+	 * image layer's `uri` or `mask`.
 	 */
 	async function addImage(
 		id: string,
 		uri: string,
 		opaque: boolean,
-		size?: { width: number; height: number },
+		preview?: string,
 	): Promise<string> {
 		const project = openProjects.get(id);
 		if (!project) throw new Error("This project isn't open.");
@@ -455,12 +460,8 @@ export function createProjectLifecycle(
 			throw new Error("This project was closed.");
 		}
 		project.images.set(url, file);
-		if (size && preparePreviews) {
-			await preparePreviews(
-				id,
-				createDocumentFromImage(url, size.width, size.height, opaque),
-				(imageUrl) => project.images.get(imageUrl),
-			);
+		if (preview && storePreview) {
+			await storePreview(id, file, url, preview);
 		}
 		return url;
 	}

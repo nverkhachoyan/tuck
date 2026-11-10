@@ -5,6 +5,8 @@ export type PickedImage = {
 	height: number;
 	// A JPEG if every pixel is opaque, else a PNG, which keeps transparency.
 	opaque: boolean;
+	// A smaller copy for the canvas when the image exceeds `PREVIEW_LONG_SIDE`.
+	preview?: string;
 };
 
 export type PickedImageResult =
@@ -24,9 +26,10 @@ export type ImageSizeLimits = {
  * - `pickPhoto`: lets the user pick a photo, read so the editor can draw it.
  * - `importPhoto`: makes an image at a URI (a dropped file's, on web) ready
  *   the same way.
- * - `addImage`: keeps an image the document gains, giving the URI the
- *   document should use. A photo layer's image comes with its size, so the
- *   canvas can draw a smaller preview of it.
+ * - `addImage`: keeps an image the document gains, with its smaller canvas
+ *   `preview` when it has one, giving the URI the document should use.
+ * - `previewUri`: the smaller preview for an image layer's URI, when there
+ *   is one, so the canvas decodes that while export decodes the full file.
  * - `title`: what the app calls the document.
  * - `saveProblem`: why edits aren't being kept, if they aren't, with
  *   `retrySave` when trying again might help.
@@ -37,11 +40,7 @@ export type ImageSizeLimits = {
 export type EditorHost = {
 	pickPhoto: (limits: ImageSizeLimits) => Promise<PickedImageResult>;
 	importPhoto: (uri: string, limits: ImageSizeLimits) => Promise<PickedImage>;
-	addImage: (
-		uri: string,
-		opaque: boolean,
-		size?: { width: number; height: number },
-	) => Promise<string>;
+	addImage: (uri: string, opaque: boolean, preview?: string) => Promise<string>;
 	title: string;
 	saveProblem: string | null;
 	retrySave?: () => void;

@@ -193,8 +193,8 @@ export function Editor({
 		// unless another screen or tool is in front of it.
 		enabled: focused && !draftOpen,
 		maxShortSide: maxNewImageShortSide(document),
-		onImage: async ({ uri, width, height, opaque }, kind) => {
-			const url = await host.addImage(uri, opaque, { width, height });
+		onImage: async ({ uri, width, height, opaque, preview }, kind) => {
+			const url = await host.addImage(uri, opaque, preview);
 			const area = canvasRef.current?.visibleArea();
 			const add = kind === "sticker" ? addStickerLayer : addImageLayer;
 			add(url, width, height, opaque, area);
@@ -613,6 +613,7 @@ export function Editor({
 							selectedLayer={selectedLayer}
 							draft={draft}
 							keepFocus={typing}
+							previewUri={host.previewUri}
 							onSelectLayer={selectLayer}
 							onTapSelectedLayer={editSelectedAt || undefined}
 							onCommitTransform={transformLayer}

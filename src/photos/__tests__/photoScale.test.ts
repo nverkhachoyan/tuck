@@ -5,6 +5,8 @@ import {
 	MAX_PHOTO_PIXELS,
 	PREVIEW_LONG_SIDE,
 	photoScale,
+	previewSize,
+	scaledPhotoSize,
 } from "../photoScale.ts";
 
 const MP = 1_000_000;
@@ -99,5 +101,26 @@ describe("photoScale", () => {
 			),
 			1,
 		);
+	});
+
+	test("scaledPhotoSize and previewSize apply the import and preview limits", () => {
+		assert.deepEqual(scaledPhotoSize({ width: 5712, height: 4284 }), {
+			width: 5712,
+			height: 4284,
+		});
+		assert.deepEqual(scaledPhotoSize({ width: 4000, height: 3000 }, 1500), {
+			width: 2000,
+			height: 1500,
+		});
+		assert.deepEqual(previewSize({ width: 5712, height: 4284 }), {
+			width: 4096,
+			height: 3072,
+		});
+		assert.deepEqual(previewSize({ width: 4284, height: 5712 }), {
+			width: 3072,
+			height: 4096,
+		});
+		assert.equal(previewSize({ width: 4096, height: 3072 }), null);
+		assert.equal(previewSize({ width: 2000, height: 1500 }), null);
 	});
 });

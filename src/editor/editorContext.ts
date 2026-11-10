@@ -11,6 +11,8 @@ import { createContext, useContext } from "react";
  * - `wide`: whether the window is wide, with a rail and a header bar in
  *   place of the dock.
  * - `cancel`: the open tool's Cancel.
+ * - `previewUri`: the smaller preview for an image layer's URI, when there
+ *   is one, for a tool's `Stage` (such as Crop's).
  */
 export type EditorContextValue = {
 	customColor: string | null;
