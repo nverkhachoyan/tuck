@@ -27,6 +27,7 @@ import decodedImages from "@src/editor/render/decodedImages.ts?raw";
 import decodeImageLayers from "@src/editor/render/decodeImageLayers.ts?raw";
 import renderDocument from "@src/editor/render/renderDocument.tsx?raw";
 import editorSlice from "@src/editor/store/editorSlice.ts?raw";
+import history from "@src/editor/store/history.ts?raw";
 import storeIndex from "@src/editor/store/index.ts?raw";
 import cropGeometry from "@src/editor/tools/crop/cropGeometry.ts?raw";
 import exportFormat from "@src/screens/export/exportFormat.ts?raw";
@@ -66,6 +67,7 @@ export const sources = {
 	"src/screens/export/exportFormat.ts": exportFormat,
 	"src/screens/export/exportSizes.ts": exportSizes,
 	"src/editor/store/editorSlice.ts": editorSlice,
+	"src/editor/store/history.ts": history,
 	"src/editor/store/index.ts": storeIndex,
 };
 

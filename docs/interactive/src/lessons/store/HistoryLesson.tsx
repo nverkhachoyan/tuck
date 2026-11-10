@@ -187,7 +187,7 @@ export function HistoryLesson() {
 		},
 		{
 			label: "EditorSnapshot",
-			file: "src/editor/store/editorSlice.ts",
+			file: "src/editor/store/history.ts",
 			name: "EditorSnapshot",
 		},
 		{ label: "useStore", file: "src/editor/store/index.ts", name: "useStore" },
