@@ -15,16 +15,13 @@ const MARGIN = 0.1;
 // per size.
 const pictures = new WeakMap<Stroke[], Map<number, Promise<string | null>>>();
 
-// Renders run one after another: on web they share one offscreen surface.
-let queue: Promise<unknown> = Promise.resolve();
-
 /**
  * A picture of the mark `layer` alone, `pixels` square, as a PNG data URL,
  * or null if it couldn't be drawn:
  * - its ink fitted inside a small margin, in its own space, unturned;
  * - a highlight drawn over white, since it multiplies; other ink on
  *   transparent;
- * - cached by its strokes and size, and drawn one at a time.
+ * - cached by its strokes and size.
  */
 export function renderMarkThumbnail(
 	layer: DrawingLayer,
@@ -38,8 +35,7 @@ export function renderMarkThumbnail(
 	}
 	const cached = bySize.get(size);
 	if (cached) return cached;
-	const drawn = queue.then(() => draw(layer, size)).catch(() => null);
-	queue = drawn;
+	const drawn = draw(layer, size).catch(() => null);
 	bySize.set(size, drawn);
 	return drawn;
 }
