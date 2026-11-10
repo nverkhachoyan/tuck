@@ -4,6 +4,7 @@ import {
 	type SharedValue,
 	useAnimatedReaction,
 	useDerivedValue,
+	useSharedValue,
 } from "react-native-reanimated";
 import {
 	BackdropFilter,
@@ -279,16 +280,30 @@ function StrokeErasedDrawing({
 	const { id } = layer;
 	const count = layer.strokes.length;
 	const { crossedStrokes, hoveredStroke } = stroke;
-	const dimmedStrokes = useDerivedValue((): readonly number[] => {
-		const touched =
-			stroke.id.value > stroke.landedId
-				? (crossedStrokes?.value[id] ?? NO_STROKES)
-				: NO_STROKES;
-		const hovered = hoveredStroke?.value;
-		return hovered && hovered.id === id && hovered.index < count
-			? [...touched, hovered.index]
-			: touched;
-	}, [id, count, stroke]);
+	// Written only when what's dimmed changes, since every stroke reads it.
+	const dimmedStrokes = useSharedValue<readonly number[]>(NO_STROKES);
+	useAnimatedReaction(
+		(): readonly number[] => {
+			const touched =
+				stroke.id.value > stroke.landedId
+					? (crossedStrokes?.value[id] ?? NO_STROKES)
+					: NO_STROKES;
+			const hovered = hoveredStroke?.value;
+			return hovered && hovered.id === id && hovered.index < count
+				? [...touched, hovered.index]
+				: touched;
+		},
+		(now) => {
+			const before = dimmedStrokes.value;
+			if (
+				now.length !== before.length ||
+				now.some((index, i) => index !== before[i])
+			) {
+				dimmedStrokes.value = now;
+			}
+		},
+		[id, count, stroke],
+	);
 	return (
 		<LayerContent
 			layer={layer}

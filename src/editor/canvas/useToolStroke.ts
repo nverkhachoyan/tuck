@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import {
 	type SharedValue,
+	useAnimatedReaction,
 	useDerivedValue,
 	useSharedValue,
 } from "react-native-reanimated";
@@ -302,44 +303,56 @@ export function useToolStroke({
 		enabled: enabled && Boolean(tool),
 	});
 	// On web, the topmost stroke a click would take, while nothing's down.
+	// Written only when that stroke changes, not on every mouse move, since
+	// each of the drawing's strokes reads it to dim itself.
 	const hoverX = hover?.x ?? null;
 	const hoverY = hover?.y ?? null;
 	const hoverShown = hover?.shown ?? null;
-	const hoveredStroke = useDerivedValue((): HoveredStroke | null => {
-		if (!strokeErasing || !hoverX || !hoverY || !hoverShown?.value) {
-			return null;
-		}
-		if (strokeId.value > landedStrokeId && strokePoints.value.length > 0) {
-			return null;
-		}
-		const point = viewPointToDocument(viewport, {
-			x: hoverX.value,
-			y: hoverY.value,
-		});
-		for (let i = strokeTargets.length - 1; i >= 0; i--) {
-			const target = strokeTargets[i];
-			const hits = strokesHitBy(
-				target.strokes,
-				target.transform,
-				[point.x, point.y],
-				touchReach,
-				target.boxes,
-			);
-			if (hits.length > 0) {
-				return { id: target.id, index: hits[hits.length - 1] };
+	const hoveredStroke = useSharedValue<HoveredStroke | null>(null);
+	useAnimatedReaction(
+		(): HoveredStroke | null => {
+			if (!strokeErasing || !hoverX || !hoverY || !hoverShown?.value) {
+				return null;
 			}
-		}
-		return null;
-	}, [
-		strokeErasing,
-		hoverX,
-		hoverY,
-		hoverShown,
-		landedStrokeId,
-		viewport,
-		strokeTargets,
-		touchReach,
-	]);
+			if (strokeId.value > landedStrokeId && strokePoints.value.length > 0) {
+				return null;
+			}
+			const point = viewPointToDocument(viewport, {
+				x: hoverX.value,
+				y: hoverY.value,
+			});
+			for (let i = strokeTargets.length - 1; i >= 0; i--) {
+				const target = strokeTargets[i];
+				const hits = strokesHitBy(
+					target.strokes,
+					target.transform,
+					[point.x, point.y],
+					touchReach,
+					target.boxes,
+				);
+				if (hits.length > 0) {
+					return { id: target.id, index: hits[hits.length - 1] };
+				}
+			}
+			return null;
+		},
+		(now) => {
+			const before = hoveredStroke.value;
+			if (now?.id !== before?.id || now?.index !== before?.index) {
+				hoveredStroke.value = now;
+			}
+		},
+		[
+			strokeErasing,
+			hoverX,
+			hoverY,
+			hoverShown,
+			landedStrokeId,
+			viewport,
+			strokeTargets,
+			touchReach,
+		],
+	);
 	// Built once a frame for every drawing the Eraser reaches. It stays once
 	// the stroke lands: emptying it would redraw the canvas before the canvas
 	// has the document that erases the same ink, and each drawing drops the
