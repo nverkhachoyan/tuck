@@ -1,6 +1,6 @@
 # Editor audit: synthesis and plan
 
-Written November 9, 2026, at `da0d580`. It replaces [editor-audit.md](editor-audit.md) and the debate in [editor-audit-debate/](editor-audit-debate/) (both untracked): it keeps what survived the debate, the two judges, and a check of the judges' own claims against the code, and turns that into steps. Remove the audit and the debate folder once this is accepted, and remove this file once its steps are built, as with other plans.
+Written November 9, 2026, at `da0d580`. It replaces the audit and its debate, which were committed in `4585f97` and removed once this was built: it keeps what survived the debate, the two judges, and a check of the judges' own claims against the code, and turns that into steps. Remove this file once its steps are built, as with other plans.
 
 ## Part 1: Synthesis
 
@@ -91,16 +91,7 @@ Commit: `perf(eraser): redo the Stroke eraser's dimming only when what's dimmed 
 
 ### Step 3: Keep cached paths when a drawing recenters (only if step 0 shows it)
 
-Build this if a landing costs more than about 4 ms on web at 200 strokes, or #95 shows a hitch on landing. Otherwise file it as an issue with step 0's numbers and stop.
-
-Files: `layers/strokes.ts`, `layers/drawing/DrawingLayerView.tsx`, `layers/__tests__/strokes.test.ts`.
-
-- In `recenterDrawing`, record each moved stroke in a module `WeakMap` from the new stroke to `{ from, dx, dy }` (the old stroke and the shift). Export a lookup. This is a plain-TypeScript side table, with no Skia and nothing saved.
-- In `pathFor`, on a miss, look the stroke up. If its old stroke's path is cached, build the new path from it with `Skia.PathBuilder.Make().addPath(path, translation).build()`: one call instead of one per point. Then delete the entry, so old strokes aren't held longer than the undo history already holds them. Otherwise build from points as now.
-- Points and centers are both on a 0.01 grid (`round`), so a translated path matches a rebuilt one up to floating point.
-- Test: `recenterDrawing` records a link with the right shift for each stroke and none when the center doesn't move. Check in the browser that a 30-stroke drawing, and a brushed redaction, look the same before and after (screenshots), including after undo.
-
-Commit: `perf(drawing): keep built stroke paths when a drawing recenters`
+Not built: step 0 measured 2.0 ms per landing at 200 strokes, under the 4 ms bar. Now [#109](https://github.com/nverkhachoyan/tuck/issues/109), with the numbers and the design, waiting on a phone check in #95.
 
 ### Step 4: One queue for the shared offscreen surface (optional hardening)
 
@@ -111,23 +102,25 @@ Files: `render/drawOffscreen.web.ts`, `render/markThumbnail.tsx`.
 - Explain in the comment that it closes the gap between the readback and `snapshot.dispose()`, and that the surface is now owned in one place. Don't say readback is asynchronous: at Skia 3.9.0 it isn't. If a Skia upgrade makes web readback truly asynchronous, this becomes a correctness fix.
 - `pnpm build:web` (a `.web` file), then export a project and open the layers panel while a thumbnail is drawing.
 
+Built in `a4085fe`; `pnpm build:web` passes, and in headless Chrome a mark's thumbnail and the export preview started in the same task both drew, with no errors.
+
 Commit: `fix(web): draw offscreen renders one at a time`
 
 ### Step 5: Live redaction (measure on a phone; no code now)
 
-Add to [#46](https://github.com/nverkhachoyan/tuck/issues/46): the brush re-records every earlier mark and the filter on each move (`LiveStrokeOverlay.tsx:443`), and any fix must keep the old marks and the live stroke in one `DstIn` mask layer and must not bound the picture by the document. Act only if the phone check shows a hitch.
+Added to [#46](https://github.com/nverkhachoyan/tuck/issues/46#issuecomment-6759301798). Step 0's web numbers went to #95 and #97 as comments.
 
 ### Step 6: Issues and cleanup
 
-File one issue per finding left (search open issues first; use the templates; no attribution lines), each linking this plan:
+Filed, each pointing here:
 
-- **Task:** "Unify the stroke walkers and box helpers in `layers/`" (`segmentsNear`, `alongLine`, `eachAlong`; `penExtent`, `boundsOf`, `strokeBounds`, `missesBox`; `erasedAt` and `erasedAfter`). No behavior change, behind `strokes.test.ts`. If step 1 lands first, build on `strokeBoxes`.
-- **Task:** "Static layer rows still set up dragging" (`StaticLayerRow` makes four unused shared values; `LayerRow` attaches its pan gesture and animated style anyway).
-- **Task:** "The text style panel repeats the color picker's HSV logic" (`TextStylePanel.tsx:140-275` and `ui/ColorPicker.tsx`).
-- **Task:** "The dial re-renders its whole tick strip on each step" (`Dial.tsx`; 91 ticks for Crop), low priority.
-- **Step 3, if step 0 doesn't justify it:** "Landing a stroke rebuilds every path in a recentering drawing", with the numbers and the design above.
+- [#105](https://github.com/nverkhachoyan/tuck/issues/105) Unify the stroke walkers and box helpers in layers
+- [#106](https://github.com/nverkhachoyan/tuck/issues/106) Static layer rows still set up dragging (`StaticLayerRow` makes two shared values and `LayerRow` two more, its pan gesture, and its animated style, though a static row renders no handle)
+- [#107](https://github.com/nverkhachoyan/tuck/issues/107) The text style panel repeats the color picker's HSV logic
+- [#108](https://github.com/nverkhachoyan/tuck/issues/108) The dial re-renders its whole tick strip on each step
+- [#109](https://github.com/nverkhachoyan/tuck/issues/109) Landing a stroke rebuilds every path in a recentering drawing (step 3)
 
-Labels: `task`, plus `tool: <name>` where one tool owns it. Then delete `editor-audit.md` and `editor-audit-debate/`.
+The audit and its debate are removed.
 
 ### Not doing
 
