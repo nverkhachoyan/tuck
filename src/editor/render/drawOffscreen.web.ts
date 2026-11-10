@@ -16,6 +16,16 @@ type Offscreen = {
 let shared: Offscreen | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
+// Drawings run one after another, each once the last has settled, so only
+// one at a time holds the surface. Otherwise one resuming from
+// `drawAsPicture` could grow or free the surface, or let the idle timer free
+// it, in the microtask between another's readback and its
+// `snapshot.dispose()`. At Skia 3.9.0 the readback itself runs synchronously;
+// should an upgrade make it asynchronous, this chain is what keeps drawings
+// apart. A failure reaches its caller and doesn't stop the next drawing. No
+// drawing calls this from inside another, so the chain can't wait on itself.
+let queue: Promise<unknown> = Promise.resolve();
+
 /**
  * Draws `element` into an image `size` pixels across, offscreen, as Skia's
  * `drawAsImage` does, but into one surface kept between drawings and freed
@@ -25,7 +35,16 @@ let idleTimer: ReturnType<typeof setTimeout> | undefined;
  * wait for garbage collection. The image comes back on the CPU, as
  * `drawAsImage`'s does, so it doesn't depend on the surface.
  */
-export async function drawOffscreen(
+export function drawOffscreen(
+	element: ReactElement,
+	size: { width: number; height: number },
+): Promise<SkImage | null> {
+	const drawn = queue.then(() => draw(element, size));
+	queue = drawn.catch(() => undefined);
+	return drawn;
+}
+
+async function draw(
 	element: ReactElement,
 	size: { width: number; height: number },
 ): Promise<SkImage | null> {
