@@ -1,23 +1,22 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Editor, type EditorHost, getSession, useSession } from "@/editor";
+import { Editor, type EditorHost } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
 import { getPreviewUri } from "@/photos/previewCache";
-import { deleteTemporaryFile } from "@/platform/temporaryFile";
-import { projectLabel } from "@/projects/projectFile";
 import { exportHref } from "@/projects/projectRoute";
+import { useAutosave } from "@/session/useAutosave";
 import {
-	addImage,
-	openProjectCreatedAt,
-	openProjectName,
-} from "@/projects/projectService";
+	addSessionImage,
+	latestSessionDocument,
+	sessionTitle,
+	useProjectSession,
+	useSessionProjectId,
+} from "@/session/useProjectSession";
 import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { colors, space, typography } from "@/ui/theme";
-import { useAutosave } from "./session/useAutosave";
-import { useProjectSession } from "./session/useProjectSession";
 
 export default function EditorScreen() {
 	const router = useRouter();
@@ -64,32 +63,25 @@ function leaveEditor(router: ReturnType<typeof useRouter>) {
 	else router.replace("/");
 }
 
-// For a save as the app leaves the foreground, or a pick finished, before
-// React has rendered.
-const latestDocument = () => getSession().document;
-
 // The open project, saved as it's edited.
 function OpenProject({ document }: { document: EditorDocument }) {
 	const router = useRouter();
 	const focused = useIsFocused();
-	const projectId = useSession((session) => session.key);
-	const { error, retry } = useAutosave(projectId, document, latestDocument);
+	const projectId = useSessionProjectId();
+	const { error, retry } = useAutosave(
+		projectId,
+		document,
+		latestSessionDocument,
+	);
 	const title = useMemo(
-		() => projectTitle(projectId, document),
+		() => sessionTitle(projectId, document),
 		[projectId, document],
 	);
 	const host: EditorHost = {
 		pickPhoto,
 		importPhoto,
-		// The image moves into the project, so autosave knows its file.
-		// Without a project, it's used where the picker left it.
-		addImage: async (uri, opaque, preview) => {
-			if (projectId !== null) {
-				return addImage(projectId, uri, opaque, preview);
-			}
-			if (preview) deleteTemporaryFile(preview);
-			return uri;
-		},
+		addImage: (uri, opaque, preview) =>
+			addSessionImage(projectId, uri, opaque, preview),
 		title,
 		saveProblem:
 			projectId === null
@@ -105,15 +97,6 @@ function OpenProject({ document }: { document: EditorDocument }) {
 				: undefined,
 	};
 	return <Editor document={document} host={host} />;
-}
-
-/** What home lists the project as. */
-function projectTitle(projectId: string | null, document: EditorDocument) {
-	if (projectId === null) return projectLabel(document, Date.now());
-	return (
-		openProjectName(projectId) ||
-		projectLabel(document, openProjectCreatedAt(projectId) ?? Date.now())
-	);
 }
 
 const styles = StyleSheet.create({

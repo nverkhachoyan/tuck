@@ -15,11 +15,10 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getSession, openDocument } from "@/editor";
-import { createBlankDocument, type Size } from "@/editor/core";
+import type { Size } from "@/editor/core";
 import { usePreference } from "@/platform/usePreference";
 import { editorHref } from "@/projects/projectRoute";
-import { createBlankProject } from "@/projects/projectService";
+import { hasOpenSession, startBlank } from "@/session/useProjectSession";
 import { PageHead } from "@/site/PageHead";
 import { Announcement } from "@/ui/Announcement";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";
@@ -72,24 +71,14 @@ export default function CreateScreen() {
 	const handleCreate = async ({ width, height }: Size, key: string) => {
 		// An editor whose save failed is still open until the welcome screen
 		// closes it.
-		if (creating.current || getSession().document) return;
+		if (creating.current || hasOpenSession()) return;
 		creating.current = true;
 		setCreatingKey(key);
 		try {
-			// Without storage, the canvas can still be edited, just not kept.
-			const opened = await createBlankProject({
-				width,
-				height,
-				background,
-			}).catch((error: unknown) => {
-				console.warn("Couldn't save the canvas as a project", error);
-				return {
-					id: null,
-					document: createBlankDocument(width, height, background),
-				};
-			});
-			openDocument(opened.document, opened.id);
-			router.replace(editorHref(opened.id));
+			const opened = await startBlank({ width, height, background });
+			if (opened) {
+				router.replace(editorHref(opened.id));
+			}
 		} finally {
 			creating.current = false;
 			setCreatingKey(null);

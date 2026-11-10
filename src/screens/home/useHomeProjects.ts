@@ -1,31 +1,28 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import {
-	closeDocument,
-	getSession,
-	openDocument,
-	renderThumbnail,
-} from "@/editor";
-import { createDocumentFromImage, type EditorDocument } from "@/editor/core";
+import type { EditorDocument } from "@/editor/core";
 import { pasteClipboardImage } from "@/photos/clipboardImage";
-import { importPhoto, type PickedPhoto, pickPhoto } from "@/photos/photoImport";
-import { getPreviewUri } from "@/photos/previewCache";
+import { importPhoto, pickPhoto } from "@/photos/photoImport";
 import { importSharedPhoto } from "@/photos/sharedPhoto";
 import { deleteTemporaryFile } from "@/platform/temporaryFile";
 import { copyName, type ProjectSummary } from "@/projects/projectFile";
 import { isProjectOpenElsewhere } from "@/projects/projectLifecycle";
 import { editorHref } from "@/projects/projectRoute";
 import {
-	closeProject,
-	copyOpenProject,
-	createProject,
 	deleteProject,
 	duplicateProject,
 	listProjects,
-	openProject,
 	renameProject,
-	updateThumbnail,
 } from "@/projects/projectService";
+import {
+	endSession,
+	hasOpenSession,
+	hasSavedSession,
+	openProjectCopy,
+	openProjectSession,
+	startFromPhoto,
+	updateProjectThumbnail,
+} from "@/session/useProjectSession";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import { displayLabel } from "./projectGrid";
@@ -88,9 +85,7 @@ export function useHomeProjects() {
 		for (const project of list) {
 			if (pass !== thumbnailPass.current) return;
 			if (project.status !== "ready" || !project.thumbnailOutdated) continue;
-			const thumbnail = await updateThumbnail(project.id, (doc) =>
-				renderThumbnail(doc, (uri) => getPreviewUri(project.id, uri)),
-			);
+			const thumbnail = await updateProjectThumbnail(project.id);
 			if (!thumbnail || pass !== thumbnailPass.current) continue;
 			setProjects((current) =>
 				current.map((listed) =>
@@ -117,21 +112,12 @@ export function useHomeProjects() {
 	// Coming back here, however the editor was left, ends that session: its
 	// last edits are saved, and the list shows them.
 	const finishSession = useCallback(() => {
-		const { document, key: projectId } = getSession();
-		return run(document && projectId ? "saving" : "loading", async () => {
-			if (document && projectId) {
-				try {
-					await closeProject(projectId, document, (doc) =>
-						renderThumbnail(doc, (uri) => getPreviewUri(projectId, uri)),
-					);
-				} catch (error) {
-					showAlert("Couldn't save your edits", errorMessage(error));
-					return "saveFailed";
-				}
-			}
-			// Unless a link to another project ended it first.
-			if (document && getSession().document === document) {
-				closeDocument();
+		return run(hasSavedSession() ? "saving" : "loading", async () => {
+			try {
+				await endSession();
+			} catch (error) {
+				showAlert("Couldn't save your edits", errorMessage(error));
+				return "saveFailed";
 			}
 			await refreshProjects();
 		});
@@ -151,14 +137,13 @@ export function useHomeProjects() {
 		load: () => Promise<Opened>,
 		target?: { action: HomeBusyAction; projectId?: string },
 	) => {
-		if (getSession().document) return;
+		if (hasOpenSession()) return;
 		return run("opening", async () => {
 			if (target) setBusyAction(target.action);
 			if (target?.projectId) setOpeningProjectId(target.projectId);
 			try {
 				const opened = await load();
 				if (opened) {
-					openDocument(opened.document, opened.id);
 					router.push(editorHref(opened.id));
 				}
 			} catch (error) {
@@ -172,40 +157,30 @@ export function useHomeProjects() {
 		});
 	};
 
-	// Without storage, the photo can still be edited, just not kept.
-	const openPhoto = (photo: PickedPhoto) =>
-		createProject(photo).catch((error: unknown) => {
-			console.warn("Couldn't save the photo as a project", error);
-			const { uri, width, height, opaque, preview } = photo;
-			if (preview) deleteTemporaryFile(preview);
-			return {
-				id: null,
-				document: createDocumentFromImage(uri, width, height, opaque),
-			};
-		});
-
 	const choosePhoto = () =>
 		open(
 			"Couldn't open photo",
 			async () => {
 				const result = await pickPhoto();
 				if (result.status === "canceled") return null;
-				return openPhoto(result.photo);
+				return startFromPhoto(result.photo);
 			},
 			{ action: "choose" },
 		);
 
 	/** Opens a pasted or dropped image, as a chosen photo opens. */
 	const openImage = (uri: string) =>
-		open("Couldn't open image", async () => openPhoto(await importPhoto(uri)), {
-			action: "choose",
-		});
+		open(
+			"Couldn't open image",
+			async () => startFromPhoto(await importPhoto(uri)),
+			{ action: "choose" },
+		);
 
 	/** Opens a photo shared from another app, as a chosen photo opens. */
 	const openSharedPhoto = (name: string) =>
 		open(
 			"Couldn't open the shared photo",
-			async () => openPhoto(await importSharedPhoto(name)),
+			async () => startFromPhoto(await importSharedPhoto(name)),
 			{ action: "choose" },
 		);
 
@@ -223,7 +198,7 @@ export function useHomeProjects() {
 					return null;
 				}
 				try {
-					return await openPhoto(await importPhoto(uri));
+					return await startFromPhoto(await importPhoto(uri));
 				} finally {
 					deleteTemporaryFile(uri);
 				}
@@ -233,35 +208,17 @@ export function useHomeProjects() {
 
 	// After the alert closes, so it isn't nested inside the open that failed.
 	const openCopy = (id: string) =>
-		open(
-			"Couldn't open a copy",
-			async () => {
-				const copyId = await copyOpenProject(id);
-				const document = await openProject(copyId);
-				if (!document) {
-					showAlert(
-						"Couldn't open project",
-						"It may have been saved by a newer version of the app.",
-					);
-				}
-				return document && { id: copyId, document };
-			},
-			{ action: "project", projectId: id },
-		);
+		open("Couldn't open a copy", () => openProjectCopy(id), {
+			action: "project",
+			projectId: id,
+		});
 
 	const openSavedProject = (id: string) =>
 		open(
 			"Couldn't open project",
 			async () => {
 				try {
-					const document = await openProject(id);
-					if (!document) {
-						showAlert(
-							"Couldn't open project",
-							"It may have been saved by a newer version of the app.",
-						);
-					}
-					return document && { id, document };
+					return await openProjectSession(id);
 				} catch (error) {
 					if (!isProjectOpenElsewhere(error)) throw error;
 					showAlert("Couldn't open project", errorMessage(error), [

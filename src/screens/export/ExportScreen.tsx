@@ -20,9 +20,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { SkImage } from "react-native-skia";
-import { useSession } from "@/editor";
 import { type EditorDocument, hasTransparency } from "@/editor/core";
-import { editorHref, projectRouteId } from "@/projects/projectRoute";
+import { editorHref } from "@/projects/projectRoute";
+import { useRouteDocument } from "@/session/useProjectSession";
 import { BottomSheet } from "@/ui/BottomSheet";
 import { Button } from "@/ui/Button";
 import { CheckerFill } from "@/ui/CheckerFill";
@@ -61,9 +61,7 @@ const SHEET_MAX_SHARE = 0.9;
 /** Export, as a sheet over the editor. */
 export default function ExportScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const document = useSession((session) =>
-		projectRouteId(session.key) === id ? session.document : null,
-	);
+	const document = useRouteDocument(id);
 	const focused = useIsFocused();
 
 	// Reached from a link or a reload, the project isn't open yet: the editor
