@@ -111,7 +111,8 @@ export type NoticeAction = { label: string; onPress: () => void };
  *   to leave the canvas to typing or selecting.
  * - `finishStroke`: what a stroke made with its canvas input does, once the
  *   finger lifts.
- * - `doneLabel`: what Done says, when it isn't "Done".
+ * - `doneLabel`: what Done says, when it isn't "Done", or null to hide Done.
+ * - `doneVariant`: whether Done is styled as "primary" or "secondary".
  * - `done`: what Done does before the tool closes.
  * - `holds`: whether it holds work only Done keeps, so a tap away leaves
  *   it open: what it picked (see its spec's `picks`).
@@ -126,8 +127,16 @@ export type NoticeAction = { label: string; onPress: () => void };
  * - `announcement`: what the editor announces for it.
  * - `layerAction`: a button it adds to the selected `layer`'s actions, or
  *   null.
+ * - `stylesLayer`: whether its panel styles `layer` while it's selected and
+ *   nothing is open.
  * - `draft`: the layer it's editing in place while it's open, as placed and
  *   outlined, and whether it's new, or null; `views.Draft` draws it.
+ * - `variants`: sub-tool choices shown in its toolbar button's flyout; a
+ *   variant may name another `tool` to run (Remove BG under Cut).
+ * - `activeVariant`: which variant id is currently chosen.
+ * - `selectVariant`: switches to the chosen variant id.
+ * - `variantEntry`: overrides the toolbar button's label or icon for the
+ *   active variant.
  * - `edit`: editing a layer it `owns` in place. A tap on a selected layer
  *   it owns, the selection bar's Edit, and Enter call `start` with that
  *   layer and where the tap landed in its space (null for the end), then

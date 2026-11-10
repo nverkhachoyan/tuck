@@ -2,6 +2,9 @@ import type { CanvasTool } from "../../canvas/canvasTool.ts";
 import type { Size } from "../../document/geometry.ts";
 import type { CutStroke } from "../../layers/image/image.ts";
 
+// Which toolbar action the Cut button runs next: Cutout or Remove BG.
+export type CutVariant = "cut" | "removeBg";
+
 // Picks the subject under a tap, or paints the cut by hand: adding what
 // it removed, or subtracting what it kept.
 export type CutTool = "tap" | "add" | "subtract";
@@ -11,6 +14,7 @@ export type CutBrushTool = Exclude<CutTool, "tap">;
 export type CutTapMode = "add" | "subtract";
 
 export type CutSettings = {
+	variant: CutVariant;
 	tool: CutTool;
 	// Indexes into `CUT_BRUSH_SIZES`; each brush keeps its own.
 	addSize: number;
@@ -21,6 +25,7 @@ export type CutSettings = {
 };
 
 export const defaultCutSettings: CutSettings = {
+	variant: "cut",
 	tool: "tap",
 	addSize: 2,
 	subtractSize: 2,
@@ -69,6 +74,7 @@ export function parseCutSettings(saved: unknown): CutSettings {
 			: defaultCutSettings[key];
 	};
 	return {
+		variant: fields.variant === "removeBg" ? "removeBg" : "cut",
 		tool:
 			TOOLS.find((tool) => tool === fields.tool) ??
 			(typeof fields.tool === "string"

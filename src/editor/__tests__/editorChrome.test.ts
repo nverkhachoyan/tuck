@@ -305,10 +305,14 @@ describe("layerActionsFor", () => {
 		);
 	});
 
-	test("a sticker only offers adjust", () => {
+	test("a sticker only offers adjust, which is the only image tool that opens on stickers", () => {
 		const sticker = createImageLayer(canvas, "sticker.png", 100, 100, false);
 		sticker.sticker = true;
 		assert.deepEqual(actions(sticker), ["adjust"]);
+		const stickerTargets = Object.entries(specs)
+			.filter(([, spec]) => spec.stickers)
+			.map(([id]) => id);
+		assert.deepEqual(stickerTargets, ["adjust"]);
 	});
 
 	test("a drawing offers pen and eraser, while shape and redaction are styled directly", () => {

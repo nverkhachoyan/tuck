@@ -368,7 +368,6 @@ export function Editor({
 	);
 
 	const hasImage = targetImage !== null;
-	const [cutVariant, setCutVariant] = useState<"cut" | "removeBg">("cut");
 	const isToolAvailable = useCallback(
 		(id: string) => {
 			const openTool = controllers[id];
@@ -377,115 +376,78 @@ export function Editor({
 		[controllers],
 	);
 
-	// The buttons that spin: Add photo while a photo is on its way, and the
-	// tools whose work is running (including Remove BG grouped under Cut).
-	const busy = useMemo(() => {
-		const ids = [...busyTools];
-		if (addBusy) ids.push("photo");
-		const removeBgAvailable = isToolAvailable("removeBg");
-		if (
-			removeBgAvailable &&
-			busyTools.includes("removeBg") &&
-			!ids.includes("cut")
-		) {
-			ids.push("cut");
-		}
-		return ids;
-	}, [busyTools, addBusy, isToolAvailable]);
-
-	const toolStarters = useMemo(
-		() => ({
-			...startTool,
-			cut: () => {
-				const removeBgAvailable = isToolAvailable("removeBg");
-				if (
-					removeBgAvailable &&
-					cutVariant === "removeBg" &&
-					startTool.removeBg
-				) {
-					startTool.removeBg();
-				} else {
-					startTool.cut();
-				}
-			},
-		}),
-		[startTool, cutVariant, isToolAvailable],
-	);
-
 	// Tools entries on the rail and dock, updated with each tool's active
 	// variant and flyout choices.
 	const toolEntries = useMemo(() => {
 		return toolbox.entries.map((entry): ToolEntry => {
-			if (entry.id === "cut" && specs.removeBg) {
-				const removeBgAvailable = isToolAvailable("removeBg");
-				if (!removeBgAvailable) {
-					return entry;
-				}
-				const isRemoveBg =
-					tool === "removeBg" || (tool !== "cut" && cutVariant === "removeBg");
-				return {
-					...entry,
-					label: isRemoveBg ? specs.removeBg.label : entry.label,
-					icon: isRemoveBg ? specs.removeBg.icon : entry.icon,
-					key: isRemoveBg ? specs.removeBg.key : entry.key,
-					activeVariant: isRemoveBg ? "removeBg" : "cut",
-					variants: [
-						{
-							id: "cut",
-							label: "Cutout",
-							icon: entry.icon,
-							shortcut: entry.key,
-						},
-						{
-							id: "removeBg",
-							label: specs.removeBg.label,
-							icon: specs.removeBg.icon,
-							shortcut: specs.removeBg.key,
-						},
-					],
-					onSelectVariant: (variantId) => {
-						setCutVariant(variantId as "cut" | "removeBg");
-						if (variantId === "removeBg") {
-							if (tool) putDownTool();
-							startTool.removeBg();
-							return;
-						}
-						if (tool && tool !== "cut") putDownTool();
-						startTool.cut();
-					},
-				};
-			}
 			const openTool = controllers[entry.id];
 			const toolDef = openTool?.definition;
-			if (toolDef?.variants) {
-				const variants = toolDef.variants(openTool.controller);
-				const active = toolDef.activeVariant?.(openTool.controller);
-				const custom = toolDef.variantEntry?.(openTool.controller);
-				return {
-					...entry,
-					label: custom?.label ?? entry.label,
-					icon: custom?.icon ?? entry.icon,
-					activeVariant: active,
-					variants,
-					onSelectVariant: (variantId) => {
-						if (tool && tool !== entry.id) putDownTool();
-						toolDef.selectVariant?.(openTool.controller, variantId);
-						startTool[entry.id]?.();
-					},
-				};
-			}
-			return entry;
+			if (!toolDef?.variants) return entry;
+			const variants = toolDef
+				.variants(openTool.controller)
+				?.filter((v) => !v.tool || (specs[v.tool] && isToolAvailable(v.tool)));
+			if (!variants || variants.length <= 1) return entry;
+			const activeId =
+				variants.find((v) => v.tool && v.tool === tool)?.id ??
+				toolDef.activeVariant?.(openTool.controller);
+			const active = variants.find((v) => v.id === activeId) ?? variants[0];
+			const custom = toolDef.variantEntry?.(openTool.controller);
+			const targetSpec = active.tool ? specs[active.tool] : undefined;
+			return {
+				...entry,
+				label: custom?.label ?? targetSpec?.label ?? entry.label,
+				icon: custom?.icon ?? targetSpec?.icon ?? entry.icon,
+				key: targetSpec?.key ?? entry.key,
+				activeVariant: active.id,
+				variants,
+				onSelectVariant: (variantId) => {
+					const chosen = variants.find((v) => v.id === variantId);
+					const target = chosen?.tool ?? entry.id;
+					if (tool && tool !== target) putDownTool();
+					toolDef.selectVariant?.(openTool.controller, variantId);
+					startTool[target]?.();
+				},
+			};
 		});
 	}, [
 		toolbox.entries,
 		specs,
 		controllers,
 		tool,
-		cutVariant,
 		putDownTool,
 		startTool,
 		isToolAvailable,
 	]);
+
+	// The buttons that spin: Add photo while a photo is on its way, and the
+	// tools whose work is running (including a variant's tool).
+	const busy = useMemo(() => {
+		const ids = [...busyTools];
+		if (addBusy) ids.push("photo");
+		for (const entry of toolEntries) {
+			if (
+				!ids.includes(entry.id) &&
+				entry.variants?.some((v) => v.tool && busyTools.includes(v.tool))
+			) {
+				ids.push(entry.id);
+			}
+		}
+		return ids;
+	}, [busyTools, addBusy, toolEntries]);
+
+	const toolStarters = useMemo(
+		() =>
+			Object.fromEntries(
+				toolEntries.map((entry) => {
+					const active = entry.variants?.find(
+						(v) => v.id === entry.activeVariant,
+					);
+					const target = active?.tool ?? entry.id;
+					return [entry.id, () => startTool[target]?.()];
+				}),
+			),
+		[toolEntries, startTool],
+	);
 
 	// What the dock offers for the selected layer: the tools that act on it,
 	// and the buttons tools add for it, each in the toolbar's order.
