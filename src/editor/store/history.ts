@@ -15,7 +15,6 @@ export type EditorSnapshot = {
  * mark (Pen's strokes, a shape or a redaction, see `stepsByMark`).
  */
 export type ToolSessionSteps = "one" | "each" | "marks";
-export type SessionSteps = ToolSessionSteps;
 
 // While a tool is open, where it started, and the undo and redo steps that
 // were next then. Undo stops at the start, and redo at that step, so a tool
@@ -28,7 +27,6 @@ export type ToolSession = EditorSnapshot & {
 	previews: boolean;
 	steps: ToolSessionSteps;
 };
-export type EditorSession = ToolSession;
 
 export function snapshotOf({
 	document,

@@ -72,10 +72,8 @@ import {
 } from "./history.ts";
 
 export {
-	type EditorSession,
 	type EditorSnapshot,
 	MAX_HISTORY,
-	type SessionSteps,
 	stepsByMark,
 	type ToolSession,
 	type ToolSessionSteps,
@@ -535,9 +533,6 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		beginToolSession,
 		commitToolSession,
 		cancelToolSession,
-		beginSession: beginToolSession,
-		commitSession: commitToolSession,
-		cancelSession: cancelToolSession,
 	};
 }
 

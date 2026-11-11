@@ -221,7 +221,7 @@ describe("history", () => {
 		assert.equal(store.getState(), before);
 	});
 });
-describe("sessions", () => {
+describe("tool sessions", () => {
 	const pen = (points: number[]): Stroke & { type: "pen" } => ({
 		type: "pen",
 		color: "#FF3B30",
@@ -234,10 +234,10 @@ describe("sessions", () => {
 		const actions = store.getState().actions;
 		const before = store.getState().document;
 		const pastLength = store.getState().past.length;
-		actions.beginSession();
+		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.drawStroke(pen([100, 100, 200, 0]));
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().toolSession, null);
 		assert.equal(store.getState().past.length, pastLength + 1);
 
@@ -256,7 +256,7 @@ describe("sessions", () => {
 		const actions = store.getState().actions;
 		actions.selectLayer(null);
 		const steps = store.getState().past.length;
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		const a = store.getState().selectedLayerId;
 		actions.drawStroke(pen([10, 0, 20, 0]), a);
@@ -264,7 +264,7 @@ describe("sessions", () => {
 		actions.drawStroke(pen([200, 200, 210, 200]));
 		const b = store.getState().selectedLayerId;
 		actions.drawStroke(pen([210, 200, 220, 200]), b);
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, steps + 2);
 
 		actions.undo();
@@ -290,7 +290,7 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const steps = store.getState().past.length;
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
 		const a = store.getState().selectedLayerId ?? "";
 		actions.setShapeStyle(a, { color: "#0A84FF" });
@@ -300,7 +300,7 @@ describe("sessions", () => {
 		// Selecting A again and restyling it is a step apart from B.
 		actions.selectLayer(a);
 		actions.setShapeStyle(a, { strokeWidth: 4 });
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, steps + 3);
 
 		const shapesNow = () =>
@@ -328,7 +328,7 @@ describe("sessions", () => {
 		}
 		actions.selectLayer(null);
 		const steps = store.getState().past.length;
-		actions.beginSession(false, "each");
+		actions.beginToolSession(false, "each");
 		for (const x of [0, 200, 400]) {
 			actions.eraseStroke(
 				{ type: "eraser", width: 40, points: [x, 0, x, 100] },
@@ -336,7 +336,7 @@ describe("sessions", () => {
 			);
 		}
 		assert.equal(drawingsIn(store).length, 0);
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, steps + 3);
 		actions.undo();
 		assert.equal(drawingsIn(store).length, 1);
@@ -346,10 +346,10 @@ describe("sessions", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		assert.equal(store.getState().selectedLayerId, text.id);
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		actions.drawStroke(pen([200, 0, 210, 0]));
-		actions.commitSession();
+		actions.commitToolSession();
 		actions.undo();
 		assert.equal(store.getState().selectedLayerId, text.id);
 	});
@@ -360,10 +360,10 @@ describe("sessions", () => {
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		const mark = store.getState().selectedLayerId ?? "";
 		const steps = store.getState().past.length;
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.restyleDrawing(mark, { color: "#0A84FF" });
 		actions.drawStroke({ ...pen([10, 0, 20, 0]), color: "#0A84FF" }, mark);
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, steps + 1);
 	});
 
@@ -371,10 +371,10 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const before = store.getState().document;
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		actions.drawStroke(pen([200, 0, 210, 0]));
-		actions.cancelSession();
+		actions.cancelToolSession();
 		assert.equal(store.getState().document, before);
 		actions.redo();
 		assert.equal(drawingsIn(store).length, 2);
@@ -384,32 +384,32 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const { past } = store.getState();
-		actions.beginSession(false, "each");
-		actions.commitSession();
+		actions.beginToolSession(false, "each");
+		actions.commitToolSession();
 		assert.equal(store.getState().past, past);
 	});
 
 	test("a kept session longer than the history keeps what fits", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		for (let i = 0; i < MAX_HISTORY + 5; i++) {
 			actions.drawStroke(pen([i * 3, 0, i * 3 + 1, 0]));
 		}
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, MAX_HISTORY);
 	});
 
 	test("undo and redo stop at the session's start while it's open", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
-		actions.beginSession(false, "each");
+		actions.beginToolSession(false, "each");
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		actions.undo();
 		assert.equal(selectCanUndo(store.getState()), false);
 		actions.redo();
 		assert.equal(selectCanRedo(store.getState()), false);
-		actions.commitSession();
+		actions.commitToolSession();
 	});
 
 	test("stepsByMark merges a mark's consecutive steps, and keeps a return to an earlier mark apart", () => {
@@ -433,12 +433,12 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const { past } = store.getState();
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
 		const shape = store.getState().selectedLayerId ?? "";
 		actions.setShapeStyle(shape, { color: "#0A84FF" });
 		actions.deleteLayer(shape);
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.deepEqual(store.getState().past, past);
 	});
 
@@ -446,11 +446,11 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const steps = store.getState().past.length;
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		actions.drawStroke(pen([200, 0, 210, 0]));
 		actions.deleteLayer(store.getState().selectedLayerId ?? "");
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, steps + 1);
 		actions.undo();
 		assert.equal(drawingsIn(store).length, 0);
@@ -462,23 +462,23 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const { past } = store.getState();
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
 		const first = store.getState().selectedLayerId ?? "";
 		actions.addShape("ellipse", place, style);
 		const second = store.getState().selectedLayerId ?? "";
 		actions.deleteLayer(second);
 		actions.setShapeStyle(first, { color: "#0A84FF" });
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, past.length + 1);
-		actions.beginSession(false, "marks");
+		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
 		const third = store.getState().selectedLayerId ?? "";
 		actions.addShape("ellipse", place, style);
 		const fourth = store.getState().selectedLayerId ?? "";
 		actions.deleteLayer(fourth);
 		actions.deleteLayer(third);
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, past.length + 1);
 	});
 
@@ -486,11 +486,11 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const before = store.getState().document;
-		actions.beginSession(true);
+		actions.beginToolSession(true);
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		assert.notEqual(store.getState().document, before);
 		assert.equal(selectAppDocument(store.getState()), before);
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(
 			selectAppDocument(store.getState()),
 			store.getState().document,
@@ -500,7 +500,7 @@ describe("sessions", () => {
 	test("the app sees a session's changes as they're made, unless it previews", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
-		actions.beginSession();
+		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		assert.equal(
 			selectAppDocument(store.getState()),
@@ -512,10 +512,10 @@ describe("sessions", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		const { document: before, past } = store.getState();
-		actions.beginSession();
+		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.deleteLayer(text.id);
-		actions.cancelSession();
+		actions.cancelToolSession();
 		assert.equal(store.getState().document, before);
 		assert.equal(store.getState().selectedLayerId, text.id);
 		assert.deepEqual(store.getState().past, past);
@@ -526,11 +526,11 @@ describe("sessions", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		const before = store.getState().document;
-		actions.beginSession();
+		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.deleteLayer(text.id);
 		const { document: canceled, selectedLayerId } = store.getState();
-		actions.cancelSession();
+		actions.cancelToolSession();
 		assert.equal(selectCanRedo(store.getState()), true);
 
 		actions.redo();
@@ -544,11 +544,11 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const { document: before, past } = store.getState();
-		actions.beginSession(true);
+		actions.beginToolSession(true);
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.drawStroke(pen([100, 100, 200, 0]));
 		actions.undo();
-		actions.cancelSession();
+		actions.cancelToolSession();
 		assert.equal(store.getState().document, before);
 		assert.deepEqual(store.getState().past, past);
 		assert.equal(selectCanRedo(store.getState()), false);
@@ -560,8 +560,8 @@ describe("sessions", () => {
 		actions.deleteLayer(text.id);
 		actions.undo();
 		const { future } = store.getState();
-		actions.beginSession(true);
-		actions.cancelSession();
+		actions.beginToolSession(true);
+		actions.cancelToolSession();
 		assert.deepEqual(store.getState().future, future);
 		actions.redo();
 		assert.equal(
@@ -575,8 +575,8 @@ describe("sessions", () => {
 		const actions = store.getState().actions;
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		const { document: before, past } = store.getState();
-		actions.beginSession(true);
-		actions.cancelSession();
+		actions.beginToolSession(true);
+		actions.cancelToolSession();
 		assert.equal(store.getState().document, before);
 		assert.deepEqual(store.getState().past, past);
 		assert.equal(selectCanUndo(store.getState()), true);
@@ -586,23 +586,23 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const { past } = store.getState();
-		actions.beginSession(true);
+		actions.beginToolSession(true);
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.undo();
-		actions.cancelSession();
+		actions.cancelToolSession();
 		assert.deepEqual(store.getState().past, past);
 	});
 
 	test("a canceled session keeps the steps undone within it", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
-		actions.beginSession();
+		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		const oneStroke = store.getState().document;
 		actions.drawStroke(pen([100, 100, 200, 0]));
 		const twoStrokes = store.getState().document;
 		actions.undo();
-		actions.cancelSession();
+		actions.cancelToolSession();
 
 		actions.redo();
 		assert.equal(store.getState().document, oneStroke);
@@ -614,8 +614,8 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const { document, past } = store.getState();
-		actions.beginSession();
-		actions.commitSession();
+		actions.beginToolSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().document, document);
 		assert.equal(store.getState().past, past);
 	});
@@ -623,7 +623,7 @@ describe("sessions", () => {
 	test("undo stops at the session's start", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
-		actions.beginSession();
+		actions.beginToolSession();
 		assert.equal(selectCanUndo(store.getState()), false);
 		actions.undo();
 		assert.equal(textLayers(store).length, 1);
@@ -641,7 +641,7 @@ describe("sessions", () => {
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.undo();
 		const before = store.getState().document;
-		actions.beginSession();
+		actions.beginToolSession();
 		assert.equal(selectCanRedo(store.getState()), false);
 		actions.redo();
 		assert.equal(store.getState().document, before);
@@ -659,8 +659,8 @@ describe("sessions", () => {
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		const drawn = store.getState().document;
 		actions.undo();
-		actions.beginSession();
-		actions.commitSession();
+		actions.beginToolSession();
+		actions.commitToolSession();
 		assert.equal(selectCanRedo(store.getState()), true);
 		actions.redo();
 		assert.equal(store.getState().document, drawn);
@@ -671,11 +671,11 @@ describe("sessions", () => {
 		const actions = store.getState().actions;
 		const before = store.getState().document;
 		const pastLength = store.getState().past.length;
-		actions.beginSession();
+		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.undo();
 		actions.drawStroke(pen([100, 100, 200, 0]));
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, pastLength + 1);
 		actions.undo();
 		assert.equal(store.getState().document, before);
@@ -685,11 +685,11 @@ describe("sessions", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		const before = store.getState().document;
-		actions.beginSession();
+		actions.beginToolSession();
 		for (let i = 0; i <= MAX_HISTORY; i++) {
 			actions.drawStroke(pen([i, 0, i + 10, 10]));
 		}
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, 1);
 		actions.undo();
 		assert.equal(store.getState().document, before);
@@ -701,28 +701,28 @@ describe("sessions", () => {
 		const next = photo();
 		const another = photo();
 
-		actions.beginSession(true);
+		actions.beginToolSession(true);
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.closeDocument();
 		assert.equal(store.getState().toolSession, null);
 		assert.equal(selectAppDocument(store.getState()), null);
 
 		actions.openDocument(next, "project-2");
-		actions.beginSession(true);
+		actions.beginToolSession(true);
 		actions.drawStroke(pen([0, 0, 40, 40]));
 		const previewed = store.getState().toolSession?.document;
 		actions.openDocument(another, "project-3");
 		assert.equal(store.getState().toolSession, null);
 		assert.equal(selectAppDocument(store.getState()), another);
 		// The previewing tool cancels as its screen unmounts, after the open.
-		actions.cancelSession();
+		actions.cancelToolSession();
 		assert.equal(store.getState().document, another);
 		assert.notEqual(store.getState().document, previewed);
 
-		actions.beginSession();
+		actions.beginToolSession();
 		assert.equal(store.getState().toolSession?.document, another);
 		actions.drawStroke(pen([0, 0, 10, 10]));
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, 1);
 		assert.equal(store.getState().past[0]?.document, another);
 		assert.notEqual(store.getState().past[0]?.document, next);
@@ -733,7 +733,7 @@ describe("sessions", () => {
 		const actions = store.getState().actions;
 		const next = photo();
 
-		actions.beginSession();
+		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		const previous = store.getState().toolSession?.document;
 		actions.closeDocument();
@@ -744,14 +744,14 @@ describe("sessions", () => {
 		assert.equal(store.getState().toolSession, null);
 		assert.equal(selectAppDocument(store.getState()), next);
 		// The tool commits as its screen unmounts, after the next document is open.
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.deepEqual(store.getState().past, []);
 		assert.equal(store.getState().document, next);
 
-		actions.beginSession();
+		actions.beginToolSession();
 		assert.equal(store.getState().toolSession?.document, next);
 		actions.drawStroke(pen([0, 0, 20, 20]));
-		actions.commitSession();
+		actions.commitToolSession();
 		assert.equal(store.getState().past.length, 1);
 		assert.equal(store.getState().past[0]?.document, next);
 		assert.notEqual(store.getState().past[0]?.document, previous);

@@ -76,11 +76,7 @@ export function SessionsLesson() {
 				</p>
 			),
 			done: ({ log }) =>
-				log.some(
-					(record) =>
-						record.action === "editor/beginToolSession" ||
-						record.action === "editor/beginSession",
-				),
+				log.some((record) => record.action === "editor/beginToolSession"),
 		},
 		{
 			title: "Make three changes",
@@ -393,9 +389,7 @@ export function SessionsLesson() {
 												{effect}
 												{inSession(record) &&
 													record.action !== "editor/commitToolSession" &&
-													record.action !== "editor/commitSession" &&
 													record.action !== "editor/cancelToolSession" &&
-													record.action !== "editor/cancelSession" &&
 													" · in the tool"}
 											</small>
 										</li>

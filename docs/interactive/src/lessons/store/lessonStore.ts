@@ -62,24 +62,15 @@ export type LessonStore = ReturnType<typeof createLessonStore>;
 export function historyEffect({ action, before, after }: ActionRecord): string {
 	if (action === "editor/undo") return "stepped back";
 	if (action === "editor/redo") return "stepped forward";
-	if (
-		action === "editor/beginToolSession" ||
-		action === "editor/beginSession"
-	) {
+	if (action === "editor/beginToolSession") {
 		return "marked where the tool started";
 	}
-	if (
-		action === "editor/commitToolSession" ||
-		action === "editor/commitSession"
-	) {
+	if (action === "editor/commitToolSession") {
 		return after.past === before.past
 			? "nothing changed in the tool"
 			: "squashed into one step";
 	}
-	if (
-		action === "editor/cancelToolSession" ||
-		action === "editor/cancelSession"
-	) {
+	if (action === "editor/cancelToolSession") {
 		return after.document === before.document
 			? "nothing to cancel"
 			: "back to where the tool started";

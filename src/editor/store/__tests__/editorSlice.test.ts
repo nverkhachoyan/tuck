@@ -778,11 +778,11 @@ describe("editorSlice", () => {
 			const actions = store.getState().actions;
 			const steps = store.getState().past.length;
 			const first = redactions(store)[0];
-			actions.beginSession(false, "marks");
+			actions.beginToolSession(false, "marks");
 			actions.setLayerGroupHidden(group.id, true);
 			// Locking the group's first box doesn't join the hiding.
 			actions.setLayerLocked(first.id, true);
-			actions.commitSession();
+			actions.commitToolSession();
 			assert.equal(store.getState().past.length, steps + 2);
 
 			actions.undo();
