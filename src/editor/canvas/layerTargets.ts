@@ -34,7 +34,8 @@ export function layerTargets(
 		});
 }
 
-function isClippedToCanvas(layer: Layer): boolean {
+// A locked image is the photo, drawn and hit only within the canvas.
+export function isClippedToCanvas(layer: Layer): boolean {
 	switch (layer.type) {
 		case "image":
 			return layer.locked;

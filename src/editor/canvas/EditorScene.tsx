@@ -8,6 +8,7 @@ import type { Layer } from "../layers/layer";
 import { toTransformList } from "../layers/layerTransform";
 import { CanvasBackground } from "./Checkerboard";
 import type { LiveAdjustment } from "./canvasInput";
+import { isClippedToCanvas } from "./layerTargets";
 import type { LiveTransform } from "./liveTransform";
 import { type CanvasRegion, RegionOutline } from "./RegionOutline";
 import { type LiveStroke, NewLayerStroke, SceneLayer } from "./SceneLayer";
@@ -206,20 +207,6 @@ export function EditorScene({
 			)}
 		</Group>
 	);
-}
-
-function isClippedToCanvas(layer: Layer): boolean {
-	switch (layer.type) {
-		case "image":
-			return layer.locked;
-		case "text":
-		case "drawing":
-		case "redaction":
-		case "shape":
-			return false;
-		default:
-			return assertNever(layer);
-	}
 }
 
 function isDimmable(layer: Layer): boolean {
