@@ -65,9 +65,11 @@ export function createHarness(
 	const released: string[] = [];
 	const copiedPreviews: { fromId: string; toId: string; files: Set<string> }[] =
 		[];
-	const copyPreviews: CopyProjectPreviews = async (fromId, toId, files) => {
+	let copyPreviewsTo: CopyProjectPreviews = async (fromId, toId, files) => {
 		copiedPreviews.push({ fromId, toId, files: new Set(files) });
 	};
+	const copyPreviews: CopyProjectPreviews = (fromId, toId, files) =>
+		copyPreviewsTo(fromId, toId, files);
 	// Projects another tab holds open, which can't be claimed here.
 	const openElsewhere = new Set<string>();
 	let copyImage: ProjectStorage["copyImage"] = async (fromId, file, toId) => {
@@ -148,6 +150,9 @@ export function createHarness(
 		openElsewhere,
 		set copyImage(copy: ProjectStorage["copyImage"]) {
 			copyImage = copy;
+		},
+		set copyPreviews(copy: CopyProjectPreviews) {
+			copyPreviewsTo = copy;
 		},
 		get writes() {
 			return writes;

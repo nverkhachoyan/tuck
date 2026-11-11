@@ -152,9 +152,9 @@ export function createProjectLibrary(
 			for (const file of files) {
 				await storage.copyImage(fromId, file, copyId);
 			}
-			if (copyPreviews) {
-				await copyPreviews(fromId, copyId, files);
-			}
+			// Previews are rebuilt on open when missing, so a failed copy
+			// costs only time.
+			await copyPreviews?.(fromId, copyId, files).catch(() => {});
 			const now = Date.now();
 			const { thumbnail } = saved;
 			const copy: SavedProject = {

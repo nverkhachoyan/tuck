@@ -334,6 +334,23 @@ describe("renaming and duplicating", () => {
 		assert.deepEqual([...harness.files.keys()], [id]);
 	});
 
+	test("a copy whose previews can't be copied is still made", async () => {
+		const harness = createHarness();
+		const id = await createSavedProject(harness);
+		harness.copyPreviews = async () => {
+			throw new Error("Close this app's other tabs, then try again.");
+		};
+		await harness.projects.duplicateProject(id, "Copy");
+		const copies = (await harness.projects.listProjects()).filter(
+			(listed) => listed.id !== id,
+		);
+		assert.equal(copies.length, 1);
+		assert.deepEqual(
+			savedProject(harness, copies[0].id).document,
+			savedProject(harness, id).document,
+		);
+	});
+
 	test("a project that's open, here or in another tab, is left alone", async () => {
 		const harness = createHarness();
 		const id = await createSavedProject(harness);
