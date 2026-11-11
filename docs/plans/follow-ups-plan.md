@@ -25,7 +25,7 @@ The refactors from October 24 to 29 were checked on web at 390, 1024, and 1440 p
 
 ## 3. Smart selection
 
-Cut's Subject, Tap (MobileSAM on every platform), Add and Subtract, Invert, and its Apply actions are built. What's open:
+Cut's Subject, Tap (MobileSAM on every platform), Paint in and Paint out, Invert, and its Apply actions are built. What's open:
 
 * **App size.** The models add 44 MB to each app, and ONNX Runtime 34 MB to Android's (its arm64 library, before the store compresses it). iOS's Release size isn't measured. An int8 encoder might bring the models to about 12 MB, if the masks hold up. On-demand resources and Play Asset Delivery could fetch them the first time Tap is used.
 * **Android on a phone.** Only the emulator has run Tap: about 2 seconds to read a photo, and taps from 0.15 seconds back to back to over a second spaced out. If a phone is slow, look at ONNX Runtime's NNAPI or QNN providers, or LiteRT on the GPU.

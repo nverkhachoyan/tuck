@@ -1,9 +1,9 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ComponentProps } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
 import { Surface } from "@/ui/Surface";
-import { colors, radii, space } from "@/ui/theme";
+import { colors, radii, space, typography } from "@/ui/theme";
 import {
 	BarButton,
 	BarChip,
@@ -34,8 +34,8 @@ type Icon = ComponentProps<typeof MaterialCommunityIcons>["name"];
 // Cut's sub-tools, in the order the dock and the bar show them.
 const CUT_TOOLS = [
 	{ tool: "tap", title: "Tap", icon: "gesture-tap" },
-	{ tool: "add", title: "Add", icon: "brush" },
-	{ tool: "subtract", title: "Subtract", icon: "eraser" },
+	{ tool: "add", title: "Paint in", icon: "brush" },
+	{ tool: "subtract", title: "Paint out", icon: "eraser" },
 ] as const satisfies readonly { tool: CutTool; title: string; icon: Icon }[];
 
 // The sub-tools on offer: Tap only where this device can find subjects.
@@ -74,7 +74,7 @@ const APPLY_ACTIONS = [
 
 /**
  * Cut's tools, in place of the toolbar while cutting an image out. Stable 6-button row:
- * [Subjects] [Tap] [Add ▾] [Subtract ▾] [Invert] [Actions ▾].
+ * [Subjects] [Tap] [Paint in ▾] [Paint out ▾] [Invert] [Actions ▾].
  */
 export function CutPanel({ controller }: { controller: CutController }) {
 	const { trayOpen, toggleTray, closeTray } = useEditorContext();
@@ -125,14 +125,14 @@ export function CutPanel({ controller }: { controller: CutController }) {
 				onPress={() => change({ ...settings, tool: "tap" })}
 			/>
 			<ToolButton
-				label="Add"
+				label="Paint in"
 				icon="brush"
 				selected={tool === "add"}
 				open={trayOpen && tray === "brush" && tool === "add"}
 				onPress={() => pickBrush("add")}
 			/>
 			<ToolButton
-				label="Subtract"
+				label="Paint out"
 				icon="eraser"
 				selected={tool === "subtract"}
 				open={trayOpen && tray === "brush" && tool === "subtract"}
@@ -157,11 +157,12 @@ export function CutPanel({ controller }: { controller: CutController }) {
 
 /**
  * Floating modifier pill shown above the dock when the Tap tool is active.
- * Houses [+ Adds | − Subtracts] and [Smaller | Larger] stepping buttons.
+ * Houses [+ Adds | − Subtracts] and [Smaller | Larger] stepping buttons,
+ * under a line saying what to do first until something is chosen.
  */
 export function TapModifierPill({ controller }: { controller: CutController }) {
 	const { wide, bottomInset, rightInset = 0 } = useEditorContext();
-	const { settings, tool, setTapMode, resize } = controller;
+	const { settings, tool, setTapMode, resize, canCommit, findAll } = controller;
 	if (wide || tool !== "tap") return null;
 
 	return (
@@ -172,6 +173,15 @@ export function TapModifierPill({ controller }: { controller: CutController }) {
 			]}
 			pointerEvents="box-none"
 		>
+			{!canCommit && (
+				<Surface style={styles.pill} contentStyle={styles.hintContent}>
+					<Text style={styles.hint}>
+						{findAll
+							? "Tap what to cut out, or choose Subjects"
+							: "Tap what to cut out"}
+					</Text>
+				</Surface>
+			)}
 			<Surface style={styles.pill} contentStyle={styles.pillContent}>
 				<OptionSegments
 					label="Tap mode"
@@ -196,7 +206,7 @@ export function TapModifierPill({ controller }: { controller: CutController }) {
 }
 
 /**
- * Cut's options in the wide editor's header: Tap, Add, and Subtract, then
+ * Cut's options in the wide editor's header: Tap, Paint in, and Paint out, then
  * whether taps add or subtract and Smaller and Larger, or the brushes'
  * size, then Subjects, Invert, and the Apply menu, a popover. Soft and Hard
  * sit in the size chip. Choosing the sub-tool already in use leaves it,
@@ -422,11 +432,20 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		alignItems: "center",
+		gap: space.xs,
 		pointerEvents: "box-none",
 		zIndex: 5,
 	},
 	pill: {
 		borderRadius: radii.large,
+	},
+	hintContent: {
+		paddingHorizontal: space.sm,
+		paddingVertical: space.xs,
+	},
+	hint: {
+		...typography.label,
+		color: colors.textSecondary,
 	},
 	pillContent: {
 		flexDirection: "row",
