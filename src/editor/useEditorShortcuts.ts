@@ -56,6 +56,7 @@ export function useEditorShortcuts({
 	arrange,
 	nudge,
 	stepBrush,
+	nextVariant,
 }: {
 	specs: ToolSpecs;
 	toolsByKey: ReadonlyMap<string, string>;
@@ -77,6 +78,7 @@ export function useEditorShortcuts({
 	arrange: (move: ArrangeMove) => void;
 	nudge: (dx: number, dy: number) => void;
 	stepBrush: (step: 1 | -1) => void;
+	nextVariant: () => void;
 }) {
 	const handleShortcut = (shortcut: Shortcut): boolean => {
 		const command = shortcutCommand(modeState, selection, shortcut, specs);
@@ -135,6 +137,9 @@ export function useEditorShortcuts({
 				break;
 			case "brushSize":
 				stepBrush(command.step);
+				break;
+			case "nextVariant":
+				nextVariant();
 				break;
 			default:
 				assertNever(command);

@@ -497,10 +497,35 @@ describe("shortcutCommand", () => {
 		}
 	});
 
-	test("Escape puts Stickers down, as any tool, and A or the other keys wait", () => {
+	test("Escape puts Stickers down, as any tool, and L or Delete wait", () => {
 		assert.deepEqual(command(stickers, null, esc), { type: "putDownTool" });
-		for (const key of [sticker, pen, layers, remove]) {
+		for (const key of [layers, remove]) {
 			assert.equal(command(stickers, "layer", key), null);
+		}
+	});
+
+	test("another tool's key switches from a tool whose work is already in", () => {
+		for (const tool of ["pen", "shape", "eraser", "redact", "sticker"]) {
+			const open = run(initialEditorMode, {
+				type: "startTool",
+				start: { tool, layerId: null },
+			});
+			const other: Shortcut = tool === "pen" ? sticker : pen;
+			assert.equal(command(open, "layer", other), other);
+			assert.deepEqual(command(open, null, { type: "tool", tool }), {
+				type: "nextVariant",
+			});
+		}
+	});
+
+	test("a tool holding a draft, preview, or picks keeps the tool keys", () => {
+		for (const tool of ["crop", "cut", "find", "adjust"]) {
+			const open = run(initialEditorMode, {
+				type: "startTool",
+				start: { tool, layerId: "image" },
+			});
+			assert.equal(command(open, null, pen), null);
+			assert.equal(command(open, null, { type: "tool", tool }), null);
 		}
 	});
 
@@ -547,7 +572,7 @@ describe("shortcutCommand", () => {
 		assert.deepEqual(command(drawing, "layer", edit), {
 			type: "doneWithTool",
 		});
-		for (const key of [pen, layers, remove, nudge]) {
+		for (const key of [layers, remove, nudge]) {
 			assert.equal(command(drawing, "layer", key), null);
 		}
 	});

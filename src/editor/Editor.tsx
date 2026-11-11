@@ -225,6 +225,7 @@ export function Editor({
 		leaveTool,
 		tapAway,
 		stepToolSize,
+		stepToolVariant,
 		resetEdit,
 		announcements,
 	} = useEditorTools({
@@ -354,6 +355,7 @@ export function Editor({
 		arrange: selectedPlace.arrange,
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
+		nextVariant: stepToolVariant,
 	});
 	useToolKeys({
 		enabled: focused && draftOpen,

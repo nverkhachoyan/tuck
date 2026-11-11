@@ -177,7 +177,8 @@ export type ShortcutCommand =
 	| { type: "closeShortcuts" }
 	| { type: "stopEyedropper" }
 	| { type: "putDownTool" }
-	| { type: "doneWithTool" };
+	| { type: "doneWithTool" }
+	| { type: "nextVariant" };
 
 /**
  * What's selected, as shortcuts see it: a layer a tool edits in place
@@ -227,6 +228,15 @@ export function shortcutCommand(
 			return shortcut;
 		}
 		if (shortcut.type === "delete" && selection === "drawn") return shortcut;
+		// A tool whose work is in the document as it's made gives way to
+		// another tool's key, as to its button; its own key steps to its next
+		// kind. One holding a draft, a preview, or picks (see `cancels`) keeps
+		// the keys until it's done or canceled.
+		if (shortcut.type === "tool" && !specs[state.mode.tool]?.cancels) {
+			return shortcut.tool === state.mode.tool
+				? { type: "nextVariant" }
+				: shortcut;
+		}
 		return null;
 	}
 	if (shortcut.type === "brushSize") return null;
