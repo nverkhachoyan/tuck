@@ -45,7 +45,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - A `Group layer` saves a layer the size of whatever clip is current, the whole canvas by default, and costs that much each frame however small its content: 50 unbounded layers dropped web to 11 fps. Bound one with a clip on a `Group` around it (a Group saves its layer before its own `clip`), and on iOS skip a layer that isn't needed, since each still costs a render pass (`DrawingLayerView`).
 - Give `beginRecording` explicit bounds: on web it defaults to a rect from (0, 0), culling anything left of or above the origin.
 - A `Group`'s `opacity` doesn't fade a paragraph: fade through a layer, `<Group layer={<Paint opacity={…} />}>`.
-- Skia paragraphs on web throw without a font provider: build every paragraph with `getFontProvider()` from `editor/layers/text/fonts.ts`.
+- Skia paragraphs on web throw without a font provider: build every paragraph with `getFontProvider()` from `editor/render/fonts.ts`, inside the editor route's `LoadFonts` or after awaiting `loadFonts` (as `renderDocument` does).
 - `getRectsForRange` gives an empty or whitespace-only line no box, so caret geometry measures a copy with a filler on each empty line (`caretText` in `packages/skia-text-input/`).
 - On web, Skia can drop redraws asked for while its surface is being set up, so a scene driven only by shared values can stay blank. Mount the drawing once the view has a size, as `EditorCanvas` and `CropCanvas` do.
 - On web, Skia binds to CanvasKit when its module is first evaluated, so anything importing Skia before CanvasKit loads gets a dead API that throws only when called. Keep `index.web.ts`'s load order.

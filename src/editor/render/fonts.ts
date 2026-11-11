@@ -7,7 +7,7 @@ import { Asset } from "expo-asset";
 import * as Font from "expo-font";
 import { use } from "react";
 import { Skia, type SkTypefaceFontProvider } from "react-native-skia";
-import type { TextFont } from "./text";
+import type { TextFont } from "../layers/text/text";
 
 /**
  * The typefaces text layers use, each in the one weight it's drawn in. They
@@ -33,7 +33,7 @@ let fontsPromise: Promise<void> | null = null;
 let fontsFailed = false;
 
 /** Registers the text fonts with Skia and React Native. Safe to call repeatedly. */
-function loadFonts(): Promise<void> {
+export function loadFonts(): Promise<void> {
 	const fonts = Object.values(TEXT_FONTS);
 	fontsPromise ??= Promise.all([
 		loadSkiaFonts(),
@@ -78,7 +78,20 @@ async function loadSkiaFonts() {
 	fontProvider = provider;
 }
 
-/** The Skia font provider for text paragraphs; requires `LoadFonts` above. */
+/**
+ * Starts loading the fonts without waiting for them, so a page that lays out
+ * no text (Home's wordmark is in Anton, with the system font standing in)
+ * shows at once. A failure is left for `LoadFonts` or `loadFonts` to report.
+ */
+export function preloadFonts() {
+	if (typeof window === "undefined") return;
+	loadFonts().catch(() => {});
+}
+
+/**
+ * The Skia font provider for text paragraphs; requires `LoadFonts` above, or
+ * an awaited `loadFonts`.
+ */
 export function getFontProvider(): SkTypefaceFontProvider {
 	if (!fontProvider) {
 		throw new Error("Text laid out before fonts loaded; mount <LoadFonts />");
@@ -89,7 +102,8 @@ export function getFontProvider(): SkTypefaceFontProvider {
 /**
  * Suspends until the fonts are ready. Text layout runs synchronously (during
  * rendering and hit-testing), so the fonts must exist before any editor UI
- * mounts. Mount it inside the same Suspense boundary as the app.
+ * mounts: the editor's route mounts it in a Suspense boundary around the
+ * editor. What draws offscreen awaits `loadFonts` instead.
  */
 export function LoadFonts() {
 	// Expo renders routes in Node when exporting a static site; there's no

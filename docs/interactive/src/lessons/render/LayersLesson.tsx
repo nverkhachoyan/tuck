@@ -238,7 +238,7 @@ export default function LayersLesson() {
 		},
 		{
 			label: "loadSkiaFonts",
-			file: "src/editor/layers/text/fonts.ts",
+			file: "src/editor/render/fonts.ts",
 			name: "loadSkiaFonts",
 		},
 	];

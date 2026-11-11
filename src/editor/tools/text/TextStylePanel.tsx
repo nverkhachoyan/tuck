@@ -18,7 +18,6 @@ import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
 import { useColorTarget, useEditorContext } from "../../editorContext";
-import { TEXT_FONTS } from "../../layers/text/fonts";
 import {
 	type TextAlign,
 	type TextFont,
@@ -26,6 +25,7 @@ import {
 	type TextLayerEdit,
 	textFonts,
 } from "../../layers/text/text";
+import { TEXT_FONTS } from "../../render/fonts";
 import { ColorChip } from "../../shell/ColorOptions";
 import { ColorSwatches, customSwatch } from "../../shell/ColorSwatches";
 import {

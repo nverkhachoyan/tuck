@@ -19,7 +19,7 @@ const canvasKitWasm = require.resolve(
 /**
  * `@expo-google-fonts/<font>/<weight>` exports its file with a `require` of
  * a `.ttf`, which only Metro understands. Here it exports the file's URL,
- * which is what `editor/layers/text/fonts.ts` hands Skia in the end.
+ * which is what `editor/render/fonts.ts` hands Skia in the end.
  */
 function expoGoogleFonts(): Plugin {
 	const prefix = "\0expo-google-font:";
