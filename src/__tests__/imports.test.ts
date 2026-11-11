@@ -13,6 +13,26 @@ const BANNED_MODULES = [
 ];
 const EXCEPTIONS = new Set(["textLayerLayout.ts"]);
 
+// `import { … } from "…"` may break across lines. The module is on the `from`
+// line, so a scan of lines that start with `import` misses it.
+function bannedImports(source: string): string[] {
+	const found: string[] = [];
+	const pattern =
+		/(?:^|\n)[ \t]*import\s+(?:type\s+)?(?:[^;"']*?\sfrom\s+)?["']([^"']+)["']/g;
+	for (const match of source.matchAll(pattern)) {
+		const specifier = match[1];
+		if (!specifier) continue;
+		const banned = BANNED_MODULES.some(
+			(name) =>
+				specifier === name ||
+				specifier.startsWith(`${name}/`) ||
+				specifier.startsWith(`${name}-`),
+		);
+		if (banned) found.push(specifier);
+	}
+	return found;
+}
+
 function findPlainTsFiles(dir: string): string[] {
 	const files: string[] = [];
 	for (const entry of readdirSync(dir)) {
@@ -40,18 +60,16 @@ describe("import boundaries", () => {
 		for (const file of plainFiles) {
 			const base = file.split("/").pop() ?? "";
 			if (EXCEPTIONS.has(base)) continue;
-			const source = readFileSync(file, "utf8");
-			for (const line of source.split("\n")) {
-				const trimmed = line.trim();
-				if (!trimmed.startsWith("import ")) continue;
-				for (const banned of BANNED_MODULES) {
-					if (line.includes(`"${banned}`) || line.includes(`'${banned}`)) {
-						violations.push(`${file}: ${trimmed}`);
-					}
-				}
+			for (const specifier of bannedImports(readFileSync(file, "utf8"))) {
+				violations.push(`${file}: ${specifier}`);
 			}
 		}
 
 		assert.deepEqual(violations, []);
+	});
+
+	test("a multiline import of a banned module is caught", () => {
+		const source = 'import {\n\tSkia,\n} from "react-native-skia";\n';
+		assert.deepEqual(bannedImports(source), ["react-native-skia"]);
 	});
 });
