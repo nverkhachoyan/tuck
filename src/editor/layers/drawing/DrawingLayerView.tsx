@@ -89,58 +89,74 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	if (stroke.type === "pen" && stroke.tip === "neon") {
 		const { color, width } = stroke;
 		const glowPaint = Skia.Paint();
-		glowPaint.setAntiAlias(true);
-		glowPaint.setStyle(PaintStyle.Stroke);
-		glowPaint.setStrokeCap(StrokeCap.Round);
-		glowPaint.setStrokeJoin(StrokeJoin.Round);
-		glowPaint.setStrokeWidth(width * NEON_GLOW);
-		glowPaint.setColor(Skia.Color(color));
-		glowPaint.setMaskFilter(
-			Skia.MaskFilter.MakeBlur(BlurStyle.Normal, width * NEON_GLOW_BLUR, true),
-		);
-		canvas.drawPath(path, glowPaint);
-
 		const tubePaint = Skia.Paint();
-		tubePaint.setAntiAlias(true);
-		tubePaint.setStyle(PaintStyle.Stroke);
-		tubePaint.setStrokeCap(StrokeCap.Round);
-		tubePaint.setStrokeJoin(StrokeJoin.Round);
-		tubePaint.setStrokeWidth(width * NEON_TUBE);
-		tubePaint.setColor(Skia.Color(color));
-		canvas.drawPath(path, tubePaint);
-
 		const corePaint = Skia.Paint();
-		corePaint.setAntiAlias(true);
-		corePaint.setStyle(PaintStyle.Stroke);
-		corePaint.setStrokeCap(StrokeCap.Round);
-		corePaint.setStrokeJoin(StrokeJoin.Round);
-		corePaint.setStrokeWidth(width * NEON_CORE);
-		corePaint.setColor(
-			Skia.Color(mixColors(color, "#FFFFFF", NEON_CORE_WHITE)),
+		// drawPath copies the paint. CanvasKit has no finalizer, so the
+		// temporaries are deleted or the web heap grows with every stroke.
+		const glow = Skia.MaskFilter.MakeBlur(
+			BlurStyle.Normal,
+			width * NEON_GLOW_BLUR,
+			true,
 		);
-		canvas.drawPath(path, corePaint);
+		try {
+			glowPaint.setAntiAlias(true);
+			glowPaint.setStyle(PaintStyle.Stroke);
+			glowPaint.setStrokeCap(StrokeCap.Round);
+			glowPaint.setStrokeJoin(StrokeJoin.Round);
+			glowPaint.setStrokeWidth(width * NEON_GLOW);
+			glowPaint.setColor(Skia.Color(color));
+			glowPaint.setMaskFilter(glow);
+			canvas.drawPath(path, glowPaint);
+
+			tubePaint.setAntiAlias(true);
+			tubePaint.setStyle(PaintStyle.Stroke);
+			tubePaint.setStrokeCap(StrokeCap.Round);
+			tubePaint.setStrokeJoin(StrokeJoin.Round);
+			tubePaint.setStrokeWidth(width * NEON_TUBE);
+			tubePaint.setColor(Skia.Color(color));
+			canvas.drawPath(path, tubePaint);
+
+			corePaint.setAntiAlias(true);
+			corePaint.setStyle(PaintStyle.Stroke);
+			corePaint.setStrokeCap(StrokeCap.Round);
+			corePaint.setStrokeJoin(StrokeJoin.Round);
+			corePaint.setStrokeWidth(width * NEON_CORE);
+			corePaint.setColor(
+				Skia.Color(mixColors(color, "#FFFFFF", NEON_CORE_WHITE)),
+			);
+			canvas.drawPath(path, corePaint);
+		} finally {
+			glowPaint.dispose();
+			tubePaint.dispose();
+			corePaint.dispose();
+			glow.dispose();
+		}
 		return;
 	}
 
 	const paint = Skia.Paint();
-	paint.setAntiAlias(true);
-	paint.setStyle(PaintStyle.Stroke);
-	paint.setStrokeJoin(StrokeJoin.Round);
-	if (stroke.type === "eraser") {
-		paint.setStrokeCap(StrokeCap.Round);
-		paint.setStrokeWidth(stroke.width);
-		paint.setColor(Skia.Color("black"));
-		paint.setBlendMode(BlendMode.Clear);
-	} else {
-		const marker = stroke.tip === "marker" || stroke.tip === "ink";
-		paint.setStrokeCap(marker ? StrokeCap.Square : StrokeCap.Round);
-		paint.setStrokeWidth(stroke.width);
-		paint.setColor(Skia.Color(stroke.color));
-		const opacity =
-			marker && !(full && stroke.tip === "marker") ? MARKER_OPACITY : 1;
-		paint.setAlphaf(opacity);
+	try {
+		paint.setAntiAlias(true);
+		paint.setStyle(PaintStyle.Stroke);
+		paint.setStrokeJoin(StrokeJoin.Round);
+		if (stroke.type === "eraser") {
+			paint.setStrokeCap(StrokeCap.Round);
+			paint.setStrokeWidth(stroke.width);
+			paint.setColor(Skia.Color("black"));
+			paint.setBlendMode(BlendMode.Clear);
+		} else {
+			const marker = stroke.tip === "marker" || stroke.tip === "ink";
+			paint.setStrokeCap(marker ? StrokeCap.Square : StrokeCap.Round);
+			paint.setStrokeWidth(stroke.width);
+			paint.setColor(Skia.Color(stroke.color));
+			const opacity =
+				marker && !(full && stroke.tip === "marker") ? MARKER_OPACITY : 1;
+			paint.setAlphaf(opacity);
+		}
+		canvas.drawPath(path, paint);
+	} finally {
+		paint.dispose();
 	}
-	canvas.drawPath(path, paint);
 }
 
 // Two frames, as `decodedImages` waits: the canvas replays the recording from
@@ -177,11 +193,17 @@ export function drawingPicture(
 				bounds.height,
 			);
 			const recorder = Skia.PictureRecorder();
-			const canvas = recorder.beginRecording(rect);
-			for (const stroke of layer.strokes) {
-				drawStroke(canvas, stroke, multiply);
+			try {
+				const canvas = recorder.beginRecording(rect);
+				for (const stroke of layer.strokes) {
+					drawStroke(canvas, stroke, multiply);
+				}
+				return recorder.finishRecordingAsPicture();
+			} finally {
+				// The recorder owns its canvas. finishRecording copies the
+				// commands into the picture and does not delete the recorder.
+				recorder.dispose();
 			}
-			return recorder.finishRecordingAsPicture();
 		},
 	);
 }
