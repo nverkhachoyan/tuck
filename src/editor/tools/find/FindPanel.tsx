@@ -304,7 +304,9 @@ function Found({
 				<Text style={styles.message}>
 					{count === 0
 						? "The detector found regions, but none are inside the canvas."
-						: "Detection can miss some. Check the photo, then ✓ to redact."}
+						: selected === 0
+							? "Tap what to hide, or All. Detection can miss some."
+							: "Detection can miss some. Check the photo, then ✓ to redact."}
 				</Text>
 			</View>
 			{count > 0 && (
