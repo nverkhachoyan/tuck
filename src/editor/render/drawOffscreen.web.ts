@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { drawAsPicture, type SkImage, Skia } from "react-native-skia";
 import { JsiSkSurface } from "react-native-skia/lib/module/skia/web/JsiSkSurface";
+import { retainDrawingPictures } from "../layers/drawing/DrawingLayerView";
 
 // How long the shared surface outlives its last drawing, so its GPU memory
 // (a camera photo's is hundreds of megabytes) goes once export is done.
@@ -48,33 +49,38 @@ async function draw(
 	element: ReactElement,
 	size: { width: number; height: number },
 ): Promise<SkImage | null> {
-	const picture = await drawAsPicture(element);
+	const release = retainDrawingPictures();
 	try {
-		const surface = surfaceFor(size.width, size.height);
-		if (!surface) return null;
-		const canvas = surface.getCanvas();
-		canvas.clear(Skia.Color("transparent"));
-		// Flushing makes the surface's WebGL context current. A photo from
-		// `offscreenPhotos` uploads into the current context as it's drawn,
-		// and since the last drawing here an onscreen canvas may have taken it.
-		surface.flush();
-		canvas.drawPicture(picture);
-		surface.flush();
-		const snapshot = surface.makeImageSnapshot(
-			Skia.XYWHRect(0, 0, size.width, size.height),
-		);
+		const picture = await drawAsPicture(element);
 		try {
-			return await snapshot.makeRasterImage();
+			const surface = surfaceFor(size.width, size.height);
+			if (!surface) return null;
+			const canvas = surface.getCanvas();
+			canvas.clear(Skia.Color("transparent"));
+			// Flushing makes the surface's WebGL context current. A photo from
+			// `offscreenPhotos` uploads into the current context as it's drawn,
+			// and since the last drawing here an onscreen canvas may have taken it.
+			surface.flush();
+			canvas.drawPicture(picture);
+			surface.flush();
+			const snapshot = surface.makeImageSnapshot(
+				Skia.XYWHRect(0, 0, size.width, size.height),
+			);
+			try {
+				return await snapshot.makeRasterImage();
+			} finally {
+				snapshot.dispose();
+			}
 		} finally {
-			snapshot.dispose();
+			picture.dispose();
+			clearTimeout(idleTimer);
+			idleTimer = setTimeout(() => {
+				shared?.free();
+				shared = null;
+			}, IDLE_MS);
 		}
 	} finally {
-		picture.dispose();
-		clearTimeout(idleTimer);
-		idleTimer = setTimeout(() => {
-			shared?.free();
-			shared = null;
-		}, IDLE_MS);
+		release();
 	}
 }
 

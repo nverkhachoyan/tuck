@@ -1,4 +1,9 @@
-import { type ComponentProps, Fragment, type ReactNode } from "react";
+import {
+	type ComponentProps,
+	Fragment,
+	type ReactNode,
+	useLayoutEffect,
+} from "react";
 import {
 	BlendMode,
 	BlurMask,
@@ -137,20 +142,102 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	canvas.drawPath(path, paint);
 }
 
-// Cached by layer id, holding the last strokes array and recorded picture.
-// Keyed by id rather than WeakMap by strokes array so undo history does not
-// keep pictures alive.
-const drawingPictures = new Map<
-	string,
-	{ strokes: readonly Stroke[]; multiply: boolean; picture: SkPicture }
->();
+// By layer id, so an undone strokes array doesn't keep its picture. A mounted
+// view holds its id. The last release drops the entry two frames later: the
+// canvas replays the recording from before the update for a frame (the same
+// wait as `decodedImages`). An offscreen draw retains pictures until its
+// scene picture is disposed, then releases the ones no view holds.
+type PictureEntry = {
+	strokes: readonly Stroke[];
+	multiply: boolean;
+	picture: SkPicture;
+	releases: number;
+};
+
+const drawingPictures = new Map<string, PictureEntry>();
+const holders = new Map<string, number>();
+
+// Draws in flight. A forget that comes due while one is running waits for
+// it, since that draw's scene picture is still replaying these recordings.
+let offscreenDraws = 0;
+
+function afterSkiaDraws(free: () => void) {
+	requestAnimationFrame(() => requestAnimationFrame(free));
+}
+
+function scheduleForget(id: string) {
+	const entry = drawingPictures.get(id);
+	if (!entry) return;
+	entry.releases += 1;
+	const latest = entry.releases;
+	afterSkiaDraws(() => {
+		// Only the last release frees, and only once nothing holds the id
+		// and no offscreen draw is still replaying this entry's picture.
+		if (
+			offscreenDraws > 0 ||
+			(holders.get(id) ?? 0) > 0 ||
+			entry.releases !== latest ||
+			drawingPictures.get(id) !== entry
+		) {
+			return;
+		}
+		drawingPictures.delete(id);
+		entry.picture.dispose();
+	});
+}
+
+// The picture a re-record replaced. Freed once no entry still has it, so
+// the frame that was drawn with it can finish first.
+function retirePicture(picture: SkPicture) {
+	afterSkiaDraws(() => {
+		for (const entry of drawingPictures.values()) {
+			if (entry.picture === picture) return;
+		}
+		picture.dispose();
+	});
+}
+
+function holdDrawingPicture(id: string): () => void {
+	holders.set(id, (holders.get(id) ?? 0) + 1);
+	return () => {
+		const next = (holders.get(id) ?? 1) - 1;
+		if (next > 0) {
+			holders.set(id, next);
+			return;
+		}
+		holders.delete(id);
+		scheduleForget(id);
+	};
+}
+
+/**
+ * Marks an offscreen draw as using the cache until the returned function
+ * runs. That drops pictures no mounted view holds, once no draw is running.
+ */
+export function retainDrawingPictures(): () => void {
+	offscreenDraws += 1;
+	let released = false;
+	return () => {
+		if (released) return;
+		released = true;
+		offscreenDraws -= 1;
+		if (offscreenDraws === 0) releaseUnheldDrawingPictures();
+	};
+}
+
+/** Drops pictures no mounted view holds. A draw still running keeps them. */
+export function releaseUnheldDrawingPictures() {
+	if (offscreenDraws > 0) return;
+	for (const id of drawingPictures.keys()) {
+		if ((holders.get(id) ?? 0) === 0) scheduleForget(id);
+	}
+}
 
 /** Records a drawing layer's settled strokes into an SkPicture bounded by inkRect. */
 export function drawingPicture(
 	layer: DrawingLayer,
 	multiply: boolean,
 ): SkPicture {
-	"worklet";
 	const cached = drawingPictures.get(layer.id);
 	if (
 		cached &&
@@ -171,7 +258,9 @@ export function drawingPicture(
 		strokes: layer.strokes,
 		multiply,
 		picture,
+		releases: 0,
 	});
+	if (cached) retirePicture(cached.picture);
 	return picture;
 }
 
@@ -202,6 +291,7 @@ export function DrawingLayerView({
 	liveInside?: boolean;
 	children?: ReactNode;
 }) {
+	useLayoutEffect(() => holdDrawingPicture(layer.id), [layer.id]);
 	const multiply = layerBlend(layer) === "multiply";
 	const live =
 		children !== undefined && children !== null && children !== false;
