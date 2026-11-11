@@ -162,6 +162,39 @@ describe("regionAt", () => {
 		assert.equal(regionAt([big, small], { x: 40, y: 0 }, 0)?.id, "big");
 	});
 
+	test("a region the point is inside beats a padded neighbour", () => {
+		// Two lines of text 10 tall, stacked 12 apart, padded by 10: each lies
+		// inside the other's padding.
+		const line = (id: string, y: number) => ({
+			id,
+			width: 100,
+			height: 10,
+			transform: { x: 0, y, scaleX: 1, scaleY: 1, rotation: 0 },
+		});
+		const address = line("address", 0);
+		const city = line("city", 12);
+		const wider = { ...line("wider", 12), width: 30 };
+		assert.equal(regionAt([address, city], { x: 0, y: 1 }, 10)?.id, "address");
+		assert.equal(regionAt([city, address], { x: 0, y: 1 }, 10)?.id, "address");
+		assert.equal(regionAt([address, wider], { x: 0, y: 3 }, 10)?.id, "address");
+	});
+
+	test("outside every region, the nearest padded one wins", () => {
+		const line = (id: string, y: number) => ({
+			id,
+			width: 100,
+			height: 10,
+			transform: { x: 0, y, scaleX: 1, scaleY: 1, rotation: 0 },
+		});
+		const top = line("top", 0);
+		const bottom = line("bottom", 20);
+		// The gap between them runs from y 5 to y 15.
+		assert.equal(regionAt([top, bottom], { x: 0, y: 7 }, 10)?.id, "top");
+		assert.equal(regionAt([top, bottom], { x: 0, y: 13 }, 10)?.id, "bottom");
+		assert.equal(regionAt([bottom, top], { x: 0, y: 7 }, 10)?.id, "top");
+		assert.equal(regionAt([top, bottom], { x: 0, y: 40 }, 10), null);
+	});
+
 	test("follows a region's turn", () => {
 		const turned = {
 			...region("long", 0, 100, 10),
