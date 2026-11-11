@@ -194,6 +194,8 @@ const EDITING_GROUPS: ShortcutGroup[] = [
 			{ keys: "mod+Z", action: "Undo" },
 			{ keys: "mod+shift+Z", action: "Redo" },
 			{ keys: "mod+E", action: "Export" },
+			{ keys: "mod+C", action: "Copy, in Export" },
+			{ keys: "Enter", action: "Download, in Export" },
 			{ keys: "mod+D", action: "Duplicate" },
 			{ keys: "mod+]", action: "Bring forward" },
 			{ keys: "mod+[", action: "Send backward" },

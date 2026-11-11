@@ -5,7 +5,14 @@ import {
 	useLocalSearchParams,
 	useRouter,
 } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useEffectEvent,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	ActivityIndicator,
 	Image,
@@ -85,19 +92,41 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 	const { state, retry } = useRenderedDocument(document, exportSize.scale);
 	const [canShare] = useState(canShareImages);
 	const close = useCallback(() => router.back(), [router]);
-	useEffect(() => {
-		if (Platform.OS !== "web") return;
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Escape") close();
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [close]);
 
 	const { busy, saved, copied, changed, handleSave, handleShare, handleCopy } =
 		useExportActions(state, format);
-
 	const ready = state.status === "ready";
+
+	// On web, Escape closes, Enter saves unless a control has focus (which
+	// Enter presses), and ⌘/Ctrl+C copies unless text is selected.
+	const onKey = useEffectEvent((event: KeyboardEvent) => {
+		if (event.key === "Escape") {
+			close();
+			return;
+		}
+		const idle = ready && busy === null;
+		const onPage = event.target === window.document.body;
+		if (event.key === "Enter" && onPage && !saved) {
+			event.preventDefault();
+			if (idle) handleSave();
+		} else if (
+			event.key.toLowerCase() === "c" &&
+			(event.metaKey || event.ctrlKey) &&
+			!event.shiftKey &&
+			!event.altKey &&
+			!window.getSelection()?.toString()
+		) {
+			event.preventDefault();
+			if (idle) handleCopy();
+		}
+	});
+	useEffect(() => {
+		if (Platform.OS !== "web") return;
+		const handleKeyDown = (event: KeyboardEvent) => onKey(event);
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, []);
+
 	const sheet = useSheetFit();
 
 	return (
@@ -155,7 +184,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									title: exportFormats[value].label,
 									detail:
 										value === "png"
-											? "Keeps transparency"
+											? transparent
+												? "Keeps transparency"
+												: "Sharper text"
 											: transparent
 												? "Fills transparency black"
 												: "Smaller file",
@@ -237,18 +268,21 @@ function useExportActions(state: RenderState, format: ExportFormat) {
 		setCopied(false);
 	};
 
-	// Alerts under `failureTitle` if `run` throws.
+	// Alerts under `failureTitle` if `run` throws, with `failureMessage` or
+	// else the error's own.
 	const runAction = async (
 		action: Busy,
 		failureTitle: string,
 		run: (image: SkImage) => Promise<void>,
+		failureMessage?: string,
 	) => {
 		if (state.status !== "ready") return;
 		setBusy(action);
 		try {
 			await run(state.image);
 		} catch (error) {
-			showAlert(failureTitle, errorMessage(error));
+			if (failureMessage) console.warn(error);
+			showAlert(failureTitle, failureMessage ?? errorMessage(error));
 		} finally {
 			setBusy(null);
 		}
@@ -283,10 +317,18 @@ function useExportActions(state: RenderState, format: ExportFormat) {
 		});
 
 	const handleCopy = () =>
-		runAction("copying", "Copy failed", async (image) => {
-			await copyImage(image);
-			setCopied(true);
-		});
+		runAction(
+			"copying",
+			"Couldn't copy the image",
+			async (image) => {
+				await copyImage(image);
+				setCopied(true);
+			},
+			// A refused write's own message is the browser's, not ours.
+			Platform.OS === "web"
+				? "Download it instead."
+				: "Save or share it instead.",
+		);
 
 	return { busy, saved, copied, changed, handleSave, handleShare, handleCopy };
 }
