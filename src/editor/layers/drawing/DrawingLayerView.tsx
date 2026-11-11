@@ -175,7 +175,13 @@ export function retainDrawingPictures(): () => void {
 	return drawingPictures.beginDraw();
 }
 
-/** Records a drawing layer's settled strokes into an SkPicture bounded by inkRect. */
+/**
+ * Records a drawing layer's settled strokes into an SkPicture bounded by
+ * inkRect. Erasers clear inside a layer the picture saves itself: Skia's
+ * recording drops a paintless saved layer around a single draw, which a
+ * picture drawn alone would be, and its erasers would clear what's under
+ * the drawing.
+ */
 export function drawingPicture(
 	layer: DrawingLayer,
 	multiply: boolean,
@@ -194,9 +200,12 @@ export function drawingPicture(
 			const recorder = Skia.PictureRecorder();
 			try {
 				const canvas = recorder.beginRecording(rect);
+				const erases = layer.strokes.some((stroke) => stroke.type === "eraser");
+				if (erases) canvas.saveLayer(undefined, rect);
 				for (const stroke of layer.strokes) {
 					drawStroke(canvas, stroke, multiply);
 				}
+				if (erases) canvas.restore();
 				return recorder.finishRecordingAsPicture();
 			} finally {
 				// The recorder owns its canvas. finishRecording copies the
@@ -212,6 +221,8 @@ export function drawingPicture(
  * - Its strokes share a saved layer only when it needs one
  *   (`needsOwnLayer`: an eraser clears only what they drew, and a highlight
  *   multiplies as a whole), or while dimmed or joined by a live stroke.
+ *   Settled strokes drawn as one picture keep their erasers in the
+ *   picture's own layer (`drawingPicture`).
  * - That layer is clipped to its ink (`inkRect`), so it costs the
  *   drawing's size, not the canvas's; `liveInside` says `children` stay
  *   within it (a live eraser), and otherwise they may reach past it.
@@ -267,7 +278,9 @@ export function DrawingLayerView({
 		})
 	);
 
-	if (!needsOwnLayer(layer) && opacity === 1 && !live) {
+	// A recorded picture keeps its erasers in a layer of its own.
+	const ownLayer = recorded ? multiply : needsOwnLayer(layer);
+	if (!ownLayer && opacity === 1 && !live) {
 		return <Group>{content}</Group>;
 	}
 	const layered = (
