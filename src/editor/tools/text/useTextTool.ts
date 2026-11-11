@@ -56,8 +56,13 @@ export function useTextTool({
 	view,
 }: Pick<ToolEnv, "document" | "open" | "close" | "view">) {
 	const selectedTextLayer = useStore(selectSelectedTextLayer);
-	const { addTextLayer, updateTextLayer, updateSelectedText, deleteLayer } =
-		useStore((state) => state.actions);
+	const {
+		addTextLayer,
+		updateTextLayer,
+		updateSelectedText,
+		deleteLayer,
+		selectLayer,
+	} = useStore((state) => state.actions);
 	// New text starts in the style text was last given.
 	const [textStyle, setTextStyle] = usePreference("textStyle", parseTextStyle);
 	const inputRef = useRef<HiddenTextInputHandle>(null);
@@ -105,6 +110,8 @@ export function useTextTool({
 		});
 	};
 	// Finishing with no text discards a new layer and deletes an existing one.
+	// New text is left unselected, so Text is still in the dock for the next
+	// caption; a drag still moves it, and a tap selects it.
 	const commit = () => {
 		if (!edit) return;
 		const { layer, isNew, area } = edit;
@@ -112,7 +119,10 @@ export function useTextTool({
 		const { font, color, outlineColor, backgroundColor, align } = layer;
 		const style = { font, color, outlineColor, backgroundColor, align };
 		if (isNew) {
-			if (text) addTextLayer(text, style, area);
+			if (text) {
+				addTextLayer(text, style, area);
+				selectLayer(null);
+			}
 		} else if (text) {
 			updateTextLayer(layer.id, { text, ...style });
 		} else {
