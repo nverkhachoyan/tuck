@@ -291,6 +291,20 @@ export function useEditorTools({
 		definition.stepSize?.(controller, step);
 	};
 
+	// The open tool's key steps to its next kind (a shape, a pen tip), if
+	// it has kinds of its own.
+	const stepToolVariant = () => {
+		if (!tool) return;
+		const { definition, controller } = controllers[tool];
+		const kinds = definition.variants?.(controller)?.filter((v) => !v.tool);
+		if (!kinds || kinds.length <= 1) return;
+		const active = kinds.findIndex(
+			(v) => v.id === definition.activeVariant?.(controller),
+		);
+		const next = kinds[(active + 1) % kinds.length];
+		definition.selectVariant?.(controller, next.id);
+	};
+
 	// The header's Reset takes back the open tool's changes to its image, if
 	// it offers that, and each tool may have something to announce.
 	const openTool = tool && controllers[tool];
@@ -316,6 +330,7 @@ export function useEditorTools({
 		leaveTool,
 		tapAway,
 		stepToolSize,
+		stepToolVariant,
 		resetEdit,
 		announcements,
 	};
