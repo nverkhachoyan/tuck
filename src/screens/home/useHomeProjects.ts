@@ -5,8 +5,8 @@ import { pasteClipboardImage } from "@/photos/clipboardImage";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
 import { importSharedPhoto } from "@/photos/sharedPhoto";
 import { deleteTemporaryFile } from "@/platform/temporaryFile";
+import { isProjectOpenElsewhere } from "@/projects/openProjects";
 import { copyName, type ProjectSummary } from "@/projects/projectFile";
-import { isProjectOpenElsewhere } from "@/projects/projectLifecycle";
 import { editorHref } from "@/projects/projectRoute";
 import {
 	deleteProject,
@@ -15,14 +15,14 @@ import {
 	renameProject,
 } from "@/projects/projectService";
 import {
-	endSession,
+	end,
 	hasOpenSession,
 	hasSavedSession,
-	openProjectCopy,
-	openProjectSession,
+	open as openSession,
+	openCopy as openSessionCopy,
 	startFromPhoto,
-	updateProjectThumbnail,
-} from "@/session/useProjectSession";
+	updateThumbnail,
+} from "@/session/appSession";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import { displayLabel } from "./projectGrid";
@@ -85,7 +85,7 @@ export function useHomeProjects() {
 		for (const project of list) {
 			if (pass !== thumbnailPass.current) return;
 			if (project.status !== "ready" || !project.thumbnailOutdated) continue;
-			const thumbnail = await updateProjectThumbnail(project.id);
+			const thumbnail = await updateThumbnail(project.id);
 			if (!thumbnail || pass !== thumbnailPass.current) continue;
 			setProjects((current) =>
 				current.map((listed) =>
@@ -114,7 +114,7 @@ export function useHomeProjects() {
 	const finishSession = useCallback(() => {
 		return run(hasSavedSession() ? "saving" : "loading", async () => {
 			try {
-				await endSession();
+				await end();
 			} catch (error) {
 				showAlert("Couldn't save your edits", errorMessage(error));
 				return "saveFailed";
@@ -208,7 +208,7 @@ export function useHomeProjects() {
 
 	// After the alert closes, so it isn't nested inside the open that failed.
 	const openCopy = (id: string) =>
-		open("Couldn't open a copy", () => openProjectCopy(id), {
+		open("Couldn't open a copy", () => openSessionCopy(id), {
 			action: "project",
 			projectId: id,
 		});
@@ -218,7 +218,7 @@ export function useHomeProjects() {
 			"Couldn't open project",
 			async () => {
 				try {
-					return await openProjectSession(id);
+					return await openSession(id);
 				} catch (error) {
 					if (!isProjectOpenElsewhere(error)) throw error;
 					showAlert("Couldn't open project", errorMessage(error), [

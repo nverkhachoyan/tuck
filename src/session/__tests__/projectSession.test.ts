@@ -2,11 +2,12 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createTextLayer, type EditorDocument } from "../../editor/core.ts";
-import { parseSavedProject } from "../../projects/projectFile.ts";
 import {
-	createProjectLifecycle,
+	createOpenProjects,
 	type ProjectStorage,
-} from "../../projects/projectLifecycle.ts";
+} from "../../projects/openProjects.ts";
+import { parseSavedProject } from "../../projects/projectFile.ts";
+import { createProjectLibrary } from "../../projects/projectLibrary.ts";
 import { UNSAVED_PROJECT } from "../../projects/projectRoute.ts";
 import {
 	createProjectSession,
@@ -112,7 +113,9 @@ function createHarness(options?: {
 		},
 	};
 
-	const projects = createProjectLifecycle(storage);
+	const { coordination, ...openProjects } = createOpenProjects(storage);
+	const library = createProjectLibrary(storage, coordination);
+	const projects = { ...openProjects, ...library };
 	const session = createProjectSession({
 		projects,
 		editor,

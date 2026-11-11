@@ -95,8 +95,8 @@ export function useCutTool({
 	const {
 		setMask,
 		invertMask,
-		cancelSession,
-		commitSession,
+		cancelToolSession,
+		commitToolSession,
 		addMaskedRedaction,
 		addCutCopy,
 		paintMask,
@@ -134,7 +134,7 @@ export function useCutTool({
 		keep,
 		onRedact: (id, mask, rect) => {
 			if (layerId.current !== id) return;
-			cancelSession();
+			cancelToolSession();
 			addMaskedRedaction(id, mask, rect, effectFor(documentSize));
 			notify("Selection redacted");
 			close();
@@ -168,21 +168,21 @@ export function useCutTool({
 	};
 	const newLayer = (selection: ImageLayer) => {
 		const { mask, maskStrokes } = selection;
-		cancelSession();
+		cancelToolSession();
 		addCutCopy(selection.id, { mask, maskStrokes });
 		notify("Selection copied to a new layer");
 		close();
 	};
 	const restorePhoto = () => {
 		if (layer) setMask(layer.id, null);
-		commitSession();
+		commitToolSession();
 		close();
 		notify("Cutout restored to whole photo");
 	};
 	const keepOnly = () => {
-		const { document, session } = useStore.getState();
-		const changed = document !== session?.document;
-		commitSession();
+		const { document, toolSession } = useStore.getState();
+		const changed = document !== toolSession?.document;
+		commitToolSession();
 		close();
 		if (changed && layer) {
 			notify(openedOnCut ? "Cut updated" : "Kept only the selection", {
@@ -204,7 +204,7 @@ export function useCutTool({
 		} else if (openedOnCut && !selected) {
 			restorePhoto();
 		} else {
-			cancelSession();
+			cancelToolSession();
 			close();
 		}
 	};
@@ -213,7 +213,7 @@ export function useCutTool({
 			const bytes = await removedMask(from, selection);
 			const mask = await keep(writeTemporaryPng(bytes));
 			if (layerId.current !== selection.id) return;
-			cancelSession();
+			cancelToolSession();
 			setMask(selection.id, mask);
 			notify("Selection removed");
 			close();

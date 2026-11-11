@@ -3,24 +3,24 @@ import { useStore } from "./store";
 import { type EditorState, selectAppDocument } from "./store/editorSlice";
 
 /**
- * What the app sees of the editor's session: the document open in it, or
+ * What the app sees of the editor: the document open in it, or
  * null, and the key the app opened it with. While a tool only previews its
  * changes (Cut's selection), the document is the one from before it opened.
  */
-export type Session = Pick<EditorState, "document" | "key">;
+export type OpenDocument = Pick<EditorState, "document" | "key">;
 
-const sessionOf = (state: EditorState): Session => ({
+const openDocumentOf = (state: EditorState): OpenDocument => ({
 	document: selectAppDocument(state),
 	key: state.key,
 });
 
-export function useSession<T>(select: (session: Session) => T): T {
-	return useStore((state) => select(sessionOf(state)));
+export function useOpenDocument<T>(select: (openDoc: OpenDocument) => T): T {
+	return useStore((state) => select(openDocumentOf(state)));
 }
 
 // For a read outside React, or after an `await`.
-export function getSession(): Session {
-	return sessionOf(useStore.getState());
+export function getOpenDocument(): OpenDocument {
+	return openDocumentOf(useStore.getState());
 }
 
 export function openDocument(document: EditorDocument, key: string | null) {

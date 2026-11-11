@@ -66,9 +66,10 @@ import {
 	MAX_HISTORY,
 	pastBefore,
 	pastIn,
-	type SessionSteps,
 	snapshotOf,
 	stepsByMark,
+	type ToolSession,
+	type ToolSessionSteps,
 } from "./history.ts";
 
 export {
@@ -77,6 +78,8 @@ export {
 	MAX_HISTORY,
 	type SessionSteps,
 	stepsByMark,
+	type ToolSession,
+	type ToolSessionSteps,
 } from "./history.ts";
 
 export type EditorState = {
@@ -90,6 +93,7 @@ export type EditorState = {
 	// While a tool is open, where it started: Cancel returns there (and redo
 	// undoes the cancel), and its changes become one undo step when it's done,
 	// unless its spec keeps more (`undoSteps`).
+	toolSession: ToolSession | null;
 	session: EditorSession | null;
 };
 
@@ -130,15 +134,34 @@ export const selectSelectedShape = (
  * The document as the app sees it, to save or draw a thumbnail of: where a
  * session started while its tool only previews its changes.
  */
-export const selectAppDocument = ({ document, session }: EditorState) =>
-	session?.previews ? session.document : document;
+export const selectAppDocument = ({
+	document,
+	toolSession,
+	session,
+}: EditorState) => {
+	const current = toolSession ?? session;
+	return current?.previews ? current.document : document;
+};
 
 // Within a session, not past its start: Cancel is the way back from there.
-export const selectCanUndo = ({ past, document, session }: EditorState) =>
-	past.length > 0 && document !== session?.document;
+export const selectCanUndo = ({
+	past,
+	document,
+	toolSession,
+	session,
+}: EditorState) => {
+	const current = toolSession ?? session;
+	return past.length > 0 && document !== current?.document;
+};
 
-export const selectCanRedo = ({ future, session }: EditorState) =>
-	future.length > 0 && future[0] !== session?.redoStop;
+export const selectCanRedo = ({
+	future,
+	toolSession,
+	session,
+}: EditorState) => {
+	const current = toolSession ?? session;
+	return future.length > 0 && future[0] !== current?.redoStop;
+};
 
 // `get` is the document and its history. An action calls another directly,
 // since reading it from `get().actions` makes that action's return type `any`.
@@ -227,6 +250,117 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	// By id, like `transformLayer`: text edited in place is committed to
 	// the layer it came from, whatever is selected by then.
 	const updateTextLayer = edit("editor/updateTextLayer", editTextLayer);
+
+	const beginToolSession = (
+		previews = false,
+		steps: ToolSessionSteps = "one",
+	) => {
+		const { document, selectedLayerId, past, future, toolSession, session } =
+			get();
+		const active = toolSession ?? session;
+		if (!document || active) return;
+		const newSession: ToolSession = {
+			document,
+			selectedLayerId,
+			undoStop: past.at(-1),
+			redoStop: future[0],
+			previews,
+			steps,
+		};
+		set(
+			{
+				toolSession: newSession,
+				session: newSession,
+			},
+			false,
+			"editor/beginToolSession",
+		);
+	};
+
+	// The session's steps become one from where it started, or stay one
+	// per change or per mark (`steps`). Each kept step undoes to the
+	// selection the session started with, not a mark drawn along the way.
+	const commitToolSession = () => {
+		const { document, selectedLayerId, toolSession, session, past } = get();
+		const active = toolSession ?? session;
+		if (!document || !active) return;
+		if (document === active.document) {
+			set(
+				{ toolSession: null, session: null },
+				false,
+				"editor/commitToolSession",
+			);
+			return;
+		}
+		const own = pastIn(past, active);
+		const kept =
+			active.steps === "one"
+				? [snapshotOf(active)]
+				: (active.steps === "each"
+						? own
+						: stepsByMark(own, { document, selectedLayerId })
+					).map((step) => ({
+						document: step.document,
+						selectedLayerId: active.selectedLayerId,
+					}));
+		set(
+			{
+				past: [...pastBefore(past, active), ...kept].slice(-MAX_HISTORY),
+				future: [],
+				toolSession: null,
+				session: null,
+			},
+			false,
+			"editor/commitToolSession",
+		);
+	};
+
+	// Redo brings the canceled changes back as one step. Any change in the
+	// session cleared the redo steps from before it, so `future` holds only
+	// the session's own undone steps, which still follow on from there. A
+	// session that only previews leaves nothing to redo: what it showed
+	// wasn't an edit (Cut's selection), so the redo steps go back to the
+	// ones from before it.
+	const cancelToolSession = () => {
+		const { document, selectedLayerId, toolSession, session, past, future } =
+			get();
+		const active = toolSession ?? session;
+		if (!document || !active) return;
+		if (active.previews) {
+			const stop = active.redoStop ? future.indexOf(active.redoStop) : -1;
+			set(
+				{
+					...snapshotOf(active),
+					past: pastBefore(past, active),
+					future: stop === -1 ? [] : future.slice(stop),
+					toolSession: null,
+					session: null,
+				},
+				false,
+				"editor/cancelToolSession",
+			);
+			return;
+		}
+		if (document === active.document) {
+			set(
+				{ toolSession: null, session: null },
+				false,
+				"editor/cancelToolSession",
+			);
+			return;
+		}
+		set(
+			{
+				...snapshotOf(active),
+				past: pastBefore(past, active),
+				future: [{ document, selectedLayerId }, ...future],
+				toolSession: null,
+				session: null,
+			},
+			false,
+			"editor/cancelToolSession",
+		);
+	};
 
 	return {
 		openDocument: (document: EditorDocument, key: string | null) =>
@@ -440,95 +574,12 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			);
 		},
 
-		beginSession: (previews = false, steps: SessionSteps = "one") => {
-			const { document, selectedLayerId, past, future, session } = get();
-			if (!document || session) return;
-			set(
-				{
-					session: {
-						document,
-						selectedLayerId,
-						undoStop: past.at(-1),
-						redoStop: future[0],
-						previews,
-						steps,
-					},
-				},
-				false,
-				"editor/beginSession",
-			);
-		},
-
-		// The session's steps become one from where it started, or stay one
-		// per change or per mark (`steps`). Each kept step undoes to the
-		// selection the session started with, not a mark drawn along the way.
-		commitSession: () => {
-			const { document, selectedLayerId, session, past } = get();
-			if (!document || !session) return;
-			if (document === session.document) {
-				set({ session: null }, false, "editor/commitSession");
-				return;
-			}
-			const own = pastIn(past, session);
-			const kept =
-				session.steps === "one"
-					? [snapshotOf(session)]
-					: (session.steps === "each"
-							? own
-							: stepsByMark(own, { document, selectedLayerId })
-						).map((step) => ({
-							document: step.document,
-							selectedLayerId: session.selectedLayerId,
-						}));
-			set(
-				{
-					past: [...pastBefore(past, session), ...kept].slice(-MAX_HISTORY),
-					future: [],
-					session: null,
-				},
-				false,
-				"editor/commitSession",
-			);
-		},
-
-		// Redo brings the canceled changes back as one step. Any change in the
-		// session cleared the redo steps from before it, so `future` holds only
-		// the session's own undone steps, which still follow on from there. A
-		// session that only previews leaves nothing to redo: what it showed
-		// wasn't an edit (Cut's selection), so the redo steps go back to the
-		// ones from before it.
-		cancelSession: () => {
-			const { document, selectedLayerId, session, past, future } = get();
-			if (!document || !session) return;
-			if (session.previews) {
-				const stop = session.redoStop ? future.indexOf(session.redoStop) : -1;
-				set(
-					{
-						...snapshotOf(session),
-						past: pastBefore(past, session),
-						future: stop === -1 ? [] : future.slice(stop),
-						session: null,
-					},
-					false,
-					"editor/cancelSession",
-				);
-				return;
-			}
-			if (document === session.document) {
-				set({ session: null }, false, "editor/cancelSession");
-				return;
-			}
-			set(
-				{
-					...snapshotOf(session),
-					past: pastBefore(past, session),
-					future: [{ document, selectedLayerId }, ...future],
-					session: null,
-				},
-				false,
-				"editor/cancelSession",
-			);
-		},
+		beginToolSession,
+		commitToolSession,
+		cancelToolSession,
+		beginSession: beginToolSession,
+		commitSession: commitToolSession,
+		cancelSession: cancelToolSession,
 	};
 }
 
@@ -551,6 +602,7 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => ({
 	selectedLayerId: null,
 	past: [],
 	future: [],
+	toolSession: null,
 	session: null,
 	actions: createEditorActions(set, get),
 });

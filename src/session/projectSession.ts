@@ -1,15 +1,16 @@
-// Storage and the editor's session are passed in so Node's test runner can
-// load this. `useProjectSession.ts` creates the app's instance.
+// Storage and the editor's open document are passed in so Node's test runner
+// can load this. `appSession.ts` creates the app's instance.
 import {
 	createBlankDocument,
 	createDocumentFromImage,
 	type EditorDocument,
 } from "../editor/core.ts";
-import { projectLabel } from "../projects/projectFile.ts";
 import {
+	type createOpenProjects,
 	NEWER_VERSION_MESSAGE,
-	type ProjectLifecycle,
-} from "../projects/projectLifecycle.ts";
+} from "../projects/openProjects.ts";
+import { projectLabel } from "../projects/projectFile.ts";
+import type { createProjectLibrary } from "../projects/projectLibrary.ts";
 import { UNSAVED_PROJECT } from "../projects/projectRoute.ts";
 
 export const UNSAVED_REOPEN_MESSAGE =
@@ -35,19 +36,23 @@ export type SessionCanvas = {
 	background: string | null;
 };
 
-export type ProjectSessionEnv = {
-	projects: Pick<
-		ProjectLifecycle,
-		| "createProject"
-		| "createBlankProject"
-		| "openProject"
-		| "closeProject"
-		| "copyOpenProject"
-		| "updateThumbnail"
-		| "addImage"
-		| "openProjectName"
-		| "openProjectCreatedAt"
+export type SessionProjects = Pick<
+	ReturnType<typeof createOpenProjects>,
+	| "createProject"
+	| "createBlankProject"
+	| "openProject"
+	| "closeProject"
+	| "addImage"
+	| "openProjectName"
+	| "openProjectCreatedAt"
+> &
+	Pick<
+		ReturnType<typeof createProjectLibrary>,
+		"copyOpenProject" | "updateThumbnail"
 	>;
+
+export type ProjectSessionEnv = {
+	projects: SessionProjects;
 	editor: EditorSessionStore;
 	renderThumbnail?: (
 		document: EditorDocument,

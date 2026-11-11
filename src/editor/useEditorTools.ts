@@ -60,7 +60,7 @@ export function useEditorTools({
 	view: ToolEnv["view"];
 	notify: (message: string, action?: NoticeAction) => void;
 }) {
-	const { cancelSession, commitSession, selectLayer } = useStore(
+	const { cancelToolSession, commitToolSession, selectLayer } = useStore(
 		(state) => state.actions,
 	);
 	const selectedLayer = useStore(selectSelectedLayer);
@@ -123,7 +123,7 @@ export function useEditorTools({
 		if (!tool) return;
 		const { definition, controller } = controllers[tool];
 		definition.done?.(controller);
-		commitSession();
+		commitToolSession();
 		closeTool();
 		if (definition.deselectOnDone && openOnId === null) selectLayer(null);
 	};
@@ -131,8 +131,8 @@ export function useEditorTools({
 	// keeps the session's other changes, such as a layer hidden meanwhile.
 	const cancelTool = () => {
 		if (!tool) return;
-		if (definitionOf(tools[tool]).spec.picks) commitSession();
-		else cancelSession();
+		if (definitionOf(tools[tool]).spec.picks) commitToolSession();
+		else cancelToolSession();
 		closeTool();
 	};
 	// What a preview shows or a tool picks isn't an edit until the tool's
@@ -332,21 +332,21 @@ export function useToolSession(
 	previews: boolean,
 	steps: SessionSteps,
 ) {
-	const { beginSession, commitSession, cancelSession } = useStore(
+	const { beginToolSession, commitToolSession, cancelToolSession } = useStore(
 		(state) => state.actions,
 	);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `reopened` ends the session and begins another.
 	useEffect(() => {
 		if (!tool) return;
-		beginSession(previews, steps);
-		return previews ? cancelSession : commitSession;
+		beginToolSession(previews, steps);
+		return previews ? cancelToolSession : commitToolSession;
 	}, [
 		tool,
 		reopened,
 		previews,
 		steps,
-		beginSession,
-		commitSession,
-		cancelSession,
+		beginToolSession,
+		commitToolSession,
+		cancelToolSession,
 	]);
 }

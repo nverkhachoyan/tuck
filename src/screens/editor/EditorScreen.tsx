@@ -6,11 +6,10 @@ import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
 import { getPreviewUri } from "@/photos/previewCache";
 import { exportHref } from "@/projects/projectRoute";
+import { addImage, title as sessionTitle } from "@/session/appSession";
 import { useAutosave } from "@/session/useAutosave";
 import {
-	addSessionImage,
 	latestSessionDocument,
-	sessionTitle,
 	useProjectSession,
 	useSessionProjectId,
 } from "@/session/useProjectSession";
@@ -99,7 +98,7 @@ function OpenProject({ document }: { document: EditorDocument }) {
 		pickPhoto,
 		importPhoto,
 		addImage: (uri, opaque, preview) =>
-			addSessionImage(projectId, uri, opaque, preview),
+			addImage(projectId, uri, opaque, preview),
 		title,
 		saveProblem:
 			projectId === null

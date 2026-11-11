@@ -10,6 +10,13 @@ import {
 } from "../../editor/core.ts";
 import { formatCreatedAt } from "../formatCreatedAt.ts";
 import {
+	createOpenProjects,
+	isProjectOpenElsewhere,
+	type PrepareProjectPreviews,
+	type ProjectStorage,
+	type StoreProjectPreview,
+} from "../openProjects.ts";
+import {
 	isImageFile,
 	PHOTO_FILE,
 	PROJECT_VERSION,
@@ -18,13 +25,30 @@ import {
 } from "../projectFile.ts";
 import {
 	type CopyProjectPreviews,
-	createProjectLifecycle,
-	isProjectOpenElsewhere,
-	type PrepareProjectPreviews,
-	type ProjectStorage,
+	createProjectLibrary,
 	type RemoveProjectPreviews,
-	type StoreProjectPreview,
-} from "../projectLifecycle.ts";
+} from "../projectLibrary.ts";
+
+function createProjectLifecycle(
+	storage: ProjectStorage,
+	preparePreviews?: PrepareProjectPreviews,
+	removePreviews?: RemoveProjectPreviews,
+	storePreview?: StoreProjectPreview,
+	copyPreviews?: CopyProjectPreviews,
+) {
+	const { coordination, ...openProjects } = createOpenProjects(
+		storage,
+		preparePreviews,
+		storePreview,
+	);
+	const library = createProjectLibrary(
+		storage,
+		coordination,
+		removePreviews,
+		copyPreviews,
+	);
+	return { ...openProjects, ...library };
+}
 
 type Write = (
 	id: string,

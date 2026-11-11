@@ -14,19 +14,21 @@ export type EditorSnapshot = {
  * whole session, one for each change (the Eraser's swipes), or one for each
  * mark (Pen's strokes, a shape or a redaction, see `stepsByMark`).
  */
-export type SessionSteps = "one" | "each" | "marks";
+export type ToolSessionSteps = "one" | "each" | "marks";
+export type SessionSteps = ToolSessionSteps;
 
 // While a tool is open, where it started, and the undo and redo steps that
 // were next then. Undo stops at the start, and redo at that step, so a tool
 // never steps into changes from before it opened. A tool that only
 // `previews` its changes until Done leaves the app seeing where it started;
 // `steps` is what its changes become when it's done.
-export type EditorSession = EditorSnapshot & {
+export type ToolSession = EditorSnapshot & {
 	undoStop: EditorSnapshot | undefined;
 	redoStop: EditorSnapshot | undefined;
 	previews: boolean;
-	steps: SessionSteps;
+	steps: ToolSessionSteps;
 };
+export type EditorSession = ToolSession;
 
 export function snapshotOf({
 	document,
@@ -36,24 +38,24 @@ export function snapshotOf({
 }
 
 /**
- * The undo steps `session` took: those after the one that was last when it
+ * The undo steps `toolSession` took: those after the one that was last when it
  * started (or all of them, if it took so many that one was dropped).
  */
 export function pastIn(
 	past: EditorSnapshot[],
-	{ undoStop }: EditorSession,
+	{ undoStop }: ToolSession,
 ): EditorSnapshot[] {
 	return undoStop ? past.slice(past.indexOf(undoStop) + 1) : past;
 }
 
 /**
- * The undo steps from before `session`, up to the one that was last when it
+ * The undo steps from before `toolSession`, up to the one that was last when it
  * started. Undo can't go past the start, so that step stays unless the
  * session took so many steps that everything before it was dropped.
  */
 export function pastBefore(
 	past: EditorSnapshot[],
-	{ undoStop }: EditorSession,
+	{ undoStop }: ToolSession,
 ): EditorSnapshot[] {
 	return undoStop ? past.slice(0, past.indexOf(undoStop) + 1) : [];
 }

@@ -27,8 +27,13 @@ type Notice = {
  * stays up longer, since deciding on it takes more than reaching for Undo.
  */
 export function useEditNotice(document: EditorDocument) {
-	const { undo, deleteLayer, deleteLayerGroup, beginSession, commitSession } =
-		useStore((state) => state.actions);
+	const {
+		undo,
+		deleteLayer,
+		deleteLayerGroup,
+		beginToolSession,
+		commitToolSession,
+	} = useStore((state) => state.actions);
 	const previous = useStore((state) => state.past.at(-1)?.document ?? null);
 	const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -88,11 +93,11 @@ export function useEditNotice(document: EditorDocument) {
 		// reach. The session has no changes of its own while the note shows,
 		// so it's closed for the Undo and opened again.
 		undo: () => {
-			const { session, document: current } = useStore.getState();
-			if (session && session.document === current) {
-				commitSession();
+			const { toolSession, document: current } = useStore.getState();
+			if (toolSession && toolSession.document === current) {
+				commitToolSession();
 				undo();
-				beginSession(session.previews, session.steps);
+				beginToolSession(toolSession.previews, toolSession.steps);
 			} else {
 				undo();
 			}

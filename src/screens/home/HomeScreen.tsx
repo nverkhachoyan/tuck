@@ -23,11 +23,11 @@ import {
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getSession, useSession } from "@/editor";
 import { listenForLaunchedPhotos } from "@/photos/sharedPhoto";
 import { useUpdateReady } from "@/platform/serviceWorker";
 import { usePhotoDrop } from "@/platform/usePhotoDrop";
 import { editorHref } from "@/projects/projectRoute";
+import { openSessionKey, useHasOpenSession } from "@/session/useProjectSession";
 import { PageHead } from "@/site/PageHead";
 import { Announcement } from "@/ui/Announcement";
 import { Button } from "@/ui/Button";
@@ -182,7 +182,7 @@ export default function HomeScreen() {
 					<Button label="Retry save" onPress={finishSession} />
 					<Button
 						label="Return to editor"
-						onPress={() => router.push(editorHref(getSession().key))}
+						onPress={() => router.push(editorHref(openSessionKey()))}
 					/>
 				</Notice>
 			)}
@@ -262,7 +262,7 @@ function useSharedPhotos({
 }) {
 	const router = useRouter();
 	const { shared } = useLocalSearchParams<{ shared?: string }>();
-	const sessionOpen = useSession((session) => session.document !== null);
+	const sessionOpen = useHasOpenSession();
 	useEffect(() => {
 		if (!shared || !focused || status !== "idle" || sessionOpen) return;
 		router.setParams({ shared: undefined });
