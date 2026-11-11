@@ -12,7 +12,7 @@ import { chosenOnWeb, interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 import { ToolButton, ToolGrid, ToolRow } from "../shell/ToolButton";
-import type { ToolEntry } from "../shell/toolList";
+import type { ToolEntry, ToolStarters } from "../shell/toolList";
 
 /**
  * The editing tools' buttons in the dock or rail:
@@ -146,9 +146,6 @@ export function ToolsPanel({
 		</>
 	);
 }
-
-/** What picking up each tool or entry does, as its key would, by its id. */
-export type ToolStarters = Record<string, () => void>;
 
 /** Each starter passed through `wrap`, as the rail does with `fromRail`. */
 export function mapStarters(

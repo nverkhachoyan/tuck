@@ -44,6 +44,9 @@ export type ToolEntry = {
 	onSelectVariant?: (variantId: string) => void;
 };
 
+/** What picking up each tool or entry does, as its key would, by its id. */
+export type ToolStarters = Record<string, () => void>;
+
 /** The editor's own entry's button; its key is in `TOOL_KEYS`. */
 export const TOOLS: Record<
 	OwnTool,

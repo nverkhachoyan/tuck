@@ -1,13 +1,12 @@
 import { useCallback, useMemo } from "react";
 import type { Layer } from "../layers/layer";
 import type { ModeActionProps } from "../shell/modeActions";
-import type { ToolEntry } from "../shell/toolList";
+import type { ToolEntry, ToolStarters } from "../shell/toolList";
 import { useStore } from "../store";
 import type { ToolControllers } from "../tools/defineTool";
 import { escapeCancels, type ToolId, type ToolSpecs } from "../tools/toolSpec";
 import { layerActionsFor, modeChrome, toolbarEntries } from "./editorChrome";
 import { layerKindName } from "./layersPanel/LayerRow";
-import type { ToolStarters } from "./ToolsPanel";
 
 /**
  * The dock's panel, and its title, Cancel, and Done (`modeActions`), chosen

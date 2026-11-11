@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { BackHandler } from "react-native";
-import type { ToolStarters } from "../chrome/ToolsPanel";
 import type { EditorDocument } from "../document/document";
 import { visibleImageLayer } from "../document/framing";
 import { type Point, type Size, toLayerSpace } from "../document/geometry";
@@ -8,6 +7,7 @@ import type { EditorHost } from "../editorHost";
 import type { EditorMode, EditorModeAction } from "../editorMode";
 import type { ImageLayer } from "../layers/image/image";
 import type { Layer } from "../layers/layer";
+import type { ToolStarters } from "../shell/toolList";
 import { useStore } from "../store";
 import {
 	selectSelectedLayer,
