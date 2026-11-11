@@ -32,6 +32,7 @@ import {
 	needsOwnLayer,
 	type Stroke,
 } from "./drawing";
+import { createPictureCache } from "./drawingPictures";
 
 // A marker's ink is see-through, so what it highlights shows through it.
 const MARKER_OPACITY = 0.45;
@@ -142,95 +143,21 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	canvas.drawPath(path, paint);
 }
 
-// By layer id, so an undone strokes array doesn't keep its picture. A mounted
-// view holds its id. The last release drops the entry two frames later: the
-// canvas replays the recording from before the update for a frame (the same
-// wait as `decodedImages`). An offscreen draw retains pictures until its
-// scene picture is disposed, then releases the ones no view holds.
-type PictureEntry = {
-	strokes: readonly Stroke[];
-	multiply: boolean;
-	picture: SkPicture;
-	releases: number;
-};
-
-const drawingPictures = new Map<string, PictureEntry>();
-const holders = new Map<string, number>();
-
-// Draws in flight. A forget that comes due while one is running waits for
-// it, since that draw's scene picture is still replaying these recordings.
-let offscreenDraws = 0;
-
+// Two frames, as `decodedImages` waits: the canvas replays the recording from
+// before an update for a frame, and a timer can fire before that frame.
 function afterSkiaDraws(free: () => void) {
 	requestAnimationFrame(() => requestAnimationFrame(free));
 }
 
-function scheduleForget(id: string) {
-	const entry = drawingPictures.get(id);
-	if (!entry) return;
-	entry.releases += 1;
-	const latest = entry.releases;
-	afterSkiaDraws(() => {
-		// Only the last release frees, and only once nothing holds the id
-		// and no offscreen draw is still replaying this entry's picture.
-		if (
-			offscreenDraws > 0 ||
-			(holders.get(id) ?? 0) > 0 ||
-			entry.releases !== latest ||
-			drawingPictures.get(id) !== entry
-		) {
-			return;
-		}
-		drawingPictures.delete(id);
-		entry.picture.dispose();
-	});
-}
-
-// The picture a re-record replaced. Freed once no entry still has it, so
-// the frame that was drawn with it can finish first.
-function retirePicture(picture: SkPicture) {
-	afterSkiaDraws(() => {
-		for (const entry of drawingPictures.values()) {
-			if (entry.picture === picture) return;
-		}
-		picture.dispose();
-	});
-}
-
-function holdDrawingPicture(id: string): () => void {
-	holders.set(id, (holders.get(id) ?? 0) + 1);
-	return () => {
-		const next = (holders.get(id) ?? 1) - 1;
-		if (next > 0) {
-			holders.set(id, next);
-			return;
-		}
-		holders.delete(id);
-		scheduleForget(id);
-	};
-}
+const drawingPictures = createPictureCache<SkPicture>(afterSkiaDraws);
 
 /**
  * Marks an offscreen draw as using the cache until the returned function
- * runs. That drops pictures no mounted view holds, once no draw is running.
+ * runs. Pictures that draw recorded stay alive until then, including one a
+ * newer recording of the same layer has since replaced.
  */
 export function retainDrawingPictures(): () => void {
-	offscreenDraws += 1;
-	let released = false;
-	return () => {
-		if (released) return;
-		released = true;
-		offscreenDraws -= 1;
-		if (offscreenDraws === 0) releaseUnheldDrawingPictures();
-	};
-}
-
-/** Drops pictures no mounted view holds. A draw still running keeps them. */
-export function releaseUnheldDrawingPictures() {
-	if (offscreenDraws > 0) return;
-	for (const id of drawingPictures.keys()) {
-		if ((holders.get(id) ?? 0) === 0) scheduleForget(id);
-	}
+	return drawingPictures.beginDraw();
 }
 
 /** Records a drawing layer's settled strokes into an SkPicture bounded by inkRect. */
@@ -238,30 +165,25 @@ export function drawingPicture(
 	layer: DrawingLayer,
 	multiply: boolean,
 ): SkPicture {
-	const cached = drawingPictures.get(layer.id);
-	if (
-		cached &&
-		cached.strokes === layer.strokes &&
-		cached.multiply === multiply
-	) {
-		return cached.picture;
-	}
-	const bounds = inkRect(layer);
-	const rect = Skia.XYWHRect(bounds.x, bounds.y, bounds.width, bounds.height);
-	const recorder = Skia.PictureRecorder();
-	const canvas = recorder.beginRecording(rect);
-	for (const stroke of layer.strokes) {
-		drawStroke(canvas, stroke, multiply);
-	}
-	const picture = recorder.finishRecordingAsPicture();
-	drawingPictures.set(layer.id, {
-		strokes: layer.strokes,
-		multiply,
-		picture,
-		releases: 0,
-	});
-	if (cached) retirePicture(cached.picture);
-	return picture;
+	return drawingPictures.pictureFor(
+		layer.id,
+		{ strokes: layer.strokes, multiply },
+		() => {
+			const bounds = inkRect(layer);
+			const rect = Skia.XYWHRect(
+				bounds.x,
+				bounds.y,
+				bounds.width,
+				bounds.height,
+			);
+			const recorder = Skia.PictureRecorder();
+			const canvas = recorder.beginRecording(rect);
+			for (const stroke of layer.strokes) {
+				drawStroke(canvas, stroke, multiply);
+			}
+			return recorder.finishRecordingAsPicture();
+		},
+	);
 }
 
 /**
@@ -291,12 +213,20 @@ export function DrawingLayerView({
 	liveInside?: boolean;
 	children?: ReactNode;
 }) {
-	useLayoutEffect(() => holdDrawingPicture(layer.id), [layer.id]);
 	const multiply = layerBlend(layer) === "multiply";
+	// The picture this commit draws. The effect holds that object, not the
+	// layer id: a thumbnail of an older strokes array re-records the same id.
+	const recorded = wrapStroke ? null : drawingPicture(layer, multiply);
+	useLayoutEffect(
+		() => (recorded ? drawingPictures.hold(recorded) : undefined),
+		[recorded],
+	);
 	const live =
 		children !== undefined && children !== null && children !== false;
 
-	const content = wrapStroke ? (
+	const content = recorded ? (
+		<Picture picture={recorded} />
+	) : (
 		layer.strokes.map((stroke, index) => {
 			const drawn = (
 				<BrushStroke
@@ -307,15 +237,13 @@ export function DrawingLayerView({
 					full={multiply}
 				/>
 			);
-			return stroke.type === "pen" ? (
+			return stroke.type === "pen" && wrapStroke ? (
 				// biome-ignore lint/suspicious/noArrayIndexKey: as above
 				<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
 			) : (
 				drawn
 			);
 		})
-	) : (
-		<Picture picture={drawingPicture(layer, multiply)} />
 	);
 
 	if (!needsOwnLayer(layer) && opacity === 1 && !live) {
