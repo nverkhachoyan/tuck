@@ -79,25 +79,34 @@ export function hitsLayer(
 }
 
 /**
- * The region under a document-space point, each padded by `padding` so a
- * small one stays tappable, and the smallest where padded regions overlap.
- * Null when there's none.
+ * The region under a document-space point, or null when there's none.
+ * - A region the point is inside wins, the smallest where several hold it.
+ * - Otherwise each region is padded by `padding`, so a small one stays
+ *   tappable, and the nearest padded region wins.
  */
 export function regionAt<
 	Region extends { transform: Transform; width: number; height: number },
 >(regions: readonly Region[], point: Point, padding: number): Region | null {
-	let hit: Region | null = null;
+	let inside: Region | null = null;
+	let near: Region | null = null;
+	let nearest = Infinity;
 	for (const region of regions) {
-		const box = {
-			halfWidth: region.width / 2 + padding,
-			halfHeight: region.height / 2 + padding,
-		};
-		if (
-			hitTestBox(region.transform, box, point) &&
-			(!hit || region.width * region.height < hit.width * hit.height)
-		) {
-			hit = region;
+		const local = toLayerSpace(region.transform, point);
+		const dx = Math.max(0, Math.abs(local.x) - region.width / 2);
+		const dy = Math.max(0, Math.abs(local.y) - region.height / 2);
+		if (dx === 0 && dy === 0) {
+			if (
+				!inside ||
+				region.width * region.height < inside.width * inside.height
+			)
+				inside = region;
+		} else if (dx <= padding && dy <= padding) {
+			const distance = Math.hypot(dx, dy);
+			if (distance < nearest) {
+				nearest = distance;
+				near = region;
+			}
 		}
 	}
-	return hit;
+	return inside ?? near;
 }
