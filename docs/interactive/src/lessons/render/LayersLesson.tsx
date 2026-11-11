@@ -207,9 +207,9 @@ export default function LayersLesson() {
 			name: "DocumentRenderScene",
 		},
 		{
-			label: "LayerContent",
-			file: "src/editor/render/DocumentRenderScene.tsx",
-			name: "LayerContent",
+			label: "LayerView",
+			file: "src/editor/render/LayerView.tsx",
+			name: "LayerView",
 		},
 		{
 			label: "toTransformList",

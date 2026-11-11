@@ -103,7 +103,7 @@ boundary ever truly needs a check, it gets a few lines, not a rule set.
 
 - **Add a tool:** create a folder in `editor/tools/<name>/` with `<name>Spec.ts` (`ToolSpec` from `toolSpec.ts`) and `<name>Tool.ts` (`defineTool` from `defineTool.ts`), then register the spec in `builtInSpecs.ts` (and `BUILT_IN_TOOLBAR`, or another tool's `grouped` and `variants` if it sits in a flyout) and the tool in `builtInTools.ts`. Adding a tool adds no case in `Editor.tsx`, `useEditorTools.ts`, `editorMode.ts`, or `editorChrome.ts`.
 - **Add a canvas stroke kind:** add its `CanvasTool` and `ToolStroke` union members, its `CANVAS_TOOLS` row, and any `canAddTo` / `strokeReaches` rules in `editor/canvas/canvasTool.ts`; update `strokeIntent` (`useToolStroke.ts`), `outlinedLayerFor`, and `inputRules` (`canvasInputFor.ts`) if its gesture or outline differs; create `editor/canvas/strokes/<kind>.tsx` (`StrokeKindModule`) and register it in `SceneLayer.tsx`; and handle its completed stroke in the tool's `finishStroke`.
-- **Add a layer type:** create a folder in `editor/layers/<type>/` for its type, factory, saved-file check, edits, and view; add it to the `Layer` union in `editor/layers/layer.ts`; and add its case in `LayerContent` and `DocumentRenderScene` (`assertNever` flags any you miss).
+- **Add a layer type:** create a folder in `editor/layers/<type>/` for its type, factory, saved-file check, edits, and view; add it to the `Layer` union in `editor/layers/layer.ts`; and fix every compile error (`assertNever` flags every site that branches on layer type).
 
 Platform differences live in `.web.ts` files next to their native versions
 (`saveImage.web.ts` downloads instead of saving to Photos;

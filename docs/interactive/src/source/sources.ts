@@ -25,6 +25,7 @@ import documentRenderScene from "@src/editor/render/DocumentRenderScene.tsx?raw"
 import decodedImages from "@src/editor/render/decodedImages.ts?raw";
 import decodeImageLayers from "@src/editor/render/decodeImageLayers.ts?raw";
 import fonts from "@src/editor/render/fonts.ts?raw";
+import layerView from "@src/editor/render/LayerView.tsx?raw";
 import renderDocument from "@src/editor/render/renderDocument.tsx?raw";
 import editorSlice from "@src/editor/store/editorSlice.ts?raw";
 import history from "@src/editor/store/history.ts?raw";
@@ -55,6 +56,7 @@ export const sources = {
 	"src/editor/render/decodeImageLayers.ts": decodeImageLayers,
 	"src/editor/render/decodedImages.ts": decodedImages,
 	"src/editor/render/DocumentRenderScene.tsx": documentRenderScene,
+	"src/editor/render/LayerView.tsx": layerView,
 	"src/editor/render/fonts.ts": fonts,
 	"src/editor/layers/image/ImageLayerView.tsx": imageLayerView,
 	"src/editor/layers/layerTransform.ts": layerTransform,

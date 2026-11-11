@@ -1,15 +1,10 @@
 import type { ReactNode } from "react";
-import { assertNever } from "../document/assertNever";
+import { LayerView } from "../render/LayerView";
 import { useDecodedImage } from "../render/useDecodedImage";
-import { DrawingLayerView } from "./drawing/DrawingLayerView";
 import type { ColorMatrix } from "./image/adjustments";
-import { ImageLayerView } from "./image/ImageLayerView";
 import type { ImageLayer } from "./image/image";
 import type { Layer } from "./layer";
-import { RedactionLayerView } from "./redaction/RedactionLayerView";
 import type { RedactionMask } from "./redaction/redaction";
-import { ShapeLayerView } from "./shape/ShapeLayerView";
-import { TextLayerView } from "./text/TextLayerView";
 
 /**
  * A layer's content in its own space, loading images asynchronously.
@@ -40,42 +35,30 @@ export function LayerContent({
 	selectionColor?: string;
 	onImageError: (error: unknown) => void;
 }) {
-	switch (layer.type) {
-		case "image":
-			return (
-				<AsyncImage
-					layer={layer}
-					uri={uri ?? layer.uri}
-					matrix={matrix}
-					liveMask={stroke}
-					selectionColor={selectionColor}
-					onError={onImageError}
-				/>
-			);
-		case "text":
-			return <TextLayerView layer={layer} />;
-		case "drawing":
-			return (
-				<DrawingLayerView
-					layer={layer}
-					opacity={opacity}
-					wrapStroke={wrapStroke}
-					liveInside={liveInside}
-				>
-					{stroke}
-				</DrawingLayerView>
-			);
-		case "redaction":
-			return layer.shape === "mask" ? (
-				<AsyncMaskedRedaction layer={layer} onError={onImageError} />
-			) : (
-				<RedactionLayerView layer={layer} />
-			);
-		case "shape":
-			return <ShapeLayerView layer={layer} />;
-		default:
-			return assertNever(layer);
+	if (layer.type === "image") {
+		return (
+			<AsyncImage
+				layer={layer}
+				uri={uri ?? layer.uri}
+				matrix={matrix}
+				stroke={stroke}
+				selectionColor={selectionColor}
+				onError={onImageError}
+			/>
+		);
 	}
+	if (layer.type === "redaction" && layer.shape === "mask") {
+		return <AsyncMaskedRedaction layer={layer} onError={onImageError} />;
+	}
+	return (
+		<LayerView
+			layer={layer}
+			stroke={stroke}
+			opacity={opacity}
+			wrapStroke={wrapStroke}
+			liveInside={liveInside}
+		/>
+	);
 }
 
 /**
@@ -88,14 +71,14 @@ function AsyncImage({
 	layer,
 	uri,
 	matrix,
-	liveMask,
+	stroke,
 	selectionColor,
 	onError,
 }: {
 	layer: ImageLayer;
 	uri: string;
 	matrix?: { value: ColorMatrix };
-	liveMask?: ReactNode;
+	stroke?: ReactNode;
 	selectionColor?: string;
 	onError: (error: unknown) => void;
 }) {
@@ -103,12 +86,12 @@ function AsyncImage({
 	const mask = useDecodedImage(layer.mask ?? null, onError);
 	if (!image || (mask === undefined && !selectionColor)) return null;
 	return (
-		<ImageLayerView
+		<LayerView
 			layer={layer}
 			image={image}
 			mask={mask ?? undefined}
 			matrix={matrix}
-			liveMask={liveMask}
+			stroke={stroke}
 			selectionColor={selectionColor}
 		/>
 	);
@@ -123,5 +106,5 @@ function AsyncMaskedRedaction({
 	onError: (error: unknown) => void;
 }) {
 	const mask = useDecodedImage(layer.mask, onError);
-	return mask ? <RedactionLayerView layer={layer} mask={mask} /> : null;
+	return mask ? <LayerView layer={layer} mask={mask} /> : null;
 }

@@ -1,13 +1,7 @@
 import { Fill, Group, Rect, type SkImage } from "react-native-skia";
-import { assertNever } from "../document/assertNever";
 import type { EditorDocument } from "../document/document";
-import { DrawingLayerView } from "../layers/drawing/DrawingLayerView";
-import { ImageLayerView } from "../layers/image/ImageLayerView";
-import type { Layer } from "../layers/layer";
 import { toTransformList } from "../layers/layerTransform";
-import { RedactionLayerView } from "../layers/redaction/RedactionLayerView";
-import { ShapeLayerView } from "../layers/shape/ShapeLayerView";
-import { TextLayerView } from "../layers/text/TextLayerView";
+import { LayerView } from "./LayerView";
 
 /**
  * The document's background and layers in document space, with no selection
@@ -33,44 +27,22 @@ export function DocumentRenderScene({
 			{document.layers.map((layer) =>
 				layer.hidden ? null : (
 					<Group key={layer.id} transform={toTransformList(layer.transform)}>
-						<LayerContent layer={layer} images={images} />
+						<LayerView
+							layer={layer}
+							image={layer.type === "image" ? images.get(layer.uri) : undefined}
+							mask={
+								layer.type === "image"
+									? layer.mask === undefined
+										? undefined
+										: images.get(layer.mask)
+									: layer.type === "redaction" && layer.shape === "mask"
+										? images.get(layer.mask)
+										: undefined
+							}
+						/>
 					</Group>
 				),
 			)}
 		</Group>
 	);
-}
-
-function LayerContent({
-	layer,
-	images,
-}: {
-	layer: Layer;
-	images: Map<string, SkImage>;
-}) {
-	switch (layer.type) {
-		case "image": {
-			const image = images.get(layer.uri);
-			const mask = layer.mask === undefined ? null : images.get(layer.mask);
-			if (!image || mask === undefined) return null;
-			return (
-				<ImageLayerView layer={layer} image={image} mask={mask ?? undefined} />
-			);
-		}
-		case "text":
-			return <TextLayerView layer={layer} />;
-		case "drawing":
-			return <DrawingLayerView layer={layer} />;
-		case "redaction":
-			return (
-				<RedactionLayerView
-					layer={layer}
-					mask={layer.shape === "mask" ? images.get(layer.mask) : undefined}
-				/>
-			);
-		case "shape":
-			return <ShapeLayerView layer={layer} />;
-		default:
-			return assertNever(layer);
-	}
 }

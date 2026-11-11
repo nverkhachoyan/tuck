@@ -1,3 +1,4 @@
+import { assertNever } from "../document/assertNever";
 import type { EditorDocument } from "../document/document";
 import type { Layer } from "../layers/layer";
 import { isLine } from "../layers/shape/shape";
@@ -26,11 +27,39 @@ export function layerTargets(
 				hitBox: layer.locked ? null : layerBounds(layer, hitPadding),
 				hitPadding,
 				strokes: layer.locked ? null : layerStrokes(layer),
-				clipped: layer.type === "image" && layer.locked,
+				clipped: isClippedToCanvas(layer),
 				resizeMode: resizeMode(layer),
-				anchored: layer.type === "redaction",
+				anchored: isAnchored(layer),
 			};
 		});
+}
+
+function isClippedToCanvas(layer: Layer): boolean {
+	switch (layer.type) {
+		case "image":
+			return layer.locked;
+		case "text":
+		case "drawing":
+		case "redaction":
+		case "shape":
+			return false;
+		default:
+			return assertNever(layer);
+	}
+}
+
+function isAnchored(layer: Layer): boolean {
+	switch (layer.type) {
+		case "redaction":
+			return true;
+		case "image":
+		case "text":
+		case "drawing":
+		case "shape":
+			return false;
+		default:
+			return assertNever(layer);
+	}
 }
 
 /**
@@ -39,19 +68,33 @@ export function layerTargets(
  * sides; a line by its ends; and an image or text by stretching, once set to.
  */
 export function resizeMode(layer: Layer): ResizeMode {
-	if (layer.type === "redaction" && layer.shape === "box") return "box";
-	if (layer.type === "shape") return isLine(layer) ? "endpoints" : "box";
-	if ((layer.type === "image" || layer.type === "text") && layer.resizable) {
-		return "stretch";
+	switch (layer.type) {
+		case "redaction":
+			return layer.shape === "box" ? "box" : "none";
+		case "shape":
+			return isLine(layer) ? "endpoints" : "box";
+		case "image":
+		case "text":
+			return layer.resizable ? "stretch" : "none";
+		case "drawing":
+			return "none";
+		default:
+			return assertNever(layer);
 	}
-	return "none";
 }
 
 function layerStrokes(layer: Layer): MaskStroke[] | null {
-	if (layer.type === "drawing") return layer.strokes;
-	if (layer.type === "redaction" && layer.shape === "strokes") {
-		return layer.strokes;
+	switch (layer.type) {
+		case "drawing":
+			return layer.strokes;
+		case "redaction":
+			return layer.shape === "strokes" ? layer.strokes : null;
+		case "shape":
+			return shapeOutline(layer);
+		case "image":
+		case "text":
+			return null;
+		default:
+			return assertNever(layer);
 	}
-	if (layer.type === "shape") return shapeOutline(layer);
-	return null;
 }

@@ -17,6 +17,7 @@ import {
 	useScreenPixels,
 } from "./canvas/SelectionOverlay";
 import type { LiveAdjustment } from "./canvasInputFor";
+import { assertNever } from "./document/assertNever";
 import type { EditorDocument } from "./document/document";
 import type { Layer } from "./layers/layer";
 import { toTransformList } from "./layers/layerTransform";
@@ -117,7 +118,7 @@ export function EditorScene({
 				layer.hidden ? null : (
 					<Group
 						key={layer.id}
-						clip={layer.type === "image" && layer.locked ? canvas : undefined}
+						clip={isClippedToCanvas(layer) ? canvas : undefined}
 					>
 						<SceneLayer
 							layer={layer}
@@ -140,7 +141,7 @@ export function EditorScene({
 							dimmed={
 								dimExcept !== null &&
 								layer.id !== dimExcept &&
-								(layer.type === "drawing" || layer.type === "shape")
+								isDimmable(layer)
 							}
 							onImageError={onImageError}
 						/>
@@ -209,4 +210,32 @@ export function EditorScene({
 			)}
 		</Group>
 	);
+}
+
+function isClippedToCanvas(layer: Layer): boolean {
+	switch (layer.type) {
+		case "image":
+			return layer.locked;
+		case "text":
+		case "drawing":
+		case "redaction":
+		case "shape":
+			return false;
+		default:
+			return assertNever(layer);
+	}
+}
+
+function isDimmable(layer: Layer): boolean {
+	switch (layer.type) {
+		case "drawing":
+		case "shape":
+			return true;
+		case "image":
+		case "text":
+		case "redaction":
+			return false;
+		default:
+			return assertNever(layer);
+	}
 }
