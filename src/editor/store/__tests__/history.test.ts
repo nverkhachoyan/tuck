@@ -238,7 +238,7 @@ describe("sessions", () => {
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.drawStroke(pen([100, 100, 200, 0]));
 		actions.commitSession();
-		assert.equal(store.getState().session, null);
+		assert.equal(store.getState().toolSession, null);
 		assert.equal(store.getState().past.length, pastLength + 1);
 
 		actions.undo();
@@ -519,7 +519,7 @@ describe("sessions", () => {
 		assert.equal(store.getState().document, before);
 		assert.equal(store.getState().selectedLayerId, text.id);
 		assert.deepEqual(store.getState().past, past);
-		assert.equal(store.getState().session, null);
+		assert.equal(store.getState().toolSession, null);
 	});
 
 	test("redo brings a canceled session back as one step", () => {
@@ -705,7 +705,6 @@ describe("sessions", () => {
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.closeDocument();
 		assert.equal(store.getState().toolSession, null);
-		assert.equal(store.getState().session, null);
 		assert.equal(selectAppDocument(store.getState()), null);
 
 		actions.openDocument(next, "project-2");
@@ -714,7 +713,6 @@ describe("sessions", () => {
 		const previewed = store.getState().toolSession?.document;
 		actions.openDocument(another, "project-3");
 		assert.equal(store.getState().toolSession, null);
-		assert.equal(store.getState().session, null);
 		assert.equal(selectAppDocument(store.getState()), another);
 		// The previewing tool cancels as its screen unmounts, after the open.
 		actions.cancelSession();

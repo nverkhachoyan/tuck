@@ -155,8 +155,8 @@ export function useEditorTools({
 	// preview that has changed the document, or what it picked.
 	const previewChanged = useStore(
 		(state) =>
-			state.session?.previews === true &&
-			state.document !== state.session.document,
+			state.toolSession?.previews === true &&
+			state.document !== state.toolSession.document,
 	);
 	const current = tool === null ? null : controllers[tool];
 	const holding =

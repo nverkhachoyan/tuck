@@ -61,7 +61,6 @@ import {
 	addTextLayer as placeTextLayer,
 } from "../layers/text/textEdits.ts";
 import {
-	type EditorSession,
 	type EditorSnapshot,
 	MAX_HISTORY,
 	pastBefore,
@@ -94,7 +93,6 @@ export type EditorState = {
 	// undoes the cancel), and its changes become one undo step when it's done,
 	// unless its spec keeps more (`undoSteps`).
 	toolSession: ToolSession | null;
-	session: EditorSession | null;
 };
 
 type EditorSet = (
@@ -134,34 +132,15 @@ export const selectSelectedShape = (
  * The document as the app sees it, to save or draw a thumbnail of: where a
  * session started while its tool only previews its changes.
  */
-export const selectAppDocument = ({
-	document,
-	toolSession,
-	session,
-}: EditorState) => {
-	const current = toolSession ?? session;
-	return current?.previews ? current.document : document;
-};
+export const selectAppDocument = ({ document, toolSession }: EditorState) =>
+	toolSession?.previews ? toolSession.document : document;
 
 // Within a session, not past its start: Cancel is the way back from there.
-export const selectCanUndo = ({
-	past,
-	document,
-	toolSession,
-	session,
-}: EditorState) => {
-	const current = toolSession ?? session;
-	return past.length > 0 && document !== current?.document;
-};
+export const selectCanUndo = ({ past, document, toolSession }: EditorState) =>
+	past.length > 0 && document !== toolSession?.document;
 
-export const selectCanRedo = ({
-	future,
-	toolSession,
-	session,
-}: EditorState) => {
-	const current = toolSession ?? session;
-	return future.length > 0 && future[0] !== current?.redoStop;
-};
+export const selectCanRedo = ({ future, toolSession }: EditorState) =>
+	future.length > 0 && future[0] !== toolSession?.redoStop;
 
 // `get` is the document and its history. An action calls another directly,
 // since reading it from `get().actions` makes that action's return type `any`.
@@ -255,10 +234,8 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		previews = false,
 		steps: ToolSessionSteps = "one",
 	) => {
-		const { document, selectedLayerId, past, future, toolSession, session } =
-			get();
-		const active = toolSession ?? session;
-		if (!document || active) return;
+		const { document, selectedLayerId, past, future, toolSession } = get();
+		if (!document || toolSession) return;
 		const newSession: ToolSession = {
 			document,
 			selectedLayerId,
@@ -267,48 +244,35 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			previews,
 			steps,
 		};
-		set(
-			{
-				toolSession: newSession,
-				session: newSession,
-			},
-			false,
-			"editor/beginToolSession",
-		);
+		set({ toolSession: newSession }, false, "editor/beginToolSession");
 	};
 
 	// The session's steps become one from where it started, or stay one
 	// per change or per mark (`steps`). Each kept step undoes to the
 	// selection the session started with, not a mark drawn along the way.
 	const commitToolSession = () => {
-		const { document, selectedLayerId, toolSession, session, past } = get();
-		const active = toolSession ?? session;
-		if (!document || !active) return;
-		if (document === active.document) {
-			set(
-				{ toolSession: null, session: null },
-				false,
-				"editor/commitToolSession",
-			);
+		const { document, selectedLayerId, toolSession, past } = get();
+		if (!document || !toolSession) return;
+		if (document === toolSession.document) {
+			set({ toolSession: null }, false, "editor/commitToolSession");
 			return;
 		}
-		const own = pastIn(past, active);
+		const own = pastIn(past, toolSession);
 		const kept =
-			active.steps === "one"
-				? [snapshotOf(active)]
-				: (active.steps === "each"
+			toolSession.steps === "one"
+				? [snapshotOf(toolSession)]
+				: (toolSession.steps === "each"
 						? own
 						: stepsByMark(own, { document, selectedLayerId })
 					).map((step) => ({
 						document: step.document,
-						selectedLayerId: active.selectedLayerId,
+						selectedLayerId: toolSession.selectedLayerId,
 					}));
 		set(
 			{
-				past: [...pastBefore(past, active), ...kept].slice(-MAX_HISTORY),
+				past: [...pastBefore(past, toolSession), ...kept].slice(-MAX_HISTORY),
 				future: [],
 				toolSession: null,
-				session: null,
 			},
 			false,
 			"editor/commitToolSession",
@@ -322,40 +286,34 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	// wasn't an edit (Cut's selection), so the redo steps go back to the
 	// ones from before it.
 	const cancelToolSession = () => {
-		const { document, selectedLayerId, toolSession, session, past, future } =
-			get();
-		const active = toolSession ?? session;
-		if (!document || !active) return;
-		if (active.previews) {
-			const stop = active.redoStop ? future.indexOf(active.redoStop) : -1;
+		const { document, selectedLayerId, toolSession, past, future } = get();
+		if (!document || !toolSession) return;
+		if (toolSession.previews) {
+			const stop = toolSession.redoStop
+				? future.indexOf(toolSession.redoStop)
+				: -1;
 			set(
 				{
-					...snapshotOf(active),
-					past: pastBefore(past, active),
+					...snapshotOf(toolSession),
+					past: pastBefore(past, toolSession),
 					future: stop === -1 ? [] : future.slice(stop),
 					toolSession: null,
-					session: null,
 				},
 				false,
 				"editor/cancelToolSession",
 			);
 			return;
 		}
-		if (document === active.document) {
-			set(
-				{ toolSession: null, session: null },
-				false,
-				"editor/cancelToolSession",
-			);
+		if (document === toolSession.document) {
+			set({ toolSession: null }, false, "editor/cancelToolSession");
 			return;
 		}
 		set(
 			{
-				...snapshotOf(active),
-				past: pastBefore(past, active),
+				...snapshotOf(toolSession),
+				past: pastBefore(past, toolSession),
 				future: [{ document, selectedLayerId }, ...future],
 				toolSession: null,
-				session: null,
 			},
 			false,
 			"editor/cancelToolSession",
@@ -372,7 +330,6 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 					past: [],
 					future: [],
 					toolSession: null,
-					session: null,
 				},
 				false,
 				"editor/openDocument",
@@ -387,7 +344,6 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 					past: [],
 					future: [],
 					toolSession: null,
-					session: null,
 				},
 				false,
 				"editor/closeDocument",
@@ -605,6 +561,5 @@ export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => ({
 	past: [],
 	future: [],
 	toolSession: null,
-	session: null,
 	actions: createEditorActions(set, get),
 });

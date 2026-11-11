@@ -89,7 +89,9 @@ export function useCutTool({
 	// The image as it was when Cut opened.
 	const before = useStore((state) => {
 		const found =
-			layer && state.session && findLayer(state.session.document, layer.id);
+			layer &&
+			state.toolSession &&
+			findLayer(state.toolSession.document, layer.id);
 		return found?.type === "image" ? found : undefined;
 	});
 	const {
