@@ -41,16 +41,24 @@ export default function EditorScreen() {
 				onBack={() => leaveEditor(router)}
 			/>
 			<View style={styles.status}>
-				<Text style={styles.statusTitle}>Couldn't open project</Text>
-				<Text style={styles.statusMessage}>{session.message}</Text>
+				<Text style={styles.statusTitle}>
+					{session.gone ? "This project wasn't kept" : "Couldn't open project"}
+				</Text>
+				<Text style={styles.statusMessage}>
+					{session.gone
+						? "A photo left without edits isn't saved as a project, and a deleted one is gone."
+						: session.message}
+				</Text>
 				<View style={styles.statusActions}>
-					{session.openElsewhere ? (
+					{session.openElsewhere || session.gone ? (
 						<Button
 							label="Back to projects"
 							onPress={() => leaveEditor(router)}
 						/>
 					) : null}
-					<Button label="Try again" onPress={session.retry} />
+					{!session.gone && (
+						<Button label="Try again" onPress={session.retry} />
+					)}
 				</View>
 			</View>
 		</View>
