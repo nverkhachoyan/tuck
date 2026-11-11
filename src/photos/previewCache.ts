@@ -1,6 +1,6 @@
-import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import type { EditorDocument, ImageLayer } from "../editor/core";
-import { JPEG_QUALITY, previewSize } from "./photoScale";
+import { makePreview } from "./photoImport";
+import { previewSize } from "./photoScale";
 import previewStorage, { type PreviewStorage } from "./previewStorage";
 
 // Previews keyed by projectId and image URI in memory for synchronous canvas lookups.
@@ -67,20 +67,9 @@ export async function ensurePreview(
 		return existing;
 	}
 
-	const rendered = await ImageManipulator.manipulate(uri)
-		.resize({ width: target.width })
-		.renderAsync();
-
-	try {
-		const saved = await rendered.saveAsync(
-			opaque
-				? { format: SaveFormat.JPEG, compress: JPEG_QUALITY }
-				: { format: SaveFormat.PNG },
-		);
-		return await storePreview(projectId, file, uri, saved.uri, storage);
-	} finally {
-		rendered.release();
-	}
+	const made = await makePreview(uri, { width, height }, opaque);
+	if (!made) return null;
+	return storePreview(projectId, file, uri, made, storage);
 }
 
 /**
@@ -128,5 +117,19 @@ export async function removeProjectPreviews(
 		if (key.startsWith(`${projectId}:`)) {
 			memoryPreviews.delete(key);
 		}
+	}
+}
+
+/**
+ * Copies cached previews when duplicating a project.
+ */
+export async function copyProjectPreviews(
+	fromId: string,
+	toId: string,
+	files: Iterable<string>,
+	storage: PreviewStorage = previewStorage,
+): Promise<void> {
+	for (const file of files) {
+		await storage.copyPreview(fromId, file, toId);
 	}
 }

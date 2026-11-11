@@ -17,6 +17,7 @@ import {
 	type SavedProject,
 } from "../projectFile.ts";
 import {
+	type CopyProjectPreviews,
 	createProjectLifecycle,
 	isProjectOpenElsewhere,
 	type PrepareProjectPreviews,
@@ -48,6 +49,11 @@ function createHarness(
 	// Each project's image files; a project with none has no entry.
 	const images = new Map<string, Set<string>>();
 	const released: string[] = [];
+	const copiedPreviews: { fromId: string; toId: string; files: Set<string> }[] =
+		[];
+	const copyPreviews: CopyProjectPreviews = async (fromId, toId, files) => {
+		copiedPreviews.push({ fromId, toId, files });
+	};
 	// Projects another tab holds open, which can't be claimed here.
 	const openElsewhere = new Set<string>();
 	let copyImage: ProjectStorage["copyImage"] = async (fromId, file, toId) => {
@@ -108,6 +114,7 @@ function createHarness(
 			preparePreviews,
 			removePreviews,
 			storePreview,
+			copyPreviews,
 		),
 		// A new session over the same storage, as after a reload or the app
 		// being killed: whatever was open was never closed.
@@ -117,11 +124,13 @@ function createHarness(
 				preparePreviews,
 				removePreviews,
 				storePreview,
+				copyPreviews,
 			);
 		},
 		files,
 		images,
 		released,
+		copiedPreviews,
 		openElsewhere,
 		set copyImage(copy: ProjectStorage["copyImage"]) {
 			copyImage = copy;
@@ -1013,6 +1022,9 @@ describe("renaming and duplicating", () => {
 			imageLayers(reopened)[0].uri,
 			`blob:${copy.id}/${PHOTO_FILE}`,
 		);
+		assert.deepEqual(harness.copiedPreviews, [
+			{ fromId: id, toId: copy.id, files: new Set([PHOTO_FILE]) },
+		]);
 	});
 
 	test("a copy of an out-of-date thumbnail is still out of date", async (t) => {

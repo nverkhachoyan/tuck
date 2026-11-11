@@ -1,4 +1,5 @@
 import {
+	copyProjectPreviews,
 	prepareProjectPreviews,
 	removeProjectPreviews,
 	storePreview,
@@ -12,6 +13,7 @@ export const projects = createProjectLifecycle(
 	prepareProjectPreviews,
 	removeProjectPreviews,
 	storePreview,
+	copyProjectPreviews,
 );
 
 export const {

@@ -37,6 +37,31 @@ export async function importPhoto(
 	return reencode(uri, options);
 }
 
+/**
+ * See `photoImport.ts`. Decodes with the browser and encodes straight from
+ * an `OffscreenCanvas` at the preview's size, as import does, rather than
+ * through `expo-image-manipulator`'s full-size PNG.
+ */
+export async function makePreview(
+	uri: string,
+	size: { width: number; height: number },
+	opaque: boolean,
+): Promise<string | null> {
+	const target = previewSize(size);
+	if (!target) return null;
+	const response = await fetch(uri);
+	if (!response.ok) throw new Error("Couldn't read the photo.");
+	const bitmap = await createImageBitmap(await response.blob());
+	try {
+		return await encodeCanvas(
+			drawBitmap(bitmap, target.width, target.height).canvas,
+			opaque,
+		);
+	} finally {
+		bitmap.close();
+	}
+}
+
 // How many pixels `isCanvasOpaque` copies out at a time, so a large image's
 // aren't all copied at once.
 const SCAN_PIXELS = 1 << 20;

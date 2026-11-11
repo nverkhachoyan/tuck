@@ -85,6 +85,14 @@ export const previewStorage: PreviewStorage = {
 		return url;
 	},
 
+	async copyPreview(fromId: string, file: string, toId: string): Promise<void> {
+		const blob: Blob | undefined = await run("readonly", (store) =>
+			store.get(previewKey(fromId, file)),
+		);
+		if (!blob) return;
+		await run("readwrite", (store) => store.put(blob, previewKey(toId, file)));
+	},
+
 	async removeProjectPreviews(projectId: string): Promise<void> {
 		await run("readwrite", (store) => store.delete(projectKeys(projectId)));
 		for (const [key, url] of activeUrls) {

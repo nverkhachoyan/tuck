@@ -13,11 +13,13 @@ import {
 	type StoreProjectPreview,
 } from "./openProjects.ts";
 import {
+	type CopyProjectPreviews,
 	createProjectLibrary,
 	type RemoveProjectPreviews,
 } from "./projectLibrary.ts";
 
 export {
+	type CopyProjectPreviews,
 	isProjectOpenElsewhere,
 	MISSING_IMAGE_MESSAGE,
 	NEWER_VERSION_MESSAGE,
@@ -35,13 +37,19 @@ export function createProjectLifecycle(
 	preparePreviews?: PrepareProjectPreviews,
 	removePreviews?: RemoveProjectPreviews,
 	storePreview?: StoreProjectPreview,
+	copyPreviews?: CopyProjectPreviews,
 ) {
 	const { coordination, ...openProjects } = createOpenProjects(
 		storage,
 		preparePreviews,
 		storePreview,
 	);
-	const library = createProjectLibrary(storage, coordination, removePreviews);
+	const library = createProjectLibrary(
+		storage,
+		coordination,
+		removePreviews,
+		copyPreviews,
+	);
 	return {
 		...openProjects,
 		...library,

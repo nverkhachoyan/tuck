@@ -26,10 +26,18 @@ import {
 /** Removes cached preview textures when a project is deleted. */
 export type RemoveProjectPreviews = (id: string) => Promise<unknown>;
 
+/** Copies cached preview textures when a project is copied. */
+export type CopyProjectPreviews = (
+	fromId: string,
+	toId: string,
+	files: Set<string>,
+) => Promise<unknown>;
+
 export function createProjectLibrary(
 	storage: ProjectStorage,
 	open: OpenProjectsCoordination,
 	removePreviews?: RemoveProjectPreviews,
+	copyPreviews?: CopyProjectPreviews,
 ) {
 	/**
 	 * Runs `work` on a saved project that no editor has open, here or in
@@ -140,8 +148,12 @@ export function createProjectLibrary(
 			throw new Error("Couldn't start the copy.");
 		}
 		try {
-			for (const file of imageFiles(saved.document)) {
+			const files = imageFiles(saved.document);
+			for (const file of files) {
 				await storage.copyImage(fromId, file, copyId);
+			}
+			if (copyPreviews) {
+				await copyPreviews(fromId, copyId, files);
 			}
 			const now = Date.now();
 			const { thumbnail } = saved;
@@ -160,6 +172,9 @@ export function createProjectLibrary(
 			return copyId;
 		} catch (error) {
 			await storage.removeProject(copyId).catch(() => {});
+			if (removePreviews) {
+				await removePreviews(copyId).catch(() => {});
+			}
 			throw error;
 		} finally {
 			await storage.releaseProject(copyId);
