@@ -233,7 +233,7 @@ export function useCutOut({
 				setNews(null);
 				showAlert(
 					"Nothing to select",
-					"There's no clear subject where you tapped. Try the middle of it, or paint the selection with Add and Subtract.",
+					"There's no clear subject where you tapped. Try the middle of it, or paint the selection with Paint in and Paint out.",
 				);
 				return;
 			}
