@@ -16,13 +16,9 @@ import { colors } from "@/ui/theme";
 import { type EditorModeState, openTray } from "../editorMode";
 import { ContextBar } from "../shell/ContextBar";
 import { LayerActionsPanel, LayerBar } from "../shell/LayerActionsPanel";
+import type { ModeActionProps } from "../shell/modeActions";
 import type { OpenTool, ToolControllers } from "../tools/defineTool";
-import {
-	CARD_HEIGHT,
-	type ModeActionProps,
-	PANEL_GAP,
-	PANEL_RADIUS,
-} from "./Dock";
+import { CARD_HEIGHT, PANEL_GAP, PANEL_RADIUS } from "./Dock";
 import type { DockPanel } from "./editorChrome";
 
 // The widest a tool's card gets, as wide as a tray.
