@@ -25,7 +25,9 @@ const parseSavedShapeSettings = (saved: unknown) =>
 /**
  * Controller for vector geometric shapes.
  * - Manages shape kind, stroke width, and outline color.
- * - Restyles selected shapes on change, or deselects when geometry changes (line vs box).
+ * - Restyles the selected shape on change. While the tool is open, a new
+ *   kind lets go of the shape just drawn and is kept for the next drag;
+ *   color and size still restyle it.
  * - Drags out new shapes via canvasInput.
  */
 export function useShapeTool({
@@ -33,7 +35,9 @@ export function useShapeTool({
 	documentSize,
 }: Pick<ToolEnv, "open" | "documentSize">) {
 	const selectedShape = useStore(selectSelectedShape);
-	const { setShapeStyle, addShape } = useStore((state) => state.actions);
+	const { setShapeStyle, addShape, selectLayer } = useStore(
+		(state) => state.actions,
+	);
 	const [shapeSettings, setShapeSettings] = usePreference(
 		KEY,
 		parseSavedShapeSettings,
@@ -60,6 +64,10 @@ export function useShapeTool({
 	const change = (next: typeof settings) => {
 		setShapeSettings(next);
 		if (!restyledShape) return;
+		if (open && next.shape !== settings.shape) {
+			selectLayer(null);
+			return;
+		}
 		const edit = shapePatch(
 			settings,
 			next,
