@@ -1,11 +1,19 @@
 import { type ComponentProps, Fragment, type ReactNode } from "react";
 import {
+	BlendMode,
 	BlurMask,
+	BlurStyle,
 	Group,
 	Paint,
+	PaintStyle,
 	Path,
+	Picture,
+	type SkCanvas,
 	Skia,
 	type SkPath,
+	type SkPicture,
+	StrokeCap,
+	StrokeJoin,
 } from "react-native-skia";
 import { mixColors } from "@/ui/color";
 import type { MaskStroke } from "../strokes";
@@ -17,6 +25,7 @@ import {
 	NEON_GLOW,
 	NEON_GLOW_BLUR,
 	needsOwnLayer,
+	type Stroke,
 } from "./drawing";
 
 // A marker's ink is see-through, so what it highlights shows through it.
@@ -68,6 +77,104 @@ export function pathFor(stroke: MaskStroke): SkPath {
 	return path;
 }
 
+function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
+	"worklet";
+	const path = pathFor(stroke);
+	if (stroke.type === "pen" && stroke.tip === "neon") {
+		const { color, width } = stroke;
+		const glowPaint = Skia.Paint();
+		glowPaint.setAntiAlias(true);
+		glowPaint.setStyle(PaintStyle.Stroke);
+		glowPaint.setStrokeCap(StrokeCap.Round);
+		glowPaint.setStrokeJoin(StrokeJoin.Round);
+		glowPaint.setStrokeWidth(width * NEON_GLOW);
+		glowPaint.setColor(Skia.Color(color));
+		glowPaint.setMaskFilter(
+			Skia.MaskFilter.MakeBlur(BlurStyle.Normal, width * NEON_GLOW_BLUR, true),
+		);
+		canvas.drawPath(path, glowPaint);
+
+		const tubePaint = Skia.Paint();
+		tubePaint.setAntiAlias(true);
+		tubePaint.setStyle(PaintStyle.Stroke);
+		tubePaint.setStrokeCap(StrokeCap.Round);
+		tubePaint.setStrokeJoin(StrokeJoin.Round);
+		tubePaint.setStrokeWidth(width * NEON_TUBE);
+		tubePaint.setColor(Skia.Color(color));
+		canvas.drawPath(path, tubePaint);
+
+		const corePaint = Skia.Paint();
+		corePaint.setAntiAlias(true);
+		corePaint.setStyle(PaintStyle.Stroke);
+		corePaint.setStrokeCap(StrokeCap.Round);
+		corePaint.setStrokeJoin(StrokeJoin.Round);
+		corePaint.setStrokeWidth(width * NEON_CORE);
+		corePaint.setColor(
+			Skia.Color(mixColors(color, "#FFFFFF", NEON_CORE_WHITE)),
+		);
+		canvas.drawPath(path, corePaint);
+		return;
+	}
+
+	const paint = Skia.Paint();
+	paint.setAntiAlias(true);
+	paint.setStyle(PaintStyle.Stroke);
+	paint.setStrokeJoin(StrokeJoin.Round);
+	if (stroke.type === "eraser") {
+		paint.setStrokeCap(StrokeCap.Round);
+		paint.setStrokeWidth(stroke.width);
+		paint.setColor(Skia.Color("black"));
+		paint.setBlendMode(BlendMode.Clear);
+	} else {
+		const marker = stroke.tip === "marker" || stroke.tip === "ink";
+		paint.setStrokeCap(marker ? StrokeCap.Square : StrokeCap.Round);
+		paint.setStrokeWidth(stroke.width);
+		paint.setColor(Skia.Color(stroke.color));
+		const opacity =
+			marker && !(full && stroke.tip === "marker") ? MARKER_OPACITY : 1;
+		paint.setAlphaf(opacity);
+	}
+	canvas.drawPath(path, paint);
+}
+
+// Cached by layer id, holding the last strokes array and recorded picture.
+// Keyed by id rather than WeakMap by strokes array so undo history does not
+// keep pictures alive.
+const drawingPictures = new Map<
+	string,
+	{ strokes: readonly Stroke[]; multiply: boolean; picture: SkPicture }
+>();
+
+/** Records a drawing layer's settled strokes into an SkPicture bounded by inkRect. */
+export function drawingPicture(
+	layer: DrawingLayer,
+	multiply: boolean,
+): SkPicture {
+	"worklet";
+	const cached = drawingPictures.get(layer.id);
+	if (
+		cached &&
+		cached.strokes === layer.strokes &&
+		cached.multiply === multiply
+	) {
+		return cached.picture;
+	}
+	const bounds = inkRect(layer);
+	const rect = Skia.XYWHRect(bounds.x, bounds.y, bounds.width, bounds.height);
+	const recorder = Skia.PictureRecorder();
+	const canvas = recorder.beginRecording(rect);
+	for (const stroke of layer.strokes) {
+		drawStroke(canvas, stroke, multiply);
+	}
+	const picture = recorder.finishRecordingAsPicture();
+	drawingPictures.set(layer.id, {
+		strokes: layer.strokes,
+		multiply,
+		picture,
+	});
+	return picture;
+}
+
 /**
  * Draws a drawing layer in its own space.
  * - Its strokes share a saved layer only when it needs one
@@ -96,27 +203,33 @@ export function DrawingLayerView({
 	children?: ReactNode;
 }) {
 	const multiply = layerBlend(layer) === "multiply";
-	const strokes = layer.strokes.map((stroke, index) => {
-		const drawn = (
-			<BrushStroke
-				// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
-				key={index}
-				path={pathFor(stroke)}
-				brush={stroke}
-				full={multiply}
-			/>
-		);
-		return wrapStroke && stroke.type === "pen" ? (
-			// biome-ignore lint/suspicious/noArrayIndexKey: as above
-			<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
-		) : (
-			drawn
-		);
-	});
 	const live =
 		children !== undefined && children !== null && children !== false;
+
+	const content = wrapStroke ? (
+		layer.strokes.map((stroke, index) => {
+			const drawn = (
+				<BrushStroke
+					// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
+					key={index}
+					path={pathFor(stroke)}
+					brush={stroke}
+					full={multiply}
+				/>
+			);
+			return stroke.type === "pen" ? (
+				// biome-ignore lint/suspicious/noArrayIndexKey: as above
+				<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
+			) : (
+				drawn
+			);
+		})
+	) : (
+		<Picture picture={drawingPicture(layer, multiply)} />
+	);
+
 	if (!needsOwnLayer(layer) && opacity === 1 && !live) {
-		return <Group>{strokes}</Group>;
+		return <Group>{content}</Group>;
 	}
 	const layered = (
 		<Group
@@ -130,7 +243,7 @@ export function DrawingLayerView({
 				)
 			}
 		>
-			{strokes}
+			{content}
 			{children}
 		</Group>
 	);
