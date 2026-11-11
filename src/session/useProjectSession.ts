@@ -7,8 +7,6 @@ import { projectRouteId } from "@/projects/projectRoute";
 import { errorMessage } from "@/ui/errorMessage";
 import { appSession } from "./appSession";
 
-export { appSession } from "./appSession";
-
 /** Reads the open document outside React renders, as when the app backgrounds. */
 export const latestSessionDocument = (): EditorDocument | null =>
 	getOpenDocument().document;

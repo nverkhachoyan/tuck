@@ -13,7 +13,7 @@ import { createProjectSession } from "./projectSession";
 export const appSession = createProjectSession({
 	projects,
 	editor: {
-		getSession: getOpenDocument,
+		getOpenDocument,
 		openDocument,
 		closeDocument,
 	},
