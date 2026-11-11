@@ -4,6 +4,7 @@ import { assertNever } from "../document/assertNever";
 import { DrawingLayerView } from "../layers/drawing/DrawingLayerView";
 import type { ColorMatrix } from "../layers/image/adjustments";
 import { ImageLayerView } from "../layers/image/ImageLayerView";
+import { canDrawCut } from "../layers/image/mask";
 import type { Layer } from "../layers/layer";
 import { RedactionLayerView } from "../layers/redaction/RedactionLayerView";
 import { ShapeLayerView } from "../layers/shape/ShapeLayerView";
@@ -38,7 +39,9 @@ export function LayerView({
 }) {
 	switch (layer.type) {
 		case "image":
-			if (!image) return null;
+			if (!image || !canDrawCut(layer, mask !== undefined, !!selectionColor)) {
+				return null;
+			}
 			return (
 				<ImageLayerView
 					layer={layer}

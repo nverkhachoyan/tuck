@@ -5,6 +5,7 @@ import { createDocumentFromImage } from "../../../document/document.ts";
 import type { ImageLayer } from "../image.ts";
 import {
 	addMaskStroke,
+	canDrawCut,
 	imagePointAt,
 	isCutOut,
 	removalOf,
@@ -202,6 +203,19 @@ describe("imagePointAt", () => {
 		// at the bottom left.
 		const point = imagePointAt(layer, { x: -999, y: 749 });
 		assert.ok(point && point.x < 0.001 && point.y < 0.001, String(point));
+	});
+});
+
+describe("canDrawCut", () => {
+	test("an uncut image draws without a mask", () => {
+		assert.equal(canDrawCut(photo(), false, false), true);
+	});
+
+	test("a cut-out draws only with its mask, or as a selection", () => {
+		const cut = withMask(photo(), "file:///a.png");
+		assert.equal(canDrawCut(cut, false, false), false);
+		assert.equal(canDrawCut(cut, true, false), true);
+		assert.equal(canDrawCut(cut, false, true), true);
 	});
 });
 
