@@ -105,7 +105,8 @@ function surfaceFor(width: number, height: number): JsiSkSurface | null {
  * every texture drawn into it (the export's photos). Skia's
  * `Skia.Surface.MakeOffscreen` draws on its shared context instead, which
  * is never freed. This frees what Skia's own web canvas frees when it
- * unmounts.
+ * unmounts. See docs/GOTCHAS.md, "An offscreen surface's dispose left its
+ * WebGL context alive".
  */
 function makeOffscreen(width: number, height: number): Offscreen | null {
 	const offscreen = new OffscreenCanvas(width, height);

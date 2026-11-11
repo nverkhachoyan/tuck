@@ -16,6 +16,8 @@ export const RAIL_WIDTH = compactControls ? 70 : 84;
 export const RAIL_INSET = RAIL_WIDTH + 2 * PANEL_GAP;
 const INSPECTOR_INSET = INSPECTOR_WIDTH + 2 * PANEL_GAP;
 // How much of the canvas's bottom a tool's card covers, with its gaps.
+// Constant, so opening a tool changes the frame once (docs/GOTCHAS.md,
+// "No handler for tag 1").
 const CARD_INSET = CARD_HEIGHT + 2 * PANEL_GAP;
 
 /**

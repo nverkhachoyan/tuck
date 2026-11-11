@@ -46,7 +46,8 @@ export function createPictureCache<T extends { dispose(): void }>(
 	}
 
 	// Only the latest schedule frees, and only once nothing holds the picture.
-	// An earlier wait can end after a later user has taken it back.
+	// An earlier wait can end after a later user has taken it back. See
+	// docs/GOTCHAS.md, "A delayed free can belong to an earlier release".
 	function schedule(picture: T) {
 		if (holdCount(picture) > 0) return;
 		const mine = ++ticket;
