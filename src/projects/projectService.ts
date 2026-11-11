@@ -1,18 +1,30 @@
 import {
+	copyProjectPreviews,
 	prepareProjectPreviews,
 	removeProjectPreviews,
 	storePreview,
 } from "../photos/previewCache";
-import { createProjectLifecycle } from "./projectLifecycle";
+import { createOpenProjects } from "./openProjects";
+import { createProjectLibrary } from "./projectLibrary";
 import storage from "./projectStorage";
 
-/** The app's one project lifecycle, shared by every screen. */
-export const projects = createProjectLifecycle(
+const { coordination, ...openProjects } = createOpenProjects(
 	storage,
 	prepareProjectPreviews,
-	removeProjectPreviews,
 	storePreview,
 );
+const library = createProjectLibrary(
+	storage,
+	coordination,
+	removeProjectPreviews,
+	copyProjectPreviews,
+);
+
+/** The app's one project lifecycle, shared by every screen. */
+export const projects = {
+	...openProjects,
+	...library,
+};
 
 export const {
 	createProject,
@@ -22,10 +34,13 @@ export const {
 	openProjectCreatedAt,
 	addImage,
 	closeProject,
+} = openProjects;
+
+export const {
 	deleteProject,
 	renameProject,
 	duplicateProject,
 	copyOpenProject,
 	listProjects,
 	updateThumbnail,
-} = projects;
+} = library;

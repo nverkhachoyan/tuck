@@ -1,11 +1,24 @@
-import { type ComponentProps, Fragment, type ReactNode } from "react";
 import {
+	type ComponentProps,
+	Fragment,
+	type ReactNode,
+	useLayoutEffect,
+} from "react";
+import {
+	BlendMode,
 	BlurMask,
+	BlurStyle,
 	Group,
 	Paint,
+	PaintStyle,
 	Path,
+	Picture,
+	type SkCanvas,
 	Skia,
 	type SkPath,
+	type SkPicture,
+	StrokeCap,
+	StrokeJoin,
 } from "react-native-skia";
 import { mixColors } from "@/ui/color";
 import type { MaskStroke } from "../strokes";
@@ -17,7 +30,9 @@ import {
 	NEON_GLOW,
 	NEON_GLOW_BLUR,
 	needsOwnLayer,
+	type Stroke,
 } from "./drawing";
+import { createPictureCache } from "./drawingPictures";
 
 // A marker's ink is see-through, so what it highlights shows through it.
 const MARKER_OPACITY = 0.45;
@@ -68,11 +83,146 @@ export function pathFor(stroke: MaskStroke): SkPath {
 	return path;
 }
 
+function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
+	const path = pathFor(stroke);
+	if (stroke.type === "pen" && stroke.tip === "neon") {
+		const { color, width } = stroke;
+		const glowPaint = Skia.Paint();
+		const tubePaint = Skia.Paint();
+		const corePaint = Skia.Paint();
+		// drawPath copies the paint. CanvasKit has no finalizer, so the
+		// temporaries are deleted or the web heap grows with every stroke.
+		const glow = Skia.MaskFilter.MakeBlur(
+			BlurStyle.Normal,
+			width * NEON_GLOW_BLUR,
+			true,
+		);
+		try {
+			glowPaint.setAntiAlias(true);
+			glowPaint.setStyle(PaintStyle.Stroke);
+			glowPaint.setStrokeCap(StrokeCap.Round);
+			glowPaint.setStrokeJoin(StrokeJoin.Round);
+			glowPaint.setStrokeWidth(width * NEON_GLOW);
+			glowPaint.setColor(Skia.Color(color));
+			glowPaint.setMaskFilter(glow);
+			canvas.drawPath(path, glowPaint);
+
+			tubePaint.setAntiAlias(true);
+			tubePaint.setStyle(PaintStyle.Stroke);
+			tubePaint.setStrokeCap(StrokeCap.Round);
+			tubePaint.setStrokeJoin(StrokeJoin.Round);
+			tubePaint.setStrokeWidth(width * NEON_TUBE);
+			tubePaint.setColor(Skia.Color(color));
+			canvas.drawPath(path, tubePaint);
+
+			corePaint.setAntiAlias(true);
+			corePaint.setStyle(PaintStyle.Stroke);
+			corePaint.setStrokeCap(StrokeCap.Round);
+			corePaint.setStrokeJoin(StrokeJoin.Round);
+			corePaint.setStrokeWidth(width * NEON_CORE);
+			corePaint.setColor(
+				Skia.Color(mixColors(color, "#FFFFFF", NEON_CORE_WHITE)),
+			);
+			canvas.drawPath(path, corePaint);
+		} finally {
+			glowPaint.dispose();
+			tubePaint.dispose();
+			corePaint.dispose();
+			glow.dispose();
+		}
+		return;
+	}
+
+	const paint = Skia.Paint();
+	try {
+		paint.setAntiAlias(true);
+		paint.setStyle(PaintStyle.Stroke);
+		paint.setStrokeJoin(StrokeJoin.Round);
+		if (stroke.type === "eraser") {
+			paint.setStrokeCap(StrokeCap.Round);
+			paint.setStrokeWidth(stroke.width);
+			paint.setColor(Skia.Color("black"));
+			paint.setBlendMode(BlendMode.Clear);
+		} else {
+			const marker = stroke.tip === "marker" || stroke.tip === "ink";
+			paint.setStrokeCap(marker ? StrokeCap.Square : StrokeCap.Round);
+			paint.setStrokeWidth(stroke.width);
+			paint.setColor(Skia.Color(stroke.color));
+			const opacity =
+				marker && !(full && stroke.tip === "marker") ? MARKER_OPACITY : 1;
+			paint.setAlphaf(opacity);
+		}
+		canvas.drawPath(path, paint);
+	} finally {
+		paint.dispose();
+	}
+}
+
+// Two frames, as `decodedImages` waits: the canvas replays the recording from
+// before an update for a frame, and a timer can fire before that frame.
+function afterSkiaDraws(free: () => void) {
+	requestAnimationFrame(() => requestAnimationFrame(free));
+}
+
+const drawingPictures = createPictureCache<SkPicture>(afterSkiaDraws);
+
+/**
+ * Marks an offscreen draw as using the cache until the returned function
+ * runs. Pictures that draw recorded stay alive until then, including one a
+ * newer recording of the same layer has since replaced.
+ */
+export function retainDrawingPictures(): () => void {
+	return drawingPictures.beginDraw();
+}
+
+/**
+ * Records a drawing layer's settled strokes into an SkPicture bounded by
+ * inkRect. Erasers clear inside a layer the picture saves itself: Skia's
+ * recording drops a paintless saved layer around a single draw, which a
+ * picture drawn alone would be, and its erasers would clear what's under
+ * the drawing.
+ */
+export function drawingPicture(
+	layer: DrawingLayer,
+	multiply: boolean,
+): SkPicture {
+	return drawingPictures.pictureFor(
+		layer.id,
+		{ strokes: layer.strokes, multiply },
+		() => {
+			const bounds = inkRect(layer);
+			const rect = Skia.XYWHRect(
+				bounds.x,
+				bounds.y,
+				bounds.width,
+				bounds.height,
+			);
+			const recorder = Skia.PictureRecorder();
+			try {
+				const canvas = recorder.beginRecording(rect);
+				const erases = layer.strokes.some((stroke) => stroke.type === "eraser");
+				if (erases) canvas.saveLayer(undefined, rect);
+				for (const stroke of layer.strokes) {
+					drawStroke(canvas, stroke, multiply);
+				}
+				if (erases) canvas.restore();
+				return recorder.finishRecordingAsPicture();
+			} finally {
+				// The recorder owns its canvas. finishRecording copies the
+				// commands into the picture and does not delete the recorder.
+				recorder.dispose();
+			}
+		},
+	);
+}
+
 /**
  * Draws a drawing layer in its own space.
  * - Its strokes share a saved layer only when it needs one
  *   (`needsOwnLayer`: an eraser clears only what they drew, and a highlight
  *   multiplies as a whole), or while dimmed or joined by a live stroke.
+ *   Settled strokes drawn as one picture keep their erasers in the
+ *   picture's own layer (`drawingPicture`).
  * - That layer is clipped to its ink (`inkRect`), so it costs the
  *   drawing's size, not the canvas's; `liveInside` says `children` stay
  *   within it (a live eraser), and otherwise they may reach past it.
@@ -96,27 +246,42 @@ export function DrawingLayerView({
 	children?: ReactNode;
 }) {
 	const multiply = layerBlend(layer) === "multiply";
-	const strokes = layer.strokes.map((stroke, index) => {
-		const drawn = (
-			<BrushStroke
-				// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
-				key={index}
-				path={pathFor(stroke)}
-				brush={stroke}
-				full={multiply}
-			/>
-		);
-		return wrapStroke && stroke.type === "pen" ? (
-			// biome-ignore lint/suspicious/noArrayIndexKey: as above
-			<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
-		) : (
-			drawn
-		);
-	});
+	// The picture this commit draws. The effect holds that object, not the
+	// layer id: a thumbnail of an older strokes array re-records the same id.
+	const recorded = wrapStroke ? null : drawingPicture(layer, multiply);
+	useLayoutEffect(
+		() => (recorded ? drawingPictures.hold(recorded) : undefined),
+		[recorded],
+	);
 	const live =
 		children !== undefined && children !== null && children !== false;
-	if (!needsOwnLayer(layer) && opacity === 1 && !live) {
-		return <Group>{strokes}</Group>;
+
+	const content = recorded ? (
+		<Picture picture={recorded} />
+	) : (
+		layer.strokes.map((stroke, index) => {
+			const drawn = (
+				<BrushStroke
+					// biome-ignore lint/suspicious/noArrayIndexKey: strokes are only added or removed at the end
+					key={index}
+					path={pathFor(stroke)}
+					brush={stroke}
+					full={multiply}
+				/>
+			);
+			return stroke.type === "pen" && wrapStroke ? (
+				// biome-ignore lint/suspicious/noArrayIndexKey: as above
+				<Fragment key={index}>{wrapStroke(index, drawn)}</Fragment>
+			) : (
+				drawn
+			);
+		})
+	);
+
+	// A recorded picture keeps its erasers in a layer of its own.
+	const ownLayer = recorded ? multiply : needsOwnLayer(layer);
+	if (!ownLayer && opacity === 1 && !live) {
+		return <Group>{content}</Group>;
 	}
 	const layered = (
 		<Group
@@ -130,7 +295,7 @@ export function DrawingLayerView({
 				)
 			}
 		>
-			{strokes}
+			{content}
 			{children}
 		</Group>
 	);

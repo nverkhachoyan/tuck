@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { readPreference, writePreference } from "@/platform/preferenceStore";
 import { usePreference } from "@/platform/usePreference";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import type { ToolStroke } from "../../canvas/canvasTool";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
 import { removedLayers } from "../../layers/drawing/drawingEdits";
 import type { Layer } from "../../layers/layer";
 import { SHAPE_NAMES } from "../../shell/shapeIcons";
 import { useStore } from "../../store";
+import type { ToolEnv } from "../defineTool";
 import {
 	type EraserMode,
 	eraserBrushFor,

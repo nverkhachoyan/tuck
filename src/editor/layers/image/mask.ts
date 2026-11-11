@@ -5,6 +5,19 @@ import type { CutStroke, ImageLayer } from "./image.ts";
 // projects bigger. Adding 0 turns a flipped -0 into 0.
 const roundPixel = (value: number) => Math.round(value * 100) / 100 + 0;
 
+/**
+ * Whether `layer` can draw with the mask it was given: a cut-out never draws
+ * without its mask, which would show what it cut away, unless its cut shows
+ * as a selection, which hides nothing.
+ */
+export function canDrawCut(
+	layer: ImageLayer,
+	hasMask: boolean,
+	asSelection: boolean,
+): boolean {
+	return layer.mask === undefined || hasMask || asSelection;
+}
+
 /** Whether some of `layer` is cut away: by a mask, or by hand. */
 export function isCutOut(layer: ImageLayer): boolean {
 	return layer.mask !== undefined || layer.maskStrokes !== undefined;

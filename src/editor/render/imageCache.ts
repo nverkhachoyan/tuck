@@ -42,7 +42,8 @@ export function createImageCache(
 		later(() => {
 			// Only the last user's release frees it, `later` after that user
 			// let go: an earlier release's wait, started while another user
-			// still drew the image, may end just after that user lets go.
+			// still drew the image, may end just after that user lets go. See
+			// docs/GOTCHAS.md, "A delayed free can belong to an earlier release".
 			if (
 				entry.users > 0 ||
 				entry.releases !== latest ||

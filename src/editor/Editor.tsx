@@ -14,29 +14,26 @@ import { isHexColor } from "@/ui/color";
 import { DropOverlay } from "@/ui/DropOverlay";
 import { Toast } from "@/ui/Toast";
 import { space } from "@/ui/theme";
-import { BUILT_IN_TOOLBAR } from "./builtInSpecs";
-import { BUILT_IN_TOOLS } from "./builtInTools";
 import { restyles } from "./canvas/canvasTool";
-import { definitionOf, type ToolList } from "./defineTool";
-import type { EditorDocument } from "./document/document";
-import { targetImageLayer, visibleImageLayer } from "./document/framing";
-import type { Point } from "./document/geometry";
-import { EditorCanvas, type EditorCanvasHandle } from "./EditorCanvas";
-import { EditorHeader } from "./EditorHeader";
-import { EditorInspector } from "./EditorInspector";
-import { EditorRail } from "./EditorRail";
-import type { SceneDraft } from "./EditorScene";
-import { layerActionsFor, toolbarEntries } from "./editorChrome";
-import { EditorContext, type EditorContextValue } from "./editorContext";
-import type { EditorHost } from "./editorHost";
-import { openTray, takesKeys } from "./editorMode";
-import { LayerSelectionBar, useArrangeSelected } from "./LayerSelectionBar";
-import { maxNewImageShortSide } from "./layers/image/image";
+import { EditorCanvas, type EditorCanvasHandle } from "./canvas/EditorCanvas";
+import type { SceneDraft } from "./canvas/EditorScene";
+import { useCanvasInput } from "./canvas/useCanvasInput";
+import { DevHud } from "./chrome/DevHud";
+import { Dock, DockFooter } from "./chrome/Dock";
+import { EditorHeader } from "./chrome/EditorHeader";
+import { EditorInspector } from "./chrome/EditorInspector";
+import { EditorRail } from "./chrome/EditorRail";
+import { toolbarEntries } from "./chrome/editorChrome";
+import { HeaderActions } from "./chrome/HeaderActions";
+import {
+	LayerSelectionBar,
+	useArrangeSelected,
+} from "./chrome/LayerSelectionBar";
 import {
 	LAYERS_SIDEBAR_INSET,
 	LayersPanel,
 	layerListProps,
-} from "./layers/panel/LayersPanel";
+} from "./chrome/layersPanel/LayersPanel";
 import {
 	ContextBarContent,
 	DockContent,
@@ -45,17 +42,21 @@ import {
 	ToolSheet,
 	ToolStage,
 	ToolTrays,
-} from "./PanelViews";
+} from "./chrome/PanelViews";
+import { SaveErrorBanner } from "./chrome/SaveErrorBanner";
+import { ShortcutsOverlay } from "./chrome/ShortcutsOverlay";
+import { ToolsPanel } from "./chrome/ToolsPanel";
+import { useEditorChrome } from "./chrome/useEditorChrome";
+import { useEditorLayout } from "./chrome/useEditorLayout";
+import type { EditorDocument } from "./document/document";
+import { targetImageLayer, visibleImageLayer } from "./document/framing";
+import type { Point } from "./document/geometry";
+import type { EditorHost } from "./editorHost";
+import { openTray, takesKeys } from "./editorMode";
+import { maxNewImageShortSide } from "./layers/image/image";
 import { decodedImages } from "./render/decodedImages";
-import { ShortcutsOverlay } from "./ShortcutsOverlay";
 import { EyedropperHint } from "./shell/ColorOptions";
-import { DevHud } from "./shell/DevHud";
-import { Dock, DockFooter } from "./shell/Dock";
-import { HeaderActions } from "./shell/HeaderActions";
-import { SaveErrorBanner } from "./shell/SaveErrorBanner";
 import { TrayHeight } from "./shell/ToolOptions";
-import { ToolsPanel } from "./shell/ToolsPanel";
-import type { ToolEntry } from "./shell/toolList";
 import { shortcutGroups, toolsByKey } from "./shortcuts";
 import { useStore } from "./store";
 import {
@@ -63,19 +64,20 @@ import {
 	selectCanUndo,
 	selectSelectedLayer,
 } from "./store/editorSlice";
-import { escapeCancels } from "./toolSpec";
+import { BUILT_IN_TOOLBAR } from "./tools/builtInSpecs";
+import { BUILT_IN_TOOLS } from "./tools/builtInTools";
+import { definitionOf, type ToolList } from "./tools/defineTool";
+import { EditorContext, type EditorContextValue } from "./tools/editorContext";
+import { escapeCancels } from "./tools/toolSpec";
+import { useEditorTools } from "./tools/useEditorTools";
 import { useAddImage } from "./useAddImage";
-import { useCanvasInput } from "./useCanvasInput";
 import { useEditNotice } from "./useEditNotice";
-import { useEditorChrome } from "./useEditorChrome";
-import { useEditorLayout } from "./useEditorLayout";
 import { useEditorMode } from "./useEditorMode";
 import {
 	offersShortcutsHelp,
 	useEditorShortcuts,
 	useToolKeys,
 } from "./useEditorShortcuts";
-import { useEditorTools } from "./useEditorTools";
 
 const parseCustomColor = (saved: unknown) => (isHexColor(saved) ? saved : null);
 
@@ -290,7 +292,15 @@ export function Editor({
 		host.leave();
 	};
 
-	const { panel, inBar, modeActions } = useEditorChrome({
+	const {
+		panel,
+		inBar,
+		modeActions,
+		toolEntries,
+		busy,
+		toolStarters,
+		layerActions,
+	} = useEditorChrome({
 		specs,
 		tool,
 		controllers,
@@ -300,6 +310,12 @@ export function Editor({
 		done,
 		cancel,
 		onReset: resetEdit,
+		toolbox,
+		busyTools,
+		addBusy,
+		putDownTool,
+		startTool,
+		layerStarters,
 	});
 
 	// A shape in Shape, a mark in Pen: what the open tool draws, and shows
@@ -368,106 +384,6 @@ export function Editor({
 	);
 
 	const hasImage = targetImage !== null;
-	const isToolAvailable = useCallback(
-		(id: string) => {
-			const openTool = controllers[id];
-			return openTool?.definition.available?.(openTool.controller) ?? true;
-		},
-		[controllers],
-	);
-
-	// Tools entries on the rail and dock, updated with each tool's active
-	// variant and flyout choices.
-	const toolEntries = useMemo(() => {
-		return toolbox.entries.map((entry): ToolEntry => {
-			const openTool = controllers[entry.id];
-			const toolDef = openTool?.definition;
-			if (!toolDef?.variants) return entry;
-			const variants = toolDef
-				.variants(openTool.controller)
-				?.filter((v) => !v.tool || (specs[v.tool] && isToolAvailable(v.tool)));
-			if (!variants || variants.length <= 1) return entry;
-			const activeId =
-				variants.find((v) => v.tool && v.tool === tool)?.id ??
-				toolDef.activeVariant?.(openTool.controller);
-			const active = variants.find((v) => v.id === activeId) ?? variants[0];
-			const custom = toolDef.variantEntry?.(openTool.controller);
-			const targetSpec = active.tool ? specs[active.tool] : undefined;
-			return {
-				...entry,
-				label: custom?.label ?? targetSpec?.label ?? entry.label,
-				icon: custom?.icon ?? targetSpec?.icon ?? entry.icon,
-				key: targetSpec?.key ?? entry.key,
-				activeVariant: active.id,
-				variants,
-				onSelectVariant: (variantId) => {
-					const chosen = variants.find((v) => v.id === variantId);
-					const target = chosen?.tool ?? entry.id;
-					if (tool && tool !== target) putDownTool();
-					toolDef.selectVariant?.(openTool.controller, variantId);
-					startTool[target]?.();
-				},
-			};
-		});
-	}, [
-		toolbox.entries,
-		specs,
-		controllers,
-		tool,
-		putDownTool,
-		startTool,
-		isToolAvailable,
-	]);
-
-	// The buttons that spin: Add photo while a photo is on its way, and the
-	// tools whose work is running (including a variant's tool).
-	const busy = useMemo(() => {
-		const ids = [...busyTools];
-		if (addBusy) ids.push("photo");
-		for (const entry of toolEntries) {
-			if (
-				!ids.includes(entry.id) &&
-				entry.variants?.some((v) => v.tool && busyTools.includes(v.tool))
-			) {
-				ids.push(entry.id);
-			}
-		}
-		return ids;
-	}, [busyTools, addBusy, toolEntries]);
-
-	const toolStarters = useMemo(
-		() =>
-			Object.fromEntries(
-				toolEntries.map((entry) => {
-					const active = entry.variants?.find(
-						(v) => v.id === entry.activeVariant,
-					);
-					const target = active?.tool ?? entry.id;
-					return [entry.id, () => startTool[target]?.()];
-				}),
-			),
-		[toolEntries, startTool],
-	);
-
-	// What the dock offers for the selected layer: the tools that act on it,
-	// and the buttons tools add for it, each in the toolbar's order.
-	const layerTools =
-		selectedLayer &&
-		layerActionsFor(selectedLayer, specs, toolbox.toolbar, isToolAvailable);
-	const layerActions = layerTools && {
-		tools: toolbarEntries(specs, layerTools, isToolAvailable),
-		busy: busyTools,
-		// Opened from the layer, a tool keeps to it and keeps it selected.
-		startTool: layerStarters,
-		actions: toolbox.toolbar.flatMap((id) => {
-			const listed = controllers[id];
-			const action = listed?.definition.layerAction?.(
-				listed.controller,
-				selectedLayer,
-			);
-			return action ? [action] : [];
-		}),
-	};
 
 	// What every tool's views read from the editor around them, and what the
 	// dock, the bar, the trays, and the inspector read besides.
@@ -489,7 +405,7 @@ export function Editor({
 	};
 	const panels: PanelContext = {
 		controllers,
-		layerActions: layerActions || undefined,
+		layerActions,
 	};
 
 	// A tap on a selected layer a tool edits in place edits it there, from

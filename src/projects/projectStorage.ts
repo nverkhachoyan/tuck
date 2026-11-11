@@ -1,5 +1,5 @@
 import { Directory, File, Paths } from "expo-file-system";
-import { MISSING_IMAGE_MESSAGE, type ProjectStorage } from "./projectLifecycle";
+import { MISSING_IMAGE_MESSAGE, type ProjectStorage } from "./openProjects.ts";
 
 // `projectStorage.web.ts` implements the same API for browsers. Each project
 // is a folder holding its image files, if it has any, and once it has been

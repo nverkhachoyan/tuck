@@ -9,7 +9,6 @@ import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { SwatchChip } from "@/ui/SwatchChip";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
-import { useEditorContext } from "../../editorContext";
 import {
 	BarButton,
 	BarChip,
@@ -20,6 +19,7 @@ import {
 import { Dial } from "../../shell/Dial";
 import type { DialScale } from "../../shell/dialDrag";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
+import { useEditorContext } from "../editorContext";
 import { MAX_STRAIGHTEN } from "./cropGeometry";
 import { ASPECT_ROWS, ASPECTS, type AspectId } from "./cropOptions";
 import type { CropController, CropTab } from "./useCropTool";

@@ -1,4 +1,4 @@
-import { defineTool } from "../../defineTool";
+import { defineTool } from "../defineTool";
 import { AdjustCard, AdjustPanel } from "./AdjustPanel";
 import { adjustSpec } from "./adjustSpec";
 import { type AdjustController, useAdjustTool } from "./useAdjustTool";

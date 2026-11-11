@@ -2,8 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { space } from "@/ui/theme";
 import { BarButton } from "./ContextBar";
 import { ToolButton, ToolRow } from "./ToolButton";
-import type { ToolStarters } from "./ToolsPanel";
-import type { ToolEntry, ToolIcon } from "./toolList";
+import type { ToolEntry, ToolIcon, ToolStarters } from "./toolList";
 
 /**
  * A button a tool adds to the selected layer's actions, like keeping a

@@ -7,6 +7,7 @@ export type PreviewStorage = {
 		file: string,
 		tempUri: string,
 	): Promise<string>;
+	copyPreview(fromId: string, file: string, toId: string): Promise<void>;
 	removeProjectPreviews(projectId: string): Promise<void>;
 };
 
@@ -30,6 +31,14 @@ export const previewStorage: PreviewStorage = {
 		const previewFile = new File(directory, file);
 		await new File(tempUri).move(previewFile, { overwrite: true });
 		return previewFile.uri;
+	},
+
+	async copyPreview(fromId: string, file: string, toId: string): Promise<void> {
+		const source = new File(projectPreviewDirectory(fromId), file);
+		if (!source.exists) return;
+		const directory = projectPreviewDirectory(toId);
+		directory.create({ intermediates: true, idempotent: true });
+		await source.copy(new File(directory, file), { overwrite: true });
 	},
 
 	async removeProjectPreviews(projectId: string): Promise<void> {

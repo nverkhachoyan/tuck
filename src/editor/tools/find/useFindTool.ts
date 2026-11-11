@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import type { DetectionFeature } from "../../detection/imageDetection";
 import { boundingBox, type Rect } from "../../document/geometry";
 import type { RedactionBoxPlacement } from "../../layers/redaction/redaction";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
+import type { ToolEnv } from "../defineTool";
 import {
 	chosenBoxes,
 	detectionTargetKey,

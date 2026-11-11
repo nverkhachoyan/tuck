@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { type DerivedValue, useDerivedValue } from "react-native-reanimated";
 import { Group } from "react-native-skia";
+import { assertNever } from "../document/assertNever";
 import type { ColorMatrix } from "../layers/image/adjustments";
 import { LayerContent } from "../layers/LayerContent";
 import type { Layer } from "../layers/layer";
@@ -86,8 +87,7 @@ export function SceneLayer({
 	}, [layer.id, layer.transform]);
 
 	const activeStroke =
-		stroke &&
-		(stroke.reaches(layer) || (layer.type === "shape" && stroke.crossed))
+		stroke && (stroke.reaches(layer) || (isCrossable(layer) && stroke.crossed))
 			? stroke
 			: null;
 	const inLayer =
@@ -109,31 +109,78 @@ export function SceneLayer({
 		<Group transform={transform}>
 			{draft ??
 				inLayer ??
-				(layer.type === "redaction" ? (
-					<LiveRedaction
-						layer={layer}
-						live={live}
-						onImageError={onImageError}
-					/>
-				) : layer.type === "shape" ? (
-					<LiveShape
-						layer={layer}
-						live={live}
-						opacity={dimmed ? DIMMED_OPACITY : 1}
-					/>
-				) : (
-					<LayerContent
-						layer={layer}
-						uri={uri}
-						matrix={matrix}
-						selectionColor={selectionColor}
-						opacity={dimmed ? DIMMED_OPACITY : undefined}
-						onImageError={onImageError}
-					/>
-				))}
+				renderBaseLayer(
+					layer,
+					live,
+					uri,
+					matrix,
+					selectionColor,
+					dimmed,
+					onImageError,
+				)}
 		</Group>
 	);
 }
+
+function isCrossable(layer: Layer): boolean {
+	switch (layer.type) {
+		case "shape":
+			return true;
+		case "image":
+		case "text":
+		case "drawing":
+		case "redaction":
+			return false;
+		default:
+			return assertNever(layer);
+	}
+}
+
+function renderBaseLayer(
+	layer: Layer,
+	live: LiveTransform,
+	uri?: string,
+	matrix?: { value: ColorMatrix },
+	selectionColor?: string,
+	dimmed?: boolean,
+	onImageError?: (error: unknown) => void,
+) {
+	switch (layer.type) {
+		case "redaction":
+			return (
+				<LiveRedaction
+					layer={layer}
+					live={live}
+					onImageError={onImageError ?? noop}
+				/>
+			);
+		case "shape":
+			return (
+				<LiveShape
+					layer={layer}
+					live={live}
+					opacity={dimmed ? DIMMED_OPACITY : 1}
+				/>
+			);
+		case "image":
+		case "text":
+		case "drawing":
+			return (
+				<LayerContent
+					layer={layer}
+					uri={uri}
+					matrix={matrix}
+					selectionColor={selectionColor}
+					opacity={dimmed ? DIMMED_OPACITY : undefined}
+					onImageError={onImageError ?? noop}
+				/>
+			);
+		default:
+			return assertNever(layer);
+	}
+}
+
+const noop = () => {};
 
 /** A stroke that will start a new layer, over everything as it's painted. */
 export function NewLayerStroke({

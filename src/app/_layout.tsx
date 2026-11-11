@@ -1,11 +1,11 @@
 import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import { type ErrorBoundaryProps, Stack } from "expo-router";
-import { Suspense, useState } from "react";
+import { useEffect, useState } from "react";
 import { Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { LoadFonts, resetFailedFonts } from "@/editor";
+import { preloadFonts, resetFailedFonts } from "@/editor";
 import { PageHead } from "@/site/PageHead";
 import { SUPPORT_EMAIL } from "@/site/site";
 import { Button } from "@/ui/Button";
@@ -15,31 +15,30 @@ import { colorScheme, colors, space, typography } from "@/ui/theme";
 const barStyle = colorScheme === "dark" ? "light-content" : "dark-content";
 
 export default function Layout() {
+	// Only the editor waits for the text fonts (its route suspends on them),
+	// so every other page shows at once, with the system font standing in
+	// for Home's wordmark until Anton loads.
+	useEffect(preloadFonts, []);
+
 	return (
 		<GestureHandlerRootView style={styles.flex}>
 			<SafeAreaProvider>
 				<PageHead />
-				<Suspense fallback={null}>
-					<LoadFonts />
-					<StatusBar barStyle={barStyle} />
-					{/* Screens pad their own bottom, so a bar or sheet there can reach
-					    under the home indicator. */}
-					<SafeAreaView
-						edges={["top", "left", "right"]}
-						style={styles.container}
-					>
-						<Routes />
-					</SafeAreaView>
-				</Suspense>
+				<StatusBar barStyle={barStyle} />
+				{/* Screens pad their own bottom, so a bar or sheet there can reach
+				    under the home indicator. */}
+				<SafeAreaView edges={["top", "left", "right"]} style={styles.container}>
+					<Routes />
+				</SafeAreaView>
 			</SafeAreaProvider>
 		</GestureHandlerRootView>
 	);
 }
 
 /**
- * Replaces the whole app when rendering fails, as when the text fonts can't
- * load. Retrying renders the layout again, loading the fonts afresh if they
- * failed. It stands in for the layout, so it can't use the layout's
+ * Replaces the whole app when rendering fails, as when the editor's text
+ * fonts can't load. Retrying renders the layout again, loading the fonts
+ * afresh if they failed. It stands in for the layout, so it can't use the layout's
  * providers; Expo Router's root provides the safe area.
  */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {

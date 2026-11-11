@@ -7,8 +7,7 @@ import {
 	useSharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import {
 	type AdjustmentKey,
 	type Adjustments,
@@ -18,6 +17,7 @@ import {
 } from "../../layers/image/adjustments";
 import type { DialScale } from "../../shell/dialDrag";
 import { useStore } from "../../store";
+import type { ToolEnv } from "../defineTool";
 
 // The dial counts in percent: -100 to 100 for -1 to 1.
 export const ADJUST_DIAL_MAX = 100;

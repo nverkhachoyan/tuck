@@ -110,6 +110,33 @@ async function reencode(
 	}
 }
 
+/**
+ * A canvas preview for a stored image that lacks one (a project saved before
+ * one-pass import, or whose cached previews were purged), as a temporary
+ * file, or null when the image is small enough to draw itself.
+ */
+export async function makePreview(
+	uri: string,
+	size: { width: number; height: number },
+	opaque: boolean,
+): Promise<string | null> {
+	const target = previewSize(size);
+	if (!target) return null;
+	const resized = await ImageManipulator.manipulate(uri)
+		.resize({ width: target.width })
+		.renderAsync();
+	try {
+		const saved = await resized.saveAsync(
+			opaque
+				? { format: SaveFormat.JPEG, compress: JPEG_QUALITY }
+				: { format: SaveFormat.PNG },
+		);
+		return saved.uri;
+	} finally {
+		resized.release();
+	}
+}
+
 // How many pixels `isOpaque` copies out at a time, so a large image's
 // aren't all copied at once.
 const SCAN_PIXELS = 1 << 20;

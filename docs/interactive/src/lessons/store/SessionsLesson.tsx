@@ -24,7 +24,7 @@ const effects: { label: string; effect: RedactionEffect }[] = [
 	{ label: "Black", effect: { type: "solid", color: "#111111" } },
 ];
 
-const inSession = (record: ActionRecord) => record.before.session !== null;
+const inSession = (record: ActionRecord) => record.before.toolSession !== null;
 
 export function SessionsLesson() {
 	const [log, setLog] = useState<ActionRecord[]>([]);
@@ -32,9 +32,9 @@ export function SessionsLesson() {
 		setLog((previous) => [record, ...previous]);
 	const [store, setStore] = useState(() => createLessonStore(report));
 	const [run, setRun] = useState(0);
-	const [tabName, setTabName] = useState("beginSession");
+	const [tabName, setTabName] = useState("beginToolSession");
 	const state = useStore(store);
-	const { document, session, selectedLayerId } = state;
+	const { document, toolSession, selectedLayerId } = state;
 	if (!document) return null;
 	const actions = store.getState().actions;
 	const redaction = selectSelectedRedaction(state);
@@ -69,13 +69,14 @@ export function SessionsLesson() {
 			title: "Open the tool",
 			body: (
 				<p>
-					Opening a tool calls <code>beginSession</code>. It records where the
-					tool started, the document and selection then, and the redo step that
-					was next, as the store's <code>session</code>. Nothing else changes.
+					Opening a tool calls <code>beginToolSession</code>. It records where
+					the tool started, the document and selection then, and the redo step
+					that was next, as the store's <code>toolSession</code>. Nothing else
+					changes.
 				</p>
 			),
 			done: ({ log }) =>
-				log.some((record) => record.action === "editor/beginSession"),
+				log.some((record) => record.action === "editor/beginToolSession"),
 		},
 		{
 			title: "Make three changes",
@@ -105,8 +106,8 @@ export function SessionsLesson() {
 				log.some(
 					(record) =>
 						record.action === "editor/undo" &&
-						record.after.session !== null &&
-						record.after.document === record.after.session.document,
+						record.after.toolSession !== null &&
+						record.after.document === record.after.toolSession.document,
 				),
 		},
 		{
@@ -114,7 +115,7 @@ export function SessionsLesson() {
 			body: (
 				<p>
 					Redo a change or two, or make new ones, then press{" "}
-					<strong>Done</strong>. <code>commitSession</code> drops the tool's
+					<strong>Done</strong>. <code>commitToolSession</code> drops the tool's
 					steps from <code>past</code> and keeps one: the document from where
 					the tool started. The whole tool is now one undo step, as Crop and
 					Adjust leave theirs. A spec's <code>undoSteps</code> keeps more: one
@@ -131,8 +132,8 @@ export function SessionsLesson() {
 			body: (
 				<p>
 					Open the tool, change something, and press <strong>Cancel</strong>.{" "}
-					<code>cancelSession</code> returns to where it started, and puts what
-					you'd done at the front of <code>future</code>.
+					<code>cancelToolSession</code> returns to where it started, and puts
+					what you'd done at the front of <code>future</code>.
 				</p>
 			),
 			done: ({ log }) =>
@@ -160,7 +161,7 @@ export function SessionsLesson() {
 						(record) =>
 							record.action === "editor/redo" &&
 							record.id > cancel.id &&
-							record.after.session === null,
+							record.after.toolSession === null,
 					)
 				);
 			},
@@ -169,19 +170,19 @@ export function SessionsLesson() {
 
 	const tabs: { label: string; file: SourceFile; name: string }[] = [
 		{
-			label: "beginSession",
+			label: "beginToolSession",
 			file: "src/editor/store/editorSlice.ts",
-			name: "beginSession",
+			name: "beginToolSession",
 		},
 		{
-			label: "commitSession",
+			label: "commitToolSession",
 			file: "src/editor/store/editorSlice.ts",
-			name: "commitSession",
+			name: "commitToolSession",
 		},
 		{
-			label: "cancelSession",
+			label: "cancelToolSession",
 			file: "src/editor/store/editorSlice.ts",
-			name: "cancelSession",
+			name: "cancelToolSession",
 		},
 		{
 			label: "pastBefore",
@@ -199,9 +200,9 @@ export function SessionsLesson() {
 			name: "selectCanRedo",
 		},
 		{
-			label: "EditorSession",
+			label: "ToolSession",
 			file: "src/editor/store/history.ts",
-			name: "EditorSession",
+			name: "ToolSession",
 		},
 	];
 	const tab = tabs.find((candidate) => candidate.label === tabName) ?? tabs[0];
@@ -215,7 +216,7 @@ export function SessionsLesson() {
 				so you can step back and forth inside it. When it closes, Done turns all
 				of them into one step (unless its spec keeps one per mark or per swipe),
 				and Cancel returns to where it started. The store does this with a{" "}
-				<code>session</code>: a note of where the tool began.
+				<code>toolSession</code>: a note of where the tool began.
 			</p>
 
 			<div className="playground">
@@ -224,8 +225,8 @@ export function SessionsLesson() {
 						<h2>History</h2>
 						<HistoryTimeline state={state} />
 						<p className="hint">
-							<code>session</code>:{" "}
-							{session
+							<code>toolSession</code>:{" "}
+							{toolSession
 								? "open. The snapshot marked “tool opened here” is where it began."
 								: "null, no tool is open."}
 						</p>
@@ -238,7 +239,7 @@ export function SessionsLesson() {
 								<button
 									type="button"
 									className="button-small"
-									disabled={session !== null}
+									disabled={toolSession !== null}
 									onClick={() => actions.addTextLayer("Golden hour")}
 								>
 									addTextLayer
@@ -246,7 +247,7 @@ export function SessionsLesson() {
 								<button
 									type="button"
 									className="button-small"
-									disabled={session !== null}
+									disabled={toolSession !== null}
 									onClick={() =>
 										actions.addShape(
 											"arrow",
@@ -261,11 +262,13 @@ export function SessionsLesson() {
 
 							<h2 className="tool-heading">
 								A tool{" "}
-								<span className={session ? "tool-state open" : "tool-state"}>
-									{session ? "open" : "closed"}
+								<span
+									className={toolSession ? "tool-state open" : "tool-state"}
+								>
+									{toolSession ? "open" : "closed"}
 								</span>
 							</h2>
-							{session ? (
+							{toolSession ? (
 								<>
 									<div className="adders">
 										<button
@@ -304,14 +307,14 @@ export function SessionsLesson() {
 										<button
 											type="button"
 											className="button-small primary"
-											onClick={() => actions.commitSession()}
+											onClick={() => actions.commitToolSession()}
 										>
 											Done
 										</button>
 										<button
 											type="button"
 											className="button-small"
-											onClick={() => actions.cancelSession()}
+											onClick={() => actions.cancelToolSession()}
 										>
 											Cancel
 										</button>
@@ -322,7 +325,7 @@ export function SessionsLesson() {
 									<button
 										type="button"
 										className="button-small"
-										onClick={() => actions.beginSession()}
+										onClick={() => actions.beginToolSession()}
 									>
 										Open the tool
 									</button>
@@ -358,7 +361,7 @@ export function SessionsLesson() {
 							<p className="hint">
 								<code>selectCanUndo</code> {String(canUndo)} ·{" "}
 								<code>selectCanRedo</code> {String(canRedo)}
-								{session &&
+								{toolSession &&
 									!canUndo &&
 									state.past.length > 0 &&
 									" · undo stops where the tool opened"}
@@ -385,8 +388,8 @@ export function SessionsLesson() {
 											<small>
 												{effect}
 												{inSession(record) &&
-													record.action !== "editor/commitSession" &&
-													record.action !== "editor/cancelSession" &&
+													record.action !== "editor/commitToolSession" &&
+													record.action !== "editor/cancelToolSession" &&
 													" · in the tool"}
 											</small>
 										</li>

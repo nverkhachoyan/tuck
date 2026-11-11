@@ -1,4 +1,4 @@
-import { defineTool } from "../../defineTool";
+import { defineTool } from "../defineTool";
 import { metaOf, PenBar, PenPanel, PenTray, TIPS } from "./PenPanel";
 import type { PenTipChoice } from "./penSettings";
 import { penSpec } from "./penSpec";

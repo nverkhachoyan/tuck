@@ -1,22 +1,23 @@
-// Storage and the editor's session are passed in so Node's test runner can
-// load this. `useProjectSession.ts` creates the app's instance.
+// Storage and the editor's open document are passed in so Node's test runner
+// can load this. `appSession.ts` creates the app's instance.
 import {
 	createBlankDocument,
 	createDocumentFromImage,
 	type EditorDocument,
 } from "../editor/core.ts";
-import { projectLabel } from "../projects/projectFile.ts";
 import {
+	type createOpenProjects,
 	NEWER_VERSION_MESSAGE,
-	type ProjectLifecycle,
-} from "../projects/projectLifecycle.ts";
+} from "../projects/openProjects.ts";
+import { projectLabel } from "../projects/projectFile.ts";
+import type { createProjectLibrary } from "../projects/projectLibrary.ts";
 import { UNSAVED_PROJECT } from "../projects/projectRoute.ts";
 
 export const UNSAVED_REOPEN_MESSAGE =
 	"This photo couldn't be saved, so it can't be reopened.";
 
-export type EditorSessionStore = {
-	getSession(): { document: EditorDocument | null; key: string | null };
+export type SessionEditor = {
+	getOpenDocument(): { document: EditorDocument | null; key: string | null };
 	openDocument(document: EditorDocument, key: string | null): void;
 	closeDocument(): void;
 };
@@ -35,20 +36,24 @@ export type SessionCanvas = {
 	background: string | null;
 };
 
-export type ProjectSessionEnv = {
-	projects: Pick<
-		ProjectLifecycle,
-		| "createProject"
-		| "createBlankProject"
-		| "openProject"
-		| "closeProject"
-		| "copyOpenProject"
-		| "updateThumbnail"
-		| "addImage"
-		| "openProjectName"
-		| "openProjectCreatedAt"
+export type SessionProjects = Pick<
+	ReturnType<typeof createOpenProjects>,
+	| "createProject"
+	| "createBlankProject"
+	| "openProject"
+	| "closeProject"
+	| "addImage"
+	| "openProjectName"
+	| "openProjectCreatedAt"
+> &
+	Pick<
+		ReturnType<typeof createProjectLibrary>,
+		"copyOpenProject" | "updateThumbnail"
 	>;
-	editor: EditorSessionStore;
+
+export type ProjectSessionEnv = {
+	projects: SessionProjects;
+	editor: SessionEditor;
 	renderThumbnail?: (
 		document: EditorDocument,
 		previewUri?: (uri: string) => string | null,
@@ -74,11 +79,11 @@ export function createProjectSession({
 	}
 
 	function hasOpenSession(): boolean {
-		return editor.getSession().document !== null;
+		return editor.getOpenDocument().document !== null;
 	}
 
 	function hasSavedSession(): boolean {
-		const { document, key } = editor.getSession();
+		const { document, key } = editor.getOpenDocument();
 		return document !== null && key !== null;
 	}
 
@@ -90,7 +95,7 @@ export function createProjectSession({
 	async function startFromPhoto(
 		photo: SessionPhoto,
 	): Promise<{ id: string | null; document: EditorDocument } | null> {
-		if (editor.getSession().document) return null;
+		if (editor.getOpenDocument().document) return null;
 		const opened = await projects
 			.createProject(photo)
 			.catch((error: unknown) => {
@@ -114,7 +119,7 @@ export function createProjectSession({
 	async function startBlank(
 		canvas: SessionCanvas,
 	): Promise<{ id: string | null; document: EditorDocument } | null> {
-		if (editor.getSession().document) return null;
+		if (editor.getOpenDocument().document) return null;
 		const { width, height, background } = canvas;
 		const opened = await projects
 			.createBlankProject(canvas)
@@ -136,12 +141,12 @@ export function createProjectSession({
 	 * before clearing the editor, so the session stays open for a retry.
 	 */
 	async function end(): Promise<void> {
-		const { document, key: projectId } = editor.getSession();
+		const { document, key: projectId } = editor.getOpenDocument();
 		if (!document) return;
 		if (projectId !== null) {
 			await projects.closeProject(projectId, document, thumbnailFor(projectId));
 		}
-		if (editor.getSession().document === document) {
+		if (editor.getOpenDocument().document === document) {
 			editor.closeDocument();
 		}
 	}
@@ -163,7 +168,7 @@ export function createProjectSession({
 		if (!opened) {
 			throw new Error(NEWER_VERSION_MESSAGE);
 		}
-		if ((stillWanted && !stillWanted()) || editor.getSession().document) {
+		if ((stillWanted && !stillWanted()) || editor.getOpenDocument().document) {
 			await projects.closeProject(routeId, opened);
 			return null;
 		}

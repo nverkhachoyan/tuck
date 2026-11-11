@@ -3,7 +3,6 @@ import type { ComponentProps } from "react";
 import { StyleSheet, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors } from "@/ui/theme";
-import { useColorTarget, useEditorContext } from "../../editorContext";
 import { ColorChip, ColorOptions } from "../../shell/ColorOptions";
 import {
 	BarChip,
@@ -19,6 +18,7 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
+import { useColorTarget, useEditorContext } from "../editorContext";
 import {
 	type PenTipChoice,
 	penColor,

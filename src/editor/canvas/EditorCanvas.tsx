@@ -1,0 +1,665 @@
+import {
+	type ReactNode,
+	type Ref,
+	useCallback,
+	useImperativeHandle,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import {
+	type LayoutChangeEvent,
+	StyleSheet,
+	Text,
+	View,
+	type ViewInstance,
+} from "react-native";
+import {
+	GestureDetector,
+	useSimultaneousGestures,
+} from "react-native-gesture-handler";
+import { useDerivedValue, useSharedValue } from "react-native-reanimated";
+import { Canvas, Group } from "react-native-skia";
+import { Surface } from "@/ui/Surface";
+import { colors, space, typography } from "@/ui/theme";
+import type { EditorDocument } from "../document/document";
+import type { Box, Point, Rect, Transform } from "../document/geometry";
+import type { Layer } from "../layers/layer";
+import { cursorStyle } from "./canvasCursor";
+import { type CanvasInput, inputRules, outlinedLayerFor } from "./canvasInput";
+import { cutImageId, type ToolStroke } from "./canvasTool";
+import { EditorScene, type SceneDraft } from "./EditorScene";
+import { FitButton } from "./FitButton";
+import { handleUnder } from "./handleMetrics";
+import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
+import { layerBounds } from "./layerBounds";
+import { layerTargets, resizeMode } from "./layerTargets";
+import {
+	type LiveTransform,
+	readLiveBox,
+	readLiveTransform,
+	syncLiveTransform,
+	useLiveTransform,
+} from "./liveTransform";
+import type { CanvasRegion } from "./RegionOutline";
+import { strokeKindOf } from "./SceneLayer";
+import { SelectionBarFrame } from "./SelectionBarFrame";
+import { useCanvasCursor, useEraserRing } from "./useCanvasCursor";
+import { useCanvasTap } from "./useCanvasTap";
+import { useCanvasZoom } from "./useCanvasZoom";
+import { useDialDrag } from "./useDialDrag";
+import { useEditTextGesture } from "./useEditTextGesture";
+import { useKeepTextFocus } from "./useKeepTextFocus";
+import { useLayerTransformGesture } from "./useLayerTransformGesture";
+import { useRegionTap } from "./useRegionTap";
+import { useShiftHeld } from "./useShiftHeld";
+import { useToolStroke } from "./useToolStroke";
+import { useViewGesture } from "./useViewGesture";
+import {
+	type DocumentViewport,
+	type ViewFrame,
+	viewPointToDocument,
+} from "./viewport";
+
+// Inside the canvas rather than around it, so layers past the photo's edge
+// and their handles still have room to draw.
+const PHOTO_INSET = 12;
+const SELECT: CanvasInput = { type: "select" };
+
+// The selection's live handle under a document point. The drags below share
+// it, and each still decides for itself whether the layer is hit.
+function liveHandleAt(
+	live: LiveTransform,
+	viewport: DocumentViewport,
+	point: Point,
+) {
+	"worklet";
+	return handleUnder(
+		readLiveTransform(live),
+		readLiveBox(live),
+		live.resizeMode.value,
+		point,
+		viewport.scale,
+	);
+}
+const NO_REGIONS: readonly CanvasRegion[] = [];
+
+type EditorCanvasProps = {
+	ref?: Ref<EditorCanvasHandle>;
+	document: EditorDocument;
+	selectedLayer?: Layer;
+	// What input does (see `CanvasInput`). With no tool or text, it selects
+	// and transforms layers.
+	input?: CanvasInput;
+	// A layer the open tool is editing in place, drawn in its place (see
+	// `SceneDraft`). With an `editText` input, presses on it place the caret
+	// or select, and a tap off it finishes.
+	draft?: SceneDraft | null;
+	// Whether a press on the canvas keeps the focus of the input taking the
+	// keyboard, as while text is typed (see `useKeepTextFocus`).
+	keepFocus?: boolean;
+	// The smaller preview for an image layer's URI, when there is one.
+	previewUri?: (uri: string) => string | null;
+	onSelectLayer?: (id: string | null) => void;
+	// A tap on the layer that's already selected, in document space (the
+	// editor edits it there, when a tool edits it in place).
+	onTapSelectedLayer?: (point: Point) => void;
+	onCommitTransform?: (id: string, transform: Transform) => void;
+	// A redaction's box resized by its handles, which moves its center too.
+	onResizeBox?: (
+		id: string,
+		transform: Transform,
+		width: number,
+		height: number,
+	) => void;
+	// Moves a layer by a document-space offset (see `nudgeSelection`).
+	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
+	// A finished stroke with a tool, in document space: a brush's points, a
+	// redaction's box, a shape, or where a tap, or a drag's end, picks a color
+	// or the subject to cut out.
+	onToolStroke?: (stroke: ToolStroke) => void;
+	// A canvas-tool gesture has finished. A tool can use this to put away its
+	// options after the same gesture has drawn, rather than blocking the draw.
+	onToolInteractionEnd?: () => void;
+	// A tap away from what the tool works on, while painting, finding, or
+	// adjusting. The editor puts the tool down, and the tap then selects what's
+	// under it, as it would without a tool.
+	onTapAway?: () => void;
+	// How much of the view's bottom is covered by panels floating over it,
+	// and by the keyboard they ride on. The document fits above them, and
+	// what's past its edges shows under.
+	bottomInset?: number;
+	// How much of each side is covered, as by a wide screen's tool rail and
+	// inspector.
+	leftInset?: number;
+	rightInset?: number;
+	// Actions for the selected layer, floating by it while it can be moved.
+	selectionBar?: ReactNode;
+};
+
+export type EditorCanvasHandle = {
+	// Moves the selected layer by an on-screen distance, in pixels.
+	nudgeSelection: (dx: number, dy: number) => void;
+	// Zooms about the middle of the view, or back to the fit, easing there.
+	zoom: (to: "in" | "out" | "fit") => void;
+	// Zooms to show a document rectangle, with some room around it.
+	zoomToArea: (rect: Rect) => void;
+	// The part of the document in view, in document space, where a new layer
+	// goes, or undefined before the canvas has been measured.
+	visibleArea: () => Rect | undefined;
+};
+
+/**
+ * Renders an EditorDocument fitted to the available space. A root group maps
+ * the document's logical coordinates onto the container's screen size, so
+ * layers live purely in document space and the same layer tree can later be
+ * rendered at full resolution for export.
+ *
+ * The view zooms into the fit (see `ViewZoom`): with two fingers wherever
+ * they wouldn't transform the selected layer (see `useViewGesture`), with a
+ * trackpad pinch or the wheel on web (`useWheelZoom`), by key through
+ * `zoom`, and with a double tap on nothing to select, which zooms in there
+ * or back out. While zoomed in, one finger pans it too, unless it lands on
+ * the selected layer or its handles, and so does it anywhere while
+ * finding. While zoomed, a Fit button returns to the fit. A crop, which
+ * changes the document's size, starts afresh at the fit.
+ *
+ * All touch handling (tap-to-select, drag/pinch/rotate, the selection's
+ * scale, resize, and rotate handles) is a single gesture on the canvas;
+ * selection is resolved by hit-testing in document space, against
+ * `layerTargets`, which the UI thread shares so a drag can pick its layer
+ * there. With a mouse, the cursor is `useCanvasCursor`.
+ *
+ * A tool's stroke is `useToolStroke`, handed to `onToolStroke` once it's
+ * finished. The selection then holds still, and
+ * only a redaction's or a shape's is outlined, to show what the tool's style
+ * changes. Dragging out a box or a shape, a tap picks the one to change, or
+ * none, and the one picked, or just drawn, shows its handles: a drag from on
+ * it or them moves or resizes it, and one from anywhere else draws another.
+ * With a `dial` input, a sideways drag anywhere turns the dial
+ * (`input.drag`), and the image it changes is drawn live, outlined when
+ * there are other images (`input.adjusting`).
+ *
+ * A tap away from what a tool works on calls `onTapAway`, then selects
+ * what's under it: off the document while painting, off the searched image
+ * while finding, and anywhere while adjusting. Without `onTapAway` it does
+ * nothing. A drag from off the document still paints.
+ *
+ * `selectionBar` floats by a layer that can be moved, following it on the
+ * UI thread, and steps aside while a gesture moves it.
+ */
+export function EditorCanvas({
+	ref,
+	document,
+	selectedLayer,
+	input = SELECT,
+	draft = null,
+	keepFocus = false,
+	previewUri,
+	onSelectLayer,
+	onTapSelectedLayer,
+	onCommitTransform,
+	onResizeBox,
+	onNudgeLayer,
+	onToolStroke,
+	onToolInteractionEnd,
+	onTapAway,
+	bottomInset = 0,
+	leftInset = 0,
+	rightInset = 0,
+	selectionBar,
+}: EditorCanvasProps) {
+	const [size, setSize] = useState({ width: 0, height: 0 });
+	const [imageFailed, setImageFailed] = useState(false);
+	const containerRef = useRef<ViewInstance>(null);
+	const live = useLiveTransform();
+	const aspectLocked = useShiftHeld();
+	useKeepTextFocus(containerRef, keepFocus);
+
+	const handleImageError = useCallback((error: unknown) => {
+		console.warn("Couldn't load an image layer", error);
+		setImageFailed(true);
+	}, []);
+
+	const handleLayout = (event: LayoutChangeEvent) => {
+		const { width, height } = event.nativeEvent.layout;
+		setSize({ width, height });
+	};
+
+	// Stable between renders: the gesture captures these, and rebuilds when
+	// they change.
+	const documentSize = useMemo(
+		() => ({ width: document.width, height: document.height }),
+		[document.width, document.height],
+	);
+	const frame = useMemo<ViewFrame>(
+		() => ({
+			documentSize,
+			area: {
+				x: leftInset,
+				y: 0,
+				width: size.width - leftInset - rightInset,
+				height: size.height - bottomInset,
+			},
+			inset: PHOTO_INSET,
+		}),
+		[documentSize, size, bottomInset, leftInset, rightInset],
+	);
+	const {
+		zoom,
+		viewport,
+		shown,
+		commitViewport,
+		tapOnNothing,
+		zoomView,
+		zoomToArea,
+		visibleArea,
+	} = useCanvasZoom(frame, containerRef);
+	const { scale } = viewport;
+	const shownTransform = useDerivedValue(() => [
+		{ translateX: shown.offsetX.value },
+		{ translateY: shown.offsetY.value },
+		{ scale: shown.scale.value },
+	]);
+
+	const targets = useMemo(
+		() => (scale > 0 ? layerTargets(document, scale) : []),
+		[document, scale],
+	);
+	const sharedTargets = useSharedValue<readonly LayerTarget[]>([]);
+	useLayoutEffect(() => {
+		sharedTargets.value = targets;
+	}, [sharedTargets, targets]);
+
+	const selectedLayerId = selectedLayer?.id ?? null;
+	const rules = inputRules(input, zoom !== null, selectedLayer);
+	const tool = input.type === "tool" ? input.tool : null;
+	// What gestures move: nothing while painting, typing, finding, or
+	// adjusting, except the box or shape a tool drags out.
+	const movableLayer = rules.selection === "still" ? undefined : selectedLayer;
+	const dragsSelection = rules.selection === "drags";
+
+	// Keep the gesture-driven values in step with the selected layer: when the
+	// selection changes, and when that layer does (a commit, undo, restyle).
+	useLayoutEffect(() => {
+		syncLiveTransform(
+			live,
+			movableLayer?.id ?? null,
+			movableLayer && {
+				transform: movableLayer.transform,
+				box: layerBounds(movableLayer),
+				resizeMode: resizeMode(movableLayer),
+			},
+		);
+	}, [live, movableLayer]);
+
+	const toDocument = useCallback(
+		(screenX: number, screenY: number) =>
+			viewPointToDocument(viewport, { x: screenX, y: screenY }),
+		[viewport],
+	);
+
+	// The selected layer's handle under a point reported by the view.
+	const handleAt = useCallback(
+		(screenX: number, screenY: number) =>
+			selectedLayer
+				? handleUnder(
+						selectedLayer.transform,
+						layerBounds(selectedLayer),
+						resizeMode(selectedLayer),
+						toDocument(screenX, screenY),
+						scale,
+					)
+				: null,
+		[selectedLayer, toDocument, scale],
+	);
+
+	// Topmost selectable layer under a point reported by the view.
+	const layerAt = useCallback(
+		(screenX: number, screenY: number) =>
+			findLayerAt(targets, toDocument(screenX, screenY))?.id ?? null,
+		[targets, toDocument],
+	);
+
+	const tapAway = useCallback(
+		(point: Point) => {
+			if (!onTapAway) return;
+			onTapAway();
+			onSelectLayer?.(findLayerAt(targets, point)?.id ?? null);
+		},
+		[onTapAway, onSelectLayer, targets],
+	);
+	const lookups = useMemo(
+		() => ({ handleAt, layerAt, toDocument, tapAway }),
+		[handleAt, layerAt, toDocument, tapAway],
+	);
+
+	const handleTap = useCallback(
+		(screenX: number, screenY: number) => {
+			// A click on a handle that didn't become a drag does nothing, rather
+			// than deselecting the layer that owns it.
+			if (scale === 0 || lookups.handleAt(screenX, screenY)) return;
+			const id = lookups.layerAt(screenX, screenY);
+			tapOnNothing(id === null ? { x: screenX, y: screenY } : null);
+			if (id !== null && id === selectedLayerId) {
+				onTapSelectedLayer?.(lookups.toDocument(screenX, screenY));
+			} else {
+				onSelectLayer?.(id);
+			}
+		},
+		[
+			lookups,
+			onSelectLayer,
+			onTapSelectedLayer,
+			scale,
+			selectedLayerId,
+			tapOnNothing,
+		],
+	);
+
+	// Where one finger moves the view too: anywhere while finding, whose taps
+	// don't drag, and while zoomed in, anywhere off the selected layer and
+	// its handles, so another layer is tapped before it's dragged. At the
+	// fit, where the view can't move, a drag picks up the layer under it, or
+	// moves the selection. Painting, typing, and adjusting keep one finger
+	// for themselves. Both the view's gesture and the layers' ask it, once,
+	// where the finger lands.
+	const oneFingerMode = rules.oneFinger;
+	const dragAlone = useMemo(() => {
+		if (oneFingerMode === null) return null;
+		if (oneFingerMode === "anywhere") {
+			return () => {
+				"worklet";
+				return true;
+			};
+		}
+		return (x: number, y: number) => {
+			"worklet";
+			const id = live.activeId.value;
+			if (id === null) return true;
+			const point = viewPointToDocument(viewport, { x, y });
+			return (
+				liveHandleAt(live, viewport, point) === null &&
+				!hitsLayer(sharedTargets.value, id, point)
+			);
+		};
+	}, [oneFingerMode, live, sharedTargets, viewport]);
+
+	// Where a tool's drag moves the selection rather than drawing: on its
+	// handles, or on the selection where it's the topmost layer.
+	const selectionDrag = useMemo(() => {
+		if (!dragsSelection) return null;
+		const onSelection = (x: number, y: number) => {
+			"worklet";
+			const id = live.activeId.value;
+			if (id === null) return false;
+			const point = viewPointToDocument(viewport, { x, y });
+			return (
+				liveHandleAt(live, viewport, point) !== null ||
+				findLayerAt(sharedTargets.value, point)?.id === id
+			);
+		};
+		const offSelection = (x: number, y: number) => {
+			"worklet";
+			return !onSelection(x, y);
+		};
+		return { onSelection, offSelection };
+	}, [dragsSelection, live, sharedTargets, viewport]);
+
+	const { cursor, setCursor, handleHover, handleHoverEnd } = useCanvasCursor({
+		scale,
+		lookups,
+		selectedLayer,
+		selectedLayerId,
+		dragsSelection,
+		targets,
+		zoom,
+	});
+
+	const handleCommit = useCallback(
+		(id: string, transform: Transform) => onCommitTransform?.(id, transform),
+		[onCommitTransform],
+	);
+	const handleResize = useCallback(
+		(id: string, transform: Transform, box: Box) =>
+			onResizeBox?.(id, transform, box.halfWidth * 2, box.halfHeight * 2),
+		[onResizeBox],
+	);
+
+	const isSelect = input.type === "select";
+	const isTool = input.type === "tool";
+	const isEditText = input.type === "editText";
+	const isRegions = input.type === "regions";
+	const isDial = input.type === "dial";
+
+	const gesture = useLayerTransformGesture({
+		live,
+		aspectLocked,
+		layers: sharedTargets,
+		viewport,
+		documentSize,
+		onTap: handleTap,
+		onSelect: onSelectLayer,
+		onCommit: handleCommit,
+		onResize: handleResize,
+		onHover: handleHover,
+		onHoverEnd: handleHoverEnd,
+		standsAside: selectionDrag?.offSelection ?? dragAlone,
+		dragOnly: dragsSelection,
+		enabled: isSelect || dragsSelection,
+	});
+	const viewGesture = useViewGesture({
+		shown,
+		frame,
+		live,
+		twoFingers: rules.twoFingers === "view",
+		dragAlone,
+		onCommit: commitViewport,
+	});
+	const nudgeSelection = useCallback(
+		(dx: number, dy: number) => {
+			if (!selectedLayer || scale === 0) return;
+			onNudgeLayer?.(selectedLayer.id, dx / scale, dy / scale);
+		},
+		[selectedLayer, scale, onNudgeLayer],
+	);
+
+	const textGesture = useEditTextGesture({
+		edit: isEditText ? input : null,
+		viewport,
+		onCursor: setCursor,
+		enabled: isEditText,
+	});
+
+	// On web, the Eraser's size follows the pointer, hidden while it drags,
+	// and the Stroke eraser lights up the stroke under it.
+	const ring = useEraserRing();
+	const { paintGesture, liveStroke } = useToolStroke({
+		tool,
+		viewport,
+		scale,
+		documentSize,
+		document,
+		targets,
+		selectedLayer,
+		lookups,
+		standsAside: selectionDrag?.onSelection,
+		onToolStroke,
+		onSelectLayer,
+		onToolInteractionEnd,
+		hover: ring,
+		enabled: isTool,
+	});
+	const cuttingOutId = cutImageId(tool);
+	const outlinedLayer = outlinedLayerFor(input, {
+		layers: document.layers,
+		selectedLayer,
+	});
+	const handleIdleTap = useCallback(
+		(screenX: number, screenY: number) => {
+			if (scale === 0) return;
+			lookups.tapAway(lookups.toDocument(screenX, screenY));
+		},
+		[lookups, scale],
+	);
+	const idleGesture = useCanvasTap(handleIdleTap, isDial);
+	// With a dial, a sideways drag turns it, and a tap still puts the tool
+	// down.
+	const dialGesture = useDialDrag(
+		isDial ? input.drag : null,
+		idleGesture,
+		isDial,
+	);
+	const regionGesture = useRegionTap({
+		input: isRegions ? input : null,
+		scale,
+		lookups,
+		targets,
+		document,
+		documentSize,
+		tapOnNothing,
+		enabled: isRegions,
+	});
+
+	// The canvas's gestures join at the top in a single, stable composition:
+	// in RNGH v3, `useSimultaneousGestures` automatically inlines same-type child compositions.
+	// Keeping the composed gesture structure constant avoids React useMemo dependency array size warnings
+	// in NativeDetector / HostGestureDetector on web, while inactive gestures remain disabled.
+	const canvasGesture = useSimultaneousGestures(
+		gesture,
+		paintGesture,
+		ring.hover,
+		textGesture,
+		regionGesture,
+		dialGesture,
+		viewGesture,
+	);
+
+	useImperativeHandle(
+		ref,
+		() => ({ nudgeSelection, zoom: zoomView, zoomToArea, visibleArea }),
+		[nudgeSelection, zoomView, zoomToArea, visibleArea],
+	);
+
+	return (
+		<View style={styles.container}>
+			<GestureDetector gesture={canvasGesture}>
+				<View
+					ref={containerRef}
+					style={[
+						styles.container,
+						cursorStyle(rules.cursor === "hover" ? cursor : rules.cursor),
+					]}
+					onLayout={handleLayout}
+				>
+					{/* sRGB, like export's offscreen surface: filters and adjustments
+				    work in the canvas's color space, so a P3 one would look stronger. */}
+					<Canvas style={styles.canvas} colorSpace="srgb">
+						{scale > 0 && (
+							<Group transform={shownTransform}>
+								<EditorScene
+									document={document}
+									selectedLayerId={movableLayer ? selectedLayerId : null}
+									draft={draft}
+									viewScale={shown.scale}
+									settledScale={scale}
+									live={live}
+									stroke={liveStroke}
+									outlinedLayer={outlinedLayer}
+									adjusting={input.type === "dial" ? input.adjusting : null}
+									cuttingOutId={cuttingOutId}
+									dimExcept={tool?.type === "erase" ? tool.scope : null}
+									regions={
+										input.type === "regions" ? input.regions : NO_REGIONS
+									}
+									onImageError={handleImageError}
+									previewUri={previewUri}
+								/>
+							</Group>
+						)}
+						{tool &&
+							strokeKindOf(tool).renderOverlay?.({
+								tool,
+								ring,
+								scale: shown.scale,
+								stroke: liveStroke,
+								selectionColor: colors.selection,
+							})}
+					</Canvas>
+					{/* At the bottom, clear of new text at the center and the editor's
+					    save banner at the top. Touches pass through to the canvas. */}
+					{imageFailed && (
+						<View
+							style={[styles.failure, { bottom: bottomInset + PHOTO_INSET }]}
+						>
+							<Surface
+								style={styles.failurePill}
+								contentStyle={styles.failurePillContent}
+							>
+								<Text style={styles.failureText}>
+									A photo couldn't be loaded.
+								</Text>
+							</Surface>
+						</View>
+					)}
+				</View>
+			</GestureDetector>
+			{/* Outside the gesture's view, so a press on the bar is the bar's. */}
+			{selectionBar &&
+				rules.selection === "transforms" &&
+				movableLayer &&
+				scale > 0 && (
+					<SelectionBarFrame
+						key={movableLayer.id}
+						live={live}
+						shown={shown}
+						width={size.width - rightInset}
+						height={size.height - bottomInset}
+					>
+						{selectionBar}
+					</SelectionBarFrame>
+				)}
+			{zoom && (
+				<View
+					style={[
+						styles.fit,
+						{ left: leftInset + space.sm, bottom: bottomInset + space.sm },
+					]}
+				>
+					<FitButton onPress={() => zoomView("fit")} />
+				</View>
+			)}
+		</View>
+	);
+}
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	canvas: {
+		flex: 1,
+	},
+	failure: {
+		position: "absolute",
+		left: PHOTO_INSET,
+		right: PHOTO_INSET,
+		alignItems: "center",
+		pointerEvents: "none",
+	},
+	fit: {
+		position: "absolute",
+	},
+	failurePill: {
+		borderRadius: 18,
+	},
+	failurePillContent: {
+		paddingHorizontal: 14,
+		paddingVertical: 8,
+	},
+	failureText: {
+		...typography.label,
+		color: colors.textPrimary,
+	},
+});

@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { readPreference, writePreference } from "@/platform/preferenceStore";
 import { usePreference } from "@/platform/usePreference";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import type { ToolStroke } from "../../canvas/canvasTool";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
 import { useStore } from "../../store";
 import { selectSelectedShape } from "../../store/editorSlice";
+import type { ToolEnv } from "../defineTool";
 import {
 	parseShapeSettings,
 	shapePatch,

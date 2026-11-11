@@ -17,6 +17,7 @@ import { DocumentRenderScene } from "./DocumentRenderScene";
 import { decodedImages } from "./decodedImages";
 import { decodeImageLayers } from "./decodeImageLayers";
 import { drawOffscreen } from "./drawOffscreen";
+import { loadFonts } from "./fonts";
 import { keptBounds } from "./keptBounds";
 import { offscreenPhotos } from "./offscreenPhotos";
 
@@ -33,6 +34,12 @@ export async function renderDocument(
 	scale = 1,
 ): Promise<SkImage> {
 	return measurePerfSpan("tuck:render-document", async () => {
+		// Text is laid out as the scene is drawn, and nothing above an
+		// offscreen render waits for the fonts. A document without text
+		// doesn't, so fonts that failed to load don't stop its export.
+		if (document.layers.some((layer) => layer.type === "text")) {
+			await loadFonts();
+		}
 		const decoded = await decodeImageLayers(
 			document.layers,
 			decodedImages,

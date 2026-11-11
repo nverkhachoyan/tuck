@@ -19,12 +19,13 @@ import layerRedaction from "@src/editor/layers/redaction/redaction.ts?raw";
 import layerShape from "@src/editor/layers/shape/shape.ts?raw";
 import shapes from "@src/editor/layers/shape/shapeGeometry.ts?raw";
 import strokes from "@src/editor/layers/strokes.ts?raw";
-import fonts from "@src/editor/layers/text/fonts.ts?raw";
 import textLayerView from "@src/editor/layers/text/TextLayerView.tsx?raw";
 import layerText from "@src/editor/layers/text/text.ts?raw";
 import documentRenderScene from "@src/editor/render/DocumentRenderScene.tsx?raw";
 import decodedImages from "@src/editor/render/decodedImages.ts?raw";
 import decodeImageLayers from "@src/editor/render/decodeImageLayers.ts?raw";
+import fonts from "@src/editor/render/fonts.ts?raw";
+import layerView from "@src/editor/render/LayerView.tsx?raw";
 import renderDocument from "@src/editor/render/renderDocument.tsx?raw";
 import editorSlice from "@src/editor/store/editorSlice.ts?raw";
 import history from "@src/editor/store/history.ts?raw";
@@ -55,7 +56,8 @@ export const sources = {
 	"src/editor/render/decodeImageLayers.ts": decodeImageLayers,
 	"src/editor/render/decodedImages.ts": decodedImages,
 	"src/editor/render/DocumentRenderScene.tsx": documentRenderScene,
-	"src/editor/layers/text/fonts.ts": fonts,
+	"src/editor/render/LayerView.tsx": layerView,
+	"src/editor/render/fonts.ts": fonts,
 	"src/editor/layers/image/ImageLayerView.tsx": imageLayerView,
 	"src/editor/layers/layerTransform.ts": layerTransform,
 	"src/editor/layers/redaction/RedactionLayerView.tsx": redactionLayerView,

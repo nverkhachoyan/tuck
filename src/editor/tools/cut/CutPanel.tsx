@@ -4,7 +4,6 @@ import { StyleSheet, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, space } from "@/ui/theme";
-import { useEditorContext } from "../../editorContext";
 import {
 	BarButton,
 	BarChip,
@@ -20,6 +19,7 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
+import { useEditorContext } from "../editorContext";
 import {
 	type CutTapMode,
 	type CutTool,

@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Size } from "@/editor/core";
 import { usePreference } from "@/platform/usePreference";
 import { editorHref } from "@/projects/projectRoute";
-import { hasOpenSession, startBlank } from "@/session/useProjectSession";
+import { hasOpenSession, startBlank } from "@/session/appSession";
 import { PageHead } from "@/site/PageHead";
 import { Announcement } from "@/ui/Announcement";
 import { BackgroundPicker } from "@/ui/BackgroundPicker";

@@ -2,15 +2,16 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { createTextLayer, type EditorDocument } from "../../editor/core.ts";
-import { parseSavedProject } from "../../projects/projectFile.ts";
 import {
-	createProjectLifecycle,
+	createOpenProjects,
 	type ProjectStorage,
-} from "../../projects/projectLifecycle.ts";
+} from "../../projects/openProjects.ts";
+import { parseSavedProject } from "../../projects/projectFile.ts";
+import { createProjectLibrary } from "../../projects/projectLibrary.ts";
 import { UNSAVED_PROJECT } from "../../projects/projectRoute.ts";
 import {
 	createProjectSession,
-	type EditorSessionStore,
+	type SessionEditor,
 	UNSAVED_REOPEN_MESSAGE,
 } from "../projectSession.ts";
 
@@ -40,7 +41,7 @@ function createHarness(options?: {
 	const deletedTemps: string[] = [];
 	const thumbnails: Array<{ id: string | undefined; uri: string }> = [];
 
-	let currentSession: {
+	let openDoc: {
 		document: EditorDocument | null;
 		key: string | null;
 	} = {
@@ -48,18 +49,18 @@ function createHarness(options?: {
 		key: null,
 	};
 
-	const editor: EditorSessionStore & {
+	const editor: SessionEditor & {
 		edit(document: EditorDocument): void;
 	} = {
-		getSession: () => currentSession,
+		getOpenDocument: () => openDoc,
 		openDocument(document, key) {
-			currentSession = { document, key };
+			openDoc = { document, key };
 		},
 		closeDocument() {
-			currentSession = { document: null, key: null };
+			openDoc = { document: null, key: null };
 		},
 		edit(document) {
-			currentSession = { ...currentSession, document };
+			openDoc = { ...openDoc, document };
 		},
 	};
 
@@ -112,7 +113,9 @@ function createHarness(options?: {
 		},
 	};
 
-	const projects = createProjectLifecycle(storage);
+	const { coordination, ...openProjects } = createOpenProjects(storage);
+	const library = createProjectLibrary(storage, coordination);
+	const projects = { ...openProjects, ...library };
 	const session = createProjectSession({
 		projects,
 		editor,
@@ -122,7 +125,7 @@ function createHarness(options?: {
 				first?.type === "image"
 					? (previewUri?.(first.uri) ?? first.uri)
 					: "blank";
-			thumbnails.push({ id: currentSession.key ?? undefined, uri });
+			thumbnails.push({ id: openDoc.key ?? undefined, uri });
 			return `data:image/jpeg;base64,${uri}`;
 		},
 		getPreviewUri: (projectId, uri) => `preview:${projectId}:${uri}`,
@@ -165,7 +168,7 @@ describe("projectSession", () => {
 		assert.ok(reopened);
 		assert.equal(reopened.id, started.id);
 		assert.equal(reopened.document.layers.length, 2);
-		assert.equal(editor.getSession().key, started.id);
+		assert.equal(editor.getOpenDocument().key, started.id);
 	});
 
 	test("a link to another project while one is open saves and closes the first before opening the second", async () => {
@@ -184,7 +187,7 @@ describe("projectSession", () => {
 		const switched = await session.open(first.id);
 		assert.ok(switched);
 		assert.equal(switched.id, first.id);
-		assert.equal(editor.getSession().key, first.id);
+		assert.equal(editor.getOpenDocument().key, first.id);
 
 		// `second` was saved when `open(first.id)` ended it first.
 		const savedSecond = parseSavedProject(files.get(second.id) ?? "");
@@ -204,7 +207,7 @@ describe("projectSession", () => {
 
 		await assert.rejects(() => session.end(), /Disk full/);
 		assert.equal(session.hasOpenSession(), true);
-		assert.equal(editor.getSession().key, started.id);
+		assert.equal(editor.getOpenDocument().key, started.id);
 
 		// Starting a photo or blank canvas while the failed session is still open is refused.
 		assert.equal(await session.startFromPhoto(photo), null);
@@ -264,7 +267,7 @@ describe("projectSession", () => {
 		const fromBlank = await session.startBlank(canvas);
 		assert.ok(fromBlank);
 		assert.equal(fromBlank.id, null);
-		assert.equal(editor.getSession().key, null);
+		assert.equal(editor.getOpenDocument().key, null);
 
 		await assert.rejects(
 			() => session.open(UNSAVED_PROJECT),

@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent } from "react";
 import { Platform } from "react-native";
+import type { ArrangeMove } from "./chrome/SelectionBar";
 import { assertNever } from "./document/assertNever";
 import {
 	type EditorModeAction,
@@ -8,10 +9,9 @@ import {
 	type ShortcutSelection,
 	shortcutCommand,
 } from "./editorMode";
-import type { ArrangeMove } from "./shell/SelectionBar";
-import type { ToolStarters } from "./shell/ToolsPanel";
+import type { ToolStarters } from "./shell/toolList";
 import { type Shortcut, shortcutFor } from "./shortcuts";
-import type { ToolSpecs } from "./toolSpec";
+import type { ToolSpecs } from "./tools/toolSpec";
 
 /**
  * Whether the editor offers its shortcuts help: on web, when a mouse or

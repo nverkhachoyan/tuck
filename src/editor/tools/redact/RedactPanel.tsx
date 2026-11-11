@@ -2,7 +2,6 @@ import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIco
 import type { ComponentProps } from "react";
 import { StyleSheet, View } from "react-native";
 import { colors, space } from "@/ui/theme";
-import { useColorTarget, useEditorContext } from "../../editorContext";
 import { ColorChip, ColorSwatchRow } from "../../shell/ColorOptions";
 import { BarGroup, BarSections, OptionSegments } from "../../shell/ContextBar";
 import {
@@ -19,6 +18,7 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
+import { useColorTarget, useEditorContext } from "../editorContext";
 import {
 	type RedactTool,
 	redactSizeIndex,

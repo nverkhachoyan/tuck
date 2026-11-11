@@ -5,9 +5,8 @@ import type {
 import { useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { usePreference } from "@/platform/usePreference";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import { layerBounds } from "../../canvas/layerBounds";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
 import type { Point, Rect } from "../../document/geometry";
 import {
 	createTextLayer,
@@ -18,6 +17,7 @@ import {
 import { textIndexAt } from "../../layers/text/textLayerLayout";
 import { useStore } from "../../store";
 import { selectSelectedTextLayer } from "../../store/editorSlice";
+import type { ToolEnv } from "../defineTool";
 import {
 	parseTextStyle,
 	type TextColorKey,

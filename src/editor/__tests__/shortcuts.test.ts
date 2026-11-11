@@ -1,15 +1,15 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { BUILT_IN_SPECS, BUILT_IN_TOOLBAR } from "../builtInSpecs.ts";
-import { toolbarEntries } from "../editorChrome.ts";
+import { toolbarEntries } from "../chrome/editorChrome.ts";
 import {
 	type KeyPress,
 	shortcutFor as shortcutForTools,
 	shortcutGroups,
 	toolsByKey,
 } from "../shortcuts.ts";
-import type { ToolSpecs } from "../toolSpec.ts";
+import { BUILT_IN_SPECS, BUILT_IN_TOOLBAR } from "../tools/builtInSpecs.ts";
+import type { ToolSpecs } from "../tools/toolSpec.ts";
 
 const entries = toolbarEntries(BUILT_IN_SPECS, BUILT_IN_TOOLBAR);
 const tools = toolsByKey(entries, BUILT_IN_SPECS);

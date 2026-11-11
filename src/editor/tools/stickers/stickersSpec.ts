@@ -1,4 +1,4 @@
-import type { ToolSpec } from "../../toolSpec.ts";
+import type { ToolSpec } from "../toolSpec.ts";
 
 export const stickersSpec = {
 	target: "none",

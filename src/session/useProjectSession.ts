@@ -1,56 +1,34 @@
 import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	closeDocument,
-	getSession,
-	openDocument,
-	renderThumbnail,
-	useSession,
-} from "@/editor";
+import { getOpenDocument, useOpenDocument } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
-import { getPreviewUri } from "@/photos/previewCache";
-import { deleteTemporaryFile } from "@/platform/temporaryFile";
-import { isProjectOpenElsewhere } from "@/projects/projectLifecycle";
+import { isProjectOpenElsewhere } from "@/projects/openProjects";
 import { projectRouteId } from "@/projects/projectRoute";
-import { projects } from "@/projects/projectService";
 import { errorMessage } from "@/ui/errorMessage";
-import { createProjectSession } from "./projectSession";
-
-/** The app's one project session controller, shared by every screen. */
-export const projectSession = createProjectSession({
-	projects,
-	editor: { getSession, openDocument, closeDocument },
-	renderThumbnail,
-	getPreviewUri,
-	deleteTemporaryFile,
-});
-
-export const {
-	hasOpenSession,
-	hasSavedSession,
-	startFromPhoto,
-	startBlank,
-	open: openProjectSession,
-	openCopy: openProjectCopy,
-	end: endSession,
-	updateThumbnail: updateProjectThumbnail,
-	addImage: addSessionImage,
-	title: sessionTitle,
-} = projectSession;
+import { appSession } from "./appSession";
 
 /** Reads the open document outside React renders, as when the app backgrounds. */
-export const latestSessionDocument = () => getSession().document;
+export const latestSessionDocument = (): EditorDocument | null =>
+	getOpenDocument().document;
+
+/** The open session's key (project id), or null for an unsaved session / none. */
+export const openSessionKey = (): string | null => getOpenDocument().key;
 
 /** The project id of the open session, or null for an unsaved session. */
 export function useSessionProjectId(): string | null {
-	return useSession((session) => session.key);
+	return useOpenDocument((openDoc) => openDoc.key);
+}
+
+/** Whether a document is open in the editor. */
+export function useHasOpenSession(): boolean {
+	return useOpenDocument((openDoc) => openDoc.document !== null);
 }
 
 /** The open document when its route id matches `routeId`, or null otherwise. */
 export function useRouteDocument(routeId: string): EditorDocument | null {
-	return useSession((session) =>
-		session.document !== null && projectRouteId(session.key) === routeId
-			? session.document
+	return useOpenDocument((openDoc) =>
+		openDoc.document !== null && projectRouteId(openDoc.key) === routeId
+			? openDoc.document
 			: null,
 	);
 }
@@ -96,7 +74,8 @@ export function useProjectSession(routeId: string): ProjectSession {
 	useEffect(() => {
 		if (document || !focused || failed || opening.current) return;
 		opening.current = true;
-		void openProjectSession(routeId, () => wanted.current)
+		void appSession
+			.open(routeId, () => wanted.current)
 			.catch((error: unknown) => {
 				setFailure({
 					routeId,

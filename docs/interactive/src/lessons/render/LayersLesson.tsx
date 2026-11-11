@@ -207,9 +207,9 @@ export default function LayersLesson() {
 			name: "DocumentRenderScene",
 		},
 		{
-			label: "LayerContent",
-			file: "src/editor/render/DocumentRenderScene.tsx",
-			name: "LayerContent",
+			label: "LayerView",
+			file: "src/editor/render/LayerView.tsx",
+			name: "LayerView",
 		},
 		{
 			label: "toTransformList",
@@ -238,7 +238,7 @@ export default function LayersLesson() {
 		},
 		{
 			label: "loadSkiaFonts",
-			file: "src/editor/layers/text/fonts.ts",
+			file: "src/editor/render/fonts.ts",
 			name: "loadSkiaFonts",
 		},
 	];

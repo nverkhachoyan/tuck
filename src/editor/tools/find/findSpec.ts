@@ -1,4 +1,4 @@
-import type { ToolSpec } from "../../toolSpec.ts";
+import type { ToolSpec } from "../toolSpec.ts";
 
 // A hidden photo can't be searched.
 export const findSpec = {

@@ -1,5 +1,5 @@
-import { defineTool } from "../../defineTool";
 import type { ToolVariant } from "../../shell/toolList";
+import { defineTool } from "../defineTool";
 import { CutBar, CutOptions, CutPanel, TapModifierPill } from "./CutPanel";
 import type { CutVariant } from "./cutSettings";
 import { cutSpec } from "./cutSpec";

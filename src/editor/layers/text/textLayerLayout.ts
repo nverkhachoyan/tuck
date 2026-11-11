@@ -13,7 +13,7 @@ import {
 	StrokeJoin,
 } from "react-native-skia";
 import type { Box, Point, Rect } from "../../document/geometry";
-import { getFontProvider, TEXT_FONTS } from "./fonts";
+import { getFontProvider, TEXT_FONTS } from "../../render/fonts";
 import type { TextAlign, TextFont, TextLayer } from "./text";
 
 export type TextLayerLayout = {

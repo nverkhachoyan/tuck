@@ -48,14 +48,14 @@ function Thumbnail({
  * step it started from and the redo step it stops at.
  */
 export function HistoryTimeline({ state }: { state: EditorSlice }) {
-	const { past, future, session, document, selectedLayerId } = state;
+	const { past, future, toolSession, document, selectedLayerId } = state;
 	if (!document) return null;
 	const marks = (snapshot: EditorSnapshot) => {
 		const result: string[] = [];
-		if (session && snapshot.document === session.document) {
+		if (toolSession && snapshot.document === toolSession.document) {
 			result.push("tool opened here");
 		}
-		if (session?.redoStop === snapshot) result.push("redo stops here");
+		if (toolSession?.redoStop === snapshot) result.push("redo stops here");
 		return result;
 	};
 	const hidden = Math.max(0, past.length - SHOWN);

@@ -1,6 +1,6 @@
-import { defineTool } from "../../defineTool";
 import { type ShapeKind, shapeKinds } from "../../layers/shape/shape";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
+import { defineTool } from "../defineTool";
 import { ShapeBar, ShapePanel, ShapeTray } from "./ShapePanel";
 import { shapeSpec } from "./shapeSpec";
 import { type ShapeController, useShapeTool } from "./useShapeTool";

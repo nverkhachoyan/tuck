@@ -1,16 +1,15 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { Editor, type EditorHost } from "@/editor";
+import { Editor, type EditorHost, LoadFonts } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
 import { getPreviewUri } from "@/photos/previewCache";
 import { exportHref } from "@/projects/projectRoute";
+import { addImage, title as sessionTitle } from "@/session/appSession";
 import { useAutosave } from "@/session/useAutosave";
 import {
-	addSessionImage,
 	latestSessionDocument,
-	sessionTitle,
 	useProjectSession,
 	useSessionProjectId,
 } from "@/session/useProjectSession";
@@ -24,8 +23,16 @@ export default function EditorScreen() {
 	const session = useProjectSession(id);
 
 	if (session.status === "open") {
-		return <OpenProject document={session.document} />;
+		// Text is laid out as the editor renders, so it waits for the fonts.
+		return (
+			<Suspense fallback={<Opening />}>
+				<LoadFonts />
+				<OpenProject document={session.document} />
+			</Suspense>
+		);
 	}
+
+	if (session.status === "opening") return <Opening />;
 
 	return (
 		<View role="main" style={styles.container}>
@@ -34,23 +41,33 @@ export default function EditorScreen() {
 				onBack={() => leaveEditor(router)}
 			/>
 			<View style={styles.status}>
-				{session.status === "opening" ? (
-					<ActivityIndicator color={colors.textSecondary} />
-				) : (
-					<>
-						<Text style={styles.statusTitle}>Couldn't open project</Text>
-						<Text style={styles.statusMessage}>{session.message}</Text>
-						<View style={styles.statusActions}>
-							{session.openElsewhere ? (
-								<Button
-									label="Back to projects"
-									onPress={() => leaveEditor(router)}
-								/>
-							) : null}
-							<Button label="Try again" onPress={session.retry} />
-						</View>
-					</>
-				)}
+				<Text style={styles.statusTitle}>Couldn't open project</Text>
+				<Text style={styles.statusMessage}>{session.message}</Text>
+				<View style={styles.statusActions}>
+					{session.openElsewhere ? (
+						<Button
+							label="Back to projects"
+							onPress={() => leaveEditor(router)}
+						/>
+					) : null}
+					<Button label="Try again" onPress={session.retry} />
+				</View>
+			</View>
+		</View>
+	);
+}
+
+// The project, or the fonts its text needs, still loading.
+function Opening() {
+	const router = useRouter();
+	return (
+		<View role="main" style={styles.container}>
+			<ScreenHeader
+				backLabel="Back to projects"
+				onBack={() => leaveEditor(router)}
+			/>
+			<View style={styles.status}>
+				<ActivityIndicator color={colors.textSecondary} />
 			</View>
 		</View>
 	);
@@ -81,7 +98,7 @@ function OpenProject({ document }: { document: EditorDocument }) {
 		pickPhoto,
 		importPhoto,
 		addImage: (uri, opaque, preview) =>
-			addSessionImage(projectId, uri, opaque, preview),
+			addImage(projectId, uri, opaque, preview),
 		title,
 		saveProblem:
 			projectId === null

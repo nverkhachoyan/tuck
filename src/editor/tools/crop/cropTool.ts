@@ -1,4 +1,4 @@
-import { defineTool } from "../../defineTool";
+import { defineTool } from "../defineTool";
 import { CropCanvas } from "./CropCanvas";
 import { CropBar, CropControls, CropDock } from "./CropPanel";
 import { cropSpec } from "./cropSpec";

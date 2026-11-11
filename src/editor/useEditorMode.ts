@@ -7,7 +7,7 @@ import {
 	type ModeTargets,
 	settle,
 } from "./editorMode";
-import type { ToolSpecs } from "./toolSpec";
+import type { ToolSpecs } from "./tools/toolSpec";
 
 /**
  * The editor's mode (see `EditorModeState`) for the tools in `specs`, which

@@ -1,4 +1,4 @@
-import type { ToolSpec } from "../../toolSpec.ts";
+import type { ToolSpec } from "../toolSpec.ts";
 
 // E adjusts, since A is the stickers'.
 export const adjustSpec = {

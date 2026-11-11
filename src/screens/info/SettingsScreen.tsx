@@ -1,7 +1,7 @@
 import { reloadAppAsync } from "expo";
 import { useState } from "react";
-import { useSession } from "@/editor";
 import { writePreference } from "@/platform/preferenceStore";
+import { useHasOpenSession } from "@/session/useProjectSession";
 import { Segmented } from "@/ui/Segmented";
 import { THEME_PREFERENCE, type ThemeSetting, themeSetting } from "@/ui/theme";
 import { InfoPage, Paragraph, Section } from "./InfoPage";
@@ -19,7 +19,7 @@ const RELOAD_DELAY = 250;
 export default function SettingsScreen() {
 	const [chosen, setChosen] = useState(themeSetting);
 	// A reload would drop edits still being saved, so wait until they are.
-	const sessionOpen = useSession((session) => session.document !== null);
+	const sessionOpen = useHasOpenSession();
 
 	const choose = (value: ThemeSetting) => {
 		if (value === chosen) return;
