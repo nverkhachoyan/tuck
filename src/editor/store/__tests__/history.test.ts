@@ -694,4 +694,68 @@ describe("sessions", () => {
 		actions.undo();
 		assert.equal(store.getState().document, before);
 	});
+
+	test("opening or closing a document ends a previewing tool session", () => {
+		const { store } = storeWithText();
+		const actions = store.getState().actions;
+		const next = photo();
+		const another = photo();
+
+		actions.beginSession(true);
+		actions.drawStroke(pen([0, 0, 100, 100]));
+		actions.closeDocument();
+		assert.equal(store.getState().toolSession, null);
+		assert.equal(store.getState().session, null);
+		assert.equal(selectAppDocument(store.getState()), null);
+
+		actions.openDocument(next, "project-2");
+		actions.beginSession(true);
+		actions.drawStroke(pen([0, 0, 40, 40]));
+		const previewed = store.getState().toolSession?.document;
+		actions.openDocument(another, "project-3");
+		assert.equal(store.getState().toolSession, null);
+		assert.equal(store.getState().session, null);
+		assert.equal(selectAppDocument(store.getState()), another);
+		// The previewing tool cancels as its screen unmounts, after the open.
+		actions.cancelSession();
+		assert.equal(store.getState().document, another);
+		assert.notEqual(store.getState().document, previewed);
+
+		actions.beginSession();
+		assert.equal(store.getState().toolSession?.document, another);
+		actions.drawStroke(pen([0, 0, 10, 10]));
+		actions.commitSession();
+		assert.equal(store.getState().past.length, 1);
+		assert.equal(store.getState().past[0]?.document, another);
+		assert.notEqual(store.getState().past[0]?.document, next);
+	});
+
+	test("opening or closing a document ends a tool session that commits", () => {
+		const { store } = storeWithText();
+		const actions = store.getState().actions;
+		const next = photo();
+
+		actions.beginSession();
+		actions.drawStroke(pen([0, 0, 100, 100]));
+		const previous = store.getState().toolSession?.document;
+		actions.closeDocument();
+		assert.equal(store.getState().toolSession, null);
+		assert.equal(selectAppDocument(store.getState()), null);
+
+		actions.openDocument(next, "project-2");
+		assert.equal(store.getState().toolSession, null);
+		assert.equal(selectAppDocument(store.getState()), next);
+		// The tool commits as its screen unmounts, after the next document is open.
+		actions.commitSession();
+		assert.deepEqual(store.getState().past, []);
+		assert.equal(store.getState().document, next);
+
+		actions.beginSession();
+		assert.equal(store.getState().toolSession?.document, next);
+		actions.drawStroke(pen([0, 0, 20, 20]));
+		actions.commitSession();
+		assert.equal(store.getState().past.length, 1);
+		assert.equal(store.getState().past[0]?.document, next);
+		assert.notEqual(store.getState().past[0]?.document, previous);
+	});
 });
