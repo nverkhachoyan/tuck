@@ -142,13 +142,18 @@ export function Inspector({ children }: { children: ReactNode }) {
  * A mode's last row: Cancel (and Reset, when the mode has one) at the left,
  * the mode's name in the middle, and Done at the right, all within reach of
  * the thumb that's using it. Without `onCancel`, the left end stays empty, so
- * the name stays centered.
+ * the name stays centered. When Done is a filled phrase ("Redact 5
+ * chosen") the name gives it the room: the highlighted tool already says where you are.
  */
 export function DockFooter({
 	title,
 	...actions
 }: { title: string } & ModeActionProps) {
 	const { cancel, done } = modeActionButtons(actions, "dock");
+	const doneIsPhrase =
+		actions.doneVariant === "primary" &&
+		actions.doneLabel !== undefined &&
+		actions.doneLabel !== "Done";
 	return (
 		<View style={styles.footer}>
 			<View style={styles.footerEnd}>
@@ -157,9 +162,11 @@ export function DockFooter({
 					<TextButton label="Reset" onPress={actions.onReset} />
 				)}
 			</View>
-			<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
-				{title}
-			</Text>
+			{!doneIsPhrase && (
+				<Text style={styles.title} numberOfLines={1} accessibilityRole="header">
+					{title}
+				</Text>
+			)}
 			<View style={[styles.footerEnd, styles.footerEndRight]}>{done}</View>
 		</View>
 	);
