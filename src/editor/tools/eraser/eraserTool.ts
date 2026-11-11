@@ -1,4 +1,4 @@
-import { defineTool } from "../../defineTool";
+import { defineTool } from "../defineTool";
 import {
 	ERASER_MODES,
 	EraserBar,

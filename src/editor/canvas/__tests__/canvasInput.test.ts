@@ -1,20 +1,20 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { CanvasTool } from "../canvas/canvasTool.ts";
+import { createDrawingLayer } from "../../layers/drawing/drawing.ts";
+import { createImageLayer } from "../../layers/image/image.ts";
+import type { Layer } from "../../layers/layer.ts";
+import { createRedactionBox } from "../../layers/redaction/redaction.ts";
+import { createShapeLayer } from "../../layers/shape/shape.ts";
+import type { DialDrag } from "../../shell/dialDrag.ts";
 import {
 	type CanvasInput,
 	canvasInputFor,
 	inputRules,
 	type LiveAdjustment,
 	outlinedLayerFor,
-} from "../canvasInputFor.ts";
-import { createDrawingLayer } from "../layers/drawing/drawing.ts";
-import { createImageLayer } from "../layers/image/image.ts";
-import type { Layer } from "../layers/layer.ts";
-import { createRedactionBox } from "../layers/redaction/redaction.ts";
-import { createShapeLayer } from "../layers/shape/shape.ts";
-import type { DialDrag } from "../shell/dialDrag.ts";
+} from "../canvasInput.ts";
+import type { CanvasTool } from "../canvasTool.ts";
 
 describe("canvasInputFor", () => {
 	const toolInput: CanvasInput = {

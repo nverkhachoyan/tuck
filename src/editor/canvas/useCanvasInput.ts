@@ -1,12 +1,12 @@
-import type { ToolStroke } from "./canvas/canvasTool";
-import { canvasInputFor } from "./canvasInputFor";
-import type { ToolControllers } from "./defineTool";
-import type { EditorDocument } from "./document/document";
-import type { Point } from "./document/geometry";
-import type { EditorModeAction, Eyedropper } from "./editorMode";
-import { sampleColor } from "./render/renderDocument";
-import { isCustomColor } from "./shell/ColorSwatches";
-import type { ToolId } from "./toolSpec";
+import type { EditorDocument } from "../document/document";
+import type { Point } from "../document/geometry";
+import type { EditorModeAction, Eyedropper } from "../editorMode";
+import { sampleColor } from "../render/renderDocument";
+import { isCustomColor } from "../shell/ColorSwatches";
+import type { ToolControllers } from "../tools/defineTool";
+import type { ToolId } from "../tools/toolSpec";
+import { canvasInputFor } from "./canvasInput";
+import type { ToolStroke } from "./canvasTool";
 
 /**
  * What input on the canvas does for the editor's state (see

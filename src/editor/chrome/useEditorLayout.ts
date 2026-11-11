@@ -3,14 +3,9 @@ import { useWindowDimensions, type ViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { compactControls } from "@/ui/density";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
+import { CARD_HEIGHT, INSPECTOR_WIDTH, PANEL_GAP, useDockInset } from "./Dock";
 import { editorFrame } from "./editorFrame";
-import { LAYERS_SIDEBAR_INSET } from "./layers/panel/LayersPanel";
-import {
-	CARD_HEIGHT,
-	INSPECTOR_WIDTH,
-	PANEL_GAP,
-	useDockInset,
-} from "./shell/Dock";
+import { LAYERS_SIDEBAR_INSET } from "./layersPanel/LayersPanel";
 
 // Room for the chosen tool's highlight inside the rail's card, and for its
 // longest label ("Remove BG", in bold) on one line. Its tools are smaller

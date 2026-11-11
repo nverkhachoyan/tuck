@@ -4,10 +4,10 @@
 // agree; the screen turns the actions into handlers once and gives both
 // layouts the result.
 
-import type { Layer } from "./layers/layer.ts";
-import { isOwnTool, TOOLS, type ToolEntry } from "./shell/toolList.ts";
-import { TOOL_KEYS } from "./shortcuts.ts";
-import type { ToolId, ToolSpecs } from "./toolSpec.ts";
+import type { Layer } from "../layers/layer.ts";
+import { isOwnTool, TOOLS, type ToolEntry } from "../shell/toolList.ts";
+import { TOOL_KEYS } from "../shortcuts.ts";
+import type { ToolId, ToolSpecs } from "../tools/toolSpec.ts";
 
 /**
  * The buttons for `toolbar`'s tools and entries, in its order: a tool's

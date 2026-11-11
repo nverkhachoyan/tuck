@@ -1,11 +1,12 @@
 import { type ReactNode, useState } from "react";
 import {
 	type DerivedValue,
+	type SharedValue,
 	useAnimatedReaction,
 	useDerivedValue,
 	useSharedValue,
 } from "react-native-reanimated";
-import { Group } from "react-native-skia";
+import { Circle, Group } from "react-native-skia";
 import { scheduleOnRN } from "react-native-worklets";
 import { BrushStroke } from "../../layers/drawing/DrawingLayerView";
 import type { DrawingLayer } from "../../layers/drawing/drawing";
@@ -168,9 +169,69 @@ function CrossedShape({
 	return <LiveShape layer={layer} live={live} opacity={opacity} />;
 }
 
+const ERASER_RING_PX = 1.5;
+
+export function EraserRing({
+	tool,
+	ring,
+	scale,
+	stroke,
+	color,
+}: {
+	tool: EraseTool;
+	ring: {
+		x: DerivedValue<number>;
+		y: DerivedValue<number>;
+		shown: SharedValue<boolean>;
+	};
+	scale: DerivedValue<number>;
+	stroke: LiveStroke | null;
+	color: string;
+}) {
+	const eraserRadius = tool.mode === "eraser" ? tool.width / 2 : 0;
+	const ringRadius = useDerivedValue(
+		() => eraserRadius * scale.value,
+		[eraserRadius, scale],
+	);
+	const strokeId = stroke?.id ?? null;
+	const strokePoints = stroke?.points ?? null;
+	const landedId = stroke?.landedId ?? 0;
+	const ringShown = ring.shown;
+	const ringOpacity = useDerivedValue(() => {
+		const dragging =
+			strokeId !== null &&
+			strokePoints !== null &&
+			strokeId.value > landedId &&
+			strokePoints.value.length > 0;
+		return ringShown.value && !dragging && eraserRadius > 0 ? 1 : 0;
+	}, [strokeId, strokePoints, landedId, eraserRadius, ringShown]);
+
+	if (eraserRadius <= 0) return null;
+	return (
+		<Circle
+			cx={ring.x}
+			cy={ring.y}
+			r={ringRadius}
+			opacity={ringOpacity}
+			style="stroke"
+			strokeWidth={ERASER_RING_PX}
+			color={color}
+		/>
+	);
+}
+
 export const eraseStrokeKind: StrokeKind<EraseTool> = {
 	reaches: (tool, layer) => strokeReaches(tool, layer),
 	startsLayer: () => false,
+	renderOverlay: ({ tool, ring, scale, stroke, selectionColor }) => (
+		<EraserRing
+			tool={tool}
+			ring={ring}
+			scale={scale}
+			stroke={stroke}
+			color={selectionColor}
+		/>
+	),
 	renderInLayer: ({ layer, stroke, live, dimmed, onImageError }) => {
 		if (layer.type === "shape") {
 			// A dimmed shape is out of the Eraser's reach, so it never crosses.

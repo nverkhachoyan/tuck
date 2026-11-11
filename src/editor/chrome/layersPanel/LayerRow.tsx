@@ -29,11 +29,11 @@ import { IconButton } from "@/ui/IconButton";
 import { chosenOnWeb } from "@/ui/interaction";
 import { colors, radii, typography } from "@/ui/theme";
 import { assertNever } from "../../document/assertNever";
+import type { DrawingLayer } from "../../layers/drawing/drawing";
+import type { Layer } from "../../layers/layer";
+import type { RedactionEffect } from "../../layers/redaction/redaction";
 import { renderMarkThumbnail } from "../../render/markThumbnail";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
-import type { DrawingLayer } from "../drawing/drawing";
-import type { Layer } from "../layer";
-import type { RedactionEffect } from "../redaction/redaction";
 import { markName } from "./layerListEntries";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 

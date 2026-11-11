@@ -4,9 +4,8 @@ import { writeTemporaryPng } from "@/platform/temporaryFile";
 import { usePreference } from "@/platform/usePreference";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import type { ToolStroke } from "../../canvas/canvasTool";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
 import { findLayer } from "../../document/document";
 import { visibleImageLayer } from "../../document/framing";
 import type { ImageLayer } from "../../layers/image/image";
@@ -19,6 +18,7 @@ import {
 import { cutOutSticker, saveSticker } from "../../savedStickers/saveSticker";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
+import type { ToolEnv } from "../defineTool";
 import { removedMask } from "./cutMask";
 import {
 	type CutTapMode,

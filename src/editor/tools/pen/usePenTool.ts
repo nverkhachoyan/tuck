@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { readPreference, writePreference } from "@/platform/preferenceStore";
 import { usePreference } from "@/platform/usePreference";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import type { ToolStroke } from "../../canvas/canvasTool";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
 import type { DrawingLayer } from "../../layers/drawing/drawing";
 import {
 	continuesMark,
@@ -12,6 +11,7 @@ import {
 	sameStyle,
 } from "../../layers/drawing/marks";
 import { useStore } from "../../store";
+import type { ToolEnv } from "../defineTool";
 import {
 	markPatch,
 	type PenSettings,

@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { BUILT_IN_SPECS } from "../builtInSpecs.ts";
 import {
 	type EditorModeAction,
 	type EditorModeState,
@@ -17,7 +16,8 @@ import {
 	takesKeys,
 } from "../editorMode.ts";
 import type { Shortcut } from "../shortcuts.ts";
-import type { ToolSpec, ToolSpecs } from "../toolSpec.ts";
+import { BUILT_IN_SPECS } from "../tools/builtInSpecs.ts";
+import type { ToolSpec, ToolSpecs } from "../tools/toolSpec.ts";
 
 type State = EditorModeState;
 

@@ -3,10 +3,10 @@ import { StyleSheet, View, type ViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Surface } from "@/ui/Surface";
 import { space } from "@/ui/theme";
-import { PANEL_GAP, PANEL_RADIUS } from "./shell/Dock";
-import { mapStarters, type ToolStarters, ToolsPanel } from "./shell/ToolsPanel";
-import type { ToolEntry } from "./shell/toolList";
-import type { ToolId } from "./toolSpec";
+import type { ToolEntry } from "../shell/toolList";
+import type { ToolId } from "../tools/toolSpec";
+import { PANEL_GAP, PANEL_RADIUS } from "./Dock";
+import { mapStarters, type ToolStarters, ToolsPanel } from "./ToolsPanel";
 import { RAIL_WIDTH } from "./useEditorLayout";
 
 /**

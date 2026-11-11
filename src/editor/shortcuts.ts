@@ -1,5 +1,9 @@
 import type { OwnTool, ToolEntry } from "./shell/toolList.ts";
-import { escapeCancels, type ToolId, type ToolSpecs } from "./toolSpec.ts";
+import {
+	escapeCancels,
+	type ToolId,
+	type ToolSpecs,
+} from "./tools/toolSpec.ts";
 
 // Nudge distances in screen pixels, so a nudge looks the same at any zoom.
 const NUDGE_PX = 1;

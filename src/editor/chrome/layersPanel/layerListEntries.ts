@@ -1,7 +1,7 @@
 import type { LayerGroup } from "../../document/document.ts";
+import type { DrawingLayer, PenTip } from "../../layers/drawing/drawing.ts";
+import type { Layer } from "../../layers/layer.ts";
 import { swatchName } from "../../shell/swatches.ts";
-import type { DrawingLayer, PenTip } from "../drawing/drawing.ts";
-import type { Layer } from "../layer.ts";
 
 // What the panel calls each pen tip's mark. Pen's own buttons name the tips
 // ("Highlighter"), but the panel can't import a tool.

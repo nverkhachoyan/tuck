@@ -1,8 +1,8 @@
 import { StyleSheet, View } from "react-native";
 import { space } from "@/ui/theme";
+import type { ToolStarters } from "../chrome/ToolsPanel";
 import { BarButton } from "./ContextBar";
 import { ToolButton, ToolRow } from "./ToolButton";
-import type { ToolStarters } from "./ToolsPanel";
 import type { ToolEntry, ToolIcon } from "./toolList";
 
 /**

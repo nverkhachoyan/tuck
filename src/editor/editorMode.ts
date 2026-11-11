@@ -3,7 +3,7 @@
 // the state for the screen.
 
 import type { Shortcut } from "./shortcuts.ts";
-import type { ToolId, ToolSpecs } from "./toolSpec.ts";
+import type { ToolId, ToolSpecs } from "./tools/toolSpec.ts";
 
 // While set, the canvas's next tap picks a color from what it shows, for
 // `apply` to give to whatever asked for it.

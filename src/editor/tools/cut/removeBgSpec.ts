@@ -1,4 +1,4 @@
-import type { ToolSpec } from "../../toolSpec.ts";
+import type { ToolSpec } from "../toolSpec.ts";
 
 // G removes a photo's background in one step, opening nothing. A hidden
 // photo has none to remove.

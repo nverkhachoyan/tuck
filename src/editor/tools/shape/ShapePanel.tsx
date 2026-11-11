@@ -2,7 +2,6 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StyleSheet, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, space } from "@/ui/theme";
-import { useColorTarget, useEditorContext } from "../../editorContext";
 import { type ShapeKind, shapeKinds } from "../../layers/shape/shape";
 import {
 	ColorChip,
@@ -19,6 +18,7 @@ import {
 	ToolOption,
 	ToolOptions,
 } from "../../shell/ToolOptions";
+import { useColorTarget, useEditorContext } from "../editorContext";
 import type { ShapeController } from "./useShapeTool";
 
 /**

@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { usePreference } from "@/platform/usePreference";
+import type { CanvasInput } from "../../canvas/canvasInput";
 import type { ToolStroke } from "../../canvas/canvasTool";
-import type { CanvasInput } from "../../canvasInputFor";
-import type { ToolEnv } from "../../defineTool";
 import {
 	redactionEffect,
 	sameEffect,
@@ -11,6 +10,7 @@ import {
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
 import { selectSelectedRedaction } from "../../store/editorSlice";
+import type { ToolEnv } from "../defineTool";
 import {
 	parseRedactSettings,
 	type RedactChoices,

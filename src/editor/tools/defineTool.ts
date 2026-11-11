@@ -1,14 +1,14 @@
 import type { ComponentType } from "react";
 import type { DerivedValue } from "react-native-reanimated";
-import type { ToolStroke } from "./canvas/canvasTool";
-import type { CanvasInput } from "./canvasInputFor";
-import type { EditorDocument } from "./document/document";
-import type { Point, Rect, Size } from "./document/geometry";
-import type { EditorHost, PickedImage } from "./editorHost";
-import type { ImageLayer } from "./layers/image/image";
-import type { Layer } from "./layers/layer";
-import type { LayerAction } from "./shell/LayerActionsPanel";
-import type { OwnTool, ToolIcon, ToolVariant } from "./shell/toolList";
+import type { CanvasInput } from "../canvas/canvasInput";
+import type { ToolStroke } from "../canvas/canvasTool";
+import type { EditorDocument } from "../document/document";
+import type { Point, Rect, Size } from "../document/geometry";
+import type { EditorHost, PickedImage } from "../editorHost";
+import type { ImageLayer } from "../layers/image/image";
+import type { Layer } from "../layers/layer";
+import type { LayerAction } from "../shell/LayerActionsPanel";
+import type { OwnTool, ToolIcon, ToolVariant } from "../shell/toolList";
 import type { ToolId, ToolSpec } from "./toolSpec";
 
 type ToolView<C> = ComponentType<{ controller: C }>;

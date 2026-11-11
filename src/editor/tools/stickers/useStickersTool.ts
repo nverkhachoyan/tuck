@@ -1,6 +1,6 @@
-import type { ToolEnv } from "../../defineTool";
 import type { Layer } from "../../layers/layer";
 import type { LayerAction } from "../../shell/LayerActionsPanel";
+import type { ToolEnv } from "../defineTool";
 import { useSavedStickers } from "./useSavedStickers";
 import { useStickerActions } from "./useStickerActions";
 import { useStickerSave } from "./useStickerSave";

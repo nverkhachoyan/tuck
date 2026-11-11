@@ -2,14 +2,14 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { LayerGroup } from "../../../document/document.ts";
-import { swatchName } from "../../../shell/swatches.ts";
 import {
 	createDrawingLayer,
 	type DrawingLayer,
 	type Stroke,
-} from "../../drawing/drawing.ts";
-import type { Layer } from "../../layer.ts";
-import { createTextLayer } from "../../text/text.ts";
+} from "../../../layers/drawing/drawing.ts";
+import type { Layer } from "../../../layers/layer.ts";
+import { createTextLayer } from "../../../layers/text/text.ts";
+import { swatchName } from "../../../shell/swatches.ts";
 import { layerListEntries, markName } from "../layerListEntries.ts";
 
 // Bottom first, as the document holds them.

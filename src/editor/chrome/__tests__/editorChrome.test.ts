@@ -1,7 +1,18 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { BUILT_IN_SPECS, BUILT_IN_TOOLBAR } from "../builtInSpecs.ts";
+import { createDrawingLayer } from "../../layers/drawing/drawing.ts";
+import { createImageLayer } from "../../layers/image/image.ts";
+import { createRedactionBox } from "../../layers/redaction/redaction.ts";
+import { createShapeLayer } from "../../layers/shape/shape.ts";
+import { createTextLayer } from "../../layers/text/text.ts";
+import type { ToolEntry } from "../../shell/toolList.ts";
+import { BUILT_IN_SPECS, BUILT_IN_TOOLBAR } from "../../tools/builtInSpecs.ts";
+import {
+	escapeCancels,
+	type ToolSpec,
+	type ToolSpecs,
+} from "../../tools/toolSpec.ts";
 import {
 	type DockPanel,
 	layerActionsFor,
@@ -9,13 +20,6 @@ import {
 	modeChrome,
 	toolbarEntries,
 } from "../editorChrome.ts";
-import { createDrawingLayer } from "../layers/drawing/drawing.ts";
-import { createImageLayer } from "../layers/image/image.ts";
-import { createRedactionBox } from "../layers/redaction/redaction.ts";
-import { createShapeLayer } from "../layers/shape/shape.ts";
-import { createTextLayer } from "../layers/text/text.ts";
-import type { ToolEntry } from "../shell/toolList.ts";
-import { escapeCancels, type ToolSpec, type ToolSpecs } from "../toolSpec.ts";
 
 const specs: ToolSpecs = BUILT_IN_SPECS;
 

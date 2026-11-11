@@ -13,17 +13,17 @@ import { BottomSheet } from "@/ui/BottomSheet";
 import { Popover } from "@/ui/Popover";
 import { Surface } from "@/ui/Surface";
 import { colors } from "@/ui/theme";
-import type { OpenTool, ToolControllers } from "./defineTool";
-import type { DockPanel } from "./editorChrome";
-import { type EditorModeState, openTray } from "./editorMode";
-import { ContextBar } from "./shell/ContextBar";
+import { type EditorModeState, openTray } from "../editorMode";
+import { ContextBar } from "../shell/ContextBar";
+import { LayerActionsPanel, LayerBar } from "../shell/LayerActionsPanel";
+import type { OpenTool, ToolControllers } from "../tools/defineTool";
 import {
 	CARD_HEIGHT,
 	type ModeActionProps,
 	PANEL_GAP,
 	PANEL_RADIUS,
-} from "./shell/Dock";
-import { LayerActionsPanel, LayerBar } from "./shell/LayerActionsPanel";
+} from "./Dock";
+import type { DockPanel } from "./editorChrome";
 
 // The widest a tool's card gets, as wide as a tray.
 const CARD_MAX_WIDTH = 520;

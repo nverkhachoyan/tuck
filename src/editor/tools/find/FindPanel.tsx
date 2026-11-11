@@ -15,7 +15,6 @@ import { Button } from "@/ui/Button";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
-import { useColorTarget, useEditorContext } from "../../editorContext";
 import { BarGroup, BarSections } from "../../shell/ContextBar";
 import {
 	EffectGlyph,
@@ -25,6 +24,7 @@ import {
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import { ToolOptions, Tray } from "../../shell/ToolOptions";
 import { useRedactLook } from "../../shell/useRedactLook";
+import { useColorTarget, useEditorContext } from "../editorContext";
 import type { FindController, FindReview } from "./useFindTool";
 import type { DetectionScope, ImageDetectionState } from "./useImageDetection";
 

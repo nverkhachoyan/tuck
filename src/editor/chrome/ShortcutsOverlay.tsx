@@ -4,7 +4,7 @@ import { PanelHeader } from "@/ui/BottomSheet";
 import { Surface } from "@/ui/Surface";
 import { formatShortcut } from "@/ui/Tooltip";
 import { colors, radii, space, typography } from "@/ui/theme";
-import type { ShortcutGroup } from "./shortcuts";
+import type { ShortcutGroup } from "../shortcuts";
 
 /**
  * Every keyboard shortcut (`groups`, from `shortcutGroups`), in a card over

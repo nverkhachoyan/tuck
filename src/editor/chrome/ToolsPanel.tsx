@@ -11,8 +11,8 @@ import { Highlight } from "@/ui/Highlight";
 import { chosenOnWeb, interaction } from "@/ui/interaction";
 import { Popover } from "@/ui/Popover";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
-import { ToolButton, ToolGrid, ToolRow } from "./ToolButton";
-import type { ToolEntry } from "./toolList";
+import { ToolButton, ToolGrid, ToolRow } from "../shell/ToolButton";
+import type { ToolEntry } from "../shell/toolList";
 
 /**
  * The editing tools' buttons in the dock or rail:

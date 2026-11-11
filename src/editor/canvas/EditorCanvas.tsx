@@ -20,50 +20,47 @@ import {
 	useSimultaneousGestures,
 } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
-import { Canvas, Circle, Group } from "react-native-skia";
+import { Canvas, Group } from "react-native-skia";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
-import { cursorStyle } from "./canvas/canvasCursor";
-import { cutImageId, type ToolStroke } from "./canvas/canvasTool";
-import { FitButton } from "./canvas/FitButton";
-import { handleUnder } from "./canvas/handleMetrics";
-import { findLayerAt, hitsLayer, type LayerTarget } from "./canvas/hitTest";
-import { layerBounds } from "./canvas/layerBounds";
-import { layerTargets, resizeMode } from "./canvas/layerTargets";
+import type { EditorDocument } from "../document/document";
+import type { Box, Point, Rect, Transform } from "../document/geometry";
+import type { Layer } from "../layers/layer";
+import { cursorStyle } from "./canvasCursor";
+import { type CanvasInput, inputRules, outlinedLayerFor } from "./canvasInput";
+import { cutImageId, type ToolStroke } from "./canvasTool";
+import { EditorScene, type SceneDraft } from "./EditorScene";
+import { FitButton } from "./FitButton";
+import { handleUnder } from "./handleMetrics";
+import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
+import { layerBounds } from "./layerBounds";
+import { layerTargets, resizeMode } from "./layerTargets";
 import {
 	type LiveTransform,
 	readLiveBox,
 	readLiveTransform,
 	syncLiveTransform,
 	useLiveTransform,
-} from "./canvas/liveTransform";
-import type { CanvasRegion } from "./canvas/RegionOutline";
-import { SelectionBarFrame } from "./canvas/SelectionBarFrame";
-import { useCanvasCursor, useEraserRing } from "./canvas/useCanvasCursor";
-import { useCanvasTap } from "./canvas/useCanvasTap";
-import { useCanvasZoom } from "./canvas/useCanvasZoom";
-import { useDialDrag } from "./canvas/useDialDrag";
-import { useEditTextGesture } from "./canvas/useEditTextGesture";
-import { useKeepTextFocus } from "./canvas/useKeepTextFocus";
-import { useLayerTransformGesture } from "./canvas/useLayerTransformGesture";
-import { useRegionTap } from "./canvas/useRegionTap";
-import { useShiftHeld } from "./canvas/useShiftHeld";
-import { useToolStroke } from "./canvas/useToolStroke";
-import { useViewGesture } from "./canvas/useViewGesture";
+} from "./liveTransform";
+import type { CanvasRegion } from "./RegionOutline";
+import { strokeKindOf } from "./SceneLayer";
+import { SelectionBarFrame } from "./SelectionBarFrame";
+import { useCanvasCursor, useEraserRing } from "./useCanvasCursor";
+import { useCanvasTap } from "./useCanvasTap";
+import { useCanvasZoom } from "./useCanvasZoom";
+import { useDialDrag } from "./useDialDrag";
+import { useEditTextGesture } from "./useEditTextGesture";
+import { useKeepTextFocus } from "./useKeepTextFocus";
+import { useLayerTransformGesture } from "./useLayerTransformGesture";
+import { useRegionTap } from "./useRegionTap";
+import { useShiftHeld } from "./useShiftHeld";
+import { useToolStroke } from "./useToolStroke";
+import { useViewGesture } from "./useViewGesture";
 import {
 	type DocumentViewport,
 	type ViewFrame,
 	viewPointToDocument,
-} from "./canvas/viewport";
-import {
-	type CanvasInput,
-	inputRules,
-	outlinedLayerFor,
-} from "./canvasInputFor";
-import type { EditorDocument } from "./document/document";
-import type { Box, Point, Rect, Transform } from "./document/geometry";
-import { EditorScene, type SceneDraft } from "./EditorScene";
-import type { Layer } from "./layers/layer";
+} from "./viewport";
 
 // Inside the canvas rather than around it, so layers past the photo's edge
 // and their handles still have room to draw.
@@ -494,26 +491,6 @@ export function EditorCanvas({
 		hover: ring,
 		enabled: isTool,
 	});
-	// The worklets below take only shared values and numbers. The Stroke
-	// eraser has no size, so no ring.
-	const ringShown = ring.shown;
-	const eraserRadius =
-		tool?.type === "erase" && tool.mode === "eraser" ? tool.width / 2 : 0;
-	const ringRadius = useDerivedValue(
-		() => eraserRadius * shown.scale.value,
-		[eraserRadius],
-	);
-	const strokeId = liveStroke?.id ?? null;
-	const strokePoints = liveStroke?.points ?? null;
-	const landedId = liveStroke?.landedId ?? 0;
-	const ringOpacity = useDerivedValue(() => {
-		const dragging =
-			strokeId !== null &&
-			strokePoints !== null &&
-			strokeId.value > landedId &&
-			strokePoints.value.length > 0;
-		return ringShown.value && !dragging && eraserRadius > 0 ? 1 : 0;
-	}, [strokeId, strokePoints, landedId, eraserRadius]);
 	const cuttingOutId = cutImageId(tool);
 	const outlinedLayer = outlinedLayerFor(input, {
 		layers: document.layers,
@@ -601,17 +578,14 @@ export function EditorCanvas({
 								/>
 							</Group>
 						)}
-						{eraserRadius > 0 && (
-							<Circle
-								cx={ring.x}
-								cy={ring.y}
-								r={ringRadius}
-								opacity={ringOpacity}
-								style="stroke"
-								strokeWidth={ERASER_RING_PX}
-								color={colors.selection}
-							/>
-						)}
+						{tool &&
+							strokeKindOf(tool).renderOverlay?.({
+								tool,
+								ring,
+								scale: shown.scale,
+								stroke: liveStroke,
+								selectionColor: colors.selection,
+							})}
 					</Canvas>
 					{/* At the bottom, clear of new text at the center and the editor's
 					    save banner at the top. Touches pass through to the canvas. */}
@@ -659,9 +633,6 @@ export function EditorCanvas({
 		</View>
 	);
 }
-
-// The Eraser's ring's line, in screen pixels.
-const ERASER_RING_PX = 1.5;
 
 const styles = StyleSheet.create({
 	container: {

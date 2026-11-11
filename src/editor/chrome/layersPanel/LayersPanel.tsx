@@ -27,8 +27,8 @@ import { IconButton } from "@/ui/IconButton";
 import { Surface } from "@/ui/Surface";
 import { colors, radii, typography } from "@/ui/theme";
 import type { EditorDocument, LayerGroup } from "../../document/document";
+import type { Layer } from "../../layers/layer";
 import type { EditorStoreActions } from "../../store/editorSlice";
-import type { Layer } from "../layer";
 import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
 import { layerListEntries } from "./layerListEntries";
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
-import { LayersPanel, type layerListProps } from "./layers/panel/LayersPanel";
-import { Inspector } from "./shell/Dock";
+import { Inspector } from "./Dock";
+import { LayersPanel, type layerListProps } from "./layersPanel/LayersPanel";
 
 /**
  * What the wide editor shows on the right when the window is tall enough, or

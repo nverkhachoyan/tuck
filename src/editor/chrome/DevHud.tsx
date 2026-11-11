@@ -2,7 +2,7 @@ import { type ProcessMemory, readProcessMemory } from "process-memory";
 import { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import type { ImageCacheSnapshot } from "../render/imageCache.ts";
-import { formatBytes } from "./formatBytes.ts";
+import { formatBytes } from "../shell/formatBytes.ts";
 
 export { formatBytes };
 

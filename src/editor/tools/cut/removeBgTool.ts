@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
-import { defineTool, type ToolEnv } from "../../defineTool";
 import {
 	isCutOutAvailable,
 	isSubjectModelDownloading,
@@ -9,6 +8,7 @@ import {
 import { visibleImageLayer } from "../../document/framing";
 import type { ImageLayer } from "../../layers/image/image";
 import { useStore } from "../../store";
+import { defineTool, type ToolEnv } from "../defineTool";
 import { removeBgSpec } from "./removeBgSpec";
 import { subjectMaskOf } from "./useCutOut";
 

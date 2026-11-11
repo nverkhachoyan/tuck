@@ -21,10 +21,10 @@ import {
 	rebaseTransform,
 	turnsWithPhoto,
 } from "../../document/framing";
-import { useEditorContext } from "../../editorContext";
 import { LayerContent } from "../../layers/LayerContent";
 import type { Layer } from "../../layers/layer";
 import { toTransformList } from "../../layers/layerTransform";
+import { useEditorContext } from "../editorContext";
 import type { CropHandle } from "./cropDrag";
 import { type CropState, cropAngle } from "./cropGeometry";
 import { useCropGesture } from "./useCropGesture";

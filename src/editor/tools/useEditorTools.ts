@@ -1,5 +1,18 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { BackHandler } from "react-native";
+import type { ToolStarters } from "../chrome/ToolsPanel";
+import type { EditorDocument } from "../document/document";
+import { visibleImageLayer } from "../document/framing";
+import { type Point, type Size, toLayerSpace } from "../document/geometry";
+import type { EditorHost } from "../editorHost";
+import type { EditorMode, EditorModeAction } from "../editorMode";
+import type { ImageLayer } from "../layers/image/image";
+import type { Layer } from "../layers/layer";
+import { useStore } from "../store";
+import {
+	selectSelectedLayer,
+	type ToolSessionSteps,
+} from "../store/editorSlice";
 import {
 	definitionOf,
 	type NoticeAction,
@@ -7,16 +20,6 @@ import {
 	type ToolEnv,
 	type ToolList,
 } from "./defineTool";
-import type { EditorDocument } from "./document/document";
-import { visibleImageLayer } from "./document/framing";
-import { type Point, type Size, toLayerSpace } from "./document/geometry";
-import type { EditorHost } from "./editorHost";
-import type { EditorMode, EditorModeAction } from "./editorMode";
-import type { ImageLayer } from "./layers/image/image";
-import type { Layer } from "./layers/layer";
-import type { ToolStarters } from "./shell/ToolsPanel";
-import { useStore } from "./store";
-import { type SessionSteps, selectSelectedLayer } from "./store/editorSlice";
 import { dropsWork, type ToolId } from "./toolSpec";
 
 /**
@@ -330,7 +333,7 @@ export function useToolSession(
 	tool: ToolId | null,
 	reopened: number,
 	previews: boolean,
-	steps: SessionSteps,
+	steps: ToolSessionSteps,
 ) {
 	const { beginToolSession, commitToolSession, cancelToolSession } = useStore(
 		(state) => state.actions,

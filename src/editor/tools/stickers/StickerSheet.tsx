@@ -17,7 +17,7 @@ import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { showAlert } from "@/ui/showAlert";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
-import { useEditorContext } from "../../editorContext";
+import { useEditorContext } from "../editorContext";
 import {
 	STICKER_CATEGORY_LABELS,
 	STICKERS,

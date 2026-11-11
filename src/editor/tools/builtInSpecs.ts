@@ -1,15 +1,15 @@
-import type { OwnTool } from "./shell/toolList.ts";
-import { adjustSpec } from "./tools/adjust/adjustSpec.ts";
-import { cropSpec } from "./tools/crop/cropSpec.ts";
-import { cutSpec } from "./tools/cut/cutSpec.ts";
-import { removeBgSpec } from "./tools/cut/removeBgSpec.ts";
-import { eraserSpec } from "./tools/eraser/eraserSpec.ts";
-import { findSpec } from "./tools/find/findSpec.ts";
-import { penSpec } from "./tools/pen/penSpec.ts";
-import { redactSpec } from "./tools/redact/redactSpec.ts";
-import { shapeSpec } from "./tools/shape/shapeSpec.ts";
-import { stickersSpec } from "./tools/stickers/stickersSpec.ts";
-import { textSpec } from "./tools/text/textSpec.ts";
+import type { OwnTool } from "../shell/toolList.ts";
+import { adjustSpec } from "./adjust/adjustSpec.ts";
+import { cropSpec } from "./crop/cropSpec.ts";
+import { cutSpec } from "./cut/cutSpec.ts";
+import { removeBgSpec } from "./cut/removeBgSpec.ts";
+import { eraserSpec } from "./eraser/eraserSpec.ts";
+import { findSpec } from "./find/findSpec.ts";
+import { penSpec } from "./pen/penSpec.ts";
+import { redactSpec } from "./redact/redactSpec.ts";
+import { shapeSpec } from "./shape/shapeSpec.ts";
+import { stickersSpec } from "./stickers/stickersSpec.ts";
+import { textSpec } from "./text/textSpec.ts";
 
 /** The built-in tools' specs, from their own folders, by id. */
 export const BUILT_IN_SPECS = {

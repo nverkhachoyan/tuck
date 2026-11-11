@@ -18,7 +18,7 @@ function findPlainTsFiles(dir: string): string[] {
 	for (const entry of readdirSync(dir)) {
 		const full = join(dir, entry);
 		if (statSync(full).isDirectory()) {
-			if (entry !== "__tests__" && entry !== "panel") {
+			if (entry !== "__tests__") {
 				files.push(...findPlainTsFiles(full));
 			}
 		} else if (entry.endsWith(".ts") && !entry.endsWith(".d.ts")) {

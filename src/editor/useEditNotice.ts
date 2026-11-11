@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import type { NoticeAction } from "./defineTool";
+import { layerKindName } from "./chrome/layersPanel/LayerRow";
 import type { EditorDocument } from "./document/document";
-import { layerKindName } from "./layers/panel/LayerRow";
 import { useStore } from "./store";
+import type { NoticeAction } from "./tools/defineTool";
 
 // Long enough to read it and reach Undo, short enough not to linger. A
 // note with a second action (Refine) stays up longer: deciding on it takes

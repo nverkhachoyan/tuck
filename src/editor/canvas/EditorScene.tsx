@@ -2,25 +2,21 @@ import type { ReactNode } from "react";
 import type { DerivedValue } from "react-native-reanimated";
 import { Fill, Group, Rect, rect, Shadow } from "react-native-skia";
 import { colorScheme, colors } from "@/ui/theme";
-import { CanvasBackground } from "./canvas/Checkerboard";
-import type { LiveTransform } from "./canvas/liveTransform";
-import { type CanvasRegion, RegionOutline } from "./canvas/RegionOutline";
-import {
-	type LiveStroke,
-	NewLayerStroke,
-	SceneLayer,
-} from "./canvas/SceneLayer";
+import { assertNever } from "../document/assertNever";
+import type { EditorDocument } from "../document/document";
+import type { Layer } from "../layers/layer";
+import { toTransformList } from "../layers/layerTransform";
+import { CanvasBackground } from "./Checkerboard";
+import type { LiveAdjustment } from "./canvasInput";
+import type { LiveTransform } from "./liveTransform";
+import { type CanvasRegion, RegionOutline } from "./RegionOutline";
+import { type LiveStroke, NewLayerStroke, SceneLayer } from "./SceneLayer";
 import {
 	SelectionHandles,
 	SelectionOutline,
 	SnapGuides,
 	useScreenPixels,
-} from "./canvas/SelectionOverlay";
-import type { LiveAdjustment } from "./canvasInputFor";
-import { assertNever } from "./document/assertNever";
-import type { EditorDocument } from "./document/document";
-import type { Layer } from "./layers/layer";
-import { toTransformList } from "./layers/layerTransform";
+} from "./SelectionOverlay";
 
 // The canvas's shadows on the table around it, as a print's: a tight one
 // where it touches and a soft one that lifts it, in screen pixels. At night,

@@ -1,8 +1,8 @@
-import type { EditorDocument } from "./document/document";
-import { drawingPieces } from "./layers/drawing/drawingEdits";
-import type { Layer } from "./layers/layer";
-import { type ArrangeMove, SelectionBar } from "./shell/SelectionBar";
-import { useStore } from "./store";
+import type { EditorDocument } from "../document/document";
+import { drawingPieces } from "../layers/drawing/drawingEdits";
+import type { Layer } from "../layers/layer";
+import { useStore } from "../store";
+import { type ArrangeMove, SelectionBar } from "./SelectionBar";
 
 /**
  * Moving the selected layer in the stack (`arrange`), and where it stands:

@@ -1,4 +1,4 @@
-import { defineTool } from "../../defineTool";
+import { defineTool } from "../defineTool";
 import { StickerSheet } from "./StickerSheet";
 import { stickersSpec } from "./stickersSpec";
 import { type StickersController, useStickersTool } from "./useStickersTool";

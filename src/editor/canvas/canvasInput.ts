@@ -1,15 +1,10 @@
 import type { DerivedValue } from "react-native-reanimated";
-import {
-	type CanvasTool,
-	cutImageId,
-	drags,
-	restyles,
-} from "./canvas/canvasTool.ts";
-import type { CanvasRegion } from "./canvas/RegionOutline.tsx";
-import type { EditText } from "./canvas/useEditTextGesture.ts";
-import type { ColorMatrix } from "./layers/image/adjustments.ts";
-import type { Layer } from "./layers/layer.ts";
-import type { DialDrag } from "./shell/dialDrag.ts";
+import type { ColorMatrix } from "../layers/image/adjustments.ts";
+import type { Layer } from "../layers/layer.ts";
+import type { DialDrag } from "../shell/dialDrag.ts";
+import { type CanvasTool, cutImageId, drags, restyles } from "./canvasTool.ts";
+import type { CanvasRegion } from "./RegionOutline.tsx";
+import type { EditText } from "./useEditTextGesture.ts";
 
 /**
  * What input on the canvas does, one at a time: select and transform

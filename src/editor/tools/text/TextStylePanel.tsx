@@ -17,7 +17,6 @@ import { type Hsv, hexToHsv, hsvToHex, hsvToTone, toneToHsv } from "@/ui/hsv";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
-import { useColorTarget, useEditorContext } from "../../editorContext";
 import {
 	type TextAlign,
 	type TextFont,
@@ -34,6 +33,7 @@ import {
 	BarSections,
 	OptionSegments,
 } from "../../shell/ContextBar";
+import { useColorTarget, useEditorContext } from "../editorContext";
 import { NEXT_ALIGN, type TextColorKey } from "./textSettings";
 import type { TextController } from "./useTextTool";
 

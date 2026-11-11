@@ -59,6 +59,18 @@ export type LayerStrokeProps = {
 	onImageError: (error: unknown) => void;
 };
 
+export type StrokeOverlayProps<T extends CanvasTool = CanvasTool> = {
+	tool: T;
+	ring: {
+		x: DerivedValue<number>;
+		y: DerivedValue<number>;
+		shown: SharedValue<boolean>;
+	};
+	scale: DerivedValue<number>;
+	stroke: LiveStroke | null;
+	selectionColor: string;
+};
+
 /**
  * What one kind of canvas tool does while its stroke is being painted:
  * which existing layers it joins, whether it starts a new layer over the
@@ -73,6 +85,7 @@ export type StrokeKind<T extends CanvasTool = CanvasTool> = {
 		tool: T,
 		viewScale: DerivedValue<number>,
 	) => ReactNode;
+	renderOverlay?: (props: StrokeOverlayProps<T>) => ReactNode;
 };
 
 // Whatever of a stroke is still to land in the document (see `LiveStroke`).

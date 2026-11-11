@@ -1,4 +1,4 @@
-import { defineTool } from "../../defineTool";
+import { defineTool } from "../defineTool";
 import { RedactBar, RedactOptions, RedactPanel } from "./RedactPanel";
 import { redactSpec } from "./redactSpec";
 import { type RedactController, useRedactTool } from "./useRedactTool";
