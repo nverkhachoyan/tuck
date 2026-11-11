@@ -2,7 +2,10 @@ import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getOpenDocument, useOpenDocument } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
-import { isProjectOpenElsewhere } from "@/projects/openProjects";
+import {
+	isProjectOpenElsewhere,
+	PROJECT_GONE_MESSAGE,
+} from "@/projects/openProjects";
 import { projectRouteId } from "@/projects/projectRoute";
 import { errorMessage } from "@/ui/errorMessage";
 import { appSession } from "./appSession";
@@ -40,6 +43,9 @@ type ProjectSession =
 			status: "failed";
 			message: string;
 			openElsewhere: boolean;
+			// Not saved, as a photo opened and left unedited isn't, or deleted:
+			// trying again can't help.
+			gone: boolean;
 			retry: () => void;
 	  };
 
@@ -57,6 +63,7 @@ export function useProjectSession(routeId: string): ProjectSession {
 		routeId: string;
 		message: string;
 		openElsewhere: boolean;
+		gone: boolean;
 	} | null>(null);
 	const failed = failure?.routeId === routeId ? failure : null;
 	// Set at once, so a render before the project opens can't open it again.
@@ -77,10 +84,12 @@ export function useProjectSession(routeId: string): ProjectSession {
 		void appSession
 			.open(routeId, () => wanted.current)
 			.catch((error: unknown) => {
+				const message = errorMessage(error);
 				setFailure({
 					routeId,
-					message: errorMessage(error),
+					message,
 					openElsewhere: isProjectOpenElsewhere(error),
+					gone: message === PROJECT_GONE_MESSAGE,
 				});
 			})
 			.finally(() => {
@@ -96,6 +105,7 @@ export function useProjectSession(routeId: string): ProjectSession {
 			status: "failed",
 			message: failed.message,
 			openElsewhere: failed.openElsewhere,
+			gone: failed.gone,
 			retry,
 		};
 	}
