@@ -1,282 +1,406 @@
-# Codebase audit: readability and performance
+# Codebase audit: structure, readability, and performance
 
-Written November 9, 2026, at `0923463`. It covers `src/`, `packages/`, and the TypeScript side of `modules/`. It changes no code. Each finding says what a newcomer trips on or what costs time, the shape I'd build instead, and how to check it. Remove this file once its findings are built or filed, as with other plans.
+Written November 10, 2026, at `95c1693`. It replaces the audit of November 9, most of which [#111](https://github.com/nverkhachoyan/tuck/pull/111) built. It covers `src/`, `packages/`, the TypeScript side of `modules/`, and their tests, and changes no code. Remove this file once its findings are built or filed, as with other plans.
 
-How the numbers were taken: headless Chrome 157 over CDP on the Apple M1 Mac, a 1280×773 viewport at 60 fps, with synthetic mouse input, `Performance.getMetrics`, rAF frame times, and CPU profiles (docs/development.md). "Dev" is the Metro dev server at this commit. "Prod" is the `dist/` export built the same evening, three commits earlier; none of those commits touch the pen, drag, or import paths measured here. Parsing was timed in Node 24 with the app's own modules. Nothing was measured on a phone: every native claim is marked `needs device`, with its reasoning.
+This pass was asked to treat every structural decision as open, including the conventions in AGENTS.md, the module map in docs/architecture.md, and what #111 just landed. Measurements, platform quirks, and bugs in docs/GOTCHAS.md still bind. Where the current shape wins after a real attempt at something else, this says so.
 
-One lesson from measuring belongs up front. The dev build triples React's cost: a landed stroke at 200 marks costs 64 ms of script in dev and 20 ms in prod, because React's dev-mode element bookkeeping (`jsxDEV`, `createTask`, `logComponentRender`) is nearly a third of the profile. The editor audit's numbers were all from the dev server. Time anything React does against an export.
+**How the numbers were taken.** Headless Chrome 157 over CDP on the Apple M1 Mac, 1280×800, at 60 fps. The production export was built at this commit into a scratch directory (`expo export -p web`) and served by a small static server with Brotli and `vercel.json`'s cache headers. Input was synthetic mouse events. Costs come from CPU profiles (sampled every 0.1 ms, on a second export built with `--no-minify` so functions keep their names), `Performance.getMetrics`, and rAF frame times. "Fast 4G" is DevTools' preset (9 Mbit/s down, 60 ms latency). No timing code was added to the repository. Nothing was measured on a phone: native claims are marked `needs device`.
+
+Two notes on reading the numbers:
+
+- `Performance.getMetrics`' `ScriptDuration` runs 1.5 to 2.5 times a CPU profile's active time for the same work here, since it counts time the profiler books as "(program)". The tables say which they use. The previous audit's live-stroke table doesn't match either exactly (3.5 ms at 1 mark agrees with the profile, 9.3 ms at 200 marks is higher), though the slopes agree.
+- The import fix in #111 holds on this export: a pasted 6000×4000 JPEG (5.9 MB) reached the editor's route in 1.08 s. The previous audit measured 3.1 s, with a larger file.
 
 ## 1. Summary
 
 The changes that would most help a newcomer, none of which costs performance:
 
-1. **Give the project session one owner** (finding 1). Opening, saving, and closing a project is spread over four screens and two registries that must agree. One `session/` module would hold it, and `projectLifecycle.ts` would split along the line it already has.
-2. **Organize the canvas's stroke code by kind, not by mechanism** (finding 2). Adding a canvas tool kind touches about ten places today, and the Eraser fills most of two files named for something else.
-3. **Make a photo and its preview one value, made in one pass** (finding 3). The preview is threaded four ways, one of them dead code, and this is also the largest measured performance win.
-4. **One flyout mechanism, and no tool names in `Editor.tsx`** (finding 6). The editor hard-codes `"cut"`, `"removeBg"`, and `"adjust"` while architecture.md says adding a tool adds no case there.
-5. **Take the history math out of the store's action table, and replace architecture.md's tool paragraphs with three checklists** (findings 7 and 9).
+1. **One word for one thing, and one module for one job, around the project session** (finding 2). "Session" names three different things in three folders. `projectLifecycle.ts` is now a 51-line barrel, two modules each build "the app's instance" and re-export its functions, and the two largest test files are still named and shaped for files that were split.
+2. **Sort the editor's root by what a file is for** (finding 4). Its 31 files are four kinds of thing. The canvas isn't in `canvas/`, the tool contract isn't in `tools/`, and the frame around the canvas is split between the root and `shell/`.
+3. **Let the compiler list where a layer type is handled, and make the plain-TypeScript rule true** (finding 5). The checklist names three places; there are nine. The rule that keeps `layers/`'s lowercase files plain is broken by two files, and nothing noticed.
+4. **Give a project's previews to the project** (finding 3). They live in `photos/` with their own storage, keyed by project. Deleting remembers them, duplicating doesn't, and nothing lets go of them when a project closes.
 
-The single biggest performance opportunity is the photo import on web: a pasted 24 MP photo takes 3.1 s to reach the canvas, and 2.1 s of that is two PNG encodes nobody reads, a second full decode, and a CanvasKit decode to check for transparency (finding 3). The biggest per-frame cost is that every redraw replays every stroke in the document (finding 4), and the biggest unmeasured risk is that on native every document change copies every stroke to the UI thread (finding 5, `needs device`).
+The single biggest performance opportunity is startup (finding 1). Every page, Privacy and Support included, waits for CanvasKit (2.8 MB of the 4.8 MB a first visit downloads) and then shows an empty page while the editor's five text fonts load. Warm, that blank lasts 0.3 s on every page load. On a first visit over Fast 4G, content appears at 4.5 s, 3 s after the page's own scripts have arrived.
+
+Carried forward from the last audit: its finding 4 (every redraw replays every stroke) is now finding 6, with numbers that pass its own bar on web and evidence that the gain is web-only. Its finding 5 (stroke copies to the UI thread) is finding 7, unchanged, still waiting for a phone. Its finding 8 stays closed, and this pass's profiles agree with #111's.
 
 ## 2. The shape I'd build
 
+### The sketch, before reading the module map
+
+I listed what the app does (five screens; eleven tools; five layer types; three platforms; projects that autosave and reopen; offscreen export and thumbnails; on-device detection) and sketched this before reading docs/architecture.md's map:
+
 ```
 src/
-  app/                     routes only                       (as today)
-  screens/                 home/ create/ export/ info/ editor/ — status and navigation
-  session/                 projectSession.ts: start, open, end a session   (new)
-                           useProjectSession.ts, useAutosave.ts            (from screens/editor/session/)
-  projects/
-    projectFile.ts         the saved format                  (as today)
-    openProjects.ts        open, save, autosave, add image, close
-    projectLibrary.ts      list, rename, duplicate, delete, copy, closed thumbnails
-    projectStorage(.web).ts
-  photos/
-    photoImport(.web).ts   one pass: the photo and its preview
-    previewCache.ts        only for projects saved without a preview
+  app/                  routes only
+  screens/              home/ create/ editor/ export/ info/
+  projects/             the saved format, storage, the open project, the list, and the session
+  photos/               pick, paste, share, re-encode
   editor/
-    Editor.tsx             composition only
-    defineTool.ts, toolSpec.ts, builtIn*.ts, useEditorTools.ts   (as today)
-    canvas/
-      SceneLayer.tsx       one layer in the scene (today's StrokeTarget + LiveLayer)
-      strokes/             draw, erase, redact, shape, cut: one file per kind
-      useToolStroke.ts     the gesture, the landing, the intent
-    store/
-      editorSlice.ts       state and the action table
-      history.ts           sessions, undo steps, stepsByMark
-    document/ layers/ render/ shell/ tools/ detection/ savedStickers/   (as today)
+    model/              plain TypeScript: document, layers/<type>.ts, edits, history
+    render/             Skia, a pure function of a document: layers/<Type>View.tsx, image caches, offscreen
+    state/              the store
+    canvas/             the interactive surface, including the canvas component itself
+    tools/              the tool contract, the registry, and <tool>/
+    chrome/             everything around the canvas
+    Editor.tsx index.ts
+  detection/ platform/ ui/
 ```
 
-Differences that matter:
+### Today, and what reading changed
 
-- **`session/`.** Today four screens each import both `@/editor`'s session and `projects/` and keep them in step by hand. One module between them removes the checks each screen repeats.
-- **`photos/` returns the preview with the photo.** Today `photos/` makes a photo, `projects/` asks `photos/` to decode it again for a preview, and the editor reaches the preview through a function passed down four levels.
-- **`canvas/strokes/`.** The canvas owns each tool kind's live drawing, which is right, but spreads each kind over a union, a table, a hook, and a 574-line switch.
-- **`store/history.ts`.** The part of the store worth reading sits under 320 lines of one-line wrappers.
+```
+Today                                   Proposed (changes only)
+src/
+  app/ screens/ ui/ platform/ site/     as today
+  session/                              as today, holding the only "session" (finding 2)
+    projectSession.ts
+    useProjectSession.ts                hooks only; the instance moves to appSession.ts
+    useAutosave.ts
+  projects/
+    projectFile.ts
+    openProjects.ts projectLibrary.ts
+    projectLifecycle.ts                 removed: projectService.ts builds both halves
+    projectService.ts
+    projectStorage(.web).ts             also keeps each image's preview (finding 3)
+  photos/
+    photoImport(.web).ts                also makes a preview for an image that lacks one
+    previewCache.ts                     removed
+    previewStorage(.web).ts             removed
+  editor/
+    index.ts core.ts                    plus a Skia-free entry for the open document (finding 1)
+    session.ts                          renamed openDocument.ts
+    Editor.tsx editorHost.ts            as today
+    editorMode.ts useEditorMode.ts      as today
+    shortcuts.ts useEditorShortcuts.ts  as today
+    useAddImage.ts useEditNotice.ts     as today
+    EditorCanvas.tsx EditorScene.tsx    -> canvas/
+    canvasInputFor.ts useCanvasInput.ts -> canvas/ (canvasInput.ts)
+    toolSpec.ts defineTool.ts           -> tools/
+    builtInSpecs.ts builtInTools.ts     -> tools/
+    useEditorTools.ts editorContext.ts  -> tools/
+    EditorHeader EditorRail             -> chrome/
+    EditorInspector PanelViews          -> chrome/
+    LayerSelectionBar ShortcutsOverlay  -> chrome/
+    editorChrome.ts useEditorChrome.ts  -> chrome/
+    useEditorLayout.ts editorFrame.ts   -> chrome/
+    canvas/ tools/ store/ render/       as today, plus the files above
+    document/ layers/<type>/            as today, with layers/panel/ -> chrome/layersPanel/
+    shell/                              the kit tools build panels from; its six frame-only files -> chrome/
+    detection/ savedStickers/           as today
+```
 
-Differences that are taste, and I'd leave:
+Differences that matter, each argued in its finding:
 
-- **The 31 files at the editor's root** could sit in `mode/` and `chrome/` folders. The directory refactor of October 23 settled this recently, and the names already group them.
-- **The big screen files** (`ProjectList.tsx` 911 lines, `HomeScreen.tsx` 675, `CreateScreen.tsx` 645, `ExportScreen.tsx` 548). I read each expecting a tangle. They hold four to eight small components with little state each (`ProjectList.tsx` has hooks at four sites: lines 96–109, 283–287, 627–653, 741) and 140 lines of styles. They're long, not hard. "Prefer growing an existing file" works here.
-- **Tool hooks running above the context.** Only `cancel` in `EditorContextValue` comes from the tools (`Editor.tsx:525`), so the provider could move above `useEditorTools` and the "hooks can't read the context" rule would go. But an explicit `ToolEnv` is easier to test and read than a context, so the rule is worth its cost.
+- **The editor's root** (finding 4). Every tool reaches up two levels for its own contract, and the 694-line canvas component sits beside the folder named for it.
+- **Previews** (finding 3). A project-scoped cache with its own storage sits in the folder for importing photos.
+- **The names** (finding 2). One word, three meanings.
+- **A third entry to the editor** (finding 1). `@/editor` is one barrel, so the root layout importing a font loader pulls in Skia.
 
-## 3. Findings
+Where reading changed the sketch, and the current shape wins:
 
-### 1. The project session has four owners
+- **`model/` and `render/layers/` against a folder per layer type.** My sketch split each layer type across a pure folder and a Skia folder. The tree was exactly that until October 29 (`7ca6d08`, "move render and model into the editor"), which moved to `layers/<type>/` with the type, its edits, and its view together. Having traced "add a layer type" and "change how a drawing draws" both ways, the folder per type wins: `drawing.ts` and `DrawingLayerView.tsx` change together (`needsOwnLayer`, `inkRect`, `layerBlend` exist for the view), and one folder answers "what is a redaction". What the split bought, purity you can see from the path, is better had from a check (finding 5). The interactive lessons still teach it as model, render, and store (`docs/interactive/src/lessons/`), which is the right way to explain it and not a reason to file it that way.
+- **`session/` inside `projects/`.** My sketch folded them. But `projects/` importing only `@/editor/core` is what lets Node test all of it with fake storage, and `session/` is the one place that knows both the editor's store and projects. Keep it separate.
+- **`document/` and `layers/` import each other** (6 imports one way, 31 the other). A document is a list of layers, and every layer edit takes and returns a document, so the cycle is the design. Moving `geometry.ts` out of `document/` would tidy the picture and change nothing a newcomer does.
 
-**What a newcomer trips on.** "When is a project saved, and who closes it?" has no one answer in the code:
+Differences that are taste, which I'd leave:
 
-- Home opens a project and navigates (`useHomeProjects.ts:149-173`), and closes whatever session exists each time it regains focus (`:119-147`). The editor's route never closes its own project.
-- Create opens one too, with its own copy of the fallback for a canvas that couldn't be saved (`CreateScreen.tsx:72-98`; Home's copy is `useHomeProjects.ts:176-184`).
-- The editor's route opens a project on a link or reload, first closing any other session (`useProjectSession.ts:92-121`).
-- Export redirects to the editor when nothing is open (`ExportScreen.tsx:62-76`).
+- Renaming `shell/` to `controls/`. It would say what the folder is, but 44 imports from tools change for a name.
+- Calling `editorSlice.ts` a slice when the store has one. `store/index.ts` is written to take more.
+- One registry file in place of `builtInSpecs.ts` and `builtInTools.ts` (section 6 says why two).
 
-Each site repeats what the others do. The thumbnail renderer `(doc) => renderThumbnail(doc, (uri) => getPreviewUri(projectId, uri))` is written three times (`useHomeProjects.ts:91-93`, `:124-126`, `useProjectSession.ts:100-102`). The check "someone else may have closed it meanwhile" is written twice (`useHomeProjects.ts:133-135`, `useProjectSession.ts:105-107`), and "an editor whose save failed is still open" twice (`CreateScreen.tsx:75`, `useHomeProjects.ts:154`). Two registries must agree throughout: `openProjects` in `projectLifecycle.ts:141` and the editor store's `document` and `key`, with `previewCache.ts`'s `memoryPreviews` as a third.
+## 3. Newcomer walkthroughs
 
-`projectLifecycle.ts` itself (792 lines, one closure, 19 functions returned) holds three things: the open project (open, save, autosave, add image, close: lines 141–523), the closed projects (delete, rename, duplicate, copy, list: 525–699), and thumbnails for both (403–433, 701–770). Someone fixing autosave reads past the library to find the rest of it.
+Files a newcomer opens to do each task, and the ideas they must hold. "Proposed" assumes findings 2 to 5.
 
-**The shape.**
+| Task | Today | Proposed |
+| :--- | :--- | :--- |
+| **Add a tool** | 5 new files in `tools/<name>/` (spec, definition, hook, panel, settings) and 2 to 4 edits: `builtInSpecs.ts` (twice: the map and the toolbar), `builtInTools.ts`, and for a new edit, `store/editorSlice.ts` and a `layers/…Edits.ts`. Its imports reach `../../defineTool`, `../../toolSpec`, `../../canvasInputFor`, `../../editorContext`. Ideas: spec, definition, a hook that gets `ToolEnv` and can't read the context, view slots, `CanvasInput`, and the tool's "session", which shares its name with two other things. | The same files and edits, all inside `tools/` except the edit itself. One idea fewer: "tool session" is the only session in the editor. |
+| **Add a layer type** | 3 new files in `layers/<type>/` and about 9 edits: `layers/layer.ts`, `layers/LayerContent.tsx`, `render/DocumentRenderScene.tsx`, `canvas/layerBounds.ts`, `canvas/layerTargets.ts`, `layers/panel/LayerRow.tsx` (two switches), `canvas/SceneLayer.tsx` if it resizes live, `store/editorSlice.ts`, `core.ts`. The checklist names three; `assertNever` flags five; `layerTargets.ts` is flagged by nothing. | 3 new files and about 7 edits, every one a compile error until it's done. One render switch, not two. |
+| **Fix undo across a crop** | 7 files: `tools/crop/useCropTool.ts` (the draft, and `reframe` on Done), `tools/crop/cropSpec.ts` (`takesKeys`, `cancels`), `document/documentEdits.ts`, `document/framing.ts`, `useEditorTools.ts` (`useToolSession`, `finishTool`), `store/editorSlice.ts`, `store/history.ts`. Then the tests: 43 on history and sessions, inside the 1,934-line `editorSlice.test.ts` from line 1108. Ideas: draft against document, the tool session and its undo stops, snapshots carrying the selection, the framing anchor. | The same 7 files. The tests are `store/__tests__/history.test.ts`. |
+| **Change what's saved in a project** | `projects/projectFile.ts` (format and version), `openProjects.ts` (`savedDocument`, `serializeOpenProject`), `projectLibrary.ts` (`writeCopy`, and the rewrites for rename and thumbnails), both `projectStorage` files for a new kind of file, the layer's own saved-file check in `layers/<type>/<type>.ts`, and for anything about images, `photos/previewCache.ts` and both `previewStorage` files, a second store. Reached through `projectService.ts` then `projectLifecycle.ts`. Tests in `projectLifecycle.test.ts`, 1,146 lines for both halves. | The same without the second store and without the barrel: 5 or 6 files. Tests named for the half they test. |
+| **Change export** | `screens/export/` (the sheet, `useRenderedDocument.tsx`, sizes, format, `saveImage`, `copyImage`) and `editor/render/` (`renderDocument.tsx`, `DocumentRenderScene.tsx`, `drawOffscreen`, `offscreenPhotos`). Easy to follow end to end. It needs AGENTS.md's Skia notes first (one shared surface on web, sRGB, who disposes the image). | No change. The flow is already in two folders with one seam. |
+| **Add a `.web.ts` implementation** | 1 new file beside its native twin, with the same extension, importing only types from it, then `pnpm build:web`. For storage, copy one of three near-identical IndexedDB openers (`projectStorage.web.ts:71`, `previewStorage.web.ts:17`, `stickerStorage.web.ts:19`). | The same. Finding 3 removes one of the three openers; a shared helper isn't worth it for two. |
 
-- `session/projectSession.ts`, plain TypeScript with storage and the editor's session passed in, as `createProjectLifecycle` takes storage: `startFromPhoto`, `startBlank`, `open(id)`, and `end()`. It owns the unsaved fallback, closing the session before, the thumbnail renderer, and the "still wanted" check.
-- The screens call it and navigate. `useProjectSession` and `useAutosave` move beside it.
-- `projects/openProjects.ts` and `projects/projectLibrary.ts`, with the `closing` queue shared between them. `createProjectLifecycle` stays as the function that builds both, so `projectService.ts` and the tests keep their entry.
-- The import rule becomes: only `session/` imports both the editor's session and `projects/`.
+The counts barely move. What moves is where the files are and how many ideas share a name. That's the honest size of the structural findings: they make the first week easier, not the code smaller.
 
-**Performance.** Neutral: the same reads and writes in the same order. One small gain is available while there: `saveProject` stringifies the document twice per autosave (`projectLifecycle.ts:387`, `:397`), 7.2 ms each for a 1 MB document in V8 (measured in Node); the file's JSON could be built around `savedJson`.
+### The four flows, end to end
 
-**Risk and size.** L. It touches every way into and out of the editor. The races handled today by scattered checks must survive the move, so write them as tests first. No interactive lesson imports these files.
+- **Pick a photo, create a project.** `HomeScreen` → `useHomeProjects.open` → `pickPhoto` (one decode, the photo and its preview in one pass) → `startFromPhoto` → `createProject` (stores both) → `openDocument` → `router.push`. Since #111 it does no work it doesn't need: 1.08 s for a 24 MP photo on the export. What's hard to follow is the chain of seven files between the tap and storage (finding 2).
+- **Open the editor, draw, type, crop, undo.** `EditorScreen` → `Editor` → `useEditorTools` (which opens the tool's session) → the canvas's gesture → the tool's `finishStroke` → a store action → an edit in `layers/` → `setDocument`. Then everything that follows a document change runs: `Editor` renders again with all eleven tool hooks (3.9 ms, section 6), Skia records the scene again (finding 6), the hit targets are rebuilt and sent to the UI thread (finding 7), and an autosave is queued for 500 ms later, which stringifies the document once (about 0.2 ms a landing at 200 marks). Two things are hard to follow: which "session" is meant, and that a tool's session is ended in two places in `useEditorTools.ts`: `finishTool` and `cancelTool` end it at once, and `useToolSession`'s effect cleanup ends it again as the tool closes, which is what covers leaving the editor with a tool open.
+- **Save, then reopen.** The editor's route never closes its project. Home regaining focus does (`useHomeProjects.ts:112-133`), whichever way the editor was left, and a link to another project closes the first from `projectSession.open`. That's the one thing here a newcomer won't guess, and the comment says it. Reopening waits for previews (finding 3).
+- **Export.** `ExportScreen` → `useRenderedDocument` → `renderDocument` → `drawOffscreen`, then a second small draw and a PNG encode for the sheet's preview. One render at a time, the latest size winning. Nothing to remove.
 
-**Verify.** Node tests for the session with fake storage, as `projects/__tests__` does: close then reopen the same project; a link to another project while one is open; a failed save keeping the session open; leaving before an open finishes. Then on web: reload on `/projects/:id`, Back and Forward, a direct link to export, and the same project in two tabs.
+What only makes sense after docs/GOTCHAS.md: `render/imageCache.ts` counting releases, `drawOffscreen.web.ts` freeing its WebGL context by hand, and the tool card's constant inset. No file in `src/` mentions GOTCHAS.md. A one-line pointer beside each would cost nothing.
 
-### 2. The canvas's stroke code is organized by mechanism, and named for something else
+## 4. Conventions on trial
+
+AGENTS.md's conventions, then docs/architecture.md's rules.
+
+| Convention | Verdict | Reason, and the wording if it changes |
+| :--- | :--- | :--- |
+| Imports flow one way, `app` → `screens` → `session` → `editor` and `projects` | **Keep** | The measured import graph matches it, with one drift: `HomeScreen.tsx:26` and `SettingsScreen.tsx:3` read the editor's session directly, past `session/`. |
+| Keep `biome.json` small; no import-boundary overrides, no import-checking script | **Change** | Keep `biome.json` small: the evidence (a thousand lines of overrides) binds. But "nothing checks imports" has let two boundaries drift that fail silently (finding 5, and finding 1 once built). New wording: "Nothing in `biome.json` checks imports. One Node test (`src/__tests__/imports.test.ts`, under 50 lines) checks the two boundaries that break without an error: the plain-TypeScript files import no React, React Native, Skia, or Expo, and Home's route reaches Skia only through a dynamic `import()`." |
+| Only routes in `src/app/`; screens don't import each other | **Keep** | Expo Router makes every file there a route. |
+| `document/` and `layers/`'s lowercase `.ts` files stay plain TypeScript | **Change** | True of the idea, false of the files: `layers/text/fonts.ts:6-9` imports `expo-asset`, `expo-font`, `react`, and Skia, and `layers/text/textLayerLayout.ts:14` imports Skia. New wording: "In `document/` and `layers/`, a file is plain TypeScript unless it's a view (`.tsx`) or is listed in the import test's short list of exceptions," with `fonts.ts` moved to `render/` and `textLayerLayout.ts` listed. |
+| `render/` and the layer views never read the store | **Keep** | It's why export and the lessons can draw any document. `layers/panel/` takes the store's action types (`LayersPanel.tsx:30`), which is another reason it belongs in `chrome/`. |
+| Everything about one layer type lives in `editor/layers/<type>/` | **Keep** | Section 2. The Layers panel isn't about one type and moves out. |
+| Colors from `colors`; sizes from `typography`, `radii`, `space` | **Keep** | Design, and out of this audit's scope. |
+| PascalCase components, camelCase modules | **Keep** | |
+| Prefer growing an existing file; split when it gains a second responsibility | **Change** | The second half never fires, because "responsibility" has no test. `ProjectList.tsx` holds a grid, a card with three interaction systems, a context menu, and an inline rename that commits on unmount. New wording: "Prefer growing an existing file over adding a single-use one. Split out a component once it keeps state or effects of its own that the rest of the file doesn't read, and a module once its tests would need a separate setup." Finding 8 applies it. |
+| A long doc comment is a sentence, then a list | **Keep** | `defineTool.ts`'s contract reads well this way. |
+| Name the editor document `document`, not `doc` | **Keep** | The reason is evidence: the DOM's global hides a missing parameter. |
+| Tests in `__tests__/` beside the code, `.ts` imports, nothing React-based | **Keep, and add** | Node's type stripping is a platform fact. Add: "A test file is named for the source file it tests." Two aren't (finding 2). |
+| A tool's hook runs above `EditorContext`, so it takes `ToolEnv` | **Keep, reworded** | The stated reason is where the provider sits, which is incidental (only `cancel` in the context comes from the tools, `Editor.tsx:487`). The real split is worth keeping: a hook gets what the tool works on, a view reads the frame around it. New wording: "A tool's hook takes what it works on through `ToolEnv`; its views read the frame around them (`wide`, the tray, the insets) from `editorContext.ts`." |
+| Outside `src/editor/`, import only `@/editor` or `@/editor/core` | **Change** | Keep the boundary, add an entry. `@/editor` is one barrel, so `app/_layout.tsx:8` importing `LoadFonts` loads the whole editor. Three entries by weight: `core` (plain), `openDocument` (the store, no Skia), and `index` (Skia and React). |
+| Nothing but `builtInSpecs.ts` and `builtInTools.ts` imports a tool; tools don't import each other | **Keep** | It held: #111 took the last tool ids out of `Editor.tsx`. |
+| Update the lesson when renaming what it covers | **Keep** | The docs build is the check. |
+| architecture.md: what a tool may import (a list of eleven files and folders) | **Change** | After finding 4 it's one line: "A tool imports from `tools/`'s own contract files, the store, and the folders beneath it (`document/`, `layers/`, `render/`, `canvas/`, `shell/`, `detection/`, `savedStickers/`), never another tool, `Editor.tsx`, or `chrome/`." |
+| architecture.md: `shell/` imports nothing else from the editor | **Keep** | It's what makes `shell/` a kit, and it's why the frame pieces that need tools and the mode can't live there. |
+| architecture.md: "Add a layer type" checklist | **Change** | It names 3 of 9 places (`docs/architecture.md:106`). New wording: "Create its folder, add it to the `Layer` union, and fix every compile error." Finding 5 makes that true. |
+| architecture.md: "Add a tool" and "Add a canvas stroke kind" checklists | **Keep** | Both match the code as of this commit. |
+
+## 5. Findings
+
+### 1. Every page waits for the editor's text fonts, and for CanvasKit
+
+**What costs time.** Measured on the export, loading Home (`/`):
+
+| Load | First client commit | Content on screen |
+| :--- | :--- | :--- |
+| Warm cache | 113 ms | 430 ms |
+| Warm cache, CPU throttled 4× | 284 ms | 616 ms |
+| First visit, Fast 4G | 3.67 s | 4.52 s |
+| First visit, Fast 4G, `/privacy` | 3.65 s | 4.47 s |
+| First visit, Slow 4G | 19.1 s | not recorded |
+
+A first visit downloads 4.81 MB: `canvaskit.wasm` 2.79 MB, scripts 0.79 MB (3.7 MB before compression, in two shared chunks every route loads), the five text fonts 0.82 MB, and the icon font 0.38 MB. On Fast 4G the scripts have arrived by 1.44 s and CanvasKit by 3.45 s. Two things stand between the scripts and the page:
+
+- **CanvasKit gates the router.** `index.web.ts:50-53` imports `expo-router/entry` only once `LoadSkiaWeb` resolves, because Skia binds to CanvasKit when its module is first evaluated and Expo Router evaluates every route at startup. That quirk is real. But Home, Create, Settings, Privacy, Support, and Licenses draw nothing with Skia, and they wait for it because `@/editor` is one barrel and the routes are imported eagerly.
+- **The fonts blank the page.** `app/_layout.tsx:22-23` puts `<LoadFonts />` inside the root `Suspense` with `fallback={null}`, and `LoadFonts` suspends until all five fonts are registered with both Skia and the page (`layers/text/fonts.ts:36-48`, `:94-99`). So React's first commit replaces the prerendered page with nothing. On a warm load in the day palette, the page's text was there at 32 ms, gone at 132 ms, and back at 431 ms. In the night palette the prerender is hidden anyway (`+html.tsx`), so the page is simply blank until then. `ui/theme.ts:186-189` already says the system font stands in for the wordmark until Anton loads, which this never lets happen.
+
+Checked and not a problem: each font is requested twice (once by Skia, once by `expo-font`), but the second is served from the HTTP cache.
+
+**The shape.** Two steps, the first small.
+
+- **Step A: load fonts where text is laid out.** `LoadFonts` leaves the root layout. The editor's route suspends on it (`screens/editor/EditorScreen.tsx`, which already shows an "opening" state), and `renderDocument` and `renderThumbnail` await `loadFonts()` themselves, since both are already async. `fonts.ts` moves to `render/` (it's Skia and Expo, not a layer's plain file). The layout's error boundary keeps `resetFailedFonts`.
+- **Step B: pages that draw nothing don't wait for CanvasKit.** This needs a plan of its own, because it changes how AGENTS.md's load-order rule is met, not the rule.
+  - `index.web.ts` starts the router at once and loads CanvasKit beside it.
+  - The editor and export routes load their screens with a dynamic `import()` that first awaits CanvasKit. Home's thumbnail refresh imports `renderThumbnail` the same way.
+  - The editor gets a third entry, `@/editor/openDocument` (today's `session.ts`): the store and nothing that imports Skia. `session/` and the screens use it.
+  - The import test from section 4 fails if Home's route can reach `react-native-skia` through static imports, since one stray import silently restores the wait.
+
+**The case for the current shape.** One load order, one rule ("nothing imports Skia above this line"), and no page can ever see a dead Skia API. The service worker precaches CanvasKit, so only first visits pay for the download. That's all true, and it's why step B needs its own plan. It doesn't cover step A: the blank costs every load, cached or not, and the stores link straight to Privacy and Support.
+
+**Performance.** Step A, better, by the measured gap: content at the first commit, 0.3 s sooner warm and 0.85 s sooner on a first visit over Fast 4G. Step B, better, by an estimate: Home's first commit when its scripts have run, about 1.5 s on Fast 4G in place of 3.67 s. How much smaller Home's own scripts become isn't measured (the export has no module names; `EXPO_ATLAS=1` would say). Native: fonts are local files there, so the gain is small (`needs device`).
+
+**Risk and size.** Step A is S: three call sites, and text can't be laid out before fonts, which `getFontProvider` already throws on. Step B is M: any path from a route file to Skia breaks it, and Expo Router's static export must keep working (`pnpm build:web`, and the CSP check for any new inline script). The lessons load `fonts.ts` (`SkiaStage.tsx`, `sources.ts`, and their Expo shims), so update those paths.
+
+**Verify.** The same CDP run: on a warm load the root's text never drops to zero, and the first commit and content coincide. For step B: Home's network log shows it interactive before `canvaskit.wasm` finishes, then open a project on Slow 4G and by a direct link to `/projects/:id`.
+
+### 2. "Session" means three things, and the project code kept the scaffolding of the file it was split from
 
 **What a newcomer trips on.**
 
-- `LiveStrokeOverlay.tsx` is not an overlay. Its main export, `StrokeTarget` (`:101-215`), is what `EditorScene` draws for every layer in every mode, stroke or not (`EditorScene.tsx:126-153`). It's a 115-line chain of `if`s over tool kind and layer type.
-- "Live" names three different things in three files: a layer following a gesture (`LiveLayer`, `EditorScene.tsx:229`), a redaction or shape following a resize (`LiveLayerContent.tsx`), and a stroke being painted (`LiveStrokeOverlay.tsx`).
-- `useToolStroke.ts` is 407 lines, of which the Eraser's hit tracking is about 250 (`:133-290`, `:305-363`): three memos, three shared values, `onSegment`, the hovered stroke, and the shared erase path. `EditorCanvas.tsx` carries the Eraser's ring as well (`:477-515`, `:603-613`).
-- Adding a canvas tool kind means: the `CanvasTool` and `ToolStroke` unions, a `CANVAS_TOOLS` row, and `canAddTo` and `strokeReaches` (`canvasTool.ts`); `strokeIntent`; the `reaches` and `startsLayer` rules in `useToolStroke.ts:364-393`; branches in `StrokeTarget` and `NewLayerStroke`; and `outlinedLayerFor` and `inputRules` (`canvasInputFor.ts`). follow-ups-plan.md's list for "a drag for a box" (`:36`) names five of these, one of which no longer exists.
+- **Three sessions.** `src/session/` is the project session: the project open across screens. `src/editor/session.ts:10` exports `Session`, the document and key the app sees. `src/editor/store/history.ts:24` exports `EditorSession`, the span from a tool opening to its Done, with `beginSession`, `commitSession`, and `cancelSession` on the store and a `session` field in its state (`editorSlice.ts:93`). The word appears 61 times in `editorSlice.ts`, nearly always meaning the third, and 35 times in `projectSession.ts`, nearly always meaning the first; `editorSlice.ts:84` uses it for the second. To the question in the brief: `src/session/` and `editor/session.ts` are two halves of one idea (the second is the editor's side of the first), and the store's is unrelated to both.
+- **`projectLifecycle.ts` is a barrel.** After #111 it's 51 lines: it re-exports ten names from the two halves and joins their factories. Only `projectService.ts` calls `createProjectLifecycle` outside tests. But the storage files import their own interface through it (`projectStorage.ts:2`), and "open a project" now reads through seven files: `useHomeProjects.ts` → `useProjectSession.ts` → `projectSession.ts` → `projectService.ts` → `projectLifecycle.ts` → `openProjects.ts` → `projectStorage`.
+- **Two "the app's one instance" modules.** `projects/projectService.ts` builds the lifecycle and re-exports 13 of its functions. `session/useProjectSession.ts:20-39` builds the session and re-exports 10, renamed (`open` as `openProjectSession`, `end` as `endSession`). That file is named for a hook and is mostly not hooks: screens import `startFromPhoto` and `endSession` from a file called `useProjectSession`.
+- **Tests shaped like the old files.** `projects/__tests__/projectLifecycle.test.ts` (1,146 lines) tests `openProjects.ts` and `projectLibrary.ts` through the barrel; neither has a test file under its own name. `store/__tests__/editorSlice.test.ts` (1,934 lines) holds the 43 tests of `history.ts` (from `:1108` and `:1284`), which has none.
 
 **The shape.**
 
-- `canvas/SceneLayer.tsx`: one layer in the scene, placed by the live transform, with whatever joins it. It replaces `StrokeTarget` and `LiveLayer`.
-- `canvas/strokes/<kind>.tsx`, one per kind (`draw`, `erase`, `redactBrush`, `redactBox`, `shape`, `cut`). Each exports the same few things: whether it reaches a layer, whether it starts one, its view inside a layer, and its view over the scene. `SceneLayer` and the scene look them up by `tool.type`.
-- `canvas/strokes/useEraseTracking.ts`: the Eraser's memos, shared values, and `onSegment`, called unconditionally from `useToolStroke` and returning null when not erasing.
-- `useToolStroke.ts` keeps the gesture, the landing id, and the intent: about 120 lines.
+- **Names.** "Session" stays with `src/session/`. The store's becomes the tool session: `ToolSession`, a `toolSession` field, `beginToolSession`, `commitToolSession`, `cancelToolSession`. `editor/session.ts` becomes `editor/openDocument.ts`: `OpenDocument`, `useOpenDocument`, `getOpenDocument`, beside the `openDocument` and `closeDocument` it already exports.
+- **`projectLifecycle.ts` goes.** `projectService.ts` calls `createOpenProjects` and `createProjectLibrary` and passes the coordination between them (ten more lines). Callers import a name from the file that declares it, as AGENTS.md already asks inside the editor.
+- **`session/appSession.ts`** holds the instance and its ten functions under the names the factory gives them. `useProjectSession.ts` keeps the hooks. Home and Settings ask it whether a session is open.
+- **Tests follow.** `store/__tests__/history.test.ts` takes the history and sessions blocks. `projects/__tests__/openProjects.test.ts` takes autosave, closing and reopening, added photos, and thumbnails; `projectLibrary.test.ts` takes listing, deleting, renaming, duplicating, and thumbnails after a session that ended without closing. The in-memory storage at the top of today's file becomes a helper beside them, which `session/__tests__` can use too.
 
-**Performance.** Neutral if three things are kept: the one `erasePath` derived value every drawing shares (`useToolStroke.ts:356-363`), the `key={stroke.landedId}` remounts that hand a landed stroke to the document in one update, and hooks called in the same order every render. The mappers and shared values stay the same in number.
-
-**Risk and size.** M. Moves and renames, no behavior change. No interactive lesson imports `StrokeTarget`, `LiveStrokeOverlay`, `useToolStroke`, or `canvasTool`. Worklet helpers must stay declared above their callers after the split.
-
-**Verify.** The "every canvas tool kind" list in follow-ups-plan.md §1, on web at 390 and 1440 points. Then the editor audit's eraser numbers on the dev server (8.6 ms per move hovering over ink at 200 strokes), which should not move.
-
-### 3. A photo is decoded three times and encoded four on its way in, and its preview is threaded four ways
-
-**What costs time.** Measured on the prod export: a 6000×4000 JPEG (9.5 MB, with sensor-like noise) pasted on Home reached the canvas in 3.1 s. The trace, from wrapping the browser's own calls:
-
-| At | Step | Where |
-| :--- | :--- | :--- |
-| 0.01 s | CanvasKit decodes the photo to ask whether it's opaque (245 ms) | `photoImport.ts:107-132` |
-| 0.25 s | The browser decodes it again for the re-encode (170 ms) | `photoImport.ts:71` |
-| 0.37 s | 24 MP **PNG** encode, never read (860 ms) | expo-image-manipulator's `renderAsync`, `ImageManipulatorContext.web.ts:76-96` |
-| 1.23 s | JPEG encode (230 ms), then stored | `photoImport.ts:82-90` |
-| 1.47 s | The stored JPEG is decoded a third time for the preview (570 ms) | `previewCache.ts:85-87`, from `projectLifecycle.ts:266-270` |
-| 2.01 s | 11 MP **PNG** encode, never read (410 ms) | `renderAsync` again |
-| 2.42 s | Preview JPEG encode (100 ms), then stored | `previewCache.ts:90-95` |
-| 3.02 s | CanvasKit decodes the preview for the canvas (104 ms) | |
-
-On web, expo-image-manipulator 58's `renderAsync` copies the canvas and encodes it to a PNG blob so a later `saveAsync` can re-encode it; the app calls `renderAsync` once per image and reads only `saveAsync`'s result. On native the manipulator holds a bitmap, so there is no PNG, but `ensurePreview` still decodes the file `reencode` just wrote (estimate: one extra 24 MP decode per photo; `needs device`).
-
-**What a newcomer trips on.** The preview reaches the canvas four ways:
-
-- `EditorHost.previewUri` (`editorHost.ts:51`), which the type's own comment doesn't list (`:21-36`).
-- Through `EditorContext` (`Editor.tsx:526`), which `EditorCanvas` reads (`EditorCanvas.tsx:250`) though architecture.md says only a tool's views read that context.
-- A `resolvePreview` argument to `renderThumbnail`, built at three call sites (finding 1).
-- `setPreviewResolver` and `globalPreviewResolver` (`renderDocument.tsx:117-124`, exported from `index.ts:11`), which nothing calls.
-
-`previewCache.ts` also keys each preview twice, by file and by URL, in three places (`:72-73`, `:96-97`, `:142-143`).
-
-**The shape.**
-
-- `photoImport` returns the photo with its preview: `{ uri, width, height, opaque, preview? }`.
-- `photos/photoImport.web.ts` (new) does it in one pass: `createImageBitmap` once, then an `OffscreenCanvas` and `convertToBlob` for the full JPEG or PNG and for the preview. A JPEG is opaque by format; anything else is scanned for alpha from the canvas in bands, as `isOpaque` does today.
-- On native, `reencode` resizes the preview from the `ImageRef` it already holds, before releasing it.
-- `projects/` stores both. `ensurePreview` stays for projects saved before this.
-- The editor takes the resolver as one documented host function and passes it to `EditorCanvas` as a prop. `setPreviewResolver` is deleted.
-
-**Performance.** Better. On web the two PNG encodes (1.27 s), the second decode (0.57 s), and the CanvasKit decode (0.25 s) go: an estimate of about 1 s in place of 3.1 s. The bitmap lives outside CanvasKit's heap, which never shrinks. Native: one fewer decode per photo (`needs device`).
-
-**Risk and size.** M. It changes what `photos/` hands `projects/` and adds a `.web` file. To keep: EXIF orientation applied and no tag written (architecture.md), `MAX_PHOTO_PIXELS` and the size limits, exact transparency detection, and HEIC on Safari. No lesson imports `photoImport`.
-
-**Verify.** The same trace should show one decode and two encodes. `photos/__tests__` for scale and limits; `pnpm build:web`; a rotated phone photo, a PNG screenshot with alpha, and a HEIC on Safari by hand. On a phone, time pick to canvas before and after.
-
-### 4. Every redraw replays every stroke in the document
-
-**What costs time.** Skia redraws the whole scene whenever a shared value it reads changes: each point of a live stroke, each frame of a drag or a pinch. The cost grows with the ink already there. Measured on the prod export, with one short stroke per mark and moves 33 ms apart:
-
-| Marks | Live stroke, script per move | Layer drag, script per move | Landed stroke, script | Frames over 20 ms |
-| :--- | :--- | :--- | :--- | :--- |
-| 1 | 3.5 ms | 3.1 ms | 19.5 ms | 0 |
-| 50 | 4.8 ms | 4.9 ms | 14.3 ms | 0 |
-| 100 | 5.6 ms | 5.2 ms | 16.6 ms | 0 |
-| 200 | 9.3 ms | 8.8 ms | 19.8 ms | 0 |
-
-The M1 drops no frames, but at 200 marks over half its frame is spent. On the dev server with three strokes per mark (600 strokes), a drag cost 12.6 ms per move. A CPU profile of that drag: 47% inside CanvasKit's WebAssembly, 34% in JavaScript around it (Skia's `play`, embind's conversions, and making a paint and parsing its color for each stroke), 14% in the browser, and 0.2% in the app's own worklets. The two builds disagree on the slope (about 0.03 ms per stroke per redraw in prod, 0.014 in dev), which I can't explain; both grow.
-
-`DrawingLayerView` draws one `<Path>` with its own paint per stroke (`DrawingLayerView.tsx:99-115`). On a phone this is [#95](https://github.com/nverkhachoyan/tuck/issues/95), still open.
-
-**The shape.** Record each drawing's ink once into an `SkPicture`, cached by its strokes array in a `WeakMap` as `pathFor` caches paths (`:60-69`), and draw it with one `<Picture>` inside the same group, saved layer, and clip. Redactions already draw this way (`RedactionLayerView`). Keep per-stroke nodes where something wraps each stroke: the Stroke eraser's dimming (`wrapStroke`) and the live stroke.
-
-It respects what can't move. Strokes record in index order inside the drawing's own saved layer, so an eraser still clears only what was drawn before it. The multiply stays on the group's paint. A picture of paths holds no image. `beginRecording` gets explicit bounds from `inkRect`.
-
-**Performance.** Better on web, by an estimate: one draw command per mark replaces a paint and a path per stroke, which should remove a third to a half of the JavaScript share for marks of several strokes (1.5–2 ms of the 12.6 ms above) and nothing of the rasterizing. Native plays its recording back in C++, so the gain there is smaller or none (`needs device`, #95).
-
-**Risk and size.** S–M, in one file. `LayersLesson.tsx` imports `DrawingLayerView`, so run the docs build.
-
-**Verify.** Prototype it and rerun the drag at 200 marks of three strokes. Build it only if the drag drops by 2 ms or more per move. Then compare an export of a drawing with erasers, a highlight, and a dimmed scope against one from before, pixel for pixel.
-
-### 5. On native, every document change copies every stroke to the UI thread (`needs device`)
-
-**What costs time.** `EditorCanvas` rebuilds `targets` on every document change and every settled zoom, and assigns it to a shared value (`EditorCanvas.tsx:268-275`). Each target for an unlocked drawing, brushed redaction, or shape carries its strokes, points and all (`layerTargets.ts:28`, `:50-57`; `hitTest.ts:28-30`).
-
-I read worklets 0.13 to see what that assignment does. The JavaScript side caches each array's clone by identity (`serializable.native.ts`, `cloneArray`), so unchanged layers aren't cloned again. But the UI runtime's copy is rebuilt every time: `SerializableArray::toJSValue` makes a new array and converts each element (`SerializableArray.cpp:19-26`); a value keeps its converted copy only when cloned with `shouldPersistRemote`, which a shared value's assignment doesn't pass. The Eraser also captures the strokes in its worklets' closures (`useToolStroke.ts:140-199`, captured by `onSegment` at `:218`); whether those are converted again on each change I didn't confirm.
-
-So each landed stroke, and each pinch that settles, rebuilds every point of the document on the UI thread. An estimate: 600 strokes of 24 points is about 29,000 numbers and 600 objects, a few milliseconds; a page of 120-point strokes is five times that, enough to drop a frame as the next stroke begins. Web has one thread and no copy, so none of this shows there.
-
-**The shape.** Split what a gesture needs in two. A small record per layer goes on every change: id, transform, boxes, and flags. A layer's stroke geometry goes once per strokes array, in a form that crosses as bytes: one `Float64Array` of points per layer with each stroke's offset and width, cached by the strokes array in a `WeakMap`. The hit tests already index `points[i]`, so they take an `ArrayLike<number>` on both threads and still agree with the edits. Nothing changes on disk: the editor audit allowed a side table in memory.
-
-**Performance.** Better on native if the estimate holds; neutral on web.
-
-**Risk and size.** M. It changes the signatures of the stroke hit tests in `layers/strokes.ts`, which the canvas and the edits share so they agree on what a touch hits. Their tests pin that. [#105](https://github.com/nverkhachoyan/tuck/issues/105) (unify the walkers and box helpers) touches the same functions, so do that first or together.
-
-**Verify.** On an iPhone Release build with 200 marks: time from assigning `sharedTargets` to a worklet scheduled right after it, and a UI-thread time profile while a stroke lands. Add the number to #95. Build only if it's over 4 ms, the bar the editor audit used.
-
-### 6. Two flyout mechanisms, and tool names in the editor
-
-**What a newcomer trips on.** architecture.md says the editor imports no tool and that "adding a tool adds no case there" (`:73`). But:
-
-- `Editor.tsx:371-457` holds a `cutVariant` state and about 90 lines that name `"cut"` and `"removeBg"`: which starts, which icon and label the button shows, which spins.
-- `useEditorTools.ts:176` names `"adjust"`, so that Adjust alone opens on a selected sticker (`targetImageLayer` leaves stickers out, `framing.ts:67`).
-- A toolbar flyout is built two ways. Pen, Shape, and Eraser declare `variants`, `activeVariant`, `selectVariant`, and `variantEntry` (`defineTool.ts:164-169`), which `Editor.tsx:458-476` reads for any tool. Cut uses `grouped` in its spec (`toolSpec.ts:60`) plus the special case.
-
-The editor audit saw this and left it: "readability only", to revisit "if a third grouped tool appears". I have no new runtime evidence. It's here because readability is this audit's brief, and because the generic mechanism now exists and Cut is the only flyout not on it.
-
-**The shape.** Let a variant name another tool: `{ id, label, icon, shortcut, tool? }`. Cut's definition lists Cutout and Remove BG, with Remove BG's entry naming the `removeBg` tool; its remembered choice becomes a preference in `cutSettings.ts`, like every other tool's. `Editor`'s one generic branch starts the named tool. For Adjust, the spec says what it takes: `target: "image"` gains a flag for stickers, and the starter reads the flag. `Editor.tsx` loses about 90 lines and every tool id.
+**The case for the current shape.** `projectLifecycle.ts` gives the tests one factory and gives `projectSession.ts` one type to `Pick` from, and #111 kept it on purpose so the tests and `projectService.ts` kept their entry. Renaming the store's session touches the lessons. Both are costs of the change, not reasons the names are right: a newcomer debugging undo and a newcomer debugging autosave shouldn't both be reading about "the session".
 
 **Performance.** Neutral.
 
-**Risk and size.** M. It touches `defineTool.ts`, the Cut and Adjust specs, `editorChrome.ts`'s `layerActionsFor` (which reads `grouped`), and the chrome tests. No lesson imports these.
+**Risk and size.** M, all renames and moves. `SessionsLesson.tsx`, `HistoryLesson.tsx`, `HistoryTimeline.tsx`, `IdentityLesson.tsx`, `lessonStore.ts`, and `sources.ts` quote the store by declaration name: update them in the same change. Tests must move without changing an assertion, so the diff is reviewable as a move.
 
-**Verify.** The chrome and spec tests. By hand: the rail's Cut flyout, each variant's key, the remembered variant after a reload, the busy spinner while Remove BG runs, and Adjust from a selected sticker.
+**Verify.** `pnpm test` with the same tests passing under new file names, `pnpm typecheck`, and `pnpm --dir docs/interactive build`.
 
-### 7. The store's history math sits under a 320-line mirror of the edits
+### 3. A project's previews belong to no one
 
-**What a newcomer trips on.** `editorSlice.ts` is 801 lines. Lines 230–549 are about 35 actions, nearly all `setDocument("editor/x", (document) => x(document, …))`, with 74 lines of imports to match (`:4-77`). The part that needs reading comes after: sessions, undo and redo stops (`:551-670`), and `stepsByMark`, `sameDocument`, `pastIn`, and `pastBefore` (`:696-801`). A new edit is written once in `layers/…Edits.ts` and again here.
+**What a newcomer trips on, and what costs time.** A preview is the smaller copy of a large photo that the canvas draws. It's scoped to a project and an image file, and it's spread like this:
+
+- `photos/previewCache.ts` keeps a module-level map keyed by project id and image URL (`:7-9`), stores previews (`:31-41`), and rebuilds missing ones (`:47-84`).
+- `photos/previewStorage.ts` keeps the files in `Paths.cache/previews/<projectId>/` on native; `previewStorage.web.ts:3` keeps them in a database of their own, `tuck-previews`, beside the projects' `tuck`.
+- `projects/projectService.ts` hands three of those functions to the lifecycle, which calls them at create (`openProjects.ts:292-294`), add (`:472-474`), open (`:376-378`), and delete (`projectLibrary.ts:82-89`).
+- `session/useProjectSession.ts:24` hands a fourth, the lookup, to the session for thumbnails, and `EditorScreen.tsx` hands the same lookup to the editor's host.
+
+What falls between the owners:
+
+- **Duplicate doesn't copy them.** `writeCopy` copies the image files (`projectLibrary.ts:143-145`) and nothing else, so a duplicate, or "Open a copy", opens without previews.
+- **A missing preview blocks opening, on the slow path.** `openProject` awaits `prepareProjectPreviews`, which rebuilds each one in turn with `ImageManipulator.manipulate(uri).resize().renderAsync()` (`previewCache.ts:70-72`). On web that's the path whose hidden PNG encode the last audit measured, and which #111 replaced for import only. Measured on the export, opening a project with one 6000×4000 photo: **50 to 59 ms with its preview stored, 926 to 992 ms without.** Five such photos would take about five seconds (an estimate: the loop awaits each).
+- **Nothing lets go on close.** On web `imageUrl` makes a new object URL each time a project opens (`projectStorage.web.ts:141-146`), so `memoryPreviews` gains an entry per image per open, and `previewStorage.web.ts:7`'s `activeUrls` keeps one URL per preview until the project is deleted or the page reloads. Small, but it's state with no owner.
+
+**The shape.** This moves stored data, so it's a plan of its own. The saved project file (`projectFile.ts`, `PROJECT_VERSION`) doesn't change.
+
+- `projectStorage` keeps an image's preview with the image: `storeImage` takes it, `copyImage` copies it, `imageUrl` gives both URLs, `releaseImage` frees both, and removing a project removes both. On web that's a second key beside the image's in the `photos` store, so the database needs no version change. On native, either the project's directory or the cache directory as today: the plan decides, since the cache can be purged and the project directory is backed up.
+- `openProjects` keeps `previews` beside `images` in its `OpenProject` record, answers `previewUri(id, url)`, and drops both when the project closes.
+- `photos/` only makes previews: one function that builds a preview for an image that lacks one, using the one-pass encoder `photoImport(.web).ts` already has. `previewCache.ts` and both `previewStorage` files go (272 lines).
+- Migration: none is required for correctness, since a missing preview is rebuilt on open. The plan should delete the old `tuck-previews` database and the old cache directory, and say whether to rebuild eagerly or on first open.
+
+Two parts can land alone before any of that, with no storage change: `writeCopy` copies the previews, and the rebuild uses the one-pass encoder on web.
+
+**The case for the current shape.** Previews are derived, so keeping them out of project storage keeps that contract small, and a cache directory the system may purge is the honest place for a cache. #111 built exactly this, deliberately, a day ago. It still loses: the cache is keyed by project, deleted with the project, and needed before the project opens, so the project already owns it in every way but the code. And the purge that makes the cache "honest" is what sends a project down the one-second path.
+
+**Performance.** Better for duplicates and for any project whose previews are gone: the measured 0.9 s per large photo becomes a file copy, or with only the encoder swapped, an estimated 0.3 to 0.4 s (the full import, with its second encode, takes 1.08 s). Blocking the open stays: letting CanvasKit decode a 24 MP photo while the preview is made would grow a heap that never shrinks. Neutral otherwise.
+
+**Risk and size.** The two parts that land alone are S. The move is M: both storage implementations, their in-memory twin in the tests, and the migration. No lesson imports these files.
+
+**Verify.** Node tests in `projects/__tests__`: a duplicate has its previews, a deleted project leaves none, a closed project holds no URLs. On web, the reopen timing above, before and after, with the preview store emptied.
+
+### 4. The editor's root holds four kinds of file
+
+**What a newcomer trips on.** `src/editor/` has 31 files at its root and nine folders. Read by what imports what, the files are four groups that the flat list hides:
+
+- **The canvas.** `EditorCanvas.tsx` (694 lines) and `EditorScene.tsx` are imported only by `Editor.tsx`, and account for nearly all of the root's 33 imports from `canvas/`. They are the canvas, and they aren't in `canvas/`, because they need `canvasInputFor.ts`, which is at the root because tools import it. `canvasInputFor.ts` itself imports only `canvas/`, two types from `layers/`, and `shell/dialDrag.ts`.
+- **The tool contract.** `toolSpec.ts`, `defineTool.ts`, `editorContext.ts`, `builtInSpecs.ts`, `builtInTools.ts`, and `useEditorTools.ts`. Tools import the root 51 times, nearly all of it these files, as `../../defineTool`.
+- **The frame.** `EditorHeader`, `EditorRail`, `EditorInspector`, `PanelViews`, `LayerSelectionBar`, `ShortcutsOverlay`, `editorChrome.ts`, `useEditorChrome.ts`, `useEditorLayout.ts`, and `editorFrame.ts` at the root; `Dock`, `ToolsPanel`, `HeaderActions`, `SaveErrorBanner`, `DevHud`, and `SelectionBar` in `shell/`, used by nothing but the root; and the Layers panel in `layers/panel/`. "Where's the toolbar?" has five answers: `EditorRail.tsx`, `shell/ToolsPanel.tsx`, `shell/ToolButton.tsx`, `editorChrome.ts`, and `Editor.tsx:379-470`, which builds each button's variants, busy state, and starter after `editorChrome.ts` built the buttons.
+- **What's the editor's own.** `Editor.tsx`, the entries, the host's types, the mode, the shortcuts, adding images, and the edit notice.
+
+Two leftovers from #111 belong here too. The canvas still names one stroke kind: `EditorCanvas.tsx:478-516` and `:604-614` build the Eraser's ring, `:595` passes its scope, and `EditorScene.tsx:141-143` decides what its scope dims. The kinds have a module each now, and this one's overlay isn't in it.
 
 **The shape.**
 
-- `store/history.ts`: the snapshot and session types and the pure functions over them. They take and return plain values already, and the store's tests cover them.
-- `store/editorSlice.ts`: the state, `setDocument` and `selectionAfter`, the actions with logic of their own (nudge, select, undo, redo, sessions), and a table for the rest, one line each, built by a typed helper that names the action and says what it selects.
+- `canvas/` gains `EditorCanvas.tsx`, `EditorScene.tsx`, `canvasInput.ts` (today's `canvasInputFor.ts`), and `useCanvasInput.ts`. A stroke kind may declare what it draws over the scene, and `strokes/erase.tsx` takes the ring.
+- `tools/` gains the six contract files at its top, beside the tool folders. Adding a tool then happens inside `tools/`.
+- `chrome/` (the name the code already uses: `editorChrome`, `modeChrome`) takes the ten root files, the six frame-only files from `shell/`, and `layers/panel/` as `chrome/layersPanel/`. `useEditorChrome` takes the toolbar's derivation from `Editor.tsx`, which drops to about 600 lines of wiring.
+- `shell/` stays the kit that tool panels are built from, with its rule intact: it imports nothing else from the editor.
+- The root keeps 11 files.
 
-**Performance.** Neutral: the same `set` calls.
+**The case for the current shape.** The last audit called this taste: the names group the files, every root file is something `Editor.tsx` composes, one flat level means no hunting, and the tree was reshaped four times in three weeks already. That's a real case, and "stop moving files" has value of its own. The change still wins on three specifics that aren't taste. The canvas component not being in `canvas/` contradicts the folder's name. A tool's contract living two levels above every tool means the folder you're told to work in isn't where its rules are. And the frame is split by an import rule a newcomer can't see (`shell/` may not import tools) rather than by what the files are. It should be the last move of the root for a while: the proposed groups are the import graph's own clusters, so there's no next arrangement waiting behind it.
 
-**Risk and size.** S–M. The interactive lessons quote this file by declaration name (`HistoryLesson.tsx`, `SessionsLesson.tsx`, `HistoryTimeline.tsx`, `lessonStore.ts`, `IdentityLesson.tsx`, `sources.ts`), so move their sources in the same change and run the docs build.
+**Performance.** Neutral: moves, and one derivation changing files. Keep `toolEntries` memoized on the same inputs when it moves.
 
-**Verify.** `pnpm test`, which covers the slice, and `pnpm --dir docs/interactive build`.
+**Risk and size.** M to L by line count, low by risk: about 30 files move and about 150 import paths change, with no behavior change. One commit, so a bisect never lands in the middle. docs/architecture.md's map, its boundary list, and the "add a tool" and "add a stroke kind" checklists change with it, and so do AGENTS.md's conventions that name `canvasInputFor.ts`, `defineTool.ts`, and `builtInSpecs.ts`. Lessons import `canvas/layerBounds.ts` and `canvas/hitTest.ts`, which don't move.
 
-### 8. A live stroke gets slower as it grows
+**Verify.** `pnpm typecheck`, `pnpm test`, `pnpm build:web`, and the docs build. Then follow-ups-plan.md §1's "every canvas tool kind" list on web at 390 and 1440 points, since the Eraser's ring changes hands.
 
-**What costs time.** `LivePath` rebuilds the whole path from every point each time one is added (`LiveStrokeOverlay.tsx:437`, with `strokePath`, `DrawingLayerView.tsx:38-56`). So do the cut's live path (`:449`), the live redaction (`:472-481`), and the Eraser's line (`useToolStroke.ts:360-363`). Measured on the prod export, one stroke on an empty canvas:
+### 5. A layer type is handled in nine places, and the rule that keeps its files plain is already broken
 
-| Points in the stroke | Script per move |
-| :--- | :--- |
-| up to 400 | 2.9 ms |
-| 800 | 5.7 ms |
-| 1,200 | 7.4 ms |
-| 1,400 | 8.0 ms |
+**What a newcomer trips on.**
 
-Most strokes are under 200 points. A long scribble or a line of joined handwriting reaches 1,000.
+- **The checklist is short by six.** docs/architecture.md:106 says to add a case in `LayerContent` and `DocumentRenderScene`, and that `assertNever` flags any you miss. `assertNever` guards five switches (`LayerContent.tsx:77`, `DocumentRenderScene.tsx:74`, `canvas/layerBounds.ts:35`, `LayerRow.tsx:231` and `:302`). It doesn't guard `canvas/layerTargets.ts:41-57`, where `resizeMode` and `layerStrokes` are chains of `if`s that fall through to "none" and `null`: a new type compiles, can't be resized, and is hit anywhere in its box. `SceneLayer.tsx` and `EditorScene.tsx:120` and `:143` branch on type the same way.
+- **Two functions named `LayerContent`.** `layers/LayerContent.tsx:22` is the editor's, which decodes images with a hook. `render/DocumentRenderScene.tsx:44` is export's, which takes them decoded. They switch over the same five types to the same five views.
+- **The plain-file rule isn't true.** AGENTS.md says the lowercase `.ts` files in `layers/` use no React, React Native, or Skia, and docs/architecture.md:57 says the views and `layerTransform.ts` are the only files there that use Skia. `layers/text/fonts.ts` imports `expo-asset`, `expo-font`, `react`, and Skia; `layers/text/textLayerLayout.ts` imports Skia; and `layerTransform.ts` imports only a type. Neither offender has a Node test, which is the only thing that would have noticed.
+- **The Layers panel is in `layers/`.** `layers/panel/` is React Native chrome that takes the store's actions, in the folder whose files "never read the store".
 
-**The shape.** Not yet known. The growth is the rebuild (one `quadTo` per point through embind, or through JSI on native) plus rasterizing a longer path, and only the first can be removed. The smoothing changes only the path's tail when a point is added, so a builder could keep the settled prefix and append two segments. A profile has to say first which half is larger.
+**The shape.**
 
-**Performance.** Unknown until then. On native each `quadTo` is a JSI call on the UI thread (`needs device`).
+- Every site that branches on layer type becomes a `switch` ending in `assertNever`, `layerTargets.ts` first. The checklist becomes "add it to the union and fix every compile error", and stays true without anyone maintaining it.
+- One switch draws a layer: `render/LayerView.tsx` takes the layer and its decoded image and mask. The editor's async wrapper (today's `AsyncImage` and `AsyncMaskedRedaction`) and export's scene each resolve the images their own way and call it.
+- `fonts.ts` moves to `render/` (finding 1 moves it anyway). `textLayerLayout.ts` stays, named as the exception: text can't be measured without Skia.
+- The import test from section 4 checks the rule: 40 lines that read each plain file's imports.
+- `layers/panel/` moves to `chrome/` (finding 4).
 
-**Risk and size.** S if built, in `strokePath`'s live callers. A straightened highlighter and a cancelled stroke must reset the builder. `StrokesStage.tsx` and `layerViews.tsx` import `strokePath`.
+**The case for the current shape.** Five layer types change rarely, the two `LayerContent`s differ in real ways (one suspends on images, one can't), and an `if` chain is shorter than a switch. A registry of per-type descriptors would be the heavier answer, and I'd reject it (section 6). But exhaustive switches cost a few lines each and turn a document that drifts into a check that can't.
 
-**Verify.** Profile the 1,400-point stroke and compare `strokePath`'s time against CanvasKit's. Build only if the rebuild is over half of the growth.
+**Performance.** Neutral. `LayerView` must stay a plain function of props, with no hook, so export's single offscreen frame still draws.
 
-### 9. architecture.md restates the tool contract, and has drifted from it
+**Risk and size.** S. `LayersLesson.tsx` quotes `LayerContent` and, with `layerViews.tsx`, imports the layer views: update the lesson for the new name and run the docs build.
 
-**What a newcomer trips on.** architecture.md's paragraphs on a tool's spec and definition (`:73`, `:74`) are about 600 words each and restate the doc comments in `toolSpec.ts:10-49` and `defineTool.ts:75-144`. Nothing checks imports, by design, so this document is the rule, and it's hard to find a rule in it. The copies have drifted:
+**Verify.** Add a throwaway sixth layer type to the union and count the compile errors against the list above. `pnpm test`, and an export of a project with every layer type compared with one from before.
 
-- `defineTool.ts`'s comment lists no `variants`, `activeVariant`, `selectVariant`, `variantEntry`, or `doneVariant`, though the type has them (`:151`, `:164-169`).
-- architecture.md says adding a tool adds no case in the editor (finding 6).
-- follow-ups-plan.md `:36` sends a new canvas kind to "its case in `useCanvasInput`'s `finishStroke`", which now only forwards to the tool's definition.
+### 6. Every redraw replays every stroke (carried forward, with new numbers)
 
-**The shape.** architecture.md keeps the map, the import rules, and rendering. The tool contract lives only in the two files' doc comments. In place of the two paragraphs, three checklists: add a tool, add a canvas stroke kind, add a layer type (the last is already there at `:101-104`).
+**What costs time.** `DrawingLayerView.tsx:99-115` still draws one `<Path>` with its own paint per stroke. On web, Skia records the whole scene again in JavaScript each time a shared value it reads changes (`play`), then draws the recording. Measured from CPU profiles of a live pen stroke, 100 moves 20 ms apart, over a 1600×1200 photo:
 
-**Performance.** None.
+| Document | CPU per redraw | Re-recording in JavaScript (`play`) | Inside CanvasKit |
+| :--- | :--- | :--- | :--- |
+| 1 mark | 3.5 ms | 0.3 ms | 78% |
+| 200 marks, 1 stroke each | 5.9 ms | 2.2 ms | 58% |
+| 200 marks, 3 strokes each | 9.8 ms | 4.7 ms | 51% |
 
-**Risk and size.** S. Docs only.
+Re-recording costs about 0.006 ms per stroke per redraw: for each one, `Player.ts:170` copies a paint, `:135` sets its properties and parses its color, and the path and paint cross embind. Landing a stroke shows the same cost from the other side. By `ScriptDuration`, a landing takes 27 ms at 1 mark, 38 ms at 200, and 47 ms at 600 strokes, where it first drops a frame (33 ms); with the CPU throttled 4× at 200 marks it takes 74 ms with a 50 ms frame. A profile of 20 landings at 200 marks puts 77% of it in Skia's recording and drawing and 8.6% (3.9 ms a landing) in React.
 
-**Verify.** Follow the "add a tool" list on a throwaway tool and see whether it's enough.
+**What's new since the last audit.**
 
-## 4. Considered and rejected
+- **The estimate now passes the bar.** The last audit said to build this only if a prototype saved 2 ms per move. A picture per drawing leaves one command per mark, so at 600 strokes in 200 marks it removes about 400 strokes' recording: about 2.5 ms of the 9.8 ms, from the measured slope. A page of handwriting has more strokes per mark, and gains more. With one stroke per mark it gains almost nothing.
+- **It's a web fix.** On native the recording is handed to the view and replayed in C++ off the JavaScript thread (`Container.native.ts:56-62`), so there's no per-stroke JavaScript to remove. [#95](https://github.com/nverkhachoyan/tuck/issues/95) is still the phone's question, and it's about rasterizing, which this doesn't change.
 
-- **Memoizing scene layers to make a landed stroke cheaper.** On the prod export a landing costs 14–20 ms of script from 1 to 200 marks, flat, with no frame over 20 ms. The 38–64 ms I first measured was the dev build. This backs the editor audit's verdict with a production number.
-- **Letting only the selected layer follow the live transform.** Every `LiveLayer` mapper depends on all twelve live values, since Reanimated takes a mapper's inputs from its closure (`mappers.ts:154-177`), so 200 run on each frame of a drag. I expected that to be the drag's cost. It's 0.03 ms per move on web. And a drag can pick up its layer on the UI thread before React knows (`useLayerTransformGesture.ts:341-356`), so every layer must be able to follow. On Hermes it may reach a millisecond at 200 layers (estimate); revisit only if #95 points at it.
-- **A summary index for Home's list, or thumbnails outside the project file.** `listProjects` reads and validates every project whole (`projectLifecycle.ts:665-699`). Measured in Node: 0.1 ms for a typical 55 KB project, 3.2 ms for a 1 MB one. It isn't worth a change to how projects are stored.
-- **Flattening the layers under a dragged one into a texture.** It would cut the rasterizing that finding 4 leaves. But a backdrop filter and a blend read the canvas they're drawn in, a full-canvas texture costs memory, and a large image that something else disposes is the bug in docs/GOTCHAS.md. Try finding 4's picture first.
-- **Splitting the big screen files, and one props type for a tool's panel, bar, and tray.** The first is taste (section 2). The second is already "considered and left" in follow-ups-plan.md, and I found nothing new.
-- **From the editor audit, not proposed again:** stroke IDs, `SkPath.offset`, the two-group dimming split, the memoization sweep, gating idle tool hooks, bounding live redaction by the document, and the `sameDocument` and `layers.find` changes. Only the `ToolSpec` rework returns, as finding 6, with its reason given there.
+**The shape.** As before: record a drawing's settled strokes once into an `SkPicture` with explicit bounds from `inkRect`, and draw it with one `<Picture>` inside the same group, saved layer, and clip. Strokes record in index order inside the drawing's own layer, so an eraser still clears only what came before it, and the multiply stays on the group's paint. Keep per-stroke nodes where something wraps each stroke (the Stroke eraser's `wrapStroke`) and for the live stroke, which stays last.
 
-## 5. Suggested order
+Two things to decide while prototyping. Cache by layer id with the strokes array as the check, not in a `WeakMap` by array: undo history keeps up to 100 old arrays alive, and each would keep its picture. And every landed stroke makes a new strokes array, so the picture is recorded again on each landing; that's cheap while `pathFor` hits, and it's where [#109](https://github.com/nverkhachoyan/tuck/issues/109) (a recentering drawing rebuilds every path) would show.
 
-Each finding can land alone except where noted.
+**The case for the current shape.** One path per stroke is the simplest thing that draws, it's what the lessons show, and the M1 drops no frame until 600 strokes. That's a fair reason to prototype before building, which is what the last audit said. It isn't a reason to stop, with a mid-range phone's browser four times slower.
 
-1. **Finding 3** (photo import) first: the largest measured gain, in files nothing else here touches.
-2. **Finding 9** (docs) and **finding 7** (store split): small, and they make the later moves easier to review.
-3. **Finding 6** (flyouts) before **finding 2** (strokes by kind): both reshape what a tool declares, and `Editor.tsx` is easier to follow once it names no tool.
-4. **Finding 1** (session) on its own, after finding 3, which changes what `photos/` hands it. Write its race tests before moving anything.
-5. **Finding 4** (pictures) and **finding 8** (live path): each starts with a measurement and may end there.
-6. **Finding 5** (UI-thread copies) waits for a phone and for #105, and shares that phone session with #95.
+**Performance.** Better on web by the estimate above; neutral on native.
+
+**Risk and size.** S to M, in one file. `LayersLesson.tsx` and `layerViews.tsx` import `DrawingLayerView`.
+
+**Verify.** Prototype, then rerun the 200×3 profile: `play` should fall from 4.7 ms toward 2 ms. Then compare an export of a drawing with erasers, a highlight, and a dimmed scope against one from before, pixel for pixel.
+
+One thing this pass found and didn't chase: at 1 mark, 2.3 ms of each redraw is inside CanvasKit's `drawPicture` for a scene of one photo and one stroke. `EditorScene.tsx:162-191` draws two blurred shadows the size of the canvas and a fill on every redraw, which is the obvious suspect and an unmeasured one. A prototype that draws them once would say.
+
+### 7. On native, every document change copies every stroke to the UI thread (`needs device`, carried forward)
+
+Nothing here changed in #111, and I read the same code again:
+
+- `EditorCanvas.tsx:269-276` rebuilds `targets` on every document change and settled zoom and assigns it to a shared value.
+- Each target for an unlocked drawing, brushed redaction, or shape carries its strokes, points and all (`layerTargets.ts:28`, `:50-57`).
+- The JavaScript side caches each array's clone by identity, but the UI runtime's copy is built fresh on every assignment: `SerializableArray::toJSValue` makes a new array and converts each element (`SerializableArray.cpp:19-26`).
+
+The estimate stands: a few milliseconds on the UI thread per landed stroke at 600 short strokes, several times that for a page of long ones. Web has one runtime and no copy.
+
+The case for the current shape is that it's one assignment, the hit tests read plain arrays on both threads, and nobody has seen it drop a frame. That holds until a phone says otherwise, which is why this waits.
+
+The shape also stands: a small record per layer on every change, and each layer's stroke geometry sent once per strokes array as a typed array, with the hit tests in `layers/strokes.ts` reading `ArrayLike<number>`. It still waits for [#105](https://github.com/nverkhachoyan/tuck/issues/105), which touches the same functions, and for a phone: time from assigning `sharedTargets` to a worklet scheduled right after it, in an iPhone Release build with 200 marks. Build only if it's over 4 ms. Add the number to #95.
+
+Performance: better on native if the estimate holds, neutral on web. Size M: it changes the signatures of hit tests that the canvas and the edits share, which their tests pin.
+
+### 8. The big files, one by one
+
+The last audit called splitting these taste. Judged one at a time, by the wording proposed in section 4 (split out a component that keeps state the rest of the file doesn't read):
+
+| File | Lines | Verdict |
+| :--- | :--- | :--- |
+| `screens/home/ProjectList.tsx` | 911 | **Split.** `ProjectCard` (275 lines: hover and keyboard reveal, the context menu's anchor, the name field's focus) and `NameField` (120 lines: a draft that commits on blur and on unmount, with a cancel flag in refs) each keep state the grid never reads. Two files, `ProjectCard.tsx` and `NameField.tsx`. |
+| `tools/text/TextStylePanel.tsx` | 739 | **Split when [#107](https://github.com/nverkhachoyan/tuck/issues/107) is done.** `InlineTextColorPicker` (150 lines) repeats `ui/ColorPicker`'s HSV logic; fixing that removes most of it. |
+| `editor/Editor.tsx` | 707 | **Shrinks in finding 4** (the toolbar's derivation moves). The rest is one component's wiring and reads top to bottom. |
+| `editor/EditorCanvas.tsx` | 694 | **Moves in finding 4**, and loses the Eraser's ring. It's one component with twelve gesture hooks; splitting it further would hide how they compose. |
+| `screens/home/HomeScreen.tsx` | 675 | **Leave.** Seven small views and one hook, little state. |
+| `screens/create/CreateScreen.tsx` | 634 | **Leave.** `CustomSize` is the only part with state of its own, and it's 135 lines. |
+| `tools/find/FindPanel.tsx` | 574 | **Leave.** follow-ups-plan.md already weighed splitting its views; six of its functions are the slots one tool fills. |
+| `projects/openProjects.ts` | 556 | **Leave.** The autosave queue (`:192-277`) is the one separable part, and it shares `saveProject` and the open-project map with the rest. Split it if it grows a second policy. |
+| `store/editorSlice.ts` | 556 | **Leave.** #111 did the work. |
+| `screens/export/ExportScreen.tsx` | 546 | **Leave.** Its two hooks are already separate functions. |
+| `layers/panel/LayersPanel.tsx` | 537 | **Leave**, apart from the move in finding 4 and [#106](https://github.com/nverkhachoyan/tuck/issues/106). |
+| `tools/crop/CropPanel.tsx` | 532 | **Leave.** |
+| `canvas/useLayerTransformGesture.ts` | 488 | **Leave.** One gesture, fifteen shared values, and worklet helpers that must sit above their callers. |
+
+So one split now, one behind an open issue, and two that other findings handle. Performance: neutral. Size: S. Verify `ProjectList` by hand on web: hover, keyboard focus, right-click, rename with Enter, Escape, blur, and Home's Done while a name is being typed.
+
+## 6. Considered and rejected
+
+Each says whether the reason is evidence, which the next audit should overturn only with new evidence, or judgment, which it may reopen.
+
+- **Moving the document subscription down so `Editor` doesn't re-render on every edit, or memoizing its children.** Evidence. `Editor` subscribes to the document (`Editor.tsx:107`), nothing in `src/` uses `React.memo`, and all eleven tool hooks run on every edit, so I expected this to be the largest cost of a landed stroke. It's 3.9 ms of React at 200 marks on the export (8.6% of the profile), 16 ms with the CPU throttled 4×. Skia's redraws are the cost. This agrees with both earlier audits, now with the profile to show it.
+- **Splitting each layer type into `model/` and `render/layers/`.** Judgment, after tracing two tasks both ways, and with the history: the tree had this shape until October 29. See section 2.
+- **A registry of layer-type descriptors** (bounds, resize mode, hit strokes, row, view per type, looked up by `layer.type`). Judgment. It would make "add a layer type" one folder and one line, for five types that rarely change, at the price of a level of indirection in the hot hit-testing path. Exhaustive switches get the same guarantee from the compiler.
+- **One registry file for tools.** Evidence. `builtInSpecs.ts` exists apart from `builtInTools.ts` because three Node test files import `BUILT_IN_SPECS` (`editorMode.test.ts`, `editorChrome.test.ts`, `shortcuts.test.ts`), and Node's type stripping can't load a tool's `.tsx` views.
+- **Folding `src/session/` into `projects/`.** Judgment. See section 2.
+- **Import boundaries in `biome.json`.** Evidence: it took a thousand lines. The Node test proposed in section 4 is a different thing, two checks in under 50 lines.
+- **Moving the context provider above the tool hooks, so hooks can read it.** Judgment, unchanged from the last audit: `ToolEnv` is easier to test than a context. Section 4 rewords the convention's reason.
+- **Rebuilding a missing preview in the background and opening on the full photo meanwhile.** Evidence. On web CanvasKit would decode the full photo into a heap that grows and never shrinks (AGENTS.md, [#74](https://github.com/nverkhachoyan/tuck/issues/74)).
+- **An incremental live path.** Evidence. #111 measured `strokePath` at 4.1% of a 1,400-point stroke. In this pass's profiles it's 2.2% of a live stroke at 1 mark.
+- **Loading the text fonts once instead of twice.** Evidence: the second request is served from the cache.
+- **A shared IndexedDB helper in `platform/`.** Judgment. Three openers of 30 lines each is real repetition, but finding 3 removes one, and two don't justify a module.
+- **A summary index for Home's list; flattening the layers under a dragged one into a texture; letting only the selected layer follow the live transform.** Evidence, from the last audit, not measured again: 0.1 ms to read a typical project, backdrop filters reading the canvas they're drawn in, and 0.03 ms per move for the mappers.
+- **From the editor audit, not reopened:** stroke IDs, `SkPath.offset`, the two-group dimming split, gating idle tool hooks, bounding live redaction by the document, and the `sameDocument` and `layers.find` changes. Each was rejected on evidence in docs/plans/editor-audit-plan.md, and I found none against it.
+
+## 7. Suggested order
+
+1. **Finding 1, step A** (fonts out of the root layout) first, alone: the largest measured gain for the smallest change.
+2. **Finding 3's two small parts** (copy previews on duplicate; rebuild with the one-pass encoder), alone.
+3. **Finding 5** (exhaustive switches, one `LayerView`, the import test) before the moves, so the test is there to hold the boundaries while files change folders. It moves `fonts.ts`, so it follows step 1.
+4. **Finding 2** (names, the barrel, the tests) as one change for the renames and one for the test moves, so each diff reads as what it is.
+5. **Finding 4** (the editor's root) as a single commit after finding 2, since both rewrite import paths across the editor and `layers/panel/` moves here. Update docs/architecture.md and AGENTS.md in the same commit.
+6. **Finding 8's split of `ProjectList.tsx`** any time; it touches nothing else.
+7. **Finding 6** (a picture per drawing) starts with a prototype and its profile, and may end there. It's independent of everything above.
+8. **Finding 1, step B** and **finding 3's storage move** each need a plan of their own first. Step B should come after finding 2, which creates the `openDocument` entry it needs.
+9. **Finding 7** waits for #105 and a phone, and shares that phone session with #95.
