@@ -95,7 +95,13 @@ export function useImageDetection(targetKey: string) {
 						scope,
 						regions,
 						issues,
-						selected: new Set(regions.map((_, index) => index)),
+						// A face found is nearly always wanted; which lines of text
+						// are private is the user's to pick.
+						selected: new Set(
+							regions.flatMap((region, index) =>
+								region.feature === "faces" ? [index] : [],
+							),
+						),
 					},
 		);
 	}, []);
