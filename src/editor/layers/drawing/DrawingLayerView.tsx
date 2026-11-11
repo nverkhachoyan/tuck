@@ -84,7 +84,6 @@ export function pathFor(stroke: MaskStroke): SkPath {
 }
 
 function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
-	"worklet";
 	const path = pathFor(stroke);
 	if (stroke.type === "pen" && stroke.tip === "neon") {
 		const { color, width } = stroke;
