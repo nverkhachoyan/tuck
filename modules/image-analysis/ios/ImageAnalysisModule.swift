@@ -22,8 +22,8 @@ public class ImageAnalysisModule: Module {
 			try self.objectSelector?.prepare(uri)
 		}.runOnQueue(objectQueue)
 
-		AsyncFunction("objectMasks") { (uri: URL, at: PointRecord) -> ObjectMasksRecord? in
-			try self.objectSelector?.masks(uri, at: at)
+		AsyncFunction("objectMasks") { (uri: URL, prompt: ObjectPromptRecord) -> ObjectMasksRecord? in
+			try self.objectSelector?.masks(uri, for: prompt)
 		}.runOnQueue(objectQueue)
 
 		AsyncFunction("releaseObjects") {

@@ -4,9 +4,9 @@ import Foundation
 import ImageIO
 import onnxruntime_objc
 
-/// Segment Anything (MobileSAM), for selecting any object under a tap, as
-/// `mobileSamWorker.js` does on web: the encoder reads one image, once, and
-/// the decoder answers each tap from what it read. Not thread-safe: the
+/// Segment Anything (MobileSAM), for selecting any object under a tap or in
+/// a box, as `mobileSamWorker.js` does on web: the encoder reads one image,
+/// once, and the decoder answers each prompt from what it read. Not thread-safe: the
 /// module calls it from one queue.
 final class ObjectSelector {
 	/// The encoder's input is this square, with the image at its top left,
@@ -46,15 +46,47 @@ final class ObjectSelector {
 		}
 		encoded = (uri, embeddings, image.width, image.height)
 		// The decoder's first run sets up much of what later runs reuse.
-		_ = try decode(x: Float(image.width) / 2, y: Float(image.height) / 2)
+		_ = try decode(Self.point(x: Float(image.width) / 2, y: Float(image.height) / 2))
 	}
 
-	/// Masks of what's at `point` in the image at `uri`, from a part to the
-	/// whole, as grayscale PNG files, or nil while that image isn't read.
-	func masks(_ uri: URL, at point: PointRecord) throws -> ObjectMasksRecord? {
+	/// Masks of the object `prompt` points at, from a part to the whole, or
+	/// boxes, just the one, in the image at `uri`, as grayscale PNG files, or
+	/// nil while that image isn't read.
+	func masks(_ uri: URL, for prompt: ObjectPromptRecord) throws -> ObjectMasksRecord? {
 		guard let encoded, encoded.uri == uri else { return nil }
-		let (width, height) = (encoded.width, encoded.height)
-		let output = try decode(x: Float(point.x) * Float(width), y: Float(point.y) * Float(height))
+		let (width, height) = (Float(encoded.width), Float(encoded.height))
+		let decoderPrompt: (coords: [Float], labels: [Float])
+		if let box = prompt.box {
+			decoderPrompt = Self.box(
+				left: Float(box.x) * width,
+				top: Float(box.y) * height,
+				right: Float(box.x + box.width) * width,
+				bottom: Float(box.y + box.height) * height
+			)
+		} else if let point = prompt.point {
+			decoderPrompt = Self.point(x: Float(point.x) * width, y: Float(point.y) * height)
+		} else {
+			throw ObjectSelectionException("A prompt needs a point or a box")
+		}
+		let output = try decode(decoderPrompt)
+		return try Self.masks(output, width: encoded.width, height: encoded.height, boxed: prompt.box != nil)
+	}
+
+	/// A point, and the padding point the decoder expects without a box.
+	private static func point(x: Float, y: Float) -> (coords: [Float], labels: [Float]) {
+		([x, y, 0, 0], [1, -1])
+	}
+
+	/// A box, as its top left and bottom right corners, labelled as SAM's are.
+	private static func box(left: Float, top: Float, right: Float, bottom: Float) -> (coords: [Float], labels: [Float]) {
+		([left, top, right, bottom], [2, 3])
+	}
+
+	/// The decoder's masks as PNG files, smallest first. The first output is
+	/// the single mask it gives when told not to guess, which the others
+	/// cover: a box, which says which object it means, gets that one alone,
+	/// and a point the others.
+	private static func masks(_ output: [String: ORTValue], width: Int, height: Int, boxed: Bool) throws -> ObjectMasksRecord {
 		guard let logitData = try output["masks"]?.tensorData(),
 			let scoreData = try output["iou_predictions"]?.tensorData()
 		else {
@@ -65,22 +97,20 @@ final class ObjectSelector {
 		let size = width * height
 		let count = logitData.length / MemoryLayout<Float>.size / size
 		var masks: [(values: [UInt8], area: Int, score: Float)] = []
-		// The first is the single mask the decoder gives when told not to
-		// guess, which the others cover.
-		for index in 1..<count {
-			let mask = Self.coverage(logits + index * size, count: size)
+		for index in boxed ? 0..<1 : 1..<count {
+			let mask = coverage(logits + index * size, count: size)
 			if mask.area > 0 { masks.append((mask.values, mask.area, scores[index])) }
 		}
 		masks.sort { $0.area < $1.area }
 		let distinct = masks.indices.filter { index in
-			index == 0 || Double(masks[index].area) > Double(masks[index - 1].area) * (1 + Self.sameArea)
+			index == 0 || Double(masks[index].area) > Double(masks[index - 1].area) * (1 + sameArea)
 		}.map { masks[$0] }
 		var likeliest = 0
 		for (index, mask) in distinct.enumerated() where mask.score > distinct[likeliest].score {
 			likeliest = index
 		}
 		return ObjectMasksRecord(
-			masks: try distinct.map { try Self.writePng($0.values, width: width, height: height) },
+			masks: try distinct.map { try writePng($0.values, width: width, height: height) },
 			likeliest: likeliest
 		)
 	}
@@ -118,7 +148,7 @@ final class ObjectSelector {
 		sessions = nil
 	}
 
-	private func decode(x: Float, y: Float) throws -> [String: ORTValue] {
+	private func decode(_ prompt: (coords: [Float], labels: [Float])) throws -> [String: ORTValue] {
 		guard let encoded else { throw ObjectSelectionException("No image is read") }
 		func tensor(_ values: [Float], _ shape: [Int]) throws -> ORTValue {
 			try ORTValue(
@@ -130,9 +160,8 @@ final class ObjectSelector {
 		return try loadSessions().decoder.run(
 			withInputs: [
 				"image_embeddings": encoded.embeddings,
-				// The point, and the padding point the decoder expects without a box.
-				"point_coords": try tensor([x, y, 0, 0], [1, 2, 2]),
-				"point_labels": try tensor([1, -1], [1, 2]),
+				"point_coords": try tensor(prompt.coords, [1, prompt.labels.count, 2]),
+				"point_labels": try tensor(prompt.labels, [1, prompt.labels.count]),
 				"mask_input": try tensor([Float](repeating: 0, count: 256 * 256), [1, 1, 256, 256]),
 				"has_mask_input": try tensor([0], [1]),
 				"orig_im_size": try tensor([Float(encoded.height), Float(encoded.width)], [2]),
@@ -257,6 +286,12 @@ final class ObjectSelector {
 		}
 		return SubjectMaskRecord(uri: file.absoluteString, width: Double(width), height: Double(height))
 	}
+}
+
+/// A point on an object or a box around it, as fractions of the image.
+struct ObjectPromptRecord: Record {
+	@Field var point: PointRecord?
+	@Field var box: RectRecord?
 }
 
 struct ObjectMasksRecord: Record {

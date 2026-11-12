@@ -134,8 +134,8 @@ class ImageAnalysisModule : Module() {
 			objectSelector.prepare(uri) { loadUpright(Uri.parse(uri)) }
 		}.runOnQueue(objectQueue)
 
-		AsyncFunction("objectMasks") { uri: String, at: PointRecord ->
-			objectSelector.masks(uri, at)
+		AsyncFunction("objectMasks") { uri: String, prompt: ObjectPromptRecord ->
+			objectSelector.masks(uri, prompt)
 		}.runOnQueue(objectQueue)
 
 		AsyncFunction("releaseObjects") {

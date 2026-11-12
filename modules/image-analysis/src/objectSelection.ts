@@ -43,8 +43,7 @@ export async function objectMasks(
 	prompt: ObjectPrompt,
 ): Promise<ObjectMasks | null> {
 	if (!prepared?.ready || prepared.uri !== uri) return null;
-	if (!("point" in prompt)) return null;
-	return ImageAnalysisModule.objectMasks(uri, prompt.point);
+	return ImageAnalysisModule.objectMasks(uri, prompt);
 }
 
 export function releaseObjects() {
