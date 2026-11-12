@@ -25,18 +25,16 @@ The refactors from October 24 to 29 were checked on web at 390, 1024, and 1440 p
 
 ## 3. Smart selection
 
-Cut's Subject, Tap (MobileSAM on every platform), Paint in and Paint out, Invert, and its Apply actions are built. What's open:
+Cut's Subject, Tap (MobileSAM on every platform, by a tap or a box), Paint in and Paint out, Invert, and its Apply actions, Adjust included, are built; a box on a phone is [#131](https://github.com/nverkhachoyan/tuck/issues/131). What's open:
 
 * **App size.** The models add 44 MB to each app, and ONNX Runtime 34 MB to Android's (its arm64 library, before the store compresses it). iOS's Release size isn't measured. An int8 encoder might bring the models to about 12 MB, if the masks hold up. On-demand resources and Play Asset Delivery could fetch them the first time Tap is used.
 * **Android on a phone.** Only the emulator has run Tap: about 2 seconds to read a photo, and taps from 0.15 seconds back to back to over a second spaced out. If a phone is slow, look at ONNX Runtime's NNAPI or QNN providers, or LiteRT on the GPU.
 * **The first Tap after launch on iOS** takes about 3 seconds while Core ML loads the model, against a quarter of a second after that.
 * **WebAssembly threads.** Where WebGPU isn't available, web encodes on one thread in about 3 seconds. Cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` in `vercel.json`) would allow threads, likely about 1 second. Check the share target and file handlers first.
 * **Tap without Vision or ML Kit.** Segment Anything needs neither, so Tap could show on iOS 16 and on Android without Play services, where Cut offers only the brushes.
-* **Edges.** SAM's masks come out at 256×256 and are scaled up, so hair and fur come out soft and blocky. Refine the mask against the photo (a guided filter), or run the decoder again on a crop around the object.
-* **A drag for a box**, which `strokeIntent` already tells from a tap. It's a new `CanvasTool` kind: its union member and `ToolStroke` member and its row in `CANVAS_TOOLS` (`canvas/canvasTool.ts`), its stroke module in `canvas/strokes/` registered in `SceneLayer.tsx`, its builder in `cutSettings.ts`, and its case in `cutTool.ts`'s `finishStroke`.
+* **Edges.** A guided filter didn't beat today's masks on fur (docs/on-device-detection.md, "Sharper edges"); decoding again on a crop for small objects is [#132](https://github.com/nverkhachoyan/tuck/issues/132).
 * **Memory in browsers.** Not measured with MobileSAM alone in its worker. With all three models loaded, the page held about 130 MB of JavaScript heap.
-* **Adjust only the selection.**
-* **Remove an object.** Fill the hole Remove leaves with an inpainting model: MI-GAN (MIT, made for phones, about 30 MB) or LaMa (Apache 2.0, about 200 MB). It's the biggest piece here, so research it first.
+* **Remove an object.** Researched in [docs/object-removal.md](../object-removal.md); what it waits on is [#134](https://github.com/nverkhachoyan/tuck/issues/134).
 
 ## 4. Later
 
