@@ -1,4 +1,4 @@
-import type { ImagePoint, ObjectMasks } from "./ImageAnalysis.types";
+import type { ObjectMasks, ObjectPrompt } from "./ImageAnalysis.types";
 import ImageAnalysisModule from "./ImageAnalysisModule";
 
 // Segment Anything runs in the native module, as `objectSelection.web.ts`
@@ -34,16 +34,17 @@ export function prepareObjects(uri: string): Promise<void> {
 }
 
 /**
- * Masks of what's at a point in the image at `uri` (see `ObjectMasks`), as
- * grayscale PNG files. Null while the image isn't ready (see
- * `prepareObjects`).
+ * Masks of the object `prompt` points at or boxes in the image at `uri` (see
+ * `ObjectMasks`), as grayscale PNG files. Null while the image isn't ready
+ * (see `prepareObjects`).
  */
 export async function objectMasks(
 	uri: string,
-	at: ImagePoint,
+	prompt: ObjectPrompt,
 ): Promise<ObjectMasks | null> {
 	if (!prepared?.ready || prepared.uri !== uri) return null;
-	return ImageAnalysisModule.objectMasks(uri, at);
+	if (!("point" in prompt)) return null;
+	return ImageAnalysisModule.objectMasks(uri, prompt.point);
 }
 
 export function releaseObjects() {

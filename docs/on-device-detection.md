@@ -72,7 +72,9 @@ Return a mask, not a cutout. Skia applies the mask to the image layer, so the or
 
 ### Selecting objects
 
-Added after this research (October 2026): Cut's Tap selects the object at a tap with MobileSAM, run with ONNX Runtime on every platform (Core ML on iOS, the CPU on Android, and a module worker with WebGPU or WebAssembly on web), alongside the subject masks above. `modules/image-analysis/src/objectSelection.ts` and its `.web.ts` are its entry points; [Implementation notes](#implementation-notes) records how the models were prepared and what each platform needs.
+Added after this research (October 2026): Cut's Tap selects the object at a tap, or inside a box dragged around it, with MobileSAM, run with ONNX Runtime on every platform (Core ML on iOS, the CPU on Android, and a module worker with WebGPU or WebAssembly on web), alongside the subject masks above. `modules/image-analysis/src/objectSelection.ts` and its `.web.ts` are its entry points; [Implementation notes](#implementation-notes) records how the models were prepared and what each platform needs.
+
+A box goes to the decoder as its two corners, labelled 2 and 3, with no padding point, and gets one mask: the decoder's first output, the one it gives when told not to guess. On web (November 2026) its other three outputs scored higher on some boxes but drew the same object, within a few percent of its area, so there's no grow and shrink after a box. Until Segment Anything has read the image, a box picks the subject at its center.
 
 ## The simulator
 

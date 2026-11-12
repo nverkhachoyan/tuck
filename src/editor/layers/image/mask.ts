@@ -1,4 +1,8 @@
-import { type Point, toLayerSpace } from "../../document/geometry.ts";
+import {
+	type Point,
+	type Rect,
+	toLayerSpace,
+} from "../../document/geometry.ts";
 import type { CutStroke, ImageLayer } from "./image.ts";
 
 // Finer than a hundredth of a pixel is invisible, and would only make saved
@@ -142,8 +146,37 @@ export function imagePointAt(
 	layer: ImageLayer,
 	point: Point,
 ): { x: number; y: number } | null {
-	const local = toLayerSpace(layer.transform, point);
-	const x = (layer.flipped ? -local.x : local.x) / layer.width + 0.5;
-	const y = local.y / layer.height + 0.5;
+	const { x, y } = imageFraction(layer, point);
 	return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? { x, y } : null;
+}
+
+/**
+ * Where a box in document space falls on `layer`'s image, as fractions of
+ * its width and height from its top left: the bounds of the box's corners
+ * on the image, however the layer is placed or flipped, clipped to the
+ * image, or null when none of it is on the image.
+ */
+export function imageRectAt(layer: ImageLayer, rect: Rect): Rect | null {
+	const corners = [
+		{ x: rect.x, y: rect.y },
+		{ x: rect.x + rect.width, y: rect.y },
+		{ x: rect.x, y: rect.y + rect.height },
+		{ x: rect.x + rect.width, y: rect.y + rect.height },
+	].map((corner) => imageFraction(layer, corner));
+	const xs = corners.map((corner) => corner.x);
+	const ys = corners.map((corner) => corner.y);
+	const left = Math.max(0, Math.min(...xs));
+	const top = Math.max(0, Math.min(...ys));
+	const right = Math.min(1, Math.max(...xs));
+	const bottom = Math.min(1, Math.max(...ys));
+	if (right <= left || bottom <= top) return null;
+	return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+function imageFraction(layer: ImageLayer, point: Point): Point {
+	const local = toLayerSpace(layer.transform, point);
+	return {
+		x: (layer.flipped ? -local.x : local.x) / layer.width + 0.5,
+		y: local.y / layer.height + 0.5,
+	};
 }

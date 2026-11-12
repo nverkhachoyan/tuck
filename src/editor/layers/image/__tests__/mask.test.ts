@@ -7,6 +7,7 @@ import {
 	addMaskStroke,
 	canDrawCut,
 	imagePointAt,
+	imageRectAt,
 	isCutOut,
 	removalOf,
 	selectsNothing,
@@ -203,6 +204,65 @@ describe("imagePointAt", () => {
 		// at the bottom left.
 		const point = imagePointAt(layer, { x: -999, y: 749 });
 		assert.ok(point && point.x < 0.001 && point.y < 0.001, String(point));
+	});
+});
+
+describe("imageRectAt", () => {
+	// The photo is 4000 by 3000, filling the document.
+	test("is a fraction of the image, from its top left", () => {
+		assert.deepEqual(
+			imageRectAt(photo(), { x: 1000, y: 750, width: 2000, height: 750 }),
+			{ x: 0.25, y: 0.25, width: 0.5, height: 0.25 },
+		);
+	});
+
+	test("follows a turned, flipped layer", () => {
+		const turned: ImageLayer = {
+			...photo(),
+			transform: { x: 0, y: 0, rotation: Math.PI, scaleX: 1, scaleY: 1 },
+		};
+		const box = { x: -2000, y: -1500, width: 1000, height: 750 };
+		const near = (rect: ReturnType<typeof imageRectAt>, x: number, y: number) =>
+			rect !== null &&
+			Math.abs(rect.x - x) < 1e-9 &&
+			Math.abs(rect.y - y) < 1e-9 &&
+			Math.abs(rect.width - 0.25) < 1e-9 &&
+			Math.abs(rect.height - 0.25) < 1e-9;
+		// Turned half around, the document's top left is the image's bottom
+		// right, and flipped as well, its bottom left.
+		const onTurned = imageRectAt(turned, box);
+		assert.ok(near(onTurned, 0.75, 0.75), JSON.stringify(onTurned));
+		const onFlipped = imageRectAt({ ...turned, flipped: true }, box);
+		assert.ok(near(onFlipped, 0, 0.75), JSON.stringify(onFlipped));
+	});
+
+	test("takes the bounds of a box on a quarter-turned layer", () => {
+		const turned: ImageLayer = {
+			...photo(),
+			transform: { x: 0, y: 0, rotation: Math.PI / 4, scaleX: 1, scaleY: 1 },
+		};
+		const rect = imageRectAt(turned, {
+			x: -100,
+			y: -100,
+			width: 200,
+			height: 200,
+		});
+		// A square's corners turned 45° reach its diagonal's half each way.
+		const half = Math.SQRT2 * 100;
+		assert.ok(rect, "on the image");
+		assert.ok(Math.abs(rect.width * 4000 - 2 * half) < 1e-6);
+		assert.ok(Math.abs(rect.height * 3000 - 2 * half) < 1e-6);
+	});
+
+	test("clips to the image, or is null off it", () => {
+		assert.deepEqual(
+			imageRectAt(photo(), { x: 3000, y: 1500, width: 5000, height: 5000 }),
+			{ x: 0.75, y: 0.5, width: 0.25, height: 0.5 },
+		);
+		assert.equal(
+			imageRectAt(photo(), { x: 4500, y: 0, width: 100, height: 100 }),
+			null,
+		);
 	});
 });
 

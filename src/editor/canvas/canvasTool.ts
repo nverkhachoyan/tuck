@@ -21,7 +21,8 @@ import type { Handle } from "./handleGeometry.ts";
  * names one) and shape, `width` across ("eraser") or taking each stroke it
  * touches whole ("stroke"); drags out a shape or a redaction's box; paints a
  * redaction's strokes; picks a color where the finger lifts; paints the cut
- * of the image `layerId`; or picks the subject to cut out of it with a tap.
+ * of the image `layerId`; or picks the object to cut out of it, with a tap
+ * on it or a box dragged around it.
  */
 export type CanvasTool =
 	| { type: "draw"; brush: PenBrush }
@@ -45,7 +46,7 @@ export type CanvasTool =
 /**
  * A finished stroke with a tool: the tool, with what the stroke made, in
  * document space: a brush's points, a redaction's box, a shape's placement,
- * or the point picked. A pen's also has when it began and ended, which
+ * the point picked, or the box dragged around an object. A pen's also has when it began and ended, which
  * decide the mark it joins; an eraser's, how far a touch reaches in
  * document units, which the Stroke eraser hits strokes within.
  */
@@ -68,7 +69,8 @@ export type ToolStroke =
 	  })
 	| (Extract<CanvasTool, { type: "pickColor" | "pickSubject" }> & {
 			point: Point;
-	  });
+	  })
+	| (Extract<CanvasTool, { type: "pickSubject" }> & { rect: Rect });
 
 // What the canvas's gestures ask about a point from the view. The hooks that
 // handle a tap, a stroke, or a hover take this instead of the viewport, the

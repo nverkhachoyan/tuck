@@ -9,10 +9,11 @@ import { showAlert } from "@/ui/showAlert";
 import {
 	findObjectMasks,
 	findSubjectMask,
-	type ImagePoint,
 	isCutOutAvailable,
 	isSubjectModelDownloading,
+	type ObjectPrompt,
 	prepareObjectSelection,
+	promptCenter,
 	releaseObjectSelection,
 } from "../../detection/subjectDetection";
 import type { ImageLayer } from "../../layers/image/image";
@@ -41,11 +42,12 @@ export type PickSize = { mask: string; index: number; count: number };
  * selection is the image's mask while Cut is open; one that selects nothing
  * is `emptyMask`, a black pixel stretched over the image.
  * - `findAll` adds every subject to the selection (`subjectMaskOf`).
- * - `pick` adds the subject at a point, or once Segment Anything is ready,
- *   any object there, or takes it out of the selection. Another tap on the
- *   same spot grows what it took, from a part to the whole and around
- *   again, and `resize` steps it a size larger or smaller (`pickSize`, while
- *   the selection is what it left).
+ * - `pick` adds the subject at a point or in a box, or once Segment Anything
+ *   is ready, any object there, or takes it out of the selection. Another
+ *   tap on the same spot grows what it took, from a part to the whole and
+ *   around again, and `resize` steps it a size larger or smaller
+ *   (`pickSize`, while the selection is what it left). A box finds one
+ *   mask, so it has neither.
  * - While `picking`, the image is read ahead for that.
  * - `clear` selects nothing, and `invert` turns the selection inside out
  *   (`inverting` meanwhile).
@@ -211,10 +213,11 @@ export function useCutOut({
 		);
 	};
 
-	const pick = (layer: ImageLayer, at: ImagePoint, add: boolean) =>
+	const pick = (layer: ImageLayer, prompt: ObjectPrompt, add: boolean) =>
 		exclusive("one", async () => {
 			const current = latest(layer.id);
 			if (!current) return;
+			const at = promptCenter(prompt);
 			const last = lastPick.current;
 			if (last && last.masks.length > 1 && picksAgain(last, current, at)) {
 				const index = nextMask(last.index, last.masks.length);
@@ -228,12 +231,14 @@ export function useCutOut({
 			}
 			forgetPick();
 			setNews("Finding the object");
-			const next = await newPick(current, at, add);
+			const next = await newPick(current, prompt, add);
 			if (!next) {
 				setNews(null);
 				showAlert(
 					"Nothing to select",
-					"There's no clear subject where you tapped. Try the middle of it, or paint the selection with Paint in and Paint out.",
+					"point" in prompt
+						? "There's no clear subject where you tapped. Try the middle of it, or paint the selection with Paint in and Paint out."
+						: "There's no clear subject in that box. Try a box closer around it, or paint the selection with Paint in and Paint out.",
 				);
 				return;
 			}
@@ -341,20 +346,20 @@ export async function subjectMaskOf(
 }
 
 /**
- * A first pick at `at` on `image`, as it is now, adding to its mask or
+ * A first pick by `prompt` on `image`, as it is now, adding to its mask or
  * taking out of it: the objects found there, or null when nothing was.
  */
 async function newPick(
 	image: ImageLayer,
-	at: ImagePoint,
+	prompt: ObjectPrompt,
 	add: boolean,
 ): Promise<Pick | null> {
-	const objects = await findObjectMasks(image.uri, at);
+	const objects = await findObjectMasks(image.uri, prompt);
 	const masks = await decodeMasks(objects.masks.map(({ uri }) => uri));
 	if (masks.length === 0) return null;
 	return {
 		layerId: image.id,
-		at,
+		at: promptCenter(prompt),
 		mask: "",
 		masks,
 		index: objects.likeliest,

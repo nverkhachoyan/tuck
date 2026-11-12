@@ -9,6 +9,17 @@ export type TextRegion = { line: Rect; words: Rect[] };
  */
 export type ImagePoint = { x: number; y: number };
 
+/**
+ * A box in an image, as fractions of its width and height once its EXIF
+ * orientation is applied, from its top left.
+ */
+export type ImageBox = { x: number; y: number; width: number; height: number };
+
+/**
+ * What to select an object by: a point on it, or a box around it.
+ */
+export type ObjectPrompt = { point: ImagePoint } | { box: ImageBox };
+
 /** An image's size, once its EXIF orientation is applied. */
 export type Size = { width: number; height: number };
 
@@ -21,7 +32,8 @@ export type SubjectMask = { uri: string; width: number; height: number };
 
 /**
  * Masks of what's at a point, from a part of it to the whole, smallest
- * first, and the index of the one the model thinks likeliest meant.
+ * first, and the index of the one the model thinks likeliest meant. A box
+ * says which object it means, so it gets only one.
  */
 export type ObjectMasks = { masks: SubjectMask[]; likeliest: number };
 

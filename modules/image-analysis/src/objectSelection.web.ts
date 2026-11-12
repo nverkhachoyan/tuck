@@ -1,4 +1,4 @@
-import type { ImagePoint, ObjectMasks } from "./ImageAnalysis.types";
+import type { ObjectMasks, ObjectPrompt } from "./ImageAnalysis.types";
 import { decode } from "./mediaPipe";
 
 // MobileSAM's encoder looks at the image at this size on its longer side.
@@ -84,21 +84,33 @@ export function prepareObjects(uri: string): Promise<void> {
 }
 
 /**
- * Masks of what's at a point in the image at `uri` (see `ObjectMasks`), as
- * grayscale PNGs' blob URLs. Null while the image isn't ready (see
- * `prepareObjects`).
+ * Masks of the object `prompt` points at or boxes in the image at `uri` (see
+ * `ObjectMasks`), as grayscale PNGs' blob URLs. Null while the image isn't
+ * ready (see `prepareObjects`).
  */
 export async function objectMasks(
 	uri: string,
-	at: ImagePoint,
+	prompt: ObjectPrompt,
 ): Promise<ObjectMasks | null> {
 	if (!prepared?.ready || prepared.uri !== uri) return null;
 	const { width, height } = prepared;
-	const { masks = [], likeliest = 0 } = await ask({
-		type: "select",
-		x: at.x * width,
-		y: at.y * height,
-	});
+	const { masks = [], likeliest = 0 } = await ask(
+		"point" in prompt
+			? {
+					type: "select",
+					x: prompt.point.x * width,
+					y: prompt.point.y * height,
+				}
+			: {
+					type: "select",
+					box: [
+						prompt.box.x * width,
+						prompt.box.y * height,
+						(prompt.box.x + prompt.box.width) * width,
+						(prompt.box.y + prompt.box.height) * height,
+					],
+				},
+	);
 	return {
 		masks: masks.map((blob) => ({
 			uri: URL.createObjectURL(blob),

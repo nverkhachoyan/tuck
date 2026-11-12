@@ -177,8 +177,8 @@ export function TapModifierPill({ controller }: { controller: CutController }) {
 				<Surface style={styles.pill} contentStyle={styles.hintContent}>
 					<Text style={styles.hint}>
 						{findAll
-							? "Tap what to cut out, or choose Subjects"
-							: "Tap what to cut out"}
+							? "Tap or drag around what to cut out, or choose Subjects"
+							: "Tap what to cut out, or drag a box around it"}
 					</Text>
 				</Surface>
 			)}

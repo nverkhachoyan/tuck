@@ -6,11 +6,13 @@ import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import type { CanvasInput } from "../../canvas/canvasInput";
 import type { ToolStroke } from "../../canvas/canvasTool";
+import type { ImageBox, ImagePoint } from "../../detection/subjectDetection";
 import { findLayer } from "../../document/document";
 import { visibleImageLayer } from "../../document/framing";
 import type { ImageLayer } from "../../layers/image/image";
 import {
 	imagePointAt,
+	imageRectAt,
 	isCutOut,
 	removalOf,
 	selectsNothing,
@@ -312,15 +314,22 @@ export function useCutTool({
 					break;
 				}
 				case "pickSubject": {
-					const at = layer && imagePointAt(layer, stroke.point);
+					if (!layer) break;
+					const prompt =
+						"rect" in stroke
+							? box(imageRectAt(layer, stroke.rect))
+							: point(imagePointAt(layer, stroke.point));
 					const mode = heldMode.current ?? settings.tapMode;
-					if (layer && at) void cutOut.pick(layer, at, mode === "add");
+					if (prompt) void cutOut.pick(layer, prompt, mode === "add");
 					break;
 				}
 			}
 		},
 	};
 }
+
+const point = (at: ImagePoint | null) => at && { point: at };
+const box = (rect: ImageBox | null) => rect && { box: rect };
 
 /**
  * Which way a tap goes while a key is held on web: Shift adds, and Alt

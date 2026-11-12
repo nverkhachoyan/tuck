@@ -5,9 +5,10 @@
 //
 // Messages in: { id, type: "encode", image } with an ImageBitmap already
 // sized for the encoder (1024 pixels on its longer side, at most), and
-// { id, type: "select", x, y } in its pixels. Out: { id, error } or
-// { id, masks, likeliest } with each mask a grayscale PNG blob, smallest
-// first, and the index of the one the model thinks likeliest.
+// { id, type: "select", x, y } or { id, type: "select", box: [left, top,
+// right, bottom] } in its pixels. Out: { id, error } or { id, masks,
+// likeliest } with each mask a grayscale PNG blob, smallest first, and the
+// index of the one the model thinks likeliest (a box gets one mask).
 
 import * as ort from "/onnxruntime/ort.webgpu.bundle.min.mjs";
 
@@ -78,26 +79,38 @@ async function encode(image) {
 	encoded = { embeddings: output.image_embeddings, width, height };
 	// WebGPU's first run of the decoder takes a second to set up, which
 	// would otherwise come with the first tap.
-	disposeAll(await decode(width / 2, height / 2));
+	disposeAll(await decode(pointPrompt(width / 2, height / 2)));
+}
+
+// A point, and the padding point SAM's decoder expects without a box.
+function pointPrompt(x, y) {
+	return { coords: [x, y, 0, 0], labels: [1, -1] };
+}
+
+// A box, as its top left and bottom right corners, labelled as SAM's are.
+function boxPrompt([left, top, right, bottom]) {
+	return { coords: [left, top, right, bottom], labels: [2, 3] };
 }
 
 function disposeAll(output) {
 	for (const tensor of Object.values(output)) tensor.dispose();
 }
 
-async function decode(x, y) {
+async function decode({ coords, labels }) {
 	if (!encoded) throw new Error("No image is encoded");
 	const { embeddings, width, height } = encoded;
 	const [, decoder] = await load();
 	return decoder.run({
 		image_embeddings: embeddings,
-		// The point, and the padding point SAM's decoder expects without a box.
-		point_coords: new ort.Tensor(
-			"float32",
-			new Float32Array([x, y, 0, 0]),
-			[1, 2, 2],
-		),
-		point_labels: new ort.Tensor("float32", new Float32Array([1, -1]), [1, 2]),
+		point_coords: new ort.Tensor("float32", new Float32Array(coords), [
+			1,
+			labels.length,
+			2,
+		]),
+		point_labels: new ort.Tensor("float32", new Float32Array(labels), [
+			1,
+			labels.length,
+		]),
 		mask_input: new ort.Tensor(
 			"float32",
 			new Float32Array(256 * 256),
@@ -114,15 +127,22 @@ async function decode(x, y) {
 
 // The decoder's three masks for a point, from a part to the whole: its
 // first output is the single mask it gives when told not to guess, which
-// the other three cover.
-async function select(x, y) {
-	const output = await decode(x, y);
+// the other three cover. A box says which object it means, so it gets that
+// first output alone.
+async function select(data) {
+	const box = data.box !== undefined;
+	const output = await decode(
+		box ? boxPrompt(data.box) : pointPrompt(data.x, data.y),
+	);
 	const { width, height } = encoded;
 	const logits = output.masks.data;
 	const scores = output.iou_predictions.data;
 	const size = width * height;
 	const masks = [];
-	for (let index = 1; index < output.masks.dims[1]; index++) {
+	const outputs = box
+		? [0]
+		: Array.from({ length: output.masks.dims[1] - 1 }, (_, i) => i + 1);
+	for (const index of outputs) {
 		const values = new Uint8ClampedArray(size);
 		let area = 0;
 		for (let i = 0; i < size; i++) {
@@ -172,7 +192,7 @@ self.addEventListener("message", ({ data }) => {
 				await encode(data.image);
 				self.postMessage({ id: data.id });
 			} else if (data.type === "select") {
-				self.postMessage({ id: data.id, ...(await select(data.x, data.y)) });
+				self.postMessage({ id: data.id, ...(await select(data)) });
 			}
 		} catch (error) {
 			self.postMessage({ id: data.id, error: String(error?.message ?? error) });
