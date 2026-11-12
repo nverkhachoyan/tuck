@@ -76,6 +76,15 @@ Added after this research (October 2026): Cut's Tap selects the object at a tap,
 
 A box goes to the decoder as its two corners, labelled 2 and 3, with no padding point, and gets one mask: the decoder's first output, the one it gives when told not to guess. On web (November 2026) its other three outputs scored higher on some boxes but drew the same object, within a few percent of its area, so there's no grow and shrink after a box. Until Segment Anything has read the image, a box picks the subject at its center.
 
+#### Sharper edges (November 2026, not built)
+
+Segment Anything's masks are 256 by 256 logits scaled up four times, so their edges are smooth curves rather than strands. Two ways to sharpen them were measured on web (WebGPU on an M1 Mac, headless Chrome) with a box around the subject of four openly licensed photos: loose dark hair against bokeh, a gray-and-white malamute against a pale sky, a tabby cat against sky and branches, and a red apple among leaves. Neither is built.
+
+- **A guided filter** (He, Sun, and Tang) on the 1024-pixel mask, changing only a band along its edge. The gray guide at radius 4 to 16 and epsilon 1e-4 to 1e-2, a color guide at radius 8, and the fast guided filter with a 2048-pixel guide all followed the hair's real outline better than the mask, but made gray fur against a sky of the same brightness see-through (the malamute's ears, and the cat's at radius 8 and up), bit into hair where it met an equally dark background, and, at radius 16, pulled blotches out of the bokeh. The color guide did least harm and still wasn't clearly better. Each took 60–80 ms per mask in JavaScript on the main thread (gray), about 210 ms (color), and 110–160 ms (fast, at 2048).
+- **Decoding again on a crop** around the box, padded a tenth each way and encoded at 1024: about 0.45 s more per pick on WebGPU, a second encoder run. Its masks matched today's, a little tighter on fur and with none of the filter's holes, but no finer, since each object already filled most of its photo. It should help most with a small object in a large photo, where today's mask has the fewest pixels, and none of these was one.
+
+The ports to Swift and Kotlin waited on the first, so they weren't written.
+
 ## The simulator
 
 These results come from a Swift program compiled for the simulator and run on the iPhone 17 Pro simulator (iOS 26.5, Xcode 27):
@@ -101,6 +110,8 @@ if let devices = try? request.supportedComputeStageDevices {
 }
 #endif
 ```
+
+MobileSAM's encoder doesn't run on the simulator either: Core ML stops it with "Unable to compute the prediction using a neural network model" (November 2026, iOS 26.5), so taps and boxes there fall back to the subject at that point, which fails as the table says. Check selecting objects on a phone.
 
 Background removal on iOS can only be tried on a real device.
 
