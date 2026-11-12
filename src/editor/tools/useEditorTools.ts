@@ -78,6 +78,7 @@ export function useEditorTools({
 		reopened,
 		openSpec?.previews === true,
 		openSpec?.undoSteps ?? "one",
+		mode.type === "tool" && mode.absorbs,
 	);
 
 	const closeTool = () => dispatchMode({ type: "endTool" });
@@ -113,7 +114,9 @@ export function useEditorTools({
 			addLayerImage,
 			pickPhoto: host.pickPhoto,
 			importPhoto: host.importPhoto,
-			startTool: (next, on) => latestOpenOn.current(next, on),
+			startTool: (next, on, options) =>
+				latestOpenOn.current(next, on, options?.absorbsLastStep ?? false),
+			hasTool: (id) => id in tools,
 		});
 		controllers[id] = { definition, controller };
 	}
@@ -180,6 +183,7 @@ export function useEditorTools({
 			? selectedImage
 			: targetImage,
 		on: string | null = null,
+		absorbs = false,
 	) => {
 		const { definition, controller } = controllers[next];
 		if (definition.spec.target !== "none" && !image) return;
@@ -197,19 +201,19 @@ export function useEditorTools({
 			if (openOnImage) definition.started(controller, image);
 			else pendingStart.current = { tool: next, image };
 		}
-		const start = { tool: next, layerId: image?.id ?? null, on };
+		const start = { tool: next, layerId: image?.id ?? null, on, absorbs };
 		if (next === tool) setReopened((count) => count + 1);
 		dispatchMode({ type: "startTool", start });
 	};
 	// What a tool's `startTool` runs, from this render whenever it's called,
 	// as from a notice shown renders ago.
-	const latestOpenOn = useRef<(next: ToolId, image: ImageLayer) => void>(
-		() => {},
-	);
-	latestOpenOn.current = (next, image) => {
+	const latestOpenOn = useRef<
+		(next: ToolId, image: ImageLayer, absorbs: boolean) => void
+	>(() => {});
+	latestOpenOn.current = (next, image, absorbs) => {
 		if (!controllers[next]) return;
 		if (tool && tool !== next) putDownTool();
-		startTool(next, image);
+		startTool(next, image, null, absorbs);
 	};
 	// The tool that edits `layer` in place, if any.
 	const editorOf = (layer: Layer): ToolId | undefined =>
@@ -342,13 +346,15 @@ export function useEditorTools({
  * leaving the editor included, keeps them, unless it only `previews` them,
  * and each change of `reopened` starts a new session for the same tool.
  * Called ahead of the tool hooks, so the session has begun before a tool's
- * own effects change the document.
+ * own effects change the document. With `absorbs`, the session takes over
+ * the undo step made just before the tool opened.
  */
 export function useToolSession(
 	tool: ToolId | null,
 	reopened: number,
 	previews: boolean,
 	steps: ToolSessionSteps,
+	absorbs: boolean,
 ) {
 	const { beginToolSession, commitToolSession, cancelToolSession } = useStore(
 		(state) => state.actions,
@@ -356,13 +362,14 @@ export function useToolSession(
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `reopened` ends the session and begins another.
 	useEffect(() => {
 		if (!tool) return;
-		beginToolSession(previews, steps);
+		beginToolSession(previews, steps, absorbs);
 		return previews ? cancelToolSession : commitToolSession;
 	}, [
 		tool,
 		reopened,
 		previews,
 		steps,
+		absorbs,
 		beginToolSession,
 		commitToolSession,
 		cancelToolSession,

@@ -59,7 +59,9 @@ export type CutTray = "brush" | "apply";
  *   the selection, taking it out of the cut the image had (`removalOf`);
  *   Redact adds a redaction in its shape, in the editor's redaction look,
  *   which is selected; and each closes Cut (`close`) as one undo step,
- *   with a notice (`notify`). Save sticker keeps what's selected as a saved
+ *   with a notice (`notify`). Adjust copies the selection as New layer
+ *   does and opens Adjust on the copy, whose session takes the copy in, so
+ *   its ✕ takes both back (`canAdjust` while the editor has Adjust). Save sticker keeps what's selected as a saved
  *   sticker and leaves Cut open (`stickerSaved` until the selection
  *   changes). `applying` names the action running, while one runs.
  * - `tray` is what the phone's tray shows, set by `showInTray`.
@@ -76,6 +78,7 @@ export function useCutTool({
 	close,
 	notify,
 	startTool,
+	hasTool,
 }: Pick<
 	ToolEnv,
 	| "open"
@@ -85,6 +88,7 @@ export function useCutTool({
 	| "close"
 	| "notify"
 	| "startTool"
+	| "hasTool"
 >) {
 	const layer = image ?? undefined;
 	const key = useStore((state) => state.key);
@@ -176,6 +180,23 @@ export function useCutTool({
 		addCutCopy(selection.id, { mask, maskStrokes });
 		notify("Selection copied to a new layer");
 		close();
+	};
+	// Adjust is named, not imported: tools don't import each other.
+	const canAdjust = hasTool("adjust");
+	const adjustSelection = (selection: ImageLayer) => {
+		const { mask, maskStrokes } = selection;
+		cancelToolSession();
+		addCutCopy(selection.id, { mask, maskStrokes });
+		const { document, selectedLayerId } = useStore.getState();
+		const copy =
+			document && selectedLayerId !== null
+				? findLayer(document, selectedLayerId)
+				: undefined;
+		if (copy?.type !== "image" || copy.id === selection.id) {
+			close();
+			return;
+		}
+		startTool("adjust", copy, { absorbsLastStep: true });
 	};
 	const restorePhoto = () => {
 		if (layer) setMask(layer.id, null);
@@ -272,6 +293,8 @@ export function useCutTool({
 		invert: cut ? () => void cutOut.invert(cut) : undefined,
 		apply: {
 			newLayer: selected ? () => newLayer(selected) : undefined,
+			adjust:
+				selected && canAdjust ? () => adjustSelection(selected) : undefined,
 			keepOnly: selected ? keepOnly : undefined,
 			remove: removal
 				? () => void remove(removal.from, removal.selection)
@@ -279,6 +302,7 @@ export function useCutTool({
 			redact: selected ? () => void redaction.redact(selected) : undefined,
 			saveSticker: selected ? () => void saveAsSticker(selected) : undefined,
 		},
+		canAdjust,
 		applying: redaction.busy ? ("redact" as const) : applying,
 		stickerSaved:
 			selected !== undefined &&

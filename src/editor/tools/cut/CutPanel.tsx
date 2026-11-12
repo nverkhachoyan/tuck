@@ -59,6 +59,7 @@ const BRUSH_EDGES = [
 // The Apply menu's actions, in the order the popover and the tray show them.
 const APPLY_ACTIONS = [
 	{ action: "newLayer", title: "New layer", icon: "layers-plus" },
+	{ action: "adjust", title: "Adjust", icon: "tune-variant" },
 	{ action: "remove", title: "Remove", icon: "selection-remove" },
 	{ action: "redact", title: "Redact", icon: "blur" },
 	{
@@ -343,14 +344,18 @@ function resizeButtons(
 
 /**
  * The Apply menu's actions, as the bar's or the tray's `Button`, each
- * spinning while it runs and the others disabled meanwhile. Save sticker says Saved once the selection is kept
+ * spinning while it runs and the others disabled meanwhile, and Adjust
+ * only where the editor has it. Save sticker says Saved once the selection is kept
  * as one. Siblings rather than a component, like `resizeButtons`.
  */
 function applyButtons(
-	{ apply, applying, stickerSaved }: CutController,
+	{ apply, applying, stickerSaved, canAdjust }: CutController,
 	Button: typeof ToolButton | typeof BarButton,
 ) {
-	return APPLY_ACTIONS.map(({ action, title, icon }) => {
+	const actions = APPLY_ACTIONS.filter(
+		({ action }) => action !== "adjust" || canAdjust,
+	);
+	return actions.map(({ action, title, icon }) => {
 		const saved = action === "saveSticker" && stickerSaved;
 		const onPress = apply[action];
 		const busy = applying === action;

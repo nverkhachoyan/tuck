@@ -44,7 +44,10 @@ type ToolViews<C> = {
  *   placed in view; one image is added at a time, Add photo's included, and
  *   an alert shows if it fails. Null from `load` adds nothing.
  * - `pickPhoto`, `importPhoto`: read a photo as the host does.
- * - `startTool`: opens `tool` on `image`, finishing any other open tool.
+ * - `startTool`: opens `tool` on `image`, finishing any other open tool;
+ *   with `absorbsLastStep`, its undo session takes over the step just made,
+ *   so its ✕ takes that back too.
+ * - `hasTool`: whether the editor has the tool `id`.
  */
 export type ToolEnv = {
 	document: EditorDocument;
@@ -66,7 +69,12 @@ export type ToolEnv = {
 	) => void;
 	pickPhoto: EditorHost["pickPhoto"];
 	importPhoto: EditorHost["importPhoto"];
-	startTool: (tool: ToolId, image: ImageLayer) => void;
+	startTool: (
+		tool: ToolId,
+		image: ImageLayer,
+		options?: { absorbsLastStep?: boolean },
+	) => void;
+	hasTool: (id: ToolId) => boolean;
 };
 
 /** A button the edit notice shows beside Undo. */

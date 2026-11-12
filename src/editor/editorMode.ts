@@ -15,6 +15,8 @@ export type Eyedropper = { apply: (color: string) => void };
  *   "image", and null for the rest.
  * - `on`: the layer whose actions opened it, or null when the toolbar did.
  * - `optionsOpen`: whether its tray is open; false for a tool without one.
+ * - `absorbs`: whether its undo session takes over the step before it (see
+ *   `ToolSession`'s `opened`).
  */
 export type ToolMode = {
 	type: "tool";
@@ -22,6 +24,7 @@ export type ToolMode = {
 	layerId: string | null;
 	on: string | null;
 	optionsOpen: boolean;
+	absorbs: boolean;
 };
 
 /**
@@ -31,13 +34,15 @@ export type ToolMode = {
 export type EditorMode = { type: "idle" } | ToolMode;
 
 /**
- * A tool to start, with the image it would work on, if any, and the layer
- * whose actions opened it (`on`), if any.
+ * A tool to start, with the image it would work on, if any, the layer
+ * whose actions opened it (`on`), if any, and whether its session takes
+ * over the step before it (`absorbs`).
  */
 export type ToolStart = {
 	tool: ToolId;
 	layerId: string | null;
 	on?: string | null;
+	absorbs?: boolean;
 };
 
 /**
@@ -255,6 +260,7 @@ function toolMode(start: ToolStart, specs: ToolSpecs): ToolMode {
 		layerId: isImageTool ? start.layerId : null,
 		on: start.on ?? null,
 		optionsOpen: false,
+		absorbs: start.absorbs ?? false,
 	};
 }
 

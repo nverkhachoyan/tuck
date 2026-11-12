@@ -135,7 +135,7 @@ export const selectAppDocument = ({ document, toolSession }: EditorState) =>
 
 // Within a session, not past its start: Cancel is the way back from there.
 export const selectCanUndo = ({ past, document, toolSession }: EditorState) =>
-	past.length > 0 && document !== toolSession?.document;
+	past.length > 0 && document !== toolSession?.opened;
 
 export const selectCanRedo = ({ future, toolSession }: EditorState) =>
 	future.length > 0 && future[0] !== toolSession?.redoStop;
@@ -228,16 +228,20 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	// the layer it came from, whatever is selected by then.
 	const updateTextLayer = edit("editor/updateTextLayer", editTextLayer);
 
+	// With `absorbs`, the session starts from before the last undo step, as
+	// though the tool had made it (see `ToolSession`'s `opened`).
 	const beginToolSession = (
 		previews = false,
 		steps: ToolSessionSteps = "one",
+		absorbs = false,
 	) => {
 		const { document, selectedLayerId, past, future, toolSession } = get();
 		if (!document || toolSession) return;
+		const absorbed = absorbs ? past.at(-1) : undefined;
 		const newSession: ToolSession = {
-			document,
-			selectedLayerId,
-			undoStop: past.at(-1),
+			...(absorbed ?? { document, selectedLayerId }),
+			opened: document,
+			undoStop: past.at(absorbed ? -2 : -1),
 			redoStop: future[0],
 			previews,
 			steps,
@@ -253,6 +257,10 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		if (!document || !toolSession) return;
 		if (document === toolSession.document) {
 			set({ toolSession: null }, false, "editor/commitToolSession");
+			return;
+		}
+		if (document === toolSession.opened) {
+			cancelToolSession();
 			return;
 		}
 		const own = pastIn(past, toolSession);
