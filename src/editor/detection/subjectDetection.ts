@@ -34,7 +34,8 @@ export function findSubjectMask(
  * Starts getting ready to select any object in the image at `uri`, not only
  * its subjects, with Segment Anything, where this device can: the model
  * loads, the first time, and reads the image. Until it's done, taps pick
- * subjects as before; if it fails, they go on doing so.
+ * subjects as before and boxes wait for it; if it fails, both pick
+ * subjects.
  */
 export function prepareObjectSelection(uri: string) {
 	if (!canSelectObjects()) return;
@@ -50,8 +51,9 @@ export function releaseObjectSelection() {
 /**
  * Masks of the object `prompt` points at or boxes in the image at `uri`, as
  * new image files, each its own (see `ObjectMasks`), once the image is
- * ready to select any object (see `prepareObjectSelection`), or else the one
- * subject there (at a box's center). No masks when there's nothing there.
+ * ready to select any object (see `prepareObjectSelection`; a box waits for
+ * it), or else the one subject there (at a box's center, when reading the
+ * image failed or this device can't). No masks when there's nothing there.
  */
 export async function findObjectMasks(
 	uri: string,

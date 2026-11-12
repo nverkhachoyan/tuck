@@ -85,15 +85,17 @@ export function prepareObjects(uri: string): Promise<void> {
 
 /**
  * Masks of the object `prompt` points at or boxes in the image at `uri` (see
- * `ObjectMasks`), as grayscale PNGs' blob URLs. Null while the image isn't
- * ready (see `prepareObjects`).
+ * `ObjectMasks`), as grayscale PNGs' blob URLs. Null while a point's image
+ * isn't ready (see `prepareObjects`); a box waits for its image, and is null
+ * only if reading it fails or it's let go meanwhile.
  */
 export async function objectMasks(
 	uri: string,
 	prompt: ObjectPrompt,
 ): Promise<ObjectMasks | null> {
-	if (!prepared?.ready || prepared.uri !== uri) return null;
-	const { width, height } = prepared;
+	const reading = await whenRead(uri, prompt);
+	if (!reading) return null;
+	const { width, height } = reading;
 	const { masks = [], likeliest = 0 } = await ask(
 		"point" in prompt
 			? {
@@ -119,6 +121,22 @@ export async function objectMasks(
 		})),
 		likeliest,
 	};
+}
+
+// The image at `uri` once it's read for `prompt`, or null: a point takes it
+// only once it's ready, while a box waits for it, since the subject at a
+// box's center is a poor stand-in for what it boxes.
+async function whenRead(uri: string, prompt: ObjectPrompt) {
+	const reading = prepared?.uri === uri ? prepared : null;
+	if (!reading) return null;
+	if (reading.ready) return reading;
+	if (!("box" in prompt)) return null;
+	try {
+		await reading.done;
+	} catch {
+		return null;
+	}
+	return prepared === reading ? reading : null;
 }
 
 export function releaseObjects() {
