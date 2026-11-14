@@ -32,13 +32,34 @@ describe("strokeIntent", () => {
 		);
 	});
 
-	test("picks the subject under a tap, and leaves a drag be", () => {
+	test("picks the object under a tap, or inside a dragged box", () => {
 		const pick: CanvasTool = { type: "pickSubject", layerId: "photo" };
 		assert.deepEqual(strokeIntent(pick, [100, 200, 103, 202], 1, size), {
 			type: "finish",
 			stroke: { ...pick, point: { x: 100, y: 200 } },
 		});
-		assert.deepEqual(strokeIntent(pick, [100, 200, 300, 400], 1, size), {
+		assert.deepEqual(
+			strokeIntent(pick, [300, 400, 250, 300, 100, 200], 1, size),
+			{
+				type: "finish",
+				stroke: { ...pick, rect: { x: 100, y: 200, width: 200, height: 200 } },
+			},
+		);
+		// Measured on screen: zoomed out, the same box is too small.
+		assert.deepEqual(strokeIntent(pick, [100, 200, 140, 240], 0.5, size), {
+			type: "none",
+		});
+		const tapAway = strokeIntent(pick, [-50, -50, -48, -49], 1, size);
+		assert.equal(tapAway.type, "tapAway");
+	});
+
+	test("selects nothing with a tap that slipped", () => {
+		const pick: CanvasTool = { type: "pickSubject", layerId: "photo" };
+		assert.deepEqual(strokeIntent(pick, [100, 200, 110, 203], 1, size), {
+			type: "none",
+		});
+		// Long but thin is a slip too.
+		assert.deepEqual(strokeIntent(pick, [100, 200, 400, 210], 1, size), {
 			type: "none",
 		});
 		const cut: CanvasTool = {

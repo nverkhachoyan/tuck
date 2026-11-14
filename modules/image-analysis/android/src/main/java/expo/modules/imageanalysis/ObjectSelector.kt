@@ -78,24 +78,38 @@ internal class ObjectSelector(private val context: Context) {
 			encoded = Encoded(uri, result, result.get(0) as OnnxTensor, width, height)
 		}
 		// The decoder's first run sets up much of what later runs reuse.
-		decode(width / 2f, height / 2f).close()
+		decode(pointPrompt(width / 2f, height / 2f)).close()
 	}
 
-	// Masks of what's at `point` in the image at `uri`, from a part to the
-	// whole, as grayscale PNG files, or null while that image isn't read.
-	fun masks(uri: String, point: PointRecord): ObjectMasksRecord? {
+	// Masks of the object `prompt` points at, from a part to the whole, or
+	// boxes, just the one, in the image at `uri`, as grayscale PNG files, or
+	// null while that image isn't read.
+	fun masks(uri: String, prompt: ObjectPromptRecord): ObjectMasksRecord? {
 		val encoded = encoded?.takeIf { it.uri == uri } ?: return null
 		val (width, height) = encoded.width to encoded.height
+		val box = prompt.box
+		val point = prompt.point
+		val decoderPrompt = when {
+			box != null -> boxPrompt(
+				(box.x * width).toFloat(),
+				(box.y * height).toFloat(),
+				((box.x + box.width) * width).toFloat(),
+				((box.y + box.height) * height).toFloat(),
+			)
+			point != null -> pointPrompt((point.x * width).toFloat(), (point.y * height).toFloat())
+			else -> throw ObjectSelectionException("A prompt needs a point or a box")
+		}
 		val size = width * height
 		val masks = mutableListOf<Triple<ByteArray, Int, Float>>()
-		decode((point.x * width).toFloat(), (point.y * height).toFloat()).use { result ->
+		decode(decoderPrompt).use { result ->
 			val buffer = (result.get("masks").get() as OnnxTensor).floatBuffer
 			val logits = FloatArray(buffer.remaining()).also { buffer.get(it) }
 			val scores = (result.get("iou_predictions").get() as OnnxTensor).floatBuffer
 			val count = logits.size / size
 			// The first is the single mask the decoder gives when told not to
-			// guess, which the others cover.
-			for (index in 1 until count) {
+			// guess, which the others cover: a box, which says which object it
+			// means, gets that one alone, and a point the others.
+			for (index in if (box != null) 0 until 1 else 1 until count) {
 				// Their sigmoid, so edges stay soft.
 				val values = ByteArray(size)
 				var area = 0
@@ -130,13 +144,22 @@ internal class ObjectSelector(private val context: Context) {
 		encoded = null
 	}
 
-	private fun decode(x: Float, y: Float): OrtSession.Result {
+	// A point, and the padding point the decoder expects without a box.
+	private fun pointPrompt(x: Float, y: Float) = DecoderPrompt(floatArrayOf(x, y, 0f, 0f), floatArrayOf(1f, -1f))
+
+	// A box, as its top left and bottom right corners, labelled as SAM's are.
+	private fun boxPrompt(left: Float, top: Float, right: Float, bottom: Float) =
+		DecoderPrompt(floatArrayOf(left, top, right, bottom), floatArrayOf(2f, 3f))
+
+	private class DecoderPrompt(val coords: FloatArray, val labels: FloatArray)
+
+	private fun decode(prompt: DecoderPrompt): OrtSession.Result {
 		val encoded = encoded ?: throw ObjectSelectionException("No image is read")
 		fun tensor(values: FloatArray, vararg shape: Long) = OnnxTensor.createTensor(env, FloatBuffer.wrap(values), shape)
+		val points = prompt.labels.size.toLong()
 		val inputs = mapOf(
-			// The point, and the padding point the decoder expects without a box.
-			"point_coords" to tensor(floatArrayOf(x, y, 0f, 0f), 1, 2, 2),
-			"point_labels" to tensor(floatArrayOf(1f, -1f), 1, 2),
+			"point_coords" to tensor(prompt.coords, 1, points, 2),
+			"point_labels" to tensor(prompt.labels, 1, points),
 			"mask_input" to tensor(FloatArray(256 * 256), 1, 1, 256, 256),
 			"has_mask_input" to tensor(floatArrayOf(0f), 1),
 			"orig_im_size" to tensor(floatArrayOf(encoded.height.toFloat(), encoded.width.toFloat()), 2),
@@ -224,6 +247,12 @@ private fun encoderInput(upright: Bitmap): Triple<FloatBuffer, Int, Int> {
 	}
 	return Triple(FloatBuffer.wrap(floats), width, height)
 }
+
+// A point on an object or a box around it, as fractions of the image.
+class ObjectPromptRecord(
+	@Field val point: PointRecord? = null,
+	@Field val box: RectRecord? = null,
+) : Record
 
 class ObjectMasksRecord(
 	@Field val masks: List<SubjectMaskRecord> = emptyList(),

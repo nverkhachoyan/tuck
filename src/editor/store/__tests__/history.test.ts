@@ -8,6 +8,7 @@ import {
 	createDocumentFromImage,
 } from "../../document/document.ts";
 import type { DrawingLayer, Stroke } from "../../layers/drawing/drawing.ts";
+import { neutralAdjustments } from "../../layers/image/adjustments.ts";
 import type { TextLayer } from "../../layers/text/text.ts";
 import {
 	createEditorSlice,
@@ -755,5 +756,61 @@ describe("tool sessions", () => {
 		assert.equal(store.getState().past.length, 1);
 		assert.equal(store.getState().past[0]?.document, next);
 		assert.notEqual(store.getState().past[0]?.document, previous);
+	});
+});
+
+describe("a session that absorbs the step before it", () => {
+	// Cut's copy, then Adjust opened on it, taking the copy into its session.
+	function copyThenAdjust() {
+		const { store } = storeWithText();
+		const actions = store.getState().actions;
+		const before = store.getState().document;
+		const pastLength = store.getState().past.length;
+		actions.addCutCopy("photo", { mask: "file:///mask.png" });
+		const withCopy = store.getState().document;
+		const copyId = store.getState().selectedLayerId ?? "";
+		actions.beginToolSession(false, "one", true);
+		const brighter = { ...neutralAdjustments, brightness: 0.3 };
+		const adjust = () => actions.setAdjustments(copyId, brighter);
+		return { store, actions, before, withCopy, pastLength, adjust };
+	}
+
+	test("commits the step and its own changes as one undo step", () => {
+		const { store, actions, before, pastLength, adjust } = copyThenAdjust();
+		adjust();
+		actions.commitToolSession();
+		assert.equal(store.getState().past.length, pastLength + 1);
+		actions.undo();
+		assert.equal(store.getState().document, before);
+	});
+
+	test("undo inside the session stops at the step it absorbed", () => {
+		const { store, actions, withCopy, adjust } = copyThenAdjust();
+		assert.equal(selectCanUndo(store.getState()), false);
+		adjust();
+		actions.undo();
+		assert.equal(store.getState().document, withCopy);
+		assert.equal(selectCanUndo(store.getState()), false);
+	});
+
+	test("canceling takes the step back too, and redo brings both back", () => {
+		const { store, actions, before, pastLength, adjust } = copyThenAdjust();
+		adjust();
+		const adjusted = store.getState().document;
+		actions.cancelToolSession();
+		assert.equal(store.getState().document, before);
+		assert.equal(store.getState().past.length, pastLength);
+		actions.redo();
+		assert.equal(store.getState().document, adjusted);
+		actions.undo();
+		assert.equal(store.getState().document, before);
+	});
+
+	test("committing with nothing changed takes the step back", () => {
+		const { store, actions, before, pastLength } = copyThenAdjust();
+		actions.commitToolSession();
+		assert.equal(store.getState().document, before);
+		assert.equal(store.getState().past.length, pastLength);
+		assert.equal(store.getState().toolSession, null);
 	});
 });

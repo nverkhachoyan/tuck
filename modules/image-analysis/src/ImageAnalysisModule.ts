@@ -3,6 +3,7 @@ import type {
 	Feature,
 	ImagePoint,
 	ObjectMasks,
+	ObjectPrompt,
 	Rect,
 	Size,
 	SubjectMask,
@@ -18,7 +19,7 @@ declare class ImageAnalysisModule extends NativeModule {
 	subjectMask(uri: string, at: ImagePoint | null): Promise<SubjectMask | null>;
 	canSelectObjects(): boolean;
 	prepareObjects(uri: string): Promise<void>;
-	objectMasks(uri: string, at: ImagePoint): Promise<ObjectMasks | null>;
+	objectMasks(uri: string, prompt: ObjectPrompt): Promise<ObjectMasks | null>;
 	releaseObjects(): Promise<void>;
 }
 

@@ -12,6 +12,7 @@ import type { LiveTransform } from "./liveTransform";
 import { cutStrokeKind } from "./strokes/cut";
 import { drawStrokeKind } from "./strokes/draw";
 import { eraseStrokeKind } from "./strokes/erase";
+import { pickSubjectStrokeKind } from "./strokes/pickSubject";
 import { redactBoxStrokeKind } from "./strokes/redactBox";
 import { redactBrushStrokeKind } from "./strokes/redactBrush";
 import { shapeStrokeKind } from "./strokes/shape";
@@ -40,7 +41,7 @@ export const STROKE_KINDS: {
 	drawShape: shapeStrokeKind,
 	cutBrush: cutStrokeKind,
 	pickColor: NOOP_STROKE,
-	pickSubject: NOOP_STROKE,
+	pickSubject: pickSubjectStrokeKind,
 };
 
 export function strokeKindOf<T extends CanvasTool>(tool: T): StrokeKind<T> {

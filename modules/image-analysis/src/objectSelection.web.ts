@@ -1,4 +1,4 @@
-import type { ImagePoint, ObjectMasks } from "./ImageAnalysis.types";
+import type { ObjectMasks, ObjectPrompt } from "./ImageAnalysis.types";
 import { decode } from "./mediaPipe";
 
 // MobileSAM's encoder looks at the image at this size on its longer side.
@@ -84,21 +84,35 @@ export function prepareObjects(uri: string): Promise<void> {
 }
 
 /**
- * Masks of what's at a point in the image at `uri` (see `ObjectMasks`), as
- * grayscale PNGs' blob URLs. Null while the image isn't ready (see
- * `prepareObjects`).
+ * Masks of the object `prompt` points at or boxes in the image at `uri` (see
+ * `ObjectMasks`), as grayscale PNGs' blob URLs. Null while a point's image
+ * isn't ready (see `prepareObjects`); a box waits for its image, and is null
+ * only if reading it fails or it's let go meanwhile.
  */
 export async function objectMasks(
 	uri: string,
-	at: ImagePoint,
+	prompt: ObjectPrompt,
 ): Promise<ObjectMasks | null> {
-	if (!prepared?.ready || prepared.uri !== uri) return null;
-	const { width, height } = prepared;
-	const { masks = [], likeliest = 0 } = await ask({
-		type: "select",
-		x: at.x * width,
-		y: at.y * height,
-	});
+	const reading = await whenRead(uri, prompt);
+	if (!reading) return null;
+	const { width, height } = reading;
+	const { masks = [], likeliest = 0 } = await ask(
+		"point" in prompt
+			? {
+					type: "select",
+					x: prompt.point.x * width,
+					y: prompt.point.y * height,
+				}
+			: {
+					type: "select",
+					box: [
+						prompt.box.x * width,
+						prompt.box.y * height,
+						(prompt.box.x + prompt.box.width) * width,
+						(prompt.box.y + prompt.box.height) * height,
+					],
+				},
+	);
 	return {
 		masks: masks.map((blob) => ({
 			uri: URL.createObjectURL(blob),
@@ -107,6 +121,22 @@ export async function objectMasks(
 		})),
 		likeliest,
 	};
+}
+
+// The image at `uri` once it's read for `prompt`, or null: a point takes it
+// only once it's ready, while a box waits for it, since the subject at a
+// box's center is a poor stand-in for what it boxes.
+async function whenRead(uri: string, prompt: ObjectPrompt) {
+	const reading = prepared?.uri === uri ? prepared : null;
+	if (!reading) return null;
+	if (reading.ready) return reading;
+	if (!("box" in prompt)) return null;
+	try {
+		await reading.done;
+	} catch {
+		return null;
+	}
+	return prepared === reading ? reading : null;
 }
 
 export function releaseObjects() {

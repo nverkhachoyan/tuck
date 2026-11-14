@@ -1,8 +1,10 @@
 import {
 	canSelectObjects,
+	type ImageBox,
 	type ImagePoint,
 	isAvailable,
 	type ObjectMasks,
+	type ObjectPrompt,
 	objectMasks,
 	prepareObjects,
 	releaseObjects,
@@ -10,7 +12,7 @@ import {
 	subjectMask,
 } from "image-analysis";
 
-export type { ImagePoint };
+export type { ImageBox, ImagePoint, ObjectPrompt };
 
 export function isCutOutAvailable(): boolean {
 	return isAvailable("background");
@@ -32,7 +34,8 @@ export function findSubjectMask(
  * Starts getting ready to select any object in the image at `uri`, not only
  * its subjects, with Segment Anything, where this device can: the model
  * loads, the first time, and reads the image. Until it's done, taps pick
- * subjects as before; if it fails, they go on doing so.
+ * subjects as before and boxes wait for it; if it fails, both pick
+ * subjects.
  */
 export function prepareObjectSelection(uri: string) {
 	if (!canSelectObjects()) return;
@@ -46,19 +49,27 @@ export function releaseObjectSelection() {
 }
 
 /**
- * Masks of what's at a point in the image at `uri`, as new image files, each
- * its own (see `ObjectMasks`), once the image is ready to select any object
- * (see `prepareObjectSelection`), or else the one subject there. No masks
- * when there's nothing there.
+ * Masks of the object `prompt` points at or boxes in the image at `uri`, as
+ * new image files, each its own (see `ObjectMasks`), once the image is
+ * ready to select any object (see `prepareObjectSelection`; a box waits for
+ * it), or else the one subject there (at a box's center, when reading the
+ * image failed or this device can't). No masks when there's nothing there.
  */
 export async function findObjectMasks(
 	uri: string,
-	at: ImagePoint,
+	prompt: ObjectPrompt,
 ): Promise<ObjectMasks> {
-	const objects = await objectMasks(uri, at);
+	const objects = await objectMasks(uri, prompt);
 	if (objects) return objects;
-	const subject = await subjectMask(uri, at);
+	const subject = await subjectMask(uri, promptCenter(prompt));
 	return { masks: subject ? [subject] : [], likeliest: 0 };
+}
+
+/** The point a prompt names, or the middle of the box it draws. */
+export function promptCenter(prompt: ObjectPrompt): ImagePoint {
+	if ("point" in prompt) return prompt.point;
+	const { box } = prompt;
+	return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
 /** Android reports this while Play services fetches an install-time model. */

@@ -20,8 +20,13 @@ export type ToolSessionSteps = "one" | "each" | "marks";
 // were next then. Undo stops at the start, and redo at that step, so a tool
 // never steps into changes from before it opened. A tool that only
 // `previews` its changes until Done leaves the app seeing where it started;
-// `steps` is what its changes become when it's done.
+// `steps` is what its changes become when it's done. `opened` is the
+// document when the tool opened, which is where it started unless it took
+// over the undo step before it (Cut's copy that Adjust opens on): then undo
+// stops at `opened`, and closing it with nothing changed takes that step
+// back too.
 export type ToolSession = EditorSnapshot & {
+	opened: EditorDocument;
 	undoStop: EditorSnapshot | undefined;
 	redoStop: EditorSnapshot | undefined;
 	previews: boolean;

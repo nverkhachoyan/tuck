@@ -11,8 +11,10 @@ import ImageAnalysisModule from "./src/ImageAnalysisModule";
 
 export type {
 	Feature,
+	ImageBox,
 	ImagePoint,
 	ObjectMasks,
+	ObjectPrompt,
 	Rect,
 	SubjectMask,
 	TextRegion,

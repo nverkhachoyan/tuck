@@ -1,4 +1,4 @@
-import type { ImagePoint, ObjectMasks } from "./ImageAnalysis.types";
+import type { ObjectMasks, ObjectPrompt } from "./ImageAnalysis.types";
 import ImageAnalysisModule from "./ImageAnalysisModule";
 
 // Segment Anything runs in the native module, as `objectSelection.web.ts`
@@ -34,16 +34,33 @@ export function prepareObjects(uri: string): Promise<void> {
 }
 
 /**
- * Masks of what's at a point in the image at `uri` (see `ObjectMasks`), as
- * grayscale PNG files. Null while the image isn't ready (see
- * `prepareObjects`).
+ * Masks of the object `prompt` points at or boxes in the image at `uri` (see
+ * `ObjectMasks`), as grayscale PNG files. Null while a point's image isn't
+ * ready (see `prepareObjects`); a box waits for its image, and is null only
+ * if reading it fails or it's let go meanwhile.
  */
 export async function objectMasks(
 	uri: string,
-	at: ImagePoint,
+	prompt: ObjectPrompt,
 ): Promise<ObjectMasks | null> {
-	if (!prepared?.ready || prepared.uri !== uri) return null;
-	return ImageAnalysisModule.objectMasks(uri, at);
+	if (!(await whenRead(uri, prompt))) return null;
+	return ImageAnalysisModule.objectMasks(uri, prompt);
+}
+
+// Whether the image at `uri` is read for `prompt`: a point takes it only
+// once it's ready, while a box waits for it, since the subject at a box's
+// center is a poor stand-in for what it boxes.
+async function whenRead(uri: string, prompt: ObjectPrompt): Promise<boolean> {
+	const reading = prepared?.uri === uri ? prepared : null;
+	if (!reading) return false;
+	if (reading.ready) return true;
+	if (!("box" in prompt)) return false;
+	try {
+		await reading.done;
+	} catch {
+		return false;
+	}
+	return prepared === reading;
 }
 
 export function releaseObjects() {

@@ -70,6 +70,7 @@ describe("editorModeReducer", () => {
 			layerId: null,
 			on: null,
 			optionsOpen: false,
+			absorbs: false,
 		});
 		assert.equal(state.sheet, null);
 
@@ -84,6 +85,7 @@ describe("editorModeReducer", () => {
 			layerId: "photo",
 			on: null,
 			optionsOpen: false,
+			absorbs: false,
 		});
 		assert.equal(adjusting.sheet, null);
 
@@ -99,6 +101,7 @@ describe("editorModeReducer", () => {
 			layerId: "photo",
 			on: null,
 			optionsOpen: true,
+			absorbs: false,
 		});
 		assert.equal(cutting.sheet, null);
 	});
@@ -129,6 +132,7 @@ describe("editorModeReducer", () => {
 			layerId: null,
 			on: null,
 			optionsOpen: false,
+			absorbs: false,
 		});
 		assert.equal(cropping.sheet, null);
 	});
@@ -152,6 +156,7 @@ describe("editorModeReducer", () => {
 			layerId: null,
 			on: null,
 			optionsOpen: true,
+			absorbs: false,
 		});
 		assert.deepEqual(run(open, { type: "closeToolOptions" }), drawing);
 		assert.deepEqual(run(open, { type: "toggleToolOptions" }), drawing);
@@ -176,6 +181,7 @@ describe("editorModeReducer", () => {
 			layerId: null,
 			on: null,
 			optionsOpen: false,
+			absorbs: false,
 		});
 		assert.equal(fromTray.eyedropper, picker);
 	});
@@ -235,6 +241,7 @@ describe("editorModeReducer", () => {
 			layerId: null,
 			on: null,
 			optionsOpen: false,
+			absorbs: false,
 		});
 		assert.equal(stickers.sheet, null);
 	});
@@ -290,6 +297,7 @@ describe("a made-up tool's mode", () => {
 			layerId: "photo",
 			on: null,
 			optionsOpen: false,
+			absorbs: false,
 		});
 	});
 
@@ -373,6 +381,7 @@ describe("settle", () => {
 				layerId: null,
 				on: null,
 				optionsOpen: false,
+				absorbs: false,
 			},
 		);
 		assert.equal(settle(drawing, targets({ hasPhoto: false })), drawing);
@@ -389,6 +398,7 @@ describe("openTray", () => {
 				layerId: null,
 				on: null,
 				optionsOpen: false,
+				absorbs: false,
 			}),
 			null,
 		);
@@ -399,6 +409,7 @@ describe("openTray", () => {
 				layerId: null,
 				on: null,
 				optionsOpen: true,
+				absorbs: false,
 			}),
 			"pen",
 		);
@@ -409,6 +420,7 @@ describe("openTray", () => {
 				layerId: "photo",
 				on: null,
 				optionsOpen: false,
+				absorbs: false,
 			}),
 			null,
 		);
@@ -419,6 +431,7 @@ describe("openTray", () => {
 				layerId: "photo",
 				on: null,
 				optionsOpen: true,
+				absorbs: false,
 			}),
 			"cut",
 		);

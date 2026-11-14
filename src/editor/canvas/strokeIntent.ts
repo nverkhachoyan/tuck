@@ -12,11 +12,15 @@ import { shapeFromDrag } from "./shapeDrag.ts";
 // pixels, was a tap; a box this thin in only one way is dropped.
 export const TAP_SLOP_PX = 6;
 
+// A box dragged around an object must be at least this big each way, in
+// screen pixels: smaller, it was a tap that slipped, and selects nothing.
+export const BOX_MIN_PX = 24;
+
 /** What a finished stroke with a tool asks for. */
 export type StrokeIntent =
 	// What the stroke made with its tool, for the editor: a brush's points, a
-	// box, a shape, the color under the stroke's end, or the subject under a
-	// tap.
+	// box, a shape, the color under the stroke's end, or the object under a
+	// tap or inside a dragged box.
 	| { type: "finish"; stroke: ToolStroke }
 	// A tap off the document, which puts the tool down.
 	| { type: "tapAway"; point: Point }
@@ -50,8 +54,12 @@ export function strokeIntent(
 		return { type: "tapAway", point: start };
 	}
 	if (tool.type === "pickSubject") {
-		return staysWithin(points, TAP_SLOP_PX / scale)
-			? { type: "finish", stroke: { ...tool, point: start } }
+		if (staysWithin(points, TAP_SLOP_PX / scale)) {
+			return { type: "finish", stroke: { ...tool, point: start } };
+		}
+		const box = rectFromCorners(start, end);
+		return Math.min(box.width, box.height) * scale >= BOX_MIN_PX
+			? { type: "finish", stroke: { ...tool, rect: box } }
 			: { type: "none" };
 	}
 	if (tool.type === "draw") {
