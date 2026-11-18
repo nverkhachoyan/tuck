@@ -49,8 +49,8 @@ export type PickSize = { mask: string; index: number; count: number };
  *   (`pickSize`, while the selection is what it left). A box finds one
  *   mask, so it has neither.
  * - While `picking`, the image is read ahead for that.
- * - `clear` selects nothing, and `invert` turns the selection inside out
- *   (`inverting` meanwhile).
+ * - `clear` selects nothing, resolving whether it did, and `invert` turns
+ *   the selection inside out (`inverting` meanwhile).
  * - `latest` is the image as it is by then, which each of these changes.
  * - A new mask goes to `onMask` once `keep` has put its file where the
  *   document can use it, saying whether to keep the strokes that refined
@@ -131,16 +131,18 @@ export function useCutOut({
 		return session.empty;
 	};
 
-	// Runs `task` unless another is running, saying which is being found.
+	// Runs `task` unless another is running, saying which is being found,
+	// and resolves whether it ran to the end.
 	const exclusive = async (
 		kind: "all" | "one" | null,
 		task: () => Promise<void>,
 	) => {
-		if (busy.current) return;
+		if (busy.current) return false;
 		busy.current = true;
 		setFinding(kind);
 		try {
 			await task();
+			return true;
 		} catch (error) {
 			setNews(null);
 			showAlert(
@@ -149,6 +151,7 @@ export function useCutOut({
 					? "Cut is still downloading. Try again in a moment."
 					: errorMessage(error),
 			);
+			return false;
 		} finally {
 			busy.current = false;
 			setFinding(null);

@@ -105,6 +105,7 @@ export function useCutTool({
 		invertMask,
 		cancelToolSession,
 		commitToolSession,
+		startToolSessionHere,
 		addMaskedRedaction,
 		addCutCopy,
 		paintMask,
@@ -313,12 +314,14 @@ export function useCutTool({
 		showInTray,
 		reset: selected ? () => void cutOut.clear(selected, true) : undefined,
 		// Opened on `image`, which this render doesn't show yet: one that
-		// isn't cut yet starts selecting nothing; one that is starts
-		// selecting what its cut keeps.
+		// isn't cut yet starts selecting nothing, where Undo stops; one that
+		// is starts selecting what its cut keeps.
 		start: (image: ImageLayer) => {
 			if (isCutOut(image)) return;
 			layerId.current = image.id;
-			void cutOut.clear(image, false);
+			void cutOut.clear(image, false).then((cleared) => {
+				if (cleared && layerId.current === image.id) startToolSessionHere();
+			});
 		},
 		canCommit,
 		doneLabel,

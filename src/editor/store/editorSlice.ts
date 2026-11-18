@@ -249,6 +249,19 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		set({ toolSession: newSession }, false, "editor/beginToolSession");
 	};
 
+	// Undo stops at the document as it is now, as though the session had
+	// opened on it: for a change a tool makes as it opens (Cut's empty
+	// selection), which isn't the user's to undo.
+	const startToolSessionHere = () => {
+		const { document, toolSession } = get();
+		if (!document || !toolSession || toolSession.opened === document) return;
+		set(
+			{ toolSession: { ...toolSession, opened: document } },
+			false,
+			"editor/startToolSessionHere",
+		);
+	};
+
 	// The session's steps become one from where it started, or stay one
 	// per change or per mark (`steps`). Each kept step undoes to the
 	// selection the session started with, not a mark drawn along the way.
@@ -539,6 +552,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		},
 
 		beginToolSession,
+		startToolSessionHere,
 		commitToolSession,
 		cancelToolSession,
 	};
