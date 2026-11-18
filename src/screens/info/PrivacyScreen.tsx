@@ -11,7 +11,7 @@ export default function PrivacyScreen() {
 			path="/privacy"
 			description="Tuck edits your photos on your own device. Nothing is uploaded, and nothing about you is collected: no account, no analytics, no ads, and no tracking."
 		>
-			<Paragraph muted>Last updated October 4, 2026</Paragraph>
+			<Paragraph muted>Last updated November 18, 2026</Paragraph>
 
 			<Section title="The short version">
 				<Paragraph>
@@ -58,19 +58,53 @@ export default function PrivacyScreen() {
 				<Paragraph>
 					Redact can find faces and text for you, and Cut finds the subjects and
 					objects in a photo. This runs on your device too: Apple's Vision on
-					iPhone, Google's ML Kit on Android, MediaPipe and Tesseract in the
-					browser, and Segment Anything on all three. Your photos aren't sent
-					anywhere to be analyzed.
+					iPhone and iPad, Google's ML Kit on Android, MediaPipe and Tesseract
+					in the browser, and Segment Anything on all three. Your photos aren't
+					sent anywhere to be analyzed.
 				</Paragraph>
 				<Paragraph>
 					On Android, ML Kit is part of Google Play services, which sends Google
 					diagnostic information about how it runs: the device model and system
 					version, Tuck's name and version, how long detection took, and an
 					identifier for the installation that isn't meant to identify you. It
-					contains nothing from your photos. Google describes this in its{" "}
+					contains nothing from your photos and no face data. Google describes
+					this in its{" "}
 					<InlineLink to={ML_KIT_DISCLOSURE}>ML Kit data disclosure</InlineLink>
 					.
 				</Paragraph>
+			</Section>
+
+			<Section title="Face data">
+				<Paragraph>
+					Tuck doesn't collect face data. When you tap Find in Redact, it looks
+					for faces in the photo you're editing so you can cover them.
+				</Paragraph>
+				<Item>
+					What it uses: only a rectangle around each face, its position and size
+					in the photo. Tuck doesn't read facial features, landmarks, or face
+					geometry, doesn't use the TrueDepth camera or Face ID, and doesn't
+					recognize or identify anyone.
+				</Item>
+				<Item>
+					How it's used: only to show you where the faces are, so you can choose
+					which to cover. It isn't used for anything else: not for ads,
+					analytics, tracking, or training.
+				</Item>
+				<Item>
+					Where it's stored: the rectangles are held in memory on your device
+					while you choose, and never written to storage. They're discarded when
+					you leave Find, switch photos, or close the project.
+				</Item>
+				<Item>
+					Retention and deletion: a face you choose to cover becomes a redaction
+					box in your project, a plain shape with a position and size that
+					doesn't record it was a face. It stays on your device with the project
+					until you remove the box, delete the project, or remove the app.
+				</Item>
+				<Item>
+					Sharing: face data is never sent off your device, to us or to anyone
+					else, and never shared with third parties.
+				</Item>
 			</Section>
 
 			<Section title="The website">
