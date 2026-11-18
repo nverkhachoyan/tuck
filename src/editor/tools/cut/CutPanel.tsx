@@ -444,7 +444,10 @@ const styles = StyleSheet.create({
 	pill: {
 		borderRadius: radii.large,
 	},
+	// A Surface fills its box, which in a column held up only by `bottom`
+	// grows each pill tall on native: these hug their content instead.
 	hintContent: {
+		flexGrow: 0,
 		paddingHorizontal: space.sm,
 		paddingVertical: space.xs,
 	},
@@ -453,6 +456,7 @@ const styles = StyleSheet.create({
 		color: colors.textSecondary,
 	},
 	pillContent: {
+		flexGrow: 0,
 		flexDirection: "row",
 		alignItems: "center",
 		paddingHorizontal: space.xs,
