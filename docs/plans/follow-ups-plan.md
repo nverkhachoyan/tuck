@@ -1,6 +1,6 @@
 # Follow-ups
 
-Everything still open from finished plans, gathered October 29, 2026 and brought up to date November 6. Each section stands alone, so they can go in any order. Finished plans are removed once built; what building them found lives in git history (the last ones as of `281f08e`: Cut and Remove BG, the dependency upgrade, the editor's layer folders, and the text input package; then, after `1c2b056`, the editor UI redesign, the Gesture Handler 3 migration, the performance plan, and the UI/UX brainstorm that led to the redesign; then, as of `ab78080`, the drawing-layers plan, `docs/plans/drawing-layers/`, and the brainstorm it came from, `docs/brainstorming/drawing-layers/`, built in PRs #85 to #94).
+Everything still open from finished plans, gathered October 29, 2026 and brought up to date November 17. Each section stands alone, so they can go in any order. Finished plans are removed once built; what building them found lives in git history (the last ones as of `281f08e`: Cut and Remove BG, the dependency upgrade, the editor's layer folders, and the text input package; then, after `1c2b056`, the editor UI redesign, the Gesture Handler 3 migration, the performance plan, and the UI/UX brainstorm that led to the redesign; then, as of `ab78080`, the drawing-layers plan, `docs/plans/drawing-layers/`, and the brainstorm it came from, `docs/brainstorming/drawing-layers/`, built in PRs #85 to #94; then, as of `7d66fee`, the editor audit plan, `docs/plans/editor-audit-plan.md`, whose leftovers are #105 to #109).
 
 Open work that has its own issue is linked rather than described here. As other entries become issues, replace them with a link.
 
@@ -21,7 +21,7 @@ The refactors from October 24 to 29 were checked on web at 390, 1024, and 1440 p
 
 ## 2. Bugs to look into
 
-* None open. [#79](https://github.com/nverkhachoyan/tuck/issues/79), the memory each closed project left behind, was a cycle in worklets' serialization cache, patched in `patches/react-native-worklets@0.13.0.patch`.
+Open bugs are in issues (`gh issue list --label bug`): as of November 17, Cut's pills over the dock, [#133](https://github.com/nverkhachoyan/tuck/issues/133); Cut's Undo lit too early, [#126](https://github.com/nverkhachoyan/tuck/issues/126); Find missing white text on dark bubbles on web, [#121](https://github.com/nverkhachoyan/tuck/issues/121); Highlighter's label breaking mid-word, [#118](https://github.com/nverkhachoyan/tuck/issues/118); and the web canvas oversaturated on P3 displays, [#117](https://github.com/nverkhachoyan/tuck/issues/117).
 
 ## 3. Smart selection
 
