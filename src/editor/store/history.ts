@@ -24,7 +24,8 @@ export type ToolSessionSteps = "one" | "each" | "marks";
 // document when the tool opened, which is where it started unless it took
 // over the undo step before it (Cut's copy that Adjust opens on): then undo
 // stops at `opened`, and closing it with nothing changed takes that step
-// back too.
+// back too. A change the tool makes as it opens moves `opened` past it
+// (`startToolSessionHere`).
 export type ToolSession = EditorSnapshot & {
 	opened: EditorDocument;
 	undoStop: EditorSnapshot | undefined;

@@ -541,6 +541,29 @@ describe("tool sessions", () => {
 		assert.equal(store.getState().document, before);
 	});
 
+	test("a change made as a session opens isn't one to undo", () => {
+		const { store } = storeWithText();
+		const actions = store.getState().actions;
+		const { document: before, past } = store.getState();
+		actions.beginToolSession(true);
+		actions.setMask("photo", "file:///empty.png");
+		const opened = store.getState().document;
+		actions.startToolSessionHere();
+		assert.equal(selectCanUndo(store.getState()), false);
+
+		actions.setMask("photo", "file:///picked.png");
+		assert.equal(selectCanUndo(store.getState()), true);
+		actions.undo();
+		assert.equal(store.getState().document, opened);
+		assert.equal(selectCanUndo(store.getState()), false);
+		actions.undo();
+		assert.equal(store.getState().document, opened);
+
+		actions.cancelToolSession();
+		assert.equal(store.getState().document, before);
+		assert.deepEqual(store.getState().past, past);
+	});
+
 	test("canceling a previewing session leaves nothing of it to redo", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
