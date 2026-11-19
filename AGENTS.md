@@ -22,6 +22,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 - A dependency's install scripts run only once `allowBuilds` in `pnpm-workspace.yaml` allows them; set one to `false` to stop pnpm asking.
 - After upgrading a dependency, start Metro with `--clear`: its file map keeps the old version's path, and it goes on bundling that version until then.
 - The repo is a pnpm workspace: one `pnpm install` at the root installs the app, `docs/interactive`, and `packages/*`. Run a package's script with `pnpm --dir <path> <script>`.
+- When upgrading React Native, bump `packages/skia-text-input`'s `react-native` devDependency with the app's. pnpm resolves Reanimated, Skia, and Worklets peers through it, so a mismatch bundles two copies (iOS starts with "property is not writable" and "Cannot read property 'ErrorBoundary' of undefined"); `pnpm-lock.yaml` should name one `react-native@` version.
 
 ### Layout
 
