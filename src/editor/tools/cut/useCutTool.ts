@@ -6,7 +6,11 @@ import { errorMessage } from "@/ui/errorMessage";
 import { showAlert } from "@/ui/showAlert";
 import type { CanvasInput } from "../../canvas/canvasInput";
 import type { ToolStroke } from "../../canvas/canvasTool";
-import type { ImageBox, ImagePoint } from "../../detection/subjectDetection";
+import {
+	type ImageBox,
+	type ImagePoint,
+	isSubjectModelDownloading,
+} from "../../detection/subjectDetection";
 import { findLayer } from "../../document/document";
 import { visibleImageLayer } from "../../document/framing";
 import type { ImageLayer } from "../../layers/image/image";
@@ -30,7 +34,7 @@ import {
 	parseCutSettings,
 	stepCutSize,
 } from "./cutSettings";
-import { useCutOut } from "./useCutOut";
+import { subjectMaskOf, useCutOut } from "./useCutOut";
 import { useCutRedaction } from "./useCutRedaction";
 
 export type CutController = ReturnType<typeof useCutTool>;
@@ -61,9 +65,12 @@ export type CutTray = "brush" | "apply";
  *   which is selected; and each closes Cut (`close`) as one undo step,
  *   with a notice (`notify`). Adjust copies the selection as New layer
  *   does and opens Adjust on the copy, whose session takes the copy in, so
- *   its ✕ takes both back (`canAdjust` while the editor has Adjust). Save sticker keeps what's selected as a saved
- *   sticker and leaves Cut open (`stickerSaved` until the selection
- *   changes). `applying` names the action running, while one runs.
+ *   its ✕ takes both back (`canAdjust` while the editor has Adjust). Save
+ *   sticker keeps what's selected as a saved sticker and leaves Cut open
+ *   (`stickerSaved` until the selection changes). Remove BG needs no
+ *   selection, only a device that finds subjects: it cuts the image down
+ *   to its subjects, as the toolbar's Remove BG does, and closes Cut as one
+ *   undo step. `applying` names the action running, while one runs.
  * - `tray` is what the phone's tray shows, set by `showInTray`.
  * - `stepSize` steps the brush's size for `[` and `]`, `canvasInput` paints
  *   or taps on a document of `documentSize`, while there's an image shown
@@ -111,9 +118,9 @@ export function useCutTool({
 		paintMask,
 	} = useStore((state) => state.actions);
 	const [tray, showInTray] = useState<CutTray>("brush");
-	const [applying, setApplying] = useState<"remove" | "saveSticker" | null>(
-		null,
-	);
+	const [applying, setApplying] = useState<
+		"remove" | "saveSticker" | "removeBg" | null
+	>(null);
 	const applyingNow = useRef(false);
 	const [savedSticker, setSavedSticker] = useState<ImageLayer | null>(null);
 	const layerId = useRef<string | null>(null);
@@ -123,14 +130,15 @@ export function useCutTool({
 	const heldMode = useHeldTapMode();
 	const { effectFor } = useRedactLook();
 	const keep = (uri: string) => addImage(uri, false);
+	const latest = (id: string) => {
+		const current = useStore.getState().document;
+		return current ? visibleImageLayer(current, id) : undefined;
+	};
 	const cutOut = useCutOut({
 		key,
 		image: layer,
 		picking: settings.tool === "tap",
-		latest: (id) => {
-			const current = useStore.getState().document;
-			return current ? visibleImageLayer(current, id) : undefined;
-		},
+		latest,
 		keep,
 		onMask: (id, mask, keepStrokes) => {
 			if (layerId.current === id) setMask(id, mask, { keepStrokes });
@@ -159,7 +167,7 @@ export function useCutTool({
 	// Runs `task` unless another action is running, with an alert titled
 	// `failed` if it throws.
 	const runAction = async (
-		action: "remove" | "saveSticker",
+		action: "remove" | "saveSticker" | "removeBg",
 		failed: string,
 		task: () => Promise<void>,
 	) => {
@@ -250,6 +258,41 @@ export function useCutTool({
 			setSavedSticker(selection);
 			cutOut.announce("Saved as a sticker");
 		});
+	const removeBackground = (image: ImageLayer) =>
+		runAction("removeBg", "Couldn't remove the background", async () => {
+			let mask: string | null;
+			try {
+				mask = await subjectMaskOf(key, image.uri, keep);
+			} catch (error) {
+				if (!isSubjectModelDownloading(error)) throw error;
+				showAlert(
+					"Couldn't remove the background",
+					"Remove BG is still downloading. Try again in a moment.",
+				);
+				return;
+			}
+			if (mask === null) {
+				showAlert(
+					"Nothing to remove",
+					"There's no clear subject in front of the background.",
+				);
+				return;
+			}
+			if (layerId.current !== image.id) return;
+			cancelToolSession();
+			const unchanged = useStore.getState().document;
+			setMask(image.id, mask);
+			close();
+			// Already cut this way, there's nothing for Undo to take back.
+			if (useStore.getState().document === unchanged) return;
+			notify("Background removed", {
+				label: "Refine",
+				onPress: () => {
+					const current = latest(image.id);
+					if (current) startTool("cut", current);
+				},
+			});
+		});
 	const { pickSize } = cutOut;
 	const tool = cutToolInUse(settings, cutOut.canFind);
 	const cutLayerId = layer?.id;
@@ -302,6 +345,10 @@ export function useCutTool({
 				: undefined,
 			redact: selected ? () => void redaction.redact(selected) : undefined,
 			saveSticker: selected ? () => void saveAsSticker(selected) : undefined,
+			removeBg:
+				layer && cutOut.canFind
+					? () => void removeBackground(layer)
+					: undefined,
 		},
 		canAdjust,
 		applying: redaction.busy ? ("redact" as const) : applying,

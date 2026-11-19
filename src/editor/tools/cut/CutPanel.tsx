@@ -27,6 +27,7 @@ import {
 	isCutBrush,
 	withCutSize,
 } from "./cutSettings";
+import { removeBgSpec } from "./removeBgSpec";
 import type { CutController, CutTray } from "./useCutTool";
 
 type Icon = ComponentProps<typeof MaterialCommunityIcons>["name"];
@@ -56,8 +57,10 @@ const BRUSH_EDGES = [
 	{ soft: false, title: "Hard", icon: "circle" },
 ] as const satisfies readonly { soft: boolean; title: string; icon: Icon }[];
 
-// The Apply menu's actions, in the order the popover and the tray show them.
+// The Apply menu's actions, in the order the popover and the tray show them:
+// Remove BG, which needs no selection, then those that act on it.
 const APPLY_ACTIONS = [
+	{ action: "removeBg", title: removeBgSpec.label, icon: removeBgSpec.icon },
 	{ action: "newLayer", title: "New layer", icon: "layers-plus" },
 	{ action: "adjust", title: "Adjust", icon: "tune-variant" },
 	{ action: "remove", title: "Remove", icon: "selection-remove" },
@@ -113,7 +116,7 @@ export function CutPanel({ controller }: { controller: CutController }) {
 			{findAll && (
 				<ToolButton
 					label="Subjects"
-					icon="auto-fix"
+					icon="select-group"
 					busy={finding === "all"}
 					onPress={findAll}
 				/>
@@ -283,12 +286,12 @@ export function CutBar({ controller }: { controller: CutController }) {
 					</SizeChip>
 				</BarGroup>
 			)}
-			{(findAll || invert || apply.newLayer) && (
+			{(findAll || invert || apply.newLayer || apply.removeBg) && (
 				<BarGroup>
 					{findAll && (
 						<BarButton
 							label="Subjects"
-							icon="auto-fix"
+							icon="select-group"
 							busy={finding === "all"}
 							onPress={findAll}
 						/>
@@ -301,7 +304,7 @@ export function CutBar({ controller }: { controller: CutController }) {
 							onPress={invert}
 						/>
 					)}
-					{apply.newLayer && (
+					{(apply.newLayer || apply.removeBg) && (
 						<BarChip label="Actions" icon="dots-horizontal" text="Actions">
 							<View style={styles.menu}>
 								{applyButtons(controller, BarButton)}
@@ -344,8 +347,9 @@ function resizeButtons(
 
 /**
  * The Apply menu's actions, as the bar's or the tray's `Button`, each
- * spinning while it runs and the others disabled meanwhile, and Adjust
- * only where the editor has it. Save sticker says Saved once the selection is kept
+ * spinning while it runs and the others disabled meanwhile, Adjust only
+ * where the editor has it, and Remove BG only where this device finds
+ * subjects. Save sticker says Saved once the selection is kept
  * as one. Siblings rather than a component, like `resizeButtons`.
  */
 function applyButtons(
@@ -353,7 +357,9 @@ function applyButtons(
 	Button: typeof ToolButton | typeof BarButton,
 ) {
 	const actions = APPLY_ACTIONS.filter(
-		({ action }) => action !== "adjust" || canAdjust,
+		({ action }) =>
+			(action !== "adjust" || canAdjust) &&
+			(action !== "removeBg" || apply.removeBg !== undefined),
 	);
 	return actions.map(({ action, title, icon }) => {
 		const saved = action === "saveSticker" && stickerSaved;
@@ -381,6 +387,11 @@ export function CutOptions({ controller }: { controller: CutController }) {
 	const { bottomInset, rightInset, closeTray } = useEditorContext();
 	const { settings, tool, change: onChange, tray } = controller;
 	if (tray === "apply") {
+		// More than four don't fit a phone's width, so they split into two
+		// rows, the top one as long or longer.
+		const actions = applyButtons(controller, ToolButton);
+		const columns =
+			actions.length > 4 ? Math.ceil(actions.length / 2) : actions.length;
 		return (
 			<ToolOptions
 				closeLabel="Close Actions"
@@ -389,7 +400,14 @@ export function CutOptions({ controller }: { controller: CutController }) {
 				onClose={closeTray}
 			>
 				<View style={styles.actions}>
-					{applyButtons(controller, ToolButton)}
+					{actions.map((action) => (
+						<View
+							key={action.key}
+							style={[styles.action, { width: `${100 / columns}%` }]}
+						>
+							{action}
+						</View>
+					))}
 				</View>
 			</ToolOptions>
 		);
@@ -475,6 +493,11 @@ const styles = StyleSheet.create({
 	},
 	actions: {
 		flexDirection: "row",
-		justifyContent: "space-around",
+		flexWrap: "wrap",
+		justifyContent: "center",
+		rowGap: space.xs,
+	},
+	action: {
+		alignItems: "center",
 	},
 });
