@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	type LayoutChangeEvent,
@@ -132,14 +132,6 @@ export function Dial({
 		};
 	});
 
-	const ticks = useMemo(() => {
-		const last = Math.floor(maxSteps / tickEvery);
-		return Array.from(
-			{ length: last * 2 + 1 },
-			(_, index) => (index - last) * tickEvery,
-		);
-	}, [maxSteps, tickEvery]);
-
 	// Accessibility actions and web arrow keys originate on the JS thread;
 	// run the same worklet callbacks as a gesture on the UI thread.
 	const setFromControl = useCallback(
@@ -210,16 +202,12 @@ export function Dial({
 					onAccessibilityAction={handleAccessibilityAction}
 				>
 					<Animated.View style={[styles.ruler, ruler]}>
-						{ticks.map((tick) => (
-							<View
-								key={tick}
-								style={[
-									styles.tick,
-									{ left: tick * pxPerStep },
-									tick % majorEvery === 0 && styles.majorTick,
-								]}
-							/>
-						))}
+						<DialTicks
+							maxSteps={maxSteps}
+							tickEvery={tickEvery}
+							majorEvery={majorEvery}
+							pxPerStep={pxPerStep}
+						/>
 					</Animated.View>
 					<Animated.View style={[styles.fill, fill]} />
 					<View
@@ -230,6 +218,37 @@ export function Dial({
 		</View>
 	);
 }
+
+/**
+ * The ruler's ticks, kept out of `Dial`'s render so passing a step
+ * re-renders only the readout, not 90-odd views.
+ */
+const DialTicks = memo(function DialTicks({
+	maxSteps,
+	tickEvery,
+	majorEvery,
+	pxPerStep,
+}: {
+	maxSteps: number;
+	tickEvery: number;
+	majorEvery: number;
+	pxPerStep: number;
+}) {
+	const last = Math.floor(maxSteps / tickEvery);
+	return Array.from({ length: last * 2 + 1 }, (_, index) => {
+		const tick = (index - last) * tickEvery;
+		return (
+			<View
+				key={tick}
+				style={[
+					styles.tick,
+					{ left: tick * pxPerStep },
+					tick % majorEvery === 0 && styles.majorTick,
+				]}
+			/>
+		);
+	});
+});
 
 const styles = StyleSheet.create({
 	container: {

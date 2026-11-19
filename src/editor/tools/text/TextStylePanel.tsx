@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
 	type AccessibilityActionEvent,
 	Pressable,
@@ -9,11 +9,16 @@ import {
 	View,
 } from "react-native";
 import { Chip } from "@/ui/Chip";
-import { ColorSliderBar } from "@/ui/ColorPicker";
+import {
+	ColorSliderBar,
+	clampHue,
+	stepOf,
+	useHsvColor,
+} from "@/ui/ColorPicker";
 import { FadeRow, MeasuredItem } from "@/ui/FadeRow";
 import { gradientBackground, HUE_GRADIENT, toneGradient } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
-import { type Hsv, hexToHsv, hsvToHex, hsvToTone, toneToHsv } from "@/ui/hsv";
+import { hsvToHex, hsvToTone, toneToHsv } from "@/ui/hsv";
 import { IconButton } from "@/ui/IconButton";
 import { interaction } from "@/ui/interaction";
 import { colors, radii, typography, webTransition } from "@/ui/theme";
@@ -130,7 +135,6 @@ export function TextToolBar({
 	);
 }
 
-const RED: Hsv = { hue: 0, saturation: 1, value: 1 };
 const HUE_STEP = 10;
 const TONE_STEP = 0.05;
 
@@ -152,58 +156,35 @@ function InlineTextColorPicker({
 	onClose: () => void;
 }) {
 	const value = layer[colorKey] ?? layer.color;
-	const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? RED);
-	const [lastValue, setLastValue] = useState(value);
-	if (value !== lastValue) {
-		setLastValue(value);
-		if (value !== hsvToHex(hsv)) setHsv(hexToHsv(value, hsv.hue) ?? hsv);
-	}
-
-	const latest = useRef(hsv);
-	latest.current = hsv;
 	const { onPickCustom, onEyedropper } = useColorTarget((color) =>
 		onChange({ [colorKey]: color }),
 	);
-
-	const preview = (next: Hsv) => {
-		latest.current = next;
-		setHsv(next);
-		onPreview?.({ [colorKey]: hsvToHex(next) });
-	};
-	const commit = () => onPickCustom(hsvToHex(latest.current));
+	const { hsv, latest, change, end, nudge } = useHsvColor(
+		value,
+		onPreview && ((color) => onPreview({ [colorKey]: color })),
+		onPickCustom,
+	);
 
 	const pureHex = hsvToHex({ hue: hsv.hue, saturation: 1, value: 1 });
 	const currentHex = hsvToHex(hsv);
 	const tone = hsvToTone(hsv);
 
-	const changeHue = (fraction: number) => {
-		const hue = Math.min(360, Math.max(0, fraction * 360));
-		preview({ ...latest.current, hue });
-	};
-
-	const changeTone = (fraction: number) => {
-		preview(toneToHsv(latest.current.hue, fraction));
-	};
-
-	const stepHue = (event: AccessibilityActionEvent) => {
-		const step = event.nativeEvent.actionName === "increment" ? 1 : -1;
-		const hue = Math.min(
-			360,
-			Math.max(0, latest.current.hue + step * HUE_STEP),
+	const changeHue = (fraction: number) =>
+		change({ ...latest.current, hue: clampHue(fraction * 360) });
+	const changeTone = (fraction: number) =>
+		change(toneToHsv(latest.current.hue, fraction));
+	const stepHue = (event: AccessibilityActionEvent) =>
+		nudge({
+			...latest.current,
+			hue: clampHue(latest.current.hue + stepOf(event) * HUE_STEP),
+		});
+	const stepTone = (event: AccessibilityActionEvent) =>
+		nudge(
+			toneToHsv(
+				latest.current.hue,
+				hsvToTone(latest.current) + stepOf(event) * TONE_STEP,
+			),
 		);
-		preview({ ...latest.current, hue });
-		commit();
-	};
-
-	const stepTone = (event: AccessibilityActionEvent) => {
-		const step = event.nativeEvent.actionName === "increment" ? 1 : -1;
-		const nextTone = Math.min(
-			1,
-			Math.max(0, hsvToTone(latest.current) + step * TONE_STEP),
-		);
-		preview(toneToHsv(latest.current.hue, nextTone));
-		commit();
-	};
 
 	return (
 		<View style={styles.inlinePickerContainer}>
@@ -248,7 +229,7 @@ function InlineTextColorPicker({
 					thumbColor={pureHex}
 					background={styles.hues}
 					onMove={changeHue}
-					onEnd={commit}
+					onEnd={end}
 					accessibilityLabel="Hue"
 					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
 					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
@@ -259,7 +240,7 @@ function InlineTextColorPicker({
 					thumbColor={currentHex}
 					background={toneGradient(pureHex)}
 					onMove={changeTone}
-					onEnd={commit}
+					onEnd={end}
 					accessibilityLabel="Tone"
 					accessibilityValue={{
 						min: 0,
