@@ -236,6 +236,9 @@ function ScreenContent({ document }: { document: EditorDocument }) {
 									)}
 								</View>
 							</View>
+							<Text style={styles.note}>
+								Exports leave out the photo's location and camera details.
+							</Text>
 							{/* Saved, the edit is finished: straight back to the projects,
 						    which ends the session, rather than through the editor. */}
 							{saved && (
@@ -561,6 +564,11 @@ const styles = StyleSheet.create({
 	statusText: {
 		...typography.label,
 		color: colors.textSecondary,
+	},
+	note: {
+		...typography.caption,
+		color: colors.textSecondary,
+		textAlign: "center",
 	},
 	secondaryActions: {
 		flexDirection: "row",
