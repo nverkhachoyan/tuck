@@ -21,13 +21,21 @@ let worker: Promise<Worker> | undefined;
 // until someone looks for text.
 function textWorker(): Promise<Worker> {
 	if (!worker) {
-		const starting = import("tesseract.js").then(({ createWorker, OEM }) =>
-			createWorker("eng", OEM.LSTM_ONLY, {
-				workerPath: `${ASSETS}/worker.min.js`,
-				corePath: ASSETS,
-				langPath: ASSETS,
-				workerBlobURL: false,
-			}),
+		const starting = import("tesseract.js").then(
+			async ({ createWorker, OEM, PSM }) => {
+				const created = await createWorker("eng", OEM.LSTM_ONLY, {
+					workerPath: `${ASSETS}/worker.min.js`,
+					corePath: ASSETS,
+					langPath: ASSETS,
+					workerBlobURL: false,
+				});
+				// tesseract.js reads the page as one block of text by default,
+				// which skips light text on a dark bubble in a screenshot.
+				// Finding the layout reads it, and keeps an icon beside a label
+				// out of the label's line.
+				await created.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+				return created;
+			},
 		);
 		// Try again next time, say once the connection is back.
 		starting.catch(() => {
