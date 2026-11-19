@@ -31,6 +31,15 @@ import { colors, radii, space, typography, webTransition } from "@/ui/theme";
 const TOOL_WIDTH = 56;
 const ROW_GAP = 12;
 
+// A grid cell on a phone is about as wide as a long one-word label
+// ("Highlighter"), which would otherwise break mid-word. Web ignores the
+// shrinking and would cut the label off instead.
+const fitOneLine = {
+	numberOfLines: 1,
+	adjustsFontSizeToFit: true,
+	minimumFontScale: 0.8,
+} as const;
+
 // Whether tools stand in a column, whose tooltips go beside them rather than
 // over the next one down.
 const InRail = createContext(false);
@@ -210,8 +219,10 @@ export function ToolButton({
 								)}
 							</View>
 							<Text
+								{...(compact && Platform.OS !== "web" ? fitOneLine : undefined)}
 								style={[
 									styles.label,
+									compact && styles.compactLabel,
 									small && styles.smallLabel,
 									highlighted && styles.labelSelected,
 									(open || marked) && styles.labelOpen,
@@ -399,6 +410,10 @@ const styles = StyleSheet.create({
 		letterSpacing: 0.1,
 		color: colors.textPrimary,
 		textAlign: "center",
+	},
+	// Keeps neighbouring labels apart when one fills its cell.
+	compactLabel: {
+		paddingHorizontal: space.xxs / 2,
 	},
 	smallLabel: {
 		fontSize: 11,
