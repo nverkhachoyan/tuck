@@ -67,7 +67,20 @@
 	document.body.style.width = `${W}px`;
 	document.body.style.height = `${H}px`;
 	const head = document.getElementById("head");
-	head.innerHTML = q.get("head");
+	// Headlines take only <br> and <mark>; everything else stays text.
+	head.replaceChildren();
+	for (const [i, line] of (q.get("head") ?? "").split("<br>").entries()) {
+		if (i) head.append(document.createElement("br"));
+		line.split(/<mark>(.*?)<\/mark>/).forEach((part, j) => {
+			if (j % 2 === 0) {
+				head.append(part);
+				return;
+			}
+			const mark = document.createElement("mark");
+			mark.textContent = part;
+			head.append(mark);
+		});
+	}
 	head.style.fontSize = `${(+q.get("size") || 128) * u}px`;
 	head.style.marginTop = `${(+q.get("top") || 150) * u}px`;
 	head.style.maxWidth = `${W * 0.86}px`;
@@ -96,7 +109,9 @@
 		frame.style.borderRadius = `${(+q.get("radius") || 0.11) * shot.naturalWidth * scale}px`;
 		document.title = "ready";
 	};
-	shot.src = q.get("shot");
+	// Screenshots are local files; anything else is refused.
+	const shotUrl = new URL(q.get("shot") ?? "", location.href);
+	if (shotUrl.protocol === "file:") shot.src = shotUrl.href;
 </script>
 </body>
 </html>
