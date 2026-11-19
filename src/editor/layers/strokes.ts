@@ -41,26 +41,52 @@ const round = (value: number) => Math.round(value * 100) / 100;
 
 export type Extent = { minX: number; minY: number; maxX: number; maxY: number };
 
+/** The box around the line through `points`, padded by `pad` on each side. */
+export function lineBox(points: number[], pad: number): Extent {
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+	for (let i = 0; i < points.length; i += 2) {
+		minX = Math.min(minX, points[i]);
+		maxX = Math.max(maxX, points[i]);
+		minY = Math.min(minY, points[i + 1]);
+		maxY = Math.max(maxY, points[i + 1]);
+	}
+	return {
+		minX: minX - pad,
+		minY: minY - pad,
+		maxX: maxX + pad,
+		maxY: maxY + pad,
+	};
+}
+
+/** Whether two boxes share any point, edges included. */
+export function boxesOverlap(a: Extent, b: Extent): boolean {
+	return (
+		a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY
+	);
+}
+
 /**
  * What a layer's pen strokes cover in its own space, or null if it has
  * none. Erasing shrinks it only by removing whole strokes (`pruneErased`).
  */
 function penExtent(strokes: MaskStroke[]): Extent | null {
-	let minX = Infinity;
-	let minY = Infinity;
-	let maxX = -Infinity;
-	let maxY = -Infinity;
+	let extent: Extent | null = null;
 	for (const stroke of strokes) {
 		if (stroke.type !== "pen") continue;
-		const reach = stroke.width / 2;
-		for (let i = 0; i < stroke.points.length; i += 2) {
-			minX = Math.min(minX, stroke.points[i] - reach);
-			maxX = Math.max(maxX, stroke.points[i] + reach);
-			minY = Math.min(minY, stroke.points[i + 1] - reach);
-			maxY = Math.max(maxY, stroke.points[i + 1] + reach);
-		}
+		const box = lineBox(stroke.points, stroke.width / 2);
+		extent = extent
+			? {
+					minX: Math.min(extent.minX, box.minX),
+					minY: Math.min(extent.minY, box.minY),
+					maxX: Math.max(extent.maxX, box.maxX),
+					maxY: Math.max(extent.maxY, box.maxY),
+				}
+			: box;
 	}
-	return minX <= maxX ? { minX, minY, maxX, maxY } : null;
+	return extent;
 }
 
 // Hit-testing asks for a drawing's box on every pointer move over the
@@ -219,7 +245,8 @@ export function straightStroke(points: number[]): number[] {
  * Whether a line drawn through `points` (flattened x, y pairs in document
  * space) passes anywhere `test` says, in the layer's own space. It's checked
  * at steps no longer than `reach`, so a quick stroke, whose points land far
- * apart, can't skip over a thin line.
+ * apart, can't skip over a thin line. It stops at the first point `test`
+ * accepts. With `identityTransform`, it walks a line in a layer's own space.
  */
 export function segmentsNear(
 	points: number[],
@@ -246,9 +273,15 @@ export function segmentsNear(
 	return false;
 }
 
-// Whether an eraser from `strokes[from]` on clears the middle of the ink at
-// `point`.
-function erasedAt(strokes: MaskStroke[], from: number, point: Point): boolean {
+/**
+ * Whether an eraser from `strokes[from]` on clears the middle of the ink at
+ * `point`, in the layer's own space.
+ */
+export function erasedAt(
+	strokes: MaskStroke[],
+	from: number,
+	point: Point,
+): boolean {
 	"worklet";
 	for (let i = from; i < strokes.length; i++) {
 		const stroke = strokes[i];

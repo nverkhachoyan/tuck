@@ -6,12 +6,15 @@ import {
 	withLayers,
 } from "../../document/document.ts";
 import { type Point, toLayerSpace } from "../../document/geometry.ts";
-import { createLayerId } from "../base.ts";
+import { createLayerId, identityTransform } from "../base.ts";
 import type { Layer } from "../layer.ts";
 import { erasesShape } from "../shape/shapeGeometry.ts";
 import {
 	addStroke,
+	boxesOverlap,
 	drawingBox,
+	erasedAt,
+	lineBox,
 	nearLine,
 	recenterDrawing,
 	segmentsNear,
@@ -62,27 +65,21 @@ function missesBox(
 	points: number[],
 	reach: number,
 ): boolean {
-	const box = drawingBox(layer);
-	let minX = Infinity;
-	let minY = Infinity;
-	let maxX = -Infinity;
-	let maxY = -Infinity;
+	const { halfWidth, halfHeight } = drawingBox(layer);
+	const local: number[] = [];
 	for (let i = 0; i < points.length; i += 2) {
-		const local = toLayerSpace(layer.transform, {
+		const { x, y } = toLayerSpace(layer.transform, {
 			x: points[i],
 			y: points[i + 1],
 		});
-		minX = Math.min(minX, local.x);
-		maxX = Math.max(maxX, local.x);
-		minY = Math.min(minY, local.y);
-		maxY = Math.max(maxY, local.y);
+		local.push(x, y);
 	}
-	return (
-		maxX < -box.halfWidth - reach ||
-		minX > box.halfWidth + reach ||
-		maxY < -box.halfHeight - reach ||
-		minY > box.halfHeight + reach
-	);
+	return !boxesOverlap(lineBox(local, 0), {
+		minX: -halfWidth - reach,
+		minY: -halfHeight - reach,
+		maxX: halfWidth + reach,
+		maxY: halfHeight + reach,
+	});
 }
 
 // Whether an eraser stroke in document space passes over any of a
@@ -242,63 +239,6 @@ function nearestOnLine(points: number[], point: Point): Point {
 	return best;
 }
 
-// Each point along a stroke's line, at steps no longer than `step`.
-function alongLine(
-	points: number[],
-	step: number,
-	visit: (point: Point) => boolean,
-): boolean {
-	if (visit({ x: points[0], y: points[1] })) return true;
-	for (let i = 2; i < points.length; i += 2) {
-		const fromX = points[i - 2];
-		const fromY = points[i - 1];
-		const dx = points[i] - fromX;
-		const dy = points[i + 1] - fromY;
-		const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / step));
-		for (let s = 1; s <= steps; s++) {
-			if (visit({ x: fromX + (dx * s) / steps, y: fromY + (dy * s) / steps })) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-// Whether an eraser after `strokes[index]` clears the middle of the ink at
-// `point`.
-function erasedAfter(strokes: Stroke[], index: number, point: Point): boolean {
-	for (let i = index + 1; i < strokes.length; i++) {
-		const stroke = strokes[i];
-		if (
-			stroke.type === "eraser" &&
-			nearLine(stroke.points, point, stroke.width / 2)
-		) {
-			return true;
-		}
-	}
-	return false;
-}
-
-// The box around a stroke's line, padded by `pad`.
-function strokeBounds(points: number[], pad: number) {
-	let minX = Number.POSITIVE_INFINITY;
-	let minY = Number.POSITIVE_INFINITY;
-	let maxX = Number.NEGATIVE_INFINITY;
-	let maxY = Number.NEGATIVE_INFINITY;
-	for (let i = 0; i < points.length; i += 2) {
-		minX = Math.min(minX, points[i]);
-		maxX = Math.max(maxX, points[i]);
-		minY = Math.min(minY, points[i + 1]);
-		maxY = Math.max(maxY, points[i + 1]);
-	}
-	return {
-		minX: minX - pad,
-		minY: minY - pad,
-		maxX: maxX + pad,
-		maxY: maxY + pad,
-	};
-}
-
 // Whether two pen strokes' visible ink meets somewhere no later eraser
 // cleared: sampled along `a` at a quarter of its width, against the nearest
 // point on `b`.
@@ -306,20 +246,19 @@ function inkTouches(strokes: Stroke[], a: number, b: number): boolean {
 	const first = strokes[a];
 	const second = strokes[b];
 	const reach = visibleReach(first) + visibleReach(second);
-	const boxA = strokeBounds(first.points, visibleReach(first));
-	const boxB = strokeBounds(second.points, visibleReach(second));
 	if (
-		boxA.maxX < boxB.minX ||
-		boxB.maxX < boxA.minX ||
-		boxA.maxY < boxB.minY ||
-		boxB.maxY < boxA.minY
+		!boxesOverlap(
+			lineBox(first.points, visibleReach(first)),
+			lineBox(second.points, visibleReach(second)),
+		)
 	) {
 		return false;
 	}
-	return alongLine(first.points, Math.max(first.width / 4, 0.5), (point) => {
+	const step = Math.max(first.width / 4, 0.5);
+	return segmentsNear(first.points, identityTransform, step, (point) => {
 		const near = nearestOnLine(second.points, point);
 		if (Math.hypot(near.x - point.x, near.y - point.y) > reach) return false;
-		return !erasedAfter(strokes, a, point) && !erasedAfter(strokes, b, near);
+		return !erasedAt(strokes, a + 1, point) && !erasedAt(strokes, b + 1, near);
 	});
 }
 
@@ -370,7 +309,8 @@ function erases(strokes: Stroke[], eraser: number, pen: number): boolean {
 	if (pen > eraser) return false;
 	const { points, width } = strokes[eraser];
 	const reach = width / 2 + visibleReach(strokes[pen]);
-	return alongLine(points, Math.max(width / 4, 0.5), (point) =>
+	const step = Math.max(width / 4, 0.5);
+	return segmentsNear(points, identityTransform, step, (point) =>
 		nearLine(strokes[pen].points, point, reach),
 	);
 }
