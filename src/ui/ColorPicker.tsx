@@ -40,32 +40,18 @@ export function ColorPicker({
 	onChangeEnd: (color: string) => void;
 	onEyedropper?: () => void;
 }) {
-	const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? RED);
-	const [lastValue, setLastValue] = useState(value);
-	if (value !== lastValue) {
-		setLastValue(value);
-		if (value !== hsvToHex(hsv)) setHsv(hexToHsv(value, hsv.hue) ?? hsv);
-	}
-
-	const latest = useRef(hsv);
-	latest.current = hsv;
-	const change = (next: Hsv) => {
-		latest.current = next;
-		setHsv(next);
-		onChange?.(hsvToHex(next));
-	};
-	const end = () => onChangeEnd(hsvToHex(latest.current));
+	const { hsv, latest, change, end, nudge } = useHsvColor(
+		value,
+		onChange,
+		onChangeEnd,
+	);
 	const field = useNormalizedDrag(
 		(x, y) => change({ ...latest.current, saturation: x, value: 1 - y }),
 		end,
 	);
 
-	const adjustHue = (event: AccessibilityActionEvent) => {
-		const step = event.nativeEvent.actionName === "increment" ? 1 : -1;
-		const hue = Math.min(360, Math.max(0, hsv.hue + step * HUE_STEP));
-		change({ ...hsv, hue });
-		onChangeEnd(hsvToHex({ ...hsv, hue }));
-	};
+	const adjustHue = (event: AccessibilityActionEvent) =>
+		nudge({ ...hsv, hue: clampHue(hsv.hue + stepOf(event) * HUE_STEP) });
 	const pickTyped = (hex: string) => {
 		const next = hexToHsv(hex, hsv.hue);
 		if (!next) return;
@@ -117,6 +103,7 @@ export function ColorPicker({
 					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
 					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
 					onAccessibilityAction={adjustHue}
+					style={styles.grow}
 				/>
 				{Platform.OS === "web" && <HexField color={color} onPick={pickTyped} />}
 			</View>
@@ -221,6 +208,51 @@ function HexField({
 const RED: Hsv = { hue: 0, saturation: 1, value: 1 };
 
 /**
+ * The HSV state behind a custom color control, kept in step with `value`.
+ * - `hsv`: what the controls show; a gray from `value` keeps the last hue.
+ * - `latest`: the newest color, for gesture callbacks between renders.
+ * - `change`: shows a color and reports it to `onChange`.
+ * - `end`: commits the newest color to `onChangeEnd`.
+ * - `nudge`: changes and commits at once, for accessibility steps.
+ */
+export function useHsvColor(
+	value: string,
+	onChange: ((color: string) => void) | undefined,
+	onChangeEnd: (color: string) => void,
+) {
+	const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? RED);
+	const [lastValue, setLastValue] = useState(value);
+	if (value !== lastValue) {
+		setLastValue(value);
+		if (value !== hsvToHex(hsv)) setHsv(hexToHsv(value, hsv.hue) ?? hsv);
+	}
+
+	const latest = useRef(hsv);
+	latest.current = hsv;
+	const change = (next: Hsv) => {
+		latest.current = next;
+		setHsv(next);
+		onChange?.(hsvToHex(next));
+	};
+	const end = () => onChangeEnd(hsvToHex(latest.current));
+	const nudge = (next: Hsv) => {
+		change(next);
+		end();
+	};
+	return { hsv, latest, change, end, nudge };
+}
+
+/** +1 for an increment accessibility action, -1 for a decrement. */
+export function stepOf(event: AccessibilityActionEvent): 1 | -1 {
+	return event.nativeEvent.actionName === "increment" ? 1 : -1;
+}
+
+/** Keeps a hue within 0 to 360 degrees. */
+export function clampHue(hue: number): number {
+	return Math.min(360, Math.max(0, hue));
+}
+
+/**
  * Reports finger location across a view from (0, 0) to (1, 1).
  * Runs on the JS thread and commits on pan finalize.
  */
@@ -282,8 +314,9 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 16,
 	},
+	// No flex here: in a column sized by its content (the text panel's
+	// sliders), flex collapses a bar to zero height.
 	bar: {
-		flex: 1,
 		height: BAR_HEIGHT,
 		borderRadius: BAR_HEIGHT / 2,
 	},
@@ -297,6 +330,9 @@ const styles = StyleSheet.create({
 		color: colors.textPrimary,
 		fontVariant: ["tabular-nums"],
 		textAlign: "center",
+	},
+	grow: {
+		flex: 1,
 	},
 	hues: gradientBackground(HUE_GRADIENT),
 	thumb: {
