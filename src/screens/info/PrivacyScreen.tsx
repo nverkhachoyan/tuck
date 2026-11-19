@@ -38,6 +38,11 @@ export default function PrivacyScreen() {
 				<Item>
 					When you save, copy, or share an edit, it goes only where you send it.
 				</Item>
+				<Item>
+					What you save, copy, or share leaves out the original photo's location
+					and camera details. Tuck re-encodes each photo as you open it, and
+					exports only the pixels you see.
+				</Item>
 				<Paragraph>
 					To delete them, delete your projects in Tuck, or remove the app. On
 					the web, clearing the site data for tuck.tools deletes everything.
