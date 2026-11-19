@@ -48,6 +48,10 @@ export type LayerRowActions = {
 	onDelete: (id: string) => void;
 };
 
+/**
+ * A row in the flat list, absolutely placed in its slot and dragged by its
+ * handle to reorder.
+ */
 export function LayerRow({
 	layer,
 	slot,
@@ -57,12 +61,8 @@ export function LayerRow({
 	scrollGesture,
 	selected,
 	compact,
-	onSelect,
 	onMove,
-	onSetHidden,
-	onSetLocked,
-	onDelete,
-	staticRow = false,
+	...actions
 }: {
 	layer: Layer;
 	slot: number;
@@ -72,10 +72,8 @@ export function LayerRow({
 	scrollGesture: NativeGesture | null;
 	selected: boolean;
 	compact: boolean;
-	/** A group-expanded list keeps its rows in normal flow, not drag slots. */
-	staticRow?: boolean;
 } & LayerRowActions) {
-	const { id, hidden, locked } = layer;
+	const { id } = layer;
 	const label = layerLabel(layer);
 	const startSlot = useSharedValue(0);
 	const dragTop = useSharedValue(0);
@@ -148,15 +146,92 @@ export function LayerRow({
 		<Animated.View
 			style={[
 				styles.row,
-				!staticRow && styles.stackedRow,
+				styles.stackedRow,
 				selected && styles.rowSelected,
-				!staticRow && position,
+				position,
 			]}
 			onPointerEnter={(event) => {
 				if (event.nativeEvent.pointerType === "mouse") setHovered(true);
 			}}
 			onPointerLeave={() => setHovered(false)}
 		>
+			<LayerRowBody
+				layer={layer}
+				label={label}
+				selected={selected}
+				compact={compact}
+				onMove={move}
+				{...actions}
+			/>
+			<GestureDetector gesture={pan}>
+				<View
+					style={[
+						styles.trailing,
+						compact && styles.compactTrailing,
+						handleCursor,
+					]}
+					accessibilityLabel={`Reorder ${label}`}
+				>
+					<Ionicons
+						name="reorder-three-outline"
+						size={24}
+						color={colors.textSecondary}
+					/>
+				</View>
+			</GestureDetector>
+		</Animated.View>
+	);
+}
+
+/**
+ * A row in the grouped list, in normal flow, which can't be reordered: no
+ * handle, drag state, or move actions.
+ */
+export function StaticLayerRow({
+	layer,
+	selected,
+	compact,
+	...actions
+}: {
+	layer: Layer;
+	selected: boolean;
+	compact: boolean;
+} & Omit<LayerRowActions, "onMove">) {
+	return (
+		<View style={[styles.row, selected && styles.rowSelected]}>
+			<LayerRowBody
+				layer={layer}
+				label={layerLabel(layer)}
+				selected={selected}
+				compact={compact}
+				{...actions}
+			/>
+		</View>
+	);
+}
+
+// The row's selectable label and its show, lock, and delete buttons.
+function LayerRowBody({
+	layer,
+	label,
+	selected,
+	compact,
+	onSelect,
+	onSetHidden,
+	onSetLocked,
+	onDelete,
+	onMove,
+}: {
+	layer: Layer;
+	label: string;
+	selected: boolean;
+	compact: boolean;
+	/** Offers "Move up" and "Move down" to assistive technology. */
+	onMove?: (event: AccessibilityActionEvent) => void;
+} & Omit<LayerRowActions, "onMove">) {
+	const { id, hidden, locked } = layer;
+	return (
+		<>
 			<Pressable
 				style={[styles.main, hidden && styles.dimmed]}
 				disabled={hidden || locked}
@@ -165,11 +240,8 @@ export function LayerRow({
 				accessibilityLabel={label}
 				accessibilityState={{ selected, disabled: hidden || locked }}
 				{...chosenOnWeb(selected)}
-				accessibilityActions={[
-					{ name: "moveUp", label: "Move up" },
-					{ name: "moveDown", label: "Move down" },
-				]}
-				onAccessibilityAction={move}
+				accessibilityActions={onMove ? MOVE_ACTIONS : undefined}
+				onAccessibilityAction={onMove}
 			>
 				<LayerThumbnail layer={layer} />
 				<Text style={styles.label} numberOfLines={1}>
@@ -193,27 +265,14 @@ export function LayerRow({
 					onPress={() => onDelete(id)}
 				/>
 			</View>
-			{staticRow ? null : (
-				<GestureDetector gesture={pan}>
-					<View
-						style={[
-							styles.trailing,
-							compact && styles.compactTrailing,
-							handleCursor,
-						]}
-						accessibilityLabel={`Reorder ${label}`}
-					>
-						<Ionicons
-							name="reorder-three-outline"
-							size={24}
-							color={colors.textSecondary}
-						/>
-					</View>
-				</GestureDetector>
-			)}
-		</Animated.View>
+		</>
 	);
 }
+
+const MOVE_ACTIONS = [
+	{ name: "moveUp", label: "Move up" },
+	{ name: "moveDown", label: "Move down" },
+];
 
 function LayerThumbnail({ layer }: { layer: Layer }) {
 	switch (layer.type) {

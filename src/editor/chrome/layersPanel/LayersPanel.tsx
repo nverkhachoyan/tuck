@@ -29,7 +29,12 @@ import { colors, radii, typography } from "@/ui/theme";
 import type { EditorDocument, LayerGroup } from "../../document/document";
 import type { Layer } from "../../layers/layer";
 import type { EditorStoreActions } from "../../store/editorSlice";
-import { LayerRow, type LayerRowActions, ROW_HEIGHT } from "./LayerRow";
+import {
+	LayerRow,
+	type LayerRowActions,
+	ROW_HEIGHT,
+	StaticLayerRow,
+} from "./LayerRow";
 import { layerListEntries } from "./layerListEntries";
 
 const SIDEBAR_WIDTH = 340;
@@ -324,27 +329,6 @@ function BackgroundRow({
 			<Text style={styles.label}>Background</Text>
 			<BackgroundPicker value={value} onPick={onPick} />
 		</View>
-	);
-}
-
-function StaticLayerRow(
-	props: Omit<
-		Parameters<typeof LayerRow>[0],
-		"slot" | "count" | "order" | "dragId" | "scrollGesture" | "staticRow"
-	>,
-) {
-	const order = useSharedValue<string[]>([]);
-	const dragId = useSharedValue<string | null>(null);
-	return (
-		<LayerRow
-			{...props}
-			slot={0}
-			count={1}
-			order={order}
-			dragId={dragId}
-			scrollGesture={null}
-			staticRow
-		/>
 	);
 }
 
