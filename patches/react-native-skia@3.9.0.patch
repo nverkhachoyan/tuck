@@ -1,0 +1,412 @@
+diff --git a/lib/module/skia/web/SharedWebGLContext.d.ts b/lib/module/skia/web/SharedWebGLContext.d.ts
+index cae7e2d8d4f6c690dc2453bf05829a26355c103c..337c3bad8fd8c63c2bf2d9441834a20096c9173c 100644
+--- a/lib/module/skia/web/SharedWebGLContext.d.ts
++++ b/lib/module/skia/web/SharedWebGLContext.d.ts
+@@ -33,7 +33,7 @@ export declare class SharedWebGLContext {
+      * bottom-left corner. The buffer holds one frame at a time: draw, flush,
+      * then present() it before the next draw.
+      */
+-    acquireScreen(width: number, height: number): JsiSkSurface | null;
++    acquireScreen(width: number, height: number, colorSpace?: PredefinedColorSpace): JsiSkSurface | null;
+     /**
+      * Copies the frame just drawn on a surface of that size onto a view's
+      * element.
+diff --git a/lib/module/skia/web/SharedWebGLContext.js b/lib/module/skia/web/SharedWebGLContext.js
+index 0029b0d5e418a02d057c8e2a94498e0a57801dd3..68fcdd0dc161f13be643a54e1fb168f0b95428d4 100644
+--- a/lib/module/skia/web/SharedWebGLContext.js
++++ b/lib/module/skia/web/SharedWebGLContext.js
+@@ -78,6 +78,9 @@ export class SharedWebGLContext {
+     // Counts the GrDirectContexts built so far: a surface built on an earlier
+     // one is dead.
+     _defineProperty(this, "generation", 0);
++    // How the browser reads the drawing buffer's values: the color space of
++    // the view drawn last (see acquireScreen()).
++    _defineProperty(this, "colorSpace", "display-p3");
+     // The surfaces wrapping the drawing buffer, by "width x height", oldest
+     // first.
+     _defineProperty(this, "screens", new Map());
+@@ -133,10 +136,10 @@ export class SharedWebGLContext {
+     this.handle = handle;
+     this.grContext = grContext;
+     this.generation++;
+-    // Wide gamut where the display has it. Surfaces stay tagged sRGB, so
+-    // their colors land in the buffer as they are and the display shows its
+-    // own primaries for them.
+-    this.gl.drawingBufferColorSpace = "display-p3";
++    // Surfaces stay tagged sRGB, so their colors land in the buffer as they
++    // are; the buffer's tag says how the browser reads them (see
++    // acquireScreen()).
++    this.gl.drawingBufferColorSpace = this.colorSpace;
+   }
+ 
+   // Frees everything built on the context. The GL objects are already gone
+@@ -179,7 +182,7 @@ export class SharedWebGLContext {
+    * bottom-left corner. The buffer holds one frame at a time: draw, flush,
+    * then present() it before the next draw.
+    */
+-  acquireScreen(width, height) {
++  acquireScreen(width, height, colorSpace = "display-p3") {
+     const grContext = this.getGrContext();
+     if (!grContext) {
+       return null;
+@@ -188,6 +191,12 @@ export class SharedWebGLContext {
+       canvas,
+       screens
+     } = this;
++    if (colorSpace !== this.colorSpace) {
++      // Retagging may reallocate the buffer: the surfaces on it are rebuilt.
++      this.deleteScreens();
++      this.colorSpace = colorSpace;
++      this.gl.drawingBufferColorSpace = colorSpace;
++    }
+     if (canvas.width < width || canvas.height < height) {
+       // Sizing the canvas reallocates the buffer: the surfaces on it are
+       // rebuilt.
+diff --git a/lib/module/specs/SkiaViewNativeComponent.web.js b/lib/module/specs/SkiaViewNativeComponent.web.js
+index eb5be9797a7ac5385cae74f48016a45c9a493635..f8e2f2424184b135d9bb43a503dec536eb074acc 100644
+--- a/lib/module/specs/SkiaViewNativeComponent.web.js
++++ b/lib/module/specs/SkiaViewNativeComponent.web.js
+@@ -5,7 +5,7 @@ const SkiaViewNativeComponent = ({
+   onLayout,
+   // Surface settings, never reach the DOM
+   highBitDepth: _highBitDepth,
+-  colorSpace: _colorSpace,
++  colorSpace,
+   androidBackingView: _androidBackingView,
+   androidOpaque: _androidOpaque,
+   androidZOrderOnTop: _androidZOrderOnTop,
+@@ -15,6 +15,7 @@ const SkiaViewNativeComponent = ({
+   return /*#__PURE__*/createElement(SkiaView, {
+     nativeID,
+     onLayout,
++    colorSpace: colorSpace === "srgb" ? "srgb" : undefined,
+     ...viewProps
+   });
+ };
+diff --git a/lib/module/views/SkiaView.web.js b/lib/module/views/SkiaView.web.js
+index f6b12585a3cae07d00ed972b36840fd29b8ff15d..e2b377c2403404e7ce678a972ebb0176bc4631f5 100644
+--- a/lib/module/views/SkiaView.web.js
++++ b/lib/module/views/SkiaView.web.js
+@@ -104,6 +104,7 @@ export const SkiaView = props => {
+     ref,
+     onLayout
+   } = props;
++  const colorSpace = props.colorSpace === "srgb" ? "srgb" : "display-p3";
+   const canvasRef = useRef(null);
+   // The picture of a <Canvas>: a whole frame.
+   const pictureRef = useRef(null);
+@@ -146,7 +147,7 @@ export const SkiaView = props => {
+   const rendererRef = useSkiaWebRenderer(canvasRef, {
+     paint,
+     onLayout
+-  });
++  }, colorSpace);
+ 
+   // Draws are flushed from a microtask rather than an animation frame: the
+   // browser composites once per frame either way, and painting right away
+@@ -271,6 +272,7 @@ export const SkiaView = props => {
+     ref: _ref,
+     onLayout: _onLayout,
+     nativeID: _nativeID,
++    colorSpace: _colorSpace,
+     // Deprecated, kept out of the DOM.
+     // eslint-disable-next-line @typescript-eslint/no-deprecated
+     __destroyWebGLContextAfterRender: _destroyWebGLContextAfterRender,
+@@ -279,6 +281,7 @@ export const SkiaView = props => {
+   return /*#__PURE__*/React.createElement(Platform.View, _extends({
+     nativeID: `${nativeId}`
+   }, viewProps), /*#__PURE__*/React.createElement("canvas", {
++    key: colorSpace,
+     ref: canvasRef,
+     style: {
+       display: "block",
+diff --git a/lib/module/views/SkiaWebRenderer.js b/lib/module/views/SkiaWebRenderer.js
+index 2e2ef8dccf81c4d522ddc6a87da5278336715824..ad8249a466755d39a1baa14db417a8e2849d917b 100644
+--- a/lib/module/views/SkiaWebRenderer.js
++++ b/lib/module/views/SkiaWebRenderer.js
+@@ -32,8 +32,12 @@ export class WebGLRenderer {
+   constructor(canvas,
+   // Called when the renderer becomes able to paint again and the current
+   // frame should be drawn.
+-  requestRedraw) {
++  requestRedraw,
++  // The <Canvas> colorSpace prop: "srgb" shows the frame's sRGB values as
++  // sRGB, anything else in the display's primaries.
++  colorSpace = "display-p3") {
+     this.canvas = canvas;
++    this.colorSpace = colorSpace;
+     _defineProperty(this, "shared", void 0);
+     _defineProperty(this, "ctx", void 0);
+     _defineProperty(this, "unsubscribe", void 0);
+@@ -46,11 +50,13 @@ export class WebGLRenderer {
+       throw new Error("Could not create a WebGL context");
+     }
+     this.shared = shared;
+-    // Wide gamut, like the shared drawing buffer the frame comes from (see
+-    // SharedWebGLContext); ignored where unsupported, which then converts
+-    // the frame to sRGB.
++    // Tagged like the shared drawing buffer the frame comes from (see
++    // SharedWebGLContext.acquireScreen()), so the copy keeps its values.
++    // Display P3 is ignored where unsupported, which converts the frame to
++    // sRGB. An element keeps the context it was first given: SkiaView makes
++    // a new <canvas> when the color space changes.
+     const ctx = canvas.getContext("2d", {
+-      colorSpace: "display-p3"
++      colorSpace
+     });
+     if (!ctx) {
+       throw new Error("Could not create a 2D context");
+@@ -91,7 +97,11 @@ export class WebGLRenderer {
+     if (width === 0 || height === 0) {
+       return null;
+     }
+-    const surface = this.shared.acquireScreen(width, height);
++    const surface = this.shared.acquireScreen(
++      width,
++      height,
++      this.colorSpace
++    );
+     if (!surface) {
+       return null;
+     }
+@@ -194,7 +204,7 @@ export const makeLayoutEvent = (x, y, width, height) => ({
+  *   holds nothing a renderer has to take over: a new renderer just sizes it
+  *   and paints.
+  */
+-export const useSkiaWebRenderer = (canvasRef, host) => {
++export const useSkiaWebRenderer = (canvasRef, host, colorSpace = "display-p3") => {
+   const rendererRef = useRef(null);
+   const hostRef = useRef(host);
+   useLayoutEffect(() => {
+@@ -205,7 +215,7 @@ export const useSkiaWebRenderer = (canvasRef, host) => {
+     if (!canvas) {
+       return undefined;
+     }
+-    const renderer = new WebGLRenderer(canvas, () => hostRef.current.paint(renderer));
++    const renderer = new WebGLRenderer(canvas, () => hostRef.current.paint(renderer), colorSpace);
+     rendererRef.current = renderer;
+     const paint = () => hostRef.current.paint(renderer);
+ 
+@@ -279,7 +289,7 @@ export const useSkiaWebRenderer = (canvasRef, host) => {
+       rendererRef.current = null;
+       renderer.dispose();
+     };
+-  }, [canvasRef]);
++  }, [canvasRef, colorSpace]);
+   return rendererRef;
+ };
+ //# sourceMappingURL=SkiaWebRenderer.js.map
+\ No newline at end of file
+diff --git a/src/skia/web/SharedWebGLContext.ts b/src/skia/web/SharedWebGLContext.ts
+index d078c7c2835bc33ce11317dd807c443f8ca2f1e6..61468e049c839990350a7786c0af5f2f33a07bb4 100644
+--- a/src/skia/web/SharedWebGLContext.ts
++++ b/src/skia/web/SharedWebGLContext.ts
+@@ -86,6 +86,9 @@ export class SharedWebGLContext {
+   // Counts the GrDirectContexts built so far: a surface built on an earlier
+   // one is dead.
+   private generation = 0;
++  // How the browser reads the drawing buffer's values: the color space of
++  // the view drawn last (see acquireScreen()).
++  private colorSpace: PredefinedColorSpace = "display-p3";
+   // The surfaces wrapping the drawing buffer, by "width x height", oldest
+   // first.
+   private readonly screens = new Map<string, JsiSkSurface>();
+@@ -147,10 +150,10 @@ export class SharedWebGLContext {
+     this.handle = handle;
+     this.grContext = grContext;
+     this.generation++;
+-    // Wide gamut where the display has it. Surfaces stay tagged sRGB, so
+-    // their colors land in the buffer as they are and the display shows its
+-    // own primaries for them.
+-    this.gl.drawingBufferColorSpace = "display-p3";
++    // Surfaces stay tagged sRGB, so their colors land in the buffer as they
++    // are; the buffer's tag says how the browser reads them (see
++    // acquireScreen()).
++    this.gl.drawingBufferColorSpace = this.colorSpace;
+   }
+ 
+   // Frees everything built on the context. The GL objects are already gone
+@@ -193,13 +196,28 @@ export class SharedWebGLContext {
+    * A surface of the given size on the canvas's drawing buffer, in its
+    * bottom-left corner. The buffer holds one frame at a time: draw, flush,
+    * then present() it before the next draw.
++   *
++   * The buffer is tagged with the view's color space, so its sRGB values
++   * reach a view's 2D context unconverted: "srgb" shows them as they are,
++   * "display-p3" in the display's own primaries (more saturated, as a
++   * native canvas shows them by default).
+    */
+-  acquireScreen(width: number, height: number): JsiSkSurface | null {
++  acquireScreen(
++    width: number,
++    height: number,
++    colorSpace: PredefinedColorSpace = "display-p3"
++  ): JsiSkSurface | null {
+     const grContext = this.getGrContext();
+     if (!grContext) {
+       return null;
+     }
+     const { canvas, screens } = this;
++    if (colorSpace !== this.colorSpace) {
++      // Retagging may reallocate the buffer: the surfaces on it are rebuilt.
++      this.deleteScreens();
++      this.colorSpace = colorSpace;
++      this.gl.drawingBufferColorSpace = colorSpace;
++    }
+     if (canvas.width < width || canvas.height < height) {
+       // Sizing the canvas reallocates the buffer: the surfaces on it are
+       // rebuilt.
+diff --git a/src/specs/SkiaViewNativeComponent.web.ts b/src/specs/SkiaViewNativeComponent.web.ts
+index 1cb853963433b6225314f66d599a07c0918835ea..a0e87616507908a650c92d71e4c56787c8a0f215 100644
+--- a/src/specs/SkiaViewNativeComponent.web.ts
++++ b/src/specs/SkiaViewNativeComponent.web.ts
+@@ -18,7 +18,7 @@ const SkiaViewNativeComponent = ({
+   onLayout,
+   // Surface settings, never reach the DOM
+   highBitDepth: _highBitDepth,
+-  colorSpace: _colorSpace,
++  colorSpace,
+   androidBackingView: _androidBackingView,
+   androidOpaque: _androidOpaque,
+   androidZOrderOnTop: _androidZOrderOnTop,
+@@ -28,6 +28,7 @@ const SkiaViewNativeComponent = ({
+   return createElement(SkiaView, {
+     nativeID,
+     onLayout,
++    colorSpace: colorSpace === "srgb" ? "srgb" : undefined,
+     ...viewProps,
+   });
+ };
+diff --git a/src/views/SkiaView.web.tsx b/src/views/SkiaView.web.tsx
+index cdd0920e75647c6d2208d0afee1287462641008c..8b0a1637ec882343b5ff77badc0630b6834f0108 100644
+--- a/src/views/SkiaView.web.tsx
++++ b/src/views/SkiaView.web.tsx
+@@ -38,6 +38,8 @@ export type SkiaViewHandle = SkiaWebViewHandle;
+ 
+ export interface SkiaViewProps extends ViewProps {
+   ref?: React.Ref<SkiaViewHandle>;
++  /** "srgb" shows colors as sRGB; anything else in the display's primaries. */
++  colorSpace?: PredefinedColorSpace;
+   /** @deprecated Does nothing: every view shares one WebGL context. */
+   __destroyWebGLContextAfterRender?: boolean;
+ }
+@@ -144,6 +146,7 @@ class WebGraphiteContext implements SkGraphiteContext {
+ 
+ export const SkiaView = (props: SkiaViewProps) => {
+   const { ref, onLayout } = props;
++  const colorSpace = props.colorSpace === "srgb" ? "srgb" : "display-p3";
+   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+   // The picture of a <Canvas>: a whole frame.
+   const pictureRef = useRef<SkPicture | null>(null);
+@@ -192,10 +195,14 @@ export const SkiaView = (props: SkiaViewProps) => {
+     },
+     [present]
+   );
+-  const rendererRef = useSkiaWebRenderer(canvasRef, {
+-    paint,
+-    onLayout,
+-  });
++  const rendererRef = useSkiaWebRenderer(
++    canvasRef,
++    {
++      paint,
++      onLayout,
++    },
++    colorSpace
++  );
+ 
+   // Draws are flushed from a microtask rather than an animation frame: the
+   // browser composites once per frame either way, and painting right away
+@@ -385,6 +392,7 @@ export const SkiaView = (props: SkiaViewProps) => {
+     ref: _ref,
+     onLayout: _onLayout,
+     nativeID: _nativeID,
++    colorSpace: _colorSpace,
+     // Deprecated, kept out of the DOM.
+     // eslint-disable-next-line @typescript-eslint/no-deprecated
+     __destroyWebGLContextAfterRender: _destroyWebGLContextAfterRender,
+@@ -393,6 +401,7 @@ export const SkiaView = (props: SkiaViewProps) => {
+   return (
+     <Platform.View nativeID={`${nativeId}`} {...viewProps}>
+       <canvas
++        key={colorSpace}
+         ref={canvasRef}
+         style={{ display: "block", width: "100%", height: "100%" }}
+       />
+diff --git a/src/views/SkiaWebRenderer.ts b/src/views/SkiaWebRenderer.ts
+index ea9cc4f0c7dabaeffcfe3539a1125355103aa2c8..db1defc3a911be175a87480fcceb239f0909fd18 100644
+--- a/src/views/SkiaWebRenderer.ts
++++ b/src/views/SkiaWebRenderer.ts
+@@ -56,17 +56,22 @@ export class WebGLRenderer implements Renderer {
+     private canvas: HTMLCanvasElement,
+     // Called when the renderer becomes able to paint again and the current
+     // frame should be drawn.
+-    requestRedraw: () => void
++    requestRedraw: () => void,
++    // The <Canvas> colorSpace prop: "srgb" shows the frame's sRGB values as
++    // sRGB, anything else in the display's primaries.
++    private colorSpace: PredefinedColorSpace = "display-p3"
+   ) {
+     const shared = getSharedWebGLContext(CanvasKit);
+     if (!shared) {
+       throw new Error("Could not create a WebGL context");
+     }
+     this.shared = shared;
+-    // Wide gamut, like the shared drawing buffer the frame comes from (see
+-    // SharedWebGLContext); ignored where unsupported, which then converts
+-    // the frame to sRGB.
+-    const ctx = canvas.getContext("2d", { colorSpace: "display-p3" });
++    // Tagged like the shared drawing buffer the frame comes from (see
++    // SharedWebGLContext.acquireScreen()), so the copy keeps its values.
++    // Display P3 is ignored where unsupported, which converts the frame to
++    // sRGB. An element keeps the context it was first given: SkiaView makes
++    // a new <canvas> when the color space changes.
++    const ctx = canvas.getContext("2d", { colorSpace });
+     if (!ctx) {
+       throw new Error("Could not create a 2D context");
+     }
+@@ -101,7 +106,11 @@ export class WebGLRenderer implements Renderer {
+     if (width === 0 || height === 0) {
+       return null;
+     }
+-    const surface = this.shared.acquireScreen(width, height);
++    const surface = this.shared.acquireScreen(
++      width,
++      height,
++      this.colorSpace
++    );
+     if (!surface) {
+       return null;
+     }
+@@ -218,7 +227,8 @@ export interface WebRendererHost {
+  */
+ export const useSkiaWebRenderer = (
+   canvasRef: RefObject<HTMLCanvasElement | null>,
+-  host: WebRendererHost
++  host: WebRendererHost,
++  colorSpace: PredefinedColorSpace = "display-p3"
+ ): RefObject<Renderer | null> => {
+   const rendererRef = useRef<Renderer | null>(null);
+   const hostRef = useRef(host);
+@@ -231,8 +241,10 @@ export const useSkiaWebRenderer = (
+     if (!canvas) {
+       return undefined;
+     }
+-    const renderer: Renderer = new WebGLRenderer(canvas, () =>
+-      hostRef.current.paint(renderer)
++    const renderer: Renderer = new WebGLRenderer(
++      canvas,
++      () => hostRef.current.paint(renderer),
++      colorSpace
+     );
+     rendererRef.current = renderer;
+ 
+@@ -312,7 +324,7 @@ export const useSkiaWebRenderer = (
+       rendererRef.current = null;
+       renderer.dispose();
+     };
+-  }, [canvasRef]);
++  }, [canvasRef, colorSpace]);
+ 
+   return rendererRef;
+ };
