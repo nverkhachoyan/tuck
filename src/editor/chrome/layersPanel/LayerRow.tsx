@@ -197,8 +197,21 @@ export function StaticLayerRow({
 	selected: boolean;
 	compact: boolean;
 } & Omit<LayerRowActions, "onMove">) {
+	// A mouse over the row, on web.
+	const [hovered, setHovered] = useState(false);
 	return (
-		<View style={[styles.row, selected && styles.rowSelected]}>
+		<View
+			style={[
+				styles.row,
+				selected
+					? [styles.rowSelected, styles.rowSelectedFill]
+					: hovered && styles.rowHovered,
+			]}
+			onPointerEnter={(event) => {
+				if (event.nativeEvent.pointerType === "mouse") setHovered(true);
+			}}
+			onPointerLeave={() => setHovered(false)}
+		>
 			<LayerRowBody
 				layer={layer}
 				label={layerLabel(layer)}
@@ -383,6 +396,13 @@ const styles = StyleSheet.create({
 	},
 	rowSelected: {
 		borderColor: colors.selectionBorder,
+	},
+	// The draggable row animates these fills in its `position` style.
+	rowSelectedFill: {
+		backgroundColor: colors.selectionSoft,
+	},
+	rowHovered: {
+		backgroundColor: colors.hoverOverlay,
 	},
 	main: {
 		flex: 1,
