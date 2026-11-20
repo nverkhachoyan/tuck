@@ -1,3 +1,4 @@
+import { makeMutable } from "react-native-reanimated";
 import { assertNever } from "../document/assertNever";
 import type { EditorDocument } from "../document/document";
 import type { Layer } from "../layers/layer";
@@ -5,7 +6,7 @@ import { isLine } from "../layers/shape/shape";
 import { shapeOutline } from "../layers/shape/shapeGeometry";
 import type { MaskStroke } from "../layers/strokes";
 import type { ResizeMode } from "./handleGeometry";
-import { HIT_PADDING_PX, type LayerTarget } from "./hitTest";
+import { HIT_PADDING_PX, type LayerTarget, type Shared } from "./hitTest";
 import { layerBounds } from "./layerBounds";
 
 /**
@@ -26,7 +27,7 @@ export function layerTargets(
 				box: layerBounds(layer),
 				hitBox: layer.locked ? null : layerBounds(layer, hitPadding),
 				hitPadding,
-				strokes: layer.locked ? null : layerStrokes(layer),
+				strokes: layer.locked ? null : sharedStrokes(layer),
 				clipped: isClippedToCanvas(layer),
 				resizeMode: resizeMode(layer),
 				anchored: isAnchored(layer),
@@ -82,6 +83,27 @@ export function resizeMode(layer: Layer): ResizeMode {
 		default:
 			return assertNever(layer);
 	}
+}
+
+const shared = new WeakMap<object, Shared<unknown>>();
+
+/**
+ * `value` behind a reference the UI thread copies only once, however many
+ * times targets holding it are sent there. Strokes never change in place, so
+ * each array is shared as it's first seen.
+ */
+export function shareOnce<T extends object>(value: T): Shared<T> {
+	let handle = shared.get(value);
+	if (!handle) {
+		handle = makeMutable(value);
+		shared.set(value, handle);
+	}
+	return handle as Shared<T>;
+}
+
+function sharedStrokes(layer: Layer): Shared<MaskStroke[]> | null {
+	const strokes = layerStrokes(layer);
+	return strokes ? shareOnce(strokes) : null;
 }
 
 function layerStrokes(layer: Layer): MaskStroke[] | null {

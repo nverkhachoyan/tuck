@@ -36,7 +36,7 @@ function target(
 		box,
 		hitBox: options.locked ? null : box,
 		hitPadding: 0,
-		strokes: options.strokes ?? null,
+		strokes: options.strokes ? { value: options.strokes } : null,
 		clipped: false,
 		resizeMode: "none",
 		anchored: false,
