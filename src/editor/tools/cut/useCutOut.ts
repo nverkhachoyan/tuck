@@ -401,7 +401,7 @@ async function withMask<T>(
 /** The mask a pick leaves its image with, as a grayscale PNG's bytes. */
 function pickedMask({ masks, index, base, add }: Pick): Promise<Uint8Array> {
 	const picked = masks[index];
-	const mode = add ? "add" : "remove";
+	const mode = add ? "add" : "takeOut";
 	if (base === undefined) return combineMasks(null, picked, mode);
 	return withMask(base, (mask) => combineMasks(mask, picked, mode));
 }

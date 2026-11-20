@@ -34,10 +34,15 @@ private val MEAN = floatArrayOf(123.675f, 116.28f, 103.53f)
 // Masks whose areas are this close to a smaller one's add nothing to grow to.
 private const val SAME_AREA = 0.05
 
-// A logit's sigmoid as coverage from 0 to 255, looked up rather than worked
-// out for each of a mask's pixels, which takes most of a second: logits past
-// ±LOGIT_REACH are all but 0 or 255, and steps of 1/LOGIT_STEPS between are
-// at most a level apart.
+// How much steeper than its sigmoid a mask's coverage rises across its edge.
+// A box's mask can be unsure all through (logits under 3 inside), and at its
+// sigmoid an object taken out after being added left a ghost of itself.
+private const val SHARPNESS = 8f
+
+// A steepened logit's sigmoid as coverage from 0 to 255, looked up rather
+// than worked out for each of a mask's pixels, which takes most of a second:
+// steepened logits past ±LOGIT_REACH are all but 0 or 255, and steps of
+// 1/LOGIT_STEPS between are at most a level apart.
 private const val LOGIT_REACH = 8f
 private const val LOGIT_STEPS = 64
 private val COVERAGE = ByteArray((2 * LOGIT_REACH * LOGIT_STEPS).toInt() + 1) { index ->
@@ -110,13 +115,13 @@ internal class ObjectSelector(private val context: Context) {
 			// guess, which the others cover: a box, which says which object it
 			// means, gets that one alone, and a point the others.
 			for (index in if (box != null) 0 until 1 else 1 until count) {
-				// Their sigmoid, so edges stay soft.
+				// Their sigmoid, steepened, so edges stay soft.
 				val values = ByteArray(size)
 				var area = 0
 				for (i in 0 until size) {
 					val logit = logits[index * size + i]
 					if (logit > 0) area++
-					values[i] = COVERAGE[((logit.coerceIn(-LOGIT_REACH, LOGIT_REACH) + LOGIT_REACH) * LOGIT_STEPS).toInt()]
+					values[i] = COVERAGE[((SHARPNESS * logit).coerceIn(-LOGIT_REACH, LOGIT_REACH) + LOGIT_REACH) * LOGIT_STEPS).toInt()]
 				}
 				if (area > 0) masks.add(Triple(values, area, scores.get(index)))
 			}
