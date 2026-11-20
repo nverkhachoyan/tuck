@@ -22,14 +22,25 @@ const FLAT_MAX_SIDE = 2048;
 // units.
 const INVERT = [-1, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0];
 
+// A pick taken out of the selection takes out all of what it covers by at
+// least 1/TAKE_OUT_GAIN. Its own mask's partly covered pixels, where an
+// unsure object's edge winds through it, would otherwise stay half selected
+// after taking out what was just added.
+const TAKE_OUT_GAIN = 8;
+const TAKE_OUT = INVERT.map((value, i) =>
+	i % 5 < 3 ? value * TAKE_OUT_GAIN : value,
+);
+
 /**
- * Returns a grayscale PNG's bytes. Both masks cover the whole image, so the
- * result has the larger one's pixels, and the other is stretched to fit.
+ * `subject` added to `mask`, removed from it, or taken out as a pick is (see
+ * `TAKE_OUT_GAIN`), as a grayscale PNG's bytes. Both masks cover the whole
+ * image, so the result has the larger one's pixels, and the other is
+ * stretched to fit.
  */
 export async function combineMasks(
 	mask: SkImage | null,
 	subject: SkImage,
-	mode: "add" | "remove",
+	mode: "add" | "remove" | "takeOut",
 ): Promise<Uint8Array> {
 	const width = Math.max(mask?.width() ?? 0, subject.width());
 	const height = Math.max(mask?.height() ?? 0, subject.height());
@@ -44,7 +55,9 @@ export async function combineMasks(
 				fit="fill"
 				blendMode={mode === "add" ? "lighten" : "darken"}
 			>
-				{mode === "remove" && <SkiaColorMatrix matrix={INVERT} />}
+				{mode !== "add" && (
+					<SkiaColorMatrix matrix={mode === "remove" ? INVERT : TAKE_OUT} />
+				)}
 			</SkiaImage>
 		</Group>,
 		{ width, height },

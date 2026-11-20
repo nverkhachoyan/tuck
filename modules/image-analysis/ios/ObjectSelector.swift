@@ -17,6 +17,11 @@ final class ObjectSelector {
 	private static let mean: [Float] = [123.675, 116.28, 103.53]
 	/// Masks whose areas are this close to a smaller one's add nothing to grow to.
 	private static let sameArea = 0.05
+	/// How much steeper than its sigmoid a mask's coverage rises across its
+	/// edge. A box's mask can be unsure all through (logits under 3 inside),
+	/// and at its sigmoid an object taken out after being added left a ghost
+	/// of itself.
+	private static let sharpness: Float = 8
 
 	private let env: ORTEnv
 	private var sessions: (encoder: ORTSession, decoder: ORTSession)?
@@ -115,13 +120,13 @@ final class ObjectSelector {
 		)
 	}
 
-	/// A mask's logits as coverage from 0 to 255 (their sigmoid, so edges
-	/// stay soft), and how many say the object is there.
+	/// A mask's logits as coverage from 0 to 255 (their sigmoid, steepened by
+	/// `sharpness`, so edges stay soft), and how many say the object is there.
 	private static func coverage(_ logits: UnsafePointer<Float>, count: Int) -> (values: [UInt8], area: Int) {
 		let length = vDSP_Length(count)
 		var zero: Float = 0
 		var one: Float = 1
-		var minusOne: Float = -1
+		var minusSharpness: Float = -sharpness
 		var full: Float = 255
 		var n = Int32(count)
 		var area = 0
@@ -134,7 +139,7 @@ final class ObjectSelector {
 			var sum: Float = 0
 			vDSP_sve(floats, 1, &sum, length)
 			area = Int((sum + Float(count)) / 2)
-			vDSP_vsmul(logits, 1, &minusOne, floats, 1, length)
+			vDSP_vsmul(logits, 1, &minusSharpness, floats, 1, length)
 			vvexpf(floats, floats, &n)
 			vDSP_vsadd(floats, 1, &one, floats, 1, length)
 			vDSP_svdiv(&full, floats, 1, floats, 1, length)

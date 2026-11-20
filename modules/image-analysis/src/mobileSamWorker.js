@@ -24,6 +24,10 @@ ort.env.wasm.numThreads = 1;
 const PROVIDERS = ["webgpu", "wasm"];
 // Masks whose areas are this close to a smaller one's add nothing to grow to.
 const SAME_AREA = 0.05;
+// How much steeper than its sigmoid a mask's coverage rises across its edge.
+// A box's mask can be unsure all through (logits under 3 inside), and at its
+// sigmoid an object taken out after being added left a ghost of itself.
+const SHARPNESS = 8;
 
 let sessions = null;
 let encoded = null;
@@ -148,7 +152,7 @@ async function select(data) {
 		for (let i = 0; i < size; i++) {
 			const logit = logits[index * size + i];
 			if (logit > 0) area++;
-			values[i] = 255 / (1 + Math.exp(-logit));
+			values[i] = 255 / (1 + Math.exp(-SHARPNESS * logit));
 		}
 		if (area > 0) masks.push({ values, area, score: scores[index] });
 	}
