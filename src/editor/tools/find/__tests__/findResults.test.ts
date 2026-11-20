@@ -4,12 +4,15 @@ import { describe, test } from "node:test";
 import type { EditorDocument } from "../../../document/document.ts";
 import type { ImageLayer } from "../../../layers/image/image.ts";
 import {
+	chooseWhole,
 	chosenBoxes,
 	detectionTargetKey,
+	type FindChoice,
 	type FoundRegion,
 	findDoneLabel,
 	readingOrder,
 	redactedNotice,
+	tapChoice,
 } from "../findResults.ts";
 
 const region = (
@@ -21,38 +24,102 @@ const region = (
 	width: 10 + sourceIndex,
 	height: 20,
 	transform: { x: sourceIndex, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+	words: [],
+});
+
+describe("tapChoice", () => {
+	const nothing = chooseWhole([]);
+	const narrowed = (index: number, words: number[]): FindChoice => ({
+		selected: new Set(),
+		words: new Map([[index, new Set(words)]]),
+	});
+
+	test("chooses a region left out whole, whether or not on a word", () => {
+		assert.deepEqual(tapChoice(nothing, 2, null), chooseWhole([2]));
+		assert.deepEqual(tapChoice(nothing, 2, 1), chooseWhole([2]));
+	});
+
+	test("narrows a line chosen whole to the word tapped", () => {
+		assert.deepEqual(tapChoice(chooseWhole([2, 3]), 2, 1), {
+			selected: new Set([3]),
+			words: new Map([[2, new Set([1])]]),
+		});
+	});
+
+	test("leaves out a region chosen whole when no word is tapped", () => {
+		assert.deepEqual(tapChoice(chooseWhole([2]), 2, null), nothing);
+	});
+
+	test("adds and leaves out words of a narrowed line", () => {
+		assert.deepEqual(tapChoice(narrowed(2, [1]), 2, 3), narrowed(2, [1, 3]));
+		assert.deepEqual(tapChoice(narrowed(2, [1, 3]), 2, 1), narrowed(2, [3]));
+	});
+
+	test("leaves out a narrowed line with its last word, or with no word", () => {
+		assert.deepEqual(tapChoice(narrowed(2, [1]), 2, 1), nothing);
+		assert.deepEqual(tapChoice(narrowed(2, [1, 3]), 2, null), nothing);
+	});
+
+	test("leaves the choice it's given alone", () => {
+		const choice = chooseWhole([2]);
+		tapChoice(choice, 2, 0);
+		assert.deepEqual(choice, chooseWhole([2]));
+	});
 });
 
 describe("chosenBoxes", () => {
 	const regions = [region(0, "faces"), region(1, "faces"), region(2, "text")];
 
 	test("is null when nothing is chosen", () => {
-		assert.equal(chosenBoxes(regions, new Set()), null);
-		assert.equal(chosenBoxes([], new Set([0])), null);
+		assert.equal(chosenBoxes(regions, chooseWhole([])), null);
+		assert.equal(chosenBoxes([], chooseWhole([0])), null);
 	});
 
 	test("makes a box of each chosen region, in order", () => {
-		const result = chosenBoxes(regions, new Set([1, 0]));
+		const result = chosenBoxes(regions, chooseWhole([1, 0]));
 		assert.deepEqual(result?.boxes, [
 			{ width: 10, height: 20, transform: regions[0].transform },
 			{ width: 11, height: 20, transform: regions[1].transform },
 		]);
 	});
 
+	test("puts a narrowed line's chosen words in its place", () => {
+		const word = (index: number) => ({
+			sourceIndex: index,
+			width: 3 + index,
+			height: 20,
+			transform: { x: index * 5, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+		});
+		const line = { ...region(2, "text"), words: [word(0), word(1), word(2)] };
+		const result = chosenBoxes([regions[0], line], {
+			selected: new Set([0]),
+			words: new Map([[2, new Set([2, 0])]]),
+		});
+		assert.deepEqual(result?.boxes, [
+			{ width: 10, height: 20, transform: regions[0].transform },
+			{ width: 3, height: 20, transform: line.words[0].transform },
+			{ width: 5, height: 20, transform: line.words[2].transform },
+		]);
+		assert.equal(result?.feature, null);
+	});
+
 	test("says what was found, or null for both kinds", () => {
-		assert.equal(chosenBoxes(regions, new Set([0, 1]))?.feature, "faces");
-		assert.equal(chosenBoxes(regions, new Set([2]))?.feature, "text");
-		assert.equal(chosenBoxes(regions, new Set([1, 2]))?.feature, null);
+		assert.equal(chosenBoxes(regions, chooseWhole([0, 1]))?.feature, "faces");
+		assert.equal(chosenBoxes(regions, chooseWhole([2]))?.feature, "text");
+		assert.equal(chosenBoxes(regions, chooseWhole([1, 2]))?.feature, null);
 	});
 
 	test("names the group for what was found", () => {
 		assert.equal(
-			chosenBoxes(regions, new Set([0, 1]))?.groupName,
+			chosenBoxes(regions, chooseWhole([0, 1]))?.groupName,
 			"Face results",
 		);
-		assert.equal(chosenBoxes(regions, new Set([2]))?.groupName, "Text results");
 		assert.equal(
-			chosenBoxes(regions, new Set([0, 2]))?.groupName,
+			chosenBoxes(regions, chooseWhole([2]))?.groupName,
+			"Text results",
+		);
+		assert.equal(
+			chosenBoxes(regions, chooseWhole([0, 2]))?.groupName,
 			"Find results",
 		);
 	});

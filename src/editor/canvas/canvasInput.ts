@@ -1,4 +1,5 @@
 import type { DerivedValue } from "react-native-reanimated";
+import type { Point } from "../document/geometry.ts";
 import type { ColorMatrix } from "../layers/image/adjustments.ts";
 import type { Layer } from "../layers/layer.ts";
 import type { DialDrag } from "../shell/dialDrag.ts";
@@ -10,8 +11,8 @@ import type { EditText } from "./useEditTextGesture.ts";
  * What input on the canvas does, one at a time: select and transform
  * layers; paint, drag out a box or a shape, or pick a color with a `tool`;
  * place the caret in, or select, text being edited in place (see
- * `EditText`); toggle the
- * `regions` shown over the image `imageId` with taps, as Find does; or hold
+ * `EditText`); tap the `regions` shown over the image `imageId`, as Find
+ * does to choose them; or hold
  * the layers still and turn a dial with a sideways drag (`drag`), as Adjust
  * does, drawing the image it changes live (`adjusting`).
  */
@@ -23,7 +24,7 @@ export type CanvasInput =
 			type: "regions";
 			imageId: string;
 			regions: readonly CanvasRegion[];
-			onToggle: (sourceIndex: number) => void;
+			onTap: (region: CanvasRegion, point: Point) => void;
 	  }
 	| { type: "dial"; drag: DialDrag; adjusting: LiveAdjustment | null };
 
