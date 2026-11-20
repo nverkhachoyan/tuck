@@ -1,5 +1,6 @@
 import type { ReactNode, Ref } from "react";
 import {
+	type LayoutChangeEvent,
 	StyleSheet,
 	useWindowDimensions,
 	View,
@@ -23,11 +24,13 @@ export function CanvasStage({
 	ref,
 	toBottom = false,
 	frameless = false,
+	onLayout,
 	children,
 }: {
 	ref?: Ref<ViewInstance>;
 	toBottom?: boolean;
 	frameless?: boolean;
+	onLayout?: (event: LayoutChangeEvent) => void;
 	children: ReactNode;
 }) {
 	const wide = useWindowDimensions().width >= FRAMED_MIN_WIDTH;
@@ -35,6 +38,7 @@ export function CanvasStage({
 	return (
 		<View
 			ref={ref}
+			onLayout={onLayout}
 			style={[
 				styles.stage,
 				framed && styles.framed,

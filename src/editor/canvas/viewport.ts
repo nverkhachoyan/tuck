@@ -1,5 +1,10 @@
 import type { Point, Rect, Size } from "../document/geometry.ts";
 
+// How far inside the canvas's area the photo is fitted, rather than around
+// it, so layers past the photo's edge and their handles still have room to
+// draw.
+export const PHOTO_INSET = 12;
+
 export type DocumentViewport = {
 	scale: number;
 	offsetX: number;

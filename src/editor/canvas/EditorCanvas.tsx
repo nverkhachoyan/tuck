@@ -58,13 +58,11 @@ import { useToolStroke } from "./useToolStroke";
 import { useViewGesture } from "./useViewGesture";
 import {
 	type DocumentViewport,
+	PHOTO_INSET,
 	type ViewFrame,
 	viewPointToDocument,
 } from "./viewport";
 
-// Inside the canvas rather than around it, so layers past the photo's edge
-// and their handles still have room to draw.
-const PHOTO_INSET = 12;
 const SELECT: CanvasInput = { type: "select" };
 
 // The selection's live handle under a document point. The drags below share

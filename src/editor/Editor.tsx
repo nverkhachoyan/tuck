@@ -257,6 +257,7 @@ export function Editor({
 		typing,
 		layersOpen,
 		cardOpen: openTool?.definition.views.Card !== undefined,
+		documentSize,
 	});
 	const { wide, layersBeside, dockInset, inspector, inspectorPinned } = layout;
 	const toolOptionsOpen = openTray(mode) !== null;
@@ -489,7 +490,15 @@ export function Editor({
 					</EditorHeader>
 					{/* The dock covers the stage's bottom, which runs under it. On a
 					    wide screen the rail and inspector rest on it as cards. */}
-					<CanvasStage ref={layout.stageRef} toBottom frameless={wide}>
+					<CanvasStage
+						ref={layout.stageRef}
+						toBottom
+						frameless={wide}
+						onLayout={(event) => {
+							const { width, height } = event.nativeEvent.layout;
+							layout.setStage({ width, height });
+						}}
+					>
 						<EditorCanvas
 							ref={canvasRef}
 							document={document}
@@ -519,7 +528,11 @@ export function Editor({
 							<ToolTrays context={panels} modeState={modeState} panel={panel} />
 						)}
 						{wide && openTool?.definition.views.Card && (
-							<ToolCard tool={openTool} inset={layout.canvasInset} />
+							<ToolCard
+								tool={openTool}
+								inset={layout.canvasInset}
+								left={layout.cardLeft}
+							/>
 						)}
 						{eyedropper && (
 							<EyedropperHint
