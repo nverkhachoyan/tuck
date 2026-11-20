@@ -14,6 +14,9 @@ import { layerKindName } from "./layersPanel/LayerRow";
  * selected layer and the tool styling it (`stylingTool`). On a wide screen
  * the panel sits in the header's context bar (`inBar`).
  *
+ * `deleteDrawn` deletes the layer the open tool drew, while it's selected:
+ * Delete then joins the mode's actions, so touch has it without the keyboard.
+ *
  * Also derives the toolbar entries with variants and busy states, the tool
  * starters mapped to active variants, and the layer actions for the selected
  * layer.
@@ -35,6 +38,7 @@ export function useEditorChrome({
 	startTool,
 	layerStarters,
 	isToolAvailable: isAvailableProp,
+	deleteDrawn,
 }: {
 	specs: ToolSpecs;
 	tool: ToolId | null;
@@ -52,6 +56,7 @@ export function useEditorChrome({
 	startTool: ToolStarters;
 	layerStarters: ToolStarters;
 	isToolAvailable?: (id: string) => boolean;
+	deleteDrawn?: () => void;
 }) {
 	const { selectLayer } = useStore((state) => state.actions);
 	const open = tool && controllers[tool];
@@ -93,6 +98,11 @@ export function useEditorChrome({
 					? "Escape"
 					: doneKey,
 			doneVariant: chrome.actions.doneVariant,
+			onDelete: deleteDrawn,
+			deleteLabel:
+				deleteDrawn && selectedLayer
+					? `Delete ${layerKindName(selectedLayer).toLowerCase()}`
+					: undefined,
 		};
 
 	const defaultIsToolAvailable = useCallback(

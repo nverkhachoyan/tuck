@@ -293,6 +293,11 @@ export function Editor({
 		host.leave();
 	};
 
+	// A shape in Shape, a mark in Pen: what the open tool draws, and shows
+	// selected, so Delete takes it without putting the tool down.
+	const drawnSelected =
+		canvasInput.input.type === "tool" &&
+		restyles(canvasInput.input.tool, selectedLayer);
 	const {
 		panel,
 		inBar,
@@ -317,13 +322,11 @@ export function Editor({
 		putDownTool,
 		startTool,
 		layerStarters,
+		deleteDrawn: drawnSelected
+			? () => editNotice.deleteLayer(selectedLayer.id)
+			: undefined,
 	});
 
-	// A shape in Shape, a mark in Pen: what the open tool draws, and shows
-	// selected, so Delete takes it without putting the tool down.
-	const drawnSelected =
-		canvasInput.input.type === "tool" &&
-		restyles(canvasInput.input.tool, selectedLayer);
 	useEditorShortcuts({
 		specs,
 		toolsByKey: toolbox.toolsByKey,
