@@ -1,3 +1,4 @@
+import { contrastRatio } from "../../../ui/color.ts";
 import type { LayerGroup } from "../../document/document.ts";
 import type { DrawingLayer, PenTip } from "../../layers/drawing/drawing.ts";
 import type { Layer } from "../../layers/layer.ts";
@@ -38,6 +39,32 @@ export function markName(layer: DrawingLayer): string {
 	return swatch
 		? `${swatch} ${kind}`
 		: `${kind[0].toUpperCase()}${kind.slice(1)}`;
+}
+
+/**
+ * Which of `tiles` to show a mark's picture on: the one its pen colors stand
+ * out from most, judged by the faintest of them, so black ink doesn't sit on
+ * a dark tile. The first tile when it has no pens or none does better.
+ */
+export function markTile(
+	layer: DrawingLayer,
+	tiles: readonly string[],
+): string {
+	let best = tiles[0];
+	let bestContrast = -1;
+	for (const tile of tiles) {
+		let faintest = Number.POSITIVE_INFINITY;
+		for (const stroke of layer.strokes) {
+			if (stroke.type === "pen") {
+				faintest = Math.min(faintest, contrastRatio(stroke.color, tile));
+			}
+		}
+		if (faintest > bestContrast) {
+			best = tile;
+			bestContrast = faintest;
+		}
+	}
+	return best;
 }
 
 export type LayerListEntry =

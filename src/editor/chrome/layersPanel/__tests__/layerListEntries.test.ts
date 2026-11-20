@@ -10,7 +10,7 @@ import {
 import type { Layer } from "../../../layers/layer.ts";
 import { createTextLayer } from "../../../layers/text/text.ts";
 import { swatchName } from "../../../shell/swatches.ts";
-import { layerListEntries, markName } from "../layerListEntries.ts";
+import { layerListEntries, markName, markTile } from "../layerListEntries.ts";
 
 // Bottom first, as the document holds them.
 const layers: Layer[] = ["a", "b", "c", "d"].map((id) => ({
@@ -107,5 +107,46 @@ describe("swatchName", () => {
 	test("names a swatch whatever its case, and nothing else", () => {
 		assert.equal(swatchName("#0a84ff"), "Blue");
 		assert.equal(swatchName("#0A84FE"), null);
+	});
+});
+
+describe("markTile", () => {
+	const night = ["#2A2B30", "#F3F3F1"];
+	const day = ["#F2F3F5", "#000000"];
+	const mark = (...colors: string[]): DrawingLayer => {
+		const strokes: Stroke[] = colors.map((color) => ({
+			type: "pen",
+			color,
+			width: 4,
+			points: [0, 0, 10, 0],
+		}));
+		return {
+			...createDrawingLayer(strokes[0] as Stroke & { type: "pen" }),
+			strokes,
+		};
+	};
+
+	test("keeps the usual tile for ink that shows on it", () => {
+		assert.equal(markTile(mark("#FF3B30"), night), "#2A2B30");
+		assert.equal(markTile(mark("#000000"), day), "#F2F3F5");
+	});
+
+	test("turns to the other tile for ink that would vanish", () => {
+		assert.equal(markTile(mark("#000000"), night), "#F3F3F1");
+		assert.equal(markTile(mark("#FFFFFF"), day), "#000000");
+		assert.equal(markTile(mark("#FFD60A"), day), "#000000");
+	});
+
+	test("judges mixed ink by its faintest color", () => {
+		// Red shows on both; black only on the light tile.
+		assert.equal(markTile(mark("#FF3B30", "#000000"), night), "#F3F3F1");
+	});
+
+	test("keeps the first tile when there's no pen", () => {
+		const erased: DrawingLayer = {
+			...mark("#000000"),
+			strokes: [{ type: "eraser", width: 4, points: [0, 0, 10, 0] }],
+		};
+		assert.equal(markTile(erased, night), "#2A2B30");
 	});
 });

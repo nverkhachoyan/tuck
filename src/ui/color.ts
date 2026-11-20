@@ -58,3 +58,27 @@ export function mixColors(from: string, to: string, amount: number): string {
 		[0, 1, 2].map((i) => start[i] + (end[i] - start[i]) * amount) as Rgb,
 	);
 }
+
+// A channel's share of light, 0 to 1, as WCAG defines it from sRGB.
+function linear(channel: number): number {
+	const value = channel / 255;
+	return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+}
+
+/**
+ * How far apart two `#RRGGBB` colors are in lightness, as WCAG's contrast
+ * ratio: 1 for the same lightness, 21 for black on white. A color that
+ * isn't `#RRGGBB` contrasts with nothing (1).
+ */
+export function contrastRatio(a: string, b: string): number {
+	const first = parseHex(a);
+	const second = parseHex(b);
+	if (!first || !second) return 1;
+	const [lighter, darker] = [first, second]
+		.map(
+			([r, g, bl]) =>
+				0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(bl),
+		)
+		.sort((x, y) => y - x);
+	return (lighter + 0.05) / (darker + 0.05);
+}

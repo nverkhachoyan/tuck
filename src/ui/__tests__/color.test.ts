@@ -1,7 +1,12 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { averageColor, isHexColor, mixColors } from "../color.ts";
+import {
+	averageColor,
+	contrastRatio,
+	isHexColor,
+	mixColors,
+} from "../color.ts";
 
 describe("isHexColor", () => {
 	test("is true only for #RRGGBB", () => {
@@ -40,5 +45,21 @@ describe("mixColors", () => {
 
 	test("leaves a color it can't read as it is", () => {
 		assert.equal(mixColors("red", "#FFFFFF", 0.5), "red");
+	});
+});
+
+describe("contrastRatio", () => {
+	test("spans 1 for the same color to 21 for black on white", () => {
+		assert.equal(contrastRatio("#777777", "#777777"), 1);
+		assert.equal(contrastRatio("#000000", "#FFFFFF"), 21);
+		assert.equal(contrastRatio("#FFFFFF", "#000000"), 21);
+	});
+
+	test("matches WCAG's figure for a mid gray on white", () => {
+		assert.equal(contrastRatio("#767676", "#FFFFFF").toFixed(2), "4.54");
+	});
+
+	test("is 1 for a color that isn't #RRGGBB", () => {
+		assert.equal(contrastRatio("red", "#FFFFFF"), 1);
 	});
 });

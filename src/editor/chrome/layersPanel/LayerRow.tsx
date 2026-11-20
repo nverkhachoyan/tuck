@@ -34,7 +34,7 @@ import type { Layer } from "../../layers/layer";
 import type { RedactionEffect } from "../../layers/redaction/redaction";
 import { renderMarkThumbnail } from "../../render/markThumbnail";
 import { SHAPE_ICONS, SHAPE_NAMES } from "../../shell/shapeIcons";
-import { markName } from "./layerListEntries";
+import { markName, markTile } from "./layerListEntries";
 import { dragRow, layerIndexForSlot, moveItem } from "./layerReorder";
 
 export const ROW_HEIGHT = 52;
@@ -345,7 +345,18 @@ function MarkThumbnail({ layer }: { layer: DrawingLayer }) {
 		};
 	}, [layer]);
 	return picture ? (
-		<Image source={{ uri: picture }} style={styles.thumbnail} />
+		<Image
+			source={{ uri: picture }}
+			style={[
+				styles.thumbnail,
+				{
+					backgroundColor: markTile(layer, [
+						colors.surfaceHover,
+						colors.primary,
+					]),
+				},
+			]}
+		/>
 	) : (
 		<IconThumbnail icon="draw" />
 	);
