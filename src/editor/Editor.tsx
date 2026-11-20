@@ -517,6 +517,7 @@ export function Editor({
 							}
 							onTapAway={tapAway}
 							bottomInset={layout.canvasInset.bottom}
+							trayInset={layout.trayInset}
 							leftInset={layout.canvasInset.left}
 							rightInset={layout.canvasInset.right}
 							selectionBar={selectionBar}

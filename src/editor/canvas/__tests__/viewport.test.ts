@@ -353,3 +353,58 @@ describe("visibleDocumentArea", () => {
 		);
 	});
 });
+
+describe("a frame with a tray over its bottom", () => {
+	// The frame's area, with its lowest 300 points under a tray: what shows
+	// runs from 100 to 600.
+	const trayed: ViewFrame = { ...frame, covered: 300 };
+
+	test("fits the document as if the tray weren't there", () => {
+		assert.deepEqual(fitToFrame(trayed), fitToFrame(frame));
+		assert.deepEqual(viewportForZoom(trayed, null), fitToFrame(frame));
+	});
+
+	test("lets a zoomed document rise until its bottom clears the tray", () => {
+		const zoomed = zoomViewportAbout(trayed, fitToFrame(trayed), 4, {
+			x: 216,
+			y: 500,
+		});
+		// 1200 tall on screen.
+		assert.equal(panViewport(trayed, zoomed, 0, 5000).offsetY, 116);
+		assert.equal(
+			panViewport(trayed, zoomed, 0, -5000).offsetY,
+			600 - 16 - 1200,
+		);
+	});
+
+	test("lets a document that fits the whole area rise clear of the tray", () => {
+		const zoomed = clampViewport(
+			trayed,
+			zoomViewportAbout(trayed, fitToFrame(trayed), 2, { x: 216, y: 500 }),
+		);
+		// 600 tall on screen, in the middle of the whole area.
+		assert.equal(zoomed.offsetY, 200);
+		assert.equal(panViewport(trayed, zoomed, 0, -5000).offsetY, 600 - 16 - 600);
+	});
+
+	test("zooms to an area in the middle of what shows above the tray", () => {
+		const face = { x: 1000, y: 1500, width: 200, height: 200 };
+		const zoom = zoomForArea(trayed, face);
+		assert.ok(zoom);
+		const shown = viewportForZoom(trayed, zoom);
+		assertClose(shown.scale, 400 / 600);
+		const middle = viewPointToDocument(shown, { x: 216, y: 350 });
+		assertClose(middle.x, 1100);
+		assertClose(middle.y, 1600);
+	});
+
+	test("leaves what the tray covers out of the visible area", () => {
+		// At the fit the photo starts 350 down; the tray covers it from 600.
+		assert.deepEqual(visibleDocumentArea(trayed, fitToFrame(trayed)), {
+			x: 0,
+			y: 0,
+			width: 4000,
+			height: 2500,
+		});
+	});
+});

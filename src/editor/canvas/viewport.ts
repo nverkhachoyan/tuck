@@ -108,13 +108,16 @@ const MAX_PIXEL_SCALE = 8;
 const MIN_MAX_ZOOM = 4;
 
 /**
- * Where a document is shown: its size, the part of the view it's fitted to
- * (the view less whatever covers it), and the margin kept inside that part.
+ * Where a document is shown.
+ * - `area`: the part of the view it's fitted to, the view less whatever covers it.
+ * - `inset`: the margin kept inside that part.
+ * - `covered`: how much of the area's bottom a phone's tray covers. The fit ignores it, so the photo holds still as a tray opens, but a zoomed view can rise clear of it, and a zoom to an area or the visible area keeps above it.
  */
 export type ViewFrame = {
 	documentSize: Size;
 	area: Rect;
 	inset: number;
+	covered?: number;
 };
 
 /**
@@ -153,6 +156,22 @@ function settledOffsets(
 	if (far < near) return [far, near];
 	const middle = (near + far) / 2;
 	return [middle, middle];
+}
+
+// The offsets along y, as `settledOffsets`, letting the document also rise
+// until its bottom clears what covers the area's bottom.
+function settledYOffsets(frame: ViewFrame, extent: number): [number, number] {
+	"worklet";
+	const { area, inset, covered = 0 } = frame;
+	const [min, max] = settledOffsets(extent, area.y, area.height, inset);
+	const clear = area.y + area.height - covered - inset - extent;
+	return [Math.min(min, clear), max];
+}
+
+// The frame's area less what covers its bottom.
+function shownArea(frame: ViewFrame): Rect {
+	const { area, covered = 0 } = frame;
+	return { ...area, height: Math.max(0, area.height - covered) };
 }
 
 // A scale kept between the fit and the most zooming allows.
@@ -197,12 +216,7 @@ export function clampViewport(
 		area.width,
 		inset,
 	);
-	const [minY, maxY] = settledOffsets(
-		documentSize.height * scale,
-		area.y,
-		area.height,
-		inset,
-	);
+	const [minY, maxY] = settledYOffsets(frame, documentSize.height * scale);
 	return {
 		scale,
 		offsetX: clamp(middle.x - (middle.x - viewport.offsetX) * k, minX, maxX),
@@ -267,12 +281,7 @@ export function panViewport(
 		area.width,
 		inset,
 	);
-	const [minY, maxY] = settledOffsets(
-		documentSize.height * scale,
-		area.y,
-		area.height,
-		inset,
-	);
+	const [minY, maxY] = settledYOffsets(frame, documentSize.height * scale);
 	return {
 		scale,
 		offsetX: clamp(
@@ -296,13 +305,14 @@ const AREA_MAX_PIXEL_SCALE = 2;
 
 /**
  * The zoom that shows the document rectangle `rect` whole in the frame's
- * area, centered, with `AREA_MARGIN` of its size around it, up to
+ * area, centered above what covers its bottom, with `AREA_MARGIN` of its size around it, up to
  * `AREA_MAX_PIXEL_SCALE`. Null where the fit shows it as large already.
  */
 export function zoomForArea(frame: ViewFrame, rect: Rect): ViewZoom | null {
 	const fit = fitToFrame(frame);
 	if (fit.scale <= 0 || rect.width <= 0 || rect.height <= 0) return null;
-	const { area, inset } = frame;
+	const { inset, covered = 0 } = frame;
+	const area = shownArea(frame);
 	const grow = 1 + AREA_MARGIN * 2;
 	const scale = limitScale(
 		fit,
@@ -314,7 +324,10 @@ export function zoomForArea(frame: ViewFrame, rect: Rect): ViewZoom | null {
 	);
 	const zoom = scale / fit.scale;
 	if (zoom < 1.01) return null;
-	return { zoom, center: areaMiddle(rect) };
+	// The zoom's center sits in the middle of the whole area, half the
+	// covered part below the middle of what shows.
+	const middle = areaMiddle(rect);
+	return { zoom, center: { x: middle.x, y: middle.y + covered / 2 / scale } };
 }
 
 /** The viewport a zoom shows in the frame, or the fit without one. */
@@ -352,7 +365,8 @@ export function zoomForViewport(
 }
 
 /**
- * The part of the document shown in the frame's area, in document space:
+ * The part of the document shown in the frame's area, above what covers
+ * its bottom, in document space:
  * all of it at the fit, less as the view zooms in, or undefined before the
  * view has been measured or when nothing of the document is visible.
  */
@@ -360,7 +374,8 @@ export function visibleDocumentArea(
 	frame: ViewFrame,
 	viewport: DocumentViewport,
 ): Rect | undefined {
-	const { area, documentSize } = frame;
+	const { documentSize } = frame;
+	const area = shownArea(frame);
 	const { scale, offsetX, offsetY } = viewport;
 	if (scale <= 0 || area.width <= 0 || area.height <= 0) {
 		return undefined;
