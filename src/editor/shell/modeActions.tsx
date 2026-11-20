@@ -22,17 +22,22 @@ export type ModeActionProps = {
 	doneLabel?: string;
 	doneShortcut?: string;
 	doneVariant?: "primary" | "secondary";
+	// Deletes the layer the open tool just drew, named by `deleteLabel`.
+	onDelete?: () => void;
+	deleteLabel?: string;
 };
 
 /**
- * Cancel, when the mode has one, and Done. The dock's footer puts them at
- * its ends; the wide editor's context bar groups them. The labels, shortcuts,
- * and which of the two show live here, so the two layouts can't disagree.
+ * Cancel, when the mode has one, Done, and Delete while the open tool's own
+ * layer is selected. The dock's footer puts them at its ends; the wide
+ * editor's context bar groups them. The labels, shortcuts, and which of them
+ * show live here, so the two layouts can't disagree.
  */
 export function ModeActions(props: ModeActionProps) {
-	const { cancel, done } = modeActionButtons(props, "bar");
+	const { cancel, done, remove } = modeActionButtons(props, "bar");
 	return (
 		<View style={styles.modeActions}>
+			{remove}
 			{props.onReset && <TextButton label="Reset" onPress={props.onReset} />}
 			{cancel}
 			{done}
@@ -48,11 +53,23 @@ export function modeActionButtons(
 		doneLabel = "Done",
 		doneShortcut,
 		doneVariant,
+		onDelete,
+		deleteLabel = "Delete",
 	}: ModeActionProps,
 	place: "dock" | "bar",
 ) {
 	const isDoneWord = !doneLabel || doneLabel === "Done";
 	return {
+		remove: onDelete ? (
+			<DockButton
+				icon="trash-outline"
+				label={deleteLabel}
+				shortcut="Delete"
+				place={place}
+				danger
+				onPress={onDelete}
+			/>
+		) : null,
 		cancel: onCancel ? (
 			<DockButton
 				icon="close-outline"
@@ -97,19 +114,21 @@ type DockIconName = ComponentProps<typeof Ionicons>["name"];
 /**
  * A glyph at one end of the footer or in the header's context bar, with no
  * fill: the ends are where a mode's Done and Cancel always are, so their
- * place names them.
+ * place names them. Delete, beside Cancel, is in the danger color.
  */
 function DockButton({
 	icon,
 	label,
 	shortcut,
 	place,
+	danger = false,
 	onPress,
 }: {
 	icon: DockIconName;
 	label: string;
 	shortcut?: string;
 	place: "dock" | "bar";
+	danger?: boolean;
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
@@ -135,7 +154,7 @@ function DockButton({
 				<Ionicons
 					name={icon}
 					size={inBar ? BAR_ICON_SIZE : BUTTON_ICON_SIZE}
-					color={colors.textPrimary}
+					color={danger ? colors.danger : colors.textPrimary}
 				/>
 			</Pressable>
 			{tooltip}

@@ -149,7 +149,7 @@ export function DockFooter({
 	title,
 	...actions
 }: { title: string } & ModeActionProps) {
-	const { cancel, done } = modeActionButtons(actions, "dock");
+	const { cancel, done, remove } = modeActionButtons(actions, "dock");
 	const doneIsPhrase =
 		actions.doneVariant === "primary" &&
 		actions.doneLabel !== undefined &&
@@ -158,6 +158,7 @@ export function DockFooter({
 		<View style={styles.footer}>
 			<View style={styles.footerEnd}>
 				{cancel}
+				{remove}
 				{actions.onReset && (
 					<TextButton label="Reset" onPress={actions.onReset} />
 				)}
