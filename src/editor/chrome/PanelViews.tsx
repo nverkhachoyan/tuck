@@ -18,7 +18,7 @@ import { ContextBar } from "../shell/ContextBar";
 import { LayerActionsPanel, LayerBar } from "../shell/LayerActionsPanel";
 import type { ModeActionProps } from "../shell/modeActions";
 import type { OpenTool, ToolControllers } from "../tools/defineTool";
-import { CARD_HEIGHT, PANEL_GAP, PANEL_RADIUS } from "./Dock";
+import { CARD_HEIGHT, PANEL_GAP, PANEL_RADIUS, SIDE_CARD_WIDTH } from "./Dock";
 import type { DockPanel } from "./editorChrome";
 
 // The widest a tool's card gets, as wide as a tray.
@@ -198,15 +198,18 @@ export function ToolSheet({
 
 /**
  * The open tool's `Card` on a wide window, centered between `inset.left` and
- * `inset.right` along the canvas's bottom. Uses `CARD_HEIGHT` as a minimum
+ * `inset.right` along the canvas's bottom, or `SIDE_CARD_WIDTH` wide from
+ * `left` beside a tall photo (`cardBeside`). Uses `CARD_HEIGHT` as a minimum
  * height to match the space reserved by `useEditorLayout`.
  */
 export function ToolCard({
 	tool,
 	inset,
+	left,
 }: {
 	tool: OpenTool;
 	inset: { left: number; right: number };
+	left: number | null;
 }) {
 	const { definition, controller } = tool;
 	const { bottom } = useSafeAreaInsets();
@@ -218,15 +221,16 @@ export function ToolCard({
 				styles.cardArea,
 				{
 					bottom: bottom + PANEL_GAP,
-					paddingLeft: inset.left,
-					paddingRight: inset.right,
+					paddingLeft: left ?? inset.left,
+					paddingRight: left === null ? inset.right : 0,
 				},
+				left !== null && styles.cardAreaBeside,
 			]}
 		>
 			<Animated.View
 				entering={FadeIn.duration(160)}
 				exiting={FadeOut.duration(100)}
-				style={styles.cardColumn}
+				style={left === null ? styles.cardColumn : styles.cardColumnBeside}
 			>
 				<Surface style={styles.card} contentStyle={styles.cardContent}>
 					<Card controller={controller} />
@@ -298,9 +302,15 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		pointerEvents: "box-none",
 	},
+	cardAreaBeside: {
+		alignItems: "flex-start",
+	},
 	cardColumn: {
 		width: "100%",
 		maxWidth: CARD_MAX_WIDTH,
+	},
+	cardColumnBeside: {
+		width: SIDE_CARD_WIDTH,
 	},
 	card: {
 		borderRadius: PANEL_RADIUS,

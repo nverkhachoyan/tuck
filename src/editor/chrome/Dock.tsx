@@ -32,6 +32,10 @@ export const INSPECTOR_WIDTH = 352;
 // Minimum height of a wide screen's bottom tool card, sized for the tallest
 // tool card (Find's scopes and results, or Adjust's choices and dial).
 export const CARD_HEIGHT = 172;
+// A tool card's width where it stands beside a tall photo rather than
+// along the canvas's bottom (`cardBeside`): room for Adjust's four chips in
+// a row.
+export const SIDE_CARD_WIDTH = 360;
 // Between a wide screen's panels, the rail and the inspector, and the edges
 // of the canvas they rest beside, and their corners. Closer and tighter
 // where controls are sized for a mouse.

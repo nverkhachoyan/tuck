@@ -3,8 +3,15 @@ import { useWindowDimensions, type ViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { compactControls } from "@/ui/density";
 import { useKeyboardOverlap } from "@/ui/useKeyboardOverlap";
-import { CARD_HEIGHT, INSPECTOR_WIDTH, PANEL_GAP, useDockInset } from "./Dock";
-import { editorFrame } from "./editorFrame";
+import type { Size } from "../document/geometry";
+import {
+	CARD_HEIGHT,
+	INSPECTOR_WIDTH,
+	PANEL_GAP,
+	SIDE_CARD_WIDTH,
+	useDockInset,
+} from "./Dock";
+import { cardBeside, editorFrame } from "./editorFrame";
 import { LAYERS_SIDEBAR_INSET } from "./layersPanel/LayersPanel";
 
 // Room for the chosen tool's highlight inside the rail's card, and for its
@@ -24,17 +31,20 @@ const CARD_INSET = CARD_HEIGHT + 2 * PANEL_GAP;
  * Where the editor's parts go for the window, and how much of the canvas
  * they cover.
  * - `layersOpen`: opens the side panel when the window isn't tall enough to pin it.
- * - `cardOpen`: reserves a constant `CARD_INSET` at the bottom on wide screens so the photo doesn't shift as card content changes.
+ * - `cardOpen`: reserves a constant `CARD_INSET` at the bottom on wide screens so the photo doesn't shift as card content changes, unless the card fits beside the photo (`cardLeft`, from `cardBeside`).
+ * - `documentSize`: the photo's size, which decides where the card goes.
  * - `typing`: fits the document above the keyboard (`stageRef`), floating the phone's dock above it too.
  */
 export function useEditorLayout({
 	typing,
 	layersOpen,
 	cardOpen,
+	documentSize,
 }: {
 	typing: boolean;
 	layersOpen: boolean;
 	cardOpen: boolean;
+	documentSize: Size;
 }) {
 	const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 	const { bottom: safeBottom } = useSafeAreaInsets();
@@ -55,9 +65,23 @@ export function useEditorLayout({
 	// and like the rail and inspector, clear of the home indicator. The
 	// keyboard covers the bottom while typing.
 	const [trayHeight, setTrayHeight] = useState(0);
+	// The stage's size, which no tool changes, so measuring it can't move
+	// the canvas a second time as a tool opens.
+	const [stage, setStage] = useState<Size | null>(null);
+	const rightInset = inspector ? INSPECTOR_INSET : wide ? PANEL_GAP : 0;
+	const cardLeft =
+		wide && cardOpen && stage
+			? cardBeside({
+					documentSize,
+					stage,
+					inset: { left: RAIL_INSET, right: rightInset, bottom: safeBottom },
+					cardWidth: SIDE_CARD_WIDTH,
+					gap: PANEL_GAP,
+				})
+			: null;
 	const coveredBottom = wide
 		? Math.max(
-				safeBottom + (cardOpen ? CARD_INSET : 0),
+				safeBottom + (cardOpen && cardLeft === null ? CARD_INSET : 0),
 				keyboardOverlap > 0 ? keyboardOverlap + PANEL_GAP : 0,
 			)
 		: dockInset + trayHeight;
@@ -70,11 +94,13 @@ export function useEditorLayout({
 		keyboardOverlap,
 		dockInset,
 		setTrayHeight,
+		setStage,
+		cardLeft,
 		canvasInset: {
 			left: wide ? RAIL_INSET : 0,
 			// Clear of the inspector while it's open, and of the screen edge
 			// while the rail's side is the only card on the table.
-			right: inspector ? INSPECTOR_INSET : wide ? PANEL_GAP : 0,
+			right: rightInset,
 			bottom: coveredBottom,
 		},
 		// What covers the canvas's right edge, which a notice over the canvas
