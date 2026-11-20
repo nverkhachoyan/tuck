@@ -17,6 +17,13 @@ import type { ResizeMode } from "./handleGeometry.ts";
 // Minimum comfortable touch padding around a layer, in screen pixels.
 export const HIT_PADDING_PX = 14;
 
+/**
+ * A value the UI thread receives once and then reads by reference (a
+ * Reanimated mutable, from `shareOnce`), so copying targets to the UI
+ * thread doesn't copy every stroke again.
+ */
+export type Shared<T> = { readonly value: T };
+
 export type LayerTarget = {
 	id: string;
 	transform: Transform;
@@ -27,7 +34,7 @@ export type LayerTarget = {
 	hitPadding: number;
 	// A drawing, a redaction painted with a brush, or a shape is only hit
 	// near what its strokes drew.
-	strokes: MaskStroke[] | null;
+	strokes: Shared<MaskStroke[]> | null;
 	// A locked photo is cut off at the canvas's edge.
 	clipped: boolean;
 	resizeMode: ResizeMode;
@@ -53,7 +60,7 @@ export function findLayerAt(
 		if (
 			!target.strokes ||
 			hitTestDrawing(
-				{ strokes: target.strokes },
+				{ strokes: target.strokes.value },
 				toLayerSpace(target.transform, point),
 				target.hitPadding,
 			)

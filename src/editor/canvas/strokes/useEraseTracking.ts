@@ -20,6 +20,7 @@ import {
 } from "../../layers/strokes";
 import { type CanvasTool, strokeReaches } from "../canvasTool";
 import { HIT_PADDING_PX, type LayerTarget } from "../hitTest";
+import { shareOnce } from "../layerTargets";
 import { type DocumentViewport, viewPointToDocument } from "../viewport";
 import type { HoveredStroke, LiveStroke } from "./strokeTypes";
 
@@ -119,12 +120,14 @@ export function useEraseTracking({
 			tool?.type === "erase" && tool.mode === "stroke"
 				? targets.flatMap((target) => {
 						const layer = document.layers.find((each) => each.id === target.id);
-						return layer && strokeReaches(tool, layer) && target.strokes
+						return layer?.type === "drawing" &&
+							strokeReaches(tool, layer) &&
+							target.strokes
 							? [
 									{
 										...target,
 										strokes: target.strokes,
-										boxes: strokeBoxes(target.strokes),
+										boxes: shareOnce(strokeBoxes(layer.strokes)),
 									},
 								]
 							: [];
@@ -183,11 +186,11 @@ export function useEraseTracking({
 			for (const target of strokeTargets) {
 				const before = next[target.id] ?? [];
 				const fresh = strokesHitBy(
-					target.strokes,
+					target.strokes.value,
 					target.transform,
 					points,
 					touchReach,
-					target.boxes,
+					target.boxes.value,
 				).filter((index) => !before.includes(index));
 				if (fresh.length > 0) {
 					next[target.id] = [...before, ...fresh];
@@ -202,7 +205,7 @@ export function useEraseTracking({
 			for (const target of crossable) {
 				if (crossed.value.includes(target.id)) continue;
 				const reach = eraserWidth / 2 / target.transform.scaleX;
-				const outline = { strokes: target.strokes };
+				const outline = { strokes: target.strokes.value };
 				const near = (point: Point) => {
 					"worklet";
 					return hitTestDrawing(outline, point, reach);
@@ -245,11 +248,11 @@ export function useEraseTracking({
 			for (let i = strokeTargets.length - 1; i >= 0; i--) {
 				const target = strokeTargets[i];
 				const hits = strokesHitBy(
-					target.strokes,
+					target.strokes.value,
 					target.transform,
 					[point.x, point.y],
 					touchReach,
-					target.boxes,
+					target.boxes.value,
 				);
 				if (hits.length > 0) {
 					return { id: target.id, index: hits[hits.length - 1] };
