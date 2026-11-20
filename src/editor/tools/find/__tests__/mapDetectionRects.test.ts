@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { ImageLayer } from "../../../layers/image/image.ts";
-import { mapDetectionRects } from "../mapDetectionRects.ts";
+import { mapDetectionRects, mapWordRects } from "../mapDetectionRects.ts";
 
 const close = (actual: number, expected: number) =>
 	assert.ok(
@@ -169,6 +169,64 @@ describe("mapDetectionRects", () => {
 				"text",
 			),
 			[],
+		);
+	});
+});
+
+describe("mapWordRects", () => {
+	const flat = image({
+		width: 1000,
+		height: 80,
+		transform: { x: 500, y: 40, scaleX: 1, scaleY: 1, rotation: 0 },
+	});
+	const document = { width: 1000, height: 80 };
+	const edges = ({
+		width,
+		height,
+		transform,
+	}: {
+		width: number;
+		height: number;
+		transform: { x: number; y: number };
+	}) => ({
+		left: transform.x - width / 2,
+		right: transform.x + width / 2,
+		top: transform.y - height / 2,
+		bottom: transform.y + height / 2,
+	});
+	// "Gate code is 4471", the line a little taller than its words.
+	const line = { x: 100, y: 20, width: 400, height: 40 };
+	const words = [
+		{ x: 100, y: 24, width: 100, height: 32 },
+		{ x: 210, y: 24, width: 100, height: 32 },
+		{ x: 320, y: 24, width: 60, height: 32 },
+		{ x: 390, y: 24, width: 110, height: 32 },
+	];
+
+	test("reaches the line's top and bottom, padded as the line is", () => {
+		const [, code] = mapWordRects(flat, line, words, document).map(edges);
+		close(code.top, 20 - 40 * 0.14);
+		close(code.bottom, 60 + 40 * 0.14);
+	});
+
+	test("pads like the line at its ends and meets its neighbors between", () => {
+		const [gate, code, is, pin] = mapWordRects(flat, line, words, document).map(
+			edges,
+		);
+		close(gate.left, 100 - 40 * 1.1);
+		close(pin.right, 500 + 40 * 1.1);
+		close(code.left, 210 - 8);
+		close(code.right, 310 + 8);
+		assert.ok(gate.right >= code.left - 1e-9, "a gap between words");
+		assert.ok(is.right >= pin.left - 1e-9, "a gap between words");
+		assert.ok(code.right < is.left + 10, "a word covers its neighbor");
+	});
+
+	test("keeps each word's index, dropping one outside the canvas", () => {
+		const cropped = mapWordRects(flat, line, words, { width: 300, height: 80 });
+		assert.deepEqual(
+			cropped.map(({ sourceIndex }) => sourceIndex),
+			[0, 1],
 		);
 	});
 });

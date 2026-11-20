@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/ui/errorMessage";
 import {
 	type DetectionFeature,
-	type DetectionRect,
+	type DetectionRegion,
 	detectImageRegions,
 	isDetectionAvailable,
 	isDetectionModelDownloading,
 } from "../../detection/imageDetection";
+import { chooseWhole, type FindChoice, tapChoice } from "./findResults";
 
-export type DetectedRegion = DetectionRect & { feature: DetectionFeature };
+export type DetectedRegion = DetectionRegion & { feature: DetectionFeature };
 export type DetectionScope = DetectionFeature | "both";
 
 type DetectionIssue = {
@@ -19,13 +20,12 @@ type DetectionIssue = {
 export type ImageDetectionState =
 	| { status: "idle" }
 	| { status: "working"; scope: DetectionScope }
-	| {
+	| ({
 			status: "found";
 			scope: DetectionScope;
 			regions: DetectedRegion[];
-			selected: ReadonlySet<number>;
 			issues: DetectionIssue[];
-	  }
+	  } & FindChoice)
 	| { status: "empty"; scope: DetectionScope; issues: DetectionIssue[] };
 
 const FEATURE_NAMES: Record<DetectionFeature, string> = {
@@ -97,7 +97,7 @@ export function useImageDetection(targetKey: string) {
 						issues,
 						// A face found is nearly always wanted; which lines of text
 						// are private is the user's to pick.
-						selected: new Set(
+						...chooseWhole(
 							regions.flatMap((region, index) =>
 								region.feature === "faces" ? [index] : [],
 							),
@@ -109,20 +109,19 @@ export function useImageDetection(targetKey: string) {
 	const select = useCallback((indices: Iterable<number>) => {
 		setState((current) =>
 			current.status === "found"
-				? { ...current, selected: new Set(indices) }
+				? { ...current, ...chooseWhole(indices) }
 				: current,
 		);
 	}, []);
 
-	const toggle = useCallback((index: number) => {
-		setState((current) => {
-			if (current.status !== "found") return current;
-			const selected = new Set(current.selected);
-			if (selected.has(index)) selected.delete(index);
-			else selected.add(index);
-			return { ...current, selected };
-		});
+	// A tap on region `index`, and on its word `word` if any (`tapChoice`).
+	const tap = useCallback((index: number, word: number | null) => {
+		setState((current) =>
+			current.status === "found"
+				? { ...current, ...tapChoice(current, index, word) }
+				: current,
+		);
 	}, []);
 
-	return { state, start, select, toggle, reset };
+	return { state, start, select, tap, reset };
 }

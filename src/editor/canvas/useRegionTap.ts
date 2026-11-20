@@ -9,8 +9,8 @@ import { insideDocument } from "./strokeIntent";
 import { useCanvasTap } from "./useCanvasTap";
 
 /**
- * A tap with a `regions` input, as while finding. One on a region toggles
- * it. A miss on the regions' image, as by a face, keeps the input, and a
+ * A tap with a `regions` input, as while finding. One on a region hands
+ * the tool that region and the point tapped, in the document. A miss on the regions' image, as by a face, keeps the input, and a
  * second one zooms (see `tapOnNothing`). Where the image is locked, it has
  * no hit box, and shows only inside the document. A tap off the image puts
  * the tool down.
@@ -28,7 +28,7 @@ export function useRegionTap({
 	input: {
 		imageId: string;
 		regions: readonly CanvasRegion[];
-		onToggle: (sourceIndex: number) => void;
+		onTap: (region: CanvasRegion, point: Point) => void;
 	} | null;
 	scale: number;
 	lookups: CanvasLookups;
@@ -45,7 +45,7 @@ export function useRegionTap({
 			const hit = regionAt(input.regions, point, 10 / scale);
 			if (hit) {
 				tapOnNothing(null);
-				input.onToggle(hit.sourceIndex);
+				input.onTap(hit, point);
 				return;
 			}
 			const under = findLayerAt(targets, point)?.id ?? null;

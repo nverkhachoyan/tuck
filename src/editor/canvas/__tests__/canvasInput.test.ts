@@ -93,7 +93,7 @@ const regions: CanvasInput = {
 	type: "regions",
 	imageId: "photo",
 	regions: [],
-	onToggle: () => {},
+	onTap: () => {},
 };
 const editText = (layer: Layer): CanvasInput => ({
 	type: "editText",

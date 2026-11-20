@@ -27,23 +27,75 @@ export function mapDetectionRects(
 ): MappedDetectionRect[] {
 	return regions.flatMap((region, sourceIndex) => {
 		const padded = padRect(region, layer, feature);
-		if (!padded) return [];
-		const polygon = rectCorners(padded).map((point) =>
-			imagePointToDocument(layer, point),
-		);
-		const visible = clipToDocument(polygon, document);
-		if (visible.length < 3) return [];
-		const placement = orientedBounds(visible, layer.transform.rotation);
-		return placement.width > 0 && placement.height > 0
-			? [{ sourceIndex, ...placement }]
-			: [];
+		const placement = padded && placeRect(layer, padded, document);
+		return placement ? [{ sourceIndex, ...placement }] : [];
 	});
+}
+
+/**
+ * The boxes of a line's `words`, mapped as `mapDetectionRects` maps the
+ * line, each with its index in `words`. Each reaches the line's top and
+ * bottom, is padded like the line where it starts or ends the line (where a
+ * recognizer can drop a letter), and less between words, so neighbors meet
+ * without covering each other.
+ */
+export function mapWordRects(
+	layer: ImageLayer,
+	line: DetectionRect,
+	words: readonly DetectionRect[],
+	document: Size,
+): MappedDetectionRect[] {
+	const lefts = words.map(({ x }) => x);
+	const rights = words.map(({ x, width }) => x + width);
+	const first = lefts.indexOf(Math.min(...lefts));
+	const last = rights.indexOf(Math.max(...rights));
+	return words.flatMap((word, sourceIndex) => {
+		if (word.width <= 0 || word.height <= 0) return [];
+		const top = Math.min(line.y, word.y);
+		const height = Math.max(line.y + line.height, word.y + word.height) - top;
+		const left = sourceIndex === first ? Math.min(line.x, word.x) : word.x;
+		const right =
+			sourceIndex === last
+				? Math.max(line.x + line.width, rights[sourceIndex])
+				: rights[sourceIndex];
+		const padLeft = height * (sourceIndex === first ? TEXT_PAD_X : WORD_PAD_X);
+		const padRight = height * (sourceIndex === last ? TEXT_PAD_X : WORD_PAD_X);
+		const padY = Math.max(2, height * TEXT_PAD_Y);
+		const padded = clampToImage(layer, {
+			x: left - padLeft,
+			y: top - padY,
+			width: right - left + padLeft + padRight,
+			height: height + padY * 2,
+		});
+		const placement = padded && placeRect(layer, padded, document);
+		return placement ? [{ sourceIndex, ...placement }] : [];
+	});
+}
+
+// An image rect's box in the document, following the image's transform and
+// clipped to the document; null when none of it shows.
+function placeRect(
+	layer: ImageLayer,
+	rect: DetectionRect,
+	document: Size,
+): Omit<MappedDetectionRect, "sourceIndex"> | null {
+	const polygon = rectCorners(rect).map((point) =>
+		imagePointToDocument(layer, point),
+	);
+	const visible = clipToDocument(polygon, document);
+	if (visible.length < 3) return null;
+	const placement = orientedBounds(visible, layer.transform.rotation);
+	return placement.width > 0 && placement.height > 0 ? placement : null;
 }
 
 // Text recognizers can leave a line's first or last letter out of its box
 // (ML Kit drops a whole "W"), so text reaches a wide letter further each way:
 // about 1.1 line heights on a line without descenders.
 const TEXT_PAD_X = 1.1;
+const TEXT_PAD_Y = 0.14;
+// Between two words, a word's box reaches a fifth of the line's height, about
+// to the middle of the space.
+const WORD_PAD_X = 0.2;
 
 function padRect(
 	region: DetectionRect,
@@ -56,11 +108,23 @@ function padRect(
 	const padY =
 		feature === "faces"
 			? region.height * 0.18
-			: Math.max(2, region.height * 0.14);
-	const x = Math.max(0, region.x - padX);
-	const y = Math.max(0, region.y - padY);
-	const right = Math.min(layer.width, region.x + region.width + padX);
-	const bottom = Math.min(layer.height, region.y + region.height + padY);
+			: Math.max(2, region.height * TEXT_PAD_Y);
+	return clampToImage(layer, {
+		x: region.x - padX,
+		y: region.y - padY,
+		width: region.width + padX * 2,
+		height: region.height + padY * 2,
+	});
+}
+
+function clampToImage(
+	layer: ImageLayer,
+	rect: DetectionRect,
+): DetectionRect | null {
+	const x = Math.max(0, rect.x);
+	const y = Math.max(0, rect.y);
+	const right = Math.min(layer.width, rect.x + rect.width);
+	const bottom = Math.min(layer.height, rect.y + rect.height);
 	return right > x && bottom > y
 		? { x, y, width: right - x, height: bottom - y }
 		: null;

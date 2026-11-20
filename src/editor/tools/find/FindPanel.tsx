@@ -179,7 +179,8 @@ function FindBody({
 	onMeasure?: (width: number) => void;
 	onCancel: () => void;
 }) {
-	const { state, visibleIndices, selectedCount, review } = controller;
+	const { state, visibleIndices, selectedCount, canNarrow, review } =
+		controller;
 	const { retry, reset, selectAll, clear } = controller;
 	return (
 		<>
@@ -217,6 +218,7 @@ function FindBody({
 					<Found
 						count={visibleIndices.length}
 						selected={selectedCount}
+						canNarrow={canNarrow}
 						review={review}
 						onSelectAll={selectAll}
 						onClear={clear}
@@ -280,6 +282,7 @@ function scopeName(scope: DetectionScope): string {
 function Found({
 	count,
 	selected,
+	canNarrow,
 	review,
 	onSelectAll,
 	onClear,
@@ -287,6 +290,7 @@ function Found({
 }: {
 	count: number;
 	selected: number;
+	canNarrow: boolean;
 	review: FindReview;
 	onSelectAll: () => void;
 	onClear: () => void;
@@ -306,7 +310,9 @@ function Found({
 						? "The detector found regions, but none are inside the canvas."
 						: selected === 0
 							? "Tap what to hide, or All. Detection can miss some."
-							: "Detection can miss some. Check the photo, then ✓ to redact."}
+							: canNarrow
+								? "Tap a chosen line again to hide only a word. Detection can miss some."
+								: "Detection can miss some. Check the photo, then ✓ to redact."}
 				</Text>
 			</View>
 			{count > 0 && (

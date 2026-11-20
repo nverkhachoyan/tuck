@@ -15,9 +15,11 @@ const MARKER_SHARE = 0.2;
 const MARKER_HIDDEN_BELOW_PX = 12;
 
 // A region a `regions` input shows over the canvas, chosen or not, by its
-// index in what the tool found.
+// index in what the tool found, and by `word` when it's one word of that
+// region shown on its own.
 export type CanvasRegion = RedactionBoxPlacement & {
 	sourceIndex: number;
+	word?: number;
 	selected: boolean;
 };
 

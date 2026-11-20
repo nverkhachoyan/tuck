@@ -191,7 +191,7 @@ export function EditorScene({
 				<Group clip={canvas}>
 					{regions.map((region) => (
 						<RegionOutline
-							key={region.sourceIndex}
+							key={`${region.sourceIndex}:${region.word ?? "all"}`}
 							region={region}
 							viewScale={viewScale}
 						/>

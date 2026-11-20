@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanvasInput } from "../../canvas/canvasInput";
+import { regionAt } from "../../canvas/hitTest";
+import type { CanvasRegion } from "../../canvas/RegionOutline";
 import type { DetectionFeature } from "../../detection/imageDetection";
-import { boundingBox, type Rect } from "../../document/geometry";
+import { boundingBox, type Point, type Rect } from "../../document/geometry";
 import type { RedactionBoxPlacement } from "../../layers/redaction/redaction";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
@@ -9,10 +11,12 @@ import type { ToolEnv } from "../defineTool";
 import {
 	chosenBoxes,
 	detectionTargetKey,
+	type FoundRegion,
+	isChosen,
 	readingOrder,
 	redactedNotice,
 } from "./findResults";
-import { mapDetectionRects } from "./mapDetectionRects";
+import { mapDetectionRects, mapWordRects } from "./mapDetectionRects";
 import { type DetectionScope, useImageDetection } from "./useImageDetection";
 
 /**
@@ -43,8 +47,9 @@ export type FindController = ReturnType<typeof useFindTool>;
  * Find: faces and text found in `image`, placed in the document, to choose
  * from and redact, and to review one at a time. What's found goes stale when
  * the image or the document changes shape, and is let go once Find closes.
- * `canvasInput` toggles a region tapped on the canvas, while there's an
- * image to search. Reviewing zooms the canvas to each region (`view`).
+ * `canvasInput` chooses a region tapped on the canvas, while there's an
+ * image to search; a second tap on a chosen line narrows it to the word
+ * under the finger, whose words are then shown and chosen one by one. Reviewing zooms the canvas to each region (`view`).
  * Redacting says how many regions it redacted (`notify`).
  */
 export function useFindTool({
@@ -61,25 +66,53 @@ export function useFindTool({
 		() => ({ width: document.width, height: document.height }),
 		[document.width, document.height],
 	);
+	const detected =
+		detection.state.status === "found" ? detection.state.regions : null;
 	const regions = useMemo(
-		() =>
-			image && detection.state.status === "found"
-				? detection.state.regions.flatMap(
-						({ feature, ...region }, sourceIndex) =>
-							mapDetectionRects(image, [region], documentSize, feature).map(
-								(mapped) => ({ ...mapped, sourceIndex, feature }),
-							),
+		(): FoundRegion[] =>
+			image && detected
+				? detected.flatMap(({ feature, words, ...region }, sourceIndex) =>
+						mapDetectionRects(image, [region], documentSize, feature).map(
+							(mapped) => ({
+								...mapped,
+								sourceIndex,
+								feature,
+								// A line of one word has nothing to narrow to.
+								words:
+									words && words.length > 1
+										? mapWordRects(image, region, words, documentSize)
+										: [],
+							}),
+						),
 					)
 				: [],
-		[image, detection.state, documentSize],
+		[image, detected, documentSize],
 	);
 	const found = detection.state.status === "found" ? detection.state : null;
+	// A narrowed line shows its words, each chosen or not, in its place.
 	const overlay = useMemo(
 		() =>
-			regions.map((region) => ({
-				...region,
-				selected: found?.selected.has(region.sourceIndex) ?? false,
-			})),
+			regions.flatMap(
+				({ sourceIndex, width, height, transform, words }): CanvasRegion[] => {
+					const narrowed = found?.words.get(sourceIndex);
+					return narrowed
+						? words.map(({ sourceIndex: word, ...placement }) => ({
+								...placement,
+								sourceIndex,
+								word,
+								selected: narrowed.has(word),
+							}))
+						: [
+								{
+									sourceIndex,
+									width,
+									height,
+									transform,
+									selected: found?.selected.has(sourceIndex) ?? false,
+								},
+							];
+				},
+			),
 		[regions, found],
 	);
 	const visibleIndices = useMemo(
@@ -87,8 +120,15 @@ export function useFindTool({
 		[regions],
 	);
 	const selectedCount = found
-		? visibleIndices.filter((index) => found.selected.has(index)).length
+		? visibleIndices.filter((index) => isChosen(found, index)).length
 		: 0;
+	// Whether a line chosen whole could be narrowed to a word, to say how.
+	const canNarrow =
+		found !== null &&
+		regions.some(
+			({ sourceIndex, words }) =>
+				words.length > 1 && found.selected.has(sourceIndex),
+		);
 	// Picking what's already found keeps the regions chosen from it.
 	const find = (scope: DetectionScope) => {
 		const { state } = detection;
@@ -111,7 +151,7 @@ export function useFindTool({
 			position,
 			count: order.length,
 			feature: shown.feature,
-			included: found?.selected.has(shown.sourceIndex) ?? false,
+			included: found ? isChosen(found, shown.sourceIndex) : false,
 			bounds: regionBounds(shown),
 		},
 		count: order.length,
@@ -126,20 +166,31 @@ export function useFindTool({
 			setReviewed(regions[order[next]].sourceIndex);
 		},
 		toggle: () => {
-			if (shown) detection.toggle(shown.sourceIndex);
+			if (shown) detection.tap(shown.sourceIndex, null);
 		},
 		stop: () => setReviewed(null),
 	};
 	useReviewZoom(review, view);
 
-	// A tap on a region toggles it, and moves a review there.
-	const { toggle: toggleDetection } = detection;
-	const toggle = useCallback(
-		(index: number) => {
-			toggleDetection(index);
+	// A tap on a region chooses it, narrows it, or leaves it out
+	// (`tapChoice`), and moves a review there. On a line chosen whole, the
+	// word tapped is the nearest one to the point.
+	const { tap: tapDetection } = detection;
+	const chosenWhole = found?.selected;
+	const tap = useCallback(
+		(hit: CanvasRegion, point: Point) => {
+			const index = hit.sourceIndex;
+			let word = hit.word ?? null;
+			if (word === null && chosenWhole?.has(index)) {
+				const line = regions.find(({ sourceIndex }) => sourceIndex === index);
+				if (line && line.words.length > 1) {
+					word = regionAt(line.words, point, Infinity)?.sourceIndex ?? null;
+				}
+			}
+			tapDetection(index, word);
 			setReviewed((current) => (current === null ? null : index));
 		},
-		[toggleDetection],
+		[tapDetection, chosenWhole, regions],
 	);
 	const { reset: resetDetection } = detection;
 	const reset = useCallback(() => {
@@ -157,8 +208,8 @@ export function useFindTool({
 		(): CanvasInput | null =>
 			imageId === undefined
 				? null
-				: { type: "regions", imageId, regions: overlay, onToggle: toggle },
-		[imageId, overlay, toggle],
+				: { type: "regions", imageId, regions: overlay, onTap: tap },
+		[imageId, overlay, tap],
 	);
 
 	return {
@@ -166,13 +217,13 @@ export function useFindTool({
 		overlay,
 		visibleIndices,
 		selectedCount,
+		canNarrow,
 		find,
 		retry: () => {
 			const { state } = detection;
 			if (state.status !== "idle") find(state.scope);
 		},
 		review,
-		toggle,
 		canvasInput,
 		selectAll: () => detection.select(visibleIndices),
 		clear: () => detection.select([]),
@@ -180,7 +231,7 @@ export function useFindTool({
 		// The regions chosen, redacted together in one group, saying how many
 		// and what they are (null for both kinds).
 		redact: () => {
-			const result = found && chosenBoxes(regions, found.selected);
+			const result = found && chosenBoxes(regions, found);
 			if (!result) return;
 			addRedactionBoxes(
 				result.boxes,
