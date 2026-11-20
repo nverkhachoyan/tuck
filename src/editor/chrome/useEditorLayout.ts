@@ -60,10 +60,11 @@ export function useEditorLayout({
 	const barInset = useDockInset(keyboardOverlap);
 	// As an inspector, the dock covers none of the canvas's bottom.
 	const dockInset = wide ? 0 : barInset;
-	// An open tray's height: the canvas fits above it as well as the dock. A
-	// wide window's card stands in the same place, with a gap above and below,
-	// and like the rail and inspector, clear of the home indicator. The
-	// keyboard covers the bottom while typing.
+	// An open tray's height. The photo holds still under it rather than
+	// refitting (`trayInset`), while notices and the canvas's own controls
+	// sit above it. A wide window's card stands in the same place, with a gap
+	// above and below, and like the rail and inspector, clear of the home
+	// indicator. The keyboard covers the bottom while typing.
 	const [trayHeight, setTrayHeight] = useState(0);
 	// The stage's size, which no tool changes, so measuring it can't move
 	// the canvas a second time as a tool opens.
@@ -96,6 +97,8 @@ export function useEditorLayout({
 		setTrayHeight,
 		setStage,
 		cardLeft,
+		// The part of `canvasInset.bottom` that the photo's fit ignores.
+		trayInset: wide ? 0 : trayHeight,
 		canvasInset: {
 			left: wide ? RAIL_INSET : 0,
 			// Clear of the inspector while it's open, and of the screen edge

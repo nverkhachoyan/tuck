@@ -128,6 +128,9 @@ type EditorCanvasProps = {
 	// and by the keyboard they ride on. The document fits above them, and
 	// what's past its edges shows under.
 	bottomInset?: number;
+	// The part of `bottomInset` an open tray covers: the document's fit
+	// ignores it and holds still, but a zoom can rise clear of it.
+	trayInset?: number;
 	// How much of each side is covered, as by a wide screen's tool rail and
 	// inspector.
 	leftInset?: number;
@@ -204,6 +207,7 @@ export function EditorCanvas({
 	onToolInteractionEnd,
 	onTapAway,
 	bottomInset = 0,
+	trayInset = 0,
 	leftInset = 0,
 	rightInset = 0,
 	selectionBar,
@@ -238,11 +242,12 @@ export function EditorCanvas({
 				x: leftInset,
 				y: 0,
 				width: size.width - leftInset - rightInset,
-				height: size.height - bottomInset,
+				height: size.height - bottomInset + trayInset,
 			},
 			inset: PHOTO_INSET,
+			covered: trayInset,
 		}),
-		[documentSize, size, bottomInset, leftInset, rightInset],
+		[documentSize, size, bottomInset, trayInset, leftInset, rightInset],
 	);
 	const {
 		zoom,
