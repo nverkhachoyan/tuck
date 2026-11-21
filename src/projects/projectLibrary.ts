@@ -23,21 +23,9 @@ import {
 	type SavedProject,
 } from "./projectFile.ts";
 
-/** Removes cached preview textures when a project is deleted. */
-export type RemoveProjectPreviews = (id: string) => Promise<unknown>;
-
-/** Copies cached preview textures when a project is copied. */
-export type CopyProjectPreviews = (
-	fromId: string,
-	toId: string,
-	files: Set<string>,
-) => Promise<unknown>;
-
 export function createProjectLibrary(
 	storage: ProjectStorage,
 	open: OpenProjectsCoordination,
-	removePreviews?: RemoveProjectPreviews,
-	copyPreviews?: CopyProjectPreviews,
 ) {
 	/**
 	 * Runs `work` on a saved project that no editor has open, here or in
@@ -90,9 +78,6 @@ export function createProjectLibrary(
 	function deleteProject(id: string): Promise<void> {
 		return withClosedProject(id, async () => {
 			await storage.removeProject(id);
-			if (removePreviews) {
-				await removePreviews(id);
-			}
 		});
 	}
 
@@ -152,9 +137,6 @@ export function createProjectLibrary(
 			for (const file of files) {
 				await storage.copyImage(fromId, file, copyId);
 			}
-			// Previews are rebuilt on open when missing, so a failed copy
-			// costs only time.
-			await copyPreviews?.(fromId, copyId, files).catch(() => {});
 			const now = Date.now();
 			const { thumbnail } = saved;
 			const copy: SavedProject = {
@@ -172,9 +154,6 @@ export function createProjectLibrary(
 			return copyId;
 		} catch (error) {
 			await storage.removeProject(copyId).catch(() => {});
-			if (removePreviews) {
-				await removePreviews(copyId).catch(() => {});
-			}
 			throw error;
 		} finally {
 			await storage.releaseProject(copyId);

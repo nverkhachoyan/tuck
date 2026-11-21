@@ -8,16 +8,11 @@ import {
 } from "../../editor/core.ts";
 import {
 	createOpenProjects,
-	type PrepareProjectPreviews,
+	type MakePreview,
 	type ProjectStorage,
-	type StoreProjectPreview,
 } from "../openProjects.ts";
 import { parseSavedProject } from "../projectFile.ts";
-import {
-	type CopyProjectPreviews,
-	createProjectLibrary,
-	type RemoveProjectPreviews,
-} from "../projectLibrary.ts";
+import { createProjectLibrary } from "../projectLibrary.ts";
 
 export type Write = (
 	id: string,
@@ -27,27 +22,18 @@ export type Write = (
 
 export function createProjectLifecycle(
 	storage: ProjectStorage,
-	preparePreviews?: PrepareProjectPreviews,
-	removePreviews?: RemoveProjectPreviews,
-	storePreview?: StoreProjectPreview,
-	copyPreviews?: CopyProjectPreviews,
+	makePreview?: MakePreview,
 ) {
 	const { coordination, ...openProjects } = createOpenProjects(
 		storage,
-		preparePreviews,
-		storePreview,
+		makePreview,
 	);
-	const library = createProjectLibrary(
-		storage,
-		coordination,
-		removePreviews,
-		copyPreviews,
-	);
+	const library = createProjectLibrary(storage, coordination);
 	return { ...openProjects, ...library };
 }
 
 // Storage in memory, with every write going through `write`. An image's URL
-// is `blob:<project>/<file>`.
+// is `blob:<project>/<file>`, and its preview's `preview:<project>/<file>`.
 export function createHarness(
 	write: Write = async (id, json, files) => {
 		files.set(id, json);
@@ -55,31 +41,38 @@ export function createHarness(
 	// When a read should see something other than the saved file, such as a
 	// file another tab is in the middle of replacing.
 	read?: (id: string, files: Map<string, string>) => Promise<string | null>,
-	preparePreviews?: PrepareProjectPreviews,
-	removePreviews?: RemoveProjectPreviews,
-	storePreview?: StoreProjectPreview,
+	makePreview?: MakePreview,
 ) {
 	const files = new Map<string, string>();
 	// Each project's image files; a project with none has no entry.
 	const images = new Map<string, Set<string>>();
+	// Each project's image files that have a preview, likewise.
+	const previews = new Map<string, Set<string>>();
+	// Every URL handed out, and every one released.
+	const issued: string[] = [];
 	const released: string[] = [];
-	const copiedPreviews: { fromId: string; toId: string; files: Set<string> }[] =
-		[];
-	let copyPreviewsTo: CopyProjectPreviews = async (fromId, toId, files) => {
-		copiedPreviews.push({ fromId, toId, files: new Set(files) });
+	const issue = (url: string) => {
+		issued.push(url);
+		return url;
 	};
-	const copyPreviews: CopyProjectPreviews = (fromId, toId, files) =>
-		copyPreviewsTo(fromId, toId, files);
+	const add = (kept: Map<string, Set<string>>, id: string, file: string) =>
+		kept.set(id, new Set(kept.get(id)).add(file));
+	const drop = (kept: Map<string, Set<string>>, id: string, file: string) => {
+		kept.get(id)?.delete(file);
+		if (kept.get(id)?.size === 0) kept.delete(id);
+	};
 	// Projects another tab holds open, which can't be claimed here.
 	const openElsewhere = new Set<string>();
 	let copyImage: ProjectStorage["copyImage"] = async (fromId, file, toId) => {
 		if (!images.get(fromId)?.has(file)) throw new Error("Missing image");
-		images.set(toId, new Set(images.get(toId)).add(file));
+		add(images, toId, file);
+		if (previews.get(fromId)?.has(file)) add(previews, toId, file);
 	};
 	let writes = 0;
 	const remove = (id: string) => {
 		files.delete(id);
 		images.delete(id);
+		previews.delete(id);
 	};
 	const storage: ProjectStorage = {
 		async claimProject(id) {
@@ -87,13 +80,22 @@ export function createHarness(
 		},
 		async releaseProject() {},
 		async storeImage(id, file) {
-			images.set(id, new Set(images.get(id)).add(file));
-			return `blob:${id}/${file}`;
+			add(images, id, file);
+			return issue(`blob:${id}/${file}`);
+		},
+		async storePreview(id, file) {
+			add(previews, id, file);
+			return issue(`preview:${id}/${file}`);
 		},
 		copyImage: (fromId, file, toId) => copyImage(fromId, file, toId),
 		async imageUrl(id, file) {
 			if (!images.get(id)?.has(file)) throw new Error("Missing image");
-			return `blob:${id}/${file}`;
+			return issue(`blob:${id}/${file}`);
+		},
+		async previewUrl(id, file) {
+			return previews.get(id)?.has(file)
+				? issue(`preview:${id}/${file}`)
+				: null;
 		},
 		releaseImage(url) {
 			released.push(url);
@@ -102,9 +104,8 @@ export function createHarness(
 			return [...(images.get(id) ?? [])];
 		},
 		async removeImage(id, file) {
-			const kept = images.get(id);
-			kept?.delete(file);
-			if (kept?.size === 0) images.delete(id);
+			drop(images, id, file);
+			drop(previews, id, file);
 		},
 		async readProjectFile(id) {
 			if (read) return read(id, files);
@@ -125,34 +126,20 @@ export function createHarness(
 		},
 	};
 	return {
-		projects: createProjectLifecycle(
-			storage,
-			preparePreviews,
-			removePreviews,
-			storePreview,
-			copyPreviews,
-		),
+		projects: createProjectLifecycle(storage, makePreview),
 		// A new session over the same storage, as after a reload or the app
 		// being killed: whatever was open was never closed.
 		restart() {
-			this.projects = createProjectLifecycle(
-				storage,
-				preparePreviews,
-				removePreviews,
-				storePreview,
-				copyPreviews,
-			);
+			this.projects = createProjectLifecycle(storage, makePreview);
 		},
 		files,
 		images,
+		previews,
+		issued,
 		released,
-		copiedPreviews,
 		openElsewhere,
 		set copyImage(copy: ProjectStorage["copyImage"]) {
 			copyImage = copy;
-		},
-		set copyPreviews(copy: CopyProjectPreviews) {
-			copyPreviewsTo = copy;
 		},
 		get writes() {
 			return writes;

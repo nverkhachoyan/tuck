@@ -4,7 +4,6 @@ import {
 	openDocument,
 	renderThumbnail,
 } from "@/editor";
-import { getPreviewUri } from "@/photos/previewCache";
 import { deleteTemporaryFile } from "@/platform/temporaryFile";
 import { projects } from "@/projects/projectService";
 import { createProjectSession } from "./projectSession";
@@ -18,9 +17,12 @@ export const appSession = createProjectSession({
 		closeDocument,
 	},
 	renderThumbnail,
-	getPreviewUri,
+	getPreviewUri: projects.previewUri,
 	deleteTemporaryFile,
 });
+
+/** The canvas preview for an open project's image URL, if it has one. */
+export const previewUri = projects.previewUri;
 
 export const {
 	hasOpenSession,
