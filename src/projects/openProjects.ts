@@ -3,6 +3,7 @@ import {
 	createDocumentFromImage,
 	type EditorDocument,
 	hasEdits,
+	type Size,
 } from "../editor/core.ts";
 import {
 	imageFiles,
@@ -16,13 +17,23 @@ import {
 	type SavedProject,
 } from "./projectFile.ts";
 
-/** Where projects are kept: `projectStorage.ts`, or `.web.ts` in browsers. */
+/**
+ * Where projects are kept: `projectStorage.ts`, or `.web.ts` in browsers.
+ * An image's canvas preview, the smaller copy of a large photo that the
+ * canvas draws, is kept with the image under its file's name.
+ * - `storeImage`, `storePreview`: move a picked file in, and return its URL.
+ * - `copyImage`, `removeImage`, `removeProject`: take the preview along.
+ * - `previewUrl`: null when the image has none, or it was purged.
+ * - `releaseImage`: frees any URL the others returned.
+ */
 export type ProjectStorage = {
 	claimProject(id: string): Promise<boolean>;
 	releaseProject(id: string): Promise<void>;
 	storeImage(id: string, file: string, uri: string): Promise<string>;
+	storePreview(id: string, file: string, uri: string): Promise<string>;
 	copyImage(fromId: string, file: string, toId: string): Promise<void>;
 	imageUrl(id: string, file: string): Promise<string>;
+	previewUrl(id: string, file: string): Promise<string | null>;
 	releaseImage(url: string): void;
 	listImages(id: string): Promise<string[]>;
 	removeImage(id: string, file: string): Promise<void>;
@@ -36,20 +47,15 @@ export type ProjectStorage = {
 	listProjectIds(): Promise<string[]>;
 };
 
-/** Stores a preview texture created when an image is imported into a project. */
-export type StoreProjectPreview = (
-	id: string,
-	file: string,
+/**
+ * Makes a canvas preview of a stored image as a temporary file, or null when
+ * it's small enough to draw itself (`makePreview` in `photos/`).
+ */
+export type MakePreview = (
 	url: string,
-	preview: string,
-) => Promise<unknown>;
-
-/** Prepares preview textures for a reopened project's images before canvas decoding. */
-export type PrepareProjectPreviews = (
-	id: string,
-	document: EditorDocument,
-	imageFile: (url: string) => string | undefined,
-) => Promise<unknown>;
+	size: Size,
+	opaque: boolean,
+) => Promise<string | null>;
 
 /** Draws a document as a thumbnail's data URL; see `ProjectThumbnail`. */
 export type RenderThumbnail = (document: EditorDocument) => Promise<string>;
@@ -96,6 +102,8 @@ type OpenProject = {
 	// project had when opened, or has been given since. They're kept until it
 	// closes, so undo can bring back a layer that used one.
 	images: Map<string, string>;
+	// The canvas preview's URL for each image URL that has one.
+	previews: Map<string, string>;
 	createdAt: number;
 	// Opened from the list, rather than started this session.
 	reopened: boolean;
@@ -166,8 +174,7 @@ function serializeOpenProject(
 
 export function createOpenProjects(
 	storage: ProjectStorage,
-	preparePreviews?: PrepareProjectPreviews,
-	storePreview?: StoreProjectPreview,
+	makePreview?: MakePreview,
 ) {
 	const openProjects = new Map<string, OpenProject>();
 
@@ -220,6 +227,58 @@ export function createOpenProjects(
 	 */
 	function openProjectName(id: string): string | null {
 		return openProjects.get(id)?.name ?? null;
+	}
+
+	/** The canvas preview for an open project's image URL, if it has one. */
+	function previewUri(id: string, url: string): string | null {
+		return openProjects.get(id)?.previews.get(url) ?? null;
+	}
+
+	/**
+	 * Keeps a picked image's preview with it. The canvas can draw the image
+	 * itself, so a failure only costs memory until it's rebuilt on open.
+	 */
+	async function storePreview(
+		id: string,
+		file: string,
+		preview: string,
+	): Promise<string | null> {
+		try {
+			return await storage.storePreview(id, file, preview);
+		} catch (error) {
+			console.warn("Couldn't keep the photo's preview", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Each of an opened document's large images' previews, made again for any
+	 * missing (saved before previews, or purged). A failure is logged, and the
+	 * canvas draws that image itself.
+	 */
+	async function openPreviews(
+		id: string,
+		document: EditorDocument,
+		images: Map<string, string>,
+		previews: Map<string, string>,
+	) {
+		for (const layer of document.layers) {
+			if (layer.type !== "image" || previews.has(layer.uri)) continue;
+			const file = images.get(layer.uri);
+			if (file === undefined) continue;
+			try {
+				let preview = await storage.previewUrl(id, file);
+				if (preview === null && makePreview) {
+					const made = await makePreview(layer.uri, layer, layer.opaque);
+					if (made !== null) {
+						preview = await storage.storePreview(id, file, made);
+					}
+				}
+				if (preview !== null) previews.set(layer.uri, preview);
+			} catch (error) {
+				console.warn("Couldn't prepare the photo's preview", error);
+			}
+		}
 	}
 
 	/** When an open project was made, beside `openProjectName`. */
@@ -289,11 +348,10 @@ export function createOpenProjects(
 			// `PHOTO_FILE` is a JPEG, so a PNG gets a name of its own.
 			const file = opaque ? PHOTO_FILE : newImageFile(opaque);
 			const url = await storage.storeImage(id, file, uri);
-			if (preview && storePreview) {
-				await storePreview(id, file, url, preview);
-			}
+			const previewUrl = preview ? await storePreview(id, file, preview) : null;
 			return {
 				images: new Map([[url, file]]),
+				previews: new Map(previewUrl === null ? [] : [[url, previewUrl]]),
 				document: createDocumentFromImage(url, width, height, opaque),
 			};
 		});
@@ -307,24 +365,28 @@ export function createOpenProjects(
 		const { width, height, background } = canvas;
 		return startProject(async () => ({
 			images: new Map(),
+			previews: new Map(),
 			document: createBlankDocument(width, height, background),
 		}));
 	}
 
 	async function startProject(
-		start: (
-			id: string,
-		) => Promise<{ images: Map<string, string>; document: EditorDocument }>,
+		start: (id: string) => Promise<{
+			images: Map<string, string>;
+			previews: Map<string, string>;
+			document: EditorDocument;
+		}>,
 	): Promise<{ id: string; document: EditorDocument }> {
 		await closing;
 		const id = createProjectId();
 		if (!(await storage.claimProject(id)))
 			throw new Error("Project is already open");
 		try {
-			const { images, document } = await start(id);
+			const { images, previews, document } = await start(id);
 			const createdAt = Date.now();
 			openProjects.set(id, {
 				images,
+				previews,
 				createdAt,
 				reopened: false,
 				savedJson: null,
@@ -362,8 +424,12 @@ export function createOpenProjects(
 				saved.document,
 				(file) => urls.get(file) ?? file,
 			);
+			const images = new Map([...urls].map(([file, url]) => [url, file]));
+			const previews = new Map<string, string>();
+			await openPreviews(id, document, images, previews);
 			const project: OpenProject = {
-				images: new Map([...urls].map(([file, url]) => [url, file])),
+				images,
+				previews,
 				createdAt: saved.createdAt,
 				reopened: true,
 				savedJson: JSON.stringify(saved.document),
@@ -373,9 +439,6 @@ export function createOpenProjects(
 				writing: Promise.resolve(),
 			};
 			openProjects.set(id, project);
-			if (preparePreviews) {
-				await preparePreviews(id, document, (url) => project.images.get(url));
-			}
 			setAutosaveError(null);
 			opened = true;
 			return document;
@@ -462,16 +525,16 @@ export function createOpenProjects(
 		if (!project) throw new Error("This project isn't open.");
 		const file = newImageFile(opaque);
 		const url = await storage.storeImage(id, file, uri);
+		const previewUrl = preview ? await storePreview(id, file, preview) : null;
 		// Closed meanwhile: the unused file goes when the project next closes,
 		// or with the project, if it wasn't kept.
 		if (openProjects.get(id) !== project) {
 			storage.releaseImage(url);
+			if (previewUrl !== null) storage.releaseImage(previewUrl);
 			throw new Error("This project was closed.");
 		}
 		project.images.set(url, file);
-		if (preview && storePreview) {
-			await storePreview(id, file, url, preview);
-		}
+		if (previewUrl !== null) project.previews.set(url, previewUrl);
 		return url;
 	}
 
@@ -528,6 +591,7 @@ export function createOpenProjects(
 			if (pendingSave?.id === id) pendingSave = null;
 			setAutosaveError(null);
 			for (const url of project.images.keys()) storage.releaseImage(url);
+			for (const url of project.previews.values()) storage.releaseImage(url);
 			await storage.releaseProject(id);
 		});
 	}
@@ -544,6 +608,7 @@ export function createOpenProjects(
 		getAutosaveError,
 		openProjectName,
 		openProjectCreatedAt,
+		previewUri,
 		hasUnsavedChanges,
 		queueAutosave,
 		flushAutosave,

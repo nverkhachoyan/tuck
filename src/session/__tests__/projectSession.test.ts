@@ -73,6 +73,9 @@ function createHarness(options?: {
 			images.set(id, new Set(images.get(id)).add(file));
 			return `blob:${id}/${file}`;
 		},
+		async storePreview(id, file) {
+			return `preview:${id}/${file}`;
+		},
 		async copyImage(fromId, file, toId) {
 			if (!images.get(fromId)?.has(file)) throw new Error("Missing image");
 			images.set(toId, new Set(images.get(toId)).add(file));
@@ -80,6 +83,9 @@ function createHarness(options?: {
 		async imageUrl(id, file) {
 			if (!images.get(id)?.has(file)) throw new Error("Missing image");
 			return `blob:${id}/${file}`;
+		},
+		async previewUrl() {
+			return null;
 		},
 		releaseImage() {},
 		async listImages(id) {

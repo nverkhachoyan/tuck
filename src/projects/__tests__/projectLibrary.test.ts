@@ -293,9 +293,6 @@ describe("renaming and duplicating", () => {
 			imageLayers(reopened)[0].uri,
 			`blob:${copy.id}/${PHOTO_FILE}`,
 		);
-		assert.deepEqual(harness.copiedPreviews, [
-			{ fromId: id, toId: copy.id, files: new Set([PHOTO_FILE]) },
-		]);
 	});
 
 	test("a copy of an out-of-date thumbnail is still out of date", async (t) => {
@@ -334,20 +331,21 @@ describe("renaming and duplicating", () => {
 		assert.deepEqual([...harness.files.keys()], [id]);
 	});
 
-	test("a copy whose previews can't be copied is still made", async () => {
+	test("a copy has its images' previews", async () => {
 		const harness = createHarness();
-		const id = await createSavedProject(harness);
-		harness.copyPreviews = async () => {
-			throw new Error("Close this app's other tabs, then try again.");
-		};
+		const { id, document } = await harness.projects.createProject({
+			...photo,
+			preview: "picked-preview",
+		});
+		await harness.projects.closeProject(id, addText(document, "CAPTION"));
 		await harness.projects.duplicateProject(id, "Copy");
 		const copies = (await harness.projects.listProjects()).filter(
 			(listed) => listed.id !== id,
 		);
 		assert.equal(copies.length, 1);
 		assert.deepEqual(
-			savedProject(harness, copies[0].id).document,
-			savedProject(harness, id).document,
+			[...(harness.previews.get(copies[0].id) ?? [])],
+			[PHOTO_FILE],
 		);
 	});
 

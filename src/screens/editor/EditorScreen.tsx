@@ -4,9 +4,12 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Editor, type EditorHost, LoadFonts } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
-import { getPreviewUri } from "@/photos/previewCache";
 import { exportHref } from "@/projects/projectRoute";
-import { addImage, title as sessionTitle } from "@/session/appSession";
+import {
+	addImage,
+	previewUri,
+	title as sessionTitle,
+} from "@/session/appSession";
 import { useAutosave } from "@/session/useAutosave";
 import {
 	latestSessionDocument,
@@ -118,7 +121,7 @@ function OpenProject({ document }: { document: EditorDocument }) {
 		openExport: () => router.push(exportHref(projectId)),
 		previewUri:
 			projectId !== null
-				? (uri: string) => getPreviewUri(projectId, uri)
+				? (uri: string) => previewUri(projectId, uri)
 				: undefined,
 	};
 	return <Editor document={document} host={host} />;

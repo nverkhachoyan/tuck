@@ -3,7 +3,7 @@ import { PHOTO_FILE } from "./projectFile";
 
 // Browsers give the app no file system to keep projects in, so they live in
 // IndexedDB: each project's JSON in one store, and its image files' bytes,
-// if it has any, in another.
+// if it has any, in another, each with its canvas preview if it has one.
 // A transaction either completes or leaves nothing, so saves need no draft.
 
 const DATABASE = "tuck";
@@ -17,8 +17,13 @@ function imageKey(id: string, file: string): IDBValidKey {
 	return file === PHOTO_FILE ? id : [id, file];
 }
 
-// Every [id, file] key of one project: arrays sort after strings, so [id, []]
-// comes after all of them.
+// Where an image's canvas preview is kept in PHOTOS, beside the image.
+function previewKey(id: string, file: string): IDBValidKey {
+	return [id, file, "preview"];
+}
+
+// Every [id, file] and [id, file, "preview"] key of one project: arrays sort
+// after strings, so [id, []] comes after all of them.
 function addedImageKeys(id: string): IDBKeyRange {
 	return IDBKeyRange.bound([id], [id, []]);
 }
@@ -78,6 +83,9 @@ function openDatabase(): Promise<IDBDatabase> {
 			};
 			request.onsuccess = () => {
 				const opened = request.result;
+				// Builds before previews were kept here kept them in a database
+				// of their own; any left are rebuilt on open.
+				indexedDB.deleteDatabase("tuck-previews");
 				// Let a newer version of the app, open in another tab, upgrade it.
 				opened.onversionchange = () => {
 					opened.close();
@@ -128,14 +136,36 @@ export async function storeImage(
 	return URL.createObjectURL(blob);
 }
 
+/** Copies an image's canvas preview into a project beside it, and returns a URL for it. */
+export async function storePreview(
+	id: string,
+	file: string,
+	uri: string,
+): Promise<string> {
+	const blob = await (await fetch(uri)).blob();
+	await run([PHOTOS], "readwrite", (t) =>
+		t.objectStore(PHOTOS).put(blob, previewKey(id, file)),
+	);
+	if (uri.startsWith("blob:")) URL.revokeObjectURL(uri);
+	return URL.createObjectURL(blob);
+}
+
+/** Copies an image, and its preview if it has one. */
 export async function copyImage(fromId: string, file: string, toId: string) {
-	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
-		t.objectStore(PHOTOS).get(imageKey(fromId, file)),
+	const [blob, preview] = await Promise.all(
+		[imageKey(fromId, file), previewKey(fromId, file)].map(
+			(key) =>
+				run([PHOTOS], "readonly", (t) =>
+					t.objectStore(PHOTOS).get(key),
+				) as Promise<Blob | undefined>,
+		),
 	);
 	if (!blob) throw new Error(MISSING_IMAGE_MESSAGE);
-	await run([PHOTOS], "readwrite", (t) =>
-		t.objectStore(PHOTOS).put(blob, imageKey(toId, file)),
-	);
+	await run([PHOTOS], "readwrite", (t) => {
+		const photos = t.objectStore(PHOTOS);
+		if (preview) photos.put(preview, previewKey(toId, file));
+		return photos.put(blob, imageKey(toId, file));
+	});
 }
 
 export async function imageUrl(id: string, file: string): Promise<string> {
@@ -146,7 +176,17 @@ export async function imageUrl(id: string, file: string): Promise<string> {
 	return URL.createObjectURL(blob);
 }
 
-/** Frees a URL from `storeImage` or `imageUrl` once nothing shows it. */
+export async function previewUrl(
+	id: string,
+	file: string,
+): Promise<string | null> {
+	const blob: Blob | undefined = await run([PHOTOS], "readonly", (t) =>
+		t.objectStore(PHOTOS).get(previewKey(id, file)),
+	);
+	return blob ? URL.createObjectURL(blob) : null;
+}
+
+/** Frees a URL from `storeImage`, `imageUrl`, or their preview counterparts once nothing shows it. */
 export function releaseImage(url: string) {
 	URL.revokeObjectURL(url);
 }
@@ -160,14 +200,17 @@ export async function listImages(id: string): Promise<string[]> {
 	]);
 	return [
 		...(photos > 0 ? [PHOTO_FILE] : []),
-		...added.flatMap((key) => (Array.isArray(key) ? [String(key[1])] : [])),
+		...added.flatMap((key) =>
+			Array.isArray(key) && key.length === 2 ? [String(key[1])] : [],
+		),
 	];
 }
 
 export async function removeImage(id: string, file: string) {
-	await run([PHOTOS], "readwrite", (t) =>
-		t.objectStore(PHOTOS).delete(imageKey(id, file)),
-	);
+	await run([PHOTOS], "readwrite", (t) => {
+		t.objectStore(PHOTOS).delete(previewKey(id, file));
+		return t.objectStore(PHOTOS).delete(imageKey(id, file));
+	});
 }
 
 /** The project's JSON, or null if it was never saved. */
@@ -236,8 +279,10 @@ const storage: ProjectStorage = {
 	claimProject,
 	releaseProject,
 	storeImage,
+	storePreview,
 	copyImage,
 	imageUrl,
+	previewUrl,
 	releaseImage,
 	listImages,
 	removeImage,

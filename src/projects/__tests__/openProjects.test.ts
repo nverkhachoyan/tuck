@@ -198,108 +198,145 @@ describe("closing and reopening", () => {
 		);
 	});
 
-	test("opening and closing does not rewrite original.jpg and unused-file sweep leaves preview cache untouched", async () => {
-		const previewCache = new Map<string, string>();
-		const prepared: string[] = [];
-		const harness = createHarness(
-			undefined,
-			undefined,
-			async (id, doc, imageFile) => {
-				for (const layer of doc.layers) {
-					if (layer.type === "image") {
-						const file = imageFile(layer.uri);
-						if (file) {
-							prepared.push(`${id}:${file}`);
-						}
-					}
-				}
-			},
-			undefined,
-			async (id, file, url, preview) => {
-				previewCache.set(`${id}:${file}`, `${url}:${preview}`);
-			},
-		);
-
+	test("a photo's preview is kept with it, and found while it's open", async () => {
+		const harness = createHarness();
 		const { id, document } = await harness.projects.createProject({
 			...photo,
 			preview: "picked-preview",
 		});
-		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
+		const [layer] = imageLayers(document);
 		assert.equal(
-			previewCache.get(`${id}:${PHOTO_FILE}`),
-			`blob:${id}/${PHOTO_FILE}:picked-preview`,
+			harness.projects.previewUri(id, layer.uri),
+			`preview:${id}/${PHOTO_FILE}`,
 		);
-		assert.deepEqual(prepared, []);
-
-		// Add an edit and close
-		const edited = addText(document, "HELLO");
-		await harness.projects.closeProject(id, edited);
-
-		// original.jpg must still be in project storage, untouched
-		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
-		// previewCache was not touched by closeProject / removeUnusedImages
-		assert.equal(previewCache.has(`${id}:${PHOTO_FILE}`), true);
-
-		// Reopen project
-		const reopened = await harness.projects.openProject(id);
-		assert.ok(reopened);
-		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
-		assert.deepEqual(prepared, [`${id}:${PHOTO_FILE}`]);
-
-		// Close unchanged
-		await harness.projects.closeProject(id, reopened);
-		assert.equal(harness.images.get(id)?.has(PHOTO_FILE), true);
-		assert.equal(previewCache.has(`${id}:${PHOTO_FILE}`), true);
-	});
-
-	test("a photo added with its preview stores it, and a mask doesn't", async () => {
-		const stored: string[] = [];
-		const harness = createHarness(
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			async (_id, file, _url, preview) => {
-				stored.push(`${file}:${preview}`);
-			},
-		);
-		const { id } = await harness.projects.createBlankProject(canvas);
-
-		const url = await harness.projects.addImage(
+		const added = await harness.projects.addImage(
 			id,
 			"picked",
 			true,
 			"picked-preview",
 		);
-		await harness.projects.addImage(id, "mask", false);
-
-		assert.deepEqual(stored, [
-			`${url.slice(`blob:${id}/`.length)}:picked-preview`,
-		]);
+		const mask = await harness.projects.addImage(id, "mask", false);
+		assert.equal(
+			harness.projects.previewUri(id, added),
+			added.replace("blob:", "preview:"),
+		);
+		assert.equal(harness.projects.previewUri(id, mask), null);
+		await harness.projects.closeProject(id, addPhoto(document, added));
+		assert.equal(harness.projects.previewUri(id, layer.uri), null);
+		assert.deepEqual(
+			[...(harness.previews.get(id) ?? [])].sort(),
+			[PHOTO_FILE, added.slice(`blob:${id}/`.length)].sort(),
+		);
 	});
 
-	test("deleting a project cleans up its cached previews", async () => {
-		const previewCache = new Map<string, string>();
+	test("reopening finds a kept preview, or makes one that's missing", async () => {
+		const made: string[] = [];
+		const harness = createHarness(undefined, undefined, async (url, size) => {
+			made.push(`${url}:${size.width}x${size.height}`);
+			return "made-preview";
+		});
+		const { id, document } = await harness.projects.createProject({
+			...photo,
+			preview: "picked-preview",
+		});
+		await harness.projects.closeProject(id, addText(document, "CAPTION"));
+
+		const kept = await harness.projects.openProject(id);
+		const url = imageLayers(kept)[0].uri;
+		assert.equal(
+			harness.projects.previewUri(id, url),
+			`preview:${id}/${PHOTO_FILE}`,
+		);
+		assert.deepEqual(made, []);
+		assert.ok(kept);
+		await harness.projects.closeProject(id, kept);
+
+		// Purged, or saved before previews were kept.
+		harness.previews.delete(id);
+		const rebuilt = await harness.projects.openProject(id);
+		assert.deepEqual(made, [`${url}:400x300`]);
+		assert.equal(
+			harness.projects.previewUri(id, url),
+			`preview:${id}/${PHOTO_FILE}`,
+		);
+		assert.equal(harness.previews.get(id)?.has(PHOTO_FILE), true);
+		assert.ok(rebuilt);
+		await harness.projects.closeProject(id, rebuilt);
+	});
+
+	test("an image too small for a preview, or one that fails, opens without", async (t) => {
+		const warn = t.mock.method(console, "warn", () => {});
+		let fail = false;
+		const harness = createHarness(undefined, undefined, async () => {
+			if (fail) throw new Error("Couldn't read the photo.");
+			return null;
+		});
+		const id = await createSavedProject(harness);
+		const small = await harness.projects.openProject(id);
+		assert.ok(small);
+		assert.equal(
+			harness.projects.previewUri(id, imageLayers(small)[0].uri),
+			null,
+		);
+		assert.equal(warn.mock.callCount(), 0);
+		await harness.projects.closeProject(id, small);
+
+		fail = true;
+		const failed = await harness.projects.openProject(id);
+		assert.ok(failed);
+		assert.equal(
+			harness.projects.previewUri(id, imageLayers(failed)[0].uri),
+			null,
+		);
+		assert.equal(warn.mock.callCount(), 1);
+	});
+
+	test("a closed project holds no URLs", async () => {
 		const harness = createHarness(
 			undefined,
 			undefined,
-			undefined,
-			async (id) => {
-				previewCache.delete(id);
-			},
-			async (id, _file, _url, preview) => {
-				previewCache.set(id, preview);
-			},
+			async () => "made-preview",
 		);
+		const { id, document } = await harness.projects.createProject({
+			...photo,
+			preview: "picked-preview",
+		});
+		const added = await harness.projects.addImage(
+			id,
+			"picked",
+			true,
+			"picked-preview",
+		);
+		await harness.projects.closeProject(id, addPhoto(document, added));
+		const reopened = await harness.projects.openProject(id);
+		assert.ok(reopened);
+		await harness.projects.closeProject(id, reopened);
+
+		// Two images and their previews, twice over.
+		assert.equal(harness.issued.length, 8);
+		assert.deepEqual([...harness.released].sort(), [...harness.issued].sort());
+	});
+
+	test("an image no layer uses goes with its preview", async () => {
+		const harness = createHarness();
+		const { id, document } = await harness.projects.createProject(photo);
+		await harness.projects.addImage(id, "picked", true, "picked-preview");
+		assert.equal(harness.previews.get(id)?.size, 1);
+		await harness.projects.closeProject(id, addText(document, "CAPTION"));
+		assert.equal(harness.previews.has(id), false);
+	});
+
+	test("deleting a project leaves none of its previews", async () => {
+		const harness = createHarness();
 		const { id, document } = await harness.projects.createProject({
 			...photo,
 			preview: "preview",
 		});
 		await harness.projects.closeProject(id, addText(document, "TEXT"));
-		assert.equal(previewCache.has(id), true);
+		assert.equal(harness.previews.has(id), true);
 
 		await harness.projects.deleteProject(id);
-		assert.equal(previewCache.has(id), false);
+		assert.equal(harness.previews.has(id), false);
 	});
 });
 
