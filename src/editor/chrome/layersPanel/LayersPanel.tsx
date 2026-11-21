@@ -495,10 +495,13 @@ const styles = StyleSheet.create({
 		flex: 1,
 		color: colors.textPrimary,
 	},
+	// One line stays centered in the row. Wrapped lines use a normal line
+	// height and grow the box, so they sit above Background.
 	empty: {
 		...typography.label,
-		height: ROW_HEIGHT,
-		lineHeight: ROW_HEIGHT,
+		minHeight: ROW_HEIGHT,
+		lineHeight: 18,
+		paddingVertical: (ROW_HEIGHT - 18) / 2,
 		paddingHorizontal: 20,
 		color: colors.textSecondary,
 	},
