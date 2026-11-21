@@ -1,6 +1,6 @@
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { Suspense, useMemo } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Editor, type EditorHost, LoadFonts } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
 import { importPhoto, pickPhoto } from "@/photos/photoImport";
@@ -19,6 +19,7 @@ import {
 import { Button } from "@/ui/Button";
 import { ScreenHeader } from "@/ui/ScreenHeader";
 import { colors, space, typography } from "@/ui/theme";
+import { EditorOpening, leaveEditor } from "./EditorOpening";
 
 export default function EditorScreen() {
 	const router = useRouter();
@@ -28,14 +29,14 @@ export default function EditorScreen() {
 	if (session.status === "open") {
 		// Text is laid out as the editor renders, so it waits for the fonts.
 		return (
-			<Suspense fallback={<Opening />}>
+			<Suspense fallback={<EditorOpening />}>
 				<LoadFonts />
 				<OpenProject document={session.document} />
 			</Suspense>
 		);
 	}
 
-	if (session.status === "opening") return <Opening />;
+	if (session.status === "opening") return <EditorOpening />;
 
 	return (
 		<View role="main" style={styles.container}>
@@ -66,29 +67,6 @@ export default function EditorScreen() {
 			</View>
 		</View>
 	);
-}
-
-// The project, or the fonts its text needs, still loading.
-function Opening() {
-	const router = useRouter();
-	return (
-		<View role="main" style={styles.container}>
-			<ScreenHeader
-				backLabel="Back to projects"
-				onBack={() => leaveEditor(router)}
-			/>
-			<View style={styles.status}>
-				<ActivityIndicator color={colors.textSecondary} />
-			</View>
-		</View>
-	);
-}
-
-// Opened from a link or a reload, there's nothing behind the editor; the
-// welcome screen still ends the session.
-function leaveEditor(router: ReturnType<typeof useRouter>) {
-	if (router.canGoBack()) router.back();
-	else router.replace("/");
 }
 
 // The open project, saved as it's edited.

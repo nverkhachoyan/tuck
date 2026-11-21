@@ -1,1 +1,3 @@
-export { default } from "@/screens/export/ExportScreen";
+import { withSkia } from "@/platform/withSkia";
+
+export default withSkia(() => import("@/screens/export/ExportScreen"));

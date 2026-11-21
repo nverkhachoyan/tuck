@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { preloadFonts, resetFailedFonts } from "@/editor";
+import { isSkiaLoaded, loadSkia, resetFailedSkia } from "@/platform/skia";
 import { PageHead } from "@/site/PageHead";
 import { SUPPORT_EMAIL } from "@/site/site";
 import { Button } from "@/ui/Button";
@@ -17,8 +17,14 @@ const barStyle = colorScheme === "dark" ? "light-content" : "dark-content";
 export default function Layout() {
 	// Only the editor waits for the text fonts (its route suspends on them),
 	// so every other page shows at once, with the system font standing in
-	// for Home's wordmark until Anton loads.
-	useEffect(preloadFonts, []);
+	// for Home's wordmark until Anton loads. On web this waits for CanvasKit
+	// so pages that draw nothing never evaluate Skia statically.
+	useEffect(() => {
+		void loadSkia()
+			.then(() => import("@/editor"))
+			.then(({ preloadFonts }) => preloadFonts())
+			.catch(() => {});
+	}, []);
 
 	return (
 		<GestureHandlerRootView style={styles.flex}>
@@ -36,15 +42,22 @@ export default function Layout() {
 }
 
 /**
- * Replaces the whole app when rendering fails, as when the editor's text
- * fonts can't load. Retrying renders the layout again, loading the fonts
- * afresh if they failed. It stands in for the layout, so it can't use the layout's
- * providers; Expo Router's root provides the safe area.
+ * Replaces the whole app when rendering fails, as when CanvasKit or the
+ * editor's text fonts can't load. Retrying renders the layout again, loading
+ * them afresh if they failed. It stands in for the layout, so it can't use the
+ * layout's providers; Expo Router's root provides the safe area.
  */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 	const [copied, setCopied] = useState(false);
 	const handleRetry = () => {
-		resetFailedFonts();
+		resetFailedSkia();
+		if (isSkiaLoaded()) {
+			void import("@/editor")
+				.then(({ resetFailedFonts }) => resetFailedFonts())
+				.catch(() => {})
+				.finally(() => void retry());
+			return;
+		}
 		void retry();
 	};
 	const copyDetails = async () => {

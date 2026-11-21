@@ -67,10 +67,10 @@ const applySavedTheme = `try {
 	}
 } catch (error) {}`;
 
-// Nothing works until CanvasKit has loaded, and `index.web.ts` only asks for
-// it once the scripts have downloaded and run. Preload from script so the fetch
-// runs in the page's main-world context, allowing Chromium to reuse the
-// response when the service worker is active without a cross-world mismatch warning.
+// Start fetching CanvasKit before the scripts download, so `skia.web.ts` can
+// reuse the response when the editor or thumbnails need it. Preload from script
+// so the fetch runs in the page's main-world context, allowing Chromium to reuse
+// the response when the service worker is active without a cross-world mismatch warning.
 const preloadCanvasKit = `try {
 	window.__canvaskit = fetch("/canvaskit.wasm", { credentials: "same-origin" });
 } catch (error) {}`;

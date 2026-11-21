@@ -4,9 +4,10 @@ import { type ComponentType, lazy } from "react";
 let loading: Promise<void> | null = null;
 
 /**
- * Loads CanvasKit, Skia's WebAssembly build, as the app's `index.web.ts`
- * does. React Native Skia binds to it the moment its module is first
- * evaluated, so nothing that imports Skia may load before this resolves.
+ * Loads CanvasKit, Skia's WebAssembly build, as the app's
+ * `src/platform/skia.web.ts` and `withSkia.tsx` do. React Native Skia binds to
+ * it the moment its module is first evaluated, so nothing that imports Skia may
+ * load before this resolves.
  */
 export function loadSkia(): Promise<void> {
 	// Imported here, so CanvasKit's script loads with the first rendering
