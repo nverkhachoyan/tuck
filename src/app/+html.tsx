@@ -13,9 +13,10 @@ const nightBackground = "#17181B";
 const dayInk = "#000000";
 const nightInk = "#F3F3F1";
 
-// The picture a link to any page shows in a chat or a post; each page's
-// title and description come from `PageHead`. The image must be an absolute
-// URL; it's made from `docs/store-listing/source/og.html`.
+// The picture a link to any page shows in a chat or a post. Each page's
+// description comes from `PageHead`; its title updates the shell's `<title>`
+// once JavaScript runs. The image must be an absolute URL; it's made from
+// `docs/store-listing/source/og.html`.
 const PREVIEW_IMAGE = { url: `${SITE_URL}/og.jpg`, width: 1200, height: 630 };
 
 const palette = (background: string, ink: string, scheme: string) =>
@@ -91,6 +92,11 @@ export default function Root({ children }: { children: ReactNode }) {
 					name="viewport"
 					content="width=device-width, initial-scale=1, viewport-fit=cover"
 				/>
+				{/*
+				    The tab title before JavaScript. `PageHead` sets `document.title`,
+				    which updates this element instead of adding a second one.
+				*/}
+				<title>Tuck</title>
 				<meta
 					name="theme-color"
 					media="(prefers-color-scheme: light)"
