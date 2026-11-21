@@ -31,7 +31,7 @@ Cut's Subject, Tap (MobileSAM on every platform, by a tap or a box), Paint in an
 * **The first Tap after launch on iOS** takes about 3 seconds while Core ML loads the model, against a quarter of a second after that.
 * **WebAssembly threads.** Where WebGPU isn't available, web encodes on one thread in about 3 seconds. Cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` in `vercel.json`) would allow threads, likely about 1 second. Check the share target and file handlers first.
 * **Tap without Vision or ML Kit.** Segment Anything needs neither, so Tap could show on iOS 16 and on Android without Play services, where Cut offers only the brushes.
-* **Edges.** A guided filter didn't beat today's masks on fur (docs/on-device-detection.md, "Sharper edges"); decoding again on a crop for small objects is [#132](https://github.com/nverkhachoyan/tuck/issues/132).
+* **Edges.** Crop re-encoding for small boxed objects (pasted into a mask up to 2048 px on its longer side) is built across web, iOS, and Android ([#132](https://github.com/nverkhachoyan/tuck/issues/132)); a guided filter wasn't built (docs/on-device-detection.md, "Sharper edges").
 * **Memory in browsers.** Not measured with MobileSAM alone in its worker. With all three models loaded, the page held about 130 MB of JavaScript heap.
 * **Remove an object.** Researched in [docs/object-removal.md](../object-removal.md); what it waits on is [#134](https://github.com/nverkhachoyan/tuck/issues/134).
 
