@@ -92,6 +92,7 @@ Read [docs/architecture.md](docs/architecture.md) before changing how the code i
 
 ### Tooling
 
+- Type-checks run TypeScript 7, but the root keeps `typescript` on 6, because TypeScript 7's package has no JavaScript API and Expo's CLI imports one. The root's `typecheck` runs `typescript7`, an alias for 7; `docs/interactive` and `packages/skia-text-input` depend on 7 as `typescript`. Bump all three, and the version pinned for Zed's tsgo extension in `.zed/settings.json`, together. Drop the alias once Expo works with 7.
 - Projects in the simulators, the emulator, and the local web app are test data: edit them freely while checking a change, and don't restore or report them.
 
 ## Conventions
