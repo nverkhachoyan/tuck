@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DerivedValue } from "react-native-reanimated";
-import { Fill, Group, Rect, rect, Shadow } from "react-native-skia";
+import { BlurMask, Fill, Group, Rect, rect } from "react-native-skia";
 import { colorScheme, colors } from "@/ui/theme";
 import { assertNever } from "../document/assertNever";
 import type { EditorDocument } from "../document/document";
@@ -159,24 +159,25 @@ export function EditorScene({
 			)}
 			<Group clip={canvas} invertClip>
 				<Fill color={colors.canvasWell} opacity={0.7} />
-				{/* One shape each: image filters on one shape chain. */}
-				<Rect rect={canvas} color="black">
-					<Shadow
-						dx={0}
-						dy={contactOffset}
-						blur={contactBlur}
-						color={colors.shadow}
-						shadowOnly
-					/>
+				{/* BlurMask on a Rect uses Skia's analytical blurred-rect shader
+				    instead of an offscreen drop-shadow pass per frame. */}
+				<Rect
+					x={0}
+					y={contactOffset}
+					width={document.width}
+					height={document.height}
+					color={colors.shadow}
+				>
+					<BlurMask blur={contactBlur} style="normal" />
 				</Rect>
-				<Rect rect={canvas} color="black">
-					<Shadow
-						dx={0}
-						dy={liftOffset}
-						blur={liftBlur}
-						color={colors.shadow}
-						shadowOnly
-					/>
+				<Rect
+					x={0}
+					y={liftOffset}
+					width={document.width}
+					height={document.height}
+					color={colors.shadow}
+				>
+					<BlurMask blur={liftBlur} style="normal" />
 				</Rect>
 				{showEdge && (
 					<Rect
