@@ -2,7 +2,11 @@ import type { EditorDocument } from "../document/document";
 import { drawingPieces } from "../layers/drawing/drawingEdits";
 import type { Layer } from "../layers/layer";
 import { useStore } from "../store";
-import { type ArrangeMove, SelectionBar } from "./SelectionBar";
+import {
+	type ArrangeMove,
+	SelectionBar,
+	SelectionBarItems,
+} from "./SelectionBar";
 
 /**
  * Moving the selected layer in the stack (`arrange`), and where it stands:
@@ -31,10 +35,12 @@ export function useArrangeSelected(
 /**
  * The selection bar for `layer`, at `index` in the stack: Edit for a layer
  * a tool edits in place (`onEdit`), Free resize for text and images, and
- * Separate for an unlocked drawing in more than one piece.
+ * Separate for an unlocked drawing in more than one piece. `inBar` gives
+ * the wide header's group instead of the bar that floats by the layer.
  */
 export function LayerSelectionBar({
 	layer,
+	inBar = false,
 	index,
 	topIndex,
 	onEdit,
@@ -44,6 +50,7 @@ export function LayerSelectionBar({
 	onDelete,
 }: {
 	layer: Layer;
+	inBar?: boolean;
 	index: number;
 	topIndex: number;
 	onEdit?: () => void;
@@ -59,19 +66,22 @@ export function LayerSelectionBar({
 		layer.type === "drawing" &&
 		!layer.locked &&
 		drawingPieces(layer).length > 1;
-	return (
-		<SelectionBar
-			canMoveForward={index < topIndex}
-			canMoveBackward={index > 0}
-			onEdit={onEdit}
-			stretched={layer.resizable === true}
-			onToggleStretch={
-				resizable ? () => onSetResizable(layer.id, !layer.resizable) : undefined
-			}
-			onSeparate={inPieces ? separateSelectedDrawing : undefined}
-			onArrange={onArrange}
-			onDuplicate={onDuplicate}
-			onDelete={() => onDelete(layer.id)}
-		/>
+	const actions = {
+		canMoveForward: index < topIndex,
+		canMoveBackward: index > 0,
+		onEdit,
+		stretched: layer.resizable === true,
+		onToggleStretch: resizable
+			? () => onSetResizable(layer.id, !layer.resizable)
+			: undefined,
+		onSeparate: inPieces ? separateSelectedDrawing : undefined,
+		onArrange,
+		onDuplicate,
+		onDelete: () => onDelete(layer.id),
+	};
+	return inBar ? (
+		<SelectionBarItems {...actions} />
+	) : (
+		<SelectionBar {...actions} />
 	);
 }

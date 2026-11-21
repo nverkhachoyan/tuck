@@ -35,16 +35,19 @@ const ITEM_HEIGHT = compactControls ? 36 : 44;
 
 /**
  * The wide editor's header, between Back and the header's actions: the
- * context's name, its options, then Cancel and Done. A divider sets those
- * off from undo, redo, and Export.
+ * context's name, its options, then `after` (the selected layer's shared
+ * actions) behind a rule, then Cancel and Done. A divider sets those off
+ * from undo, redo, and Export.
  */
 export function ContextBar({
 	title,
 	keepFocus = false,
 	children,
+	after,
 	...actions
 }: {
 	title: string;
+	after?: ReactNode;
 	// While text is being typed, a press in the bar must not take the caret
 	// from the hidden input. Canceling the press's default leaves it there.
 	keepFocus?: boolean;
@@ -71,6 +74,8 @@ export function ContextBar({
 			</Text>
 			<FadeRow style={styles.scroll} contentStyle={styles.scrollContent}>
 				{children}
+				{after && <View style={styles.rule} />}
+				{after}
 			</FadeRow>
 			<ModeActions {...actions} />
 			<View style={styles.divider} />
@@ -102,7 +107,7 @@ export function OptionSegments({
 	label: string;
 	options: readonly SegmentOption[];
 	selected: number;
-	// Alignment is the one control that stays icons, since left, center, and
+	// Alignment stays icons, since left, center, and
 	// right mean the same thing without their names.
 	iconsOnly?: boolean;
 	onSelect: (index: number) => void;
@@ -203,6 +208,8 @@ export function BarSections({ children }: { children: ReactNode }) {
  * - `busy` swaps its icon for a spinner and ignores presses, as a tool button does.
  * - `checked` makes it a switch. The glyph shows the box; the highlighter
  *   stays on the mode.
+ * - `iconOnly` drops the drawn label, for an action whose glyph is familiar
+ *   (Duplicate, Delete); the tooltip and screen readers still name it.
  */
 export function BarButton({
 	label,
@@ -211,6 +218,7 @@ export function BarButton({
 	busy = false,
 	disabled = false,
 	checked,
+	iconOnly = false,
 	onPress,
 }: {
 	label: string;
@@ -219,6 +227,7 @@ export function BarButton({
 	busy?: boolean;
 	disabled?: boolean;
 	checked?: boolean;
+	iconOnly?: boolean;
 	onPress: () => void;
 }) {
 	const { anchor, tooltip } = useTooltip(label, shortcut);
@@ -243,6 +252,7 @@ export function BarButton({
 					const { pressed, hovered } = interaction(state);
 					return [
 						styles.action,
+						iconOnly && styles.segmentIcon,
 						webTransition,
 						inactive && styles.actionInactive,
 						hovered && !inactive && styles.segmentHovered,
@@ -259,7 +269,7 @@ export function BarButton({
 						color={colors.textPrimary}
 					/>
 				)}
-				<Text style={styles.actionLabel}>{label}</Text>
+				{!iconOnly && <Text style={styles.actionLabel}>{label}</Text>}
 			</Pressable>
 			{tooltip}
 		</>

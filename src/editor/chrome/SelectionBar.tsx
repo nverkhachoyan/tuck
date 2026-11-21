@@ -5,18 +5,75 @@ import { Highlight } from "@/ui/Highlight";
 import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
-import { colors, radii, typography, webTransition } from "@/ui/theme";
+import { colors, radii, space, typography, webTransition } from "@/ui/theme";
+import {
+	BarChip,
+	BarGroup,
+	BarButton as HeaderButton,
+} from "../shell/ContextBar";
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /** Where Arrange moves a layer in the stack. */
 export type ArrangeMove = "front" | "forward" | "backward" | "back";
 
+/** What the selection bar offers, in either place it shows. */
+export type SelectionActions = {
+	canMoveForward: boolean;
+	canMoveBackward: boolean;
+	onEdit?: () => void;
+	stretched?: boolean;
+	onToggleStretch?: () => void;
+	onSeparate?: () => void;
+	onArrange: (move: ArrangeMove) => void;
+	onDuplicate: () => void;
+	onDelete: () => void;
+};
+
+// Arrange's moves, in the order both bars list them. `forward` moves need
+// a layer above.
+const ARRANGE_MOVES: readonly {
+	move: ArrangeMove;
+	label: string;
+	icon: IconName;
+	shortcut?: string;
+	forward: boolean;
+}[] = [
+	{
+		move: "front",
+		label: "To front",
+		icon: "arrange-bring-to-front",
+		forward: true,
+	},
+	{
+		move: "forward",
+		label: "Forward",
+		icon: "arrange-bring-forward",
+		shortcut: "mod+]",
+		forward: true,
+	},
+	{
+		move: "backward",
+		label: "Backward",
+		icon: "arrange-send-backward",
+		shortcut: "mod+[",
+		forward: false,
+	},
+	{
+		move: "back",
+		label: "To back",
+		icon: "arrange-send-to-back",
+		forward: false,
+	},
+];
+
 /**
  * The actions every selected layer shares, in a small bar the canvas floats
- * by it (see `EditorCanvas`): Edit for text, Free resize for text and images,
- * Separate for a drawing in pieces, Arrange, Duplicate, and Delete. Arrange shows its moves in the bar's
- * place, until Back. What only one kind of layer does stays in the dock.
+ * by it on a phone (see `EditorCanvas`): Edit for text, Free resize for text
+ * and images, Separate for a drawing in pieces, Arrange, Duplicate, and
+ * Delete. Arrange shows its moves in the bar's place, until Back. What only
+ * one kind of layer does stays in the dock. A wide window shows them in the
+ * header instead (`SelectionBarItems`).
  */
 export function SelectionBar({
 	canMoveForward,
@@ -28,17 +85,7 @@ export function SelectionBar({
 	onArrange,
 	onDuplicate,
 	onDelete,
-}: {
-	canMoveForward: boolean;
-	canMoveBackward: boolean;
-	onEdit?: () => void;
-	stretched?: boolean;
-	onToggleStretch?: () => void;
-	onSeparate?: () => void;
-	onArrange: (move: ArrangeMove) => void;
-	onDuplicate: () => void;
-	onDelete: () => void;
-}) {
+}: SelectionActions) {
 	const [arranging, setArranging] = useState(false);
 	return (
 		<Surface style={styles.bar} contentStyle={styles.content}>
@@ -50,32 +97,16 @@ export function SelectionBar({
 						onPress={() => setArranging(false)}
 					/>
 					<View style={styles.divider} />
-					<BarButton
-						icon="arrange-bring-to-front"
-						label="To front"
-						disabled={!canMoveForward}
-						onPress={() => onArrange("front")}
-					/>
-					<BarButton
-						icon="arrange-bring-forward"
-						label="Forward"
-						shortcut="mod+]"
-						disabled={!canMoveForward}
-						onPress={() => onArrange("forward")}
-					/>
-					<BarButton
-						icon="arrange-send-backward"
-						label="Backward"
-						shortcut="mod+["
-						disabled={!canMoveBackward}
-						onPress={() => onArrange("backward")}
-					/>
-					<BarButton
-						icon="arrange-send-to-back"
-						label="To back"
-						disabled={!canMoveBackward}
-						onPress={() => onArrange("back")}
-					/>
+					{ARRANGE_MOVES.map(({ move, label, icon, shortcut, forward }) => (
+						<BarButton
+							key={move}
+							icon={icon}
+							label={label}
+							shortcut={shortcut}
+							disabled={forward ? !canMoveForward : !canMoveBackward}
+							onPress={() => onArrange(move)}
+						/>
+					))}
 				</>
 			) : (
 				<>
@@ -119,6 +150,81 @@ export function SelectionBar({
 				</>
 			)}
 		</Surface>
+	);
+}
+
+/**
+ * The same actions as one group of the wide header's context bar, after the
+ * selected layer's style or tools, so nothing floats over the photo.
+ * Duplicate and Delete are icons, so the group fits beside text's options at
+ * 1440 points. Arrange opens its moves in a popover, left open so a layer
+ * can step several places.
+ */
+export function SelectionBarItems({
+	canMoveForward,
+	canMoveBackward,
+	onEdit,
+	stretched,
+	onToggleStretch,
+	onSeparate,
+	onArrange,
+	onDuplicate,
+	onDelete,
+}: SelectionActions) {
+	return (
+		<BarGroup>
+			{onEdit && (
+				<HeaderButton icon="cursor-text" label="Edit" onPress={onEdit} />
+			)}
+			{onToggleStretch && (
+				<HeaderButton
+					icon="arrow-expand-horizontal"
+					label="Free resize"
+					checked={stretched === true}
+					onPress={onToggleStretch}
+				/>
+			)}
+			{onSeparate && (
+				<HeaderButton icon="call-split" label="Separate" onPress={onSeparate} />
+			)}
+			{canMoveForward || canMoveBackward ? (
+				<BarChip label="Arrange" icon="arrange-bring-forward" text="Arrange">
+					<View style={styles.moves}>
+						{ARRANGE_MOVES.map(({ move, label, icon, shortcut, forward }) => (
+							<HeaderButton
+								key={move}
+								icon={icon}
+								label={label}
+								shortcut={shortcut}
+								disabled={forward ? !canMoveForward : !canMoveBackward}
+								onPress={() => onArrange(move)}
+							/>
+						))}
+					</View>
+				</BarChip>
+			) : (
+				<HeaderButton
+					icon="arrange-bring-forward"
+					label="Arrange"
+					disabled
+					onPress={() => {}}
+				/>
+			)}
+			<HeaderButton
+				icon="content-copy"
+				label="Duplicate"
+				shortcut="mod+D"
+				iconOnly
+				onPress={onDuplicate}
+			/>
+			<HeaderButton
+				icon="trash-can-outline"
+				label="Delete"
+				shortcut="Delete"
+				iconOnly
+				onPress={onDelete}
+			/>
+		</BarGroup>
 	);
 }
 
@@ -214,6 +320,11 @@ const styles = StyleSheet.create({
 	},
 	label: {
 		...typography.caption,
+	},
+	moves: {
+		flexDirection: "row",
+		gap: 2,
+		padding: space.xs,
 	},
 	divider: {
 		width: StyleSheet.hairlineWidth,
