@@ -433,18 +433,23 @@ export function Editor({
 				}
 			: null;
 
-	const selectionBar = selectedLayer && (
-		<LayerSelectionBar
-			layer={selectedLayer}
-			index={selectedPlace.index}
-			topIndex={selectedPlace.topIndex}
-			onEdit={editable ? () => editLayer(editable) : undefined}
-			onSetResizable={setLayerResizable}
-			onArrange={selectedPlace.arrange}
-			onDuplicate={duplicateSelectedLayer}
-			onDelete={editNotice.deleteLayer}
-		/>
-	);
+	// The actions every selected layer shares, while the canvas selects: in
+	// the header on a wide window, where they cover nothing, or else
+	// floating by the layer.
+	const selectionActions = selectedLayer &&
+		canvasInput.input.type === "select" && (
+			<LayerSelectionBar
+				layer={selectedLayer}
+				inBar={wide}
+				index={selectedPlace.index}
+				topIndex={selectedPlace.topIndex}
+				onEdit={editable ? () => editLayer(editable) : undefined}
+				onSetResizable={setLayerResizable}
+				onArrange={selectedPlace.arrange}
+				onDuplicate={duplicateSelectedLayer}
+				onDelete={editNotice.deleteLayer}
+			/>
+		);
 
 	return (
 		<TrayHeight.Provider value={layout.setTrayHeight}>
@@ -462,6 +467,7 @@ export function Editor({
 									panel={panel}
 									chrome={modeActions}
 									keepFocus={typing}
+									after={wide ? selectionActions : undefined}
 								/>
 							) : undefined
 						}
@@ -520,7 +526,7 @@ export function Editor({
 							trayInset={layout.trayInset}
 							leftInset={layout.canvasInset.left}
 							rightInset={layout.canvasInset.right}
-							selectionBar={selectionBar}
+							selectionBar={wide ? undefined : selectionActions}
 						/>
 						{openTool?.definition.views.Stage && (
 							<ToolStage tool={openTool} inset={layout.canvasInset} />

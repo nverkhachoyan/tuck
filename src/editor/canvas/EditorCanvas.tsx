@@ -617,6 +617,7 @@ export function EditorCanvas({
 						key={movableLayer.id}
 						live={live}
 						shown={shown}
+						documentSize={document}
 						width={size.width - rightInset}
 						height={size.height - bottomInset}
 					>

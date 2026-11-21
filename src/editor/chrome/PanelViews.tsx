@@ -242,7 +242,8 @@ export function ToolCard({
 
 /**
  * What the wide editor's header holds instead of the project's title: the
- * open tool's options, or a selected layer's actions. Phones have no bar;
+ * open tool's options, or a selected layer's style or tools, then `after`.
+ * Phones have no bar;
  * the dock shows the same tools. With nothing in context, the header keeps
  * the title. One `ContextBar` stays mounted as the panel changes, keeping
  * its scroll and fades. While `keepFocus`, a press in it keeps the focus
@@ -253,17 +254,20 @@ export function ContextBarContent({
 	panel,
 	chrome,
 	keepFocus,
+	after,
 }: {
 	context: PanelContext;
 	panel: DockPanel;
 	// The bar's title, Cancel, and Done, which `modeChrome` chose.
 	chrome: { title: string } & ModeActionProps;
 	keepFocus: boolean;
+	// The selected layer's shared actions, after the panel's.
+	after?: ReactNode;
 }) {
 	if (panel === "idle") return null;
 	const open = openToolIn(panel, context.controllers);
 	return (
-		<ContextBar {...chrome} keepFocus={keepFocus}>
+		<ContextBar {...chrome} keepFocus={keepFocus} after={after}>
 			{open ? toolView(open, "Bar") : LAYER_PANEL.bar(context)}
 		</ContextBar>
 	);

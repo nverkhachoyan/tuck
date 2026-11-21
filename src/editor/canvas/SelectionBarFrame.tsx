@@ -5,6 +5,7 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
+import type { Size } from "../document/geometry";
 import { handleMetrics } from "./handleMetrics";
 import {
 	type LiveTransform,
@@ -27,33 +28,44 @@ const SELECTION_BAR_GAPS = {
 
 /**
  * Places `children` by the selection (see `placeSelectionBar`), within
- * `width` and `height`, as the live values move it. It's hidden until it has
- * a size to place, and while a gesture holds the layer.
+ * `width` and `height`, as the live values move it, covering as little of
+ * the document (`documentSize`, as shown) as it can. It's hidden until it
+ * has a size to place, and while a gesture holds the layer.
  */
 export function SelectionBarFrame({
 	live,
 	shown,
+	documentSize,
 	width,
 	height,
 	children,
 }: {
 	live: LiveTransform;
 	shown: ShownViewport;
+	documentSize: Size;
 	width: number;
 	height: number;
 	children: ReactNode;
 }) {
 	const barSize = useSharedValue({ width: 0, height: 0 });
+	const { width: documentWidth, height: documentHeight } = documentSize;
 	const style = useAnimatedStyle(() => {
+		const viewport = readShownViewport(shown);
 		const { x, y } = placeSelectionBar(
 			selectionScreenBounds(
 				readLiveTransform(live),
 				readLiveBox(live),
-				readShownViewport(shown),
+				viewport,
 			),
 			barSize.value,
 			{ width, height },
 			SELECTION_BAR_GAPS,
+			{
+				x: viewport.offsetX,
+				y: viewport.offsetY,
+				width: documentWidth * viewport.scale,
+				height: documentHeight * viewport.scale,
+			},
 		);
 		const visible =
 			barSize.value.width > 0 &&
@@ -63,7 +75,7 @@ export function SelectionBarFrame({
 			transform: [{ translateX: x }, { translateY: y }],
 			opacity: withTiming(visible ? 1 : 0, { duration: visible ? 160 : 80 }),
 		};
-	}, [live, shown, width, height]);
+	}, [live, shown, documentWidth, documentHeight, width, height]);
 	return (
 		// A plain view, since Reanimated drops `box-none` on web.
 		<View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
