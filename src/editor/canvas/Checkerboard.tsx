@@ -1,9 +1,63 @@
-import { useMemo } from "react";
-import { Group, Path, Rect, rect, Skia, type SkRect } from "react-native-skia";
+import {
+	AlphaType,
+	ColorType,
+	FilterMode,
+	ImageShader,
+	MipmapMode,
+	Rect,
+	type SkImage,
+	Skia,
+	type SkRect,
+} from "react-native-skia";
+import { parseHex } from "@/ui/color";
 import { CHECKER_CELL, colors } from "@/ui/theme";
 
-// Past this many squares, they're drawn bigger instead.
-const MAX_CELLS = 20_000;
+const CHECKER_SAMPLING = {
+	filter: FilterMode.Nearest,
+	mipmap: MipmapMode.None,
+} as const;
+
+// A 2×2 tile of the palette's light and dark squares, tiled on the GPU by
+// ImageShader. Built lazily on first draw so module load doesn't touch Skia
+// before CanvasKit is ready on web; the palette never changes while running.
+let checkerTile: SkImage | null = null;
+
+function getCheckerTile(): SkImage {
+	if (checkerTile) return checkerTile;
+	const light = parseHex(colors.checkerLight) ?? [237, 238, 240];
+	const dark = parseHex(colors.checkerDark) ?? [211, 213, 217];
+	const pixels = new Uint8Array([
+		light[0],
+		light[1],
+		light[2],
+		255,
+		dark[0],
+		dark[1],
+		dark[2],
+		255,
+		dark[0],
+		dark[1],
+		dark[2],
+		255,
+		light[0],
+		light[1],
+		light[2],
+		255,
+	]);
+	const image = Skia.Image.MakeRaster(
+		{
+			width: 2,
+			height: 2,
+			colorType: ColorType.RGBA_8888,
+			alphaType: AlphaType.Opaque,
+		},
+		Skia.Data.fromBytes(pixels),
+		8,
+	);
+	if (!image) throw new Error("Couldn't create checkerboard tile.");
+	checkerTile = image;
+	return image;
+}
 
 /**
  * The checkerboard that stands for transparency, filling `bounds`. `cell` is
@@ -17,32 +71,22 @@ export function Checkerboard({
 	bounds: SkRect;
 	cell: number;
 }) {
-	const { x, y, width, height } = bounds;
-	const squares = useMemo(() => {
-		const count = (width / cell) * (height / cell);
-		const side = count > MAX_CELLS ? cell * Math.sqrt(count / MAX_CELLS) : cell;
-		const builder = Skia.PathBuilder.Make();
-		for (let row = 0; row * side < height; row++) {
-			for (let column = row % 2; column * side < width; column += 2) {
-				builder.addRect(
-					Skia.XYWHRect(x + column * side, y + row * side, side, side),
-				);
-			}
-		}
-		return builder.build();
-	}, [x, y, width, height, cell]);
-
+	const tile = getCheckerTile();
+	const period = cell * 2;
 	return (
-		<Group clip={rect(x, y, width, height)}>
-			<Rect
-				x={x}
-				y={y}
-				width={width}
-				height={height}
-				color={colors.checkerDark}
+		<Rect rect={bounds}>
+			<ImageShader
+				image={tile}
+				tx="repeat"
+				ty="repeat"
+				fit="fill"
+				x={bounds.x}
+				y={bounds.y}
+				width={period}
+				height={period}
+				sampling={CHECKER_SAMPLING}
 			/>
-			<Path path={squares} color={colors.checkerLight} />
-		</Group>
+		</Rect>
 	);
 }
 
