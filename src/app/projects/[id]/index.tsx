@@ -1,1 +1,7 @@
-export { default } from "@/screens/editor/EditorScreen";
+import { withSkia } from "@/platform/withSkia";
+import { EditorOpening } from "@/screens/editor/EditorOpening";
+
+export default withSkia(
+	() => import("@/screens/editor/EditorScreen"),
+	EditorOpening,
+);

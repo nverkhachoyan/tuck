@@ -1,7 +1,7 @@
 import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getOpenDocument, useOpenDocument } from "@/editor";
 import type { EditorDocument } from "@/editor/core";
+import { getOpenDocument, useOpenDocument } from "@/editor/openDocument";
 import {
 	isProjectOpenElsewhere,
 	PROJECT_GONE_MESSAGE,

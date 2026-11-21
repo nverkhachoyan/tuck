@@ -1,12 +1,24 @@
+import type { EditorDocument } from "@/editor/core";
 import {
 	closeDocument,
 	getOpenDocument,
 	openDocument,
-	renderThumbnail,
-} from "@/editor";
+} from "@/editor/openDocument";
+import { loadSkia } from "@/platform/skia";
 import { deleteTemporaryFile } from "@/platform/temporaryFile";
 import { projects } from "@/projects/projectService";
 import { createProjectSession } from "./projectSession";
+
+// Loaded dynamically once CanvasKit is ready, so Home and the other non-drawing
+// pages never evaluate Skia statically.
+async function renderThumbnail(
+	document: EditorDocument,
+	previewUri?: (uri: string) => string | null,
+): Promise<string> {
+	await loadSkia();
+	const { renderThumbnail: render } = await import("@/editor");
+	return render(document, previewUri);
+}
 
 /** The app's one project session controller, shared by every screen. */
 export const appSession = createProjectSession({
