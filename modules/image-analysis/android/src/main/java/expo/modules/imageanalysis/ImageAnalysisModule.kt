@@ -3,10 +3,12 @@ package expo.modules.imageanalysis
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.media.ExifInterface
 import android.net.Uri
+import android.os.Build
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.OptionalModuleApi
@@ -135,7 +137,7 @@ class ImageAnalysisModule : Module() {
 		}.runOnQueue(objectQueue)
 
 		AsyncFunction("objectMasks") { uri: String, prompt: ObjectPromptRecord ->
-			objectSelector.masks(uri, prompt)
+			objectSelector.masks(uri, prompt) { rect -> loadCrop(Uri.parse(uri), rect) }
 		}.runOnQueue(objectQueue)
 
 		AsyncFunction("releaseObjects") {
@@ -193,6 +195,50 @@ class ImageAnalysisModule : Module() {
 		val upright = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 		if (upright !== bitmap) bitmap.recycle()
 		return upright
+	}
+
+	// Decodes only `rect` (in upright pixels) when the image isn't rotated,
+	// avoiding decoding the full photo; falls back to cropping `loadUpright`.
+	private fun loadCrop(uri: Uri, rect: Rect): Bitmap {
+		val orientation = readOrientation(uri)
+		if (orientation == ExifInterface.ORIENTATION_NORMAL || orientation == ExifInterface.ORIENTATION_UNDEFINED) {
+			context.contentResolver.openInputStream(uri)?.use { stream ->
+				val decoder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					BitmapRegionDecoder.newInstance(stream)
+				} else {
+					@Suppress("DEPRECATION")
+					BitmapRegionDecoder.newInstance(stream, false)
+				}
+				if (decoder != null) {
+					try {
+						val left = rect.left.coerceIn(0, decoder.width - 1)
+						val top = rect.top.coerceIn(0, decoder.height - 1)
+						val clipped = Rect(
+							left,
+							top,
+							rect.right.coerceIn(left + 1, decoder.width),
+							rect.bottom.coerceIn(top + 1, decoder.height),
+						)
+						decoder.decodeRegion(clipped, null)?.let { return it }
+					} finally {
+						decoder.recycle()
+					}
+				}
+			}
+		}
+		val upright = loadUpright(uri)
+		try {
+			val left = rect.left.coerceIn(0, upright.width - 1)
+			val top = rect.top.coerceIn(0, upright.height - 1)
+			val width = rect.right.coerceIn(left + 1, upright.width) - left
+			val height = rect.bottom.coerceIn(top + 1, upright.height) - top
+			val cropped = Bitmap.createBitmap(upright, left, top, width, height)
+			if (cropped !== upright) upright.recycle()
+			return cropped
+		} catch (e: Throwable) {
+			upright.recycle()
+			throw e
+		}
 	}
 
 	// A grayscale PNG in the cache, or null when no pixel is more likely the

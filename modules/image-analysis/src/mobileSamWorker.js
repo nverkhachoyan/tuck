@@ -4,9 +4,11 @@
 // then answers each tap from that encoding.
 //
 // Messages in: { id, type: "encode", image } with an ImageBitmap already
-// sized for the encoder (1024 pixels on its longer side, at most), and
+// sized for the encoder (1024 pixels on its longer side, at most),
 // { id, type: "select", x, y } or { id, type: "select", box: [left, top,
-// right, bottom] } in its pixels. Out: { id, error } or { id, masks,
+// right, bottom] } in its pixels, and { id, type: "selectCrop", image, box,
+// outputWidth, outputHeight, paste } to encode and decode a crop without
+// replacing the whole-image encoding. Out: { id, error } or { id, masks,
 // likeliest } with each mask a grayscale PNG blob, smallest first, and the
 // index of the one the model thinks likeliest (a box gets one mask).
 
@@ -56,7 +58,7 @@ function load() {
 const SIDE = 1024;
 const MEAN = [123.675, 116.28, 103.53];
 
-async function encode(image) {
+async function runEncoder(image) {
 	const { width, height } = image;
 	const canvas = new OffscreenCanvas(width, height);
 	const context = canvas.getContext("2d");
@@ -75,15 +77,22 @@ async function encode(image) {
 		}
 	}
 	const [encoder] = await load();
+	const tensor = new ort.Tensor("float32", input, [SIDE, SIDE, 3]);
+	try {
+		const output = await encoder.run({ input_image: tensor });
+		return { embeddings: output.image_embeddings, width, height };
+	} finally {
+		tensor.dispose();
+	}
+}
+
+async function encode(image) {
 	encoded?.embeddings.dispose();
 	encoded = null;
-	const output = await encoder.run({
-		input_image: new ort.Tensor("float32", input, [SIDE, SIDE, 3]),
-	});
-	encoded = { embeddings: output.image_embeddings, width, height };
+	encoded = await runEncoder(image);
 	// WebGPU's first run of the decoder takes a second to set up, which
 	// would otherwise come with the first tap.
-	disposeAll(await decode(pointPrompt(width / 2, height / 2)));
+	disposeAll(await decode(pointPrompt(encoded.width / 2, encoded.height / 2)));
 }
 
 // A point, and the padding point SAM's decoder expects without a box.
@@ -100,33 +109,60 @@ function disposeAll(output) {
 	for (const tensor of Object.values(output)) tensor.dispose();
 }
 
-async function decode({ coords, labels }) {
-	if (!encoded) throw new Error("No image is encoded");
-	const { embeddings, width, height } = encoded;
+async function decodeWith(embeddings, width, height, { coords, labels }) {
 	const [, decoder] = await load();
-	return decoder.run({
-		image_embeddings: embeddings,
-		point_coords: new ort.Tensor("float32", new Float32Array(coords), [
-			1,
-			labels.length,
-			2,
-		]),
-		point_labels: new ort.Tensor("float32", new Float32Array(labels), [
-			1,
-			labels.length,
-		]),
-		mask_input: new ort.Tensor(
-			"float32",
-			new Float32Array(256 * 256),
-			[1, 1, 256, 256],
-		),
-		has_mask_input: new ort.Tensor("float32", new Float32Array([0]), [1]),
-		orig_im_size: new ort.Tensor(
-			"float32",
-			new Float32Array([height, width]),
-			[2],
-		),
-	});
+	const pointCoords = new ort.Tensor("float32", new Float32Array(coords), [
+		1,
+		labels.length,
+		2,
+	]);
+	const pointLabels = new ort.Tensor("float32", new Float32Array(labels), [
+		1,
+		labels.length,
+	]);
+	const maskInput = new ort.Tensor(
+		"float32",
+		new Float32Array(256 * 256),
+		[1, 1, 256, 256],
+	);
+	const hasMaskInput = new ort.Tensor("float32", new Float32Array([0]), [1]);
+	const origImSize = new ort.Tensor(
+		"float32",
+		new Float32Array([height, width]),
+		[2],
+	);
+	try {
+		return await decoder.run({
+			image_embeddings: embeddings,
+			point_coords: pointCoords,
+			point_labels: pointLabels,
+			mask_input: maskInput,
+			has_mask_input: hasMaskInput,
+			orig_im_size: origImSize,
+		});
+	} finally {
+		pointCoords.dispose();
+		pointLabels.dispose();
+		maskInput.dispose();
+		hasMaskInput.dispose();
+		origImSize.dispose();
+	}
+}
+
+async function decode(prompt) {
+	if (!encoded) throw new Error("No image is encoded");
+	return decodeWith(encoded.embeddings, encoded.width, encoded.height, prompt);
+}
+
+function coverageMask(logits, offset, size) {
+	const values = new Uint8ClampedArray(size);
+	let area = 0;
+	for (let i = 0; i < size; i++) {
+		const logit = logits[offset + i];
+		if (logit > 0) area++;
+		values[i] = 255 / (1 + Math.exp(-SHARPNESS * logit));
+	}
+	return { values, area };
 }
 
 // The decoder's three masks for a point, from a part to the whole: its
@@ -147,13 +183,7 @@ async function select(data) {
 		? [0]
 		: Array.from({ length: output.masks.dims[1] - 1 }, (_, i) => i + 1);
 	for (const index of outputs) {
-		const values = new Uint8ClampedArray(size);
-		let area = 0;
-		for (let i = 0; i < size; i++) {
-			const logit = logits[index * size + i];
-			if (logit > 0) area++;
-			values[i] = 255 / (1 + Math.exp(-SHARPNESS * logit));
-		}
+		const { values, area } = coverageMask(logits, index * size, size);
 		if (area > 0) masks.push({ values, area, score: scores[index] });
 	}
 	disposeAll(output);
@@ -171,6 +201,36 @@ async function select(data) {
 		),
 		likeliest,
 	};
+}
+
+async function selectCrop({ image, box, outputWidth, outputHeight, paste }) {
+	const crop = await runEncoder(image);
+	let output;
+	try {
+		output = await decodeWith(
+			crop.embeddings,
+			paste.width,
+			paste.height,
+			boxPrompt(box),
+		);
+		const size = paste.width * paste.height;
+		const { values, area } = coverageMask(output.masks.data, 0, size);
+		if (area === 0) return { masks: [], likeliest: 0 };
+		const full = new Uint8ClampedArray(outputWidth * outputHeight);
+		for (let row = 0; row < paste.height; row++) {
+			full.set(
+				values.subarray(row * paste.width, (row + 1) * paste.width),
+				(paste.y + row) * outputWidth + paste.x,
+			);
+		}
+		return {
+			masks: [await encodePng(full, outputWidth, outputHeight)],
+			likeliest: 0,
+		};
+	} finally {
+		if (output) disposeAll(output);
+		crop.embeddings.dispose();
+	}
 }
 
 function encodePng(values, width, height) {
@@ -197,6 +257,8 @@ self.addEventListener("message", ({ data }) => {
 				self.postMessage({ id: data.id });
 			} else if (data.type === "select") {
 				self.postMessage({ id: data.id, ...(await select(data)) });
+			} else if (data.type === "selectCrop") {
+				self.postMessage({ id: data.id, ...(await selectCrop(data)) });
 			}
 		} catch (error) {
 			self.postMessage({ id: data.id, error: String(error?.message ?? error) });

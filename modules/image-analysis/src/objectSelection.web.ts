@@ -1,8 +1,10 @@
 import type { ObjectMasks, ObjectPrompt } from "./ImageAnalysis.types";
 import { decode } from "./mediaPipe";
-
-// MobileSAM's encoder looks at the image at this size on its longer side.
-const ENCODER_SIDE = 1024;
+import {
+	ENCODER_SIDE,
+	type ObjectCropPlan,
+	planObjectCrop,
+} from "./objectCrop";
 
 type Reply = { id: number; error?: string; masks?: Blob[]; likeliest?: number };
 
@@ -13,6 +15,8 @@ let prepared: {
 	uri: string;
 	width: number;
 	height: number;
+	sourceWidth: number;
+	sourceHeight: number;
 	ready: boolean;
 	done: Promise<void>;
 } | null = null;
@@ -53,14 +57,18 @@ export function prepareObjects(uri: string): Promise<void> {
 		uri,
 		width: 0,
 		height: 0,
+		sourceWidth: 0,
+		sourceHeight: 0,
 		ready: false,
 		done: Promise.resolve(),
 	};
 	preparing.done = (async () => {
 		const image = await decode(uri);
-		const scale = ENCODER_SIDE / Math.max(image.width, image.height);
-		const width = Math.round(image.width * scale);
-		const height = Math.round(image.height * scale);
+		const sourceWidth = image.width;
+		const sourceHeight = image.height;
+		const scale = ENCODER_SIDE / Math.max(sourceWidth, sourceHeight);
+		const width = Math.round(sourceWidth * scale);
+		const height = Math.round(sourceHeight * scale);
 		let sized: ImageBitmap;
 		try {
 			sized = await createImageBitmap(image, {
@@ -74,6 +82,8 @@ export function prepareObjects(uri: string): Promise<void> {
 		await ask({ type: "encode", image: sized }, [sized]);
 		preparing.width = width;
 		preparing.height = height;
+		preparing.sourceWidth = sourceWidth;
+		preparing.sourceHeight = sourceHeight;
 		if (prepared === preparing) preparing.ready = true;
 	})();
 	preparing.done.catch(() => {
@@ -95,6 +105,36 @@ export async function objectMasks(
 ): Promise<ObjectMasks | null> {
 	const reading = await whenRead(uri, prompt);
 	if (!reading) return null;
+	if ("box" in prompt) {
+		const plan = planObjectCrop(
+			{ width: reading.sourceWidth, height: reading.sourceHeight },
+			prompt.box,
+		);
+		if (plan) {
+			const cropped = await cropForEncoder(uri, plan);
+			const { masks = [] } = await ask(
+				{
+					type: "selectCrop",
+					image: cropped,
+					box: plan.promptBox,
+					outputWidth: plan.output.width,
+					outputHeight: plan.output.height,
+					paste: plan.paste,
+				},
+				[cropped],
+			);
+			if (masks.length > 0) {
+				return {
+					masks: masks.map((blob) => ({
+						uri: URL.createObjectURL(blob),
+						width: plan.output.width,
+						height: plan.output.height,
+					})),
+					likeliest: 0,
+				};
+			}
+		}
+	}
 	const { width, height } = reading;
 	const { masks = [], likeliest = 0 } = await ask(
 		"point" in prompt
@@ -121,6 +161,34 @@ export async function objectMasks(
 		})),
 		likeliest,
 	};
+}
+
+async function cropForEncoder(
+	uri: string,
+	plan: ObjectCropPlan,
+): Promise<ImageBitmap> {
+	const image = await decode(uri);
+	try {
+		const canvas = new OffscreenCanvas(plan.encode.width, plan.encode.height);
+		const context = canvas.getContext("2d");
+		if (!context) throw new Error("Couldn't crop the image");
+		context.imageSmoothingEnabled = true;
+		context.imageSmoothingQuality = "high";
+		context.drawImage(
+			image,
+			plan.source.x,
+			plan.source.y,
+			plan.source.width,
+			plan.source.height,
+			0,
+			0,
+			plan.encode.width,
+			plan.encode.height,
+		);
+		return canvas.transferToImageBitmap();
+	} finally {
+		image.close();
+	}
 }
 
 // The image at `uri` once it's read for `prompt`, or null: a point takes it
