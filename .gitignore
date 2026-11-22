@@ -48,6 +48,8 @@ public/mediapipe/
 public/onnxruntime/
 public/mobile-sam/
 public/mobile-sam-worker.js
+public/salient-subject/
+public/salient-subject-worker.js
 
 # Vercel CLI (local `vercel build`)
 .vercel/

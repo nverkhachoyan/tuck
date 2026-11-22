@@ -56,8 +56,10 @@ export type PickSize = { mask: string; index: number; count: number };
  *   document can use it, saying whether to keep the strokes that refined
  *   the selection; `onMask` decides whether the image still wants it.
  *   Inverting goes to `onInvert`.
- * - `finding` says which is being found, while one is. Only one of these
- *   runs at a time: another meanwhile does nothing.
+ * - `finding` says which is being found, while one is; `detecting` narrows
+ *   that to calls actually running on-device detection (excluding instant
+ *   re-taps or resizes). Only one of these runs at a time: another meanwhile
+ *   does nothing.
  * - `news` says what the last one did, for a screen reader, or what was
  *   last given to `announce`.
  * - `canFind` is false while this device can't find subjects, when only the
@@ -81,6 +83,7 @@ export function useCutOut({
 	onInvert: (layerId: string, mask: string) => void;
 }) {
 	const [finding, setFinding] = useState<"all" | "one" | null>(null);
+	const [detecting, setDetecting] = useState<"all" | "one" | null>(null);
 	const [inverting, setInverting] = useState(false);
 	const [news, setNews] = useState<string | null>(null);
 	const [pickSize, setPickSize] = useState<PickSize | null>(null);
@@ -155,12 +158,14 @@ export function useCutOut({
 		} finally {
 			busy.current = false;
 			setFinding(null);
+			setDetecting(null);
 		}
 	};
 
 	const findAll = (layer: ImageLayer) =>
 		exclusive("all", async () => {
-			setNews("Finding the subjects");
+			setNews(null);
+			setDetecting("all");
 			const subject = await subjectMaskOf(key, layer.uri, keep);
 			if (subject === null) {
 				setNews(null);
@@ -233,7 +238,8 @@ export function useCutOut({
 				return;
 			}
 			forgetPick();
-			setNews("Finding the object");
+			setNews(null);
+			setDetecting("one");
 			const next = await newPick(current, prompt, add);
 			if (!next) {
 				setNews(null);
@@ -302,6 +308,7 @@ export function useCutOut({
 	return {
 		canFind: isCutOutAvailable(),
 		finding,
+		detecting,
 		inverting,
 		news,
 		announce: setNews,

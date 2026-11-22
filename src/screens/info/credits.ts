@@ -95,6 +95,11 @@ export const creditGroups: { title: string; credits: Credit[] }[] = [
 				license: "Apache-2.0",
 			},
 			{
+				name: "U²-Net (U2Net-p)",
+				notice: "Copyright (c) 2020 Xuebin Qin",
+				license: "Apache-2.0",
+			},
+			{
 				name: "ONNX Runtime",
 				notice: "Copyright (c) Microsoft Corporation",
 				license: "MIT",

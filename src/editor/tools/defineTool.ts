@@ -81,6 +81,19 @@ export type ToolEnv = {
 export type NoticeAction = { label: string; onPress: () => void };
 
 /**
+ * What a tool is working on, shown in a floating banner over the canvas so
+ * slow on-device work is immediately obvious.
+ * - `message`: active label (e.g. "Removing background…").
+ * - `detail`: quieter note revealed if the work runs for a couple of seconds.
+ * - `delayMs`: wait before showing, for actions that are usually instant.
+ */
+export type ToolBusy = {
+	message: string;
+	detail?: string;
+	delayMs?: number;
+};
+
+/**
  * One of the editor's tools, as its own folder describes it, given its
  * controller `C` (what its hook returns). The editor reads it wherever it
  * shows or finishes the tool.
@@ -156,6 +169,8 @@ export type NoticeAction = { label: string; onPress: () => void };
  * - `run`: what pressing it does on its target image, exactly when its spec
  *   is an `action`. Such a tool has no views and no canvas input.
  * - `busy`: whether its button spins, while what it runs is working.
+ * - `busyNotice`: what it's working on, shown in a floating banner over the
+ *   canvas while non-null.
  * - `available`: whether this tool can run on this device; when false,
  *   the toolbar, flyouts, shortcuts, and layer actions hide it.
  */
@@ -173,6 +188,7 @@ export type ToolDefinition<C> = {
 	reset?: (controller: C) => (() => void) | undefined;
 	announcement?: (controller: C) => string | null;
 	busy?: (controller: C) => boolean;
+	busyNotice?: (controller: C) => ToolBusy | null;
 	sheetTitle?: string;
 	sheetDismissed?: (controller: C) => void;
 	layerAction?: (controller: C, layer: Layer) => LayerAction | null;

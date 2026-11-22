@@ -21,9 +21,11 @@ const segmenter = lazyTask(
 );
 
 /**
- * A mask of the subject `at` a point, or else at the image's center:
- * MagicTouch needs to be told where to look. It's a grayscale PNG's blob
- * URL, white where the subject is. Null when it finds nothing there.
+ * A mask of the subject `at` a point (falling back to the image's center if
+ * omitted): used on web for point-prompted taps before MobileSAM finishes
+ * encoding. Automatic subject detection uses `salientSubject` instead. It's a
+ * grayscale PNG's blob URL, white where the subject is, or null when nothing
+ * is found there.
  */
 export async function mediaPipeSubject(
 	uri: string,

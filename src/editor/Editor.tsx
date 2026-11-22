@@ -9,6 +9,7 @@ import {
 import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
 import { usePreference } from "@/platform/usePreference";
 import { Announcement } from "@/ui/Announcement";
+import { BusyBanner } from "@/ui/BusyBanner";
 import { CanvasStage } from "@/ui/CanvasStage";
 import { isHexColor } from "@/ui/color";
 import { DropOverlay } from "@/ui/DropOverlay";
@@ -216,6 +217,7 @@ export function Editor({
 		startTool,
 		layerStarters,
 		busy: busyTools,
+		busyNotice,
 		editLayer,
 		editorOf,
 		stylerOf,
@@ -600,7 +602,19 @@ export function Editor({
 						) : null}
 					</CanvasStage>
 					{!layersBeside && layersPanel}
-					{editNotice.message && (
+					{busyNotice && (
+						<BusyBanner
+							message={busyNotice.message}
+							detail={busyNotice.detail}
+							delayMs={busyNotice.delayMs}
+							inset={{
+								left: layout.canvasInset.left,
+								right: layout.coveredRight ?? 0,
+								bottom: layout.coveredBottom + space.md,
+							}}
+						/>
+					)}
+					{!busyNotice && editNotice.message && (
 						<Toast
 							message={editNotice.message}
 							action="Undo"
