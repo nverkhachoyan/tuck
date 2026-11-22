@@ -6,5 +6,11 @@
     <provider
       android:name="ai.onnxruntime.TelemetryInitializer"
       tools:node="remove" />
+    <!-- ML Kit logs usage to Google's Clearcut through datatransport, which
+      finds its upload backend here. Without it, events are dropped before
+      they're stored or scheduled. -->
+    <service
+      android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+      tools:node="remove" />
   </application>
 </manifest>

@@ -68,10 +68,12 @@ export default function PrivacyScreen() {
 					sent anywhere to be analyzed.
 				</Paragraph>
 				<Paragraph>
-					On Android, ML Kit is part of Google Play services, which sends Google
-					diagnostic information about how it runs: the device model and system
-					version, Tuck's name and version, how long detection took, and an
-					identifier for the installation that isn't meant to identify you. It
+					On Android, ML Kit is part of Google Play services. ML Kit is built to
+					send Google diagnostic information about how it runs: the device model
+					and system version, Tuck's name and version, how long detection took,
+					and an identifier for the installation that isn't meant to identify
+					you. Tuck switches off the part of that ML Kit sends from inside the
+					app, but Google Play services may still send some of it on its own. It
 					contains nothing from your photos and no face data. Google describes
 					this in its{" "}
 					<InlineLink to={ML_KIT_DISCLOSURE}>ML Kit data disclosure</InlineLink>
