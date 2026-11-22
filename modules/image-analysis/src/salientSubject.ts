@@ -1,10 +1,16 @@
 import type { SubjectMask } from "./ImageAnalysis.types";
 import { decode } from "./mediaPipe";
-import { evaluateSalientMask } from "./salientMask";
+import { refineBoxMask } from "./objectSelection.web";
+import {
+	evaluateSalientMask,
+	MIN_REFINEMENT_IOU,
+	maskAgreementIoU,
+	salientSubjectBoxes,
+} from "./salientMask";
 
 const INPUT_SIDE = 320;
-// Aspect-preserving mask resolution: smooth upscaling from 320×320 without
-// storing a giant PNG, matching `mediaPipeSubject.ts`.
+// Aspect-preserving fallback mask resolution when MobileSAM is skipped or
+// disagrees with U²-Net-p.
 const MAX_MASK_SIDE = 1024;
 
 type Reply = {
@@ -43,9 +49,12 @@ function ask(message: object, transfer: Transferable[] = []): Promise<Reply> {
 }
 
 /**
- * A mask of the salient foreground subjects in the image at `uri`, using
- * U²-Net-p in an ONNX Runtime Web worker. Returns a grayscale PNG's blob URL,
- * white where the subject is, or null when no plausible subject is found.
+ * A mask of the salient foreground subjects in the image at `uri`:
+ * - Stage 1 runs U²-Net-p (320×320) in an ONNX Runtime Web worker to locate
+ *   salient subjects anywhere in the frame and reject empty scenes.
+ * - Stage 2 refines each subject box with MobileSAM (up to 2048 px on crops
+ *   for small subjects, 1024 px on whole images) for crisp edges, falling back
+ *   to U²-Net-p's mask if MobileSAM fails or disagrees (`IoU < 0.70`).
  */
 export async function salientSubject(uri: string): Promise<SubjectMask | null> {
 	const image = await decode(uri);
@@ -70,7 +79,96 @@ export async function salientSubject(uri: string): Promise<SubjectMask | null> {
 		[sized],
 	);
 	if (!probs || !evaluateSalientMask(probs).hasSubject) return null;
+
+	const refined = await tryRefineWithSam(uri, probs, side);
+	if (refined) return refined;
 	return encodeSalientMask(probs, side, outputWidth, outputHeight);
+}
+
+async function tryRefineWithSam(
+	uri: string,
+	probs: Float32Array,
+	side: number,
+): Promise<SubjectMask | null> {
+	const boxes = salientSubjectBoxes(probs, side);
+	if (boxes.length === 0) return null;
+
+	const parts: SubjectMask[] = [];
+	try {
+		for (const box of boxes) {
+			const mask = await refineBoxMask(uri, box);
+			if (mask) parts.push(mask);
+		}
+		if (parts.length === 0) return null;
+
+		const candidate =
+			parts.length === 1 ? parts[0] : await combineMaskParts(parts);
+		if (!candidate) return null;
+
+		const iou = await maskBlobIoU(probs, side, candidate.uri);
+		if (iou >= MIN_REFINEMENT_IOU) {
+			// Revoke any intermediate parts that were combined into a new URL.
+			for (const part of parts) {
+				if (part.uri !== candidate.uri) URL.revokeObjectURL(part.uri);
+			}
+			return candidate;
+		}
+		if (parts.every((part) => part.uri !== candidate.uri)) {
+			URL.revokeObjectURL(candidate.uri);
+		}
+		for (const part of parts) URL.revokeObjectURL(part.uri);
+		return null;
+	} catch (error) {
+		for (const part of parts) URL.revokeObjectURL(part.uri);
+		console.warn("Couldn't refine salient subject with MobileSAM", error);
+		return null;
+	}
+}
+
+async function combineMaskParts(
+	parts: readonly SubjectMask[],
+): Promise<SubjectMask | null> {
+	let width = 0;
+	let height = 0;
+	for (const part of parts) {
+		if (part.width > width) width = part.width;
+		if (part.height > height) height = part.height;
+	}
+	if (width <= 0 || height <= 0) return null;
+	const canvas = new OffscreenCanvas(width, height);
+	const context = canvas.getContext("2d");
+	if (!context) return null;
+	context.fillStyle = "black";
+	context.fillRect(0, 0, width, height);
+	context.globalCompositeOperation = "lighten";
+	for (const part of parts) {
+		const bitmap = await decode(part.uri);
+		try {
+			context.drawImage(bitmap, 0, 0, width, height);
+		} finally {
+			bitmap.close();
+		}
+	}
+	const blob = await canvas.convertToBlob({ type: "image/png" });
+	return { uri: URL.createObjectURL(blob), width, height };
+}
+
+async function maskBlobIoU(
+	probs: Float32Array,
+	side: number,
+	maskUri: string,
+): Promise<number> {
+	const bitmap = await decode(maskUri);
+	try {
+		const canvas = new OffscreenCanvas(side, side);
+		const context = canvas.getContext("2d");
+		if (!context) return 0;
+		context.drawImage(bitmap, 0, 0, side, side);
+		const pixels = context.getImageData(0, 0, side, side).data;
+		return maskAgreementIoU(probs, pixels, 4);
+	} finally {
+		bitmap.close();
+	}
 }
 
 async function encodeSalientMask(

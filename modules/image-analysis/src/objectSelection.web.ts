@@ -1,4 +1,9 @@
-import type { ObjectMasks, ObjectPrompt } from "./ImageAnalysis.types";
+import type {
+	ImageBox,
+	ObjectMasks,
+	ObjectPrompt,
+	SubjectMask,
+} from "./ImageAnalysis.types";
 import { decode } from "./mediaPipe";
 import {
 	ENCODER_SIDE,
@@ -161,6 +166,60 @@ export async function objectMasks(
 		})),
 		likeliest,
 	};
+}
+
+/**
+ * Refines a single normalized `box` on the image at `uri` using the shared
+ * MobileSAM worker. Small subjects use `selectCrop` directly without encoding
+ * the whole image; larger subjects reuse or populate the whole-image encoding
+ * (so opening Cut → Refine afterward is instant).
+ */
+export async function refineBoxMask(
+	uri: string,
+	box: ImageBox,
+): Promise<SubjectMask | null> {
+	if (!canSelectObjects()) return null;
+	const source =
+		prepared?.uri === uri && prepared.sourceWidth > 0
+			? { width: prepared.sourceWidth, height: prepared.sourceHeight }
+			: await imageDimensions(uri);
+	const plan = planObjectCrop(source, box);
+	if (plan) {
+		const cropped = await cropForEncoder(uri, plan);
+		const { masks = [] } = await ask(
+			{
+				type: "selectCrop",
+				image: cropped,
+				box: plan.promptBox,
+				outputWidth: plan.output.width,
+				outputHeight: plan.output.height,
+				paste: plan.paste,
+			},
+			[cropped],
+		);
+		const blob = masks[0];
+		if (blob) {
+			return {
+				uri: URL.createObjectURL(blob),
+				width: plan.output.width,
+				height: plan.output.height,
+			};
+		}
+	}
+	await prepareObjects(uri);
+	const result = await objectMasks(uri, { box });
+	return result?.masks[result.likeliest] ?? result?.masks[0] ?? null;
+}
+
+async function imageDimensions(
+	uri: string,
+): Promise<{ width: number; height: number }> {
+	const image = await decode(uri);
+	try {
+		return { width: image.width, height: image.height };
+	} finally {
+		image.close();
+	}
 }
 
 async function cropForEncoder(
