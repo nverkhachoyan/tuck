@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
 	AUTO_SUBJECT_POINTS,
-	chooseSubjectMask,
+	BORDER_SUBJECT_LIMIT,
+	chooseSubjectMasks,
 	isPlausibleSubject,
 	MAX_SUBJECT_AREA,
 	MIN_SUBJECT_AREA,
+	type SubjectMaskStats,
 	subjectMaskIndex,
 	subjectMaskStats,
 } from "../subjectPrompt.ts";
@@ -42,6 +44,8 @@ describe("subjectMaskStats", () => {
 		assert.equal(stats.area, 4 / 16);
 		assert.equal(stats.confidence, 1);
 		assert.equal(stats.border, 0);
+		assert.equal(stats.columnSpan, 0.5);
+		assert.equal(stats.rowSpan, 0.5);
 	});
 
 	test("counts a pixel at exactly half as subject", () => {
@@ -69,11 +73,31 @@ describe("subjectMaskStats", () => {
 			area: 0,
 			confidence: 0,
 			border: 0,
+			columnSpan: 0,
+			rowSpan: 0,
 		});
 	});
 });
 
-describe("chooseSubjectMask", () => {
+function candidate(
+	mask: string,
+	stats: Partial<SubjectMaskStats> &
+		Pick<SubjectMaskStats, "area" | "confidence">,
+	occupancy?: number[],
+) {
+	return {
+		mask,
+		occupancy,
+		stats: {
+			border: 0,
+			columnSpan: 0.3,
+			rowSpan: 0.3,
+			...stats,
+		},
+	};
+}
+
+describe("chooseSubjectMasks", () => {
 	test("auto prompts are the rule-of-thirds grid, center first", () => {
 		assert.deepEqual(AUTO_SUBJECT_POINTS, [
 			{ x: 0.5, y: 0.5 },
@@ -88,104 +112,188 @@ describe("chooseSubjectMask", () => {
 		]);
 	});
 
-	test("a speck or almost the whole frame is not a subject", () => {
-		assert.equal(MIN_SUBJECT_AREA, 0.03);
+	test("a speck, the whole frame, or a mask on the edge is not a subject", () => {
+		assert.equal(MIN_SUBJECT_AREA, 0.01);
 		assert.equal(MAX_SUBJECT_AREA, 0.9);
+		assert.equal(BORDER_SUBJECT_LIMIT, 0.05);
+		const inside = { confidence: 1, border: 0, columnSpan: 0.2, rowSpan: 0.2 };
+		assert.equal(isPlausibleSubject({ area: 0.009, ...inside }), false);
+		assert.equal(isPlausibleSubject({ area: 0.01, ...inside }), true);
 		assert.equal(
-			isPlausibleSubject({ area: 0.029, confidence: 1, border: 0 }),
+			isPlausibleSubject({ area: 0.2, ...inside, border: 0.05 }),
 			false,
 		);
 		assert.equal(
-			isPlausibleSubject({ area: 0.03, confidence: 1, border: 0 }),
+			isPlausibleSubject({ area: 0.2, ...inside, border: 0.049 }),
 			true,
 		);
 		assert.equal(
-			isPlausibleSubject({ area: 0.9, confidence: 1, border: 1 }),
-			true,
-		);
-		assert.equal(
-			isPlausibleSubject({ area: 0.91, confidence: 1, border: 1 }),
+			isPlausibleSubject({
+				area: 0.4,
+				confidence: 0.9,
+				border: 0,
+				columnSpan: 0.8,
+				rowSpan: 0.4,
+			}),
 			false,
 		);
-	});
-
-	test("returns null when every mask is a speck or the whole frame", () => {
-		const chosen = chooseSubjectMask([
-			{ mask: "speck", stats: { area: 0.01, confidence: 1, border: 0 } },
-			{ mask: "frame", stats: { area: 0.97, confidence: 0.8, border: 1 } },
-		]);
-		assert.equal(chosen, null);
-	});
-
-	test("keeps a small sure horse instead of a wider, less sure tree line", () => {
-		// Measured on a horse standing left of center: the center prompt
-		// found the horse, and a point in the trees found a larger region.
-		const chosen = chooseSubjectMask([
-			{
-				mask: "horse",
-				stats: { area: 0.055, confidence: 0.991, border: 0 },
-			},
-			{
-				mask: "trees",
-				stats: { area: 0.331, confidence: 0.915, border: 0.058 },
-			},
-			{
-				mask: "speck",
-				stats: { area: 0.009, confidence: 0.965, border: 0 },
-			},
-		]);
-		assert.equal(chosen, "horse");
-	});
-
-	test("an interior subject wins a close call against a mask on the border", () => {
-		const chosen = chooseSubjectMask([
-			{ mask: "sky", stats: { area: 0.55, confidence: 0.9, border: 0.8 } },
-			{
-				mask: "horse",
-				stats: { area: 0.16, confidence: 0.88, border: 0.02 },
-			},
-		]);
-		assert.equal(chosen, "horse");
-	});
-
-	test("a portrait that is clearly the surest mask is kept at the edge", () => {
-		const chosen = chooseSubjectMask([
-			{ mask: "blob", stats: { area: 0.05, confidence: 0.9, border: 0 } },
-			{
-				mask: "portrait",
-				stats: { area: 0.58, confidence: 0.97, border: 0.72 },
-			},
-		]);
-		assert.equal(chosen, "portrait");
-	});
-
-	test("the most confident plausible mask wins, and a tie keeps the larger", () => {
 		assert.equal(
-			chooseSubjectMask([
-				{ mask: "rock", stats: { area: 0.3, confidence: 0.8, border: 0 } },
-				{
-					mask: "horse",
-					stats: { area: 0.1, confidence: 0.95, border: 0 },
-				},
-			]),
-			"horse",
+			isPlausibleSubject({
+				area: 0.4,
+				confidence: 0.97,
+				border: 0,
+				columnSpan: 0.8,
+				rowSpan: 0.9,
+			}),
+			true,
 		);
-		assert.equal(
-			chooseSubjectMask([
-				{
-					mask: "small",
-					stats: { area: 0.1, confidence: 0.9, border: 0 },
-				},
-				{
-					mask: "large",
-					stats: { area: 0.2, confidence: 0.9, border: 0 },
-				},
+	});
+
+	test("returns nothing when every mask is a speck or the whole frame", () => {
+		assert.deepEqual(
+			chooseSubjectMasks([
+				candidate("speck", { area: 0.005, confidence: 1 }),
+				candidate("frame", {
+					area: 0.97,
+					confidence: 0.8,
+					border: 1,
+					columnSpan: 1,
+					rowSpan: 1,
+				}),
 			]),
-			"large",
+			[],
+		);
+	});
+
+	test("keeps the small interior horse and drops the hillside on the edge", () => {
+		// Measured on the two horses on a grassy slope: the orange horse is
+		// a small interior mask, and the forested hillside meets the edge.
+		assert.deepEqual(
+			chooseSubjectMasks([
+				candidate("hillside", {
+					area: 0.163,
+					confidence: 0.971,
+					border: 0.071,
+					columnSpan: 0.657,
+					rowSpan: 0.663,
+				}),
+				candidate("grass", {
+					area: 0.348,
+					confidence: 0.953,
+					border: 0.377,
+					columnSpan: 1,
+					rowSpan: 0.571,
+				}),
+				candidate("orange", {
+					area: 0.015,
+					confidence: 0.98,
+					border: 0,
+					columnSpan: 0.154,
+					rowSpan: 0.202,
+				}),
+				candidate("trees", {
+					area: 0.053,
+					confidence: 0.913,
+					border: 0,
+					columnSpan: 0.319,
+					rowSpan: 0.432,
+				}),
+			]),
+			["orange"],
+		);
+	});
+
+	test("drops a patch that only sits inside a wide background band", () => {
+		// The band is the top row. The bush is two of those cells.
+		const band = [1, 1, 1, 1, 0, 0, 0, 0];
+		const bush = [1, 1, 0, 0, 0, 0, 0, 0];
+		assert.deepEqual(
+			chooseSubjectMasks([
+				candidate(
+					"band",
+					{
+						area: 0.147,
+						confidence: 0.917,
+						border: 0,
+						columnSpan: 0.813,
+						rowSpan: 0.465,
+					},
+					band,
+				),
+				candidate(
+					"tree",
+					{
+						area: 0.269,
+						confidence: 0.994,
+						border: 0.247,
+						columnSpan: 0.547,
+						rowSpan: 0.719,
+					},
+					[0, 0, 0, 0, 1, 1, 1, 1],
+				),
+				candidate(
+					"bush",
+					{
+						area: 0.04,
+						confidence: 0.939,
+						border: 0,
+						columnSpan: 0.352,
+						rowSpan: 0.247,
+					},
+					bush,
+				),
+			]),
+			[],
+		);
+	});
+
+	test("keeps a centered dog that fills much of the frame without meeting the edge", () => {
+		assert.deepEqual(
+			chooseSubjectMasks([
+				candidate("dog", {
+					area: 0.357,
+					confidence: 0.997,
+					border: 0,
+					columnSpan: 0.588,
+					rowSpan: 0.924,
+				}),
+			]),
+			["dog"],
+		);
+	});
+
+	test("combines overlapping prompts of one subject and leaves another out", () => {
+		const body = [1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0];
+		const head = [0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0];
+		const other = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0];
+		assert.deepEqual(
+			chooseSubjectMasks([
+				candidate("body", { area: 0.04, confidence: 0.97 }, body),
+				candidate("head", { area: 0.03, confidence: 0.99 }, head),
+				candidate("other", { area: 0.02, confidence: 0.9 }, other),
+			]),
+			["body", "head"],
+		);
+	});
+
+	test("the most confident interior mask wins, and a tie keeps the larger", () => {
+		assert.deepEqual(
+			chooseSubjectMasks([
+				candidate("rock", { area: 0.3, confidence: 0.8 }),
+				candidate("horse", { area: 0.1, confidence: 0.95 }),
+			]),
+			["horse"],
+		);
+		assert.deepEqual(
+			chooseSubjectMasks([
+				candidate("small", { area: 0.1, confidence: 0.9 }),
+				candidate("large", { area: 0.2, confidence: 0.9 }),
+			]),
+			["large"],
 		);
 	});
 
 	test("an empty list has no subject", () => {
-		assert.equal(chooseSubjectMask([]), null);
+		assert.deepEqual(chooseSubjectMasks([]), []);
 	});
 });

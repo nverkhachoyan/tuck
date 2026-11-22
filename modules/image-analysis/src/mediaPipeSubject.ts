@@ -3,10 +3,10 @@ import type { ImagePoint, SubjectMask } from "./ImageAnalysis.types";
 import { ASSETS, decode, lazyTask } from "./mediaPipe";
 import {
 	AUTO_SUBJECT_POINTS,
-	chooseSubjectMask,
-	isPlausibleSubject,
+	chooseSubjectMasks,
+	maskOccupancy,
 	SUBJECT_CONFIDENCE,
-	type SubjectMaskStats,
+	type SubjectCandidate,
 	subjectMaskIndex,
 	subjectMaskStats,
 } from "./subjectPrompt";
@@ -38,8 +38,9 @@ type Foreground = {
  * the subject is. Null when nothing there looks like a subject.
  * - A tap segments that point, including a small object.
  * - Remove BG, which passes no point, tries the rule-of-thirds grid on
- *   the one loaded segmenter and keeps the mask `chooseSubjectMask` picks.
- *   A speck or a mask of almost the whole frame is not applied.
+ *   the one loaded segmenter and keeps what `chooseSubjectMasks` picks,
+ *   combined when two prompts found the same subject. A mask that runs
+ *   along the frame, or nothing that looks like a subject, is not applied.
  */
 export async function mediaPipeSubject(
 	uri: string,
@@ -52,20 +53,37 @@ export async function mediaPipeSubject(
 		return encodeMask(mask.data, mask.width, mask.height);
 	}
 
-	const found: { stats: SubjectMaskStats; mask: Foreground }[] = [];
+	const found: SubjectCandidate<Foreground>[] = [];
 	for (let i = 0; i < AUTO_SUBJECT_POINTS.length; i++) {
 		const point = AUTO_SUBJECT_POINTS[i];
 		if (!point) continue;
 		const mask = foregroundAt(segment, canvas, point);
-		const stats = subjectMaskStats(mask.data, mask.width, mask.height);
-		// Drop a speck before keeping its pixels. The choice still rejects
-		// one that slips through.
-		if (isPlausibleSubject(stats)) found.push({ stats, mask });
+		found.push({
+			stats: subjectMaskStats(mask.data, mask.width, mask.height),
+			occupancy: maskOccupancy(mask.data, mask.width, mask.height),
+			mask,
+		});
 		if (i < AUTO_SUBJECT_POINTS.length - 1) await yieldToMain();
 	}
-	const chosen = chooseSubjectMask(found);
-	if (!chosen) return null;
-	return encodeMask(chosen.data, chosen.width, chosen.height);
+	const chosen = chooseSubjectMasks(found);
+	const combined = unionMasks(chosen);
+	if (!combined) return null;
+	return encodeMask(combined.data, combined.width, combined.height);
+}
+
+function unionMasks(masks: readonly Foreground[]): Foreground | null {
+	const first = masks[0];
+	if (!first) return null;
+	if (masks.length === 1) return first;
+	const data = new Float32Array(first.data);
+	for (const mask of masks) {
+		if (mask.width !== first.width || mask.height !== first.height) continue;
+		for (let i = 0; i < data.length; i++) {
+			const value = mask.data[i] ?? 0;
+			if (value > (data[i] ?? 0)) data[i] = value;
+		}
+	}
+	return { data, width: first.width, height: first.height };
 }
 
 async function subjectCanvas(uri: string): Promise<OffscreenCanvas> {
