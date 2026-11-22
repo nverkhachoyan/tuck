@@ -86,10 +86,12 @@ doesn't require terms.
   - Content rating (the IARC questionnaire).
   - Target audience: 13 and up, so the Families policy doesn't apply.
   - Data safety: photos never leave the device, so they aren't "collected".
-    ML Kit's diagnostics are: declare "App info and performance:
-    diagnostics" and "Device or other IDs", collected for analytics, not
-    shared, encrypted in transit. How to answer is your call; Google's
-    disclosure is at
+    ML Kit's in-app usage logging is switched off (#159,
+    `modules/image-analysis/android/src/main/AndroidManifest.xml`), but
+    Google Play services may still log on its own. Declaring "App info and
+    performance: diagnostics" and "Device or other IDs", collected for
+    analytics, not shared, encrypted in transit, is the cautious answer.
+    How to answer is your call; Google's disclosure is at
     https://developers.google.com/ml-kit/android-data-disclosure.
   - No photo and video permissions declaration: the app doesn't ask to read
     the library (`READ_MEDIA_IMAGES` is blocked in `app.json`). It picks
