@@ -9,7 +9,8 @@ const HASHED = /^\/(_expo\/static|assets)\//;
 // The detection engines and models, too big to fetch before they're used.
 // Their names stay the same across library versions, so they're kept with
 // the version of the app that fetched them.
-const ENGINES = /^\/(mediapipe|tesseract|onnxruntime|mobile-sam)\//;
+const ENGINES =
+	/^\/(mediapipe|tesseract|onnxruntime|mobile-sam|salient-subject)\//;
 // Stickers, which only the sheet loads: kept from their first use, across
 // versions, under names with content hashes.
 const STICKERS_CACHE = "tuck-stickers";

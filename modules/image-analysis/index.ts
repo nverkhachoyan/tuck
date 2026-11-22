@@ -63,7 +63,7 @@ export function detectText(uri: string): Promise<TextRegion[]> {
  * cutting them out of their background, or null if there's none. It's the
  * same way up as the image once its EXIF orientation is applied. With `at`,
  * it's only the subject there, or null if there's none; without, it's every
- * subject on iOS and Android, and on web whatever is at the image's center.
+ * salient subject in the frame.
  */
 export function subjectMask(
 	uri: string,

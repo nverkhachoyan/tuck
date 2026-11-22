@@ -77,3 +77,14 @@ for (const model of [
 	copy(`modules/image-analysis/models/${model}`, `mobile-sam/${model}`);
 }
 copy("modules/image-analysis/src/mobileSamWorker.js", "mobile-sam-worker.js");
+
+// One-shot Remove BG and Cut → Subjects on web: U²-Net-p salient-object
+// segmentation in its own ONNX Runtime worker.
+copy(
+	"modules/image-analysis/models/u2netp.onnx",
+	"salient-subject/u2netp.onnx",
+);
+copy(
+	"modules/image-analysis/src/salientSubjectWorker.js",
+	"salient-subject-worker.js",
+);

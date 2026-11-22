@@ -7,7 +7,8 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Loaded only when used: the service worker keeps them then.
-const ON_USE = /^(mediapipe|tesseract|onnxruntime|mobile-sam|assets\/assets)\//;
+const ON_USE =
+	/^(mediapipe|tesseract|onnxruntime|mobile-sam|salient-subject|assets\/assets)\//;
 // Served for the site, not the app.
 const SITE_FILES = new Set([
 	"og.jpg",

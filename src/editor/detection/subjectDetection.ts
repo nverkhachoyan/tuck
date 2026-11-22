@@ -21,7 +21,7 @@ export function isCutOutAvailable(): boolean {
 /**
  * A mask of the subjects in the image at `uri`, as a new image file of its
  * own, or null when there's none. With `at`, it's only the subject there;
- * without, on web it's whatever is at the center.
+ * without, it's every salient subject in the frame.
  */
 export function findSubjectMask(
 	uri: string,
