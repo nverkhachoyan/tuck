@@ -435,6 +435,7 @@ export function EditorCanvas({
 	const isEditText = input.type === "editText";
 	const isRegions = input.type === "regions";
 	const isDial = input.type === "dial";
+	const isView = input.type === "view";
 
 	const gesture = useLayerTransformGesture({
 		live,
@@ -508,12 +509,13 @@ export function EditorCanvas({
 	);
 	const idleGesture = useCanvasTap(handleIdleTap, isDial);
 	// With a dial, a sideways drag turns it, and a tap still puts the tool
-	// down.
+	// down. In view mode, tapping away also puts the tool down.
 	const dialGesture = useDialDrag(
 		isDial ? input.drag : null,
 		idleGesture,
 		isDial,
 	);
+	const viewTapGesture = useCanvasTap(handleIdleTap, isView);
 	const regionGesture = useRegionTap({
 		input: isRegions ? input : null,
 		scale,
@@ -536,6 +538,7 @@ export function EditorCanvas({
 		textGesture,
 		regionGesture,
 		dialGesture,
+		viewTapGesture,
 		viewGesture,
 	);
 

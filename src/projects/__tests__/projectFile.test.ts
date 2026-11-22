@@ -16,6 +16,7 @@ import {
 	type MaskStroke,
 	withAdjustments,
 	withMask,
+	withMaskEdge,
 } from "../../editor/core.ts";
 import { formatCreatedAt } from "../formatCreatedAt.ts";
 import {
@@ -324,6 +325,38 @@ describe("parseSavedProject", () => {
 			const damaged = {
 				...document,
 				layers: [{ ...photo, maskStrokes } as unknown as ImageLayer],
+			};
+			assert.equal(parseSavedProject(savedJson({ document: damaged })), null);
+		}
+	});
+
+	test("reads a cut's maskEdge refinement, and rejects invalid values", () => {
+		const document = mapImageUris(documentWithText(), () => PHOTO_FILE);
+		const photo = document.layers[0] as ImageLayer;
+		document.layers[0] = withMaskEdge(withMask(photo, "image-abc-123.png"), {
+			smooth: 0.35,
+			shift: -0.2,
+			feather: 0.15,
+		});
+		assert.deepEqual(
+			parseSavedProject(savedJson({ document }))?.document,
+			document,
+		);
+		for (const maskEdge of [
+			"soft",
+			{ smooth: -0.1, shift: 0, feather: 0 },
+			{ smooth: 0, shift: 1.5, feather: 0 },
+			{ smooth: 0, shift: 0, feather: 2 },
+			{ smooth: 0, shift: 0 },
+		]) {
+			const damaged = {
+				...document,
+				layers: [
+					{
+						...withMask(photo, "image-abc-123.png"),
+						maskEdge,
+					} as unknown as ImageLayer,
+				],
 			};
 			assert.equal(parseSavedProject(savedJson({ document: damaged })), null);
 		}

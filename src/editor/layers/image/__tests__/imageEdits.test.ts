@@ -15,7 +15,9 @@ import {
 	paintMask,
 	setAdjustments,
 	setMask,
+	setMaskEdge,
 } from "../imageEdits.ts";
+import { neutralMaskEdge } from "../mask.ts";
 
 const photo = () =>
 	createDocumentFromImage("file:///photo.jpg", 4000, 3000, true);
@@ -167,5 +169,58 @@ describe("addCutCopy", () => {
 		const selection = { mask: "file:///a.png" };
 		assert.equal(addCutCopy(document, textId, selection, "copy"), document);
 		assert.equal(addCutCopy(document, "gone", selection, "copy"), document);
+	});
+
+	test("carries maskEdge from selection and strips source's maskEdge", () => {
+		const edge = { smooth: 0.3, shift: -0.2, feather: 0.1 };
+		const cut = setMaskEdge(
+			setMask(photo(), "photo", "file:///old.png"),
+			"photo",
+			{ smooth: 0.9, shift: 0.5, feather: 0.5 },
+		);
+		const withEdge = addCutCopy(
+			cut,
+			"photo",
+			{ mask: "file:///a.png", maskEdge: edge },
+			"copy1",
+		).layers[1] as ImageLayer;
+		assert.deepEqual(withEdge.maskEdge, edge);
+
+		const withoutEdge = addCutCopy(
+			cut,
+			"photo",
+			{ mask: "file:///a.png" },
+			"copy2",
+		).layers[1] as ImageLayer;
+		assert.equal("maskEdge" in withoutEdge, false);
+	});
+});
+
+describe("setMaskEdge", () => {
+	const edge = { smooth: 0.4, shift: -0.2, feather: 0.15 };
+
+	test("sets edge refinement on any image (cutout or uncut) and clears when neutral", () => {
+		const uncut = photo();
+		const refinedUncut = setMaskEdge(uncut, "photo", edge);
+		assert.deepEqual(image(refinedUncut).maskEdge, edge);
+		assert.equal(setMaskEdge(refinedUncut, "photo", { ...edge }), refinedUncut);
+		const resetUncut = setMaskEdge(refinedUncut, "photo", neutralMaskEdge);
+		assert.equal("maskEdge" in image(resetUncut), false);
+
+		const cut = setMask(photo(), "photo", "file:///a.png");
+		const refined = setMaskEdge(cut, "photo", edge);
+		assert.deepEqual(image(refined).maskEdge, edge);
+		const reset = setMaskEdge(refined, "photo", neutralMaskEdge);
+		assert.equal("maskEdge" in image(reset), false);
+	});
+
+	test("ignores non-image layers", () => {
+		const document = photo();
+		const withText = addLayerOnTop(
+			document,
+			createTextLayer(document, "Hello"),
+		);
+		assert.equal(setMaskEdge(withText, withText.layers[1].id, edge), withText);
+		assert.equal(setMaskEdge(withText, "missing", edge), withText);
 	});
 });

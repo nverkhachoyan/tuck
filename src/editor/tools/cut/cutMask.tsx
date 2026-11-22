@@ -127,7 +127,7 @@ async function flattenedCut(layer: ImageLayer): Promise<SkImage> {
 		const mask = held ? await held.decoded : undefined;
 		let width = mask?.width() ?? 1;
 		let height = mask?.height() ?? 1;
-		if (layer.maskStrokes) {
+		if (layer.maskStrokes || layer.maskEdge) {
 			const scale = Math.min(
 				1,
 				FLAT_MAX_SIDE / Math.max(layer.width, layer.height),

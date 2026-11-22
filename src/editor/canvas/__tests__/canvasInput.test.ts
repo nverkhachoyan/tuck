@@ -194,6 +194,22 @@ describe("inputRules", () => {
 			});
 		}
 	});
+
+	test("viewing an image holds layers still and pans with one finger when zoomed", () => {
+		const view: CanvasInput = { type: "view", imageId: "photo" };
+		assert.deepEqual(inputRules(view, false), {
+			selection: "still",
+			twoFingers: "view",
+			oneFinger: null,
+			cursor: "default",
+		});
+		assert.deepEqual(inputRules(view, true), {
+			selection: "still",
+			twoFingers: "view",
+			oneFinger: "anywhere",
+			cursor: "grab",
+		});
+	});
 });
 
 describe("outlinedLayerFor", () => {
@@ -221,6 +237,17 @@ describe("outlinedLayerFor", () => {
 			null,
 		);
 		assert.equal(outlinedLayerFor(dial, none), null);
+		assert.equal(
+			outlinedLayerFor({ type: "view", imageId: "other" }, none),
+			other,
+		);
+		assert.equal(
+			outlinedLayerFor(
+				{ type: "view", imageId: "photo" },
+				{ ...none, layers: [photo] },
+			),
+			null,
+		);
 	});
 
 	test("a tool outlines the layer whose style it changes, unless that layer drags", () => {

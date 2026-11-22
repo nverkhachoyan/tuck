@@ -3,6 +3,7 @@ import { adjustSpec } from "./adjust/adjustSpec.ts";
 import { cropSpec } from "./crop/cropSpec.ts";
 import { cutSpec } from "./cut/cutSpec.ts";
 import { removeBgSpec } from "./cut/removeBgSpec.ts";
+import { edgeSpec } from "./edge/edgeSpec.ts";
 import { eraserSpec } from "./eraser/eraserSpec.ts";
 import { findSpec } from "./find/findSpec.ts";
 import { penSpec } from "./pen/penSpec.ts";
@@ -22,6 +23,7 @@ export const BUILT_IN_SPECS = {
 	sticker: stickersSpec,
 	cut: cutSpec,
 	removeBg: removeBgSpec,
+	edge: edgeSpec,
 	crop: cropSpec,
 	adjust: adjustSpec,
 };
@@ -37,6 +39,7 @@ export const BUILT_IN_TOOLBAR: readonly (
 )[] = [
 	"crop",
 	"cut",
+	"edge",
 	"adjust",
 	"text",
 	"pen",

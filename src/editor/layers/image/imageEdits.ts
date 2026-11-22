@@ -6,7 +6,14 @@ import {
 } from "../../document/document.ts";
 import type { Adjustments } from "./adjustments.ts";
 import { type CutStroke, type ImageLayer, withAdjustments } from "./image.ts";
-import { addMaskStroke, isCutOut, withInvertedCut, withMask } from "./mask.ts";
+import {
+	addMaskStroke,
+	isCutOut,
+	type MaskEdge,
+	withInvertedCut,
+	withMask,
+	withMaskEdge,
+} from "./mask.ts";
 
 export function setAdjustments(
 	document: EditorDocument,
@@ -58,23 +65,34 @@ export function paintMask(
 	return replaceLayer(document, target, addMaskStroke(target, stroke));
 }
 
+export function setMaskEdge(
+	document: EditorDocument,
+	id: string,
+	edge: MaskEdge,
+): EditorDocument {
+	const target = findLayer(document, id);
+	if (target?.type !== "image") return document;
+	return replaceLayer(document, target, withMaskEdge(target, edge));
+}
+
 /**
- * A copy of image `id`, as `copyId`, showing what `selection` (a cut's mask
- * and strokes) keeps of it, just above it and exactly over it. It starts
- * unlocked and shown, so it moves on the canvas whatever its source is. The
- * strokes are in the image's own pixels, so they fit the copy unchanged.
+ * A copy of image `id`, as `copyId`, showing what `selection` (a cut's mask,
+ * strokes, and edge refinement) keeps of it, just above it and exactly over
+ * it. It starts unlocked and shown, so it moves on the canvas whatever its
+ * source is. The strokes are in the image's own pixels, so they fit the copy
+ * unchanged.
  */
 export function addCutCopy(
 	document: EditorDocument,
 	id: string,
-	selection: Pick<ImageLayer, "mask" | "maskStrokes">,
+	selection: Pick<ImageLayer, "mask" | "maskStrokes" | "maskEdge">,
 	copyId: string,
 ): EditorDocument {
 	const index = document.layers.findIndex((layer) => layer.id === id);
 	const source = document.layers[index];
 	if (source?.type !== "image") return document;
-	const { mask: _, maskStrokes: __, ...rest } = source;
-	const { mask, maskStrokes } = selection;
+	const { mask: _, maskStrokes: __, maskEdge: ___, ...rest } = source;
+	const { mask, maskStrokes, maskEdge } = selection;
 	const copy: ImageLayer = {
 		...rest,
 		id: copyId,
@@ -82,6 +100,7 @@ export function addCutCopy(
 		locked: false,
 		...(mask === undefined ? {} : { mask }),
 		...(maskStrokes === undefined ? {} : { maskStrokes }),
+		...(maskEdge === undefined ? {} : { maskEdge }),
 	};
 	const { layers } = document;
 	return withLayers(document, [

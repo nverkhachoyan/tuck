@@ -4,6 +4,7 @@ import { cropTool } from "./crop/cropTool";
 import { cutTool } from "./cut/cutTool";
 import { removeBgTool } from "./cut/removeBgTool";
 import type { Tool } from "./defineTool";
+import { edgeTool } from "./edge/edgeTool";
 import { eraserTool } from "./eraser/eraserTool";
 import { findTool } from "./find/findTool";
 import { penTool } from "./pen/penTool";
@@ -23,6 +24,7 @@ export const BUILT_IN_TOOLS = {
 	sticker: stickersTool,
 	cut: cutTool,
 	removeBg: removeBgTool,
+	edge: edgeTool,
 	crop: cropTool,
 	adjust: adjustTool,
 } satisfies Record<keyof typeof BUILT_IN_SPECS, Tool>;

@@ -26,7 +26,10 @@ export type CanvasInput =
 			regions: readonly CanvasRegion[];
 			onTap: (region: CanvasRegion, point: Point) => void;
 	  }
-	| { type: "dial"; drag: DialDrag; adjusting: LiveAdjustment | null };
+	| { type: "dial"; drag: DialDrag; adjusting: LiveAdjustment | null }
+	// Holds layers still while a panel refines `imageId` (such as Edge),
+	// letting the user pinch-zoom and pan around edges to inspect them.
+	| { type: "view"; imageId: string };
 
 /**
  * An image layer whose adjustments a dial is changing: `matrix` colors it
@@ -105,6 +108,13 @@ export function inputRules(
 				oneFinger: null,
 				cursor: "ew-resize",
 			};
+		case "view":
+			return {
+				selection: "still",
+				twoFingers: "view",
+				oneFinger: zoomed ? "anywhere" : null,
+				cursor: zoomed ? "grab" : "default",
+			};
 	}
 }
 
@@ -159,6 +169,8 @@ export function outlinedLayerFor(
 			return input.layer;
 		case "dial":
 			return input.adjusting && outlinedImage(layers, input.adjusting.layerId);
+		case "view":
+			return outlinedImage(layers, input.imageId);
 		case "select":
 		case "regions":
 			return null;

@@ -22,7 +22,8 @@ export {
 	createStickerLayer,
 	withAdjustments,
 } from "./layers/image/image.ts";
-export { withMask } from "./layers/image/mask.ts";
+export type { MaskEdge } from "./layers/image/mask.ts";
+export { withMask, withMaskEdge } from "./layers/image/mask.ts";
 export { isLayer, layerFiles } from "./layers/layer.ts";
 export {
 	createMaskedRedaction,

@@ -28,7 +28,9 @@ import {
 	paintMask,
 	setAdjustments,
 	setMask,
+	setMaskEdge,
 } from "../layers/image/imageEdits.ts";
+import type { MaskEdge } from "../layers/image/mask.ts";
 import { duplicateLayer, type Layer } from "../layers/layer.ts";
 import {
 	deleteLayer,
@@ -223,6 +225,9 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	// The document the last nudge produced. While it's still the current one,
 	// nothing else has changed since, so the next nudge joins its undo step.
 	let lastNudge: { document: EditorDocument; id: string } | null = null;
+	// Same for a continuous drag on a cut's mask-edge slider: updates while
+	// dragging coalesce into one undo step.
+	let lastMaskEdge: { document: EditorDocument; id: string } | null = null;
 
 	// By id, like `transformLayer`: text edited in place is committed to
 	// the layer it came from, whatever is selected by then.
@@ -488,7 +493,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		// By id, like `setMask`. The copy is selected, though it isn't on top.
 		addCutCopy: (
 			id: string,
-			selection: Pick<ImageLayer, "mask" | "maskStrokes">,
+			selection: Pick<ImageLayer, "mask" | "maskStrokes" | "maskEdge">,
 		) => {
 			const copyId = createLayerId("image");
 			setDocument(
@@ -496,6 +501,25 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 				(document) => addCutCopy(document, id, selection, copyId),
 				copyId,
 			);
+		},
+
+		// A continuous drag on a mask-edge slider passes `coalesce = true` so
+		// the whole drag records one undo step.
+		setMaskEdge: (id: string, edge: MaskEdge, coalesce = false) => {
+			const { document } = get();
+			if (!document) return;
+			const next = setMaskEdge(document, id, edge);
+			if (next === document) return;
+			if (
+				coalesce &&
+				lastMaskEdge?.document === document &&
+				lastMaskEdge.id === id
+			) {
+				set({ document: next, future: [] }, false, "editor/setMaskEdge");
+			} else {
+				setDocument("editor/setMaskEdge", () => next);
+			}
+			lastMaskEdge = { document: next, id };
 		},
 
 		updateSelectedText: (patch: TextLayerEdit) => {

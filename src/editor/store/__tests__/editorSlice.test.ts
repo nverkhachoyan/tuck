@@ -1270,4 +1270,51 @@ describe("editorSlice", () => {
 			assert.equal(store.getState().past.length, steps + 1);
 		});
 	});
+
+	describe("setMaskEdge", () => {
+		test("coalesces consecutive drag updates into one undo step", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.setMask("photo", "file:///mask.png");
+			const steps = store.getState().past.length;
+
+			actions.setMaskEdge(
+				"photo",
+				{ smooth: 0.1, shift: 0, feather: 0 },
+				false,
+			);
+			actions.setMaskEdge("photo", { smooth: 0.3, shift: 0, feather: 0 }, true);
+			actions.setMaskEdge(
+				"photo",
+				{ smooth: 0.5, shift: -0.2, feather: 0.1 },
+				true,
+			);
+			assert.deepEqual(firstImage(store).maskEdge, {
+				smooth: 0.5,
+				shift: -0.2,
+				feather: 0.1,
+			});
+			assert.equal(store.getState().past.length, steps + 1);
+
+			actions.undo();
+			assert.equal("maskEdge" in firstImage(store), false);
+			actions.redo();
+			assert.deepEqual(firstImage(store).maskEdge, {
+				smooth: 0.5,
+				shift: -0.2,
+				feather: 0.1,
+			});
+		});
+
+		test("records separate undo steps when coalesce is false", () => {
+			const { store } = storeWithText();
+			const actions = store.getState().actions;
+			actions.setMask("photo", "file:///mask.png");
+			const steps = store.getState().past.length;
+
+			actions.setMaskEdge("photo", { smooth: 0.2, shift: 0, feather: 0 });
+			actions.setMaskEdge("photo", { smooth: 0.6, shift: 0, feather: 0 });
+			assert.equal(store.getState().past.length, steps + 2);
+		});
+	});
 });

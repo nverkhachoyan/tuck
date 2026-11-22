@@ -24,8 +24,9 @@ import { formatCreatedAt } from "./formatCreatedAt.ts";
 // photo. So did image layers' `adjustments`: builds from before them show
 // the image unadjusted. 5 added image layers' `mask`, a file of its own: a
 // build from before it would show the whole photo, and remove the mask's
-// file as unused when it closed the project. Image layers' `maskStrokes`
-// kept it: builds from before them show the cut without its refinements.
+// file as unused when it closed the project. Image layers' `maskStrokes` and
+// `maskEdge` kept it: builds from before them show the cut without those
+// refinements.
 // So did masked redactions: builds from before them list a project with one
 // as unavailable, so never remove its mask's file as unused.
 export const PROJECT_VERSION = 5;

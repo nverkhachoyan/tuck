@@ -11,6 +11,7 @@ import {
 	BarSections,
 	OptionSegments,
 } from "../../shell/ContextBar";
+import { EdgeControls } from "../../shell/EdgeControls";
 import { ToolButton, ToolRow } from "../../shell/ToolButton";
 import {
 	SizeChip,
@@ -78,8 +79,8 @@ const APPLY_ACTIONS = [
 }[];
 
 /**
- * Cut's tools, in place of the toolbar while cutting an image out. Stable 6-button row:
- * [Subjects] [Tap] [Paint in ▾] [Paint out ▾] [Invert] [Actions ▾].
+ * Cut's tools, in place of the toolbar while cutting an image out:
+ * [Subjects] [Tap] [Paint in ▾] [Paint out ▾] [Edge ▾] [Invert] [Actions ▾].
  */
 export function CutPanel({ controller }: { controller: CutController }) {
 	const { trayOpen, toggleTray, closeTray } = useEditorContext();
@@ -90,6 +91,8 @@ export function CutPanel({ controller }: { controller: CutController }) {
 		findAll,
 		inverting,
 		invert,
+		hasSelection,
+		maskEdge,
 		change,
 		tray,
 		showInTray,
@@ -142,6 +145,14 @@ export function CutPanel({ controller }: { controller: CutController }) {
 				selected={tool === "subtract"}
 				open={trayOpen && tray === "brush" && tool === "subtract"}
 				onPress={() => pickBrush("subtract")}
+			/>
+			<ToolButton
+				label="Edge"
+				icon="feather"
+				glyph={maskEdge ? <EdgeGlyph size={24} /> : undefined}
+				disabled={!hasSelection}
+				open={trayOpen && tray === "edge"}
+				onPress={() => openTray("edge")}
 			/>
 			<ToolButton
 				label="Invert"
@@ -240,7 +251,18 @@ function TapModifierPillContent({
  * since the options stay in view.
  */
 export function CutBar({ controller }: { controller: CutController }) {
-	const { settings, tool, finding, findAll, inverting, invert } = controller;
+	const {
+		settings,
+		tool,
+		finding,
+		findAll,
+		inverting,
+		invert,
+		hasSelection,
+		maskEdge,
+		setEdge,
+		resetEdge,
+	} = controller;
 	const { apply, change: onChange, resize, setTapMode } = controller;
 	const options = cutTools(findAll !== undefined).map((option) => ({
 		...option,
@@ -309,7 +331,11 @@ export function CutBar({ controller }: { controller: CutController }) {
 					</SizeChip>
 				</BarGroup>
 			)}
-			{(findAll || invert || apply.newLayer || apply.removeBg) && (
+			{(findAll ||
+				hasSelection ||
+				invert ||
+				apply.newLayer ||
+				apply.removeBg) && (
 				<BarGroup>
 					{findAll && (
 						<BarButton
@@ -318,6 +344,21 @@ export function CutBar({ controller }: { controller: CutController }) {
 							busy={finding === "all"}
 							onPress={findAll}
 						/>
+					)}
+					{hasSelection && setEdge && (
+						<BarChip
+							label={maskEdge ? "Refine edge, changed" : "Refine edge"}
+							icon="feather"
+							glyph={maskEdge ? <EdgeGlyph size={18} /> : undefined}
+							text="Edge"
+						>
+							<EdgeControls
+								wide
+								edge={maskEdge}
+								onChange={setEdge}
+								onReset={resetEdge}
+							/>
+						</BarChip>
 					)}
 					{invert && (
 						<BarButton
@@ -402,13 +443,35 @@ function applyButtons(
 }
 
 /**
- * In a tray above the dock, either the Apply menu's actions, or the size of
- * the brush in use and whether both brushes' edges are soft. Tap has no
- * options, so no brush options show for it.
+ * In a tray above the dock: the Apply menu's actions, the edge refinement
+ * sliders, or the size of the brush in use and whether both brushes' edges
+ * are soft. Tap has no brush options, so no brush options show for it.
  */
 export function CutOptions({ controller }: { controller: CutController }) {
 	const { bottomInset, rightInset, closeTray } = useEditorContext();
-	const { settings, tool, change: onChange, tray } = controller;
+	const {
+		settings,
+		tool,
+		change: onChange,
+		tray,
+		hasSelection,
+		maskEdge,
+		setEdge,
+		resetEdge,
+	} = controller;
+	if (tray === "edge") {
+		if (!hasSelection || !setEdge) return null;
+		return (
+			<ToolOptions
+				closeLabel="Close edge options"
+				bottomInset={bottomInset}
+				rightInset={rightInset}
+				onClose={closeTray}
+			>
+				<EdgeControls edge={maskEdge} onChange={setEdge} onReset={resetEdge} />
+			</ToolOptions>
+		);
+	}
 	if (tray === "apply") {
 		// More than four don't fit a phone's width, so they split into two
 		// rows, the top one as long or longer.
@@ -472,7 +535,33 @@ export function CutOptions({ controller }: { controller: CutController }) {
 	);
 }
 
+/** The Edge icon with an ink dot while edge refinement is active. */
+function EdgeGlyph({ size }: { size: number }) {
+	return (
+		<View style={styles.edgeGlyph}>
+			<MaterialCommunityIcons
+				name="feather"
+				size={size}
+				color={colors.textPrimary}
+			/>
+			<View style={styles.edgeDot} />
+		</View>
+	);
+}
+
 const styles = StyleSheet.create({
+	edgeGlyph: {
+		position: "relative",
+	},
+	edgeDot: {
+		position: "absolute",
+		top: -2,
+		right: -3,
+		width: 6,
+		height: 6,
+		borderRadius: 3,
+		backgroundColor: colors.primary,
+	},
 	pillArea: {
 		position: "absolute",
 		left: 0,

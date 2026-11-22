@@ -13,6 +13,7 @@ import {
 	isAdjustments,
 	isNeutral,
 } from "./adjustments.ts";
+import { isMaskEdge, type MaskEdge } from "./mask.ts";
 
 /**
  * A stroke on an image's cut: a mask stroke whose edge fades over
@@ -41,7 +42,8 @@ export function isCutStroke(value: unknown): boolean {
 // `maskStrokes` refine the cut by hand, painted over the mask (or over the
 // whole image, without one) in the image's own pixels, centered on its
 // middle, before it's flipped: a pen shows the image, an eraser hides it.
-// They're left out while there are none.
+// `maskEdge` refines the cut's boundary non-destructively (smooth, shift,
+// feather). Both are left out while unused.
 export type ImageLayer = LayerBase & {
 	type: "image";
 	uri: string;
@@ -53,6 +55,7 @@ export type ImageLayer = LayerBase & {
 	adjustments?: Adjustments;
 	mask?: string;
 	maskStrokes?: CutStroke[];
+	maskEdge?: MaskEdge;
 };
 
 // How much of the canvas a new image layer may take up, either way.
@@ -166,6 +169,7 @@ export function isImageLayer(value: unknown): boolean {
 		(value.maskStrokes === undefined ||
 			(Array.isArray(value.maskStrokes) &&
 				value.maskStrokes.length > 0 &&
-				value.maskStrokes.every(isCutStroke)))
+				value.maskStrokes.every(isCutStroke))) &&
+		(value.maskEdge === undefined || isMaskEdge(value.maskEdge))
 	);
 }

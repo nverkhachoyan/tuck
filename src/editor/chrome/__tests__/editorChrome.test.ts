@@ -186,6 +186,7 @@ describe("toolbarEntries", () => {
 			[
 				["crop", "Crop", "C"],
 				["cut", "Cut", "B"],
+				["edge", "Soften", "M"],
 				["adjust", "Adjust", "E"],
 				["text", "Text", "T"],
 				["pen", "Pen", "D"],
@@ -203,7 +204,7 @@ describe("toolbarEntries", () => {
 		const waiting = toolbarEntries(specs, BUILT_IN_TOOLBAR)
 			.filter((entry) => entry.needsImage)
 			.map((entry) => entry.id);
-		assert.deepEqual(waiting, ["cut", "adjust", "find"]);
+		assert.deepEqual(waiting, ["cut", "edge", "adjust", "find"]);
 	});
 
 	test("takes a made-up tool's button from its spec", () => {
@@ -284,11 +285,12 @@ describe("layerActionsFor", () => {
 	const actions = (layer: Parameters<typeof layerActionsFor>[0]) =>
 		layerActionsFor(layer, specs, BUILT_IN_TOOLBAR);
 
-	test("a photo can be cut, have its background removed, adjusted, found, and redacted", () => {
+	test("a photo can be cut, have its background removed, have edges refined, adjusted, found, and redacted", () => {
 		const photo = createImageLayer(canvas, "photo.jpg", 100, 100, true);
 		assert.deepEqual(actions(photo), [
 			"cut",
 			"removeBg",
+			"edge",
 			"adjust",
 			"find",
 			"redact",
@@ -305,18 +307,18 @@ describe("layerActionsFor", () => {
 				BUILT_IN_TOOLBAR,
 				(id) => id !== "removeBg",
 			),
-			["cut", "adjust", "find", "redact"],
+			["cut", "edge", "adjust", "find", "redact"],
 		);
 	});
 
-	test("a sticker only offers adjust, which is the only image tool that opens on stickers", () => {
+	test("a sticker offers edge and adjust, the image tools that open on stickers", () => {
 		const sticker = createImageLayer(canvas, "sticker.png", 100, 100, false);
 		sticker.sticker = true;
-		assert.deepEqual(actions(sticker), ["adjust"]);
+		assert.deepEqual(actions(sticker), ["edge", "adjust"]);
 		const stickerTargets = Object.entries(specs)
 			.filter(([, spec]) => spec.stickers)
 			.map(([id]) => id);
-		assert.deepEqual(stickerTargets, ["adjust"]);
+		assert.deepEqual(stickerTargets, ["edge", "adjust"]);
 	});
 
 	test("a drawing offers pen and eraser, while shape and redaction are styled directly", () => {

@@ -7,7 +7,7 @@ import {
 	type ImageLayer,
 	withAdjustments,
 } from "../../layers/image/image.ts";
-import { withMask } from "../../layers/image/mask.ts";
+import { withMask, withMaskEdge } from "../../layers/image/mask.ts";
 import { createTextLayer } from "../../layers/text/text.ts";
 import {
 	createBlankDocument,
@@ -94,6 +94,13 @@ describe("hasEdits", () => {
 			(document) => {
 				document.layers[0] = withMask(photo(document), "file:///mask.png");
 			},
+			(document) => {
+				document.layers[0] = withMaskEdge(photo(document), {
+					smooth: 0.2,
+					shift: 0,
+					feather: 0.3,
+				});
+			},
 		];
 		for (const edit of edits) {
 			const document = landscape();
@@ -173,6 +180,22 @@ describe("hasTransparency", () => {
 			"file:///mask.png",
 		);
 		assert.equal(hasTransparency(document), true);
+	});
+
+	test("is true when an opaque photo's edges are feathered, smoothed, or shrunk", () => {
+		const document = landscape();
+		document.layers[0] = withMaskEdge(document.layers[0] as ImageLayer, {
+			smooth: 0,
+			shift: 0,
+			feather: 0.25,
+		});
+		assert.equal(hasTransparency(document), true);
+		document.layers[0] = withMaskEdge(document.layers[0] as ImageLayer, {
+			smooth: 0,
+			shift: 0.25,
+			feather: 0,
+		});
+		assert.equal(hasTransparency(document), false);
 	});
 
 	test("is true while only a transparent image covers the canvas", () => {

@@ -1,5 +1,5 @@
 import { centeredTransform, createLayerId } from "../layers/base.ts";
-import { isCutOut } from "../layers/image/mask.ts";
+import { hasEdgeTransparency, isCutOut } from "../layers/image/mask.ts";
 import type { Layer } from "../layers/layer.ts";
 import { hitTestBox, transformsEqual } from "./geometry.ts";
 
@@ -144,6 +144,7 @@ export function hasEdits(document: EditorDocument): boolean {
 		document.height !== first.height ||
 		first.flipped ||
 		first.adjustments !== undefined ||
+		first.maskEdge !== undefined ||
 		isCutOut(first) ||
 		!transformsEqual(
 			first.transform,
@@ -175,7 +176,8 @@ export function hasTransparency(document: EditorDocument): boolean {
 			layer.type !== "image" ||
 			layer.hidden ||
 			!layer.opaque ||
-			isCutOut(layer)
+			isCutOut(layer) ||
+			hasEdgeTransparency(layer)
 		) {
 			return false;
 		}

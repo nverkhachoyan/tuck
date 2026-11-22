@@ -178,10 +178,10 @@ describe("shortcutGroups", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["C", "B", "G", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+			["C", "B", "G", "M", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
 		assert.equal(toolGroup.items[2].action, "Remove the background");
-		assert.equal(toolGroup.items[8].action, "Find faces or text to redact");
+		assert.equal(toolGroup.items[9].action, "Find faces or text to redact");
 	});
 
 	test("leaves out grouped tools that are unavailable", () => {
@@ -192,7 +192,7 @@ describe("shortcutGroups", () => {
 		);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+			["C", "B", "M", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
 	});
 

@@ -6,13 +6,23 @@ import type { ImageLayer } from "../image.ts";
 import {
 	addMaskStroke,
 	canDrawCut,
+	clampMaskEdge,
+	hasEdgeTransparency,
 	imagePointAt,
 	imageRectAt,
 	isCutOut,
+	isMaskEdge,
+	isNeutralMaskEdge,
+	maskEdgeBorderInset,
+	maskEdgeEqual,
+	maskEdgeFilter,
+	maskEdgePad,
+	neutralMaskEdge,
 	removalOf,
 	selectsNothing,
 	withInvertedCut,
 	withMask,
+	withMaskEdge,
 } from "../mask.ts";
 
 const photo = () =>
@@ -340,5 +350,152 @@ describe("removalOf", () => {
 		const before = withMask(photo(), "file:///cut.png");
 		assert.equal(removalOf(before, withMask(photo(), empty), empty), null);
 		assert.equal(removalOf(before, photo(), empty), null);
+	});
+});
+
+describe("maskEdge", () => {
+	const refined = { smooth: 0.4, shift: -0.25, feather: 0.2 };
+
+	test("validates ranges and rejects invalid values", () => {
+		assert.equal(isMaskEdge(neutralMaskEdge), true);
+		assert.equal(isMaskEdge(refined), true);
+		assert.equal(isMaskEdge({ smooth: 1, shift: 1, feather: 1 }), true);
+		assert.equal(isMaskEdge({ smooth: 0, shift: -1, feather: 0 }), true);
+		for (const bad of [
+			null,
+			"edge",
+			{ smooth: -0.1, shift: 0, feather: 0 },
+			{ smooth: 1.1, shift: 0, feather: 0 },
+			{ smooth: 0, shift: -1.1, feather: 0 },
+			{ smooth: 0, shift: 1.1, feather: 0 },
+			{ smooth: 0, shift: 0, feather: -0.1 },
+			{ smooth: 0, shift: 0, feather: 1.1 },
+			{ smooth: Number.NaN, shift: 0, feather: 0 },
+			{ smooth: 0, shift: 0 },
+		]) {
+			assert.equal(isMaskEdge(bad), false, JSON.stringify(bad));
+		}
+	});
+
+	test("clamps out-of-range values and normalizes -0", () => {
+		assert.deepEqual(
+			clampMaskEdge({ smooth: -2, shift: 3, feather: Number.NaN }),
+			{ smooth: 0, shift: 1, feather: 0 },
+		);
+		assert.equal(
+			Object.is(clampMaskEdge({ smooth: -0, shift: -0, feather: -0 }).shift, 0),
+			true,
+		);
+		assert.equal(isNeutralMaskEdge(neutralMaskEdge), true);
+		assert.equal(isNeutralMaskEdge(refined), false);
+		assert.equal(maskEdgeEqual(refined, { ...refined }), true);
+		assert.equal(maskEdgeEqual(refined, neutralMaskEdge), false);
+	});
+
+	test("attaches non-neutral edge, drops neutral, and preserves identity when unchanged", () => {
+		const cut = withMask(photo(), "file:///a.png");
+		assert.equal(withMaskEdge(cut, neutralMaskEdge), cut);
+		const withEdge = withMaskEdge(cut, refined);
+		assert.deepEqual(withEdge.maskEdge, refined);
+		assert.equal(withMaskEdge(withEdge, { ...refined }), withEdge);
+		const reset = withMaskEdge(withEdge, neutralMaskEdge);
+		assert.equal("maskEdge" in reset, false);
+		assert.deepEqual(reset, cut);
+	});
+
+	test("drops maskEdge when replacing or clearing mask, keeps it when growing", () => {
+		const withEdge = withMaskEdge(withMask(photo(), "file:///a.png"), refined);
+		const replaced = withMask(withEdge, "file:///b.png");
+		assert.equal("maskEdge" in replaced, false);
+		const cleared = withMask(withEdge, null);
+		assert.equal("maskEdge" in cleared, false);
+		const clearedEvenWithKeep = withMask(withEdge, null, { keepStrokes: true });
+		assert.equal("maskEdge" in clearedEvenWithKeep, false);
+		const grown = withMask(withEdge, "file:///b.png", { keepStrokes: true });
+		assert.deepEqual(grown.maskEdge, refined);
+	});
+
+	test("inverts shift on invert while keeping smooth and feather", () => {
+		const withEdge = withMaskEdge(withMask(photo(), "file:///a.png"), refined);
+		const inverted = withInvertedCut(withEdge, "file:///b.png");
+		assert.deepEqual(inverted.maskEdge, {
+			smooth: 0.4,
+			shift: 0.25,
+			feather: 0.2,
+		});
+		const doubleInverted = withInvertedCut(inverted, "file:///a.png");
+		assert.deepEqual(doubleInverted.maskEdge, refined);
+		// Zero shift stays +0, never -0.
+		const zeroShift = withMaskEdge(withMask(photo(), "file:///a.png"), {
+			smooth: 0.5,
+			shift: 0,
+			feather: 0,
+		});
+		const invZero = withInvertedCut(zeroShift, "file:///b.png");
+		assert.equal(Object.is(invZero.maskEdge?.shift, 0), true);
+	});
+
+	test("computes filter spec proportional to shorter side and null when neutral", () => {
+		const size = { width: 2000, height: 1000 };
+		assert.equal(maskEdgeFilter(undefined, size), null);
+		assert.equal(maskEdgeFilter(neutralMaskEdge, size), null);
+		assert.equal(maskEdgeFilter(refined, { width: 0, height: 100 }), null);
+
+		const erode = maskEdgeFilter({ smooth: 0, shift: -0.5, feather: 0 }, size);
+		assert.ok(erode);
+		assert.deepEqual(erode.shift, { operator: "erode", radius: 10 });
+		assert.equal(erode.smooth, null);
+		assert.equal(erode.feather, null);
+
+		const dilate = maskEdgeFilter({ smooth: 0, shift: 0.5, feather: 0 }, size);
+		assert.deepEqual(dilate?.shift, { operator: "dilate", radius: 10 });
+
+		const smooth = maskEdgeFilter({ smooth: 0.5, shift: 0, feather: 0 }, size);
+		assert.ok(smooth?.smooth);
+		assert.equal(smooth.smooth.sigma, 7.5);
+		// Contrast ramp keeps 0.5 at 0.5 and clears faint halo values cleanly to 0.
+		const gain = smooth.smooth.matrix[0];
+		const offset = smooth.smooth.matrix[4];
+		assert.ok(Math.abs(gain * 0.5 + offset - 0.5) < 1e-9);
+		assert.ok(gain * 0.2 + offset <= 0);
+		assert.ok(gain * 0.8 + offset >= 1);
+		assert.equal(smooth.smooth.matrix[18], 1); // alpha unchanged
+
+		const feather = maskEdgeFilter({ smooth: 0, shift: 0, feather: 0.4 }, size);
+		assert.ok(feather?.feather);
+		assert.ok(Math.abs(feather.feather.sigma - 10) < 1e-9);
+		assert.ok(maskEdgePad(feather) >= 34);
+		assert.ok(Math.abs(maskEdgeBorderInset(feather, size) - 22) < 1e-9);
+		assert.equal(maskEdgeBorderInset(erode, size), 0);
+	});
+
+	test("detects when maskEdge introduces transparency on an opaque image", () => {
+		const layer = photo();
+		assert.equal(hasEdgeTransparency(layer), false);
+		// Positive shift alone on an opaque rect doesn't shrink inside the box.
+		assert.equal(
+			hasEdgeTransparency(
+				withMaskEdge(layer, { smooth: 0, shift: 0.5, feather: 0 }),
+			),
+			false,
+		);
+		assert.equal(
+			hasEdgeTransparency(
+				withMaskEdge(layer, { smooth: 0.2, shift: 0, feather: 0 }),
+			),
+			true,
+		);
+		assert.equal(
+			hasEdgeTransparency(
+				withMaskEdge(layer, { smooth: 0, shift: -0.2, feather: 0 }),
+			),
+			true,
+		);
+		assert.equal(
+			hasEdgeTransparency(
+				withMaskEdge(layer, { smooth: 0, shift: 0, feather: 0.2 }),
+			),
+			true,
+		);
 	});
 });

@@ -289,7 +289,8 @@ export function useCutOut({
 			const now = latest(layer.id);
 			if (
 				now?.mask !== current.mask ||
-				now?.maskStrokes !== current.maskStrokes
+				now?.maskStrokes !== current.maskStrokes ||
+				now?.maskEdge !== current.maskEdge
 			) {
 				return;
 			}

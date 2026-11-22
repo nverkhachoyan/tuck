@@ -2,20 +2,41 @@ import { type ComponentProps, type ReactNode, useMemo } from "react";
 import {
 	BlurMask,
 	Group,
+	ImageFilter,
 	Mask,
 	Morphology,
 	Paint,
 	Path,
 	Rect,
+	rect,
 	type SkImage,
+	type SkImageFilter,
+	Skia,
 	ColorMatrix as SkiaColorMatrix,
 	Image as SkiaImage,
+	TileMode,
 } from "react-native-skia";
 import { pathFor } from "../drawing/DrawingLayerView";
 import { adjustmentMatrix, type ColorMatrix } from "./adjustments";
 import type { CutStroke, ImageLayer } from "./image";
+import {
+	type MaskEdgeFilterSpec,
+	maskEdgeBorderInset,
+	maskEdgeFilter,
+	maskEdgePad,
+} from "./mask";
 
 const MIRRORED = [{ scaleX: -1 }];
+// Converts an image's alpha channel into opaque grayscale luminance
+// (R = A, G = A, B = A, A = 1) so transparent PNGs and stickers run through
+// the same mask edge filter pipeline as cut-out masks.
+// biome-ignore format: a matrix reads best in rows
+const ALPHA_TO_LUMINANCE: ColorMatrix = [
+	0, 0, 0, 1, 0,
+	0, 0, 0, 1, 0,
+	0, 0, 0, 1, 0,
+	0, 0, 0, 0, 1,
+];
 // While a cut is refined, the whole photo shows, and what it selects is
 // washed and outlined in the selection color.
 const SELECTION_WASH = 0.35;
@@ -60,9 +81,13 @@ export function ImageLayerView({
 			{filter && <SkiaColorMatrix matrix={filter} />}
 		</SkiaImage>
 	);
-	const cut = mask || maskStrokes || liveMask;
-	const cutMask = cut && (
-		<CutMask layer={layer} mask={mask}>
+	const hasCut = Boolean(mask || maskStrokes || liveMask);
+	const hasEdge = useMemo(
+		() => maskEdgeFilter(layer.maskEdge, layer) !== null,
+		[layer],
+	);
+	const cutMask = (hasCut || hasEdge) && (
+		<CutMask layer={layer} image={image} mask={mask}>
 			{liveMask}
 		</CutMask>
 	);
@@ -163,22 +188,119 @@ function Tint({
 }
 
 /**
- * What of an image layer its cut shows, in luminance, in the image's own
- * space before it's flipped: its `mask` stretched over it (or white without
- * one), with its `maskStrokes` and then `children` painted over that.
+ * Builds the composed Skia image filter for a cut's `maskEdge` (Shift →
+ * Smooth → Feather), using only filters CanvasKit supports on web.
+ */
+function buildMaskEdgeFilter(spec: MaskEdgeFilterSpec): SkImageFilter | null {
+	let filter: SkImageFilter | null = null;
+	if (spec.shift) {
+		const { operator, radius } = spec.shift;
+		filter =
+			operator === "dilate"
+				? Skia.ImageFilter.MakeDilate(radius, radius, filter)
+				: Skia.ImageFilter.MakeErode(radius, radius, filter);
+	}
+	if (spec.smooth) {
+		const { sigma, matrix } = spec.smooth;
+		filter = Skia.ImageFilter.MakeBlur(sigma, sigma, TileMode.Clamp, filter);
+		filter = Skia.ImageFilter.MakeColorFilter(
+			Skia.ColorFilter.MakeMatrix(matrix),
+			filter,
+		);
+	}
+	if (spec.feather) {
+		const { sigma } = spec.feather;
+		filter = Skia.ImageFilter.MakeBlur(sigma, sigma, TileMode.Clamp, filter);
+	}
+	return filter;
+}
+
+/**
+ * What of an image layer its cut or edge refinement shows, in luminance, in
+ * the image's own space before it's flipped:
+ * - Cut-out image (`mask`, `maskStrokes`, or live `children`): mask + strokes,
+ *   clamped to the image's box so subjects touching the border stay flush.
+ * - Uncut transparent PNG / sticker (`!layer.opaque`, `image` given): the
+ *   image's own alpha channel converted to luminance, refined by `maskEdge`.
+ * - Uncut opaque photo (`layer.opaque`): white inside the image's box over a
+ *   padded black surround (inset on Feather for a seamless edge fade).
  */
 export function CutMask({
 	layer,
+	image,
 	mask,
 	children,
 }: {
 	layer: ImageLayer;
+	image?: SkImage;
 	mask?: SkImage;
 	children?: ReactNode;
 }) {
 	const box = imageBox(layer);
-	return (
-		<Group>
+	const hasCut = Boolean(mask || layer.maskStrokes || children);
+	const edge = useMemo(() => {
+		const spec = maskEdgeFilter(layer.maskEdge, {
+			width: layer.width,
+			height: layer.height,
+		});
+		const filter = spec ? buildMaskEdgeFilter(spec) : null;
+		return spec && filter ? { spec, filter } : null;
+	}, [layer.maskEdge, layer.width, layer.height]);
+
+	if (!hasCut && edge) {
+		if (!layer.opaque && image) {
+			const clip = rect(box.x, box.y, box.width, box.height);
+			return (
+				<Group clip={clip}>
+					<Group
+						layer={
+							<Paint>
+								<ImageFilter filter={edge.filter} />
+							</Paint>
+						}
+					>
+						<Rect {...box} color="black" />
+						<SkiaImage image={image} {...box} fit="fill">
+							<SkiaColorMatrix matrix={ALPHA_TO_LUMINANCE} />
+						</SkiaImage>
+					</Group>
+				</Group>
+			);
+		}
+		// Uncut opaque photo: pad with black around the image box so Smooth rounds
+		// corners, negative Shift insets the border, and Feather fades seamlessly.
+		const pad = maskEdgePad(edge.spec);
+		const inset = maskEdgeBorderInset(edge.spec, layer);
+		const padded = rect(
+			box.x - pad,
+			box.y - pad,
+			box.width + pad * 2,
+			box.height + pad * 2,
+		);
+		return (
+			<Group clip={padded}>
+				<Group
+					layer={
+						<Paint>
+							<ImageFilter filter={edge.filter} />
+						</Paint>
+					}
+				>
+					<Rect rect={padded} color="black" />
+					<Rect
+						x={box.x + inset}
+						y={box.y + inset}
+						width={Math.max(0, box.width - inset * 2)}
+						height={Math.max(0, box.height - inset * 2)}
+						color="white"
+					/>
+				</Group>
+			</Group>
+		);
+	}
+
+	const content = (
+		<>
 			{mask ? (
 				<SkiaImage image={mask} {...box} fit="fill" />
 			) : (
@@ -193,6 +315,23 @@ export function CutMask({
 				/>
 			))}
 			{children}
+		</>
+	);
+	if (!edge) return <Group>{content}</Group>;
+	// Clip outside the saved layer so the layer is bounded to the image box
+	// and TileMode.Clamp clamps at the image's edges.
+	const clip = rect(box.x, box.y, box.width, box.height);
+	return (
+		<Group clip={clip}>
+			<Group
+				layer={
+					<Paint>
+						<ImageFilter filter={edge.filter} />
+					</Paint>
+				}
+			>
+				{content}
+			</Group>
 		</Group>
 	);
 }

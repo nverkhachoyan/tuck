@@ -18,6 +18,8 @@ import {
 	imagePointAt,
 	imageRectAt,
 	isCutOut,
+	type MaskEdge,
+	neutralMaskEdge,
 	removalOf,
 	selectsNothing,
 } from "../../layers/image/mask";
@@ -39,8 +41,8 @@ import { useCutRedaction } from "./useCutRedaction";
 
 export type CutController = ReturnType<typeof useCutTool>;
 
-/** What the phone's tray shows: the brush's options, or the Apply menu. */
-export type CutTray = "brush" | "apply";
+/** What the phone's tray shows: the brush's options, edge refinement, or the Apply menu. */
+export type CutTray = "brush" | "edge" | "apply";
 
 /**
  * Cut, on its `image` while it's open: its settings, kept between sessions,
@@ -109,6 +111,7 @@ export function useCutTool({
 	});
 	const {
 		setMask,
+		setMaskEdge,
 		invertMask,
 		cancelToolSession,
 		commitToolSession,
@@ -184,18 +187,18 @@ export function useCutTool({
 		}
 	};
 	const newLayer = (selection: ImageLayer) => {
-		const { mask, maskStrokes } = selection;
+		const { mask, maskStrokes, maskEdge } = selection;
 		cancelToolSession();
-		addCutCopy(selection.id, { mask, maskStrokes });
+		addCutCopy(selection.id, { mask, maskStrokes, maskEdge });
 		notify("Selection copied to a new layer");
 		close();
 	};
 	// Adjust is named, not imported: tools don't import each other.
 	const canAdjust = hasTool("adjust");
 	const adjustSelection = (selection: ImageLayer) => {
-		const { mask, maskStrokes } = selection;
+		const { mask, maskStrokes, maskEdge } = selection;
 		cancelToolSession();
-		addCutCopy(selection.id, { mask, maskStrokes });
+		addCutCopy(selection.id, { mask, maskStrokes, maskEdge });
 		const { document, selectedLayerId } = useStore.getState();
 		const copy =
 			document && selectedLayerId !== null
@@ -360,6 +363,16 @@ export function useCutTool({
 					}
 				: undefined,
 		invert: cut ? () => void cutOut.invert(cut) : undefined,
+		hasSelection: selected !== undefined,
+		maskEdge: selected?.maskEdge,
+		setEdge: selected
+			? (edge: MaskEdge, coalesce?: boolean) =>
+					setMaskEdge(selected.id, edge, coalesce)
+			: undefined,
+		resetEdge:
+			selected?.maskEdge !== undefined
+				? () => setMaskEdge(selected.id, neutralMaskEdge)
+				: undefined,
 		apply: {
 			newLayer: selected ? () => newLayer(selected) : undefined,
 			adjust:
@@ -382,7 +395,8 @@ export function useCutTool({
 			selected !== undefined &&
 			savedSticker?.id === selected.id &&
 			savedSticker.mask === selected.mask &&
-			savedSticker.maskStrokes === selected.maskStrokes,
+			savedSticker.maskStrokes === selected.maskStrokes &&
+			savedSticker.maskEdge === selected.maskEdge,
 		tray,
 		showInTray,
 		reset: selected ? () => void cutOut.clear(selected, true) : undefined,

@@ -289,6 +289,7 @@ export function BarChip({
 	glyph,
 	text,
 	shortcut,
+	disabled = false,
 	textStyle,
 	restoreFocus,
 	children,
@@ -298,12 +299,14 @@ export function BarChip({
 	glyph?: ReactNode;
 	text: string;
 	shortcut?: string;
+	disabled?: boolean;
 	// The font chip draws its name in the font it sets.
 	textStyle?: StyleProp<TextStyle>;
 	restoreFocus?: () => void;
 	children: ReactNode | ((close: () => void) => ReactNode);
 }) {
 	const [open, setOpen] = useState(false);
+	const shown = open && !disabled;
 	const close = () => setOpen(false);
 	const ownRef = useRef<ViewInstance>(null);
 	const { anchor, tooltip } = useTooltip(label, shortcut);
@@ -313,18 +316,20 @@ export function BarChip({
 			<Pressable
 				{...anchor}
 				ref={ref}
+				disabled={disabled}
 				accessibilityRole="button"
 				accessibilityLabel={label}
-				accessibilityState={{ expanded: open }}
-				aria-expanded={open}
-				onPress={() => setOpen((shown) => !shown)}
+				accessibilityState={{ expanded: shown, disabled }}
+				aria-expanded={shown}
+				onPress={() => setOpen((current) => !current)}
 				style={(state) => {
 					const { pressed, hovered } = interaction(state);
 					return [
 						styles.action,
 						webTransition,
-						hovered && styles.segmentHovered,
-						pressed && styles.segmentPressed,
+						disabled && styles.actionInactive,
+						hovered && !disabled && styles.segmentHovered,
+						pressed && !disabled && styles.segmentPressed,
 					];
 				}}
 			>
@@ -346,7 +351,7 @@ export function BarChip({
 			{tooltip}
 			<Popover
 				anchor={ref}
-				open={open}
+				open={shown}
 				onClose={close}
 				label={label}
 				restoreFocus={restoreFocus}
