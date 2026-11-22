@@ -16,20 +16,20 @@ import Animated, {
 import { Announcement } from "./Announcement";
 import { colors, floatingShadow, radii, space, typography } from "./theme";
 
-const DROP = { duration: 160, easing: Easing.out(Easing.cubic) };
+const RISE = { duration: 160, easing: Easing.out(Easing.cubic) };
 // Reveal the optional reassurance note only once work has run long enough
 // that someone might wonder if it's stuck (e.g. first-time model load or WASM).
 const SLOW_MS = 1800;
 
 /**
- * Says that on-device work is running, floating across the top of the canvas
- * so it's immediately visible without blocking touches.
+ * Says that on-device work is running, floating over the bottom of the canvas
+ * in the same slot as `Toast` without blocking touches.
  * - `message`: short active status (e.g. "Removing background…"), also read
  *   out to a screen reader.
  * - `detail`: quieter note shown underneath if the work runs past `SLOW_MS`.
  * - `delayMs`: wait before appearing or announcing, so fast operations don't
  *   flash.
- * - `inset`: keeps it clear of the rail, sidebar, and any banner above it.
+ * - `inset`: keeps it clear of the dock, rail, sidebar, and any open tray.
  */
 export function BusyBanner({
 	message,
@@ -40,7 +40,7 @@ export function BusyBanner({
 	message: string;
 	detail?: string;
 	delayMs?: number;
-	inset?: Pick<ViewStyle, "top" | "left" | "right">;
+	inset: Pick<ViewStyle, "left" | "right" | "bottom">;
 }) {
 	return (
 		<TimedBusyBanner
@@ -62,7 +62,7 @@ function TimedBusyBanner({
 	message: string;
 	detail?: string;
 	delayMs: number;
-	inset?: Pick<ViewStyle, "top" | "left" | "right">;
+	inset: Pick<ViewStyle, "left" | "right" | "bottom">;
 }) {
 	const [visible, setVisible] = useState(delayMs <= 0);
 	const [showDetail, setShowDetail] = useState(false);
@@ -101,16 +101,16 @@ function BusyBannerView({
 }: {
 	message: string;
 	detail?: string;
-	inset?: Pick<ViewStyle, "top" | "left" | "right">;
+	inset: Pick<ViewStyle, "left" | "right" | "bottom">;
 }) {
 	const reduceMotion = useReducedMotion();
 	const progress = useSharedValue(reduceMotion ? 1 : 0);
 	useEffect(() => {
-		progress.value = withTiming(1, DROP);
+		progress.value = withTiming(1, RISE);
 	}, [progress]);
 	const appear = useAnimatedStyle(() => ({
 		opacity: progress.value,
-		transform: [{ translateY: (1 - progress.value) * -6 }],
+		transform: [{ translateY: (1 - progress.value) * 6 }],
 	}));
 	return (
 		<View style={[styles.area, inset]}>
@@ -137,9 +137,6 @@ const styles = StyleSheet.create({
 	// `pointerEvents` from an animated view's inline style.
 	area: {
 		position: "absolute",
-		top: space.sm,
-		left: 0,
-		right: 0,
 		alignItems: "center",
 		paddingHorizontal: space.md,
 		pointerEvents: "none",

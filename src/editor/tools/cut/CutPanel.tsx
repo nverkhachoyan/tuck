@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { ComponentProps } from "react";
+import { type ComponentProps, useContext, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { RingChoice } from "@/ui/RingChoice";
 import { Surface } from "@/ui/Surface";
@@ -18,6 +18,7 @@ import {
 	ToolChoices,
 	ToolOption,
 	ToolOptions,
+	TrayHeight,
 } from "../../shell/ToolOptions";
 import { useEditorContext } from "../editorContext";
 import {
@@ -166,8 +167,29 @@ export function CutPanel({ controller }: { controller: CutController }) {
  */
 export function TapModifierPill({ controller }: { controller: CutController }) {
 	const { wide, bottomInset, rightInset = 0 } = useEditorContext();
-	const { settings, tool, setTapMode, resize, canCommit, findAll } = controller;
-	if (wide || tool !== "tap") return null;
+	if (wide || controller.tool !== "tap") return null;
+	return (
+		<TapModifierPillContent
+			controller={controller}
+			bottomInset={bottomInset}
+			rightInset={rightInset}
+		/>
+	);
+}
+
+function TapModifierPillContent({
+	controller,
+	bottomInset,
+	rightInset,
+}: {
+	controller: CutController;
+	bottomInset: number;
+	rightInset: number;
+}) {
+	const setHeight = useContext(TrayHeight);
+	useEffect(() => () => setHeight(0), [setHeight]);
+	const { settings, setTapMode, resize, canCommit, findAll, finding } =
+		controller;
 
 	return (
 		<View
@@ -176,8 +198,9 @@ export function TapModifierPill({ controller }: { controller: CutController }) {
 				{ bottom: bottomInset + 8, paddingRight: rightInset },
 			]}
 			pointerEvents="box-none"
+			onLayout={(event) => setHeight(event.nativeEvent.layout.height + 8)}
 		>
-			{!canCommit && (
+			{!canCommit && finding === null && (
 				<Surface style={styles.pill} contentStyle={styles.hintContent}>
 					<Text style={styles.hint}>
 						{findAll

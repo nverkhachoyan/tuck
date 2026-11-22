@@ -558,18 +558,6 @@ export function Editor({
 								rightInset={layout.coveredRight}
 							/>
 						)}
-						{busyNotice && (
-							<BusyBanner
-								message={busyNotice.message}
-								detail={busyNotice.detail}
-								delayMs={busyNotice.delayMs}
-								inset={{
-									top: saveProblem || eyedropper ? 72 : space.sm,
-									left: layout.canvasInset.left,
-									right: layout.coveredRight ?? 0,
-								}}
-							/>
-						)}
 						{layersBeside && !wide && layersPanel}
 						{wide && (
 							<EditorRail
@@ -614,7 +602,19 @@ export function Editor({
 						) : null}
 					</CanvasStage>
 					{!layersBeside && layersPanel}
-					{editNotice.message && (
+					{busyNotice && (
+						<BusyBanner
+							message={busyNotice.message}
+							detail={busyNotice.detail}
+							delayMs={busyNotice.delayMs}
+							inset={{
+								left: layout.canvasInset.left,
+								right: layout.coveredRight ?? 0,
+								bottom: layout.coveredBottom + space.md,
+							}}
+						/>
+					)}
+					{!busyNotice && editNotice.message && (
 						<Toast
 							message={editNotice.message}
 							action="Undo"
