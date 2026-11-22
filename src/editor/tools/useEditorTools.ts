@@ -16,6 +16,7 @@ import {
 import {
 	definitionOf,
 	type NoticeAction,
+	type ToolBusy,
 	type ToolControllers,
 	type ToolEnv,
 	type ToolList,
@@ -288,6 +289,16 @@ export function useEditorTools({
 		return definition.busy?.(controller) === true;
 	});
 
+	// The active work banner any tool reports, shown over the canvas.
+	let busyNotice: ToolBusy | null = null;
+	for (const { definition, controller } of Object.values(controllers)) {
+		const notice = definition.busyNotice?.(controller) ?? null;
+		if (notice) {
+			busyNotice = notice;
+			break;
+		}
+	}
+
 	// [ and ] step the open tool's brush, if it has one.
 	const stepToolSize = (step: 1 | -1) => {
 		if (!tool) return;
@@ -325,6 +336,7 @@ export function useEditorTools({
 		startTool: starters,
 		layerStarters,
 		busy,
+		busyNotice,
 		editLayer,
 		editorOf,
 		stylerOf,

@@ -24,7 +24,7 @@ import {
 import { cutOutSticker, saveSticker } from "../../savedStickers/saveSticker";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
-import type { ToolEnv } from "../defineTool";
+import type { ToolBusy, ToolEnv } from "../defineTool";
 import { removedMask } from "./cutMask";
 import {
 	type CutTapMode,
@@ -294,6 +294,31 @@ export function useCutTool({
 			});
 		});
 	const { pickSize } = cutOut;
+	const activeApply = redaction.busy ? ("redact" as const) : applying;
+	const busyNotice: ToolBusy | null =
+		activeApply === "removeBg"
+			? {
+					message: "Removing background…",
+					detail: "This can take a moment the first time.",
+				}
+			: cutOut.detecting === "all"
+				? {
+						message: "Finding subjects…",
+						detail: "This can take a moment the first time.",
+					}
+				: cutOut.detecting === "one"
+					? {
+							message: "Finding object…",
+							detail: "This can take a moment the first time.",
+							delayMs: 200,
+						}
+					: activeApply === "remove"
+						? { message: "Removing selection…", delayMs: 200 }
+						: activeApply === "redact"
+							? { message: "Redacting selection…", delayMs: 200 }
+							: activeApply === "saveSticker"
+								? { message: "Saving sticker…", delayMs: 200 }
+								: null;
 	const tool = cutToolInUse(settings, cutOut.canFind);
 	const cutLayerId = layer?.id;
 	const canvasInput = useMemo(
@@ -351,7 +376,8 @@ export function useCutTool({
 					: undefined,
 		},
 		canAdjust,
-		applying: redaction.busy ? ("redact" as const) : applying,
+		applying: activeApply,
+		busyNotice,
 		stickerSaved:
 			selected !== undefined &&
 			savedSticker?.id === selected.id &&

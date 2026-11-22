@@ -96,4 +96,11 @@ export const removeBgTool = defineTool<RemoveBgController>({
 	available: () => isCutOutAvailable(),
 	run: (removeBg, image) => void removeBg.run(image),
 	busy: (removeBg) => removeBg.busy,
+	busyNotice: (removeBg) =>
+		removeBg.busy
+			? {
+					message: "Removing background…",
+					detail: "This can take a moment the first time.",
+				}
+			: null,
 });

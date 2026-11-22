@@ -39,6 +39,7 @@ export const cutTool = defineTool<CutController>({
 	done: (cut) => cut.commit(),
 	reset: (cut) => cut.reset,
 	announcement: (cut) => cut.news,
+	busyNotice: (cut) => cut.busyNotice,
 	stepSize: (cut, step) => cut.stepSize(step),
 	variants: () => CUT_VARIANTS,
 	activeVariant: (cut) => (cut.open ? "cut" : cut.settings.variant),

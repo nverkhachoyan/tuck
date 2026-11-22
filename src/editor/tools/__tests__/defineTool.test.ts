@@ -89,4 +89,24 @@ describe("defineTool", () => {
 		ready = true;
 		assert.equal(gated.available?.(), true);
 	});
+
+	test("reports an optional busy notice for slow work", () => {
+		const working = defineTool({
+			spec,
+			useController: () => ({ working: true }),
+			views: { Dock: views.Dock },
+			busyNotice: (c) =>
+				c.working
+					? {
+							message: "Working…",
+							detail: "This can take a moment.",
+						}
+					: null,
+		});
+		const controller = working.useController({} as never);
+		assert.deepEqual(working.busyNotice?.(controller), {
+			message: "Working…",
+			detail: "This can take a moment.",
+		});
+	});
 });
