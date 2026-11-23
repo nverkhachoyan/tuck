@@ -7,6 +7,7 @@ import {
 	useState,
 } from "react";
 import { Platform, StyleSheet, View, type ViewInstance } from "react-native";
+import { hapticTick } from "@/platform/haptics";
 import { usePreference } from "@/platform/usePreference";
 import { Announcement } from "@/ui/Announcement";
 import { BusyBanner } from "@/ui/BusyBanner";
@@ -524,6 +525,16 @@ export function Editor({
 								dispatchMode({ type: "closeToolOptions" })
 							}
 							onTapAway={tapAway}
+							// Typing in place, text takes the undo, as it takes the keys.
+							onUndo={
+								draftOpen
+									? undefined
+									: () => {
+											if (!canUndo) return;
+											undo();
+											hapticTick();
+										}
+							}
 							bottomInset={layout.canvasInset.bottom}
 							trayInset={layout.trayInset}
 							leftInset={layout.canvasInset.left}
