@@ -9,7 +9,7 @@ import { type DocumentViewport, viewPointToDocument } from "./viewport";
 // A point closer than this to the last one, in screen pixels, adds nothing
 // anyone could see.
 const MIN_POINT_GAP_PX = 1.5;
-// Holding the highlighter within this many screen pixels straightens it.
+// Holding a pen within this many screen pixels straightens its stroke.
 const STILL_PX = 8;
 const STILL_MS = 500;
 
@@ -31,9 +31,13 @@ const STILL_MS = 500;
  * point alone, then each new point with the one before it. An empty list
  * starts over, for a new stroke or a cancelled one.
  *
- * When `straighten` is set, a highlighter holds still for half a second and
- * the stroke becomes the line from where it began. Shift held at its first
- * move (`shiftHeld`) does that from the start. It then follows as that line.
+ * When `straighten` is set, a pen held still for half a second turns its
+ * stroke into the line from where it began. Shift held at its first move
+ * (`shiftHeld`) does that from the start. It then follows as that line.
+ *
+ * `smoothing`, in screen points, is how far the line trails the finger: it
+ * moves only once the finger pulls past that, so a wobble smaller than it
+ * doesn't show (a "lazy brush"). A straightened line follows the finger.
  */
 export function usePaintGesture({
 	viewport,
@@ -42,6 +46,7 @@ export function usePaintGesture({
 	onStroke,
 	standsAside = null,
 	straighten = false,
+	smoothing = 0,
 	shiftHeld = null,
 	onSegment = null,
 	enabled = true,
@@ -58,8 +63,9 @@ export function usePaintGesture({
 	) => void;
 	// Whether one finger landing at a point is another gesture's. A worklet.
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
-	// The highlighter: hold still, or hold Shift on web, and it draws a line.
+	// A pen: hold still, or hold Shift on web, and it draws a line.
 	straighten?: boolean;
+	smoothing?: number;
 	shiftHeld?: SharedValue<boolean> | null;
 	onSegment?: ((points: number[]) => void) | null;
 	enabled?: boolean;
@@ -72,6 +78,9 @@ export function usePaintGesture({
 	const anchorX = useSharedValue(0);
 	const anchorY = useSharedValue(0);
 	const startedAt = useSharedValue(0);
+	// Where a smoothed line's tip is, in document space.
+	const brushX = useSharedValue(0);
+	const brushY = useSharedValue(0);
 	const tick = Platform.OS !== "web";
 
 	// Rounded as the model rounds strokes, so a saved stroke is what was drawn.
@@ -133,6 +142,28 @@ export function usePaintGesture({
 		onSegment?.(first ? [x, y] : [lastX, lastY, x, y]);
 	};
 
+	// Pulls the line's tip toward the finger, once it's more than
+	// `smoothing` away, and adds it.
+	const followFinger = (x: number, y: number) => {
+		"worklet";
+		if (smoothing <= 0) {
+			extendStroke(x, y);
+			return;
+		}
+		const lag = smoothing / viewport.scale;
+		const dx = x - brushX.value;
+		const dy = y - brushY.value;
+		const distance = Math.hypot(dx, dy);
+		if (distance <= lag) return;
+		const pull = (distance - lag) / distance;
+		brushX.value += dx * pull;
+		brushY.value += dy * pull;
+		extendStroke(
+			Math.round(brushX.value * 100) / 100,
+			Math.round(brushY.value * 100) / 100,
+		);
+	};
+
 	// Waits for stillness afresh once the finger strays from where it last
 	// started waiting.
 	const restartStillness = (screenX: number, screenY: number) => {
@@ -165,6 +196,8 @@ export function usePaintGesture({
 				cancelled.value || aside.value ? [] : toDocument(event.x, event.y);
 			onSegment?.([]);
 			if (points.value.length > 0) onSegment?.(points.value);
+			brushX.value = points.value[0] ?? 0;
+			brushY.value = points.value[1] ?? 0;
 			anchorX.value = event.x;
 			anchorY.value = event.y;
 			if (event.numberOfPointers > 1) cancel();
@@ -183,7 +216,7 @@ export function usePaintGesture({
 				points.value = straightStroke([line[0], line[1], x, y]);
 				return;
 			}
-			extendStroke(x, y);
+			followFinger(x, y);
 			if (straighten) restartStillness(event.x, event.y);
 		},
 		onFinalize: () => {

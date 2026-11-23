@@ -120,10 +120,8 @@ export function useToolStroke({
 		strokeId,
 		onStroke: handleStroke,
 		standsAside,
-		straighten:
-			tool?.type === "draw" &&
-			tool.brush.type === "pen" &&
-			tool.brush.tip === "marker",
+		straighten: tool?.type === "draw",
+		smoothing: tool?.type === "draw" ? (tool.smoothing ?? 0) : 0,
 		shiftHeld,
 		onSegment,
 		enabled: enabled && Boolean(tool),

@@ -17,7 +17,8 @@ import type { Handle } from "./handleGeometry.ts";
 
 /**
  * What dragging on the canvas does in place of moving layers: draws with a
- * pen; erases through every unlocked drawing (or only `scope`'s, when it
+ * pen, trailing the finger by `smoothing` screen points to even out its
+ * wobble; erases through every unlocked drawing (or only `scope`'s, when it
  * names one) and shape, `width` across ("eraser") or taking each stroke it
  * touches whole ("stroke"); drags out a shape or a redaction's box; paints a
  * redaction's strokes; picks a color where the finger lifts; paints the cut
@@ -25,7 +26,7 @@ import type { Handle } from "./handleGeometry.ts";
  * on it or a box dragged around it.
  */
 export type CanvasTool =
-	| { type: "draw"; brush: PenBrush }
+	| { type: "draw"; brush: PenBrush; smoothing?: number }
 	| {
 			type: "erase";
 			mode: "eraser" | "stroke";

@@ -45,7 +45,7 @@ import {
 import type { CanvasRegion } from "./RegionOutline";
 import { strokeKindOf } from "./SceneLayer";
 import { SelectionBarFrame } from "./SelectionBarFrame";
-import { useCanvasCursor, useEraserRing } from "./useCanvasCursor";
+import { useBrushRing, useCanvasCursor } from "./useCanvasCursor";
 import { useCanvasTap, useTwoFingerTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useDialDrag } from "./useDialDrag";
@@ -481,9 +481,9 @@ export function EditorCanvas({
 		enabled: isEditText,
 	});
 
-	// On web, the Eraser's size follows the pointer, hidden while it drags,
-	// and the Stroke eraser lights up the stroke under it.
-	const ring = useEraserRing();
+	// On web, the Eraser's and Pen's size follows the pointer, hidden while
+	// it drags, and the Stroke eraser lights up the stroke under it.
+	const ring = useBrushRing();
 	const { paintGesture, liveStroke } = useToolStroke({
 		tool,
 		viewport,

@@ -1,10 +1,19 @@
 import { useDerivedValue } from "react-native-reanimated";
 import { Group, Paint } from "react-native-skia";
-import { BrushStroke, strokePath } from "../../layers/drawing/DrawingLayerView";
-import type { PenBrush } from "../../layers/drawing/drawing";
+import {
+	BrushStroke,
+	roundedEndsOutline,
+	strokePath,
+} from "../../layers/drawing/DrawingLayerView";
+import {
+	type PenBrush,
+	ROUNDED_END,
+	strokeEnds,
+} from "../../layers/drawing/drawing";
 import { LayerContent } from "../../layers/LayerContent";
 import { toInverseTransformList } from "../../layers/layerTransform";
 import type { CanvasTool } from "../canvasTool";
+import { BrushRing } from "./BrushRing";
 import {
 	DIMMED_OPACITY,
 	type LiveStroke,
@@ -28,10 +37,37 @@ function LivePath({
 	full?: boolean;
 }) {
 	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
-	return <BrushStroke path={path} brush={brush} full={full} />;
+	const rounded = strokeEnds(brush) === "rounded";
+	const { width } = brush;
+	// Built on the UI thread with each frame's path.
+	const outline = useDerivedValue(
+		() => (rounded && roundedEndsOutline(path.value, width)) || path.value,
+		[path, rounded, width],
+	);
+	return (
+		<BrushStroke
+			path={path}
+			outline={rounded ? outline : undefined}
+			brush={brush}
+			full={full}
+		/>
+	);
 }
 
+// How round a pen's size ring is: its ends' shape.
+const RING_CORNER = { round: 0.5, rounded: ROUNDED_END, square: 0 };
+
 export const drawStrokeKind: StrokeKind<DrawTool> = {
+	renderOverlay: ({ tool, ring, scale, stroke, selectionColor }) => (
+		<BrushRing
+			ring={ring}
+			scale={scale}
+			stroke={stroke}
+			color={selectionColor}
+			width={tool.brush.width}
+			corner={RING_CORNER[strokeEnds(tool.brush)]}
+		/>
+	),
 	reaches: (_tool, layer, selectedId) => layer.id === selectedId,
 	startsLayer: (selectedId) => selectedId === null,
 	renderInLayer: ({
