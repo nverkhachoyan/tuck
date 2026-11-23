@@ -46,7 +46,7 @@ import type { CanvasRegion } from "./RegionOutline";
 import { strokeKindOf } from "./SceneLayer";
 import { SelectionBarFrame } from "./SelectionBarFrame";
 import { useCanvasCursor, useEraserRing } from "./useCanvasCursor";
-import { useCanvasTap } from "./useCanvasTap";
+import { useCanvasTap, useTwoFingerTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
 import { useDialDrag } from "./useDialDrag";
 import { useEditTextGesture } from "./useEditTextGesture";
@@ -124,6 +124,9 @@ type EditorCanvasProps = {
 	// adjusting. The editor puts the tool down, and the tap then selects what's
 	// under it, as it would without a tool.
 	onTapAway?: () => void;
+	// Two fingers tapped the canvas: the editor undoes. Without it, the tap
+	// does nothing.
+	onUndo?: () => void;
 	// How much of the view's bottom is covered by panels floating over it,
 	// and by the keyboard they ride on. The document fits above them, and
 	// what's past its edges shows under.
@@ -187,6 +190,8 @@ export type EditorCanvasHandle = {
  * while finding, and anywhere while adjusting. Without `onTapAway` it does
  * nothing. A drag from off the document still paints.
  *
+ * Two fingers tapping together call `onUndo`, whatever input is in use.
+ *
  * `selectionBar` floats by a layer that can be moved, following it on the
  * UI thread, and steps aside while a gesture moves it.
  */
@@ -206,6 +211,7 @@ export function EditorCanvas({
 	onToolStroke,
 	onToolInteractionEnd,
 	onTapAway,
+	onUndo,
 	bottomInset = 0,
 	trayInset = 0,
 	leftInset = 0,
@@ -525,6 +531,11 @@ export function EditorCanvas({
 		enabled: isRegions,
 	});
 
+	const undoGesture = useTwoFingerTap(
+		useCallback(() => onUndo?.(), [onUndo]),
+		onUndo !== undefined,
+	);
+
 	// The canvas's gestures join at the top in a single, stable composition:
 	// in RNGH v3, `useSimultaneousGestures` automatically inlines same-type child compositions.
 	// Keeping the composed gesture structure constant avoids React useMemo dependency array size warnings
@@ -537,6 +548,7 @@ export function EditorCanvas({
 		regionGesture,
 		dialGesture,
 		viewGesture,
+		undoGesture,
 	);
 
 	useImperativeHandle(
