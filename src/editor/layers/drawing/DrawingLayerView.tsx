@@ -8,6 +8,7 @@ import {
 	BlendMode,
 	BlurMask,
 	BlurStyle,
+	CornerPathEffect,
 	Group,
 	Paint,
 	PaintStyle,
@@ -30,12 +31,14 @@ import {
 	NEON_GLOW,
 	NEON_GLOW_BLUR,
 	needsOwnLayer,
+	type PenBrush,
+	ROUNDED_END,
 	type Stroke,
+	strokeEnds,
+	strokeOpacity,
 } from "./drawing";
 import { createPictureCache } from "./drawingPictures";
 
-// A marker's ink is see-through, so what it highlights shows through it.
-const MARKER_OPACITY = 0.45;
 // A neon stroke's parts, as shares of its width: a blurred glow
 // (`NEON_GLOW`, with `NEON_GLOW_BLUR` its sigma, so it scales with the
 // stroke and fades out about where the width ends), the tube over it, and
@@ -83,10 +86,47 @@ export function pathFor(stroke: MaskStroke): SkPath {
 	return path;
 }
 
+/**
+ * The outline a square-ended line of `width` covers, to fill with a corner
+ * effect that rounds its ends' corners (`ROUNDED_END`): Skia's strokes end
+ * only butt, round, or square. Null if Skia can't stroke it. A worklet, for
+ * a stroke still being drawn.
+ */
+export function roundedEndsOutline(path: SkPath, width: number): SkPath | null {
+	"worklet";
+	return Skia.Path.Stroke(path, {
+		width,
+		cap: StrokeCap.Square,
+		join: StrokeJoin.Round,
+	});
+}
+
+// A settled stroke's outline, built once, as its path is.
+const outlines = new WeakMap<
+	SkPath,
+	{ width: number; outline: SkPath | null }
+>();
+
+function outlineFor(path: SkPath, width: number): SkPath | null {
+	const cached = outlines.get(path);
+	if (cached?.width === width) return cached.outline;
+	const outline = roundedEndsOutline(path, width);
+	outlines.set(path, { width, outline });
+	return outline;
+}
+
+// What a pen stroke's paint fades to: a highlighter that multiplies draws
+// at full strength, since the blend shows what's under it.
+function inkOpacity(brush: PenBrush, full: boolean): number {
+	return full && brush.tip === "marker" ? 1 : strokeOpacity(brush);
+}
+
 function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	const path = pathFor(stroke);
 	if (stroke.type === "pen" && stroke.tip === "neon") {
 		const { color, width } = stroke;
+		const opacity = strokeOpacity(stroke);
+		const fade = opacity < 1 ? Skia.Paint() : null;
 		const glowPaint = Skia.Paint();
 		const tubePaint = Skia.Paint();
 		const corePaint = Skia.Paint();
@@ -98,6 +138,11 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 			true,
 		);
 		try {
+			// Faded as a whole, so the glow doesn't show through the tube.
+			if (fade) {
+				fade.setAlphaf(opacity);
+				canvas.saveLayer(fade);
+			}
 			glowPaint.setAntiAlias(true);
 			glowPaint.setStyle(PaintStyle.Stroke);
 			glowPaint.setStrokeCap(StrokeCap.Round);
@@ -124,7 +169,9 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 				Skia.Color(mixColors(color, "#FFFFFF", NEON_CORE_WHITE)),
 			);
 			canvas.drawPath(path, corePaint);
+			if (fade) canvas.restore();
 		} finally {
+			fade?.dispose();
 			glowPaint.dispose();
 			tubePaint.dispose();
 			corePaint.dispose();
@@ -134,6 +181,11 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	}
 
 	const paint = Skia.Paint();
+	const ends = stroke.type === "pen" ? strokeEnds(stroke) : "round";
+	const outline = ends === "rounded" ? outlineFor(path, stroke.width) : null;
+	const corner = outline
+		? Skia.PathEffect.MakeCorner(stroke.width * ROUNDED_END)
+		: null;
 	try {
 		paint.setAntiAlias(true);
 		paint.setStyle(PaintStyle.Stroke);
@@ -144,17 +196,21 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 			paint.setColor(Skia.Color("black"));
 			paint.setBlendMode(BlendMode.Clear);
 		} else {
-			const marker = stroke.tip === "marker" || stroke.tip === "ink";
-			paint.setStrokeCap(marker ? StrokeCap.Square : StrokeCap.Round);
+			paint.setStrokeCap(ends === "round" ? StrokeCap.Round : StrokeCap.Square);
 			paint.setStrokeWidth(stroke.width);
 			paint.setColor(Skia.Color(stroke.color));
-			const opacity =
-				marker && !(full && stroke.tip === "marker") ? MARKER_OPACITY : 1;
-			paint.setAlphaf(opacity);
+			paint.setAlphaf(inkOpacity(stroke, full));
 		}
-		canvas.drawPath(path, paint);
+		if (outline && corner) {
+			paint.setStyle(PaintStyle.Fill);
+			paint.setPathEffect(corner);
+			canvas.drawPath(outline, paint);
+		} else {
+			canvas.drawPath(path, paint);
+		}
 	} finally {
 		paint.dispose();
+		corner?.dispose();
 	}
 }
 
@@ -308,23 +364,32 @@ export function DrawingLayerView({
 	);
 }
 
+type PathProp = ComponentProps<typeof Path>["path"];
+
 /**
- * A stroke's line as its brush paints it: a pen with its tip, or an eraser,
- * which clears. `path` can be a shared value, for a stroke still growing.
+ * A stroke's line as its brush paints it: a pen with its tip, ends, and
+ * opacity, or an eraser, which clears.
+ * - `path` can be a shared value, for a stroke still growing.
+ * - `outline` is that stroke's `roundedEndsOutline`, for rounded ends,
+ *   built where the shared value is (this file can't use Reanimated: the
+ *   docs draw it without). A settled `path`'s is built here.
  */
 export function BrushStroke({
 	path,
+	outline,
 	brush,
 	full = false,
 }: {
-	path: ComponentProps<typeof Path>["path"];
+	path: PathProp;
+	outline?: PathProp;
 	brush: Brush;
 	// Draw a highlighter at full strength. The layer around it multiplies.
 	full?: boolean;
 }) {
 	if (brush.type === "pen" && brush.tip === "neon") {
 		const { color, width } = brush;
-		return (
+		const opacity = strokeOpacity(brush);
+		const tube = (
 			<>
 				<Path
 					path={path}
@@ -348,8 +413,45 @@ export function BrushStroke({
 				/>
 			</>
 		);
+		// Faded as a whole, so the glow doesn't show through the tube.
+		return opacity < 1 ? (
+			<Group layer={<Paint opacity={opacity} />}>{tube}</Group>
+		) : (
+			tube
+		);
+	}
+	if (brush.type === "pen" && strokeEnds(brush) === "rounded") {
+		return (
+			<RoundedEnds
+				outline={outline ?? outlineFor(path as SkPath, brush.width)}
+				brush={brush}
+				full={full}
+			/>
+		);
 	}
 	return <Path path={path} {...brushPaint(brush, full)} />;
+}
+
+function RoundedEnds({
+	outline,
+	brush,
+	full,
+}: {
+	outline: PathProp | null;
+	brush: PenBrush;
+	full: boolean;
+}) {
+	if (outline === null) return null;
+	return (
+		<Path
+			path={outline}
+			style="fill"
+			color={brush.color}
+			opacity={inkOpacity(brush, full)}
+		>
+			<CornerPathEffect r={brush.width * ROUNDED_END} />
+		</Path>
+	);
 }
 
 const ROUND_STROKE = {
@@ -358,8 +460,9 @@ const ROUND_STROKE = {
 	strokeJoin: "round",
 } as const;
 
-// Round ends, but a marker's are square, like a highlighter's chisel tip.
-// One path per stroke, so a marker crossing itself doesn't darken.
+// Round ends, but a marker's are square unless chosen otherwise, like a
+// highlighter's chisel tip. One path per stroke, so ink crossing itself
+// doesn't darken.
 function brushPaint(brush: Brush, full: boolean) {
 	if (brush.type === "eraser") {
 		return {
@@ -369,15 +472,14 @@ function brushPaint(brush: Brush, full: boolean) {
 			blendMode: "clear",
 		} as const;
 	}
-	const marker = brush.tip === "marker" || brush.tip === "ink";
 	return {
 		...ROUND_STROKE,
 		strokeWidth: brush.width,
-		strokeCap: marker ? "square" : "round",
+		strokeCap: strokeEnds(brush) === "square" ? "square" : "round",
 		color: brush.color,
 		// A multiplying highlighter is see-through because of the blend.
-		// The marker tip, and a highlighter saved before it multiplied, stay
-		// at the ink's own opacity.
-		opacity: marker && !(full && brush.tip === "marker") ? MARKER_OPACITY : 1,
+		// Other ink, and a highlighter saved before it multiplied, keep their
+		// own opacity.
+		opacity: inkOpacity(brush, full),
 	} as const;
 }

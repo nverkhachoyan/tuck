@@ -16,13 +16,28 @@ import {
 export const penTips = ["marker", "ink", "neon"] as const;
 export type PenTip = (typeof penTips)[number];
 
+// How a highlighter's or marker's line ends. Pen and neon always end round.
+export const penEnds = ["square", "rounded", "round"] as const;
+export type PenEnds = (typeof penEnds)[number];
+
 /**
  * What a stroke draws with: a pen's color, or an eraser, which clears what
  * the drawing's earlier strokes drew. `width` is the line's thickness, glow
  * and all. A pen without a `tip` is a plain round one.
+ * - `ends`: a highlighter's or marker's ends; absent is square, as strokes
+ *   were saved before it existed.
+ * - `opacity`: the ink's, 0–1; absent is the tip's own (`tipOpacity`). A
+ *   highlighter ignores it, since its multiply blend already shows through.
  */
 export type Brush =
-	| { type: "pen"; color: string; width: number; tip?: PenTip }
+	| {
+			type: "pen";
+			color: string;
+			width: number;
+			tip?: PenTip;
+			ends?: PenEnds;
+			opacity?: number;
+	  }
 	| { type: "eraser"; width: number };
 
 export type PenBrush = Extract<Brush, { type: "pen" }>;
@@ -34,6 +49,80 @@ export type Stroke = Brush & { points: number[] };
 // and its blur's sigma. `DrawingLayerView` draws it; erasing measures it.
 export const NEON_GLOW = 0.55;
 export const NEON_GLOW_BLUR = 0.16;
+
+// A marker's ink is see-through, so what it marks shows through it.
+const MARKER_OPACITY = 0.45;
+
+/** The ink's opacity when a stroke doesn't save its own. */
+export function tipOpacity(tip: PenTip | undefined): number {
+	return tip === "ink" || tip === "marker" ? MARKER_OPACITY : 1;
+}
+
+/** Whether a tip takes an opacity of its own: all but the highlighter. */
+export function hasOpacity(tip: PenTip | undefined): boolean {
+	return tip !== "marker";
+}
+
+/** Whether a tip's ends can be chosen: the highlighter's and the marker's. */
+export function hasEnds(tip: PenTip | undefined): boolean {
+	return tip === "marker" || tip === "ink";
+}
+
+/** How a pen stroke's line ends. Any saved value it doesn't know is square. */
+export function strokeEnds(brush: PenBrush): PenEnds {
+	if (!hasEnds(brush.tip)) return "round";
+	return brush.ends === "rounded" || brush.ends === "round"
+		? brush.ends
+		: "square";
+}
+
+/**
+ * A pen stroke's ink opacity: its own, between 0.05 and 1, else its tip's.
+ * A highlighter's is always its tip's.
+ */
+export function strokeOpacity(brush: PenBrush): number {
+	const { opacity } = brush;
+	if (!hasOpacity(brush.tip) || typeof opacity !== "number") {
+		return tipOpacity(brush.tip);
+	}
+	return Number.isFinite(opacity)
+		? Math.min(1, Math.max(0.05, opacity))
+		: tipOpacity(brush.tip);
+}
+
+/**
+ * A pen brush with only what differs from the defaults saved: no `tip` for
+ * the round pen, `ends` only where a tip has them and they aren't square,
+ * and `opacity` only where a tip takes one and it isn't the tip's own.
+ */
+export function penBrush(style: {
+	color: string;
+	width: number;
+	tip?: PenTip;
+	ends?: PenEnds;
+	opacity?: number;
+}): PenBrush {
+	const { color, width, tip, ends, opacity } = style;
+	const brush: PenBrush = { type: "pen", color, width };
+	if (tip !== undefined) brush.tip = tip;
+	if (hasEnds(tip) && (ends === "rounded" || ends === "round")) {
+		brush.ends = ends;
+	}
+	if (hasOpacity(tip) && opacity !== undefined && opacity !== tipOpacity(tip)) {
+		brush.opacity = opacity;
+	}
+	return brush;
+}
+
+/** Whether two pen brushes look alike but for width. */
+export function sameLook(a: PenBrush, b: PenBrush): boolean {
+	return (
+		a.tip === b.tip &&
+		a.color.toLowerCase() === b.color.toLowerCase() &&
+		strokeEnds(a) === strokeEnds(b) &&
+		strokeOpacity(a) === strokeOpacity(b)
+	);
+}
 
 export function isStroke(value: unknown): boolean {
 	return (
@@ -95,32 +184,45 @@ export function isDrawingLayer(value: unknown): boolean {
 	);
 }
 
+// A rounded end's corners, as a share of the stroke's width: a quarter, as
+// the size dot that previews it.
+export const ROUNDED_END = 0.25;
+
 /**
- * How far a pen stroke's ink reaches from its line: half its width for a
- * round pen, to the corners of a marker's or highlighter's square ends, and
- * to where a neon glow's blur fades out (three sigmas).
+ * How far a pen stroke's ink reaches from its line: half its width for
+ * round ends, to the corners of a marker's or highlighter's square or
+ * rounded ends, and to where a neon glow's blur fades out (three sigmas).
  */
 export function visibleReach(stroke: Brush): number {
-	if (stroke.type !== "pen" || stroke.tip === undefined)
-		return stroke.width / 2;
+	if (stroke.type !== "pen") return stroke.width / 2;
 	if (stroke.tip === "neon") {
 		return stroke.width * (NEON_GLOW / 2 + 3 * NEON_GLOW_BLUR);
 	}
-	return stroke.width * Math.SQRT1_2;
+	const ends = strokeEnds(stroke);
+	if (ends === "square") return stroke.width * Math.SQRT1_2;
+	if (ends === "rounded") {
+		const corner = stroke.width * ROUNDED_END;
+		return Math.SQRT2 * (stroke.width / 2 - corner) + corner;
+	}
+	return stroke.width / 2;
 }
 
 /**
- * A mark's style: its last pen stroke's tip, color, and width, in the
- * layer's own space. Null for a drawing with no pen strokes.
+ * A mark's style: its last pen stroke's tip, color, width, ends, and
+ * opacity, in the layer's own space. Null for a drawing with no pen strokes.
  */
 export function markStyle(layer: DrawingLayer): PenBrush | null {
 	for (let i = layer.strokes.length - 1; i >= 0; i--) {
 		const stroke = layer.strokes[i];
 		if (stroke.type === "pen") {
 			const { color, width, tip } = stroke;
-			return tip === undefined
-				? { type: "pen", color, width }
-				: { type: "pen", color, width, tip };
+			return penBrush({
+				color,
+				width,
+				tip,
+				ends: strokeEnds(stroke),
+				opacity: strokeOpacity(stroke),
+			});
 		}
 	}
 	return null;

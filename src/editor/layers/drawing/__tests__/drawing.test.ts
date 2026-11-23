@@ -8,8 +8,11 @@ import {
 	layerBlend,
 	markStyle,
 	needsOwnLayer,
+	penBrush,
 	pruneErased,
 	type Stroke,
+	strokeEnds,
+	strokeOpacity,
 	visibleReach,
 } from "../drawing.ts";
 
@@ -145,4 +148,54 @@ test("a mark's style is its last pen stroke's", () => {
 		tip: "neon",
 	});
 	assert.equal(markStyle({ ...layer, strokes: [] }), null);
+});
+
+test("a highlighter's or marker's ends are square unless saved otherwise", () => {
+	assert.equal(strokeEnds({ ...pen, tip: "marker" }), "square");
+	assert.equal(strokeEnds({ ...pen, tip: "ink", ends: "rounded" }), "rounded");
+	assert.equal(
+		strokeEnds({ ...pen, tip: "ink", ends: "chisel" as never }),
+		"square",
+	);
+	assert.equal(strokeEnds({ ...pen, ends: "square" }), "round");
+});
+
+test("ink opacity is the tip's own unless saved, and never the highlighter's", () => {
+	assert.equal(strokeOpacity(pen), 1);
+	assert.equal(strokeOpacity({ ...pen, tip: "ink" }), 0.45);
+	assert.equal(strokeOpacity({ ...pen, opacity: 0.3 }), 0.3);
+	assert.equal(strokeOpacity({ ...pen, opacity: -2 }), 0.05);
+	assert.equal(strokeOpacity({ ...pen, tip: "marker", opacity: 0.9 }), 0.45);
+});
+
+test("a pen brush saves only what differs from its tip's defaults", () => {
+	assert.deepEqual(
+		penBrush({ color: "#000000", width: 4, ends: "round", opacity: 1 }),
+		{ type: "pen", color: "#000000", width: 4 },
+	);
+	assert.deepEqual(
+		penBrush({
+			color: "#000000",
+			width: 4,
+			tip: "ink",
+			ends: "rounded",
+			opacity: 0.7,
+		}),
+		{
+			type: "pen",
+			color: "#000000",
+			width: 4,
+			tip: "ink",
+			ends: "rounded",
+			opacity: 0.7,
+		},
+	);
+});
+
+test("rounded ends reach between round and square ones", () => {
+	const square = visibleReach({ ...pen, tip: "ink" });
+	const rounded = visibleReach({ ...pen, tip: "ink", ends: "rounded" });
+	const round = visibleReach({ ...pen, tip: "ink", ends: "round" });
+	assert.equal(round, pen.width / 2);
+	assert.ok(round < rounded && rounded < square);
 });

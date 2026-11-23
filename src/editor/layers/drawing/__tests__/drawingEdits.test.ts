@@ -446,6 +446,33 @@ describe("eraseWholeStrokes", () => {
 });
 
 describe("restyleDrawing", () => {
+	test("sets ends and opacity only where the tip has them", () => {
+		const highlight = drawStroke(blank(), null, { ...pen, tip: "marker" });
+		const { id } = top<DrawingLayer>(highlight);
+		const restyled = top<DrawingLayer>(
+			restyleDrawing(highlight, id, { ends: "round", opacity: 0.5 }),
+		);
+		const stroke = restyled.strokes[0];
+		assert.equal(stroke.type === "pen" && stroke.ends, "round");
+		assert.equal(stroke.type === "pen" && stroke.opacity, undefined);
+
+		const toPen = top<DrawingLayer>(
+			restyleDrawing(highlight, id, { tip: null }),
+		);
+		const plain = toPen.strokes[0];
+		assert.equal(plain.type === "pen" && plain.ends, undefined);
+		assert.equal(toPen.blend, undefined);
+	});
+
+	test("clears a saved opacity back to the tip's own", () => {
+		const faded = drawStroke(blank(), null, { ...pen, opacity: 0.4 });
+		const { id } = top<DrawingLayer>(faded);
+		const after = top<DrawingLayer>(
+			restyleDrawing(faded, id, { opacity: null }),
+		);
+		assert.equal("opacity" in after.strokes[0], false);
+	});
+
 	const twoPensAndAnEraser = () => {
 		const first = drawStroke(blank(), null, pen);
 		const { id } = top<DrawingLayer>(first);

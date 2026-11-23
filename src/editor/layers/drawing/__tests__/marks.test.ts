@@ -122,4 +122,13 @@ describe("sameStyle", () => {
 		);
 		assert.equal(sameStyle(pen([]), { type: "eraser", width: 5 }), false);
 	});
+
+	test("compares ends and opacity, as drawn rather than as saved", () => {
+		const ink = pen([], { tip: "ink" });
+		assert.equal(sameStyle(ink, pen([], { tip: "ink", ends: "round" })), false);
+		assert.equal(sameStyle(ink, pen([], { tip: "ink", opacity: 0.45 })), true);
+		assert.equal(sameStyle(pen([]), pen([], { opacity: 0.5 })), false);
+		// Pen ends are always round, whatever was saved.
+		assert.equal(sameStyle(pen([]), pen([], { ends: "square" })), true);
+	});
 });

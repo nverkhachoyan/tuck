@@ -24,7 +24,9 @@ import {
 	createDrawingLayer,
 	type DrawingLayer,
 	layerBlend,
+	type PenEnds,
 	type PenTip,
+	penBrush,
 	pruneErased,
 	type Stroke,
 	strokeBlend,
@@ -352,17 +354,23 @@ export function separateDrawing(
 	);
 }
 
-/** What restyling a mark changes; `tip: null` is the round pen. */
+/**
+ * What restyling a mark changes: `tip: null` is the round pen, and
+ * `opacity: null` the tip's own.
+ */
 export type MarkPatch = {
 	color?: string;
 	tip?: PenTip | null;
 	width?: number;
+	ends?: PenEnds;
+	opacity?: number | null;
 };
 
 /**
  * Every pen stroke of the drawing `id` restyled with `patch`:
  * - `width` is in document units, divided by the layer's scale;
  * - a new tip sets the layer's blend (a highlight multiplies);
+ * - `ends` and `opacity` keep only where the stroke's tip has them;
  * - eraser strokes stay as they are, so what was erased stays erased;
  * - the drawing recenters, since widths move its box.
  * The same document when nothing changes, or the drawing is locked or gone.
@@ -381,21 +389,28 @@ export function restyleDrawing(
 	let changed = false;
 	const strokes = target.strokes.map((stroke): Stroke => {
 		if (stroke.type !== "pen") return stroke;
-		const color = patch.color ?? stroke.color;
 		const tip = patch.tip === undefined ? stroke.tip : (patch.tip ?? undefined);
-		const nextWidth = width ?? stroke.width;
+		const restyled = penBrush({
+			color: patch.color ?? stroke.color,
+			width: width ?? stroke.width,
+			tip,
+			ends: patch.ends ?? stroke.ends,
+			opacity:
+				patch.opacity === undefined
+					? stroke.opacity
+					: (patch.opacity ?? undefined),
+		});
 		if (
-			color === stroke.color &&
-			tip === stroke.tip &&
-			nextWidth === stroke.width
+			restyled.color === stroke.color &&
+			restyled.tip === stroke.tip &&
+			restyled.width === stroke.width &&
+			restyled.ends === stroke.ends &&
+			restyled.opacity === stroke.opacity
 		) {
 			return stroke;
 		}
 		changed = true;
-		const { tip: _, ...rest } = stroke;
-		return tip === undefined
-			? { ...rest, color, width: nextWidth }
-			: { ...rest, color, width: nextWidth, tip };
+		return { ...restyled, points: stroke.points };
 	});
 	if (!changed) return document;
 	const blend =
