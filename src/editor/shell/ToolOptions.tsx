@@ -1,9 +1,16 @@
 import { createContext, type ReactNode, useContext, useEffect } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+	type ViewStyle,
+} from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import { ColorSliderBar } from "@/ui/ColorPicker";
 import { RingChoice } from "@/ui/RingChoice";
 import { colors, radii, space, typography } from "@/ui/theme";
-import type { PenTip } from "../layers/drawing/drawing";
+import type { PenEnds, PenTip } from "../layers/drawing/drawing";
 import { BarChip } from "./ContextBar";
 
 // The dock's widest, so a tray lines up with the dock it rises out of.
@@ -220,18 +227,27 @@ export function SizeChip({
 }
 
 /**
- * A brush's tip: filled with its color, or an outline for an eraser. A
- * marker's is squarer and see-through, and a neon pen's glows.
+ * A brush's tip: filled with its color, or an outline for an eraser.
+ * - `tip`: a marker's or highlighter's is squarer, and a neon pen's glows.
+ * - `ends`: how square a marker's or highlighter's is.
+ * - `opacity`: the ink's; a marker's defaults to see-through.
  */
 export function SizeDot({
 	size,
 	color,
 	tip,
+	ends = "rounded",
+	opacity,
 }: {
 	size: number;
 	color: string | null;
 	tip?: PenTip;
+	ends?: PenEnds;
+	opacity?: number;
 }) {
+	const squared = color !== null && (tip === "marker" || tip === "ink");
+	const corner =
+		ends === "square" ? size / 10 : ends === "rounded" ? size / 4 : size / 2;
 	return (
 		<View
 			style={[
@@ -240,9 +256,11 @@ export function SizeDot({
 				color === null
 					? styles.eraserDot
 					: { backgroundColor: color, borderColor: colors.borderStrong },
+				squared && { borderRadius: corner },
 				color !== null &&
-					(tip === "marker" || tip === "ink") && { borderRadius: size / 4 },
-				color !== null && tip === "ink" && { opacity: 0.6 },
+					(opacity !== undefined
+						? { opacity }
+						: tip === "ink" && { opacity: 0.6 }),
 				color !== null &&
 					tip === "neon" && {
 						borderColor: colors.textPrimary,
@@ -250,6 +268,59 @@ export function SizeDot({
 					},
 			]}
 		/>
+	);
+}
+
+/**
+ * A tool option set by dragging, 0–1 along a bar, with its value written
+ * after it. It reports each move (`onMove`) and when the finger lifts
+ * (`onEnd`); screen readers and the keyboard step it (`onStep`).
+ * - `track` is the bar's background, plain unless given.
+ * - `thumbColor` fills its thumb.
+ * - `showLabel` writes `label` before it, in a tray, where it then takes
+ *   one row rather than a label's and its own.
+ */
+export function ToolSlider({
+	label,
+	showLabel = false,
+	value,
+	valueText,
+	thumbColor,
+	track,
+	onMove,
+	onEnd,
+	onStep,
+}: {
+	label: string;
+	showLabel?: boolean;
+	value: number;
+	valueText: string;
+	thumbColor: string;
+	track?: ViewStyle;
+	onMove: (value: number) => void;
+	onEnd: () => void;
+	onStep: (step: 1 | -1) => void;
+}) {
+	return (
+		<View style={styles.slider}>
+			{showLabel && <Text style={styles.sliderLabel}>{label}</Text>}
+			<View style={styles.sliderBar}>
+				<ColorSliderBar
+					value={value}
+					thumbColor={thumbColor}
+					background={[styles.track, track]}
+					onMove={(x) => onMove(x)}
+					onEnd={onEnd}
+					accessibilityLabel={label}
+					accessibilityValue={{ text: valueText }}
+					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+					onAccessibilityAction={(event) =>
+						onStep(event.nativeEvent.actionName === "increment" ? 1 : -1)
+					}
+				/>
+			</View>
+			<Text style={styles.sliderValue}>{valueText}</Text>
+		</View>
 	);
 }
 
@@ -309,5 +380,33 @@ const styles = StyleSheet.create({
 	eraserDot: {
 		borderWidth: 1.5,
 		borderColor: colors.textPrimary,
+	},
+	slider: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: space.md,
+		minHeight: 36,
+	},
+	// It grows to fill a tray, and keeps a usable width in a popover, which
+	// is only as wide as its content.
+	sliderBar: {
+		flexGrow: 1,
+		minWidth: 180,
+	},
+	track: {
+		backgroundColor: colors.surfaceHover,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: colors.border,
+	},
+	sliderLabel: {
+		...typography.labelStrong,
+		color: colors.textSecondary,
+	},
+	sliderValue: {
+		...typography.label,
+		minWidth: 44,
+		textAlign: "right",
+		color: colors.textSecondary,
+		fontVariant: ["tabular-nums"],
 	},
 });

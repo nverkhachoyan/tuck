@@ -17,6 +17,7 @@ import {
 	type PenSettings,
 	parsePenSettings,
 	penBrushFor,
+	SMOOTHING_PX,
 	stepPenSize,
 	withSelectedMark,
 } from "./penSettings";
@@ -88,6 +89,7 @@ export function usePenTool({
 			tool: {
 				type: "draw",
 				brush: penBrushFor(settings, documentSize),
+				smoothing: SMOOTHING_PX[settings.smoothing],
 			},
 		}),
 		[settings, documentSize],
@@ -135,6 +137,7 @@ export function usePenTool({
 	return {
 		settings,
 		change: setSettings,
+		shortSide: Math.min(documentSize.width, documentSize.height),
 		stepSize,
 		canvasInput,
 		finishStroke,
