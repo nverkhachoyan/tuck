@@ -5,7 +5,7 @@ import { fadeTo } from "@/ui/gradient";
 import { RingChoice } from "@/ui/RingChoice";
 import { Segmented } from "@/ui/Segmented";
 import { colors, space } from "@/ui/theme";
-import type { PenEnds } from "../../layers/drawing/drawing";
+import { MIN_OPACITY, type PenEnds } from "../../layers/drawing/drawing";
 import { ColorChip, ColorOptions } from "../../shell/ColorOptions";
 import {
 	BarChip,
@@ -24,7 +24,7 @@ import {
 } from "../../shell/ToolOptions";
 import { useColorTarget, useEditorContext } from "../editorContext";
 import {
-	clampOpacity,
+	opacityToSlider,
 	PEN_SIZES,
 	type PenSettings,
 	type PenTipChoice,
@@ -34,6 +34,7 @@ import {
 	presetIndex,
 	type Smoothing,
 	sizeToSlider,
+	sliderToOpacity,
 	sliderToSize,
 	smoothings,
 	stepPenSize,
@@ -166,7 +167,10 @@ function PenSizeOptions({
 				thumbColor={style.color}
 				onMove={move}
 				onEnd={end}
-				onStep={(step) => change(stepPenSize(settings, step))}
+				onStep={(step) => {
+					const next = stepPenSize(settings, step);
+					if (next !== settings) change(next);
+				}}
 			/>
 		</View>
 	);
@@ -182,23 +186,29 @@ function PenOpacitySlider({
 	showLabel?: boolean;
 }) {
 	const saved = penOpacity(settings);
-	const { draft, move, end } = useDraft(saved ?? 1, (along) =>
-		change(withPenOpacity(settings, along)),
+	const { draft, move, end } = useDraft(opacityToSlider(saved ?? 1), (along) =>
+		change(withPenOpacity(settings, sliderToOpacity(along))),
 	);
 	if (saved === null) return null;
-	const opacity = draft === null ? saved : clampOpacity(draft);
+	const opacity = draft === null ? saved : sliderToOpacity(draft);
+	const percent = Math.round(opacity * 100);
 	const color = penColor(settings);
 	return (
 		<ToolSlider
 			label="Opacity"
 			showLabel={showLabel}
-			value={opacity}
-			valueText={`${Math.round(opacity * 100)}%`}
+			value={draft ?? opacityToSlider(saved)}
+			min={Math.round(MIN_OPACITY * 100)}
+			now={percent}
+			valueText={`${percent}%`}
 			thumbColor={color}
-			track={fadeTo("right", color)}
+			track={fadeTo("right", color, MIN_OPACITY)}
 			onMove={move}
 			onEnd={end}
-			onStep={(step) => change(withPenOpacity(settings, saved + step * 0.05))}
+			onStep={(step) => {
+				const next = withPenOpacity(settings, saved + step * 0.05);
+				if (next !== settings) change(next);
+			}}
 		/>
 	);
 }

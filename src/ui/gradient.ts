@@ -13,16 +13,16 @@ export function gradientBackground(gradient: string): ViewStyle {
 }
 
 /**
- * Fades from clear to `hex` (a `#RRGGBB` color) toward `direction`, such as
- * "bottom". It fades from the same color at zero alpha, since `transparent`
- * can pass through gray.
+ * Fades from `from` alpha (0 by default) to `hex` (a `#RRGGBB` color) toward
+ * `direction`, such as "bottom". It fades from the same color, since
+ * `transparent` can pass through gray.
  */
-export function fadeTo(direction: string, hex: string): ViewStyle {
+export function fadeTo(direction: string, hex: string, from = 0): ViewStyle {
 	const [r, g, b] = [1, 3, 5].map((at) =>
 		Number.parseInt(hex.slice(at, at + 2), 16),
 	);
 	return gradientBackground(
-		`linear-gradient(to ${direction}, rgba(${r}, ${g}, ${b}, 0), ${hex})`,
+		`linear-gradient(to ${direction}, rgba(${r}, ${g}, ${b}, ${from}), ${hex})`,
 	);
 }
 

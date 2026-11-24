@@ -284,6 +284,8 @@ export function ToolSlider({
 	label,
 	showLabel = false,
 	value,
+	min = 0,
+	now,
 	valueText,
 	thumbColor,
 	track,
@@ -294,6 +296,8 @@ export function ToolSlider({
 	label: string;
 	showLabel?: boolean;
 	value: number;
+	min?: number;
+	now?: number;
 	valueText: string;
 	thumbColor: string;
 	track?: ViewStyle;
@@ -313,9 +317,9 @@ export function ToolSlider({
 					onEnd={onEnd}
 					accessibilityLabel={label}
 					accessibilityValue={{
-						min: 0,
+						min,
 						max: 100,
-						now: Math.round(value * 100),
+						now: now ?? Math.round(value * 100),
 						text: valueText,
 					}}
 					onStep={onStep}

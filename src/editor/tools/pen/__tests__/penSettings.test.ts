@@ -9,6 +9,7 @@ import { sameStyle } from "../../../layers/drawing/marks.ts";
 import {
 	defaultPenSettings,
 	markPatch,
+	opacityToSlider,
 	PEN_SIZE_RANGE,
 	PEN_SIZES,
 	parsePenSettings,
@@ -16,6 +17,7 @@ import {
 	penColor,
 	presetIndex,
 	sizeToSlider,
+	sliderToOpacity,
 	sliderToSize,
 	stepPenSize,
 	withPenColor,
@@ -127,7 +129,9 @@ describe("stepPenSize & withPenSize", () => {
 		const pen = { ...defaultPenSettings, tip: "pen" as const };
 		const bigger = stepPenSize(pen, 1);
 		assert.ok(bigger.sizes.pen > pen.sizes.pen);
-		assert.ok(stepPenSize(bigger, -1).sizes.pen - pen.sizes.pen < 1e-4);
+		assert.ok(
+			Math.abs(stepPenSize(bigger, -1).sizes.pen - pen.sizes.pen) < 1e-4,
+		);
 
 		const [min, max] = PEN_SIZE_RANGE.pen;
 		const atMin = withPenSize(pen, 0);
@@ -151,6 +155,17 @@ describe("stepPenSize & withPenSize", () => {
 	test("marks a quick pick only while the width is one", () => {
 		assert.equal(presetIndex("pen", PEN_SIZES.pen[3]), 3);
 		assert.equal(presetIndex("pen", PEN_SIZES.pen[3] * 1.2), -1);
+	});
+
+	test("the opacity slider maps MIN_OPACITY..1 across 0..1 and keeps bounds steady", () => {
+		assert.equal(opacityToSlider(MIN_OPACITY), 0);
+		assert.equal(opacityToSlider(1), 1);
+		assert.equal(sliderToOpacity(0), MIN_OPACITY);
+		assert.equal(sliderToOpacity(1), 1);
+		assert.equal(sliderToOpacity(opacityToSlider(0.45)), 0.45);
+		const atMin = withPenOpacity(defaultPenSettings, MIN_OPACITY);
+		assert.equal(withPenOpacity(atMin, 0), atMin);
+		assert.equal(withPenOpacity(defaultPenSettings, 1.5), defaultPenSettings);
 	});
 });
 

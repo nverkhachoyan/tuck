@@ -99,6 +99,18 @@ export function clampOpacity(opacity: number): number {
 	return roundOpacity(Math.min(1, Math.max(MIN_OPACITY, opacity)));
 }
 
+/** Where `opacity` sits along the opacity slider, 0–1 (from `MIN_OPACITY` to 1). */
+export function opacityToSlider(opacity: number): number {
+	return Math.min(1, Math.max(0, (opacity - MIN_OPACITY) / (1 - MIN_OPACITY)));
+}
+
+/** The opacity at `along` (0–1) on the opacity slider. */
+export function sliderToOpacity(along: number): number {
+	return clampOpacity(
+		MIN_OPACITY + Math.min(1, Math.max(0, along)) * (1 - MIN_OPACITY),
+	);
+}
+
 /**
  * Where `share` sits along `tip`'s size slider, 0–1. The slider is
  * logarithmic, so thin lines get as much of it as thick ones.
@@ -244,9 +256,11 @@ export function withPenOpacity(
 ): PenSettings {
 	const { tip } = settings;
 	if (tip === "marker") return settings;
+	const next = clampOpacity(opacity);
+	if (next === settings.opacity[tip]) return settings;
 	return {
 		...settings,
-		opacity: { ...settings.opacity, [tip]: clampOpacity(opacity) },
+		opacity: { ...settings.opacity, [tip]: next },
 	};
 }
 
