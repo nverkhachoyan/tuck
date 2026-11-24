@@ -180,13 +180,17 @@ function PopoverFrame({
 	}, [anchor]);
 
 	// After the control has seen the key: other keys stay in the dialog, so a
-	// shortcut listening on the window doesn't act on what's behind it.
+	// shortcut listening on the window doesn't act on what's behind it. On
+	// the body it's portaled into, where React listens too, and added after
+	// React's listener, which a stop on the layer would cut off.
 	useEffect(() => {
 		const layer = layerRef.current as unknown as HTMLElement | null;
 		if (!layer) return;
-		const stop = (event: KeyboardEvent) => event.stopPropagation();
-		layer.addEventListener("keydown", stop);
-		return () => layer.removeEventListener("keydown", stop);
+		const stop = (event: KeyboardEvent) => {
+			if (layer.contains(event.target as Node)) event.stopPropagation();
+		};
+		document.body.addEventListener("keydown", stop);
+		return () => document.body.removeEventListener("keydown", stop);
 	}, []);
 
 	const isAbove =

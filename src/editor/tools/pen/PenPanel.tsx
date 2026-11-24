@@ -99,23 +99,28 @@ function dotStyle(settings: PenSettings) {
 }
 
 /**
- * A value dragged along a slider, kept apart from the settings until the
- * finger lifts, so a drag is one change (one undo step on a mark).
+ * Where a slider is dragged to, 0–1, kept apart from the settings until the
+ * finger lifts, so a drag is one change (one undo step on a mark). A drag
+ * that ends where the slider was (`at`) changes nothing, so a mark's own
+ * value isn't rounded to a slider's.
  */
-function useDraft(commit: (value: number) => void) {
+function useDraft(at: number, commit: (along: number) => void) {
 	const [draft, setDraft] = useState<number | null>(null);
 	// A tap begins and ends in one go, before the draft renders.
 	const latest = useRef<number | null>(null);
+	const start = useRef(at);
 	return {
 		draft,
-		move: (value: number) => {
-			latest.current = value;
-			setDraft(value);
+		move: (along: number) => {
+			if (latest.current === null) start.current = at;
+			latest.current = along;
+			setDraft(along);
 		},
 		end: () => {
-			if (latest.current !== null) commit(latest.current);
+			const along = latest.current;
 			latest.current = null;
 			setDraft(null);
+			if (along !== null && along !== start.current) commit(along);
 		},
 	};
 }
@@ -133,10 +138,11 @@ function PenSizeOptions({
 	nowrap?: boolean;
 }) {
 	const { tip } = settings;
-	const { draft, move, end } = useDraft((share) =>
-		change(withPenSize(settings, share)),
+	const saved = settings.sizes[tip];
+	const { draft, move, end } = useDraft(sizeToSlider(tip, saved), (along) =>
+		change(withPenSize(settings, sliderToSize(tip, along))),
 	);
-	const share = draft ?? settings.sizes[tip];
+	const share = draft === null ? saved : sliderToSize(tip, draft);
 	const chosen = presetIndex(tip, share);
 	const style = dotStyle(settings);
 	return (
@@ -155,10 +161,10 @@ function PenSizeOptions({
 			</ToolChoices>
 			<ToolSlider
 				label="Size"
-				value={sizeToSlider(tip, share)}
+				value={draft ?? sizeToSlider(tip, saved)}
 				valueText={`${Math.max(1, Math.round(share * shortSide))} px`}
 				thumbColor={style.color}
-				onMove={(along) => move(sliderToSize(tip, along))}
+				onMove={move}
 				onEnd={end}
 				onStep={(step) => change(stepPenSize(settings, step))}
 			/>
@@ -175,12 +181,12 @@ function PenOpacitySlider({
 	controller: PenController;
 	showLabel?: boolean;
 }) {
-	const { draft, move, end } = useDraft((opacity) =>
-		change(withPenOpacity(settings, opacity)),
-	);
 	const saved = penOpacity(settings);
+	const { draft, move, end } = useDraft(saved ?? 1, (along) =>
+		change(withPenOpacity(settings, along)),
+	);
 	if (saved === null) return null;
-	const opacity = draft ?? saved;
+	const opacity = draft === null ? saved : clampOpacity(draft);
 	const color = penColor(settings);
 	return (
 		<ToolSlider
@@ -190,7 +196,7 @@ function PenOpacitySlider({
 			valueText={`${Math.round(opacity * 100)}%`}
 			thumbColor={color}
 			track={fadeTo("right", color)}
-			onMove={(value) => move(clampOpacity(value))}
+			onMove={move}
 			onEnd={end}
 			onStep={(step) => change(withPenOpacity(settings, saved + step * 0.05))}
 		/>

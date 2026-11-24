@@ -1,10 +1,13 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createDrawingLayer } from "../../../layers/drawing/drawing.ts";
+import {
+	createDrawingLayer,
+	MIN_OPACITY,
+} from "../../../layers/drawing/drawing.ts";
+import { sameStyle } from "../../../layers/drawing/marks.ts";
 import {
 	defaultPenSettings,
-	MIN_OPACITY,
 	markPatch,
 	PEN_SIZE_RANGE,
 	PEN_SIZES,
@@ -226,6 +229,21 @@ describe("withSelectedMark and markPatch", () => {
 		const settings = withSelectedMark(defaultPenSettings, layer, size);
 		assert.equal(settings.opacity.ink, 0.8);
 		assert.equal(settings.ends.ink, "round");
+	});
+
+	test("keeps a mark's own opacity, so new strokes still join it", () => {
+		const stroke = {
+			type: "pen" as const,
+			color: "#30D158",
+			width: 20,
+			tip: "neon" as const,
+			opacity: 0.333,
+			points: [0, 0, 10, 0],
+		};
+		const layer = createDrawingLayer(stroke);
+		const settings = withSelectedMark(defaultPenSettings, layer, size);
+		assert.equal(settings.opacity.neon, 0.333);
+		assert.ok(sameStyle(stroke, penBrushFor(settings, size)));
 	});
 
 	test("lists only what changed", () => {

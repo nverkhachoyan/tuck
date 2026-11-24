@@ -23,6 +23,7 @@ import {
 	type StrokeKind,
 	unlanded,
 } from "./strokeTypes";
+import { noted, useFreeReplaced, usePathsBuilt } from "./useFreeReplaced";
 
 type DrawTool = Extract<CanvasTool, { type: "draw" }>;
 
@@ -39,14 +40,20 @@ function LivePath({
 	brush: PenBrush;
 	full?: boolean;
 }) {
-	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
+	const built = usePathsBuilt();
+	const path = useDerivedValue(() =>
+		noted(built, strokePath(unlanded(stroke))),
+	);
 	const rounded = strokeEnds(brush) === "rounded";
 	const { width } = brush;
 	// Built on the UI thread with each frame's path.
 	const outline = useDerivedValue(
-		() => (rounded && roundedEndsOutline(path.value, width)) || path.value,
+		() =>
+			(rounded && noted(built, roundedEndsOutline(path.value, width))) ||
+			path.value,
 		[path, rounded, width],
 	);
+	useFreeReplaced(built, path, outline);
 	const faded = brush.tip === "neon" && strokeOpacity(brush) < 1;
 	const reach = visibleReach(brush);
 	// Only a faded neon stroke saves a layer to bound.

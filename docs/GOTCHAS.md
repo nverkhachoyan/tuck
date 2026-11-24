@@ -41,3 +41,29 @@ How it was found:
 2. Chrome's memory-infra dump is reliable: over CDP on the browser target, `Tracing.start` with `disabled-by-default-memory-infra` and no triggers, then `Tracing.requestMemoryDump` with `levelOfDetail: "detailed"`, then `Tracing.end`. The renderer's `webgl/offscreen_context_*` entries list each live context and its drawing buffer, and the GPU process's `gpu/shared_images` shows what they share with it.
 3. Load photos without the file picker with `DOM.setFileInputFiles` on the app's `input[type=file]` (it exists once "Open a photo" or "Add photo" has been clicked). Then click through with `element.click()`.
 4. What stays after the fix and isn't a leak: CanvasKit's WASM heap (`CanvasKit.HEAPU8.buffer.byteLength`), which WebAssembly can grow but never shrink, held the export's peak until the tab reloads (lowered in [#74](https://github.com/nverkhachoyan/tuck/issues/74)), and Chrome's transfer memory for uploads (`gpu/transfer_memory`) stays as a pool. Neither grows after the first pass.
+
+## A live stroke's paths stayed in CanvasKit's heap
+
+Fixed November 23, 2026, in `canvas/strokes/useFreeReplaced.ts` and `strokePath` (`DrawingLayerView.tsx`).
+
+* **Seen:** on web, reading the code for rounded ends: a live stroke built a new path, and now an outline, in a derived value every frame, and nothing freed them. On web nothing but `dispose` frees a Skia object, and CanvasKit's heap never shrinks.
+* **Causes:** three, found one after another.
+  * `strokePath` built its path with `PathBuilder.build()`, which copies, and never freed the builder: one leaked per call, for every stroke, live or settled.
+  * The Eraser's tracking path is rebuilt every frame while any tool draws, not only the Eraser.
+  * A first fix freed each path a reaction saw replaced, and two paths per stroke still stayed. A derived value computes its first path before the reaction starts watching, and a view's last path is never replaced. Neither reaches the reaction.
+* **Fix:** `strokePath` frees its builder. A derived value notes each path it builds (`noted`), and `useFreeReplaced` frees all but the current ones as they change, and the rest two frames after the view unmounts, unless it mounted again (strict mode).
+* **The rule:** to free what a derived value builds, record it where it's built. Watching the value misses its first result and its last.
+
+How it was found, which works for any Skia object on web:
+
+1. Wrap `CanvasKit.PathBuilder` in a `Proxy` whose `construct` keeps each new object in a `Map` with a tag taken from `new Error().stack` (`roundedEndsOutline`, `drawTsx`, `useEraseTracking`), and wrap the prototype's `delete` to remove it. The tags left after a stroke say who leaks.
+2. Draw with synthetic `PointerEvent`s on the canvas element. `setPointerCapture` throws for an untrusted pointer, so wrap it in a `try` first. A hidden Browser pane runs about two frames a second, so count leftovers per stroke, not per frame: the fix left one of each tag however many strokes were drawn.
+
+## Keys never reached React inside a popover
+
+Fixed November 23, 2026, in `ui/Popover.web.tsx`.
+
+* **Seen:** on web, the pen's Opacity slider, in a popover, didn't step with the arrow keys, though its `onKeyDown` was on the element. Calling the handler from the element's React props worked.
+* **Cause:** the popover is portaled into `document.body`, and React listens for its events there. To keep keys from the window's shortcuts, the popover stopped `keydown` on its own layer, which sits between the control and the body, so React's listener never ran: no React key handler inside a popover saw a key.
+* **Fix:** the stop moved to `document.body`, added after React's listener there, and stops only keys from inside the layer.
+* **The rule:** a native listener that stops an event must sit at or above the element React listens on (the root, or a portal's container), never between it and the target.

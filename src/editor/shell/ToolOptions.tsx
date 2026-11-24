@@ -274,7 +274,7 @@ export function SizeDot({
 /**
  * A tool option set by dragging, 0–1 along a bar, with its value written
  * after it. It reports each move (`onMove`) and when the finger lifts
- * (`onEnd`); screen readers and the keyboard step it (`onStep`).
+ * (`onEnd`); screen readers and, on web, the arrow keys step it (`onStep`).
  * - `track` is the bar's background, plain unless given.
  * - `thumbColor` fills its thumb.
  * - `showLabel` writes `label` before it, in a tray, where it then takes
@@ -309,14 +309,16 @@ export function ToolSlider({
 					value={value}
 					thumbColor={thumbColor}
 					background={[styles.track, track]}
-					onMove={(x) => onMove(x)}
+					onMove={onMove}
 					onEnd={onEnd}
 					accessibilityLabel={label}
-					accessibilityValue={{ text: valueText }}
-					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-					onAccessibilityAction={(event) =>
-						onStep(event.nativeEvent.actionName === "increment" ? 1 : -1)
-					}
+					accessibilityValue={{
+						min: 0,
+						max: 100,
+						now: Math.round(value * 100),
+						text: valueText,
+					}}
+					onStep={onStep}
 				/>
 			</View>
 			<Text style={styles.sliderValue}>{valueText}</Text>

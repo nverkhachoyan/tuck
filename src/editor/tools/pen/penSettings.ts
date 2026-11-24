@@ -4,6 +4,7 @@ import {
 	type DrawingLayer,
 	hasEnds,
 	hasOpacity,
+	MIN_OPACITY,
 	markStyle,
 	type PenBrush,
 	type PenEnds,
@@ -54,8 +55,6 @@ export const PEN_SIZE_RANGE: Record<PenTipChoice, [number, number]> = {
 	ink: [0.005, 0.18],
 	neon: [0.005, 0.18],
 };
-
-export const MIN_OPACITY = 0.1;
 
 // How far behind the finger a smoothed stroke trails, in screen points.
 export const SMOOTHING_PX: Record<Smoothing, number> = {
@@ -277,7 +276,9 @@ export function penBrushFor(settings: PenSettings, size: Size): PenBrush {
 /**
  * `settings` showing the mark `layer`'s style: its tip, its color (kept as
  * the highlight color for a highlight), its width, ends, and opacity.
- * The same settings for a drawing with no pen strokes.
+ * The opacity is the mark's exactly, not rounded as a slider's, so strokes
+ * drawn into the mark match it. The same settings for a drawing with no pen
+ * strokes.
  */
 export function withSelectedMark(
 	settings: PenSettings,
@@ -293,7 +294,12 @@ export function withSelectedMark(
 		share,
 	);
 	if (hasEnds(style.tip)) next = withPenEnds(next, strokeEnds(style));
-	if (hasOpacity(style.tip)) next = withPenOpacity(next, strokeOpacity(style));
+	if (hasOpacity(style.tip) && tip !== "marker") {
+		next = {
+			...next,
+			opacity: { ...next.opacity, [tip]: strokeOpacity(style) },
+		};
+	}
 	return next;
 }
 

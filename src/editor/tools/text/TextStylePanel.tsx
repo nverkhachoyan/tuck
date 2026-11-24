@@ -1,20 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { type ReactNode, useState } from "react";
-import {
-	type AccessibilityActionEvent,
-	Pressable,
-	StyleSheet,
-	Text,
-	View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Chip } from "@/ui/Chip";
-import {
-	ColorSliderBar,
-	clampHue,
-	stepOf,
-	useHsvColor,
-} from "@/ui/ColorPicker";
+import { ColorSliderBar, clampHue, useHsvColor } from "@/ui/ColorPicker";
 import { FadeRow, MeasuredItem } from "@/ui/FadeRow";
 import { gradientBackground, HUE_GRADIENT, toneGradient } from "@/ui/gradient";
 import { Highlight } from "@/ui/Highlight";
@@ -173,16 +162,16 @@ function InlineTextColorPicker({
 		change({ ...latest.current, hue: clampHue(fraction * 360) });
 	const changeTone = (fraction: number) =>
 		change(toneToHsv(latest.current.hue, fraction));
-	const stepHue = (event: AccessibilityActionEvent) =>
+	const stepHue = (step: 1 | -1) =>
 		nudge({
 			...latest.current,
-			hue: clampHue(latest.current.hue + stepOf(event) * HUE_STEP),
+			hue: clampHue(latest.current.hue + step * HUE_STEP),
 		});
-	const stepTone = (event: AccessibilityActionEvent) =>
+	const stepTone = (step: 1 | -1) =>
 		nudge(
 			toneToHsv(
 				latest.current.hue,
-				hsvToTone(latest.current) + stepOf(event) * TONE_STEP,
+				hsvToTone(latest.current) + step * TONE_STEP,
 			),
 		);
 
@@ -232,8 +221,7 @@ function InlineTextColorPicker({
 					onEnd={end}
 					accessibilityLabel="Hue"
 					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
-					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-					onAccessibilityAction={stepHue}
+					onStep={stepHue}
 				/>
 				<ColorSliderBar
 					value={tone}
@@ -247,8 +235,7 @@ function InlineTextColorPicker({
 						max: 100,
 						now: Math.round(tone * 100),
 					}}
-					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-					onAccessibilityAction={stepTone}
+					onStep={stepTone}
 				/>
 			</View>
 		</View>

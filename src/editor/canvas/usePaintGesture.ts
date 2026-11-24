@@ -9,8 +9,12 @@ import { type DocumentViewport, viewPointToDocument } from "./viewport";
 // A point closer than this to the last one, in screen pixels, adds nothing
 // anyone could see.
 const MIN_POINT_GAP_PX = 1.5;
-// Holding a pen within this many screen pixels straightens its stroke.
+// Holding a pen within this many screen pixels for `STILL_MS` straightens
+// its stroke: the highlighter's before its first move, as a press. Once a
+// stroke has moved, a hold must keep within `HOLD_PX`, so slow tracing, which
+// covers about 8 pixels in that time, isn't taken for one.
 const STILL_PX = 8;
+const HOLD_PX = 3;
 const STILL_MS = 500;
 
 /**
@@ -79,6 +83,8 @@ export function usePaintGesture({
 	const aside = useSharedValue(false);
 	const straight = useSharedValue(false);
 	const moved = useSharedValue(false);
+	// Whether it has strayed from where it landed, so a hold is mid-stroke.
+	const strayed = useSharedValue(false);
 	const generation = useSharedValue(0);
 	const anchorX = useSharedValue(0);
 	const anchorY = useSharedValue(0);
@@ -181,12 +187,14 @@ export function usePaintGesture({
 	};
 
 	// Waits for stillness afresh once the finger strays from where it last
-	// started waiting.
+	// started waiting: past `STILL_PX` from where it landed, then `HOLD_PX`.
 	const restartStillness = (screenX: number, screenY: number) => {
 		"worklet";
 		const dx = screenX - anchorX.value;
 		const dy = screenY - anchorY.value;
-		if (dx * dx + dy * dy <= STILL_PX * STILL_PX) return;
+		const still = strayed.value ? HOLD_PX : STILL_PX;
+		if (dx * dx + dy * dy <= still * still) return;
+		strayed.value = true;
 		anchorX.value = screenX;
 		anchorY.value = screenY;
 		armStillness();
@@ -206,6 +214,7 @@ export function usePaintGesture({
 			aside.value = standsAside?.(event.x, event.y) ?? false;
 			straight.value = false;
 			moved.value = false;
+			strayed.value = false;
 			startedAt.value = Date.now();
 			strokeId.value += 1;
 			points.value =

@@ -6,13 +6,17 @@ import {
 	inkRect,
 	isDrawingLayer,
 	layerBlend,
+	MARKER_OPACITY,
+	MIN_OPACITY,
 	markStyle,
 	needsOwnLayer,
 	penBrush,
 	pruneErased,
+	ROUNDED_END,
 	type Stroke,
 	strokeEnds,
 	strokeOpacity,
+	tipOpacity,
 	visibleReach,
 } from "../drawing.ts";
 
@@ -164,8 +168,18 @@ test("ink opacity is the tip's own unless saved, and never the highlighter's", (
 	assert.equal(strokeOpacity(pen), 1);
 	assert.equal(strokeOpacity({ ...pen, tip: "ink" }), 0.45);
 	assert.equal(strokeOpacity({ ...pen, opacity: 0.3 }), 0.3);
-	assert.equal(strokeOpacity({ ...pen, opacity: -2 }), 0.05);
+	assert.equal(strokeOpacity({ ...pen, opacity: -2 }), MIN_OPACITY);
 	assert.equal(strokeOpacity({ ...pen, tip: "marker", opacity: 0.9 }), 0.45);
+});
+
+// Strokes save nothing for these, so a change would restyle every saved one.
+test("the defaults saved strokes draw with stay as they were saved", () => {
+	assert.equal(MARKER_OPACITY, 0.45);
+	assert.equal(tipOpacity("ink"), 0.45);
+	assert.equal(tipOpacity("marker"), 0.45);
+	assert.equal(tipOpacity("neon"), 1);
+	assert.equal(tipOpacity(undefined), 1);
+	assert.equal(ROUNDED_END, 0.25);
 });
 
 test("a pen brush saves only what differs from its tip's defaults", () => {

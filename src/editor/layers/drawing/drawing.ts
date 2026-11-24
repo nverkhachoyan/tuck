@@ -50,8 +50,13 @@ export type Stroke = Brush & { points: number[] };
 export const NEON_GLOW = 0.55;
 export const NEON_GLOW_BLUR = 0.16;
 
-// A marker's ink is see-through, so what it marks shows through it.
-const MARKER_OPACITY = 0.45;
+// A marker's ink is see-through, so what it marks shows through it. Saved
+// strokes rely on it: one drawn at its tip's opacity saves none, as strokes
+// were saved before opacity existed, so changing this restyles them all.
+export const MARKER_OPACITY = 0.45;
+
+/** The faintest ink a pen stroke draws, or its opacity slider reaches. */
+export const MIN_OPACITY = 0.1;
 
 /** The ink's opacity when a stroke doesn't save its own. */
 export function tipOpacity(tip: PenTip | undefined): number {
@@ -77,7 +82,8 @@ export function strokeEnds(brush: PenBrush): PenEnds {
 }
 
 /**
- * A pen stroke's ink opacity: its own, between 0.05 and 1, else its tip's.
+ * A pen stroke's ink opacity: its own, from `MIN_OPACITY` to 1, else its
+ * tip's.
  * A highlighter's is always its tip's.
  */
 export function strokeOpacity(brush: PenBrush): number {
@@ -86,7 +92,7 @@ export function strokeOpacity(brush: PenBrush): number {
 		return tipOpacity(brush.tip);
 	}
 	return Number.isFinite(opacity)
-		? Math.min(1, Math.max(0.05, opacity))
+		? Math.min(1, Math.max(MIN_OPACITY, opacity))
 		: tipOpacity(brush.tip);
 }
 
@@ -185,7 +191,8 @@ export function isDrawingLayer(value: unknown): boolean {
 }
 
 // A rounded end's corners, as a share of the stroke's width: a quarter, as
-// the size dot that previews it.
+// the size dot that previews it. Strokes save only that their ends are
+// rounded, so changing this reshapes every one saved.
 export const ROUNDED_END = 0.25;
 
 /**

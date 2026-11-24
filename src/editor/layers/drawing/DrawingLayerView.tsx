@@ -2,7 +2,9 @@ import {
 	type ComponentProps,
 	Fragment,
 	type ReactNode,
+	useEffect,
 	useLayoutEffect,
+	useMemo,
 } from "react";
 import {
 	BlendMode,
@@ -17,6 +19,7 @@ import {
 	type SkCanvas,
 	Skia,
 	type SkPath,
+	type SkPathBuilder,
 	type SkPicture,
 	type SkRect,
 	StrokeCap,
@@ -49,6 +52,15 @@ const NEON_TUBE = 0.2;
 const NEON_CORE = 0.08;
 const NEON_CORE_WHITE = 0.75;
 
+// The path a builder made, with the builder freed: `build` copies it, and
+// on web nothing but `dispose` frees the builder. A worklet, as strokePath.
+function built(builder: SkPathBuilder): SkPath {
+	"worklet";
+	const path = builder.build();
+	builder.dispose();
+	return path;
+}
+
 /**
  * A smooth line through flattened x, y pairs: curves through the midpoints
  * between them, so a finger's jitter doesn't show as corners. One point is
@@ -59,7 +71,7 @@ export function strokePath(points: number[]): SkPath {
 	"worklet";
 	const builder = Skia.PathBuilder.Make();
 	const count = points.length / 2;
-	if (count === 0) return builder.build();
+	if (count === 0) return built(builder);
 	builder.moveTo(points[0], points[1]);
 	for (let i = 1; i < count - 1; i++) {
 		const x = points[i * 2];
@@ -72,7 +84,7 @@ export function strokePath(points: number[]): SkPath {
 		);
 	}
 	builder.lineTo(points[count * 2 - 2], points[count * 2 - 1]);
-	return builder.build();
+	return built(builder);
 }
 
 // A stroke's path never changes, and the editor and export draw the same
@@ -117,20 +129,6 @@ export function inkBounds(path: SkPath, reach: number): SkRect {
 		box.width + reach * 2,
 		box.height + reach * 2,
 	);
-}
-
-// A settled stroke's outline, built once, as its path is.
-const outlines = new WeakMap<
-	SkPath,
-	{ width: number; outline: SkPath | null }
->();
-
-function outlineFor(path: SkPath, width: number): SkPath | null {
-	const cached = outlines.get(path);
-	if (cached?.width === width) return cached.outline;
-	const outline = roundedEndsOutline(path, width);
-	outlines.set(path, { width, outline });
-	return outline;
 }
 
 // What a pen stroke's paint fades to: a highlighter that multiplies draws
@@ -200,7 +198,9 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 
 	const paint = Skia.Paint();
 	const ends = stroke.type === "pen" ? strokeEnds(stroke) : "round";
-	const outline = ends === "rounded" ? outlineFor(path, stroke.width) : null;
+	// The picture copies the outline as it records, so it's freed right after.
+	const outline =
+		ends === "rounded" ? roundedEndsOutline(path, stroke.width) : null;
 	const corner = outline
 		? Skia.PathEffect.MakeCorner(stroke.width * ROUNDED_END)
 		: null;
@@ -229,6 +229,7 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	} finally {
 		paint.dispose();
 		corner?.dispose();
+		outline?.dispose();
 	}
 }
 
@@ -236,6 +237,40 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 // before an update for a frame, and a timer can fire before that frame.
 function afterSkiaDraws(free: () => void) {
 	requestAnimationFrame(() => requestAnimationFrame(free));
+}
+
+// The outlines views hold, each with its holders and its latest release. On
+// web nothing but `dispose` frees a path, so the last holder's release frees
+// it once the canvas stops drawing it, unless it's held again by then
+// (docs/GOTCHAS.md, "A delayed free can belong to an earlier release").
+const heldOutlines = new Map<SkPath, { holders: number; release: number }>();
+let releases = 0;
+
+function holdOutline(outline: SkPath): () => void {
+	const entry = heldOutlines.get(outline) ?? { holders: 0, release: 0 };
+	entry.holders += 1;
+	heldOutlines.set(outline, entry);
+	return () => {
+		entry.holders -= 1;
+		const mine = ++releases;
+		entry.release = mine;
+		afterSkiaDraws(() => {
+			if (entry.holders > 0 || entry.release !== mine) return;
+			heldOutlines.delete(outline);
+			outline.dispose();
+		});
+	};
+}
+
+// A settled stroke's rounded-ends outline, held while it's drawn. None for
+// `path` null, a stroke still being drawn, whose outline its caller builds.
+function useSettledOutline(path: SkPath | null, width: number) {
+	const outline = useMemo(
+		() => (path ? roundedEndsOutline(path, width) : null),
+		[path, width],
+	);
+	useEffect(() => (outline ? holdOutline(outline) : undefined), [outline]);
+	return outline;
 }
 
 const drawingPictures = createPictureCache<SkPicture>(afterSkiaDraws);
@@ -448,7 +483,8 @@ export function BrushStroke({
 	if (brush.type === "pen" && strokeEnds(brush) === "rounded") {
 		return (
 			<RoundedEnds
-				outline={outline ?? outlineFor(path as SkPath, brush.width)}
+				settled={outline ? null : (path as SkPath)}
+				outline={outline}
 				brush={brush}
 				full={full}
 			/>
@@ -457,19 +493,25 @@ export function BrushStroke({
 	return <Path path={path} {...brushPaint(brush, full)} />;
 }
 
+// A stroke with rounded ends: `outline` built for one still being drawn, or
+// one built here for a `settled` stroke's path.
 function RoundedEnds({
+	settled,
 	outline,
 	brush,
 	full,
 }: {
-	outline: PathProp | null;
+	settled: SkPath | null;
+	outline?: PathProp;
 	brush: PenBrush;
 	full: boolean;
 }) {
-	if (outline === null) return null;
+	const own = useSettledOutline(settled, brush.width);
+	const drawn = outline ?? own;
+	if (!drawn) return null;
 	return (
 		<Path
-			path={outline}
+			path={drawn}
 			style="fill"
 			color={brush.color}
 			opacity={inkOpacity(brush, full)}
