@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { Announcement } from "@/ui/Announcement";
 import { colors, space, typography } from "@/ui/theme";
 import { BarButton, BarGroup, BarSections } from "../../shell/ContextBar";
 import { ToolButton } from "../../shell/ToolButton";
@@ -8,9 +10,25 @@ const statusLabel = (count: number) =>
 	count > 0 ? `${count} selected` : "Tap or drag over layers";
 
 /**
+ * Reads out the selection count to a screen reader each time it changes
+ * while the tool is open (not when it opens), since the canvas has no focus
+ * to announce it from.
+ */
+function CountAnnouncement({ count }: { count: number }) {
+	const [shown, setShown] = useState(count);
+	const [message, setMessage] = useState<string | null>(null);
+	if (count !== shown) {
+		setShown(count);
+		setMessage(count > 0 ? `${count} selected` : "Nothing selected");
+	}
+	return <Announcement message={message} />;
+}
+
+/**
  * Select options in the wide editor's header bar:
  * - Select all button (⌘A)
- * - Count of selected layers, or a short prompt when none are selected
+ * - Count of selected layers, or a short prompt when none are selected,
+ *   read out as it changes
  */
 export function SelectBar({
 	controller: { count, canSelectAll, selectAll },
@@ -32,6 +50,7 @@ export function SelectBar({
 				<Text style={styles.barStatus} numberOfLines={1}>
 					{statusLabel(count)}
 				</Text>
+				<CountAnnouncement count={count} />
 			</BarGroup>
 		</BarSections>
 	);
@@ -57,6 +76,7 @@ export function SelectPanel({
 			<Text style={styles.dockStatus} numberOfLines={2}>
 				{statusLabel(count)}
 			</Text>
+			<CountAnnouncement count={count} />
 		</View>
 	);
 }
