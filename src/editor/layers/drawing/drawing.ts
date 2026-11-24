@@ -114,8 +114,13 @@ export function penBrush(style: {
 	if (hasEnds(tip) && (ends === "rounded" || ends === "round")) {
 		brush.ends = ends;
 	}
-	if (hasOpacity(tip) && opacity !== undefined && opacity !== tipOpacity(tip)) {
-		brush.opacity = opacity;
+	if (
+		hasOpacity(tip) &&
+		typeof opacity === "number" &&
+		Number.isFinite(opacity)
+	) {
+		const clamped = Math.min(1, Math.max(MIN_OPACITY, opacity));
+		if (clamped !== tipOpacity(tip)) brush.opacity = clamped;
 	}
 	return brush;
 }

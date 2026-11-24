@@ -204,6 +204,21 @@ test("a pen brush saves only what differs from its tip's defaults", () => {
 			opacity: 0.7,
 		},
 	);
+	assert.deepEqual(penBrush({ color: "#000000", width: 4, opacity: 0 }), {
+		type: "pen",
+		color: "#000000",
+		width: 4,
+		opacity: MIN_OPACITY,
+	});
+	assert.deepEqual(penBrush({ color: "#000000", width: 4, opacity: 2 }), {
+		type: "pen",
+		color: "#000000",
+		width: 4,
+	});
+	assert.deepEqual(
+		penBrush({ color: "#000000", width: 4, opacity: Number.NaN }),
+		{ type: "pen", color: "#000000", width: 4 },
+	);
 });
 
 test("rounded ends reach between round and square ones", () => {
