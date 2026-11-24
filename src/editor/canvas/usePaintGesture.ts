@@ -31,13 +31,16 @@ const STILL_MS = 500;
  * point alone, then each new point with the one before it. An empty list
  * starts over, for a new stroke or a cancelled one.
  *
- * When `straighten` is set, a pen held still for half a second turns its
- * stroke into the line from where it began. Shift held at its first move
+ * When `straighten` is set, a pen held still for half a second, once it has
+ * moved, turns its stroke into the line from where it began. With
+ * `straightenAtStart`, a hold before the first move does too (the
+ * highlighter: hold, then drag a line). Shift held at its first move
  * (`shiftHeld`) does that from the start. It then follows as that line.
  *
  * `smoothing`, in screen points, is how far the line trails the finger: it
  * moves only once the finger pulls past that, so a wobble smaller than it
- * doesn't show (a "lazy brush"). A straightened line follows the finger.
+ * doesn't show (a "lazy brush"). The line catches up where the finger lifts.
+ * A straightened line follows the finger.
  */
 export function usePaintGesture({
 	viewport,
@@ -46,6 +49,7 @@ export function usePaintGesture({
 	onStroke,
 	standsAside = null,
 	straighten = false,
+	straightenAtStart = false,
 	smoothing = 0,
 	shiftHeld = null,
 	onSegment = null,
@@ -65,6 +69,7 @@ export function usePaintGesture({
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
 	// A pen: hold still, or hold Shift on web, and it draws a line.
 	straighten?: boolean;
+	straightenAtStart?: boolean;
 	smoothing?: number;
 	shiftHeld?: SharedValue<boolean> | null;
 	onSegment?: ((points: number[]) => void) | null;
@@ -81,6 +86,10 @@ export function usePaintGesture({
 	// Where a smoothed line's tip is, in document space.
 	const brushX = useSharedValue(0);
 	const brushY = useSharedValue(0);
+	// Where the finger last was, in document space, for a smoothed line to
+	// end at.
+	const fingerX = useSharedValue(0);
+	const fingerY = useSharedValue(0);
 	const tick = Platform.OS !== "web";
 
 	// Rounded as the model rounds strokes, so a saved stroke is what was drawn.
@@ -198,10 +207,14 @@ export function usePaintGesture({
 			if (points.value.length > 0) onSegment?.(points.value);
 			brushX.value = points.value[0] ?? 0;
 			brushY.value = points.value[1] ?? 0;
+			fingerX.value = brushX.value;
+			fingerY.value = brushY.value;
 			anchorX.value = event.x;
 			anchorY.value = event.y;
 			if (event.numberOfPointers > 1) cancel();
-			else if (!cancelled.value && !aside.value) armStillness();
+			else if (!cancelled.value && !aside.value && straightenAtStart) {
+				armStillness();
+			}
 		},
 		onUpdate: (event) => {
 			if (event.numberOfPointers > 1) cancel();
@@ -216,12 +229,17 @@ export function usePaintGesture({
 				points.value = straightStroke([line[0], line[1], x, y]);
 				return;
 			}
+			fingerX.value = x;
+			fingerY.value = y;
 			followFinger(x, y);
 			if (straighten) restartStillness(event.x, event.y);
 		},
 		onFinalize: () => {
 			generation.value += 1;
 			if (!cancelled.value && !aside.value) {
+				if (smoothing > 0 && !straight.value && points.value.length > 0) {
+					extendStroke(fingerX.value, fingerY.value);
+				}
 				scheduleOnRN(
 					onStroke,
 					points.value,

@@ -121,6 +121,7 @@ export function useToolStroke({
 		onStroke: handleStroke,
 		standsAside,
 		straighten: tool?.type === "draw",
+		straightenAtStart: tool?.type === "draw" && tool.brush.tip === "marker",
 		smoothing: tool?.type === "draw" ? (tool.smoothing ?? 0) : 0,
 		shiftHeld,
 		onSegment,

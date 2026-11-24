@@ -2,6 +2,7 @@ import { useDerivedValue } from "react-native-reanimated";
 import { Group, Paint } from "react-native-skia";
 import {
 	BrushStroke,
+	inkBounds,
 	roundedEndsOutline,
 	strokePath,
 } from "../../layers/drawing/DrawingLayerView";
@@ -9,6 +10,8 @@ import {
 	type PenBrush,
 	ROUNDED_END,
 	strokeEnds,
+	strokeOpacity,
+	visibleReach,
 } from "../../layers/drawing/drawing";
 import { LayerContent } from "../../layers/LayerContent";
 import { toInverseTransformList } from "../../layers/layerTransform";
@@ -44,10 +47,18 @@ function LivePath({
 		() => (rounded && roundedEndsOutline(path.value, width)) || path.value,
 		[path, rounded, width],
 	);
+	const faded = brush.tip === "neon" && strokeOpacity(brush) < 1;
+	const reach = visibleReach(brush);
+	// Only a faded neon stroke saves a layer to bound.
+	const bounds = useDerivedValue(
+		() => (faded ? inkBounds(path.value, reach) : undefined),
+		[path, faded, reach],
+	);
 	return (
 		<BrushStroke
 			path={path}
 			outline={rounded ? outline : undefined}
+			bounds={faded ? bounds : undefined}
 			brush={brush}
 			full={full}
 		/>

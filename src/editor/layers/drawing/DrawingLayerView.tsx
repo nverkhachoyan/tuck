@@ -18,6 +18,7 @@ import {
 	Skia,
 	type SkPath,
 	type SkPicture,
+	type SkRect,
 	StrokeCap,
 	StrokeJoin,
 } from "react-native-skia";
@@ -36,6 +37,7 @@ import {
 	type Stroke,
 	strokeEnds,
 	strokeOpacity,
+	visibleReach,
 } from "./drawing";
 import { createPictureCache } from "./drawingPictures";
 
@@ -101,6 +103,22 @@ export function roundedEndsOutline(path: SkPath, width: number): SkPath | null {
 	});
 }
 
+/**
+ * The box `path`'s ink fills, reaching `reach` past its line, to bound a
+ * layer saved around one stroke: unbounded, it's the whole canvas, every
+ * frame. A worklet, for a stroke still being drawn.
+ */
+export function inkBounds(path: SkPath, reach: number): SkRect {
+	"worklet";
+	const box = path.computeTightBounds();
+	return Skia.XYWHRect(
+		box.x - reach,
+		box.y - reach,
+		box.width + reach * 2,
+		box.height + reach * 2,
+	);
+}
+
 // A settled stroke's outline, built once, as its path is.
 const outlines = new WeakMap<
 	SkPath,
@@ -141,7 +159,7 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 			// Faded as a whole, so the glow doesn't show through the tube.
 			if (fade) {
 				fade.setAlphaf(opacity);
-				canvas.saveLayer(fade);
+				canvas.saveLayer(fade, inkBounds(path, visibleReach(stroke)));
 			}
 			glowPaint.setAntiAlias(true);
 			glowPaint.setStyle(PaintStyle.Stroke);
@@ -373,15 +391,19 @@ type PathProp = ComponentProps<typeof Path>["path"];
  * - `outline` is that stroke's `roundedEndsOutline`, for rounded ends,
  *   built where the shared value is (this file can't use Reanimated: the
  *   docs draw it without). A settled `path`'s is built here.
+ * - `bounds` is that stroke's `inkBounds`, for a faded neon stroke's
+ *   layer, built likewise. A settled `path`'s is built here.
  */
 export function BrushStroke({
 	path,
 	outline,
+	bounds,
 	brush,
 	full = false,
 }: {
 	path: PathProp;
 	outline?: PathProp;
+	bounds?: ComponentProps<typeof Group>["clip"];
 	brush: Brush;
 	// Draw a highlighter at full strength. The layer around it multiplies.
 	full?: boolean;
@@ -413,9 +435,12 @@ export function BrushStroke({
 				/>
 			</>
 		);
-		// Faded as a whole, so the glow doesn't show through the tube.
+		// Faded as a whole, so the glow doesn't show through the tube. The
+		// clip around it bounds the layer it saves.
 		return opacity < 1 ? (
-			<Group layer={<Paint opacity={opacity} />}>{tube}</Group>
+			<Group clip={bounds ?? inkBounds(path as SkPath, visibleReach(brush))}>
+				<Group layer={<Paint opacity={opacity} />}>{tube}</Group>
+			</Group>
 		) : (
 			tube
 		);
