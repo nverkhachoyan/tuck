@@ -24,6 +24,7 @@ import {
 } from "../../shell/ToolOptions";
 import { useColorTarget, useEditorContext } from "../editorContext";
 import {
+	clampOpacity,
 	PEN_SIZES,
 	type PenSettings,
 	type PenTipChoice,
@@ -189,7 +190,7 @@ function PenOpacitySlider({
 			valueText={`${Math.round(opacity * 100)}%`}
 			thumbColor={color}
 			track={fadeTo("right", color)}
-			onMove={(value) => move(value)}
+			onMove={(value) => move(clampOpacity(value))}
 			onEnd={end}
 			onStep={(step) => change(withPenOpacity(settings, saved + step * 0.05))}
 		/>

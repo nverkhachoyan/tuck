@@ -112,7 +112,14 @@ export function usePaintGesture({
 		if (straight.value || cancelled.value || aside.value) return;
 		generation.value += 1;
 		straight.value = true;
-		points.value = straightStroke(points.value);
+		// To the finger, which a smoothed line trails.
+		const line = points.value;
+		const away =
+			line.length >= 2 &&
+			(fingerX.value !== line[0] || fingerY.value !== line[1]);
+		points.value = away
+			? straightStroke([line[0], line[1], fingerX.value, fingerY.value])
+			: line;
 		if (tick) scheduleOnRN(hapticTick);
 	};
 
@@ -220,6 +227,8 @@ export function usePaintGesture({
 			if (event.numberOfPointers > 1) cancel();
 			if (cancelled.value || aside.value) return;
 			const [x, y] = toDocument(event.x, event.y);
+			fingerX.value = x;
+			fingerY.value = y;
 			if (straighten && !moved.value) {
 				moved.value = true;
 				if (shiftHeld?.value) markStraight();
@@ -229,8 +238,6 @@ export function usePaintGesture({
 				points.value = straightStroke([line[0], line[1], x, y]);
 				return;
 			}
-			fingerX.value = x;
-			fingerY.value = y;
 			followFinger(x, y);
 			if (straighten) restartStillness(event.x, event.y);
 		},
