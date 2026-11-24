@@ -196,6 +196,12 @@ describe("straightStroke", () => {
 		assert.deepEqual(straightStroke([0, 0, 40, 10, 100, 8]), [0, 0, 100, 0]);
 		assert.deepEqual(straightStroke([0, 0, -100, 4]), [0, 0, -100, 0]);
 		assert.deepEqual(straightStroke([0, 0, 100, 10]), [0, 0, 100, 10]);
+	});
+
+	test("snaps to upright within 5 degrees, up or down", () => {
+		assert.deepEqual(straightStroke([0, 0, 10, 40, 8, 100]), [0, 0, 0, 100]);
+		assert.deepEqual(straightStroke([0, 0, -4, -100]), [0, 0, 0, -100]);
+		assert.deepEqual(straightStroke([0, 0, 10, 100]), [0, 0, 10, 100]);
 		assert.deepEqual(straightStroke([0, 0, 0, 100]), [0, 0, 0, 100]);
 	});
 

@@ -219,12 +219,14 @@ export function nearLine(
 	return false;
 }
 
-// How close to horizontal a straightened stroke snaps flat, in radians.
-const LEVEL = (5 * Math.PI) / 180;
+// How close to level or upright a straightened stroke snaps to it, in
+// radians.
+const AXIS_SNAP = (5 * Math.PI) / 180;
 
 /**
- * A stroke as the straight line from its first point to its last.
- * Within 5° of level it is horizontal, through the first point.
+ * A stroke as the straight line from its first point to its last. Within 5°
+ * of level it is horizontal, and within 5° of upright vertical, through the
+ * first point.
  */
 export function straightStroke(points: number[]): number[] {
 	"worklet";
@@ -233,12 +235,11 @@ export function straightStroke(points: number[]): number[] {
 	const y0 = points[1];
 	const x1 = points[points.length - 2];
 	const y1 = points[points.length - 1];
-	const angle = Math.atan2(y1 - y0, x1 - x0);
-	const toLevel = Math.min(
-		Math.abs(angle),
-		Math.abs(Math.abs(angle) - Math.PI),
-	);
-	return [x0, y0, x1, toLevel <= LEVEL ? y0 : y1];
+	// 0 for level either way, a quarter turn for upright either way.
+	const tilt = Math.abs(Math.atan2(y1 - y0, x1 - x0));
+	if (Math.min(tilt, Math.PI - tilt) <= AXIS_SNAP) return [x0, y0, x1, y0];
+	if (Math.abs(tilt - Math.PI / 2) <= AXIS_SNAP) return [x0, y0, x0, y1];
+	return [x0, y0, x1, y1];
 }
 
 /**
