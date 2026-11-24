@@ -50,6 +50,19 @@ describe("shortcutFor", () => {
 		});
 	});
 
+	test("selects all with the modifier and A, without Shift", () => {
+		assert.deepEqual(shortcutFor(press("a", { metaKey: true })), {
+			type: "selectAll",
+		});
+		assert.deepEqual(shortcutFor(press("A", { ctrlKey: true })), {
+			type: "selectAll",
+		});
+		assert.equal(
+			shortcutFor(press("A", { metaKey: true, shiftKey: true })),
+			null,
+		);
+	});
+
 	test("duplicates and reorders with the modifier", () => {
 		assert.deepEqual(shortcutFor(press("d", { metaKey: true })), {
 			type: "duplicate",
@@ -236,5 +249,10 @@ describe("shortcutGroups", () => {
 			{ keys: "Enter", action: "Apply" },
 			{ keys: "Escape", action: "Cancel" },
 		]);
+		assert.ok(
+			items("Editing")?.some(
+				(item) => item.keys === "mod+A" && item.action === "Select all",
+			),
+		);
 	});
 });

@@ -640,11 +640,82 @@ describe("shortcutCommand", () => {
 	});
 
 	test("the selection keys act on a selection, and Enter only on one a tool edits", () => {
-		for (const key of [esc, remove, nudge]) {
+		const duplicate: Shortcut = { type: "duplicate" };
+		const reorder: Shortcut = { type: "reorder", step: 1 };
+		for (const key of [esc, remove, duplicate, reorder, nudge]) {
 			assert.equal(command(initialEditorMode, "layer", key), key);
 			assert.equal(command(initialEditorMode, "editable", key), key);
+			assert.equal(command(initialEditorMode, "many", key), key);
 		}
 		assert.equal(command(initialEditorMode, "layer", edit), null);
+		assert.equal(command(initialEditorMode, "many", edit), null);
 		assert.equal(command(initialEditorMode, "editable", edit), edit);
+	});
+
+	test("Select all runs in idle, puts down non-canceling tools, and ignores canceling tools", () => {
+		const selectAll: Shortcut = { type: "selectAll" };
+		assert.equal(command(initialEditorMode, null, selectAll), selectAll);
+		assert.equal(command(initialEditorMode, "layer", selectAll), selectAll);
+		assert.equal(command(initialEditorMode, "many", selectAll), selectAll);
+		for (const tool of ["pen", "shape", "eraser", "redact", "sticker"]) {
+			const open = run(initialEditorMode, {
+				type: "startTool",
+				start: { tool, layerId: null },
+			});
+			assert.deepEqual(command(open, null, selectAll), {
+				type: "putDownAndSelectAll",
+			});
+		}
+		for (const tool of ["crop", "cut", "find", "adjust"]) {
+			const open = run(initialEditorMode, {
+				type: "startTool",
+				start: { tool, layerId: "image" },
+			});
+			assert.equal(command(open, null, selectAll), null);
+		}
+		assert.equal(command(picking, null, selectAll), null);
+		assert.equal(command(listOpen, null, selectAll), "held");
+	});
+
+	test("a tool with keepsSelectionKeys keeps Delete, Duplicate, Reorder, Nudge, and Select all", () => {
+		const selectAll: Shortcut = { type: "selectAll" };
+		const duplicate: Shortcut = { type: "duplicate" };
+		const reorder: Shortcut = { type: "reorder", step: -1 };
+		const withSelect: ToolSpecs = {
+			...specs,
+			select: {
+				target: "none",
+				tray: false,
+				sized: false,
+				undoSteps: "each",
+				keepsSelectionKeys: true,
+				label: "Select",
+				icon: "selection-drag",
+				key: "V",
+				shortcut: "Select layers",
+				actsOn: () => false,
+			},
+		};
+		const open = editorModeReducer(
+			initialEditorMode,
+			{ type: "startTool", start: { tool: "select", layerId: null } },
+			withSelect,
+		);
+		assert.equal(shortcutCommand(open, null, selectAll, withSelect), selectAll);
+		assert.equal(
+			shortcutCommand(open, "many", selectAll, withSelect),
+			selectAll,
+		);
+		for (const key of [remove, duplicate, reorder, nudge]) {
+			assert.equal(shortcutCommand(open, "layer", key, withSelect), key);
+			assert.equal(shortcutCommand(open, "many", key, withSelect), key);
+			assert.equal(shortcutCommand(open, null, key, withSelect), null);
+		}
+		assert.deepEqual(shortcutCommand(open, "many", esc, withSelect), {
+			type: "putDownTool",
+		});
+		assert.deepEqual(shortcutCommand(open, "many", edit, withSelect), {
+			type: "doneWithTool",
+		});
 	});
 });

@@ -153,6 +153,7 @@ export function Editor({
 		nudgeSelectedLayers,
 		setLayerResizable,
 		selectLayer,
+		selectAll,
 		toggleLayerSelected,
 		undo,
 		redo,
@@ -344,11 +345,13 @@ export function Editor({
 		modeState,
 		selection: drawnSelected
 			? "drawn"
-			: selectedEditor
-				? "editable"
-				: selectedLayer
-					? "layer"
-					: null,
+			: selectedLayers.length > 1
+				? "many"
+				: selectedEditor
+					? "editable"
+					: selectedLayer
+						? "layer"
+						: null,
 		dispatchMode,
 		undo,
 		redo,
@@ -357,6 +360,7 @@ export function Editor({
 		done,
 		putDown: putDownTool,
 		startTool,
+		selectAll,
 		editSelected: () => {
 			if (selectedLayer) editLayer(selectedLayer);
 		},
