@@ -791,6 +791,11 @@ export function EditorCanvas({
 									live={live}
 									stroke={liveStroke}
 									outlinedLayer={outlinedLayer}
+									groupMembers={
+										selectionFrame.groupIds.length > 0
+											? movableLayers
+											: NO_LAYERS
+									}
 									adjusting={input.type === "dial" ? input.adjusting : null}
 									cuttingOutId={cuttingOutId}
 									dimExcept={tool?.type === "erase" ? tool.scope : null}

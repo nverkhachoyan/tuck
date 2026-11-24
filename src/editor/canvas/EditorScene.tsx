@@ -13,6 +13,7 @@ import type { LiveTransform } from "./liveTransform";
 import { type CanvasRegion, RegionOutline } from "./RegionOutline";
 import { type LiveStroke, NewLayerStroke, SceneLayer } from "./SceneLayer";
 import {
+	GroupMemberOutlines,
 	SelectionHandles,
 	SelectionOutline,
 	SnapGuides,
@@ -53,6 +54,8 @@ type EditorSceneProps = {
 	stroke: LiveStroke | null;
 	// Outlined without handles, as a tool's target: it holds still.
 	outlinedLayer: Layer | null;
+	// Each layer of a selection of several, outlined under the group's box.
+	groupMembers: readonly Layer[];
 	adjusting: LiveAdjustment | null;
 	// The image being cut, which shows its cut as a selection.
 	cuttingOutId: string | null;
@@ -89,6 +92,7 @@ export function EditorScene({
 	live,
 	stroke,
 	outlinedLayer,
+	groupMembers,
 	adjusting,
 	cuttingOutId,
 	dimExcept,
@@ -202,6 +206,13 @@ export function EditorScene({
 			<SnapGuides document={document} viewScale={viewScale} live={live} />
 			{outlinedLayer && (
 				<SelectionOutline layer={outlinedLayer} viewScale={viewScale} />
+			)}
+			{groupMembers.length > 0 && (
+				<GroupMemberOutlines
+					layers={groupMembers}
+					live={live}
+					viewScale={viewScale}
+				/>
 			)}
 			{selectedLayerId !== null && (
 				<SelectionHandles live={live} viewScale={viewScale} />
