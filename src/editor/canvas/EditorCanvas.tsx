@@ -28,9 +28,11 @@ import {
 	type Box,
 	type GroupTransformChange,
 	groupBounds,
+	normalizeAngle,
 	type Point,
 	type Rect,
 	type Transform,
+	transformAbout,
 } from "../document/geometry";
 import type { Layer } from "../layers/layer";
 import { cursorStyle } from "./canvasCursor";
@@ -370,6 +372,16 @@ export function EditorCanvas({
 	const isMarquee = isSelect && input.marquee === true;
 	const dragsSelection = rules.selection === "drags";
 
+	// The turn rotating a group gave its box, and the rotation each member
+	// came out with: the box stays turned while every member keeps that
+	// rotation (a move or scale after), and stands upright again once one
+	// doesn't (an undo, another edit) or the selection changes. A ref, so the
+	// box is turned in the same render the committed rotation lands in.
+	const groupTurn = useRef<{
+		rotation: number;
+		members: ReadonlyMap<string, number>;
+	} | null>(null);
+
 	const selectionFrame = useMemo((): {
 		id: string | null;
 		state: LiveLayerState | undefined;
@@ -390,11 +402,19 @@ export function EditorCanvas({
 				groupIds: NO_IDS,
 			};
 		}
+		const turn = groupTurn.current;
+		const turned =
+			turn !== null &&
+			turn.members.size === movableLayers.length &&
+			movableLayers.every(
+				(layer) => turn.members.get(layer.id) === layer.transform.rotation,
+			);
 		const bounds = groupBounds(
 			movableLayers.map((layer) => ({
 				transform: layer.transform,
 				box: layerBounds(layer),
 			})),
+			turned ? turn.rotation : 0,
 		);
 		return bounds
 			? {
@@ -579,8 +599,23 @@ export function EditorCanvas({
 		[onCommitTransform],
 	);
 	const handleCommitGroup = useCallback(
-		(change: GroupTransformChange) => onCommitGroupTransform?.(change),
-		[onCommitGroupTransform],
+		(change: GroupTransformChange) => {
+			if (change.rotation !== 0) {
+				groupTurn.current = {
+					rotation: normalizeAngle(
+						(selectionFrame.state?.transform.rotation ?? 0) + change.rotation,
+					),
+					members: new Map(
+						movableLayers.map((layer) => [
+							layer.id,
+							transformAbout(layer.transform, change).rotation,
+						]),
+					),
+				};
+			}
+			onCommitGroupTransform?.(change);
+		},
+		[movableLayers, onCommitGroupTransform, selectionFrame.state],
 	);
 	const handleResize = useCallback(
 		(id: string, transform: Transform, box: Box) =>

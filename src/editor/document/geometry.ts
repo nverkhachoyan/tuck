@@ -237,33 +237,43 @@ export function transformAbout(
 }
 
 /**
- * The smallest axis-aligned bounding box covering every item's rotated box,
- * as a transform centered on the box (scale 1, rotation 0) and its half size.
- * Null when `items` is empty.
+ * The smallest box covering every item's rotated box, turned by `rotation`
+ * (upright by default), as a transform centered on the box (scale 1) and its
+ * half size. Null when `items` is empty.
  */
 export function groupBounds(
 	items: readonly { transform: Transform; box: Box }[],
+	rotation = 0,
 ): { transform: Transform; box: Box } | null {
 	"worklet";
 	if (items.length === 0) return null;
+	const { cos, sin } = cosSin(rotation);
 	let minX = Number.POSITIVE_INFINITY;
 	let minY = Number.POSITIVE_INFINITY;
 	let maxX = Number.NEGATIVE_INFINITY;
 	let maxY = Number.NEGATIVE_INFINITY;
 	for (const { transform, box } of items) {
-		const { halfWidth, halfHeight } = boundingBox(transform, box);
-		minX = Math.min(minX, transform.x - halfWidth);
-		maxX = Math.max(maxX, transform.x + halfWidth);
-		minY = Math.min(minY, transform.y - halfHeight);
-		maxY = Math.max(maxY, transform.y + halfHeight);
+		// Each item measured in the frame turned by `rotation`.
+		const x = transform.x * cos + transform.y * sin;
+		const y = -transform.x * sin + transform.y * cos;
+		const { halfWidth, halfHeight } = boundingBox(
+			{ ...transform, rotation: transform.rotation - rotation },
+			box,
+		);
+		minX = Math.min(minX, x - halfWidth);
+		maxX = Math.max(maxX, x + halfWidth);
+		minY = Math.min(minY, y - halfHeight);
+		maxY = Math.max(maxY, y + halfHeight);
 	}
+	const centerX = (minX + maxX) / 2;
+	const centerY = (minY + maxY) / 2;
 	return {
 		transform: {
-			x: (minX + maxX) / 2,
-			y: (minY + maxY) / 2,
+			x: centerX * cos - centerY * sin,
+			y: centerX * sin + centerY * cos,
 			scaleX: 1,
 			scaleY: 1,
-			rotation: 0,
+			rotation,
 		},
 		box: {
 			halfWidth: (maxX - minX) / 2,

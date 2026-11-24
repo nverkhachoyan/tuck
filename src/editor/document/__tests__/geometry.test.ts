@@ -283,4 +283,40 @@ describe("groupBounds", () => {
 			box: { halfWidth: 70, halfHeight: 85 },
 		});
 	});
+
+	test("keeps a turned group's box as tight as it was upright", () => {
+		const items = [
+			{
+				transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+				box: { halfWidth: 20, halfHeight: 10 },
+			},
+			{
+				transform: { x: 200, y: 150, scaleX: 1, scaleY: 1, rotation: 0 },
+				box: { halfWidth: 10, halfHeight: 30 },
+			},
+		];
+		const upright = groupBounds(items);
+		assert.ok(upright);
+		const turn = Math.PI / 6;
+		const change = {
+			pivot: { x: upright.transform.x, y: upright.transform.y },
+			dx: 0,
+			dy: 0,
+			scale: 1,
+			rotation: turn,
+		};
+		const turned = groupBounds(
+			items.map((item) => ({
+				...item,
+				transform: transformAbout(item.transform, change),
+			})),
+			turn,
+		);
+		assert.ok(turned);
+		assert.ok(Math.abs(turned.transform.x - upright.transform.x) < 1e-9);
+		assert.ok(Math.abs(turned.transform.y - upright.transform.y) < 1e-9);
+		assert.equal(turned.transform.rotation, turn);
+		assert.ok(Math.abs(turned.box.halfWidth - upright.box.halfWidth) < 1e-9);
+		assert.ok(Math.abs(turned.box.halfHeight - upright.box.halfHeight) < 1e-9);
+	});
 });
