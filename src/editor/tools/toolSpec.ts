@@ -42,7 +42,7 @@ export type ToolId = string;
  *   in the document as it's made, and undo takes it back.
  * - `keepsSelectionKeys`: whether Delete, Duplicate, Reorder, Nudge, and
  *   Select all act on the selection while this tool is open without putting
- *   it down (Select).
+ *   it down, and Escape first deselects (Select).
  * - `action`: whether pressing it runs its definition's `run` on its target
  *   and opens no mode, as Remove BG does.
  * - `grouped`: other tools folded into this button's flyout on the toolbar,

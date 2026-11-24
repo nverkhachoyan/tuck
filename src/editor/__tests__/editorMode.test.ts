@@ -711,7 +711,9 @@ describe("shortcutCommand", () => {
 			assert.equal(shortcutCommand(open, "many", key, withSelect), key);
 			assert.equal(shortcutCommand(open, null, key, withSelect), null);
 		}
-		assert.deepEqual(shortcutCommand(open, "many", esc, withSelect), {
+		assert.equal(shortcutCommand(open, "many", esc, withSelect), esc);
+		assert.equal(shortcutCommand(open, "layer", esc, withSelect), esc);
+		assert.deepEqual(shortcutCommand(open, null, esc, withSelect), {
 			type: "putDownTool",
 		});
 		assert.deepEqual(shortcutCommand(open, "many", edit, withSelect), {

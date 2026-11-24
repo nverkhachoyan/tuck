@@ -228,7 +228,12 @@ export function shortcutCommand(
 	}
 	if (state.mode.type === "tool") {
 		const spec = specs[state.mode.tool];
-		if (shortcut.type === "deselect") return { type: "putDownTool" };
+		// Escape lets go of a selection the tool keeps before putting it down.
+		if (shortcut.type === "deselect") {
+			return spec?.keepsSelectionKeys && selection !== null
+				? shortcut
+				: { type: "putDownTool" };
+		}
 		if (shortcut.type === "edit") return { type: "doneWithTool" };
 		// [ and ] step a brush while a tool with one is open. A sub-tool with
 		// no size, like a box, leaves the size where it is.
