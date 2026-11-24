@@ -7,7 +7,7 @@ import {
 	findLayer,
 } from "../document/document.ts";
 import { reframe, setBackground } from "../document/documentEdits.ts";
-import type { Rect } from "../document/geometry.ts";
+import type { GroupTransformChange, Rect } from "../document/geometry.ts";
 import { createLayerId } from "../layers/base.ts";
 import type { Stroke } from "../layers/drawing/drawing.ts";
 import {
@@ -31,15 +31,21 @@ import {
 } from "../layers/image/imageEdits.ts";
 import { duplicateLayer, type Layer } from "../layers/layer.ts";
 import {
+	type ArrangeMove,
+	arrangeLayers,
 	deleteLayer,
 	deleteLayerGroup,
+	deleteLayers,
+	duplicateLayers,
 	moveLayer,
 	nudgeLayer,
+	nudgeLayers,
 	resizeBox,
 	setLayerFlag,
 	setLayerGroupFlag,
 	setLayerResizable,
 	transformLayer,
+	transformLayers,
 } from "../layers/layerEdits.ts";
 import type {
 	RedactionEffect,
@@ -276,7 +282,8 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 
 	// The document the last nudge produced. While it's still the current one,
 	// nothing else has changed since, so the next nudge joins its undo step.
-	let lastNudge: { document: EditorDocument; id: string } | null = null;
+	let lastNudge: { document: EditorDocument; ids: readonly string[] } | null =
+		null;
 
 	// By id, like `transformLayer`: text edited in place is committed to
 	// the layer it came from, whatever is selected by then.
@@ -451,6 +458,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		setBackground: edit("editor/setBackground", setBackground),
 		moveLayer: edit("editor/moveLayer", moveLayer),
 		deleteLayer: edit("editor/deleteLayer", deleteLayer),
+		deleteLayers: edit("editor/deleteLayers", deleteLayers),
 		deleteLayerGroup: edit("editor/deleteLayerGroup", deleteLayerGroup),
 		setLayerHidden: toggleFlag(
 			"editor/hideLayer",
@@ -511,6 +519,43 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			addOnTop("editor/duplicateSelectedLayer", duplicateLayer(layer));
 		},
 
+		deleteSelectedLayers: () => {
+			const { selectedLayerIds } = get();
+			if (selectedLayerIds.length === 0) return;
+			setDocument(
+				"editor/deleteSelectedLayers",
+				(document) => deleteLayers(document, selectedLayerIds),
+				NO_IDS,
+			);
+		},
+
+		duplicateSelectedLayers: () => {
+			const { document, selectedLayerIds } = get();
+			if (!document || selectedLayerIds.length === 0) return;
+			const { document: next, copyIds } = duplicateLayers(
+				document,
+				selectedLayerIds,
+			);
+			if (next === document) return;
+			setDocument("editor/duplicateSelectedLayers", () => next, copyIds);
+		},
+
+		arrangeSelectedLayers: (move: ArrangeMove) => {
+			const { selectedLayerIds } = get();
+			if (selectedLayerIds.length === 0) return;
+			setDocument("editor/arrangeSelectedLayers", (document) =>
+				arrangeLayers(document, selectedLayerIds, move),
+			);
+		},
+
+		transformSelectedLayers: (change: GroupTransformChange) => {
+			const { selectedLayerIds } = get();
+			if (selectedLayerIds.length === 0) return;
+			setDocument("editor/transformSelectedLayers", (document) =>
+				transformLayers(document, selectedLayerIds, change),
+			);
+		},
+
 		// Joins the mark `joinId` (see `continuesMark`) or starts one on top.
 		// The mark it lands in is selected, so Pen can ask about it next.
 		drawStroke: (
@@ -564,12 +609,34 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			if (!document) return;
 			const next = nudgeLayer(document, id, dx, dy);
 			if (next === document) return;
-			if (lastNudge?.document === document && lastNudge.id === id) {
+			const ids = [id];
+			if (lastNudge?.document === document && sameIds(lastNudge.ids, ids)) {
 				set({ document: next, future: [] }, false, "editor/nudgeLayer");
 			} else {
 				setDocument("editor/nudgeLayer", () => next);
 			}
-			lastNudge = { document: next, id };
+			lastNudge = { document: next, ids };
+		},
+
+		// A run of nudges to the same selection is a single undo step.
+		nudgeSelectedLayers: (dx: number, dy: number) => {
+			const { document, selectedLayerIds } = get();
+			if (!document || selectedLayerIds.length === 0) return;
+			const next = nudgeLayers(document, selectedLayerIds, dx, dy);
+			if (next === document) return;
+			if (
+				lastNudge?.document === document &&
+				sameIds(lastNudge.ids, selectedLayerIds)
+			) {
+				set(
+					{ document: next, future: [] },
+					false,
+					"editor/nudgeSelectedLayers",
+				);
+			} else {
+				setDocument("editor/nudgeSelectedLayers", () => next);
+			}
+			lastNudge = { document: next, ids: selectedLayerIds };
 		},
 
 		selectLayer: (id: string | null) => {

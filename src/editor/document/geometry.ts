@@ -202,6 +202,40 @@ export function applyMatrix(m: Matrix, point: Point): Point {
 	};
 }
 
+export type GroupTransformChange = {
+	pivot: Point;
+	dx: number;
+	dy: number;
+	scale: number;
+	rotation: number;
+};
+
+/**
+ * Applies a group's live or committed change to one member's transform: its
+ * center scales and rotates about `pivot`, then moves by `(dx, dy)`; its
+ * scale multiplies by `scale` and its rotation adds `rotation`.
+ */
+export function transformAbout(
+	transform: Transform,
+	{ pivot, dx, dy, scale, rotation }: GroupTransformChange,
+): Transform {
+	"worklet";
+	if (dx === 0 && dy === 0 && scale === 1 && rotation === 0) return transform;
+	const { cos, sin } = cosSin(rotation);
+	const rx = (transform.x - pivot.x) * scale;
+	const ry = (transform.y - pivot.y) * scale;
+	return {
+		x: pivot.x + rx * cos - ry * sin + dx,
+		y: pivot.y + rx * sin + ry * cos + dy,
+		scaleX: transform.scaleX * scale,
+		scaleY: transform.scaleY * scale,
+		rotation:
+			rotation === 0
+				? transform.rotation
+				: normalizeAngle(transform.rotation + rotation),
+	};
+}
+
 export function transformsEqual(left: Transform, right: Transform): boolean {
 	"worklet";
 	return (

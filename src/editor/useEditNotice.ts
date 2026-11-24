@@ -30,6 +30,7 @@ export function useEditNotice(document: EditorDocument) {
 	const {
 		undo,
 		deleteLayer,
+		deleteLayers,
 		deleteLayerGroup,
 		beginToolSession,
 		commitToolSession,
@@ -79,6 +80,17 @@ export function useEditNotice(document: EditorDocument) {
 			const layer = document.layers.find((candidate) => candidate.id === id);
 			if (!layer) return;
 			deleted(`${layerKindName(layer)} deleted`, () => deleteLayer(id));
+		},
+		deleteLayers: (ids: readonly string[]) => {
+			if (ids.length === 0) return;
+			const selected = new Set(ids);
+			const targets = document.layers.filter((layer) => selected.has(layer.id));
+			if (targets.length === 0) return;
+			const message =
+				targets.length === 1
+					? `${layerKindName(targets[0])} deleted`
+					: `${targets.length} layers deleted`;
+			deleted(message, () => deleteLayers(targets.map((layer) => layer.id)));
 		},
 		deleteGroup: (id: string) => {
 			const group = document.groups?.find((candidate) => candidate.id === id);

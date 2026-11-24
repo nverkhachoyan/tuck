@@ -1362,5 +1362,112 @@ describe("editorSlice", () => {
 			actions.moveLayer(a.id, 2);
 			assert.deepEqual(store.getState().selectedLayerIds, [b.id, a.id]);
 		});
+
+		test("deleteSelectedLayers removes all selected in one step and undo restores them selected", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("B");
+			actions.addTextLayer("C");
+			const [, b, c] = textLayers(store);
+			actions.selectLayers([a.id, c.id]);
+			const steps = store.getState().past.length;
+
+			actions.deleteSelectedLayers();
+			assert.deepEqual(
+				textLayers(store).map((layer) => layer.id),
+				[b.id],
+			);
+			assert.deepEqual(store.getState().selectedLayerIds, []);
+			assert.equal(store.getState().past.length, steps + 1);
+
+			actions.undo();
+			assert.deepEqual(
+				textLayers(store).map((layer) => layer.id),
+				[a.id, b.id, c.id],
+			);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, c.id]);
+		});
+
+		test("duplicateSelectedLayers copies all selected on top in one step and selects copies", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("B");
+			const [, b] = textLayers(store);
+			actions.selectLayers([a.id, b.id]);
+			const steps = store.getState().past.length;
+
+			actions.duplicateSelectedLayers();
+			const texts = textLayers(store);
+			assert.equal(texts.length, 4);
+			assert.deepEqual(store.getState().selectedLayerIds, [
+				texts[2].id,
+				texts[3].id,
+			]);
+			assert.equal(store.getState().past.length, steps + 1);
+
+			actions.undo();
+			assert.equal(textLayers(store).length, 2);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, b.id]);
+		});
+
+		test("arrangeSelectedLayers reorders the group in one step", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("B");
+			actions.addTextLayer("C");
+			const [, b, c] = textLayers(store);
+			actions.selectLayers([a.id, b.id]);
+			const steps = store.getState().past.length;
+
+			actions.arrangeSelectedLayers("front");
+			assert.deepEqual(
+				textLayers(store).map((layer) => layer.id),
+				[c.id, a.id, b.id],
+			);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, b.id]);
+			assert.equal(store.getState().past.length, steps + 1);
+		});
+
+		test("nudgeSelectedLayers coalesces a run of nudges into one undo step", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("B");
+			const [, b] = textLayers(store);
+			actions.selectLayers([a.id, b.id]);
+			const before = store.getState().document;
+			const steps = store.getState().past.length;
+
+			for (let i = 0; i < 4; i++) actions.nudgeSelectedLayers(3, -2);
+			assert.equal(store.getState().past.length, steps + 1);
+			const [afterA, afterB] = textLayers(store);
+			assert.equal(afterA.transform.x, a.transform.x + 12);
+			assert.equal(afterB.transform.y, b.transform.y - 8);
+
+			actions.undo();
+			assert.equal(store.getState().document, before);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, b.id]);
+		});
+
+		test("transformSelectedLayers updates all selected in one step", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("B");
+			const [, b] = textLayers(store);
+			actions.selectLayers([a.id, b.id]);
+			const steps = store.getState().past.length;
+
+			actions.transformSelectedLayers({
+				pivot: { x: a.transform.x, y: a.transform.y },
+				dx: 50,
+				dy: -25,
+				scale: 1.5,
+				rotation: 0,
+			});
+			assert.equal(store.getState().past.length, steps + 1);
+			const [afterA, afterB] = textLayers(store);
+			assert.equal(afterA.transform.x, a.transform.x + 50);
+			assert.equal(afterA.transform.scaleX, 1.5);
+			assert.equal(afterB.transform.scaleY, 1.5);
+		});
 	});
 });

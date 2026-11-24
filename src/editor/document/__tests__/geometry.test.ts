@@ -13,6 +13,7 @@ import {
 	type Transform,
 	toDocumentSpace,
 	toLayerSpace,
+	transformAbout,
 	transformMatrix,
 	transformsEqual,
 } from "../geometry.ts";
@@ -189,5 +190,64 @@ describe("transformMatrix", () => {
 		const back = applyMatrix(invertMatrix(both), once);
 		near(back.x, point.x);
 		near(back.y, point.y);
+	});
+});
+
+describe("transformAbout", () => {
+	const base: Transform = {
+		x: 110,
+		y: 100,
+		scaleX: 1.5,
+		scaleY: 2,
+		rotation: 0.25,
+	};
+
+	test("returns the same transform on a no-op change", () => {
+		const same = transformAbout(base, {
+			pivot: { x: 100, y: 100 },
+			dx: 0,
+			dy: 0,
+			scale: 1,
+			rotation: 0,
+		});
+		assert.equal(same, base);
+	});
+
+	test("scales and rotates a layer's center about pivot, then translates", () => {
+		const next = transformAbout(
+			{ x: 110, y: 100, scaleX: 1.5, scaleY: 2, rotation: 0 },
+			{
+				pivot: { x: 100, y: 100 },
+				dx: 5,
+				dy: -3,
+				scale: 2,
+				rotation: Math.PI / 2,
+			},
+		);
+		// Offset (10, 0) scaled by 2 -> (20, 0), rotated +90° -> (0, 20), + pivot (100, 100) + (5, -3) = (105, 117)
+		near(next.x, 105);
+		near(next.y, 117);
+		near(next.scaleX, 3);
+		near(next.scaleY, 4);
+		near(next.rotation, Math.PI / 2);
+	});
+
+	test("agrees with transforming any local point about the pivot", () => {
+		const change = {
+			pivot: { x: 80, y: 120 },
+			dx: 14,
+			dy: -9,
+			scale: 1.4,
+			rotation: -0.6,
+		};
+		const next = transformAbout(base, change);
+		const local = { x: 17, y: -23 };
+		const after = toDocumentSpace(next, local);
+		const before = toDocumentSpace(base, local);
+		const { cos, sin } = cosSin(change.rotation);
+		const rx = (before.x - change.pivot.x) * change.scale;
+		const ry = (before.y - change.pivot.y) * change.scale;
+		near(after.x, change.pivot.x + rx * cos - ry * sin + change.dx);
+		near(after.y, change.pivot.y + rx * sin + ry * cos + change.dy);
 	});
 });
