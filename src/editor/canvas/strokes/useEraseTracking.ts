@@ -23,6 +23,7 @@ import { HIT_PADDING_PX, type LayerTarget } from "../hitTest";
 import { shareOnce } from "../layerTargets";
 import { type DocumentViewport, viewPointToDocument } from "../viewport";
 import type { HoveredStroke, LiveStroke } from "./strokeTypes";
+import { noted, useFreeReplaced, usePathsBuilt } from "./useFreeReplaced";
 
 /** Where a mouse hovers over the canvas, in view points, while `shown`. */
 export type CanvasHover = {
@@ -281,10 +282,12 @@ export function useEraseTracking({
 	// the stroke lands: emptying it would redraw the canvas before the canvas
 	// has the document that erases the same ink, and each drawing drops the
 	// line itself, in a render (`ErasedDrawing`).
+	const built = usePathsBuilt();
 	const erasePath = useDerivedValue(
-		() => strokePath(erasing ? strokePoints.value : []),
+		() => noted(built, strokePath(erasing ? strokePoints.value : [])),
 		[erasing],
 	);
+	useFreeReplaced(built, erasePath);
 
 	const fields = useMemo<
 		Pick<

@@ -2,12 +2,15 @@ import {
 	type ComponentProps,
 	Fragment,
 	type ReactNode,
+	useEffect,
 	useLayoutEffect,
+	useMemo,
 } from "react";
 import {
 	BlendMode,
 	BlurMask,
 	BlurStyle,
+	CornerPathEffect,
 	Group,
 	Paint,
 	PaintStyle,
@@ -16,7 +19,9 @@ import {
 	type SkCanvas,
 	Skia,
 	type SkPath,
+	type SkPathBuilder,
 	type SkPicture,
+	type SkRect,
 	StrokeCap,
 	StrokeJoin,
 } from "react-native-skia";
@@ -30,12 +35,15 @@ import {
 	NEON_GLOW,
 	NEON_GLOW_BLUR,
 	needsOwnLayer,
+	type PenBrush,
+	ROUNDED_END,
 	type Stroke,
+	strokeEnds,
+	strokeOpacity,
+	visibleReach,
 } from "./drawing";
 import { createPictureCache } from "./drawingPictures";
 
-// A marker's ink is see-through, so what it highlights shows through it.
-const MARKER_OPACITY = 0.45;
 // A neon stroke's parts, as shares of its width: a blurred glow
 // (`NEON_GLOW`, with `NEON_GLOW_BLUR` its sigma, so it scales with the
 // stroke and fades out about where the width ends), the tube over it, and
@@ -43,6 +51,15 @@ const MARKER_OPACITY = 0.45;
 const NEON_TUBE = 0.2;
 const NEON_CORE = 0.08;
 const NEON_CORE_WHITE = 0.75;
+
+// The path a builder made, with the builder freed: `build` copies it, and
+// on web nothing but `dispose` frees the builder. A worklet, as strokePath.
+function built(builder: SkPathBuilder): SkPath {
+	"worklet";
+	const path = builder.build();
+	builder.dispose();
+	return path;
+}
 
 /**
  * A smooth line through flattened x, y pairs: curves through the midpoints
@@ -54,7 +71,7 @@ export function strokePath(points: number[]): SkPath {
 	"worklet";
 	const builder = Skia.PathBuilder.Make();
 	const count = points.length / 2;
-	if (count === 0) return builder.build();
+	if (count === 0) return built(builder);
 	builder.moveTo(points[0], points[1]);
 	for (let i = 1; i < count - 1; i++) {
 		const x = points[i * 2];
@@ -67,7 +84,7 @@ export function strokePath(points: number[]): SkPath {
 		);
 	}
 	builder.lineTo(points[count * 2 - 2], points[count * 2 - 1]);
-	return builder.build();
+	return built(builder);
 }
 
 // A stroke's path never changes, and the editor and export draw the same
@@ -83,10 +100,49 @@ export function pathFor(stroke: MaskStroke): SkPath {
 	return path;
 }
 
+/**
+ * The outline a square-ended line of `width` covers, to fill with a corner
+ * effect that rounds its ends' corners (`ROUNDED_END`): Skia's strokes end
+ * only butt, round, or square. Null if Skia can't stroke it. A worklet, for
+ * a stroke still being drawn.
+ */
+export function roundedEndsOutline(path: SkPath, width: number): SkPath | null {
+	"worklet";
+	return Skia.Path.Stroke(path, {
+		width,
+		cap: StrokeCap.Square,
+		join: StrokeJoin.Round,
+	});
+}
+
+/**
+ * The box `path`'s ink fills, reaching `reach` past its line, to bound a
+ * layer saved around one stroke: unbounded, it's the whole canvas, every
+ * frame. A worklet, for a stroke still being drawn.
+ */
+export function inkBounds(path: SkPath, reach: number): SkRect {
+	"worklet";
+	const box = path.computeTightBounds();
+	return Skia.XYWHRect(
+		box.x - reach,
+		box.y - reach,
+		box.width + reach * 2,
+		box.height + reach * 2,
+	);
+}
+
+// What a pen stroke's paint fades to: a highlighter that multiplies draws
+// at full strength, since the blend shows what's under it.
+function inkOpacity(brush: PenBrush, full: boolean): number {
+	return full && brush.tip === "marker" ? 1 : strokeOpacity(brush);
+}
+
 function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	const path = pathFor(stroke);
 	if (stroke.type === "pen" && stroke.tip === "neon") {
 		const { color, width } = stroke;
+		const opacity = strokeOpacity(stroke);
+		const fade = opacity < 1 ? Skia.Paint() : null;
 		const glowPaint = Skia.Paint();
 		const tubePaint = Skia.Paint();
 		const corePaint = Skia.Paint();
@@ -98,6 +154,11 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 			true,
 		);
 		try {
+			// Faded as a whole, so the glow doesn't show through the tube.
+			if (fade) {
+				fade.setAlphaf(opacity);
+				canvas.saveLayer(fade, inkBounds(path, visibleReach(stroke)));
+			}
 			glowPaint.setAntiAlias(true);
 			glowPaint.setStyle(PaintStyle.Stroke);
 			glowPaint.setStrokeCap(StrokeCap.Round);
@@ -124,7 +185,9 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 				Skia.Color(mixColors(color, "#FFFFFF", NEON_CORE_WHITE)),
 			);
 			canvas.drawPath(path, corePaint);
+			if (fade) canvas.restore();
 		} finally {
+			fade?.dispose();
 			glowPaint.dispose();
 			tubePaint.dispose();
 			corePaint.dispose();
@@ -134,6 +197,13 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 	}
 
 	const paint = Skia.Paint();
+	const ends = stroke.type === "pen" ? strokeEnds(stroke) : "round";
+	// The picture copies the outline as it records, so it's freed right after.
+	const outline =
+		ends === "rounded" ? roundedEndsOutline(path, stroke.width) : null;
+	const corner = outline
+		? Skia.PathEffect.MakeCorner(stroke.width * ROUNDED_END)
+		: null;
 	try {
 		paint.setAntiAlias(true);
 		paint.setStyle(PaintStyle.Stroke);
@@ -144,17 +214,22 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 			paint.setColor(Skia.Color("black"));
 			paint.setBlendMode(BlendMode.Clear);
 		} else {
-			const marker = stroke.tip === "marker" || stroke.tip === "ink";
-			paint.setStrokeCap(marker ? StrokeCap.Square : StrokeCap.Round);
+			paint.setStrokeCap(ends === "round" ? StrokeCap.Round : StrokeCap.Square);
 			paint.setStrokeWidth(stroke.width);
 			paint.setColor(Skia.Color(stroke.color));
-			const opacity =
-				marker && !(full && stroke.tip === "marker") ? MARKER_OPACITY : 1;
-			paint.setAlphaf(opacity);
+			paint.setAlphaf(inkOpacity(stroke, full));
 		}
-		canvas.drawPath(path, paint);
+		if (outline && corner) {
+			paint.setStyle(PaintStyle.Fill);
+			paint.setPathEffect(corner);
+			canvas.drawPath(outline, paint);
+		} else {
+			canvas.drawPath(path, paint);
+		}
 	} finally {
 		paint.dispose();
+		corner?.dispose();
+		outline?.dispose();
 	}
 }
 
@@ -162,6 +237,40 @@ function drawStroke(canvas: SkCanvas, stroke: Stroke, full: boolean) {
 // before an update for a frame, and a timer can fire before that frame.
 function afterSkiaDraws(free: () => void) {
 	requestAnimationFrame(() => requestAnimationFrame(free));
+}
+
+// The outlines views hold, each with its holders and its latest release. On
+// web nothing but `dispose` frees a path, so the last holder's release frees
+// it once the canvas stops drawing it, unless it's held again by then
+// (docs/GOTCHAS.md, "A delayed free can belong to an earlier release").
+const heldOutlines = new Map<SkPath, { holders: number; release: number }>();
+let releases = 0;
+
+function holdOutline(outline: SkPath): () => void {
+	const entry = heldOutlines.get(outline) ?? { holders: 0, release: 0 };
+	entry.holders += 1;
+	heldOutlines.set(outline, entry);
+	return () => {
+		entry.holders -= 1;
+		const mine = ++releases;
+		entry.release = mine;
+		afterSkiaDraws(() => {
+			if (entry.holders > 0 || entry.release !== mine) return;
+			heldOutlines.delete(outline);
+			outline.dispose();
+		});
+	};
+}
+
+// A settled stroke's rounded-ends outline, held while it's drawn. None for
+// `path` null, a stroke still being drawn, whose outline its caller builds.
+function useSettledOutline(path: SkPath | null, width: number) {
+	const outline = useMemo(
+		() => (path ? roundedEndsOutline(path, width) : null),
+		[path, width],
+	);
+	useEffect(() => (outline ? holdOutline(outline) : undefined), [outline]);
+	return outline;
 }
 
 const drawingPictures = createPictureCache<SkPicture>(afterSkiaDraws);
@@ -308,23 +417,36 @@ export function DrawingLayerView({
 	);
 }
 
+type PathProp = ComponentProps<typeof Path>["path"];
+
 /**
- * A stroke's line as its brush paints it: a pen with its tip, or an eraser,
- * which clears. `path` can be a shared value, for a stroke still growing.
+ * A stroke's line as its brush paints it: a pen with its tip, ends, and
+ * opacity, or an eraser, which clears.
+ * - `path` can be a shared value, for a stroke still growing.
+ * - `outline` is that stroke's `roundedEndsOutline`, for rounded ends,
+ *   built where the shared value is (this file can't use Reanimated: the
+ *   docs draw it without). A settled `path`'s is built here.
+ * - `bounds` is that stroke's `inkBounds`, for a faded neon stroke's
+ *   layer, built likewise. A settled `path`'s is built here.
  */
 export function BrushStroke({
 	path,
+	outline,
+	bounds,
 	brush,
 	full = false,
 }: {
-	path: ComponentProps<typeof Path>["path"];
+	path: PathProp;
+	outline?: PathProp;
+	bounds?: ComponentProps<typeof Group>["clip"];
 	brush: Brush;
 	// Draw a highlighter at full strength. The layer around it multiplies.
 	full?: boolean;
 }) {
 	if (brush.type === "pen" && brush.tip === "neon") {
 		const { color, width } = brush;
-		return (
+		const opacity = strokeOpacity(brush);
+		const tube = (
 			<>
 				<Path
 					path={path}
@@ -348,8 +470,55 @@ export function BrushStroke({
 				/>
 			</>
 		);
+		// Faded as a whole, so the glow doesn't show through the tube. The
+		// clip around it bounds the layer it saves.
+		return opacity < 1 ? (
+			<Group clip={bounds ?? inkBounds(path as SkPath, visibleReach(brush))}>
+				<Group layer={<Paint opacity={opacity} />}>{tube}</Group>
+			</Group>
+		) : (
+			tube
+		);
+	}
+	if (brush.type === "pen" && strokeEnds(brush) === "rounded") {
+		return (
+			<RoundedEnds
+				settled={outline ? null : (path as SkPath)}
+				outline={outline}
+				brush={brush}
+				full={full}
+			/>
+		);
 	}
 	return <Path path={path} {...brushPaint(brush, full)} />;
+}
+
+// A stroke with rounded ends: `outline` built for one still being drawn, or
+// one built here for a `settled` stroke's path.
+function RoundedEnds({
+	settled,
+	outline,
+	brush,
+	full,
+}: {
+	settled: SkPath | null;
+	outline?: PathProp;
+	brush: PenBrush;
+	full: boolean;
+}) {
+	const own = useSettledOutline(settled, brush.width);
+	const drawn = outline ?? own;
+	if (!drawn) return null;
+	return (
+		<Path
+			path={drawn}
+			style="fill"
+			color={brush.color}
+			opacity={inkOpacity(brush, full)}
+		>
+			<CornerPathEffect r={brush.width * ROUNDED_END} />
+		</Path>
+	);
 }
 
 const ROUND_STROKE = {
@@ -358,8 +527,9 @@ const ROUND_STROKE = {
 	strokeJoin: "round",
 } as const;
 
-// Round ends, but a marker's are square, like a highlighter's chisel tip.
-// One path per stroke, so a marker crossing itself doesn't darken.
+// Round ends, but a marker's are square unless chosen otherwise, like a
+// highlighter's chisel tip. One path per stroke, so ink crossing itself
+// doesn't darken.
 function brushPaint(brush: Brush, full: boolean) {
 	if (brush.type === "eraser") {
 		return {
@@ -369,15 +539,14 @@ function brushPaint(brush: Brush, full: boolean) {
 			blendMode: "clear",
 		} as const;
 	}
-	const marker = brush.tip === "marker" || brush.tip === "ink";
 	return {
 		...ROUND_STROKE,
 		strokeWidth: brush.width,
-		strokeCap: marker ? "square" : "round",
+		strokeCap: strokeEnds(brush) === "square" ? "square" : "round",
 		color: brush.color,
 		// A multiplying highlighter is see-through because of the blend.
-		// The marker tip, and a highlighter saved before it multiplied, stay
-		// at the ink's own opacity.
-		opacity: marker && !(full && brush.tip === "marker") ? MARKER_OPACITY : 1,
+		// Other ink, and a highlighter saved before it multiplied, keep their
+		// own opacity.
+		opacity: inkOpacity(brush, full),
 	} as const;
 }

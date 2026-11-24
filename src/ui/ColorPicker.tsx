@@ -7,6 +7,7 @@ import {
 	StyleSheet,
 	TextInput,
 	View,
+	type ViewProps,
 	type ViewStyle,
 } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
@@ -50,8 +51,8 @@ export function ColorPicker({
 		end,
 	);
 
-	const adjustHue = (event: AccessibilityActionEvent) =>
-		nudge({ ...hsv, hue: clampHue(hsv.hue + stepOf(event) * HUE_STEP) });
+	const adjustHue = (step: 1 | -1) =>
+		nudge({ ...hsv, hue: clampHue(hsv.hue + step * HUE_STEP) });
 	const pickTyped = (hex: string) => {
 		const next = hexToHsv(hex, hsv.hue);
 		if (!next) return;
@@ -101,8 +102,7 @@ export function ColorPicker({
 					onEnd={end}
 					accessibilityLabel="Hue"
 					accessibilityValue={{ min: 0, max: 360, now: Math.round(hsv.hue) }}
-					accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-					onAccessibilityAction={adjustHue}
+					onStep={adjustHue}
 					style={styles.grow}
 				/>
 				{Platform.OS === "web" && <HexField color={color} onPick={pickTyped} />}
@@ -124,14 +124,27 @@ export type ColorSliderBarProps = {
 		now?: number;
 		text?: string;
 	};
-	accessibilityActions?: { name: "increment" | "decrement" }[];
-	onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
+	onStep?: (step: 1 | -1) => void;
 	style?: StyleProp<ViewStyle>;
 };
 
+type WebKeyDownEvent = {
+	nativeEvent: { key: string };
+	preventDefault: () => void;
+	stopPropagation: () => void;
+};
+
+const STEP_ACTIONS = [{ name: "increment" }, { name: "decrement" }] as const;
+
+// How far from the thumb's middle a touch takes hold of it, in pixels.
+const THUMB_GRAB = THUMB / 2 + 8;
+
 /**
- * 1D slider bar for hue or tone picking.
- * Uses normalized drag gesture and places a circular thumb along the track.
+ * 1D slider bar for hue, tone, or a tool's value, with a circular thumb.
+ * - A touch on the thumb drags it from where it is, so a tap or a drag
+ *   back to where it began leaves the value as it was; a touch elsewhere
+ *   on the track jumps there.
+ * - `onStep` steps it from screen readers and, on web, the arrow keys.
  */
 export function ColorSliderBar({
 	value,
@@ -141,11 +154,40 @@ export function ColorSliderBar({
 	onEnd,
 	accessibilityLabel,
 	accessibilityValue,
-	accessibilityActions,
-	onAccessibilityAction,
+	onStep,
 	style,
 }: ColorSliderBarProps) {
-	const drag = useNormalizedDrag((x) => onMove(x), onEnd);
+	// Where a drag that took hold of the thumb began: its value, and the touch.
+	const grab = useRef<{ from: number; at: number } | null>(null);
+	const drag = useNormalizedDrag(
+		(x, _y, rawX) => {
+			const held = grab.current;
+			if (held) {
+				onMove(Math.min(1, Math.max(0, held.from + (rawX - held.at))));
+				return;
+			}
+			const onThumb =
+				Math.abs(rawX - value) * drag.size.current.width <= THUMB_GRAB;
+			grab.current = onThumb ? { from: value, at: rawX } : { from: x, at: x };
+			if (!onThumb) onMove(x);
+		},
+		() => {
+			grab.current = null;
+			onEnd?.();
+		},
+	);
+	const handleKeyDown = (event: WebKeyDownEvent) => {
+		const { key } = event.nativeEvent;
+		if (key === "ArrowRight" || key === "ArrowUp") onStep?.(1);
+		else if (key === "ArrowLeft" || key === "ArrowDown") onStep?.(-1);
+		else return;
+		event.preventDefault();
+		event.stopPropagation();
+	};
+	const webKeyProps =
+		Platform.OS === "web" && onStep
+			? ({ focusable: true, onKeyDown: handleKeyDown } as unknown as ViewProps)
+			: undefined;
 	return (
 		<GestureDetector gesture={drag.gesture}>
 			<View
@@ -153,9 +195,16 @@ export function ColorSliderBar({
 				accessible
 				accessibilityRole="adjustable"
 				accessibilityLabel={accessibilityLabel}
-				accessibilityValue={accessibilityValue}
-				accessibilityActions={accessibilityActions}
-				onAccessibilityAction={onAccessibilityAction}
+				// React Native Web drops `accessibilityValue`; both read these.
+				aria-valuemin={accessibilityValue?.min}
+				aria-valuemax={accessibilityValue?.max}
+				aria-valuenow={accessibilityValue?.now}
+				aria-valuetext={accessibilityValue?.text}
+				accessibilityActions={onStep ? STEP_ACTIONS : undefined}
+				onAccessibilityAction={
+					onStep ? (event) => onStep(stepOf(event)) : undefined
+				}
+				{...webKeyProps}
 				style={[styles.bar, background, style]}
 			>
 				<View
@@ -242,8 +291,8 @@ export function useHsvColor(
 	return { hsv, latest, change, end, nudge };
 }
 
-/** +1 for an increment accessibility action, -1 for a decrement. */
-export function stepOf(event: AccessibilityActionEvent): 1 | -1 {
+// +1 for an increment accessibility action, -1 for a decrement.
+function stepOf(event: AccessibilityActionEvent): 1 | -1 {
 	return event.nativeEvent.actionName === "increment" ? 1 : -1;
 }
 
@@ -253,11 +302,12 @@ export function clampHue(hue: number): number {
 }
 
 /**
- * Reports finger location across a view from (0, 0) to (1, 1).
+ * Reports finger location across a view from (0, 0) to (1, 1), then the
+ * same unclamped, for a drag measured from where it began.
  * Runs on the JS thread and commits on pan finalize.
  */
 export function useNormalizedDrag(
-	onMove: (x: number, y: number) => void,
+	onMove: (x: number, y: number, rawX: number, rawY: number) => void,
 	onEnd?: () => void,
 ) {
 	const size = useRef({ width: 1, height: 1 });
@@ -268,6 +318,8 @@ export function useNormalizedDrag(
 		handlers.current.onMove(
 			Math.min(1, Math.max(0, x / width)),
 			Math.min(1, Math.max(0, y / height)),
+			x / width,
+			y / height,
 		);
 	};
 	// On iOS a pan only activates once the finger moves, but a tap still
@@ -283,7 +335,7 @@ export function useNormalizedDrag(
 		const { width, height } = event.nativeEvent.layout;
 		size.current = { width: Math.max(1, width), height: Math.max(1, height) };
 	};
-	return { gesture, onLayout };
+	return { gesture, onLayout, size };
 }
 
 const styles = StyleSheet.create({

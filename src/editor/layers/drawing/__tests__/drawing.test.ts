@@ -6,10 +6,17 @@ import {
 	inkRect,
 	isDrawingLayer,
 	layerBlend,
+	MARKER_OPACITY,
+	MIN_OPACITY,
 	markStyle,
 	needsOwnLayer,
+	penBrush,
 	pruneErased,
+	ROUNDED_END,
 	type Stroke,
+	strokeEnds,
+	strokeOpacity,
+	tipOpacity,
 	visibleReach,
 } from "../drawing.ts";
 
@@ -145,4 +152,85 @@ test("a mark's style is its last pen stroke's", () => {
 		tip: "neon",
 	});
 	assert.equal(markStyle({ ...layer, strokes: [] }), null);
+});
+
+test("a highlighter's or marker's ends are square unless saved otherwise", () => {
+	assert.equal(strokeEnds({ ...pen, tip: "marker" }), "square");
+	assert.equal(strokeEnds({ ...pen, tip: "ink", ends: "rounded" }), "rounded");
+	assert.equal(
+		strokeEnds({ ...pen, tip: "ink", ends: "chisel" as never }),
+		"square",
+	);
+	assert.equal(strokeEnds({ ...pen, ends: "square" }), "round");
+});
+
+test("ink opacity is the tip's own unless saved, and never the highlighter's", () => {
+	assert.equal(strokeOpacity(pen), 1);
+	assert.equal(strokeOpacity({ ...pen, tip: "ink" }), 0.45);
+	assert.equal(strokeOpacity({ ...pen, opacity: 0.3 }), 0.3);
+	assert.equal(strokeOpacity({ ...pen, opacity: -2 }), MIN_OPACITY);
+	assert.equal(strokeOpacity({ ...pen, tip: "marker", opacity: 0.9 }), 0.45);
+});
+
+// Strokes save nothing for these, so a change would restyle every saved one.
+test("the defaults saved strokes draw with stay as they were saved", () => {
+	assert.equal(MARKER_OPACITY, 0.45);
+	assert.equal(tipOpacity("ink"), 0.45);
+	assert.equal(tipOpacity("marker"), 0.45);
+	assert.equal(tipOpacity("neon"), 1);
+	assert.equal(tipOpacity(undefined), 1);
+	assert.equal(ROUNDED_END, 0.25);
+});
+
+test("a pen brush saves only what differs from its tip's defaults", () => {
+	assert.deepEqual(
+		penBrush({ color: "#000000", width: 4, ends: "round", opacity: 1 }),
+		{ type: "pen", color: "#000000", width: 4 },
+	);
+	assert.deepEqual(
+		penBrush({
+			color: "#000000",
+			width: 4,
+			tip: "ink",
+			ends: "rounded",
+			opacity: 0.7,
+		}),
+		{
+			type: "pen",
+			color: "#000000",
+			width: 4,
+			tip: "ink",
+			ends: "rounded",
+			opacity: 0.7,
+		},
+	);
+	assert.deepEqual(penBrush({ color: "#000000", width: 4, opacity: 0 }), {
+		type: "pen",
+		color: "#000000",
+		width: 4,
+		opacity: MIN_OPACITY,
+	});
+	assert.deepEqual(penBrush({ color: "#000000", width: 4, opacity: 2 }), {
+		type: "pen",
+		color: "#000000",
+		width: 4,
+	});
+	assert.deepEqual(
+		penBrush({ color: "#000000", width: 4, opacity: Number.NaN }),
+		{ type: "pen", color: "#000000", width: 4 },
+	);
+});
+
+test("rounded ends reach between round and square ones", () => {
+	const square = visibleReach({ ...pen, tip: "ink" });
+	const rounded = visibleReach({ ...pen, tip: "ink", ends: "rounded" });
+	const round = visibleReach({ ...pen, tip: "ink", ends: "round" });
+	assert.equal(round, pen.width / 2);
+	assert.ok(round < rounded && rounded < square);
+	// Measured on CanvasKit: a 200-wide rounded end reaches 123.7.
+	assert.ok(
+		Math.abs(
+			visibleReach({ ...pen, width: 200, tip: "ink", ends: "rounded" }) - 123.7,
+		) < 0.1,
+	);
 });

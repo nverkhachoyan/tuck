@@ -1,6 +1,11 @@
 import { toLayerSpace } from "../../document/geometry.ts";
 import { hitTestDrawing } from "../strokes.ts";
-import type { Brush, DrawingLayer, Stroke } from "./drawing.ts";
+import {
+	type Brush,
+	type DrawingLayer,
+	type Stroke,
+	sameLook,
+} from "./drawing.ts";
 
 /**
  * How strokes group into marks: one drawing per word, arrow, or circle,
@@ -19,12 +24,12 @@ export const MARK_NEAR_GAP = 1.5;
 export type LastStroke = { markId: string; endedAt: number };
 
 /**
- * Whether two brushes draw one mark: the same tip and color. A size change
- * keeps the mark (open question 2's lean).
+ * Whether two brushes draw one mark: the same tip, color, ends, and
+ * opacity. A size change keeps the mark (open question 2's lean).
  */
 export function sameStyle(a: Brush, b: Brush): boolean {
 	if (a.type !== "pen" || b.type !== "pen") return false;
-	return a.tip === b.tip && a.color.toLowerCase() === b.color.toLowerCase();
+	return sameLook(a, b);
 }
 
 // The mark's last pen stroke, whose style a new stroke must match.

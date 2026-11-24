@@ -1,16 +1,28 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createDrawingLayer } from "../../../layers/drawing/drawing.ts";
+import {
+	createDrawingLayer,
+	MIN_OPACITY,
+} from "../../../layers/drawing/drawing.ts";
+import { sameStyle } from "../../../layers/drawing/marks.ts";
 import {
 	defaultPenSettings,
 	markPatch,
+	opacityToSlider,
+	PEN_SIZE_RANGE,
 	PEN_SIZES,
 	parsePenSettings,
 	penBrushFor,
 	penColor,
+	presetIndex,
+	sizeToSlider,
+	sliderToOpacity,
+	sliderToSize,
 	stepPenSize,
 	withPenColor,
+	withPenEnds,
+	withPenOpacity,
 	withPenSize,
 	withSelectedMark,
 } from "../penSettings.ts";
@@ -24,7 +36,7 @@ describe("penBrushFor", () => {
 		assert.deepEqual(brush, {
 			type: "pen",
 			color: defaultPenSettings.color,
-			width: PEN_SIZES.pen[defaultPenSettings.sizes.pen] * 3000,
+			width: defaultPenSettings.sizes.pen * 3000,
 		});
 	});
 
@@ -39,8 +51,9 @@ describe("penBrushFor", () => {
 		assert.deepEqual(brush, {
 			type: "pen",
 			color: "#FFD60A",
-			width: PEN_SIZES.marker[settings.sizes.marker] * 1000,
+			width: settings.sizes.marker * 1000,
 			tip: "marker",
+			ends: "rounded",
 		});
 	});
 
@@ -54,9 +67,32 @@ describe("penBrushFor", () => {
 		assert.deepEqual(brush, {
 			type: "pen",
 			color: "#0A84FF",
-			width: PEN_SIZES.neon[settings.sizes.neon] * 1000,
+			width: settings.sizes.neon * 1000,
 			tip: "neon",
 		});
+	});
+
+	test("saves ends only where a tip has them and they aren't square", () => {
+		const ink = { ...defaultPenSettings, tip: "ink" as const };
+		const size = { width: 1000, height: 1000 };
+		assert.equal(penBrushFor(ink, size).ends, "rounded");
+		assert.equal(penBrushFor(withPenEnds(ink, "square"), size).ends, undefined);
+		assert.equal(penBrushFor(withPenEnds(ink, "round"), size).ends, "round");
+		assert.equal(
+			penBrushFor({ ...defaultPenSettings, tip: "neon" }, size).ends,
+			undefined,
+		);
+	});
+
+	test("saves opacity only where it isn't the tip's own", () => {
+		const size = { width: 1000, height: 1000 };
+		assert.equal(penBrushFor(defaultPenSettings, size).opacity, undefined);
+		const faded = withPenOpacity(defaultPenSettings, 0.5);
+		assert.equal(penBrushFor(faded, size).opacity, 0.5);
+		const ink = { ...defaultPenSettings, tip: "ink" as const };
+		assert.equal(penBrushFor(ink, size).opacity, undefined);
+		const highlight = { ...defaultPenSettings, tip: "marker" as const };
+		assert.equal(withPenOpacity(highlight, 0.3), highlight);
 	});
 });
 
@@ -89,15 +125,47 @@ describe("penColor & withPenColor", () => {
 });
 
 describe("stepPenSize & withPenSize", () => {
-	test("steps size index clamped to valid range", () => {
-		const atMin = withPenSize({ ...defaultPenSettings, tip: "pen" }, 0);
-		assert.equal(stepPenSize(atMin, -1).sizes.pen, 0);
-		assert.equal(stepPenSize(atMin, 1).sizes.pen, 1);
+	test("steps the width by a sixth, within the tip's range", () => {
+		const pen = { ...defaultPenSettings, tip: "pen" as const };
+		const bigger = stepPenSize(pen, 1);
+		assert.ok(bigger.sizes.pen > pen.sizes.pen);
+		assert.ok(
+			Math.abs(stepPenSize(bigger, -1).sizes.pen - pen.sizes.pen) < 1e-4,
+		);
 
-		const maxIdx = PEN_SIZES.pen.length - 1;
-		const atMax = withPenSize({ ...defaultPenSettings, tip: "pen" }, maxIdx);
-		assert.equal(stepPenSize(atMax, 1).sizes.pen, maxIdx);
-		assert.equal(stepPenSize(atMax, -1).sizes.pen, maxIdx - 1);
+		const [min, max] = PEN_SIZE_RANGE.pen;
+		const atMin = withPenSize(pen, 0);
+		assert.equal(atMin.sizes.pen, min);
+		assert.equal(stepPenSize(atMin, -1), atMin);
+		const atMax = withPenSize(pen, 1);
+		assert.equal(atMax.sizes.pen, max);
+		assert.equal(stepPenSize(atMax, 1), atMax);
+	});
+
+	test("the slider runs across the range and back", () => {
+		const [min, max] = PEN_SIZE_RANGE.ink;
+		assert.equal(sliderToSize("ink", 0), min);
+		assert.equal(sliderToSize("ink", 1), max);
+		const share = PEN_SIZES.ink[2];
+		assert.ok(
+			Math.abs(sliderToSize("ink", sizeToSlider("ink", share)) - share) < 1e-4,
+		);
+	});
+
+	test("marks a quick pick only while the width is one", () => {
+		assert.equal(presetIndex("pen", PEN_SIZES.pen[3]), 3);
+		assert.equal(presetIndex("pen", PEN_SIZES.pen[3] * 1.2), -1);
+	});
+
+	test("the opacity slider maps MIN_OPACITY..1 across 0..1 and keeps bounds steady", () => {
+		assert.equal(opacityToSlider(MIN_OPACITY), 0);
+		assert.equal(opacityToSlider(1), 1);
+		assert.equal(sliderToOpacity(0), MIN_OPACITY);
+		assert.equal(sliderToOpacity(1), 1);
+		assert.equal(sliderToOpacity(opacityToSlider(0.45)), 0.45);
+		const atMin = withPenOpacity(defaultPenSettings, MIN_OPACITY);
+		assert.equal(withPenOpacity(atMin, 0), atMin);
+		assert.equal(withPenOpacity(defaultPenSettings, 1.5), defaultPenSettings);
 	});
 });
 
@@ -107,7 +175,7 @@ describe("parsePenSettings", () => {
 		assert.deepEqual(parsePenSettings("invalid"), defaultPenSettings);
 	});
 
-	test("migrates from legacy brush settings", () => {
+	test("migrates from legacy brush settings and size indexes", () => {
 		const legacy = {
 			tool: "neon",
 			lastBrush: "neon",
@@ -119,14 +187,34 @@ describe("parsePenSettings", () => {
 		assert.equal(parsed.tip, "neon");
 		assert.equal(parsed.color, "#123456");
 		assert.equal(parsed.highlightColor, "#654321");
-		assert.equal(parsed.sizes.neon, 3);
+		assert.equal(parsed.sizes.pen, PEN_SIZES.pen[0]);
+		assert.equal(parsed.sizes.neon, PEN_SIZES.neon[3]);
+		assert.deepEqual(parsed.ends, defaultPenSettings.ends);
+		assert.equal(parsed.smoothing, defaultPenSettings.smoothing);
+	});
+
+	test("restores free widths, opacities, ends, and smoothing", () => {
+		const parsed = parsePenSettings({
+			sizes: { pen: 0.0123, marker: 5 },
+			opacity: { pen: 0.4, ink: 0.01, neon: "x" },
+			ends: { marker: "square", ink: "chisel" },
+			smoothing: "strong",
+		});
+		assert.equal(parsed.sizes.pen, 0.0123);
+		assert.equal(parsed.sizes.marker, defaultPenSettings.sizes.marker);
+		assert.equal(parsed.opacity.pen, 0.4);
+		assert.equal(parsed.opacity.ink, MIN_OPACITY);
+		assert.equal(parsed.opacity.neon, defaultPenSettings.opacity.neon);
+		assert.equal(parsed.ends.marker, "square");
+		assert.equal(parsed.ends.ink, defaultPenSettings.ends.ink);
+		assert.equal(parsed.smoothing, "strong");
 	});
 });
 
 describe("withSelectedMark and markPatch", () => {
 	const size = { width: 1000, height: 2000 };
 
-	test("shows a highlight's tip, its color as the highlight color, and the nearest size", () => {
+	test("shows a highlight's tip, its color as the highlight color, its width and ends", () => {
 		const layer = createDrawingLayer({
 			type: "pen",
 			color: "#30D158",
@@ -138,8 +226,39 @@ describe("withSelectedMark and markPatch", () => {
 		assert.equal(settings.tip, "marker");
 		assert.equal(settings.highlightColor, "#30D158");
 		assert.equal(settings.color, defaultPenSettings.color);
-		// 41 of a 1000 short side is nearest 0.04.
-		assert.equal(PEN_SIZES.marker[settings.sizes.marker], 0.04);
+		assert.equal(settings.sizes.marker, 0.041);
+		// Saved before ends existed, so square.
+		assert.equal(settings.ends.marker, "square");
+	});
+
+	test("shows a marker's opacity", () => {
+		const layer = createDrawingLayer({
+			type: "pen",
+			color: "#30D158",
+			width: 20,
+			tip: "ink",
+			ends: "round",
+			opacity: 0.8,
+			points: [0, 0, 10, 0],
+		});
+		const settings = withSelectedMark(defaultPenSettings, layer, size);
+		assert.equal(settings.opacity.ink, 0.8);
+		assert.equal(settings.ends.ink, "round");
+	});
+
+	test("keeps a mark's own opacity, so new strokes still join it", () => {
+		const stroke = {
+			type: "pen" as const,
+			color: "#30D158",
+			width: 20,
+			tip: "neon" as const,
+			opacity: 0.333,
+			points: [0, 0, 10, 0],
+		};
+		const layer = createDrawingLayer(stroke);
+		const settings = withSelectedMark(defaultPenSettings, layer, size);
+		assert.equal(settings.opacity.neon, 0.333);
+		assert.ok(sameStyle(stroke, penBrushFor(settings, size)));
 	});
 
 	test("lists only what changed", () => {
@@ -148,12 +267,23 @@ describe("withSelectedMark and markPatch", () => {
 		assert.deepEqual(markPatch(before, withPenColor(before, "#0A84FF"), size), {
 			color: "#0A84FF",
 		});
-		const bigger = withPenSize(before, before.sizes.pen + 1);
+		const bigger = withPenSize(before, before.sizes.pen * 2);
 		assert.deepEqual(Object.keys(markPatch(before, bigger, size)), ["width"]);
+		assert.deepEqual(markPatch(before, withPenOpacity(before, 0.5), size), {
+			opacity: 0.5,
+		});
 		assert.equal(
 			markPatch(before, { ...before, tip: "neon" }, size).tip,
 			"neon",
 		);
 		assert.equal(markPatch({ ...before, tip: "neon" }, before, size).tip, null);
+	});
+
+	test("a new tip with ends brings its ends", () => {
+		const before = defaultPenSettings;
+		const after = withPenEnds({ ...before, tip: "marker" }, "round");
+		const patch = markPatch(before, after, size);
+		assert.equal(patch.tip, "marker");
+		assert.equal(patch.ends, "round");
 	});
 });

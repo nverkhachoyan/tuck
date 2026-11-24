@@ -1,16 +1,29 @@
 import { useDerivedValue } from "react-native-reanimated";
 import { Group, Paint } from "react-native-skia";
-import { BrushStroke, strokePath } from "../../layers/drawing/DrawingLayerView";
-import type { PenBrush } from "../../layers/drawing/drawing";
+import {
+	BrushStroke,
+	inkBounds,
+	roundedEndsOutline,
+	strokePath,
+} from "../../layers/drawing/DrawingLayerView";
+import {
+	type PenBrush,
+	ROUNDED_END,
+	strokeEnds,
+	strokeOpacity,
+	visibleReach,
+} from "../../layers/drawing/drawing";
 import { LayerContent } from "../../layers/LayerContent";
 import { toInverseTransformList } from "../../layers/layerTransform";
 import type { CanvasTool } from "../canvasTool";
+import { BrushRing } from "./BrushRing";
 import {
 	DIMMED_OPACITY,
 	type LiveStroke,
 	type StrokeKind,
 	unlanded,
 } from "./strokeTypes";
+import { noted, useFreeReplaced, usePathsBuilt } from "./useFreeReplaced";
 
 type DrawTool = Extract<CanvasTool, { type: "draw" }>;
 
@@ -27,11 +40,54 @@ function LivePath({
 	brush: PenBrush;
 	full?: boolean;
 }) {
-	const path = useDerivedValue(() => strokePath(unlanded(stroke)));
-	return <BrushStroke path={path} brush={brush} full={full} />;
+	const built = usePathsBuilt();
+	const path = useDerivedValue(() =>
+		noted(built, strokePath(unlanded(stroke))),
+	);
+	const rounded = strokeEnds(brush) === "rounded";
+	const { width } = brush;
+	// Built on the UI thread with each frame's path. Falls back to an empty
+	// path rather than the centerline, which RoundedEnds would fill.
+	const outline = useDerivedValue(
+		() =>
+			rounded
+				? noted(built, roundedEndsOutline(path.value, width) ?? strokePath([]))
+				: path.value,
+		[path, rounded, width],
+	);
+	useFreeReplaced(built, path, outline);
+	const faded = brush.tip === "neon" && strokeOpacity(brush) < 1;
+	const reach = visibleReach(brush);
+	// Only a faded neon stroke saves a layer to bound.
+	const bounds = useDerivedValue(
+		() => (faded ? inkBounds(path.value, reach) : undefined),
+		[path, faded, reach],
+	);
+	return (
+		<BrushStroke
+			path={path}
+			outline={rounded ? outline : undefined}
+			bounds={faded ? bounds : undefined}
+			brush={brush}
+			full={full}
+		/>
+	);
 }
 
+// How round a pen's size ring is: its ends' shape.
+const RING_CORNER = { round: 0.5, rounded: ROUNDED_END, square: 0 };
+
 export const drawStrokeKind: StrokeKind<DrawTool> = {
+	renderOverlay: ({ tool, ring, scale, stroke, selectionColor }) => (
+		<BrushRing
+			ring={ring}
+			scale={scale}
+			stroke={stroke}
+			color={selectionColor}
+			width={tool.brush.width}
+			corner={RING_CORNER[strokeEnds(tool.brush)]}
+		/>
+	),
 	reaches: (_tool, layer, selectedId) => layer.id === selectedId,
 	startsLayer: (selectedId) => selectedId === null,
 	renderInLayer: ({

@@ -73,13 +73,14 @@ export function useCanvasCursor({
 }
 
 /**
- * Where the Eraser's ring is drawn on web: the pointer over the canvas, in
+ * Where a brush's size ring is drawn on web: the pointer over the canvas, in
  * the canvas view's pixels, while a mouse hovers there (`shown`). It follows
  * the pointer whatever the tool, since a hover begins only as the pointer
  * enters: the Eraser opened from its key, over the canvas, still shows its
- * ring. The canvas draws it only for the Eraser, and hides it during a drag.
+ * ring. The canvas draws it only for the Eraser and Pen, and hides it
+ * during a drag.
  */
-export function useEraserRing() {
+export function useBrushRing() {
 	const x = useSharedValue(0);
 	const y = useSharedValue(0);
 	const shown = useSharedValue(false);
