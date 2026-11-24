@@ -8,6 +8,7 @@ import { handleSides } from "./handleGeometry";
 import { handleMetrics, shownHandles } from "./handleMetrics";
 import { layerBounds } from "./layerBounds";
 import type { LiveTransform } from "./liveTransform";
+import type { LiveMarquee } from "./useMarqueeGesture";
 
 export const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
@@ -211,5 +212,46 @@ export function SelectionHandles({
 				strokeWidth={outline}
 			/>
 		</Group>
+	);
+}
+
+/**
+ * The Select tool's drag box in screen pixels: a faint fill inside a haloed
+ * outline, driven from shared values so no Skia path is built while dragging.
+ */
+export function MarqueeBox({ box }: { box: LiveMarquee }) {
+	const fillOpacity = useDerivedValue(() => (box.active.value ? 0.12 : 0));
+	const strokeOpacity = useDerivedValue(() => (box.active.value ? 1 : 0));
+	return (
+		<>
+			<Rect
+				x={box.x}
+				y={box.y}
+				width={box.width}
+				height={box.height}
+				color={colors.selection}
+				opacity={fillOpacity}
+			/>
+			<Rect
+				x={box.x}
+				y={box.y}
+				width={box.width}
+				height={box.height}
+				color={SELECTION_HALO}
+				style="stroke"
+				strokeWidth={SELECTION_HALO_PX}
+				opacity={strokeOpacity}
+			/>
+			<Rect
+				x={box.x}
+				y={box.y}
+				width={box.width}
+				height={box.height}
+				color={colors.selection}
+				style="stroke"
+				strokeWidth={SELECTION_STROKE_PX}
+				opacity={strokeOpacity}
+			/>
+		</>
 	);
 }

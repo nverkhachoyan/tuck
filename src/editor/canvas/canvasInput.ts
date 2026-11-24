@@ -17,7 +17,7 @@ import type { EditText } from "./useEditTextGesture.ts";
  * does, drawing the image it changes live (`adjusting`).
  */
 export type CanvasInput =
-	| { type: "select" }
+	| { type: "select"; marquee?: true }
 	| { type: "tool"; tool: CanvasTool }
 	| ({ type: "editText" } & EditText)
 	| {
@@ -68,7 +68,7 @@ export function inputRules(
 			return {
 				selection: "transforms",
 				twoFingers: hasSelection ? "selection" : "view",
-				oneFinger: zoomed ? "offSelection" : null,
+				oneFinger: input.marquee ? null : zoomed ? "offSelection" : null,
 				cursor: "hover",
 			};
 		case "tool":

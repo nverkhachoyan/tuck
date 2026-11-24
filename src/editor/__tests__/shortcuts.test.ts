@@ -96,6 +96,7 @@ describe("shortcutFor", () => {
 	});
 
 	test("picks up a tool, or shows the layers, with a plain letter", () => {
+		assert.deepEqual(shortcutFor(press("v")), { type: "tool", tool: "select" });
 		assert.deepEqual(shortcutFor(press("t")), { type: "tool", tool: "text" });
 		assert.deepEqual(shortcutFor(press("d")), { type: "tool", tool: "pen" });
 		assert.deepEqual(shortcutFor(press("s")), { type: "tool", tool: "shape" });
@@ -191,10 +192,10 @@ describe("shortcutGroups", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["C", "B", "G", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+			["V", "C", "B", "G", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
-		assert.equal(toolGroup.items[2].action, "Remove the background");
-		assert.equal(toolGroup.items[8].action, "Find faces or text to redact");
+		assert.equal(toolGroup.items[3].action, "Remove the background");
+		assert.equal(toolGroup.items[9].action, "Find faces or text to redact");
 	});
 
 	test("leaves out grouped tools that are unavailable", () => {
@@ -205,7 +206,7 @@ describe("shortcutGroups", () => {
 		);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+			["V", "C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
 	});
 

@@ -153,6 +153,7 @@ export function Editor({
 		nudgeSelectedLayers,
 		setLayerResizable,
 		selectLayer,
+		selectLayers,
 		selectAll,
 		toggleLayerSelected,
 		undo,
@@ -528,6 +529,7 @@ export function Editor({
 							keepFocus={typing}
 							previewUri={host.previewUri}
 							onSelectLayer={selectLayer}
+							onSelectLayers={selectLayers}
 							onToggleSelectLayer={toggleLayerSelected}
 							onTapSelectedLayer={editSelectedAt || undefined}
 							onCommitTransform={transformLayer}

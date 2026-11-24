@@ -8,12 +8,14 @@ import { eraserTool } from "./eraser/eraserTool";
 import { findTool } from "./find/findTool";
 import { penTool } from "./pen/penTool";
 import { redactTool } from "./redact/redactTool";
+import { selectTool } from "./select/selectTool";
 import { shapeTool } from "./shape/shapeTool";
 import { stickersTool } from "./stickers/stickersTool";
 import { textTool } from "./text/textTool";
 
 /** The tools the editor has unless it's given others, by id. */
 export const BUILT_IN_TOOLS = {
+	select: selectTool,
 	text: textTool,
 	pen: penTool,
 	shape: shapeTool,

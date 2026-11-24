@@ -129,6 +129,24 @@ describe("inputRules", () => {
 		);
 	});
 
+	test("marquee selecting keeps one finger for the box even when zoomed", () => {
+		for (const zoomed of [false, true]) {
+			assert.deepEqual(
+				inputRules({ type: "select", marquee: true }, zoomed, shape),
+				{
+					selection: "transforms",
+					twoFingers: "selection",
+					oneFinger: null,
+					cursor: "hover",
+				},
+			);
+			assert.equal(
+				inputRules({ type: "select", marquee: true }, zoomed).twoFingers,
+				"view",
+			);
+		}
+	});
+
 	test("a tool, picking a color too, keeps one finger and a crosshair", () => {
 		for (const input of [pen, pick]) {
 			for (const zoomed of [false, true]) {

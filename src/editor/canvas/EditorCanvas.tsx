@@ -59,6 +59,7 @@ import {
 import type { CanvasRegion } from "./RegionOutline";
 import { strokeKindOf } from "./SceneLayer";
 import { SelectionBarFrame } from "./SelectionBarFrame";
+import { MarqueeBox } from "./SelectionOverlay";
 import { useBrushRing, useCanvasCursor } from "./useCanvasCursor";
 import { useCanvasTap, useTwoFingerTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
@@ -66,6 +67,7 @@ import { useDialDrag } from "./useDialDrag";
 import { useEditTextGesture } from "./useEditTextGesture";
 import { useKeepTextFocus } from "./useKeepTextFocus";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
+import { useMarqueeGesture } from "./useMarqueeGesture";
 import { useRegionTap } from "./useRegionTap";
 import { useShiftHeld } from "./useShiftHeld";
 import { useToolStroke } from "./useToolStroke";
@@ -130,6 +132,7 @@ type EditorCanvasProps = {
 	// The smaller preview for an image layer's URI, when there is one.
 	previewUri?: (uri: string) => string | null;
 	onSelectLayer?: (id: string | null) => void;
+	onSelectLayers?: (ids: readonly string[]) => void;
 	onToggleSelectLayer?: (id: string) => void;
 	// A tap on the layer that's already selected, in document space (the
 	// editor edits it there, when a tool edits it in place).
@@ -236,6 +239,7 @@ export function EditorCanvas({
 	keepFocus = false,
 	previewUri,
 	onSelectLayer,
+	onSelectLayers,
 	onToggleSelectLayer,
 	onTapSelectedLayer,
 	onCommitTransform,
@@ -342,6 +346,8 @@ export function EditorCanvas({
 					? [selectedLayer]
 					: NO_LAYERS
 				: selectedLayers;
+	const isSelect = input.type === "select";
+	const isMarquee = isSelect && input.marquee === true;
 	const dragsSelection = rules.selection === "drags";
 
 	const selectionFrame = useMemo((): {
@@ -437,6 +443,12 @@ export function EditorCanvas({
 			// than deselecting the layer that owns it.
 			if (scale === 0 || lookups.handleAt(screenX, screenY)) return;
 			const id = lookups.layerAt(screenX, screenY);
+			if (isMarquee) {
+				tapOnNothing(id === null ? { x: screenX, y: screenY } : null);
+				if (id !== null) onToggleSelectLayer?.(id);
+				else onSelectLayer?.(null);
+				return;
+			}
 			if (aspectLocked.value && onToggleSelectLayer) {
 				if (id !== null) onToggleSelectLayer(id);
 				return;
@@ -450,6 +462,7 @@ export function EditorCanvas({
 		},
 		[
 			aspectLocked,
+			isMarquee,
 			lookups,
 			onSelectLayer,
 			onTapSelectedLayer,
@@ -487,10 +500,10 @@ export function EditorCanvas({
 		};
 	}, [oneFingerMode, live, sharedTargets, viewport]);
 
-	// Where a tool's drag moves the selection rather than drawing: on its
-	// handles, or on the selection where it's the topmost layer.
+	// Where a drag moves the selection rather than drawing a tool stroke or
+	// marquee box: on its handles, or on the selection where it's topmost.
 	const selectionDrag = useMemo(() => {
-		if (!dragsSelection) return null;
+		if (!dragsSelection && !isMarquee) return null;
 		const onSelection = (x: number, y: number) => {
 			"worklet";
 			const id = live.activeId.value;
@@ -508,14 +521,14 @@ export function EditorCanvas({
 			return !onSelection(x, y);
 		};
 		return { onSelection, offSelection };
-	}, [dragsSelection, live, sharedTargets, viewport]);
+	}, [dragsSelection, isMarquee, live, sharedTargets, viewport]);
 
 	const { cursor, setCursor, handleHover, handleHoverEnd } = useCanvasCursor({
 		scale,
 		lookups,
 		selectionRotation: selectionFrame.state?.transform.rotation ?? null,
 		selectedLayerIds,
-		dragsSelection,
+		dragsSelection: dragsSelection || isMarquee,
 		targets,
 		zoom,
 	});
@@ -533,8 +546,19 @@ export function EditorCanvas({
 			onResizeBox?.(id, transform, box.halfWidth * 2, box.halfHeight * 2),
 		[onResizeBox],
 	);
+	const handleMarquee = useCallback(
+		(caught: readonly string[], additive: boolean) => {
+			if (additive) {
+				if (caught.length > 0) {
+					onSelectLayers?.([...selectedLayerIds, ...caught]);
+				}
+			} else {
+				onSelectLayers?.(caught);
+			}
+		},
+		[onSelectLayers, selectedLayerIds],
+	);
 
-	const isSelect = input.type === "select";
 	const isTool = input.type === "tool";
 	const isEditText = input.type === "editText";
 	const isRegions = input.type === "regions";
@@ -547,7 +571,7 @@ export function EditorCanvas({
 		viewport,
 		documentSize,
 		onTap: handleTap,
-		onSelect: onSelectLayer,
+		onSelect: isMarquee ? undefined : onSelectLayer,
 		onCommit: handleCommit,
 		onCommitGroup: handleCommitGroup,
 		onResize: handleResize,
@@ -556,6 +580,14 @@ export function EditorCanvas({
 		standsAside: selectionDrag?.offSelection ?? dragAlone,
 		dragOnly: dragsSelection,
 		enabled: isSelect || dragsSelection,
+	});
+	const { marqueeGesture, marqueeBox } = useMarqueeGesture({
+		viewport,
+		layers: sharedTargets,
+		additive: aspectLocked,
+		standsAside: selectionDrag?.onSelection,
+		onFinish: handleMarquee,
+		enabled: isMarquee,
 	});
 	const viewGesture = useViewGesture({
 		shown,
@@ -641,6 +673,7 @@ export function EditorCanvas({
 	// in NativeDetector / HostGestureDetector on web, while inactive gestures remain disabled.
 	const canvasGesture = useSimultaneousGestures(
 		gesture,
+		marqueeGesture,
 		paintGesture,
 		ring.hover,
 		textGesture,
@@ -700,6 +733,7 @@ export function EditorCanvas({
 								stroke: liveStroke,
 								selectionColor: colors.selection,
 							})}
+						{isMarquee && <MarqueeBox box={marqueeBox} />}
 					</Canvas>
 					{/* At the bottom, clear of new text at the center and the editor's
 					    save banner at the top. Touches pass through to the canvas. */}
