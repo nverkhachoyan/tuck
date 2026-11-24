@@ -46,11 +46,13 @@ function LivePath({
 	);
 	const rounded = strokeEnds(brush) === "rounded";
 	const { width } = brush;
-	// Built on the UI thread with each frame's path.
+	// Built on the UI thread with each frame's path. Falls back to an empty
+	// path rather than the centerline, which RoundedEnds would fill.
 	const outline = useDerivedValue(
 		() =>
-			(rounded && noted(built, roundedEndsOutline(path.value, width))) ||
-			path.value,
+			rounded
+				? noted(built, roundedEndsOutline(path.value, width) ?? strokePath([]))
+				: path.value,
 		[path, rounded, width],
 	);
 	useFreeReplaced(built, path, outline);

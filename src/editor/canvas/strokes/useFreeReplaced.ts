@@ -47,9 +47,9 @@ export function useFreeReplaced(
 	outline: DerivedValue<SkPath> = path,
 ) {
 	useAnimatedReaction(
-		() => [path.value, outline.value],
+		() => (web ? [path.value, outline.value] : null),
 		(now) => {
-			if (!web) return;
+			if (!now) return;
 			const stale = built.filter((each) => !now.includes(each));
 			if (stale.length === 0) return;
 			built.length = 0;
