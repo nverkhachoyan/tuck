@@ -134,9 +134,11 @@ function useDraft(at: number, commit: (along: number) => void) {
 function PenSizeOptions({
 	controller: { settings, change, shortSide },
 	nowrap = false,
+	onPickPreset,
 }: {
 	controller: PenController;
 	nowrap?: boolean;
+	onPickPreset?: () => void;
 }) {
 	const { tip } = settings;
 	const saved = settings.sizes[tip];
@@ -154,7 +156,10 @@ function PenSizeOptions({
 						key={preset}
 						label={`Size ${index + 1} of ${PEN_SIZES[tip].length}`}
 						selected={index === chosen}
-						onPress={() => change(withPenSize(settings, preset))}
+						onPress={() => {
+							change(withPenSize(settings, preset));
+							onPickPreset?.();
+						}}
 					>
 						<SizeDot size={SIZE_DOTS[index]} {...style} />
 					</RingChoice>
@@ -269,7 +274,13 @@ export function PenBar({ controller }: { controller: PenController }) {
 						/>
 					}
 				>
-					<PenSizeOptions controller={controller} nowrap />
+					{(close) => (
+						<PenSizeOptions
+							controller={controller}
+							nowrap
+							onPickPreset={close}
+						/>
+					)}
 				</BarChip>
 			</BarGroup>
 			<BarGroup>
@@ -403,25 +414,27 @@ export function PenTray({ controller }: { controller: PenController }) {
 			<View style={styles.pair}>
 				{ends !== null && (
 					<ToolOption label="Ends">
-						<ToolChoices nowrap>
-							{ENDS.map((each) => (
-								<RingChoice
-									key={each.ends}
-									variant="highlight"
-									label={`${each.title} ends`}
-									selected={ends === each.ends}
-									onPress={() => change(withPenEnds(settings, each.ends))}
-								>
-									{(ink) => (
-										<MaterialCommunityIcons
-											name={each.icon}
-											size={20}
-											color={ink}
-										/>
-									)}
-								</RingChoice>
-							))}
-						</ToolChoices>
+						<View style={styles.endsChoices}>
+							<ToolChoices nowrap>
+								{ENDS.map((each) => (
+									<RingChoice
+										key={each.ends}
+										variant="highlight"
+										label={`${each.title} ends`}
+										selected={ends === each.ends}
+										onPress={() => change(withPenEnds(settings, each.ends))}
+									>
+										{(ink) => (
+											<MaterialCommunityIcons
+												name={each.icon}
+												size={20}
+												color={ink}
+											/>
+										)}
+									</RingChoice>
+								))}
+							</ToolChoices>
+						</View>
 					</ToolOption>
 				)}
 				<View style={styles.smoothing}>
@@ -454,7 +467,12 @@ const styles = StyleSheet.create({
 	},
 	pair: {
 		flexDirection: "row",
-		gap: space.lg,
+		gap: space.sm,
+	},
+	// Pulls the 36px highlight boxes flush with the label above, leaving more
+	// width for Smoothing on 375pt phones.
+	endsChoices: {
+		marginHorizontal: -4,
 	},
 	smoothing: {
 		flexGrow: 1,

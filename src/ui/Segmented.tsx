@@ -55,7 +55,10 @@ export function Segmented({
 							}}
 						>
 							{chosen && <Highlight />}
-							<Text style={[styles.title, chosen && styles.titleChosen]}>
+							<Text
+								numberOfLines={1}
+								style={[styles.title, chosen && styles.titleChosen]}
+							>
 								{title}
 							</Text>
 							{detail && (

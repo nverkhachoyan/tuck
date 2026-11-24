@@ -308,7 +308,7 @@ export function ToolSlider({
 	return (
 		<View style={styles.slider}>
 			{showLabel && <Text style={styles.sliderLabel}>{label}</Text>}
-			<View style={styles.sliderBar}>
+			<View style={[styles.sliderBar, showLabel && styles.sliderBarInTray]}>
 				<ColorSliderBar
 					value={value}
 					thumbColor={thumbColor}
@@ -398,6 +398,10 @@ const styles = StyleSheet.create({
 	sliderBar: {
 		flexGrow: 1,
 		minWidth: 180,
+	},
+	sliderBarInTray: {
+		flexShrink: 1,
+		minWidth: 120,
 	},
 	track: {
 		backgroundColor: colors.surfaceHover,
