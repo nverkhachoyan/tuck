@@ -82,7 +82,8 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  *   view (see `useViewGesture`).
  * - Dragging empty space keeps moving the selection, which helps with small
  *   text, unless it's `anchored` (a redaction, which moves only from on
- *   itself).
+ *   itself), or `standsAside` already keeps drags to inside the selection's
+ *   box (`dragsInsideBox`, the Select tool's).
  * - A one-finger drag from where `standsAside` says another gesture takes
  *   it (the view's, or a tool's) is left alone, from touch-down to lift.
  * - With `dragOnly`, only one finger's drag moves the selection or its
@@ -114,6 +115,7 @@ export function useLayerTransformGesture({
 	onHover,
 	onHoverEnd,
 	standsAside = null,
+	dragsInsideBox = false,
 	dragOnly = false,
 	enabled = true,
 }: {
@@ -133,6 +135,9 @@ export function useLayerTransformGesture({
 	onHoverEnd: () => void;
 	// Whether one finger landing at a point is another gesture's. A worklet.
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
+	// Whether `standsAside` hands over only drags inside the selection's box,
+	// which move even an anchored one.
+	dragsInsideBox?: boolean;
 	dragOnly?: boolean;
 	enabled?: boolean;
 }) {
@@ -347,7 +352,8 @@ export function useLayerTransformGesture({
 
 	// Picks up the layer under the pan's touch-down point, keeping the active
 	// group when the finger lands on a member, or, off the selection, pins an
-	// anchored one where it is.
+	// anchored one where it is, unless it came from inside the selection's
+	// box (`dragsInsideBox`).
 	const pickUp = () => {
 		"worklet";
 		const target = findLayerAt(
@@ -366,6 +372,8 @@ export function useLayerTransformGesture({
 		if (onSelect && !dragOnly && target) {
 			holdLayer(live, target.id, target);
 			scheduleOnRN(onSelect, target.id);
+		} else if (dragsInsideBox) {
+			return;
 		} else if (activeId === SELECTION_GROUP_ID) {
 			const members = live.groupIds.value;
 			pinned.value = layers.value.some(

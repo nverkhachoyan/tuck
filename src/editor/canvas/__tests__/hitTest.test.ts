@@ -9,6 +9,7 @@ import { shapeOutline } from "../../layers/shape/shapeGeometry.ts";
 import {
 	findLayerAt,
 	hitsLayer,
+	insidePaddedBox,
 	type LayerTarget,
 	layersInRect,
 	regionAt,
@@ -139,6 +140,27 @@ describe("hitsLayer", () => {
 		const targets = [target("locked", 0, 0, { locked: true })];
 		assert.equal(hitsLayer(targets, "locked", { x: 0, y: 0 }), false);
 		assert.equal(hitsLayer(targets, "gone", { x: 0, y: 0 }), false);
+	});
+});
+
+describe("insidePaddedBox", () => {
+	const box: Box = { halfWidth: 50, halfHeight: 10 };
+
+	test("pads the box by the touch padding on screen", () => {
+		// 14 screen pixels at scale 2 are 7 document units.
+		assert.equal(insidePaddedBox(at(0, 0), box, { x: 0, y: 16 }, 2), true);
+		assert.equal(insidePaddedBox(at(0, 0), box, { x: 0, y: 18 }, 2), false);
+	});
+
+	test("keeps the padding the same whatever the layer's scale", () => {
+		const scaled = { ...at(0, 0), scaleX: -2, scaleY: 2 };
+		// The box reaches 20 units; the padding adds 14 more at scale 1.
+		assert.equal(insidePaddedBox(scaled, box, { x: 0, y: 33 }, 1), true);
+		assert.equal(insidePaddedBox(scaled, box, { x: 0, y: 35 }, 1), false);
+	});
+
+	test("misses everything before the view has a scale", () => {
+		assert.equal(insidePaddedBox(at(0, 0), box, { x: 0, y: 0 }, 0), false);
 	});
 });
 

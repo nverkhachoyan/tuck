@@ -43,6 +43,7 @@ import {
 	findLayerAt,
 	hitsAnyLayer,
 	hitsLayer,
+	insidePaddedBox,
 	type LayerTarget,
 } from "./hitTest";
 import { layerBounds } from "./layerBounds";
@@ -68,8 +69,8 @@ import { useEditTextGesture } from "./useEditTextGesture";
 import { useKeepTextFocus } from "./useKeepTextFocus";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
 import { useMarqueeGesture } from "./useMarqueeGesture";
+import { useModifierKeys } from "./useModifierKeys";
 import { useRegionTap } from "./useRegionTap";
-import { useShiftHeld } from "./useShiftHeld";
 import { useToolStroke } from "./useToolStroke";
 import { useViewGesture } from "./useViewGesture";
 import {
@@ -97,6 +98,25 @@ function liveHandleAt(
 		live.resizeMode.value,
 		point,
 		viewport.scale,
+	);
+}
+
+// Whether a document point lies inside the selection's live box, padded by
+// the touch padding layers get, so a thin line stays easy to grab.
+function insideLiveSelection(
+	live: LiveTransform,
+	viewport: DocumentViewport,
+	point: Point,
+): boolean {
+	"worklet";
+	return (
+		live.activeId.value !== null &&
+		insidePaddedBox(
+			readLiveTransform(live),
+			readLiveBox(live),
+			point,
+			viewport.scale,
+		)
 	);
 }
 
@@ -260,7 +280,7 @@ export function EditorCanvas({
 	const [imageFailed, setImageFailed] = useState(false);
 	const containerRef = useRef<ViewInstance>(null);
 	const live = useLiveTransform();
-	const aspectLocked = useShiftHeld();
+	const { shift: aspectLocked, alt: altHeld } = useModifierKeys();
 	useKeepTextFocus(containerRef, keepFocus);
 
 	const handleImageError = useCallback((error: unknown) => {
@@ -501,7 +521,9 @@ export function EditorCanvas({
 	}, [oneFingerMode, live, sharedTargets, viewport]);
 
 	// Where a drag moves the selection rather than drawing a tool stroke or
-	// marquee box: on its handles, or on the selection where it's topmost.
+	// marquee box: on its handles; for the Select tool, anywhere inside its
+	// box unless Alt is held, which always draws a box; for a tool, on the
+	// selection where it's topmost, so a new shape can start inside it.
 	const selectionDrag = useMemo(() => {
 		if (!dragsSelection && !isMarquee) return null;
 		const onSelection = (x: number, y: number) => {
@@ -510,6 +532,9 @@ export function EditorCanvas({
 			if (id === null) return false;
 			const point = viewPointToDocument(viewport, { x, y });
 			if (liveHandleAt(live, viewport, point) !== null) return true;
+			if (isMarquee) {
+				return !altHeld.value && insideLiveSelection(live, viewport, point);
+			}
 			const top = findLayerAt(sharedTargets.value, point)?.id;
 			if (top === undefined) return false;
 			return id === SELECTION_GROUP_ID
@@ -521,7 +546,22 @@ export function EditorCanvas({
 			return !onSelection(x, y);
 		};
 		return { onSelection, offSelection };
-	}, [dragsSelection, isMarquee, live, sharedTargets, viewport]);
+	}, [altHeld, dragsSelection, isMarquee, live, sharedTargets, viewport]);
+
+	// Whether the Select tool's drag from a point reported by the view would
+	// move the selection, for the cursor.
+	const movesSelectionAt = useCallback(
+		(screenX: number, screenY: number) =>
+			selectionFrame.state !== undefined &&
+			!altHeld.value &&
+			insidePaddedBox(
+				selectionFrame.state.transform,
+				selectionFrame.state.box,
+				toDocument(screenX, screenY),
+				scale,
+			),
+		[altHeld, scale, selectionFrame.state, toDocument],
+	);
 
 	const { cursor, setCursor, handleHover, handleHoverEnd } = useCanvasCursor({
 		scale,
@@ -529,6 +569,7 @@ export function EditorCanvas({
 		selectionRotation: selectionFrame.state?.transform.rotation ?? null,
 		selectedLayerIds,
 		dragsSelection: dragsSelection || isMarquee,
+		movesSelectionAt: isMarquee ? movesSelectionAt : null,
 		targets,
 		zoom,
 	});
@@ -578,6 +619,7 @@ export function EditorCanvas({
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
 		standsAside: selectionDrag?.offSelection ?? dragAlone,
+		dragsInsideBox: isMarquee,
 		dragOnly: dragsSelection,
 		enabled: isSelect || dragsSelection,
 	});

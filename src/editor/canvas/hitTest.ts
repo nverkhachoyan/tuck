@@ -80,6 +80,29 @@ export function findLayerAt(
 }
 
 /**
+ * Whether a document-space point lies inside `box` placed by `transform`,
+ * padded by `HIT_PADDING_PX` on screen at the view's `scale`.
+ */
+export function insidePaddedBox(
+	transform: Transform,
+	box: Box,
+	point: Point,
+	scale: number,
+): boolean {
+	"worklet";
+	if (scale === 0) return false;
+	const pad = HIT_PADDING_PX / scale;
+	return hitTestBox(
+		transform,
+		{
+			halfWidth: box.halfWidth + pad / (Math.abs(transform.scaleX) || 1),
+			halfHeight: box.halfHeight + pad / (Math.abs(transform.scaleY) || 1),
+		},
+		point,
+	);
+}
+
+/**
  * Whether a document-space point hits the layer `id` itself, whatever lies
  * over it there.
  */

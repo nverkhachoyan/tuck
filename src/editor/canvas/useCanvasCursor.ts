@@ -10,7 +10,9 @@ import type { ViewZoom } from "./viewport";
 /**
  * What a press at the pointer would do: grab a handle, move a layer, move
  * the view, or nothing. The cursor changes only when that does, not on every
- * pointer move. With a mouse, it shows that on the canvas.
+ * pointer move. With a mouse, it shows that on the canvas. Where a drag
+ * draws a box or a stroke, `movesSelectionAt`, when given, says where it
+ * moves the selection instead.
  */
 export function useCanvasCursor({
 	scale,
@@ -18,6 +20,7 @@ export function useCanvasCursor({
 	selectionRotation,
 	selectedLayerIds,
 	dragsSelection,
+	movesSelectionAt,
 	targets,
 	zoom,
 }: {
@@ -26,6 +29,7 @@ export function useCanvasCursor({
 	selectionRotation: number | null;
 	selectedLayerIds: readonly string[];
 	dragsSelection: boolean;
+	movesSelectionAt: ((screenX: number, screenY: number) => boolean) | null;
 	targets: readonly LayerTarget[];
 	zoom: ViewZoom | null;
 }) {
@@ -39,8 +43,13 @@ export function useCanvasCursor({
 				return;
 			}
 			if (dragsSelection) {
-				const hit = lookups.layerAt(screenX, screenY);
-				const onSelection = hit !== null && selectedLayerIds.includes(hit);
+				let onSelection: boolean;
+				if (movesSelectionAt) {
+					onSelection = movesSelectionAt(screenX, screenY);
+				} else {
+					const hit = lookups.layerAt(screenX, screenY);
+					onSelection = hit !== null && selectedLayerIds.includes(hit);
+				}
 				setCursor(onSelection ? "move" : "crosshair");
 				return;
 			}
@@ -59,6 +68,7 @@ export function useCanvasCursor({
 		[
 			dragsSelection,
 			lookups,
+			movesSelectionAt,
 			scale,
 			selectedLayerIds,
 			selectionRotation,
