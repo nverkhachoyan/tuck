@@ -30,16 +30,17 @@ export type LiveMarquee = {
 export function useMarqueeGesture({
 	viewport,
 	layers,
-	additive,
+	replaces,
 	standsAside = null,
 	onFinish,
 	enabled = false,
 }: {
 	viewport: DocumentViewport;
 	layers: SharedValue<readonly LayerTarget[]>;
-	additive: SharedValue<boolean>;
+	// Whether the box replaces the selection rather than adding to it.
+	replaces: SharedValue<boolean>;
 	standsAside?: ((screenX: number, screenY: number) => boolean) | null;
-	onFinish: (ids: readonly string[], additive: boolean) => void;
+	onFinish: (ids: readonly string[], replace: boolean) => void;
 	enabled?: boolean;
 }) {
 	const active = useSharedValue(false);
@@ -107,7 +108,7 @@ export function useMarqueeGesture({
 					layers.value,
 					rectFromCorners(topLeft, bottomRight),
 				);
-				scheduleOnRN(onFinish, caught, additive.value);
+				scheduleOnRN(onFinish, caught, replaces.value);
 			}
 			active.value = false;
 		},

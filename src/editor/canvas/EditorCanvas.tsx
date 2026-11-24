@@ -622,14 +622,14 @@ export function EditorCanvas({
 			onResizeBox?.(id, transform, box.halfWidth * 2, box.halfHeight * 2),
 		[onResizeBox],
 	);
+	// A box adds what it catches to the selection, as taps do in the Select
+	// tool: a touch screen has no Shift to add with. An Alt+drag box, which
+	// can start over the selection, replaces it instead.
 	const handleMarquee = useCallback(
-		(caught: readonly string[], additive: boolean) => {
-			if (additive) {
-				if (caught.length > 0) {
-					onSelectLayers?.([...selectedLayerIds, ...caught]);
-				}
-			} else {
-				onSelectLayers?.(caught);
+		(caught: readonly string[], replace: boolean) => {
+			if (replace) onSelectLayers?.(caught);
+			else if (caught.length > 0) {
+				onSelectLayers?.([...selectedLayerIds, ...caught]);
 			}
 		},
 		[onSelectLayers, selectedLayerIds],
@@ -661,7 +661,7 @@ export function EditorCanvas({
 	const { marqueeGesture, marqueeBox } = useMarqueeGesture({
 		viewport,
 		layers: sharedTargets,
-		additive: aspectLocked,
+		replaces: altHeld,
 		standsAside: selectionDrag?.onSelection,
 		onFinish: handleMarquee,
 		enabled: isMarquee,
