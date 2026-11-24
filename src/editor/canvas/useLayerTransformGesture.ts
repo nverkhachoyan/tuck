@@ -13,6 +13,7 @@ import { hapticTick } from "@/platform/haptics";
 import {
 	type Box,
 	boundingBox,
+	type GroupTransformChange,
 	type Point,
 	type Size,
 	type Transform,
@@ -33,8 +34,10 @@ import {
 	clampScale,
 	holdLayer,
 	type LiveTransform,
+	liveGroupChange,
 	readLiveBox,
 	readLiveTransform,
+	SELECTION_GROUP_ID,
 } from "./liveTransform";
 import {
 	continueTravel,
@@ -106,6 +109,7 @@ export function useLayerTransformGesture({
 	onTap,
 	onSelect,
 	onCommit,
+	onCommitGroup,
 	onResize,
 	onHover,
 	onHoverEnd,
@@ -122,6 +126,7 @@ export function useLayerTransformGesture({
 	// Without it, a drag only ever moves the current selection.
 	onSelect?: (id: string) => void;
 	onCommit: (id: string, transform: Transform) => void;
+	onCommitGroup?: (change: GroupTransformChange) => void;
 	// A resized box: its transform, and its new size in its own units.
 	onResize: (id: string, transform: Transform, box: Box) => void;
 	onHover: (screenX: number, screenY: number) => void;
@@ -327,7 +332,11 @@ export function useLayerTransformGesture({
 		if (activeCount.value > 0) return;
 		const id = live.heldId.value;
 		if (moved.value && id !== null && holding()) {
-			if (resizedBox.value) {
+			if (id === SELECTION_GROUP_ID) {
+				if (onCommitGroup) {
+					scheduleOnRN(onCommitGroup, liveGroupChange(live));
+				}
+			} else if (resizedBox.value) {
 				scheduleOnRN(onResize, id, readLiveTransform(live), readLiveBox(live));
 			} else {
 				scheduleOnRN(onCommit, id, readLiveTransform(live));
@@ -336,8 +345,9 @@ export function useLayerTransformGesture({
 		live.heldId.value = null;
 	};
 
-	// Picks up the layer under the pan's touch-down point, or, off the
-	// selection, pins an anchored one where it is.
+	// Picks up the layer under the pan's touch-down point, keeping the active
+	// group when the finger lands on a member, or, off the selection, pins an
+	// anchored one where it is.
 	const pickUp = () => {
 		"worklet";
 		const target = findLayerAt(
@@ -345,10 +355,22 @@ export function useLayerTransformGesture({
 			toDocument(downX.value, downY.value),
 		);
 		const activeId = live.activeId.value;
-		if (target?.id === activeId) return;
+		if (
+			target &&
+			(target.id === activeId ||
+				(activeId === SELECTION_GROUP_ID &&
+					live.groupIds.value.includes(target.id)))
+		) {
+			return;
+		}
 		if (onSelect && !dragOnly && target) {
 			holdLayer(live, target.id, target);
 			scheduleOnRN(onSelect, target.id);
+		} else if (activeId === SELECTION_GROUP_ID) {
+			const members = live.groupIds.value;
+			pinned.value = layers.value.some(
+				(layer) => layer.anchored && members.includes(layer.id),
+			);
 		} else {
 			pinned.value =
 				layers.value.find((layer) => layer.id === activeId)?.anchored ?? false;
@@ -402,9 +424,14 @@ export function useLayerTransformGesture({
 				transform: readLiveTransform(live),
 				box: readLiveBox(live),
 			};
+			const held = live.heldId.value;
+			const heldGroup =
+				held === SELECTION_GROUP_ID ? live.groupIds.value : null;
 			snapLines.value = snapLinesFor(
 				documentSize,
-				layers.value.filter((target) => target.id !== live.heldId.value),
+				layers.value.filter((target) =>
+					heldGroup ? !heldGroup.includes(target.id) : target.id !== held,
+				),
 			);
 		},
 		onUpdate: (event) => {

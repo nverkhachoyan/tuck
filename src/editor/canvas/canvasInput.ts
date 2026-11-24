@@ -54,18 +54,20 @@ export type InputRules = {
 
 /**
  * What `input` asks of the canvas's shared behavior, `zoomed` in or not,
- * with `selected` the selected layer.
+ * with `selected` the single selected layer and `hasSelection` whether one
+ * or more layers are selected.
  */
 export function inputRules(
 	input: CanvasInput,
 	zoomed: boolean,
 	selected?: Layer,
+	hasSelection = selected !== undefined,
 ): InputRules {
 	switch (input.type) {
 		case "select":
 			return {
 				selection: "transforms",
-				twoFingers: selected ? "selection" : "view",
+				twoFingers: hasSelection ? "selection" : "view",
 				oneFinger: zoomed ? "offSelection" : null,
 				cursor: "hover",
 			};

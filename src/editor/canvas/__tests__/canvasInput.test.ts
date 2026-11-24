@@ -122,6 +122,11 @@ describe("inputRules", () => {
 		for (const zoomed of [false, true]) {
 			assert.equal(inputRules({ type: "select" }, zoomed).twoFingers, "view");
 		}
+		// Several selected (no single layer) still transforms with two fingers.
+		assert.equal(
+			inputRules({ type: "select" }, false, undefined, true).twoFingers,
+			"selection",
+		);
 	});
 
 	test("a tool, picking a color too, keeps one finger and a crosshair", () => {

@@ -85,6 +85,19 @@ export function hitsLayer(
 	return target !== undefined && findLayerAt([target], point) !== null;
 }
 
+/** Whether a document-space point hits any layer whose id is in `ids`. */
+export function hitsAnyLayer(
+	targets: readonly LayerTarget[],
+	ids: readonly string[],
+	point: Point,
+): boolean {
+	"worklet";
+	for (const id of ids) {
+		if (hitsLayer(targets, id, point)) return true;
+	}
+	return false;
+}
+
 /**
  * The region under a document-space point, or null when there's none.
  * - A region the point is inside wins, the smallest where several hold it.

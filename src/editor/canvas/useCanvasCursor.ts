@@ -2,10 +2,9 @@ import { useCallback, useState } from "react";
 import { Platform } from "react-native";
 import { useHoverGesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
-import type { Layer } from "../layers/layer";
 import { type CanvasCursor, cursorForHandle } from "./canvasCursor";
 import type { CanvasLookups } from "./canvasTool";
-import { hitsLayer, type LayerTarget } from "./hitTest";
+import { hitsAnyLayer, type LayerTarget } from "./hitTest";
 import type { ViewZoom } from "./viewport";
 
 /**
@@ -16,16 +15,16 @@ import type { ViewZoom } from "./viewport";
 export function useCanvasCursor({
 	scale,
 	lookups,
-	selectedLayer,
-	selectedLayerId,
+	selectionRotation,
+	selectedLayerIds,
 	dragsSelection,
 	targets,
 	zoom,
 }: {
 	scale: number;
 	lookups: CanvasLookups;
-	selectedLayer: Layer | undefined;
-	selectedLayerId: string | null;
+	selectionRotation: number | null;
+	selectedLayerIds: readonly string[];
 	dragsSelection: boolean;
 	targets: readonly LayerTarget[];
 	zoom: ViewZoom | null;
@@ -35,22 +34,21 @@ export function useCanvasCursor({
 		(screenX: number, screenY: number) => {
 			if (scale === 0) return;
 			const handle = lookups.handleAt(screenX, screenY);
-			if (handle && selectedLayer) {
-				setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
+			if (handle && selectionRotation !== null) {
+				setCursor(cursorForHandle(handle, selectionRotation));
 				return;
 			}
 			if (dragsSelection) {
-				const onSelection =
-					selectedLayerId !== null &&
-					lookups.layerAt(screenX, screenY) === selectedLayerId;
+				const hit = lookups.layerAt(screenX, screenY);
+				const onSelection = hit !== null && selectedLayerIds.includes(hit);
 				setCursor(onSelection ? "move" : "crosshair");
 				return;
 			}
 			if (zoom) {
 				const point = lookups.toDocument(screenX, screenY);
 				const onSelection =
-					selectedLayerId !== null &&
-					hitsLayer(targets, selectedLayerId, point);
+					selectedLayerIds.length > 0 &&
+					hitsAnyLayer(targets, selectedLayerIds, point);
 				setCursor(onSelection ? "move" : "grab");
 				return;
 			}
@@ -62,8 +60,8 @@ export function useCanvasCursor({
 			dragsSelection,
 			lookups,
 			scale,
-			selectedLayer,
-			selectedLayerId,
+			selectedLayerIds,
+			selectionRotation,
 			targets,
 			zoom,
 		],

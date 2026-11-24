@@ -5,6 +5,7 @@ import {
 	applyMatrix,
 	boundingBox,
 	cosSin,
+	groupBounds,
 	hitTestBox,
 	invertMatrix,
 	multiplyMatrices,
@@ -249,5 +250,37 @@ describe("transformAbout", () => {
 		const ry = (before.y - change.pivot.y) * change.scale;
 		near(after.x, change.pivot.x + rx * cos - ry * sin + change.dx);
 		near(after.y, change.pivot.y + rx * sin + ry * cos + change.dy);
+	});
+});
+
+describe("groupBounds", () => {
+	test("returns null for an empty list", () => {
+		assert.equal(groupBounds([]), null);
+	});
+
+	test("encloses each rotated and scaled box in an upright frame", () => {
+		const bounds = groupBounds([
+			{
+				transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+				box: { halfWidth: 20, halfHeight: 10 },
+			},
+			{
+				transform: {
+					x: 200,
+					y: 200,
+					scaleX: 2,
+					scaleY: 2,
+					rotation: Math.PI / 2,
+				},
+				box: { halfWidth: 30, halfHeight: 10 },
+			},
+		]);
+		// First: x in [80, 120], y in [90, 110]
+		// Second rotated 90° and scaled 2x: halfWidth 20, halfHeight 60 -> x in [180, 220], y in [140, 260]
+		// Union: x in [80, 220] (center 150, halfWidth 70), y in [90, 260] (center 175, halfHeight 85)
+		assert.deepEqual(bounds, {
+			transform: { x: 150, y: 175, scaleX: 1, scaleY: 1, rotation: 0 },
+			box: { halfWidth: 70, halfHeight: 85 },
+		});
 	});
 });

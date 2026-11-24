@@ -1,6 +1,7 @@
 import type { EditorDocument } from "../document/document";
 import { drawingPieces } from "../layers/drawing/drawingEdits";
 import type { Layer } from "../layers/layer";
+import { canArrangeLayers } from "../layers/layerEdits";
 import { useStore } from "../store";
 import {
 	type ArrangeMove,
@@ -9,75 +10,72 @@ import {
 } from "./SelectionBar";
 
 /**
- * Moving the selected layer in the stack (`arrange`), and where it stands:
- * at `index`, under the top layer at `topIndex`.
+ * Moving the selected layers in the stack (`arrange`), and whether they can
+ * move forward or backward while keeping locked layers fixed.
  */
 export function useArrangeSelected(
 	document: EditorDocument,
-	selectedLayer: Layer | undefined,
+	selectedLayers: readonly Layer[],
 ) {
-	const { moveLayer } = useStore((state) => state.actions);
-	const index = selectedLayer ? document.layers.indexOf(selectedLayer) : -1;
-	const topIndex = document.layers.length - 1;
-	const arrange = (move: ArrangeMove) => {
-		if (!selectedLayer) return;
-		const to = {
-			front: topIndex,
-			forward: index + 1,
-			backward: index - 1,
-			back: 0,
-		};
-		moveLayer(selectedLayer.id, to[move]);
+	const { arrangeSelectedLayers } = useStore((state) => state.actions);
+	const ids = selectedLayers.map((layer) => layer.id);
+	return {
+		canMoveForward: canArrangeLayers(document.layers, ids, "forward"),
+		canMoveBackward: canArrangeLayers(document.layers, ids, "backward"),
+		arrange: arrangeSelectedLayers,
 	};
-	return { index, topIndex, arrange };
 }
 
 /**
- * The selection bar for `layer`, at `index` in the stack: Edit for a layer
- * a tool edits in place (`onEdit`), Free resize for text and images, and
- * Separate for an unlocked drawing in more than one piece. `inBar` gives
- * the wide header's group instead of the bar that floats by the layer.
+ * The selection bar for the selected `layers`: Edit for a single layer a tool
+ * edits in place (`onEdit`), Free resize for a single text or image, Separate
+ * for a single unlocked drawing in pieces, and Arrange, Duplicate, and Delete
+ * for one or several. `inBar` gives the wide header's group instead of the bar
+ * that floats by the selection.
  */
 export function LayerSelectionBar({
-	layer,
+	layers,
 	inBar = false,
-	index,
-	topIndex,
+	canMoveForward,
+	canMoveBackward,
 	onEdit,
 	onSetResizable,
 	onArrange,
 	onDuplicate,
 	onDelete,
 }: {
-	layer: Layer;
+	layers: readonly Layer[];
 	inBar?: boolean;
-	index: number;
-	topIndex: number;
+	canMoveForward: boolean;
+	canMoveBackward: boolean;
 	onEdit?: () => void;
 	onSetResizable: (id: string, resizable: boolean) => void;
 	onArrange: (move: ArrangeMove) => void;
 	onDuplicate: () => void;
-	onDelete: (id: string) => void;
+	onDelete: () => void;
 }) {
 	const { separateSelectedDrawing } = useStore((state) => state.actions);
+	const single = layers.length === 1 ? layers[0] : undefined;
 	const resizable =
-		layer.type === "text" || (layer.type === "image" && !layer.sticker);
+		single !== undefined &&
+		(single.type === "text" || (single.type === "image" && !single.sticker));
 	const inPieces =
-		layer.type === "drawing" &&
-		!layer.locked &&
-		drawingPieces(layer).length > 1;
+		single?.type === "drawing" &&
+		!single.locked &&
+		drawingPieces(single).length > 1;
 	const actions = {
-		canMoveForward: index < topIndex,
-		canMoveBackward: index > 0,
-		onEdit,
-		stretched: layer.resizable === true,
-		onToggleStretch: resizable
-			? () => onSetResizable(layer.id, !layer.resizable)
-			: undefined,
+		canMoveForward,
+		canMoveBackward,
+		onEdit: single ? onEdit : undefined,
+		stretched: single?.resizable === true,
+		onToggleStretch:
+			single && resizable
+				? () => onSetResizable(single.id, !single.resizable)
+				: undefined,
 		onSeparate: inPieces ? separateSelectedDrawing : undefined,
 		onArrange,
 		onDuplicate,
-		onDelete: () => onDelete(layer.id),
+		onDelete,
 	};
 	return inBar ? (
 		<SelectionBarItems {...actions} />

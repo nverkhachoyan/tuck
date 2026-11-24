@@ -2,31 +2,48 @@ import { useMemo } from "react";
 import { Platform } from "react-native";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
 import { scheduleOnUI } from "react-native-worklets";
-import type { Box, Transform } from "../document/geometry";
+import {
+	type Box,
+	type GroupTransformChange,
+	type Transform,
+	transformAbout,
+} from "../document/geometry";
 import type { ResizeMode } from "./handleGeometry";
 
 const MIN_LAYER_SCALE = 0.2;
 const MAX_LAYER_SCALE = 8;
 
+/** Virtual layer id held in `LiveTransform` while several layers are selected. */
+export const SELECTION_GROUP_ID = "__selection_group__";
+
+const NO_GROUP_IDS: readonly string[] = [];
+
 /**
- * High-frequency transform state for the selected layer.
+ * High-frequency transform state for the selected layer or virtual selection
+ * group.
  * - Gestures write here every frame (no React rerenders). The document only
  *   receives the final value when the gesture ends.
  * - While `activeId` matches a layer, that layer's node renders from these
  *   values instead of its document transform.
+ * - While `activeId` is `SELECTION_GROUP_ID`, each layer in `groupIds` renders
+ *   as `transformAbout` of its document transform from `(groupStartX,
+ *   groupStartY)` to the live values.
  * - `halfWidth` and `halfHeight` are its selection box, so the UI thread
  *   can find and draw its handles without laying out text.
  * - `resizeMode` says how the box resizes, with side handles.
  * - `guideX` and `guideY` are the document's lines a drag has snapped it
  *   onto, if any: a vertical line at x = `guideX`, a horizontal one at
  *   y = `guideY`.
- * - `heldId` is the layer a gesture is transforming, if any. The gesture
- *   owns its transform and box until it ends, so a sync from the document
- *   leaves them be.
+ * - `heldId` is the layer (or `SELECTION_GROUP_ID`) a gesture is transforming,
+ *   if any. The gesture owns its transform and box until it ends, so a sync
+ *   from the document leaves them be.
  */
 export type LiveTransform = {
 	activeId: SharedValue<string | null>;
 	heldId: SharedValue<string | null>;
+	groupIds: SharedValue<readonly string[]>;
+	groupStartX: SharedValue<number>;
+	groupStartY: SharedValue<number>;
 	x: SharedValue<number>;
 	y: SharedValue<number>;
 	scaleX: SharedValue<number>;
@@ -42,6 +59,9 @@ export type LiveTransform = {
 export function useLiveTransform(): LiveTransform {
 	const activeId = useSharedValue<string | null>(null);
 	const heldId = useSharedValue<string | null>(null);
+	const groupIds = useSharedValue<readonly string[]>(NO_GROUP_IDS);
+	const groupStartX = useSharedValue(0);
+	const groupStartY = useSharedValue(0);
 	const x = useSharedValue(0);
 	const y = useSharedValue(0);
 	const scaleX = useSharedValue(1);
@@ -56,6 +76,9 @@ export function useLiveTransform(): LiveTransform {
 		() => ({
 			activeId,
 			heldId,
+			groupIds,
+			groupStartX,
+			groupStartY,
 			x,
 			y,
 			scaleX,
@@ -70,6 +93,9 @@ export function useLiveTransform(): LiveTransform {
 		[
 			activeId,
 			heldId,
+			groupIds,
+			groupStartX,
+			groupStartY,
 			x,
 			y,
 			scaleX,
@@ -107,31 +133,46 @@ function applySync(
 	live: LiveTransform,
 	id: string | null,
 	layer: LiveLayerState | undefined,
+	groupIds: readonly string[],
 ) {
 	"worklet";
-	if (id && layer) {
-		const held = id === live.heldId.value && id === live.activeId.value;
-		if (!held) writeLayer(live, layer);
+	const held =
+		id !== null && id === live.heldId.value && id === live.activeId.value;
+	if (!held) {
+		if (id && layer) {
+			writeLayer(live, layer);
+			if (id === SELECTION_GROUP_ID) {
+				live.groupStartX.value = layer.transform.x;
+				live.groupStartY.value = layer.transform.y;
+				live.groupIds.value = groupIds;
+			} else {
+				live.groupIds.value = NO_GROUP_IDS;
+			}
+		} else {
+			live.groupIds.value = NO_GROUP_IDS;
+		}
 	}
 	live.activeId.value = id;
 }
 
 /**
- * Points the live values at the selected layer, and its document transform
- * and box, whenever either changes. It runs on the UI thread, between a
- * gesture's frames rather than during one, and leaves a layer a gesture
- * holds to the gesture. Otherwise a drag that picked its layer on the UI
- * thread would jump back when that selection reached React.
+ * Points the live values at the selected layer or virtual selection group,
+ * and its document transform and box, whenever either changes. It runs on
+ * the UI thread, between a gesture's frames rather than during one, and
+ * leaves a layer or group a gesture holds to the gesture. Otherwise a drag
+ * that picked its layer on the UI thread would jump back when that selection
+ * reached React.
  */
 export function syncLiveTransform(
 	live: LiveTransform,
 	id: string | null,
 	layer: LiveLayerState | undefined,
+	groupIds: readonly string[] = NO_GROUP_IDS,
 ) {
 	// On web, worklets run on the JS thread anyway, and scheduling one there
 	// waits for the next frame.
-	if (Platform.OS === "web") applySync(live, id, layer);
-	else scheduleOnUI(applySync, live, id, layer);
+	if (Platform.OS === "web") applySync(live, id, layer, groupIds);
+	else scheduleOnUI(applySync, live, id, layer, groupIds);
 }
 
 /**
@@ -145,6 +186,7 @@ export function holdLayer(
 ) {
 	"worklet";
 	writeLayer(live, layer);
+	live.groupIds.value = NO_GROUP_IDS;
 	live.activeId.value = id;
 	live.heldId.value = id;
 }
@@ -165,15 +207,35 @@ export function readLiveBox(live: LiveTransform): Box {
 	return { halfWidth: live.halfWidth.value, halfHeight: live.halfHeight.value };
 }
 
+/** The group transform change from the group's starting center to the live values. */
+export function liveGroupChange(live: LiveTransform): GroupTransformChange {
+	"worklet";
+	const startX = live.groupStartX.value;
+	const startY = live.groupStartY.value;
+	return {
+		pivot: { x: startX, y: startY },
+		dx: live.x.value - startX,
+		dy: live.y.value - startY,
+		scale: live.scaleX.value,
+		rotation: live.rotation.value,
+	};
+}
+
 // `transform` and `box` are the layer's own, from the document: while it's
-// the active layer, the live values stand in for them.
+// the active layer (or a member of the active group), the live values stand
+// in for them.
 export function liveTransformOf(
 	live: LiveTransform,
 	id: string,
 	transform: Transform,
 ): Transform {
 	"worklet";
-	return live.activeId.value === id ? readLiveTransform(live) : transform;
+	const active = live.activeId.value;
+	if (active === id) return readLiveTransform(live);
+	if (active === SELECTION_GROUP_ID && live.groupIds.value.includes(id)) {
+		return transformAbout(transform, liveGroupChange(live));
+	}
+	return transform;
 }
 
 export function liveBoxOf(live: LiveTransform, id: string, box: Box): Box {
