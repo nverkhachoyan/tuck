@@ -5,6 +5,7 @@ import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
+	selectSelectedLayerId,
 } from "@src/editor/store/editorSlice.ts";
 import { useState } from "react";
 import { useStore } from "zustand";
@@ -48,8 +49,9 @@ export function HistoryLesson() {
 	const [run, setRun] = useState(0);
 	const [tabName, setTabName] = useState("setDocument");
 	const state = useStore(store);
-	const { document, selectedLayerId } = state;
+	const { document, selectedLayerIds } = state;
 	if (!document) return null;
+	const selectedLayerId = selectSelectedLayerId(state);
 	const selected = selectSelectedLayer(state);
 	const actions = store.getState().actions;
 	const count = (type: Layer["type"]) =>
@@ -83,8 +85,8 @@ export function HistoryLesson() {
 			body: (
 				<p>
 					Choose a different layer in the list. <code>selectLayer</code> changes{" "}
-					<code>selectedLayerId</code> and nothing else: choosing isn't an edit,
-					so there's no undo step. Each snapshot still remembers what was
+					<code>selectedLayerIds</code> and nothing else: choosing isn't an
+					edit, so there's no undo step. Each snapshot still remembers what was
 					selected.
 				</p>
 			),
@@ -92,7 +94,7 @@ export function HistoryLesson() {
 				log.some(
 					(record) =>
 						record.action === "editor/selectLayer" &&
-						record.after.selectedLayerId !== null,
+						record.after.selectedLayerIds.length > 0,
 				),
 		},
 		{
@@ -151,8 +153,8 @@ export function HistoryLesson() {
 				log.some(
 					(record) =>
 						record.action === "editor/hideLayer" &&
-						record.before.selectedLayerId !== null &&
-						record.after.selectedLayerId === null,
+						record.before.selectedLayerIds.length > 0 &&
+						record.after.selectedLayerIds.length === 0,
 				),
 		},
 	];
@@ -334,7 +336,7 @@ export function HistoryLesson() {
 							</p>
 							<ol className="layer-list">
 								{topFirst.map((layer) => {
-									const chosen = layer.id === selectedLayerId;
+									const chosen = selectedLayerIds.includes(layer.id);
 									return (
 										<li
 											key={layer.id}
@@ -377,8 +379,8 @@ export function HistoryLesson() {
 						<section className="panel history" aria-label="Action log">
 							<h2>Action log</h2>
 							<p className="history-counts">
-								As Redux DevTools names them. <code>selectedLayerId</code>:{" "}
-								{selectedLayerId ?? "null"}
+								As Redux DevTools names them. <code>selectedLayerIds</code>: [
+								{selectedLayerIds.join(", ")}]
 							</p>
 							<ol className="log">
 								{log.slice(0, 10).map((record) => {

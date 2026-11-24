@@ -137,6 +137,7 @@ export function Editor({
 	});
 	const { specs } = toolbox;
 	const selectedLayer = useStore(selectSelectedLayer);
+	const selectedLayerIds = useStore((state) => state.selectedLayerIds);
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
 	const actions = useStore((state) => state.actions);
@@ -373,7 +374,7 @@ export function Editor({
 
 	const layerList = layerListProps({
 		document,
-		selectedLayer,
+		selectedLayerIds,
 		actions: {
 			...actions,
 			deleteLayer: editNotice.deleteLayer,

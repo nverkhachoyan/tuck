@@ -34,7 +34,7 @@ export function SessionsLesson() {
 	const [run, setRun] = useState(0);
 	const [tabName, setTabName] = useState("beginToolSession");
 	const state = useStore(store);
-	const { document, toolSession, selectedLayerId } = state;
+	const { document, toolSession } = state;
 	if (!document) return null;
 	const actions = store.getState().actions;
 	const redaction = selectSelectedRedaction(state);
@@ -295,8 +295,8 @@ export function SessionsLesson() {
 												className="button-small"
 												disabled={!redaction}
 												onClick={() =>
-													selectedLayerId &&
-													actions.setRedactionEffect(selectedLayerId, effect)
+													redaction &&
+													actions.setRedactionEffect(redaction.id, effect)
 												}
 											>
 												{label}

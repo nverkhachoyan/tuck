@@ -19,6 +19,8 @@ import {
 	createEditorSlice,
 	type EditorSlice,
 	selectSelectedLayer,
+	selectSelectedLayerId,
+	selectSelectedLayers,
 	selectSelectedRedaction,
 	selectSelectedShape,
 	selectSelectedTextLayer,
@@ -61,7 +63,7 @@ describe("editorSlice", () => {
 		actions.openDocument(next, "project-2");
 		assert.equal(store.getState().document, next);
 		assert.equal(store.getState().key, "project-2");
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 	});
 
 	test("closing clears the document, its key, and selection", () => {
@@ -70,14 +72,14 @@ describe("editorSlice", () => {
 		actions.closeDocument();
 		assert.equal(store.getState().document, null);
 		assert.equal(store.getState().key, null);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 	});
 
 	test("adding text puts it on top and selects it", () => {
 		const { store, text } = storeWithText();
 		assert.equal(text.type, "text");
 		assert.equal(text.text, "TOP TEXT");
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		assert.equal(selectSelectedTextLayer(store.getState()), text);
 	});
 
@@ -90,11 +92,11 @@ describe("editorSlice", () => {
 		assert.equal(added.uri, "file:///added.jpg");
 		assert.equal(added.locked, false);
 		assert.equal(added.transform.scaleX, (4000 * 0.8) / 8000);
-		assert.equal(store.getState().selectedLayerId, added.id);
+		assert.equal(selectSelectedLayerId(store.getState()), added.id);
 
 		actions.undo();
 		assert.equal(store.getState().document?.layers.length, 2);
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		actions.redo();
 		assert.equal(store.getState().document?.layers.at(-1), added);
 	});
@@ -107,7 +109,7 @@ describe("editorSlice", () => {
 		assert.ok(added?.type === "image");
 		assert.equal(added.sticker, true);
 		assert.equal(added.opaque, false);
-		assert.equal(store.getState().selectedLayerId, added.id);
+		assert.equal(selectSelectedLayerId(store.getState()), added.id);
 
 		actions.undo();
 		assert.equal(store.getState().document?.layers.length, 2);
@@ -120,7 +122,7 @@ describe("editorSlice", () => {
 		actions.addImageLayer("file:///a.jpg", 400, 300, true);
 		actions.addImageLayer("file:///b.jpg", 400, 300, true);
 		const [first, second] = store.getState().document?.layers ?? [];
-		assert.equal(store.getState().selectedLayerId, second.id);
+		assert.equal(selectSelectedLayerId(store.getState()), second.id);
 		actions.nudgeLayer(first.id, 10, 0);
 		assert.equal(store.getState().document?.layers[0].transform.x, 550);
 	});
@@ -129,11 +131,11 @@ describe("editorSlice", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		actions.selectLayer(null);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 		assert.equal(selectSelectedTextLayer(store.getState()), undefined);
 
 		actions.selectLayer(text.id);
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		assert.equal(selectSelectedTextLayer(store.getState()), text);
 	});
 
@@ -145,7 +147,7 @@ describe("editorSlice", () => {
 		assert.equal(original, text);
 		assert.notEqual(copy.id, text.id);
 		assert.equal(copy.text, text.text);
-		assert.equal(store.getState().selectedLayerId, copy.id);
+		assert.equal(selectSelectedLayerId(store.getState()), copy.id);
 	});
 
 	test("any layer type can be selected and duplicated", () => {
@@ -172,7 +174,7 @@ describe("editorSlice", () => {
 		const copy = store.getState().document?.layers.at(-1);
 		assert.equal(copy?.type, "image");
 		assert.notEqual(copy?.id, sticker.id);
-		assert.equal(store.getState().selectedLayerId, copy?.id);
+		assert.equal(selectSelectedLayerId(store.getState()), copy?.id);
 	});
 
 	test("updating text patches only the selected text layer", () => {
@@ -210,7 +212,7 @@ describe("editorSlice", () => {
 		assert.equal(first.text, "TOP");
 		assert.equal(first.font, "serif");
 		assert.equal(last.text, "BOTTOM");
-		assert.equal(store.getState().selectedLayerId, last.id);
+		assert.equal(selectSelectedLayerId(store.getState()), last.id);
 
 		actions.undo();
 		assert.equal(textLayers(store)[0], text, "one undo step");
@@ -238,7 +240,7 @@ describe("editorSlice", () => {
 		actions.transformLayer(text.id, transform);
 
 		assert.deepEqual(textLayers(store)[0].transform, transform);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 	});
 
 	test("enables free resize for text and image layers only", () => {
@@ -263,30 +265,30 @@ describe("editorSlice", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		actions.deleteLayer(text.id);
-		const { document, selectedLayerId } = store.getState();
+		const { document, selectedLayerIds } = store.getState();
 		assert.ok(!document?.layers.some((layer) => layer.id === text.id));
 		assert.equal(document?.layers.length, 1, "the photo stays");
-		assert.equal(selectedLayerId, null);
+		assert.deepEqual(selectedLayerIds, []);
 	});
 
 	test("deleting another layer keeps the selection", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		actions.addTextLayer("BOTTOM");
-		const { selectedLayerId } = store.getState();
+		const selectedLayerId = selectSelectedLayerId(store.getState());
 		actions.deleteLayer(text.id);
 		assert.equal(textLayers(store).length, 1);
-		assert.equal(store.getState().selectedLayerId, selectedLayerId);
+		assert.equal(selectSelectedLayerId(store.getState()), selectedLayerId);
 	});
 
 	test("moving a layer reorders the stack and keeps the selection", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		actions.addTextLayer("BOTTOM");
-		const { selectedLayerId } = store.getState();
+		const selectedLayerId = selectSelectedLayerId(store.getState());
 		actions.moveLayer(text.id, 2);
 		assert.equal(textLayers(store).at(-1)?.id, text.id);
-		assert.equal(store.getState().selectedLayerId, selectedLayerId);
+		assert.equal(selectSelectedLayerId(store.getState()), selectedLayerId);
 	});
 
 	test("hiding the selected layer clears selection; showing doesn't select", () => {
@@ -294,20 +296,20 @@ describe("editorSlice", () => {
 		const actions = store.getState().actions;
 		actions.setLayerHidden(text.id, true);
 		assert.equal(textLayers(store)[0].hidden, true);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 
 		actions.setLayerHidden(text.id, false);
 		assert.equal(textLayers(store)[0].hidden, false);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 	});
 
 	test("hiding another layer keeps the selection", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
 		actions.addTextLayer("BOTTOM");
-		const { selectedLayerId } = store.getState();
+		const selectedLayerId = selectSelectedLayerId(store.getState());
 		actions.setLayerHidden(text.id, true);
-		assert.equal(store.getState().selectedLayerId, selectedLayerId);
+		assert.equal(selectSelectedLayerId(store.getState()), selectedLayerId);
 	});
 
 	test("nudging moves a layer by a document-space offset", () => {
@@ -368,9 +370,9 @@ describe("editorSlice", () => {
 
 		actions.setLayerLocked(photoId, true);
 		assert.equal(store.getState().document?.layers[0].locked, true);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 		actions.undo();
-		assert.equal(store.getState().selectedLayerId, photoId);
+		assert.equal(selectSelectedLayerId(store.getState()), photoId);
 	});
 
 	test("reframing is one undo step, and an unchanged framing isn't one", () => {
@@ -422,7 +424,7 @@ describe("editorSlice", () => {
 		const actions = store.getState().actions;
 		const document = store.getState().document;
 		const snapshot = structuredClone(document);
-		const id = store.getState().selectedLayerId ?? "";
+		const id = selectSelectedLayerId(store.getState()) ?? "";
 		actions.updateSelectedText({ text: "changed" });
 		actions.addTextLayer("more");
 		actions.moveLayer(id, 2);
@@ -451,12 +453,12 @@ describe("editorSlice", () => {
 			actions.drawStroke(pen([0, 0, 100, 100]));
 			const [drawing] = drawings(store);
 			assert.equal(store.getState().document?.layers.at(-1), drawing);
-			assert.equal(store.getState().selectedLayerId, drawing.id);
+			assert.equal(selectSelectedLayerId(store.getState()), drawing.id);
 
 			actions.drawStroke(pen([100, 100, 200, 0]), drawing.id);
 			assert.equal(drawings(store).length, 1);
 			assert.equal(drawings(store)[0].strokes.length, 2);
-			assert.equal(store.getState().selectedLayerId, drawing.id);
+			assert.equal(selectSelectedLayerId(store.getState()), drawing.id);
 		});
 
 		test("a stroke with no mark to join starts a new drawing", () => {
@@ -480,16 +482,16 @@ describe("editorSlice", () => {
 			const { store } = storeWithText();
 			const actions = store.getState().actions;
 			actions.drawStroke(pen([0, 0, 50, 0]));
-			const id = store.getState().selectedLayerId;
+			const id = selectSelectedLayerId(store.getState());
 			actions.drawStroke(pen([300, 300, 350, 300]), id);
 			const steps = store.getState().past.length;
 			actions.separateSelectedDrawing();
 			assert.equal(drawings(store).length, 2);
-			assert.equal(store.getState().selectedLayerId, id);
+			assert.equal(selectSelectedLayerId(store.getState()), id);
 			assert.equal(store.getState().past.length, steps + 1);
 			actions.undo();
 			assert.equal(drawings(store).length, 1);
-			assert.equal(store.getState().selectedLayerId, id);
+			assert.equal(selectSelectedLayerId(store.getState()), id);
 		});
 
 		test("an eraser erases every drawing it crosses, with nothing selected", () => {
@@ -516,7 +518,7 @@ describe("editorSlice", () => {
 				],
 			);
 			assert.equal(store.getState().past.length, steps + 1, "one step a swipe");
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 		});
 
 		test("an eraser leaves locked and hidden drawings", () => {
@@ -538,10 +540,10 @@ describe("editorSlice", () => {
 			const actions = store.getState().actions;
 			actions.drawStroke(pen([0, 0, 100, 100]));
 			const [drawing] = drawings(store);
-			assert.equal(store.getState().selectedLayerId, drawing.id);
+			assert.equal(selectSelectedLayerId(store.getState()), drawing.id);
 			actions.eraseStroke(eraser([0, 0, 100, 100], 40), null);
 			assert.equal(drawings(store).length, 0);
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 			actions.undo();
 			assert.equal(drawings(store)[0], drawing);
 		});
@@ -553,7 +555,7 @@ describe("editorSlice", () => {
 			actions.selectLayer(null);
 			actions.drawStroke(pen([0, 0, 100, 100]));
 			const [other, selected] = drawings(store);
-			assert.equal(store.getState().selectedLayerId, selected.id);
+			assert.equal(selectSelectedLayerId(store.getState()), selected.id);
 			actions.eraseStroke(eraser([0, 50, 100, 50], 20), selected.id);
 			const [otherAfter, selectedAfter] = drawings(store);
 			assert.equal(otherAfter, other);
@@ -561,11 +563,11 @@ describe("editorSlice", () => {
 				selectedAfter.strokes.map((stroke) => stroke.type),
 				["pen", "eraser"],
 			);
-			assert.equal(store.getState().selectedLayerId, selected.id);
+			assert.equal(selectSelectedLayerId(store.getState()), selected.id);
 
 			actions.eraseStroke(eraser([0, 0, 100, 100], 40), selected.id);
 			assert.deepEqual(drawings(store), [other], "erased away");
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 		});
 
 		test("a stroke eraser swipe is one undo step", () => {
@@ -625,7 +627,7 @@ describe("editorSlice", () => {
 			assert.equal(drawings(store)[0].strokes.length, 1);
 			actions.undo();
 			assert.equal(drawings(store).length, 0);
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 		});
 	});
 
@@ -753,7 +755,7 @@ describe("editorSlice", () => {
 					},
 				],
 			);
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 			assert.equal(store.getState().past.length, 2, "one new history step");
 
 			actions.setLayerGroupHidden(group?.id ?? "", true);
@@ -770,7 +772,7 @@ describe("editorSlice", () => {
 
 			actions.undo();
 			assert.equal(store.getState().document, before);
-			assert.equal(store.getState().selectedLayerId, text.id);
+			assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		});
 
 		test("a change to several layers at once is a mark of its own", () => {
@@ -796,19 +798,19 @@ describe("editorSlice", () => {
 			actions.selectLayer(text.id);
 			actions.setLayerGroupLocked(group.id, true);
 			assert.ok(redactions(store).every((layer) => layer.locked));
-			assert.equal(store.getState().selectedLayerId, text.id);
+			assert.equal(selectSelectedLayerId(store.getState()), text.id);
 
 			actions.setLayerGroupLocked(group.id, false);
 			actions.selectLayer(boxes[1].id);
 			actions.setLayerGroupHidden(group.id, true);
 			assert.ok(redactions(store).every((layer) => layer.hidden));
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 
 			actions.undo();
 			assert.deepEqual(redactions(store), boxes);
-			assert.equal(store.getState().selectedLayerId, boxes[1].id);
+			assert.equal(selectSelectedLayerId(store.getState()), boxes[1].id);
 			actions.setLayerGroupLocked(group.id, true);
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 		});
 
 		test("a group's flags change nothing when its boxes already have them", () => {
@@ -829,12 +831,12 @@ describe("editorSlice", () => {
 			actions.deleteLayerGroup(group.id);
 			assert.deepEqual(redactions(store), []);
 			assert.deepEqual(store.getState().document?.groups, []);
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 
 			actions.undo();
 			actions.selectLayer(text.id);
 			actions.deleteLayerGroup(group.id);
-			assert.equal(store.getState().selectedLayerId, text.id);
+			assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		});
 
 		test("resizing a box is one undo step, by id", () => {
@@ -850,7 +852,7 @@ describe("editorSlice", () => {
 			assert.equal(resized.shape === "box" && resized.width, 360);
 			assert.equal(resized.shape === "box" && resized.height, 80);
 			assert.deepEqual(resized.transform, moved);
-			assert.equal(store.getState().selectedLayerId, text.id);
+			assert.equal(selectSelectedLayerId(store.getState()), text.id);
 			assert.equal(store.getState().past.length, steps + 1);
 
 			actions.undo();
@@ -1026,7 +1028,7 @@ describe("editorSlice", () => {
 			assert.deepEqual(shapes(store), [arrow]);
 			assert.equal(store.getState().past.length, steps + 1);
 			// The arrow was selected, and still is.
-			assert.equal(store.getState().selectedLayerId, arrow.id);
+			assert.equal(selectSelectedLayerId(store.getState()), arrow.id);
 
 			actions.undo();
 			assert.deepEqual(shapes(store), [box, arrow]);
@@ -1041,7 +1043,7 @@ describe("editorSlice", () => {
 				null,
 			);
 			assert.deepEqual(shapes(store), []);
-			assert.equal(store.getState().selectedLayerId, null);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
 		});
 
 		test("an eraser leaves locked and hidden shapes, and misses nothing else", () => {
@@ -1175,11 +1177,11 @@ describe("editorSlice", () => {
 			const actions = store.getState().actions;
 			const steps = store.getState().past.length;
 			actions.addCutCopy("photo", { mask: "file:///mask.png" });
-			const { document, selectedLayerId, past } = store.getState();
+			const { document, selectedLayerIds, past } = store.getState();
 			const copy = document?.layers[1] as ImageLayer;
 			assert.equal(copy.type, "image");
 			assert.equal(copy.mask, "file:///mask.png");
-			assert.equal(selectedLayerId, copy.id);
+			assert.deepEqual(selectedLayerIds, [copy.id]);
 			assert.equal(past.length, steps + 1);
 			actions.undo();
 			assert.equal(store.getState().document?.layers.length, 2);
@@ -1192,7 +1194,7 @@ describe("editorSlice", () => {
 			const before = store.getState().document;
 			actions.addCutCopy("missing", { mask: "file:///mask.png" });
 			assert.equal(store.getState().document, before);
-			assert.equal(store.getState().selectedLayerId, text.id);
+			assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		});
 	});
 
@@ -1231,7 +1233,7 @@ describe("editorSlice", () => {
 			actions.paintMask("photo", pen);
 			assert.equal(firstImage(store).maskStrokes?.length, 2);
 			assert.equal(store.getState().past.length, steps + 2);
-			assert.equal(store.getState().selectedLayerId, text.id, "kept");
+			assert.equal(selectSelectedLayerId(store.getState()), text.id, "kept");
 			actions.undo();
 			actions.undo();
 			assert.equal("maskStrokes" in firstImage(store), false);
@@ -1268,6 +1270,97 @@ describe("editorSlice", () => {
 			assert.equal(firstImage(store).mask, "file:///grown.png");
 			assert.equal(firstImage(store).maskStrokes?.length, 1);
 			assert.equal(store.getState().past.length, steps + 1);
+		});
+	});
+
+	describe("multi-layer selection", () => {
+		test("selectLayers orders by document stack, deduplicates, and ignores missing ids", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("SECOND");
+			actions.addTextLayer("THIRD");
+			const [, b, c] = textLayers(store);
+
+			actions.selectLayers([c.id, a.id, c.id, "missing"]);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, c.id]);
+			assert.deepEqual(selectSelectedLayers(store.getState()), [a, c]);
+			assert.equal(selectSelectedLayerId(store.getState()), null);
+			assert.equal(selectSelectedLayer(store.getState()), undefined);
+			assert.equal(selectSelectedTextLayer(store.getState()), undefined);
+			assert.equal(
+				selectSelectedLayers(store.getState()),
+				selectSelectedLayers(store.getState()),
+			);
+
+			actions.selectLayers([b.id]);
+			assert.equal(selectSelectedLayerId(store.getState()), b.id);
+			assert.equal(selectSelectedLayer(store.getState()), b);
+		});
+
+		test("toggleLayerSelected adds in document order and removes without duplicates", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("SECOND");
+			const [, b] = textLayers(store);
+
+			actions.toggleLayerSelected(a.id);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, b.id]);
+
+			actions.toggleLayerSelected(b.id);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id]);
+
+			actions.toggleLayerSelected(a.id);
+			assert.deepEqual(store.getState().selectedLayerIds, []);
+		});
+
+		test("selectAll selects every visible, unlocked layer and leaves out locked and hidden ones", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("HIDDEN");
+			actions.addTextLayer("LOCKED");
+			actions.addTextLayer("VISIBLE");
+			const [, hidden, locked, visible] = textLayers(store);
+			actions.setLayerHidden(hidden.id, true);
+			actions.setLayerLocked(locked.id, true);
+
+			actions.selectAll();
+			// Photo starts locked, so only `a` and `visible` are selected.
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, visible.id]);
+			assert.deepEqual(selectSelectedLayers(store.getState()), [a, visible]);
+		});
+
+		test("hiding, locking, or deleting one member drops only it", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("B");
+			actions.addTextLayer("C");
+			const [, b, c] = textLayers(store);
+			actions.selectLayers([a.id, b.id, c.id]);
+
+			actions.setLayerHidden(b.id, true);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, c.id]);
+
+			actions.setLayerLocked(a.id, true);
+			assert.deepEqual(store.getState().selectedLayerIds, [c.id]);
+
+			actions.undo();
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, c.id]);
+			actions.undo();
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, b.id, c.id]);
+
+			actions.deleteLayer(b.id);
+			assert.deepEqual(store.getState().selectedLayerIds, [a.id, c.id]);
+		});
+
+		test("reordering keeps selectedLayerIds in bottom-to-top document order", () => {
+			const { store, text: a } = storeWithText();
+			const actions = store.getState().actions;
+			actions.addTextLayer("B");
+			const [, b] = textLayers(store);
+			actions.selectLayers([a.id, b.id]);
+
+			actions.moveLayer(a.id, 2);
+			assert.deepEqual(store.getState().selectedLayerIds, [b.id, a.id]);
 		});
 	});
 });

@@ -11,6 +11,7 @@ import {
 	sameStyle,
 } from "../../layers/drawing/marks";
 import { useStore } from "../../store";
+import { selectSelectedLayerId } from "../../store/editorSlice";
 import type { ToolEnv } from "../defineTool";
 import {
 	markPatch,
@@ -130,7 +131,7 @@ export function usePenTool({
 			);
 		}
 		drawStroke(pen, joinId);
-		const markId = useStore.getState().selectedLayerId;
+		const markId = selectSelectedLayerId(useStore.getState());
 		last.current = markId ? { markId, endedAt: stroke.endedAt } : null;
 	};
 
