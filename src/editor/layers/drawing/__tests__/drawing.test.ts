@@ -198,4 +198,10 @@ test("rounded ends reach between round and square ones", () => {
 	const round = visibleReach({ ...pen, tip: "ink", ends: "round" });
 	assert.equal(round, pen.width / 2);
 	assert.ok(round < rounded && rounded < square);
+	// Measured on CanvasKit: a 200-wide rounded end reaches 123.7.
+	assert.ok(
+		Math.abs(
+			visibleReach({ ...pen, width: 200, tip: "ink", ends: "rounded" }) - 123.7,
+		) < 0.1,
+	);
 });

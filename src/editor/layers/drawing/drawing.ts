@@ -201,8 +201,10 @@ export function visibleReach(stroke: Brush): number {
 	const ends = strokeEnds(stroke);
 	if (ends === "square") return stroke.width * Math.SQRT1_2;
 	if (ends === "rounded") {
+		// Skia's corner effect is a quadratic through the corner, not an arc:
+		// its middle lies a quarter of the corner in from the square's.
 		const corner = stroke.width * ROUNDED_END;
-		return Math.SQRT2 * (stroke.width / 2 - corner) + corner;
+		return Math.SQRT2 * (stroke.width / 2 - corner / 4);
 	}
 	return stroke.width / 2;
 }
