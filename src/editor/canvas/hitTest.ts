@@ -80,6 +80,25 @@ export function findLayerAt(
 }
 
 /**
+ * The topmost selectable layer under a document-space point that sits above
+ * every layer in `ids`, or null: what a press inside the selection's box
+ * reaches over it, leaving what lies beneath to the selection.
+ */
+export function findLayerAbove(
+	targets: readonly LayerTarget[],
+	ids: readonly string[],
+	point: Point,
+): LayerTarget | null {
+	"worklet";
+	for (let i = targets.length - 1; i >= 0; i--) {
+		if (ids.includes(targets[i].id)) {
+			return findLayerAt(targets.slice(i + 1), point);
+		}
+	}
+	return findLayerAt(targets, point);
+}
+
+/**
  * Whether a document-space point lies inside `box` placed by `transform`,
  * padded by `HIT_PADDING_PX` on screen at the view's `scale`.
  */

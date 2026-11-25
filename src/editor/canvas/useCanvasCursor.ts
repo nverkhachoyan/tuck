@@ -10,9 +10,10 @@ import type { ViewZoom } from "./viewport";
 /**
  * What a press at the pointer would do: grab a handle, move a layer, move
  * the view, or nothing. The cursor changes only when that does, not on every
- * pointer move. With a mouse, it shows that on the canvas. Where a drag
- * draws a box or a stroke, `movesSelectionAt`, when given, says where it
- * moves the selection instead.
+ * pointer move. With a mouse, it shows that on the canvas.
+ * `movesSelectionAt`, when given, says where a drag moves the selection:
+ * where a drag would otherwise draw a box or a stroke, or move the view or
+ * another layer.
  */
 export function useCanvasCursor({
 	scale,
@@ -51,6 +52,10 @@ export function useCanvasCursor({
 					onSelection = hit !== null && selectedLayerIds.includes(hit);
 				}
 				setCursor(onSelection ? "move" : "crosshair");
+				return;
+			}
+			if (movesSelectionAt?.(screenX, screenY)) {
+				setCursor("move");
 				return;
 			}
 			if (zoom) {

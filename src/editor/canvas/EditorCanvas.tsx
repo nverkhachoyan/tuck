@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
 	type LayoutChangeEvent,
+	Platform,
 	StyleSheet,
 	Text,
 	View,
@@ -41,13 +42,7 @@ import { cutImageId, type ToolStroke } from "./canvasTool";
 import { EditorScene, type SceneDraft } from "./EditorScene";
 import { FitButton } from "./FitButton";
 import { handleUnder } from "./handleMetrics";
-import {
-	findLayerAt,
-	hitsAnyLayer,
-	hitsLayer,
-	insidePaddedBox,
-	type LayerTarget,
-} from "./hitTest";
+import { findLayerAt, insidePaddedBox, type LayerTarget } from "./hitTest";
 import { layerBounds } from "./layerBounds";
 import { layerTargets, resizeMode } from "./layerTargets";
 import {
@@ -122,19 +117,6 @@ function insideLiveSelection(
 	);
 }
 
-// Whether a document point hits the active layer or any member of the active group.
-function hitsActiveSelection(
-	targets: readonly LayerTarget[],
-	live: LiveTransform,
-	point: Point,
-): boolean {
-	"worklet";
-	const id = live.activeId.value;
-	if (id === null) return false;
-	return id === SELECTION_GROUP_ID
-		? hitsAnyLayer(targets, live.groupIds.value, point)
-		: hitsLayer(targets, id, point);
-}
 const NO_REGIONS: readonly CanvasRegion[] = [];
 
 type EditorCanvasProps = {
@@ -514,8 +496,8 @@ export function EditorCanvas({
 	);
 
 	// Where one finger moves the view too: anywhere while finding, whose taps
-	// don't drag, and while zoomed in, anywhere off the selection and its
-	// handles, so another layer is tapped before it's dragged. At the fit,
+	// don't drag, and while zoomed in, anywhere outside the selection's box
+	// and handles, so another layer is tapped before it's dragged. At the fit,
 	// where the view can't move, a drag picks up the layer under it, or moves
 	// the selection. Painting, typing, and adjusting keep one finger for
 	// themselves. Both the view's gesture and the layers' ask it, once, where
@@ -535,10 +517,59 @@ export function EditorCanvas({
 			const point = viewPointToDocument(viewport, { x, y });
 			return (
 				liveHandleAt(live, viewport, point) === null &&
-				!hitsActiveSelection(sharedTargets.value, live, point)
+				!insideLiveSelection(live, viewport, point)
 			);
 		};
-	}, [oneFingerMode, live, sharedTargets, viewport]);
+	}, [oneFingerMode, live, viewport]);
+
+	// Where a drag draws a box with no tool open, on web, from where it lands
+	// off the selection's handles: with Alt, anywhere, replacing the
+	// selection; with Shift, on empty canvas outside the selection's box,
+	// adding to it. The view and the layers stand aside there.
+	const drawsBox = useMemo(() => {
+		if (!isSelect || isMarquee || Platform.OS !== "web") return null;
+		return (x: number, y: number) => {
+			"worklet";
+			if (!altHeld.value && !aspectLocked.value) return false;
+			const point = viewPointToDocument(viewport, { x, y });
+			const active = live.activeId.value !== null;
+			if (active && liveHandleAt(live, viewport, point) !== null) return false;
+			if (altHeld.value) return true;
+			return (
+				!insideLiveSelection(live, viewport, point) &&
+				findLayerAt(sharedTargets.value, point) === null
+			);
+		};
+	}, [
+		altHeld,
+		aspectLocked,
+		isMarquee,
+		isSelect,
+		live,
+		sharedTargets,
+		viewport,
+	]);
+	const viewDragAlone = useMemo(() => {
+		if (drawsBox === null || dragAlone === null) return dragAlone;
+		return (x: number, y: number) => {
+			"worklet";
+			return !drawsBox(x, y) && dragAlone(x, y);
+		};
+	}, [dragAlone, drawsBox]);
+	const layersStandAside = useMemo(() => {
+		if (drawsBox === null) return viewDragAlone;
+		return (x: number, y: number) => {
+			"worklet";
+			return drawsBox(x, y) || (viewDragAlone?.(x, y) ?? false);
+		};
+	}, [drawsBox, viewDragAlone]);
+	const boxStandsAside = useMemo(() => {
+		if (drawsBox === null) return null;
+		return (x: number, y: number) => {
+			"worklet";
+			return !drawsBox(x, y);
+		};
+	}, [drawsBox]);
 
 	// Where a drag moves the selection rather than drawing a tool stroke or
 	// marquee box: on its handles; for the Select tool, anywhere inside its
@@ -568,8 +599,8 @@ export function EditorCanvas({
 		return { onSelection, offSelection };
 	}, [altHeld, dragsSelection, isMarquee, live, sharedTargets, viewport]);
 
-	// Whether the Select tool's drag from a point reported by the view would
-	// move the selection, for the cursor.
+	// Whether a drag from a point reported by the view would move the
+	// selection, inside its box, for the cursor.
 	const movesSelectionAt = useCallback(
 		(screenX: number, screenY: number) =>
 			selectionFrame.state !== undefined &&
@@ -589,7 +620,7 @@ export function EditorCanvas({
 		selectionRotation: selectionFrame.state?.transform.rotation ?? null,
 		selectedLayerIds,
 		dragsSelection: dragsSelection || isMarquee,
-		movesSelectionAt: isMarquee ? movesSelectionAt : null,
+		movesSelectionAt: isSelect ? movesSelectionAt : null,
 		targets,
 		zoom,
 	});
@@ -653,8 +684,7 @@ export function EditorCanvas({
 		onResize: handleResize,
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
-		standsAside: selectionDrag?.offSelection ?? dragAlone,
-		dragsInsideBox: isMarquee,
+		standsAside: selectionDrag?.offSelection ?? layersStandAside,
 		dragOnly: dragsSelection,
 		enabled: isSelect || dragsSelection,
 	});
@@ -662,16 +692,16 @@ export function EditorCanvas({
 		viewport,
 		layers: sharedTargets,
 		replaces: altHeld,
-		standsAside: selectionDrag?.onSelection,
+		standsAside: selectionDrag?.onSelection ?? boxStandsAside,
 		onFinish: handleMarquee,
-		enabled: isMarquee,
+		enabled: isMarquee || drawsBox !== null,
 	});
 	const viewGesture = useViewGesture({
 		shown,
 		frame,
 		live,
 		twoFingers: rules.twoFingers === "view",
-		dragAlone,
+		dragAlone: viewDragAlone,
 		onCommit: commitViewport,
 	});
 	const nudgeSelection = useCallback(
@@ -815,7 +845,9 @@ export function EditorCanvas({
 								stroke: liveStroke,
 								selectionColor: colors.selection,
 							})}
-						{isMarquee && <MarqueeBox box={marqueeBox} />}
+						{(isMarquee || drawsBox !== null) && (
+							<MarqueeBox box={marqueeBox} />
+						)}
 					</Canvas>
 					{/* At the bottom, clear of new text at the center and the editor's
 					    save banner at the top. Touches pass through to the canvas. */}

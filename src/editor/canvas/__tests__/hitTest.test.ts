@@ -7,6 +7,7 @@ import type { RedactionStrokes } from "../../layers/redaction/redaction.ts";
 import { createShapeLayer } from "../../layers/shape/shape.ts";
 import { shapeOutline } from "../../layers/shape/shapeGeometry.ts";
 import {
+	findLayerAbove,
 	findLayerAt,
 	hitsLayer,
 	insidePaddedBox,
@@ -126,6 +127,31 @@ describe("findLayerAt", () => {
 		];
 		assert.equal(findLayerAt(targets, { x: -30, y: 0 })?.id, "photo");
 		assert.equal(findLayerAt(targets, { x: 30, y: 0 })?.id, "redaction");
+	});
+});
+
+describe("findLayerAbove", () => {
+	test("reaches only layers over the selection", () => {
+		const targets = [
+			target("below", 0, 0),
+			target("selected", 10, 0),
+			target("above", 40, 0),
+		];
+		const ids = ["selected"];
+		assert.equal(findLayerAbove(targets, ids, { x: 30, y: 0 })?.id, "above");
+		assert.equal(findLayerAbove(targets, ids, { x: -45, y: 0 }), null);
+	});
+
+	test("measures from the highest of several selected layers", () => {
+		const targets = [
+			target("first", 0, 0),
+			target("between", 0, 0),
+			target("second", 0, 0),
+		];
+		assert.equal(
+			findLayerAbove(targets, ["first", "second"], { x: 0, y: 0 }),
+			null,
+		);
 	});
 });
 
