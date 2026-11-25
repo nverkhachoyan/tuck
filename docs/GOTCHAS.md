@@ -67,3 +67,12 @@ Fixed November 23, 2026, in `ui/Popover.web.tsx`.
 * **Cause:** the popover is portaled into `document.body`, and React listens for its events there. To keep keys from the window's shortcuts, the popover stopped `keydown` on its own layer, which sits between the control and the body, so React's listener never ran: no React key handler inside a popover saw a key.
 * **Fix:** the stop moved to `document.body`, added after React's listener there, and stops only keys from inside the layer.
 * **The rule:** a native listener that stops an event must sit at or above the element React listens on (the root, or a portal's container), never between it and the target.
+
+## A moved group snapped back for a frame on release
+
+Fixed November 24, 2026, in `editor/canvas/liveTransform.ts`.
+
+* **Seen:** on web, dragging a selection of several drawings with the mouse and letting go: the drawings jumped back to where the drag started, then to where it ended. One selected layer didn't do it.
+* **Cause:** a group member draws as its document transform moved by the live group change (`liveTransformOf`), in a `useDerivedValue` whose closure holds the document transform. On release the commit lands, and `EditorCanvas`'s layout effect syncs the live values, resetting the change to nothing. That write re-ran each member's old mapper, which still held the transform from before the commit, so it drew the old place. Reanimated restarts a derived value's mapper with new dependencies only in a passive `useEffect` (`useDerivedValueCommon.ts`), after the layout effect, and that restart drew the new place. A single layer reads the live values whole and never uses its closure's transform, so it didn't jump.
+* **Fix:** the sync writes the members' document transforms to `live.groupTransforms` in the same step that resets the change, and `liveTransformOf` moves a member from those, not from its closure.
+* **The rule:** a `useDerivedValue` that mixes a value from React (through its closure) with shared values that a layout effect writes sees the new shared values before the new closure. Put both halves on the UI thread and write them together.

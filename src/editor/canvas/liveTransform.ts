@@ -17,6 +17,7 @@ const MAX_LAYER_SCALE = 8;
 export const SELECTION_GROUP_ID = "__selection_group__";
 
 const NO_GROUP_IDS: readonly string[] = [];
+const NO_TRANSFORMS: readonly Transform[] = [];
 
 /**
  * High-frequency transform state for the selected layer or virtual selection
@@ -26,8 +27,8 @@ const NO_GROUP_IDS: readonly string[] = [];
  * - While `activeId` matches a layer, that layer's node renders from these
  *   values instead of its document transform.
  * - While `activeId` is `SELECTION_GROUP_ID`, each layer in `groupIds` renders
- *   as `transformAbout` of its document transform from `(groupStartX,
- *   groupStartY)` to the live values.
+ *   as `transformAbout` of its document transform, kept in step in
+ *   `groupTransforms`, from `(groupStartX, groupStartY)` to the live values.
  * - `halfWidth` and `halfHeight` are its selection box, so the UI thread
  *   can find and draw its handles without laying out text.
  * - `resizeMode` says how the box resizes, with side handles.
@@ -42,6 +43,7 @@ export type LiveTransform = {
 	activeId: SharedValue<string | null>;
 	heldId: SharedValue<string | null>;
 	groupIds: SharedValue<readonly string[]>;
+	groupTransforms: SharedValue<readonly Transform[]>;
 	groupStartX: SharedValue<number>;
 	groupStartY: SharedValue<number>;
 	x: SharedValue<number>;
@@ -60,6 +62,7 @@ export function useLiveTransform(): LiveTransform {
 	const activeId = useSharedValue<string | null>(null);
 	const heldId = useSharedValue<string | null>(null);
 	const groupIds = useSharedValue<readonly string[]>(NO_GROUP_IDS);
+	const groupTransforms = useSharedValue<readonly Transform[]>(NO_TRANSFORMS);
 	const groupStartX = useSharedValue(0);
 	const groupStartY = useSharedValue(0);
 	const x = useSharedValue(0);
@@ -77,6 +80,7 @@ export function useLiveTransform(): LiveTransform {
 			activeId,
 			heldId,
 			groupIds,
+			groupTransforms,
 			groupStartX,
 			groupStartY,
 			x,
@@ -94,6 +98,7 @@ export function useLiveTransform(): LiveTransform {
 			activeId,
 			heldId,
 			groupIds,
+			groupTransforms,
 			groupStartX,
 			groupStartY,
 			x,
@@ -129,11 +134,18 @@ function writeLayer(live: LiveTransform, layer: LiveLayerState) {
 	live.resizeMode.value = layer.resizeMode;
 }
 
+function clearGroup(live: LiveTransform) {
+	"worklet";
+	live.groupIds.value = NO_GROUP_IDS;
+	live.groupTransforms.value = NO_TRANSFORMS;
+}
+
 function applySync(
 	live: LiveTransform,
 	id: string | null,
 	layer: LiveLayerState | undefined,
 	groupIds: readonly string[],
+	groupTransforms: readonly Transform[],
 ) {
 	"worklet";
 	const held =
@@ -145,11 +157,12 @@ function applySync(
 				live.groupStartX.value = layer.transform.x;
 				live.groupStartY.value = layer.transform.y;
 				live.groupIds.value = groupIds;
+				live.groupTransforms.value = groupTransforms;
 			} else {
-				live.groupIds.value = NO_GROUP_IDS;
+				clearGroup(live);
 			}
 		} else {
-			live.groupIds.value = NO_GROUP_IDS;
+			clearGroup(live);
 		}
 	}
 	live.activeId.value = id;
@@ -162,17 +175,25 @@ function applySync(
  * leaves a layer or group a gesture holds to the gesture. Otherwise a drag
  * that picked its layer on the UI thread would jump back when that selection
  * reached React.
+ *
+ * A group's members are synced with their document transforms
+ * (`groupTransforms`, in `groupIds`' order), so that resetting the group's
+ * change and moving its members land together: a member's derived value
+ * picks up its new document transform only in a passive effect, after this
+ * sync, and would otherwise draw the old transform with the change reset.
  */
 export function syncLiveTransform(
 	live: LiveTransform,
 	id: string | null,
 	layer: LiveLayerState | undefined,
 	groupIds: readonly string[] = NO_GROUP_IDS,
+	groupTransforms: readonly Transform[] = NO_TRANSFORMS,
 ) {
 	// On web, worklets run on the JS thread anyway, and scheduling one there
 	// waits for the next frame.
-	if (Platform.OS === "web") applySync(live, id, layer, groupIds);
-	else scheduleOnUI(applySync, live, id, layer, groupIds);
+	if (Platform.OS === "web")
+		applySync(live, id, layer, groupIds, groupTransforms);
+	else scheduleOnUI(applySync, live, id, layer, groupIds, groupTransforms);
 }
 
 /**
@@ -186,7 +207,7 @@ export function holdLayer(
 ) {
 	"worklet";
 	writeLayer(live, layer);
-	live.groupIds.value = NO_GROUP_IDS;
+	clearGroup(live);
 	live.activeId.value = id;
 	live.heldId.value = id;
 }
@@ -223,7 +244,8 @@ export function liveGroupChange(live: LiveTransform): GroupTransformChange {
 
 // `transform` and `box` are the layer's own, from the document: while it's
 // the active layer (or a member of the active group), the live values stand
-// in for them.
+// in for them. A group member moves from the transform the group was synced
+// with, not `transform`, which may still be the one before a commit.
 export function liveTransformOf(
 	live: LiveTransform,
 	id: string,
@@ -232,8 +254,12 @@ export function liveTransformOf(
 	"worklet";
 	const active = live.activeId.value;
 	if (active === id) return readLiveTransform(live);
-	if (active === SELECTION_GROUP_ID && live.groupIds.value.includes(id)) {
-		return transformAbout(transform, liveGroupChange(live));
+	if (active === SELECTION_GROUP_ID) {
+		const index = live.groupIds.value.indexOf(id);
+		if (index >= 0) {
+			const base = live.groupTransforms.value[index] ?? transform;
+			return transformAbout(base, liveGroupChange(live));
+		}
 	}
 	return transform;
 }

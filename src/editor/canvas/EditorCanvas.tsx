@@ -80,6 +80,13 @@ import {
 const SELECT: CanvasInput = { type: "select" };
 const NO_LAYERS: readonly Layer[] = [];
 const NO_IDS: readonly string[] = [];
+const NO_TRANSFORMS: readonly Transform[] = [];
+const NO_FRAME = {
+	id: null,
+	state: undefined,
+	groupIds: NO_IDS,
+	groupTransforms: NO_TRANSFORMS,
+};
 
 // The selection's live handle under a document point. The drags below share
 // it, and each still decides for itself whether the layer is hit.
@@ -368,9 +375,10 @@ export function EditorCanvas({
 		id: string | null;
 		state: LiveLayerState | undefined;
 		groupIds: readonly string[];
+		groupTransforms: readonly Transform[];
 	} => {
 		if (movableLayers.length === 0) {
-			return { id: null, state: undefined, groupIds: NO_IDS };
+			return NO_FRAME;
 		}
 		if (movableLayers.length === 1) {
 			const only = movableLayers[0];
@@ -382,6 +390,7 @@ export function EditorCanvas({
 					resizeMode: resizeMode(only),
 				},
 				groupIds: NO_IDS,
+				groupTransforms: NO_TRANSFORMS,
 			};
 		}
 		const turn = groupTurn.current;
@@ -403,8 +412,9 @@ export function EditorCanvas({
 					id: SELECTION_GROUP_ID,
 					state: { ...bounds, resizeMode: "none" },
 					groupIds: movableLayers.map((layer) => layer.id),
+					groupTransforms: movableLayers.map((layer) => layer.transform),
 				}
-			: { id: null, state: undefined, groupIds: NO_IDS };
+			: NO_FRAME;
 	}, [movableLayers]);
 
 	// Keep the gesture-driven values in step with the selection: when it
@@ -415,6 +425,7 @@ export function EditorCanvas({
 			selectionFrame.id,
 			selectionFrame.state,
 			selectionFrame.groupIds,
+			selectionFrame.groupTransforms,
 		);
 	}, [live, selectionFrame]);
 
