@@ -223,8 +223,8 @@ export type EditorCanvasHandle = {
  *
  * A tool's stroke is `useToolStroke`, handed to `onToolStroke` once it's
  * finished. The selection then holds still, and
- * only a redaction's or a shape's is outlined, to show what the tool's style
- * changes. Dragging out a box or a shape, a tap picks the one to change, or
+ * only a redaction's, a shape's, or the mark Pen was opened on is outlined,
+ * to show what the tool's style changes. Dragging out a box or a shape, a tap picks the one to change, or
  * none, and the one picked, or just drawn, shows its handles: a drag from on
  * it or them moves or resizes it, and one from anywhere else draws another.
  * With a `dial` input, a sideways drag anywhere turns the dial

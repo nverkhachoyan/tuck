@@ -152,6 +152,9 @@ export function outlinedLayerFor(
 			if (tool.type === "erase" && tool.scope !== null) {
 				return layers.find((layer) => layer.id === tool.scope) ?? null;
 			}
+			// Pen outlines only the mark it was opened on, whose style its
+			// settings show: not each mark as it's drawn.
+			if (tool.type === "draw" && tool.on !== selectedLayer?.id) return null;
 			return restyles(input.tool, selectedLayer) &&
 				!drags(input.tool, selectedLayer)
 				? selectedLayer

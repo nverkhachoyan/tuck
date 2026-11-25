@@ -91,9 +91,10 @@ export function usePenTool({
 				type: "draw",
 				brush: penBrushFor(settings, documentSize),
 				smoothing: SMOOTHING_PX[settings.smoothing],
+				on: mark?.id,
 			},
 		}),
-		[settings, documentSize],
+		[settings, documentSize, mark?.id],
 	);
 
 	// The mark the last stroke went to, forgotten when Pen closes.

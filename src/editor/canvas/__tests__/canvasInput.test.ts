@@ -261,10 +261,26 @@ describe("outlinedLayerFor", () => {
 			outlinedLayerFor(redactBox, { ...none, selectedLayer: locked }),
 			locked,
 		);
-		// Pen shows and restyles a selected mark.
+		// Pen outlines the mark it was opened on, not one it just drew.
+		const penOn = (on: string): CanvasInput => ({
+			type: "tool",
+			tool: {
+				type: "draw",
+				brush: { type: "pen", color: "#FF3B30", width: 10 },
+				on,
+			},
+		});
+		assert.equal(
+			outlinedLayerFor(penOn(drawing.id), { ...none, selectedLayer: drawing }),
+			drawing,
+		);
 		assert.equal(
 			outlinedLayerFor(pen, { ...none, selectedLayer: drawing }),
-			drawing,
+			null,
+		);
+		assert.equal(
+			outlinedLayerFor(penOn("earlier"), { ...none, selectedLayer: drawing }),
+			null,
 		);
 	});
 

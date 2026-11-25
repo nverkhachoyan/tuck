@@ -304,8 +304,9 @@ export function Editor({
 		host.leave();
 	};
 
-	// A shape in Shape, a mark in Pen: what the open tool draws, and shows
-	// selected, so Delete takes it without putting the tool down.
+	// A shape in Shape, a mark in Pen: what the open tool draws, and keeps
+	// selected, so Delete takes it without putting the tool down. Pen outlines
+	// a mark only when it was opened on it.
 	const drawnSelected =
 		canvasInput.input.type === "tool" &&
 		restyles(canvasInput.input.tool, selectedLayer);
