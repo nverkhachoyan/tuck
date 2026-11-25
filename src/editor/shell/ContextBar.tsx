@@ -74,7 +74,7 @@ export function ContextBar({
 			</Text>
 			<FadeRow style={styles.scroll} contentStyle={styles.scrollContent}>
 				{children}
-				{after && <View style={styles.rule} />}
+				{Boolean(children) && after && <View style={styles.rule} />}
 				{after}
 			</FadeRow>
 			<ModeActions {...actions} />

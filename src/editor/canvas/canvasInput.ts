@@ -17,7 +17,7 @@ import type { EditText } from "./useEditTextGesture.ts";
  * does, drawing the image it changes live (`adjusting`).
  */
 export type CanvasInput =
-	| { type: "select" }
+	| { type: "select"; marquee?: true }
 	| { type: "tool"; tool: CanvasTool }
 	| ({ type: "editText" } & EditText)
 	| {
@@ -54,19 +54,21 @@ export type InputRules = {
 
 /**
  * What `input` asks of the canvas's shared behavior, `zoomed` in or not,
- * with `selected` the selected layer.
+ * with `selected` the single selected layer and `hasSelection` whether one
+ * or more layers are selected.
  */
 export function inputRules(
 	input: CanvasInput,
 	zoomed: boolean,
 	selected?: Layer,
+	hasSelection = selected !== undefined,
 ): InputRules {
 	switch (input.type) {
 		case "select":
 			return {
 				selection: "transforms",
-				twoFingers: selected ? "selection" : "view",
-				oneFinger: zoomed ? "offSelection" : null,
+				twoFingers: hasSelection ? "selection" : "view",
+				oneFinger: input.marquee ? null : zoomed ? "offSelection" : null,
 				cursor: "hover",
 			};
 		case "tool":
@@ -150,6 +152,9 @@ export function outlinedLayerFor(
 			if (tool.type === "erase" && tool.scope !== null) {
 				return layers.find((layer) => layer.id === tool.scope) ?? null;
 			}
+			// Pen outlines only the mark it was opened on, whose style its
+			// settings show: not each mark as it's drawn.
+			if (tool.type === "draw" && tool.on !== selectedLayer?.id) return null;
 			return restyles(input.tool, selectedLayer) &&
 				!drags(input.tool, selectedLayer)
 				? selectedLayer

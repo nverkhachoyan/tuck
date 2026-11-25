@@ -24,6 +24,7 @@ import {
 import { cutOutSticker, saveSticker } from "../../savedStickers/saveSticker";
 import { useRedactLook } from "../../shell/useRedactLook";
 import { useStore } from "../../store";
+import { selectSelectedLayer } from "../../store/editorSlice";
 import type { ToolBusy, ToolEnv } from "../defineTool";
 import { removedMask } from "./cutMask";
 import {
@@ -196,11 +197,7 @@ export function useCutTool({
 		const { mask, maskStrokes } = selection;
 		cancelToolSession();
 		addCutCopy(selection.id, { mask, maskStrokes });
-		const { document, selectedLayerId } = useStore.getState();
-		const copy =
-			document && selectedLayerId !== null
-				? findLayer(document, selectedLayerId)
-				: undefined;
+		const copy = selectSelectedLayer(useStore.getState());
 		if (copy?.type !== "image" || copy.id === selection.id) {
 			close();
 			return;

@@ -8,15 +8,21 @@ import {
 import { identityTransform } from "../base.ts";
 import type { ImageLayer } from "../image/image.ts";
 import {
+	arrangeLayers,
+	canArrangeLayers,
 	deleteLayer,
 	deleteLayerGroup,
+	deleteLayers,
+	duplicateLayers,
 	moveLayer,
 	nudgeLayer,
+	nudgeLayers,
 	resizeBox,
 	setLayerFlag,
 	setLayerGroupFlag,
 	setLayerResizable,
 	transformLayer,
+	transformLayers,
 } from "../layerEdits.ts";
 import { addRedactionBoxes } from "../redaction/redactionEdits.ts";
 import type { TextLayer } from "../text/text.ts";
@@ -181,5 +187,203 @@ describe("nudgeLayer", () => {
 		const start = document();
 		assert.equal(nudgeLayer(start, textId(start), 0, 0), start);
 		assert.equal(nudgeLayer(start, "photo", 3, 0), start);
+	});
+});
+
+function stack() {
+	let d = document();
+	d = addTextLayer(d, "B");
+	d = addTextLayer(d, "C");
+	d = addTextLayer(d, "D");
+	const [, a, b, c, dLayer] = d.layers as [
+		ImageLayer,
+		TextLayer,
+		TextLayer,
+		TextLayer,
+		TextLayer,
+	];
+	return { document: d, a, b, c, d: dLayer };
+}
+
+describe("deleteLayers", () => {
+	test("removes every listed layer and updates groups", () => {
+		const start = found();
+		const [boxA, boxB] = start.groups?.[0]?.layerIds ?? [];
+		const next = deleteLayers(start, [textId(start), boxA, boxB]);
+		assert.deepEqual(
+			next.layers.map((layer) => layer.id),
+			["photo"],
+		);
+		assert.deepEqual(next.groups, []);
+	});
+
+	test("returns the same document when nothing matches", () => {
+		const start = document();
+		assert.equal(deleteLayers(start, []), start);
+		assert.equal(deleteLayers(start, ["missing"]), start);
+	});
+});
+
+describe("duplicateLayers", () => {
+	test("copies listed layers on top in document order and returns copy ids", () => {
+		const { document: start, a, c } = stack();
+		const { document: next, copyIds } = duplicateLayers(start, [c.id, a.id]);
+		assert.equal(copyIds.length, 2);
+		const copies = next.layers.slice(-2) as TextLayer[];
+		assert.deepEqual(
+			copies.map((layer) => layer.id),
+			copyIds,
+		);
+		assert.deepEqual(
+			copies.map((layer) => layer.text),
+			[a.text, c.text],
+		);
+		assert.ok(copies[0].transform.x > a.transform.x);
+		assert.ok(copies[1].transform.y > c.transform.y);
+	});
+
+	test("returns the same document when nothing matches", () => {
+		const start = document();
+		const empty = duplicateLayers(start, []);
+		assert.equal(empty.document, start);
+		assert.deepEqual(empty.copyIds, []);
+		const missing = duplicateLayers(start, ["missing"]);
+		assert.equal(missing.document, start);
+		assert.deepEqual(missing.copyIds, []);
+	});
+});
+
+describe("arrangeLayers", () => {
+	const idsOf = (d: EditorDocument) => d.layers.map((layer) => layer.id);
+
+	test("moves non-contiguous layers while keeping relative order and locked layers fixed", () => {
+		const { document: start, a, b, c, d } = stack();
+		// Order: [photo(locked), a, b, c, d]
+		assert.deepEqual(idsOf(arrangeLayers(start, [a.id, c.id], "front")), [
+			"photo",
+			b.id,
+			d.id,
+			a.id,
+			c.id,
+		]);
+		assert.deepEqual(idsOf(arrangeLayers(start, [b.id, d.id], "back")), [
+			"photo",
+			b.id,
+			d.id,
+			a.id,
+			c.id,
+		]);
+		assert.deepEqual(idsOf(arrangeLayers(start, [a.id, c.id], "forward")), [
+			"photo",
+			b.id,
+			a.id,
+			d.id,
+			c.id,
+		]);
+		assert.deepEqual(idsOf(arrangeLayers(start, [b.id, d.id], "backward")), [
+			"photo",
+			b.id,
+			a.id,
+			d.id,
+			c.id,
+		]);
+	});
+
+	test("keeps a locked layer in the middle at its index", () => {
+		const { document: start, a, b, c, d } = stack();
+		const withLockedMid = setLayerFlag(start, b.id, "locked", true);
+		// Order: [photo(locked), a, b(locked), c, d]
+		const moved = arrangeLayers(withLockedMid, [a.id], "forward");
+		assert.deepEqual(idsOf(moved), ["photo", c.id, b.id, a.id, d.id]);
+		assert.equal(arrangeLayers(withLockedMid, [b.id], "front"), withLockedMid);
+	});
+
+	test("returns the same document when already at the limit", () => {
+		const { document: start, a, b, c, d } = stack();
+		assert.equal(arrangeLayers(start, [c.id, d.id], "front"), start);
+		assert.equal(arrangeLayers(start, [c.id, d.id], "forward"), start);
+		assert.equal(arrangeLayers(start, [a.id, b.id], "back"), start);
+		assert.equal(arrangeLayers(start, [a.id, b.id], "backward"), start);
+		assert.equal(arrangeLayers(start, [], "front"), start);
+		assert.equal(
+			canArrangeLayers(start.layers, [c.id, d.id], "forward"),
+			false,
+		);
+		assert.equal(
+			canArrangeLayers(start.layers, [c.id, d.id], "backward"),
+			true,
+		);
+		assert.equal(
+			canArrangeLayers(start.layers, [a.id, b.id], "backward"),
+			false,
+		);
+		assert.equal(canArrangeLayers(start.layers, [a.id, b.id], "forward"), true);
+	});
+});
+
+describe("nudgeLayers", () => {
+	test("nudges unlocked listed layers and ignores locked ones", () => {
+		const { document: start, a, b } = stack();
+		const next = nudgeLayers(start, ["photo", a.id, b.id], 10, -5);
+		assert.equal(next.layers[0], start.layers[0]);
+		assert.equal(next.layers[1].transform.x, a.transform.x + 10);
+		assert.equal(next.layers[2].transform.y, b.transform.y - 5);
+		assert.equal(next.layers[3], start.layers[3]);
+	});
+
+	test("returns the same document for zero offset or no unlocked targets", () => {
+		const { document: start, a } = stack();
+		assert.equal(nudgeLayers(start, [a.id], 0, 0), start);
+		assert.equal(nudgeLayers(start, ["photo"], 5, 5), start);
+		assert.equal(nudgeLayers(start, [], 5, 5), start);
+	});
+});
+
+describe("transformLayers", () => {
+	test("transforms unlocked listed layers about a pivot", () => {
+		const { document: start, a, b } = stack();
+		const placed = transformLayer(
+			transformLayer(start, a.id, { ...a.transform, x: 100, y: 200 }),
+			b.id,
+			{ ...b.transform, x: 300, y: 200 },
+		);
+		const next = transformLayers(placed, ["photo", a.id, b.id], {
+			pivot: { x: 200, y: 200 },
+			dx: 20,
+			dy: 10,
+			scale: 2,
+			rotation: Math.PI / 2,
+		});
+		assert.equal(next.layers[0], placed.layers[0]);
+		assert.equal(next.layers[1].transform.x, 220);
+		assert.equal(next.layers[1].transform.y, 10);
+		assert.equal(next.layers[1].transform.scaleX, 2);
+		assert.equal(next.layers[2].transform.x, 220);
+		assert.equal(next.layers[2].transform.y, 410);
+		assert.equal(next.layers[2].transform.rotation, Math.PI / 2);
+	});
+
+	test("returns the same document on a no-op change or locked layers", () => {
+		const { document: start, a } = stack();
+		assert.equal(
+			transformLayers(start, [a.id], {
+				pivot: { x: 0, y: 0 },
+				dx: 0,
+				dy: 0,
+				scale: 1,
+				rotation: 0,
+			}),
+			start,
+		);
+		assert.equal(
+			transformLayers(start, ["photo"], {
+				pivot: { x: 0, y: 0 },
+				dx: 10,
+				dy: 0,
+				scale: 1,
+				rotation: 0,
+			}),
+			start,
+		);
 	});
 });

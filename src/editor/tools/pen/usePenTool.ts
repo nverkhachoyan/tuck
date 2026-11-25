@@ -11,6 +11,7 @@ import {
 	sameStyle,
 } from "../../layers/drawing/marks";
 import { useStore } from "../../store";
+import { selectSelectedLayerId } from "../../store/editorSlice";
 import type { ToolEnv } from "../defineTool";
 import {
 	markPatch,
@@ -90,9 +91,10 @@ export function usePenTool({
 				type: "draw",
 				brush: penBrushFor(settings, documentSize),
 				smoothing: SMOOTHING_PX[settings.smoothing],
+				on: mark?.id,
 			},
 		}),
-		[settings, documentSize],
+		[settings, documentSize, mark?.id],
 	);
 
 	// The mark the last stroke went to, forgotten when Pen closes.
@@ -130,7 +132,7 @@ export function usePenTool({
 			);
 		}
 		drawStroke(pen, joinId);
-		const markId = useStore.getState().selectedLayerId;
+		const markId = selectSelectedLayerId(useStore.getState());
 		last.current = markId ? { markId, endedAt: stroke.endedAt } : null;
 	};
 

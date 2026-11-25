@@ -5,6 +5,7 @@ import {
 	applyMatrix,
 	boundingBox,
 	cosSin,
+	groupBounds,
 	hitTestBox,
 	invertMatrix,
 	multiplyMatrices,
@@ -13,6 +14,7 @@ import {
 	type Transform,
 	toDocumentSpace,
 	toLayerSpace,
+	transformAbout,
 	transformMatrix,
 	transformsEqual,
 } from "../geometry.ts";
@@ -189,5 +191,132 @@ describe("transformMatrix", () => {
 		const back = applyMatrix(invertMatrix(both), once);
 		near(back.x, point.x);
 		near(back.y, point.y);
+	});
+});
+
+describe("transformAbout", () => {
+	const base: Transform = {
+		x: 110,
+		y: 100,
+		scaleX: 1.5,
+		scaleY: 2,
+		rotation: 0.25,
+	};
+
+	test("returns the same transform on a no-op change", () => {
+		const same = transformAbout(base, {
+			pivot: { x: 100, y: 100 },
+			dx: 0,
+			dy: 0,
+			scale: 1,
+			rotation: 0,
+		});
+		assert.equal(same, base);
+	});
+
+	test("scales and rotates a layer's center about pivot, then translates", () => {
+		const next = transformAbout(
+			{ x: 110, y: 100, scaleX: 1.5, scaleY: 2, rotation: 0 },
+			{
+				pivot: { x: 100, y: 100 },
+				dx: 5,
+				dy: -3,
+				scale: 2,
+				rotation: Math.PI / 2,
+			},
+		);
+		// Offset (10, 0) scaled by 2 -> (20, 0), rotated +90° -> (0, 20), + pivot (100, 100) + (5, -3) = (105, 117)
+		near(next.x, 105);
+		near(next.y, 117);
+		near(next.scaleX, 3);
+		near(next.scaleY, 4);
+		near(next.rotation, Math.PI / 2);
+	});
+
+	test("agrees with transforming any local point about the pivot", () => {
+		const change = {
+			pivot: { x: 80, y: 120 },
+			dx: 14,
+			dy: -9,
+			scale: 1.4,
+			rotation: -0.6,
+		};
+		const next = transformAbout(base, change);
+		const local = { x: 17, y: -23 };
+		const after = toDocumentSpace(next, local);
+		const before = toDocumentSpace(base, local);
+		const { cos, sin } = cosSin(change.rotation);
+		const rx = (before.x - change.pivot.x) * change.scale;
+		const ry = (before.y - change.pivot.y) * change.scale;
+		near(after.x, change.pivot.x + rx * cos - ry * sin + change.dx);
+		near(after.y, change.pivot.y + rx * sin + ry * cos + change.dy);
+	});
+});
+
+describe("groupBounds", () => {
+	test("returns null for an empty list", () => {
+		assert.equal(groupBounds([]), null);
+	});
+
+	test("encloses each rotated and scaled box in an upright frame", () => {
+		const bounds = groupBounds([
+			{
+				transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+				box: { halfWidth: 20, halfHeight: 10 },
+			},
+			{
+				transform: {
+					x: 200,
+					y: 200,
+					scaleX: 2,
+					scaleY: 2,
+					rotation: Math.PI / 2,
+				},
+				box: { halfWidth: 30, halfHeight: 10 },
+			},
+		]);
+		// First: x in [80, 120], y in [90, 110]
+		// Second rotated 90° and scaled 2x: halfWidth 20, halfHeight 60 -> x in [180, 220], y in [140, 260]
+		// Union: x in [80, 220] (center 150, halfWidth 70), y in [90, 260] (center 175, halfHeight 85)
+		assert.deepEqual(bounds, {
+			transform: { x: 150, y: 175, scaleX: 1, scaleY: 1, rotation: 0 },
+			box: { halfWidth: 70, halfHeight: 85 },
+		});
+	});
+
+	test("keeps a turned group's box as tight as it was upright", () => {
+		const items = [
+			{
+				transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+				box: { halfWidth: 20, halfHeight: 10 },
+			},
+			{
+				transform: { x: 200, y: 150, scaleX: 1, scaleY: 1, rotation: 0 },
+				box: { halfWidth: 10, halfHeight: 30 },
+			},
+		];
+		const upright = groupBounds(items);
+		assert.ok(upright);
+		const turn = Math.PI / 6;
+		const change = {
+			pivot: { x: upright.transform.x, y: upright.transform.y },
+			dx: 0,
+			dy: 0,
+			scale: 1,
+			rotation: turn,
+		};
+		const turned = groupBounds(
+			items.map((item) => ({
+				...item,
+				transform: transformAbout(item.transform, change),
+			})),
+			turn,
+		);
+		assert.ok(turned);
+		assert.ok(Math.abs(turned.transform.x - upright.transform.x) < 1e-9);
+		assert.ok(Math.abs(turned.transform.y - upright.transform.y) < 1e-9);
+		assert.equal(turned.transform.rotation, turn);
+		assert.ok(Math.abs(turned.box.halfWidth - upright.box.halfWidth) < 1e-9);
+		assert.ok(Math.abs(turned.box.halfHeight - upright.box.halfHeight) < 1e-9);
 	});
 });

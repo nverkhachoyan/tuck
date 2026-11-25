@@ -33,6 +33,7 @@ const nothing: ModeChromeInput = {
 };
 
 const TOOLS: [string, string, boolean][] = [
+	["select", "Select", false],
 	["pen", "Pen", false],
 	["shape", "Shape", false],
 	["eraser", "Eraser", false],
@@ -184,6 +185,7 @@ describe("toolbarEntries", () => {
 		assert.deepEqual(
 			entries.map((entry) => [entry.id, entry.label, entry.key]),
 			[
+				["select", "Select", "V"],
 				["crop", "Crop", "C"],
 				["cut", "Cut", "B"],
 				["adjust", "Adjust", "E"],
@@ -360,6 +362,7 @@ describe("undo steps", () => {
 			spec.undoSteps ? [[id, spec.undoSteps]] : [],
 		);
 		assert.deepEqual(Object.fromEntries(kept), {
+			select: "each",
 			pen: "marks",
 			eraser: "each",
 			shape: "marks",

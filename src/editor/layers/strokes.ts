@@ -177,7 +177,11 @@ export function addStroke<T extends StrokesLayer>(
 
 // Hit-testing runs in gestures on the UI thread, so it's made of worklets,
 // each declared above the ones that call it: worklets aren't hoisted.
-function segmentDistanceSquared(from: Point, to: Point, point: Point): number {
+export function segmentDistanceSquared(
+	from: Point,
+	to: Point,
+	point: Point,
+): number {
 	"worklet";
 	const dx = to.x - from.x;
 	const dy = to.y - from.y;

@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
 	type LayoutChangeEvent,
+	Platform,
 	StyleSheet,
 	Text,
 	View,
@@ -24,7 +25,16 @@ import { Canvas, Group } from "react-native-skia";
 import { Surface } from "@/ui/Surface";
 import { colors, space, typography } from "@/ui/theme";
 import type { EditorDocument } from "../document/document";
-import type { Box, Point, Rect, Transform } from "../document/geometry";
+import {
+	type Box,
+	type GroupTransformChange,
+	groupBounds,
+	normalizeAngle,
+	type Point,
+	type Rect,
+	type Transform,
+	transformAbout,
+} from "../document/geometry";
 import type { Layer } from "../layers/layer";
 import { cursorStyle } from "./canvasCursor";
 import { type CanvasInput, inputRules, outlinedLayerFor } from "./canvasInput";
@@ -32,19 +42,22 @@ import { cutImageId, type ToolStroke } from "./canvasTool";
 import { EditorScene, type SceneDraft } from "./EditorScene";
 import { FitButton } from "./FitButton";
 import { handleUnder } from "./handleMetrics";
-import { findLayerAt, hitsLayer, type LayerTarget } from "./hitTest";
+import { findLayerAt, insidePaddedBox, type LayerTarget } from "./hitTest";
 import { layerBounds } from "./layerBounds";
 import { layerTargets, resizeMode } from "./layerTargets";
 import {
+	type LiveLayerState,
 	type LiveTransform,
 	readLiveBox,
 	readLiveTransform,
+	SELECTION_GROUP_ID,
 	syncLiveTransform,
 	useLiveTransform,
 } from "./liveTransform";
 import type { CanvasRegion } from "./RegionOutline";
 import { strokeKindOf } from "./SceneLayer";
 import { SelectionBarFrame } from "./SelectionBarFrame";
+import { MarqueeBox } from "./SelectionOverlay";
 import { useBrushRing, useCanvasCursor } from "./useCanvasCursor";
 import { useCanvasTap, useTwoFingerTap } from "./useCanvasTap";
 import { useCanvasZoom } from "./useCanvasZoom";
@@ -52,8 +65,9 @@ import { useDialDrag } from "./useDialDrag";
 import { useEditTextGesture } from "./useEditTextGesture";
 import { useKeepTextFocus } from "./useKeepTextFocus";
 import { useLayerTransformGesture } from "./useLayerTransformGesture";
+import { useMarqueeGesture } from "./useMarqueeGesture";
+import { useModifierKeys } from "./useModifierKeys";
 import { useRegionTap } from "./useRegionTap";
-import { useShiftHeld } from "./useShiftHeld";
 import { useToolStroke } from "./useToolStroke";
 import { useViewGesture } from "./useViewGesture";
 import {
@@ -64,6 +78,15 @@ import {
 } from "./viewport";
 
 const SELECT: CanvasInput = { type: "select" };
+const NO_LAYERS: readonly Layer[] = [];
+const NO_IDS: readonly string[] = [];
+const NO_TRANSFORMS: readonly Transform[] = [];
+const NO_FRAME = {
+	id: null,
+	state: undefined,
+	groupIds: NO_IDS,
+	groupTransforms: NO_TRANSFORMS,
+};
 
 // The selection's live handle under a document point. The drags below share
 // it, and each still decides for itself whether the layer is hit.
@@ -81,12 +104,32 @@ function liveHandleAt(
 		viewport.scale,
 	);
 }
+
+// Whether a document point lies inside the selection's live box, padded by
+// the touch padding layers get, so a thin line stays easy to grab.
+function insideLiveSelection(
+	live: LiveTransform,
+	viewport: DocumentViewport,
+	point: Point,
+): boolean {
+	"worklet";
+	return (
+		live.activeId.value !== null &&
+		insidePaddedBox(
+			readLiveTransform(live),
+			readLiveBox(live),
+			point,
+			viewport.scale,
+		)
+	);
+}
+
 const NO_REGIONS: readonly CanvasRegion[] = [];
 
 type EditorCanvasProps = {
 	ref?: Ref<EditorCanvasHandle>;
 	document: EditorDocument;
-	selectedLayer?: Layer;
+	selectedLayers?: readonly Layer[];
 	// What input does (see `CanvasInput`). With no tool or text, it selects
 	// and transforms layers.
 	input?: CanvasInput;
@@ -100,10 +143,13 @@ type EditorCanvasProps = {
 	// The smaller preview for an image layer's URI, when there is one.
 	previewUri?: (uri: string) => string | null;
 	onSelectLayer?: (id: string | null) => void;
+	onSelectLayers?: (ids: readonly string[]) => void;
+	onToggleSelectLayer?: (id: string) => void;
 	// A tap on the layer that's already selected, in document space (the
 	// editor edits it there, when a tool edits it in place).
 	onTapSelectedLayer?: (point: Point) => void;
 	onCommitTransform?: (id: string, transform: Transform) => void;
+	onCommitGroupTransform?: (change: GroupTransformChange) => void;
 	// A redaction's box resized by its handles, which moves its center too.
 	onResizeBox?: (
 		id: string,
@@ -111,8 +157,8 @@ type EditorCanvasProps = {
 		width: number,
 		height: number,
 	) => void;
-	// Moves a layer by a document-space offset (see `nudgeSelection`).
-	onNudgeLayer?: (id: string, dx: number, dy: number) => void;
+	// Moves the selection by a document-space offset (see `nudgeSelection`).
+	onNudgeSelection?: (dx: number, dy: number) => void;
 	// A finished stroke with a tool, in document space: a brush's points, a
 	// redaction's box, a shape, or where a tap, or a drag's end, picks a color
 	// or the subject to cut out.
@@ -177,8 +223,8 @@ export type EditorCanvasHandle = {
  *
  * A tool's stroke is `useToolStroke`, handed to `onToolStroke` once it's
  * finished. The selection then holds still, and
- * only a redaction's or a shape's is outlined, to show what the tool's style
- * changes. Dragging out a box or a shape, a tap picks the one to change, or
+ * only a redaction's, a shape's, or the mark Pen was opened on is outlined,
+ * to show what the tool's style changes. Dragging out a box or a shape, a tap picks the one to change, or
  * none, and the one picked, or just drawn, shows its handles: a drag from on
  * it or them moves or resizes it, and one from anywhere else draws another.
  * With a `dial` input, a sideways drag anywhere turns the dial
@@ -198,16 +244,19 @@ export type EditorCanvasHandle = {
 export function EditorCanvas({
 	ref,
 	document,
-	selectedLayer,
+	selectedLayers = NO_LAYERS,
 	input = SELECT,
 	draft = null,
 	keepFocus = false,
 	previewUri,
 	onSelectLayer,
+	onSelectLayers,
+	onToggleSelectLayer,
 	onTapSelectedLayer,
 	onCommitTransform,
+	onCommitGroupTransform,
 	onResizeBox,
-	onNudgeLayer,
+	onNudgeSelection,
 	onToolStroke,
 	onToolInteractionEnd,
 	onTapAway,
@@ -222,7 +271,7 @@ export function EditorCanvas({
 	const [imageFailed, setImageFailed] = useState(false);
 	const containerRef = useRef<ViewInstance>(null);
 	const live = useLiveTransform();
-	const aspectLocked = useShiftHeld();
+	const { shift: aspectLocked, alt: altHeld } = useModifierKeys();
 	useKeepTextFocus(containerRef, keepFocus);
 
 	const handleImageError = useCallback((error: unknown) => {
@@ -281,27 +330,104 @@ export function EditorCanvas({
 		sharedTargets.value = targets;
 	}, [sharedTargets, targets]);
 
+	const selectedLayer =
+		selectedLayers.length === 1 ? selectedLayers[0] : undefined;
 	const selectedLayerId = selectedLayer?.id ?? null;
-	const rules = inputRules(input, zoom !== null, selectedLayer);
+	const selectedLayerIds = useMemo(
+		() =>
+			selectedLayers.length === 0
+				? NO_IDS
+				: selectedLayers.map((layer) => layer.id),
+		[selectedLayers],
+	);
+	const rules = inputRules(
+		input,
+		zoom !== null,
+		selectedLayer,
+		selectedLayers.length > 0,
+	);
 	const tool = input.type === "tool" ? input.tool : null;
 	// What gestures move: nothing while painting, typing, finding, or
 	// adjusting, except the box or shape a tool drags out.
-	const movableLayer = rules.selection === "still" ? undefined : selectedLayer;
+	const movableLayers =
+		rules.selection === "still"
+			? NO_LAYERS
+			: rules.selection === "drags"
+				? selectedLayer
+					? [selectedLayer]
+					: NO_LAYERS
+				: selectedLayers;
+	const isSelect = input.type === "select";
+	const isMarquee = isSelect && input.marquee === true;
 	const dragsSelection = rules.selection === "drags";
 
-	// Keep the gesture-driven values in step with the selected layer: when the
-	// selection changes, and when that layer does (a commit, undo, restyle).
+	// The turn rotating a group gave its box, and the rotation each member
+	// came out with: the box stays turned while every member keeps that
+	// rotation (a move or scale after), and stands upright again once one
+	// doesn't (an undo, another edit) or the selection changes. A ref, so the
+	// box is turned in the same render the committed rotation lands in.
+	const groupTurn = useRef<{
+		rotation: number;
+		members: ReadonlyMap<string, number>;
+	} | null>(null);
+
+	const selectionFrame = useMemo((): {
+		id: string | null;
+		state: LiveLayerState | undefined;
+		groupIds: readonly string[];
+		groupTransforms: readonly Transform[];
+	} => {
+		if (movableLayers.length === 0) {
+			return NO_FRAME;
+		}
+		if (movableLayers.length === 1) {
+			const only = movableLayers[0];
+			return {
+				id: only.id,
+				state: {
+					transform: only.transform,
+					box: layerBounds(only),
+					resizeMode: resizeMode(only),
+				},
+				groupIds: NO_IDS,
+				groupTransforms: NO_TRANSFORMS,
+			};
+		}
+		const turn = groupTurn.current;
+		const turned =
+			turn !== null &&
+			turn.members.size === movableLayers.length &&
+			movableLayers.every(
+				(layer) => turn.members.get(layer.id) === layer.transform.rotation,
+			);
+		const bounds = groupBounds(
+			movableLayers.map((layer) => ({
+				transform: layer.transform,
+				box: layerBounds(layer),
+			})),
+			turned ? turn.rotation : 0,
+		);
+		return bounds
+			? {
+					id: SELECTION_GROUP_ID,
+					state: { ...bounds, resizeMode: "none" },
+					groupIds: movableLayers.map((layer) => layer.id),
+					groupTransforms: movableLayers.map((layer) => layer.transform),
+				}
+			: NO_FRAME;
+	}, [movableLayers]);
+
+	// Keep the gesture-driven values in step with the selection: when it
+	// changes, and when any member does (a commit, undo, restyle).
 	useLayoutEffect(() => {
 		syncLiveTransform(
 			live,
-			movableLayer?.id ?? null,
-			movableLayer && {
-				transform: movableLayer.transform,
-				box: layerBounds(movableLayer),
-				resizeMode: resizeMode(movableLayer),
-			},
+			selectionFrame.id,
+			selectionFrame.state,
+			selectionFrame.groupIds,
+			selectionFrame.groupTransforms,
 		);
-	}, [live, movableLayer]);
+	}, [live, selectionFrame]);
 
 	const toDocument = useCallback(
 		(screenX: number, screenY: number) =>
@@ -309,19 +435,19 @@ export function EditorCanvas({
 		[viewport],
 	);
 
-	// The selected layer's handle under a point reported by the view.
+	// The selection's handle under a point reported by the view.
 	const handleAt = useCallback(
 		(screenX: number, screenY: number) =>
-			selectedLayer
+			selectionFrame.state
 				? handleUnder(
-						selectedLayer.transform,
-						layerBounds(selectedLayer),
-						resizeMode(selectedLayer),
+						selectionFrame.state.transform,
+						selectionFrame.state.box,
+						selectionFrame.state.resizeMode,
 						toDocument(screenX, screenY),
 						scale,
 					)
 				: null,
-		[selectedLayer, toDocument, scale],
+		[selectionFrame.state, toDocument, scale],
 	);
 
 	// Topmost selectable layer under a point reported by the view.
@@ -350,6 +476,16 @@ export function EditorCanvas({
 			// than deselecting the layer that owns it.
 			if (scale === 0 || lookups.handleAt(screenX, screenY)) return;
 			const id = lookups.layerAt(screenX, screenY);
+			if (isMarquee) {
+				tapOnNothing(id === null ? { x: screenX, y: screenY } : null);
+				if (id !== null) onToggleSelectLayer?.(id);
+				else onSelectLayer?.(null);
+				return;
+			}
+			if (aspectLocked.value && onToggleSelectLayer) {
+				if (id !== null) onToggleSelectLayer(id);
+				return;
+			}
 			tapOnNothing(id === null ? { x: screenX, y: screenY } : null);
 			if (id !== null && id === selectedLayerId) {
 				onTapSelectedLayer?.(lookups.toDocument(screenX, screenY));
@@ -358,9 +494,12 @@ export function EditorCanvas({
 			}
 		},
 		[
+			aspectLocked,
+			isMarquee,
 			lookups,
 			onSelectLayer,
 			onTapSelectedLayer,
+			onToggleSelectLayer,
 			scale,
 			selectedLayerId,
 			tapOnNothing,
@@ -368,12 +507,12 @@ export function EditorCanvas({
 	);
 
 	// Where one finger moves the view too: anywhere while finding, whose taps
-	// don't drag, and while zoomed in, anywhere off the selected layer and
-	// its handles, so another layer is tapped before it's dragged. At the
-	// fit, where the view can't move, a drag picks up the layer under it, or
-	// moves the selection. Painting, typing, and adjusting keep one finger
-	// for themselves. Both the view's gesture and the layers' ask it, once,
-	// where the finger lands.
+	// don't drag, and while zoomed in, anywhere outside the selection's box
+	// and handles, so another layer is tapped before it's dragged. At the fit,
+	// where the view can't move, a drag picks up the layer under it, or moves
+	// the selection. Painting, typing, and adjusting keep one finger for
+	// themselves. Both the view's gesture and the layers' ask it, once, where
+	// the finger lands.
 	const oneFingerMode = rules.oneFinger;
 	const dragAlone = useMemo(() => {
 		if (oneFingerMode === null) return null;
@@ -385,43 +524,114 @@ export function EditorCanvas({
 		}
 		return (x: number, y: number) => {
 			"worklet";
-			const id = live.activeId.value;
-			if (id === null) return true;
+			if (live.activeId.value === null) return true;
 			const point = viewPointToDocument(viewport, { x, y });
 			return (
 				liveHandleAt(live, viewport, point) === null &&
-				!hitsLayer(sharedTargets.value, id, point)
+				!insideLiveSelection(live, viewport, point)
 			);
 		};
-	}, [oneFingerMode, live, sharedTargets, viewport]);
+	}, [oneFingerMode, live, viewport]);
 
-	// Where a tool's drag moves the selection rather than drawing: on its
-	// handles, or on the selection where it's the topmost layer.
+	// Where a drag draws a box with no tool open, on web, from where it lands
+	// off the selection's handles: with Alt, anywhere, replacing the
+	// selection; with Shift, on empty canvas outside the selection's box,
+	// adding to it. The view and the layers stand aside there.
+	const drawsBox = useMemo(() => {
+		if (!isSelect || isMarquee || Platform.OS !== "web") return null;
+		return (x: number, y: number) => {
+			"worklet";
+			if (!altHeld.value && !aspectLocked.value) return false;
+			const point = viewPointToDocument(viewport, { x, y });
+			const active = live.activeId.value !== null;
+			if (active && liveHandleAt(live, viewport, point) !== null) return false;
+			if (altHeld.value) return true;
+			return (
+				!insideLiveSelection(live, viewport, point) &&
+				findLayerAt(sharedTargets.value, point) === null
+			);
+		};
+	}, [
+		altHeld,
+		aspectLocked,
+		isMarquee,
+		isSelect,
+		live,
+		sharedTargets,
+		viewport,
+	]);
+	const viewDragAlone = useMemo(() => {
+		if (drawsBox === null || dragAlone === null) return dragAlone;
+		return (x: number, y: number) => {
+			"worklet";
+			return !drawsBox(x, y) && dragAlone(x, y);
+		};
+	}, [dragAlone, drawsBox]);
+	const layersStandAside = useMemo(() => {
+		if (drawsBox === null) return viewDragAlone;
+		return (x: number, y: number) => {
+			"worklet";
+			return drawsBox(x, y) || (viewDragAlone?.(x, y) ?? false);
+		};
+	}, [drawsBox, viewDragAlone]);
+	const boxStandsAside = useMemo(() => {
+		if (drawsBox === null) return null;
+		return (x: number, y: number) => {
+			"worklet";
+			return !drawsBox(x, y);
+		};
+	}, [drawsBox]);
+
+	// Where a drag moves the selection rather than drawing a tool stroke or
+	// marquee box: on its handles; for the Select tool, anywhere inside its
+	// box unless Alt is held, which always draws a box; for a tool, on the
+	// selection where it's topmost, so a new shape can start inside it.
 	const selectionDrag = useMemo(() => {
-		if (!dragsSelection) return null;
+		if (!dragsSelection && !isMarquee) return null;
 		const onSelection = (x: number, y: number) => {
 			"worklet";
 			const id = live.activeId.value;
 			if (id === null) return false;
 			const point = viewPointToDocument(viewport, { x, y });
-			return (
-				liveHandleAt(live, viewport, point) !== null ||
-				findLayerAt(sharedTargets.value, point)?.id === id
-			);
+			if (liveHandleAt(live, viewport, point) !== null) return true;
+			if (isMarquee) {
+				return !altHeld.value && insideLiveSelection(live, viewport, point);
+			}
+			const top = findLayerAt(sharedTargets.value, point)?.id;
+			if (top === undefined) return false;
+			return id === SELECTION_GROUP_ID
+				? live.groupIds.value.includes(top)
+				: top === id;
 		};
 		const offSelection = (x: number, y: number) => {
 			"worklet";
 			return !onSelection(x, y);
 		};
 		return { onSelection, offSelection };
-	}, [dragsSelection, live, sharedTargets, viewport]);
+	}, [altHeld, dragsSelection, isMarquee, live, sharedTargets, viewport]);
+
+	// Whether a drag from a point reported by the view would move the
+	// selection, inside its box, for the cursor.
+	const movesSelectionAt = useCallback(
+		(screenX: number, screenY: number) =>
+			selectionFrame.state !== undefined &&
+			!altHeld.value &&
+			insidePaddedBox(
+				selectionFrame.state.transform,
+				selectionFrame.state.box,
+				toDocument(screenX, screenY),
+				scale,
+			),
+		[altHeld, scale, selectionFrame.state, toDocument],
+	);
 
 	const { cursor, setCursor, handleHover, handleHoverEnd } = useCanvasCursor({
 		scale,
 		lookups,
-		selectedLayer,
-		selectedLayerId,
-		dragsSelection,
+		selectionRotation: selectionFrame.state?.transform.rotation ?? null,
+		selectedLayerIds,
+		dragsSelection: dragsSelection || isMarquee,
+		movesSelectionAt: isSelect ? movesSelectionAt : null,
 		targets,
 		zoom,
 	});
@@ -430,13 +640,43 @@ export function EditorCanvas({
 		(id: string, transform: Transform) => onCommitTransform?.(id, transform),
 		[onCommitTransform],
 	);
+	const handleCommitGroup = useCallback(
+		(change: GroupTransformChange) => {
+			if (change.rotation !== 0) {
+				groupTurn.current = {
+					rotation: normalizeAngle(
+						(selectionFrame.state?.transform.rotation ?? 0) + change.rotation,
+					),
+					members: new Map(
+						movableLayers.map((layer) => [
+							layer.id,
+							transformAbout(layer.transform, change).rotation,
+						]),
+					),
+				};
+			}
+			onCommitGroupTransform?.(change);
+		},
+		[movableLayers, onCommitGroupTransform, selectionFrame.state],
+	);
 	const handleResize = useCallback(
 		(id: string, transform: Transform, box: Box) =>
 			onResizeBox?.(id, transform, box.halfWidth * 2, box.halfHeight * 2),
 		[onResizeBox],
 	);
+	// A box adds what it catches to the selection, as taps do in the Select
+	// tool: a touch screen has no Shift to add with. An Alt+drag box, which
+	// can start over the selection, replaces it instead.
+	const handleMarquee = useCallback(
+		(caught: readonly string[], replace: boolean) => {
+			if (replace) onSelectLayers?.(caught);
+			else if (caught.length > 0) {
+				onSelectLayers?.([...selectedLayerIds, ...caught]);
+			}
+		},
+		[onSelectLayers, selectedLayerIds],
+	);
 
-	const isSelect = input.type === "select";
 	const isTool = input.type === "tool";
 	const isEditText = input.type === "editText";
 	const isRegions = input.type === "regions";
@@ -449,29 +689,38 @@ export function EditorCanvas({
 		viewport,
 		documentSize,
 		onTap: handleTap,
-		onSelect: onSelectLayer,
+		onSelect: isMarquee ? undefined : onSelectLayer,
 		onCommit: handleCommit,
+		onCommitGroup: handleCommitGroup,
 		onResize: handleResize,
 		onHover: handleHover,
 		onHoverEnd: handleHoverEnd,
-		standsAside: selectionDrag?.offSelection ?? dragAlone,
+		standsAside: selectionDrag?.offSelection ?? layersStandAside,
 		dragOnly: dragsSelection,
 		enabled: isSelect || dragsSelection,
+	});
+	const { marqueeGesture, marqueeBox } = useMarqueeGesture({
+		viewport,
+		layers: sharedTargets,
+		replaces: altHeld,
+		standsAside: selectionDrag?.onSelection ?? boxStandsAside,
+		onFinish: handleMarquee,
+		enabled: isMarquee || drawsBox !== null,
 	});
 	const viewGesture = useViewGesture({
 		shown,
 		frame,
 		live,
 		twoFingers: rules.twoFingers === "view",
-		dragAlone,
+		dragAlone: viewDragAlone,
 		onCommit: commitViewport,
 	});
 	const nudgeSelection = useCallback(
 		(dx: number, dy: number) => {
-			if (!selectedLayer || scale === 0) return;
-			onNudgeLayer?.(selectedLayer.id, dx / scale, dy / scale);
+			if (selectedLayers.length === 0 || scale === 0) return;
+			onNudgeSelection?.(dx / scale, dy / scale);
 		},
-		[selectedLayer, scale, onNudgeLayer],
+		[selectedLayers.length, scale, onNudgeSelection],
 	);
 
 	const textGesture = useEditTextGesture({
@@ -542,6 +791,7 @@ export function EditorCanvas({
 	// in NativeDetector / HostGestureDetector on web, while inactive gestures remain disabled.
 	const canvasGesture = useSimultaneousGestures(
 		gesture,
+		marqueeGesture,
 		paintGesture,
 		ring.hover,
 		textGesture,
@@ -575,13 +825,18 @@ export function EditorCanvas({
 							<Group transform={shownTransform}>
 								<EditorScene
 									document={document}
-									selectedLayerId={movableLayer ? selectedLayerId : null}
+									selectedLayerId={selectionFrame.id}
 									draft={draft}
 									viewScale={shown.scale}
 									settledScale={scale}
 									live={live}
 									stroke={liveStroke}
 									outlinedLayer={outlinedLayer}
+									groupMembers={
+										selectionFrame.groupIds.length > 0
+											? movableLayers
+											: NO_LAYERS
+									}
 									adjusting={input.type === "dial" ? input.adjusting : null}
 									cuttingOutId={cuttingOutId}
 									dimExcept={tool?.type === "erase" ? tool.scope : null}
@@ -601,6 +856,9 @@ export function EditorCanvas({
 								stroke: liveStroke,
 								selectionColor: colors.selection,
 							})}
+						{(isMarquee || drawsBox !== null) && (
+							<MarqueeBox box={marqueeBox} />
+						)}
 					</Canvas>
 					{/* At the bottom, clear of new text at the center and the editor's
 					    save banner at the top. Touches pass through to the canvas. */}
@@ -623,10 +881,14 @@ export function EditorCanvas({
 			{/* Outside the gesture's view, so a press on the bar is the bar's. */}
 			{selectionBar &&
 				rules.selection === "transforms" &&
-				movableLayer &&
+				selectionFrame.id !== null &&
 				scale > 0 && (
 					<SelectionBarFrame
-						key={movableLayer.id}
+						key={
+							selectionFrame.id === SELECTION_GROUP_ID
+								? selectedLayerIds.join(",")
+								: selectionFrame.id
+						}
 						live={live}
 						shown={shown}
 						documentSize={document}

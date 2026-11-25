@@ -182,15 +182,17 @@ export type ShortcutCommand =
 	| { type: "closeShortcuts" }
 	| { type: "stopEyedropper" }
 	| { type: "putDownTool" }
+	| { type: "putDownAndSelectAll" }
 	| { type: "doneWithTool" }
 	| { type: "nextVariant" };
 
 /**
  * What's selected, as shortcuts see it: a layer a tool edits in place
  * ("editable"), one of the kind the open tool draws and shows selected
- * ("drawn": a shape in Shape, a mark in Pen), any other layer, or nothing.
+ * ("drawn": a shape in Shape, a mark in Pen), any other single layer
+ * ("layer"), several layers ("many"), or nothing.
  */
-export type ShortcutSelection = "editable" | "drawn" | "layer" | null;
+export type ShortcutSelection = "editable" | "drawn" | "layer" | "many" | null;
 
 /**
  * What `shortcut` does with `state` open and `selection` selected: a command
@@ -225,11 +227,31 @@ export function shortcutCommand(
 		return shortcut.type === "deselect" ? { type: "stopEyedropper" } : null;
 	}
 	if (state.mode.type === "tool") {
-		if (shortcut.type === "deselect") return { type: "putDownTool" };
+		const spec = specs[state.mode.tool];
+		// Escape lets go of a selection the tool keeps before putting it down.
+		if (shortcut.type === "deselect") {
+			return spec?.keepsSelectionKeys && selection !== null
+				? shortcut
+				: { type: "putDownTool" };
+		}
 		if (shortcut.type === "edit") return { type: "doneWithTool" };
 		// [ and ] step a brush while a tool with one is open. A sub-tool with
 		// no size, like a box, leaves the size where it is.
-		if (shortcut.type === "brushSize" && specs[state.mode.tool]?.sized) {
+		if (shortcut.type === "brushSize" && spec?.sized) {
+			return shortcut;
+		}
+		if (shortcut.type === "selectAll") {
+			if (spec?.keepsSelectionKeys) return shortcut;
+			return spec?.cancels ? null : { type: "putDownAndSelectAll" };
+		}
+		if (
+			spec?.keepsSelectionKeys &&
+			selection !== null &&
+			(shortcut.type === "delete" ||
+				shortcut.type === "duplicate" ||
+				shortcut.type === "reorder" ||
+				shortcut.type === "nudge")
+		) {
 			return shortcut;
 		}
 		if (shortcut.type === "delete" && selection === "drawn") return shortcut;
@@ -237,7 +259,7 @@ export function shortcutCommand(
 		// another tool's key, as to its button; its own key steps to its next
 		// kind. One holding a draft, a preview, or picks (see `cancels`) keeps
 		// the keys until it's done or canceled.
-		if (shortcut.type === "tool" && !specs[state.mode.tool]?.cancels) {
+		if (shortcut.type === "tool" && !spec?.cancels) {
 			return shortcut.tool === state.mode.tool
 				? { type: "nextVariant" }
 				: shortcut;
@@ -245,7 +267,13 @@ export function shortcutCommand(
 		return null;
 	}
 	if (shortcut.type === "brushSize") return null;
-	if (shortcut.type === "tool" || shortcut.type === "layers") return shortcut;
+	if (
+		shortcut.type === "tool" ||
+		shortcut.type === "layers" ||
+		shortcut.type === "selectAll"
+	) {
+		return shortcut;
+	}
 	if (selection === null) return null;
 	if (shortcut.type === "edit" && selection !== "editable") return null;
 	return shortcut;

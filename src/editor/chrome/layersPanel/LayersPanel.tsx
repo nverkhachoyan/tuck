@@ -52,7 +52,7 @@ type LayerListProps = LayerRowActions & {
 	layers: Layer[];
 	groups: LayerGroup[];
 	background: string | null;
-	selectedLayerId: string | null;
+	selectedLayerIds: readonly string[];
 	onSetBackground: (background: string | null) => void;
 	onSetGroupHidden: (id: string, hidden: boolean) => void;
 	onSetGroupLocked: (id: string, locked: boolean) => void;
@@ -186,11 +186,15 @@ type ListBodyProps = Omit<LayerListProps, keyof LayerRowActions> & {
 function FlatLayerList({
 	layers,
 	background,
-	selectedLayerId,
+	selectedLayerIds,
 	onSetBackground,
 	compact,
 	rowActions,
 }: ListBodyProps) {
+	const selectedIds = useMemo(
+		() => new Set(selectedLayerIds),
+		[selectedLayerIds],
+	);
 	const rows = useMemo(() => layers.slice().reverse(), [layers]);
 	const order = useSharedValue(rows.map((layer) => layer.id));
 	const dragId = useSharedValue<string | null>(null);
@@ -226,7 +230,7 @@ function FlatLayerList({
 						order={order}
 						dragId={dragId}
 						scrollGesture={scrollGesture}
-						selected={layer.id === selectedLayerId}
+						selected={selectedIds.has(layer.id)}
 						compact={compact}
 						{...rowActions}
 					/>
@@ -246,7 +250,7 @@ function GroupedLayerList({
 	layers,
 	groups,
 	background,
-	selectedLayerId,
+	selectedLayerIds,
 	onSetBackground,
 	compact,
 	rowActions,
@@ -254,6 +258,10 @@ function GroupedLayerList({
 	onSetGroupLocked,
 	onDeleteGroup,
 }: ListBodyProps) {
+	const selectedIds = useMemo(
+		() => new Set(selectedLayerIds),
+		[selectedLayerIds],
+	);
 	const [expanded, setExpanded] = useState<ReadonlySet<string>>(
 		() => new Set(),
 	);
@@ -270,7 +278,7 @@ function GroupedLayerList({
 						<StaticLayerRow
 							key={layer.id}
 							layer={layer}
-							selected={layer.id === selectedLayerId}
+							selected={selectedIds.has(layer.id)}
 							compact={compact}
 							{...rowActions}
 						/>
@@ -302,7 +310,7 @@ function GroupedLayerList({
 								<View key={child.id} style={styles.groupChild}>
 									<StaticLayerRow
 										layer={child}
-										selected={child.id === selectedLayerId}
+										selected={selectedIds.has(child.id)}
 										compact={compact}
 										{...rowActions}
 									/>
@@ -403,13 +411,13 @@ type LayerListActions = Pick<
 /** The layers panel's props, from the document, the selection, and the store. */
 export function layerListProps({
 	document,
-	selectedLayer,
+	selectedLayerIds,
 	actions,
 	onClose,
 	bottomInset,
 }: {
 	document: EditorDocument;
-	selectedLayer: Layer | undefined;
+	selectedLayerIds: readonly string[];
 	actions: LayerListActions;
 	onClose: () => void;
 	bottomInset: number;
@@ -418,7 +426,7 @@ export function layerListProps({
 		layers: document.layers,
 		groups: document.groups ?? [],
 		background: document.background,
-		selectedLayerId: selectedLayer?.id ?? null,
+		selectedLayerIds,
 		onSelect: actions.selectLayer,
 		onMove: actions.moveLayer,
 		onSetHidden: actions.setLayerHidden,

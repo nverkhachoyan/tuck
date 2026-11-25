@@ -1,13 +1,18 @@
 /// <reference types="node" />
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { Transform } from "../../document/geometry.ts";
+import type { Box, Transform } from "../../document/geometry.ts";
 import type { DrawingLayer } from "../../layers/drawing/drawing.ts";
 import type { RedactionStrokes } from "../../layers/redaction/redaction.ts";
+import { createShapeLayer } from "../../layers/shape/shape.ts";
+import { shapeOutline } from "../../layers/shape/shapeGeometry.ts";
 import {
+	findLayerAbove,
 	findLayerAt,
 	hitsLayer,
+	insidePaddedBox,
 	type LayerTarget,
+	layersInRect,
 	regionAt,
 } from "../hitTest.ts";
 
@@ -125,6 +130,31 @@ describe("findLayerAt", () => {
 	});
 });
 
+describe("findLayerAbove", () => {
+	test("reaches only layers over the selection", () => {
+		const targets = [
+			target("below", 0, 0),
+			target("selected", 10, 0),
+			target("above", 40, 0),
+		];
+		const ids = ["selected"];
+		assert.equal(findLayerAbove(targets, ids, { x: 30, y: 0 })?.id, "above");
+		assert.equal(findLayerAbove(targets, ids, { x: -45, y: 0 }), null);
+	});
+
+	test("measures from the highest of several selected layers", () => {
+		const targets = [
+			target("first", 0, 0),
+			target("between", 0, 0),
+			target("second", 0, 0),
+		];
+		assert.equal(
+			findLayerAbove(targets, ["first", "second"], { x: 0, y: 0 }),
+			null,
+		);
+	});
+});
+
 describe("hitsLayer", () => {
 	test("hits a layer under another one over it", () => {
 		const targets = [target("below", 0, 0), target("above", 20, 0)];
@@ -136,6 +166,27 @@ describe("hitsLayer", () => {
 		const targets = [target("locked", 0, 0, { locked: true })];
 		assert.equal(hitsLayer(targets, "locked", { x: 0, y: 0 }), false);
 		assert.equal(hitsLayer(targets, "gone", { x: 0, y: 0 }), false);
+	});
+});
+
+describe("insidePaddedBox", () => {
+	const box: Box = { halfWidth: 50, halfHeight: 10 };
+
+	test("pads the box by the touch padding on screen", () => {
+		// 14 screen pixels at scale 2 are 7 document units.
+		assert.equal(insidePaddedBox(at(0, 0), box, { x: 0, y: 16 }, 2), true);
+		assert.equal(insidePaddedBox(at(0, 0), box, { x: 0, y: 18 }, 2), false);
+	});
+
+	test("keeps the padding the same whatever the layer's scale", () => {
+		const scaled = { ...at(0, 0), scaleX: -2, scaleY: 2 };
+		// The box reaches 20 units; the padding adds 14 more at scale 1.
+		assert.equal(insidePaddedBox(scaled, box, { x: 0, y: 33 }, 1), true);
+		assert.equal(insidePaddedBox(scaled, box, { x: 0, y: 35 }, 1), false);
+	});
+
+	test("misses everything before the view has a scale", () => {
+		assert.equal(insidePaddedBox(at(0, 0), box, { x: 0, y: 0 }, 0), false);
 	});
 });
 
@@ -202,5 +253,138 @@ describe("regionAt", () => {
 		};
 		assert.equal(regionAt([turned], { x: 0, y: 40 }, 0)?.id, "long");
 		assert.equal(regionAt([turned], { x: 40, y: 0 }, 0), null);
+	});
+});
+
+describe("layersInRect", () => {
+	const boxTarget = (
+		id: string,
+		transform: Transform,
+		box: Box,
+		options: {
+			locked?: boolean;
+			strokes?: DrawingLayer["strokes"] | RedactionStrokes["strokes"];
+			hitPadding?: number;
+		} = {},
+	): LayerTarget => {
+		const pad = options.hitPadding ?? 0;
+		return {
+			id,
+			transform,
+			box,
+			hitBox: options.locked
+				? null
+				: { halfWidth: box.halfWidth + pad, halfHeight: box.halfHeight + pad },
+			hitPadding: pad,
+			strokes: options.strokes ? { value: options.strokes } : null,
+			clipped: false,
+			resizeMode: "none",
+			anchored: false,
+		};
+	};
+
+	test("catches layers the box touches in bottom-to-top order, skipping locked ones", () => {
+		const targets = [
+			target("first", 0, 0),
+			target("locked", 20, 0, { locked: true }),
+			target("outside", 300, 300),
+			target("second", 120, 0),
+		];
+		assert.deepEqual(
+			layersInRect(targets, { x: -10, y: -10, width: 100, height: 20 }),
+			["first", "second"],
+		);
+	});
+
+	test("skips a non-stroke layer whose bounds hold the whole box", () => {
+		const fullCanvasPhoto = boxTarget("photo", at(500, 500), {
+			halfWidth: 500,
+			halfHeight: 500,
+		});
+		const sticker = target("sticker", 200, 200);
+		// Box drawn inside the unlocked full-canvas photo catches only the sticker.
+		assert.deepEqual(
+			layersInRect([fullCanvasPhoto, sticker], {
+				x: 100,
+				y: 100,
+				width: 150,
+				height: 150,
+			}),
+			["sticker"],
+		);
+		// Crossing the photo's edge catches it too.
+		assert.deepEqual(
+			layersInRect([fullCanvasPhoto, sticker], {
+				x: -20,
+				y: 100,
+				width: 220,
+				height: 150,
+			}),
+			["photo", "sticker"],
+		);
+	});
+
+	test("follows a rotated layer's true bounds", () => {
+		// A thin 200×20 bar rotated 45°: its AABB corner at (-70, 70) is empty.
+		const bar = boxTarget(
+			"bar",
+			{ x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: Math.PI / 4 },
+			{ halfWidth: 100, halfHeight: 10 },
+		);
+		assert.deepEqual(
+			layersInRect([bar], { x: -80, y: 60, width: 20, height: 20 }),
+			[],
+		);
+		assert.deepEqual(
+			layersInRect([bar], { x: 40, y: 40, width: 20, height: 20 }),
+			["bar"],
+		);
+	});
+
+	test("a box inside a drawn circle or shape does not catch it until it touches the ink", () => {
+		const circle = createShapeLayer(
+			"ellipse",
+			{ x: 200, y: 200, rotation: 0, width: 200, height: 200 },
+			{ color: "#FF3B30", strokeWidth: 8 },
+		);
+		const circleTarget = boxTarget(
+			"circle",
+			circle.transform,
+			{ halfWidth: 100, halfHeight: 100 },
+			{ strokes: shapeOutline(circle), hitPadding: 10 },
+		);
+		// Well inside the circle's hollow middle.
+		assert.deepEqual(
+			layersInRect([circleTarget], { x: 170, y: 170, width: 60, height: 60 }),
+			[],
+		);
+		// Touching the right arc of the circle.
+		assert.deepEqual(
+			layersInRect([circleTarget], { x: 280, y: 190, width: 40, height: 20 }),
+			["circle"],
+		);
+	});
+
+	test("a box over an erased stroke segment does not catch the drawing", () => {
+		const erased = [
+			...line.strokes,
+			{ type: "eraser" as const, width: 30, points: [-60, 0, 0, 0] },
+		];
+		const drawing = boxTarget(
+			"drawing",
+			at(0, 0),
+			{ halfWidth: 50, halfHeight: 50 },
+			{ strokes: erased, hitPadding: 10 },
+		);
+		// Left half was erased.
+		assert.deepEqual(
+			layersInRect([drawing], { x: -45, y: -15, width: 25, height: 30 }),
+			[],
+		);
+		// Right half still has ink.
+		assert.deepEqual(
+			layersInRect([drawing], { x: 20, y: -15, width: 25, height: 30 }),
+			["drawing"],
+		);
 	});
 });

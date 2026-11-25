@@ -18,9 +18,9 @@ function Thumbnail({
 	marks: string[];
 	current?: boolean;
 }) {
-	const { document, selectedLayerId } = snapshot;
-	const selected = document.layers.find(
-		(layer) => layer.id === selectedLayerId,
+	const { document, selectedLayerIds } = snapshot;
+	const selected = document.layers.filter(
+		(layer) => !layer.hidden && selectedLayerIds.includes(layer.id),
 	);
 	return (
 		<li className={current ? "snapshot current" : "snapshot"}>
@@ -30,7 +30,9 @@ function Thumbnail({
 				aria-label={`${label}: ${document.layers.length} layers`}
 			>
 				<DocumentScene document={document} />
-				{selected && !selected.hidden && <Selection layer={selected} />}
+				{selected.map((layer) => (
+					<Selection key={layer.id} layer={layer} />
+				))}
 			</svg>
 			<span className="snapshot-label">{label}</span>
 			{marks.map((mark) => (
@@ -48,7 +50,7 @@ function Thumbnail({
  * step it started from and the redo step it stops at.
  */
 export function HistoryTimeline({ state }: { state: EditorSlice }) {
-	const { past, future, toolSession, document, selectedLayerId } = state;
+	const { past, future, toolSession, document, selectedLayerIds } = state;
 	if (!document) return null;
 	const marks = (snapshot: EditorSnapshot) => {
 		const result: string[] = [];
@@ -59,7 +61,7 @@ export function HistoryTimeline({ state }: { state: EditorSlice }) {
 		return result;
 	};
 	const hidden = Math.max(0, past.length - SHOWN);
-	const now = { document, selectedLayerId };
+	const now = { document, selectedLayerIds };
 	return (
 		<div className="timeline">
 			<section aria-label="past">

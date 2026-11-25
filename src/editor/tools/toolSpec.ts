@@ -40,6 +40,9 @@ export type ToolId = string;
  * - `cancels`: whether its panel offers Cancel, for a draft, a preview, or
  *   settings tried out (Crop, Cut, Find, Adjust). Any other tool's work is
  *   in the document as it's made, and undo takes it back.
+ * - `keepsSelectionKeys`: whether Delete, Duplicate, Reorder, Nudge, and
+ *   Select all act on the selection while this tool is open without putting
+ *   it down, and Escape first deselects (Select).
  * - `action`: whether pressing it runs its definition's `run` on its target
  *   and opens no mode, as Remove BG does.
  * - `grouped`: other tools folded into this button's flyout on the toolbar,
@@ -59,6 +62,7 @@ export type ToolSpec = {
 	picks?: true;
 	undoSteps?: "each" | "marks";
 	cancels?: true;
+	keepsSelectionKeys?: true;
 	action?: true;
 	grouped?: readonly ToolId[];
 	label: string;

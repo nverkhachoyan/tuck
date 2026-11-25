@@ -7,13 +7,17 @@ import { toTransformList } from "../layers/layerTransform";
 import { handleSides } from "./handleGeometry";
 import { handleMetrics, shownHandles } from "./handleMetrics";
 import { layerBounds } from "./layerBounds";
-import type { LiveTransform } from "./liveTransform";
+import { type LiveTransform, liveTransformOf } from "./liveTransform";
+import type { LiveMarquee } from "./useMarqueeGesture";
 
 export const SELECTION_STROKE_PX = 1.5;
 // Under the selection's lines, so they read on light photos as on dark ones.
 // Crop's frame uses the same width.
 export const SELECTION_HALO_PX = 3.5;
 export const SELECTION_HALO = "rgba(0, 0, 0, 0.22)";
+// Each member of a selection of several layers, under the group's outline.
+const MEMBER_STROKE_PX = 1;
+const MEMBER_HALO_PX = 2.5;
 
 /**
  * `px` screen pixels in document units, following the view's scale as a
@@ -43,6 +47,75 @@ export function SelectionOutline({
 	const box = rect(-w, -h, w * 2, h * 2);
 	return (
 		<Group transform={toTransformList({ ...transform, scaleX: 1, scaleY: 1 })}>
+			<Rect
+				rect={box}
+				color={SELECTION_HALO}
+				style="stroke"
+				strokeWidth={halo}
+			/>
+			<Rect
+				rect={box}
+				color={colors.selection}
+				style="stroke"
+				strokeWidth={outline}
+			/>
+		</Group>
+	);
+}
+
+/**
+ * A thin outline around each layer in a selection of several, following the
+ * group's gestures, so it's clear which layers the group's box holds.
+ */
+export function GroupMemberOutlines({
+	layers,
+	live,
+	viewScale,
+}: {
+	layers: readonly Layer[];
+	live: LiveTransform;
+	viewScale: DerivedValue<number>;
+}) {
+	const halo = useScreenPixels(viewScale, MEMBER_HALO_PX);
+	const outline = useScreenPixels(viewScale, MEMBER_STROKE_PX);
+	return layers.map((layer) => (
+		<MemberOutline
+			key={layer.id}
+			layer={layer}
+			live={live}
+			halo={halo}
+			outline={outline}
+		/>
+	));
+}
+
+function MemberOutline({
+	layer,
+	live,
+	halo,
+	outline,
+}: {
+	layer: Layer;
+	live: LiveTransform;
+	halo: DerivedValue<number>;
+	outline: DerivedValue<number>;
+}) {
+	const { halfWidth, halfHeight } = layerBounds(layer);
+	const current = useDerivedValue(
+		() => liveTransformOf(live, layer.id, layer.transform),
+		[layer.id, layer.transform],
+	);
+	// Unscaled, so the lines keep their width; the scale moves the corners.
+	const transform = useDerivedValue(() =>
+		toTransformList({ ...current.value, scaleX: 1, scaleY: 1 }),
+	);
+	const box = useDerivedValue(() => {
+		const w = halfWidth * current.value.scaleX;
+		const h = halfHeight * current.value.scaleY;
+		return Skia.XYWHRect(-w, -h, w * 2, h * 2);
+	}, [halfWidth, halfHeight]);
+	return (
+		<Group transform={transform}>
 			<Rect
 				rect={box}
 				color={SELECTION_HALO}
@@ -211,5 +284,46 @@ export function SelectionHandles({
 				strokeWidth={outline}
 			/>
 		</Group>
+	);
+}
+
+/**
+ * The Select tool's drag box in screen pixels: a faint fill inside a haloed
+ * outline, driven from shared values so no Skia path is built while dragging.
+ */
+export function MarqueeBox({ box }: { box: LiveMarquee }) {
+	const fillOpacity = useDerivedValue(() => (box.active.value ? 0.12 : 0));
+	const strokeOpacity = useDerivedValue(() => (box.active.value ? 1 : 0));
+	return (
+		<>
+			<Rect
+				x={box.x}
+				y={box.y}
+				width={box.width}
+				height={box.height}
+				color={colors.selection}
+				opacity={fillOpacity}
+			/>
+			<Rect
+				x={box.x}
+				y={box.y}
+				width={box.width}
+				height={box.height}
+				color={SELECTION_HALO}
+				style="stroke"
+				strokeWidth={SELECTION_HALO_PX}
+				opacity={strokeOpacity}
+			/>
+			<Rect
+				x={box.x}
+				y={box.y}
+				width={box.width}
+				height={box.height}
+				color={colors.selection}
+				style="stroke"
+				strokeWidth={SELECTION_STROKE_PX}
+				opacity={strokeOpacity}
+			/>
+		</>
 	);
 }

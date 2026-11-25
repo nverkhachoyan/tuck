@@ -7,12 +7,14 @@ import { eraserSpec } from "./eraser/eraserSpec.ts";
 import { findSpec } from "./find/findSpec.ts";
 import { penSpec } from "./pen/penSpec.ts";
 import { redactSpec } from "./redact/redactSpec.ts";
+import { selectSpec } from "./select/selectSpec.ts";
 import { shapeSpec } from "./shape/shapeSpec.ts";
 import { stickersSpec } from "./stickers/stickersSpec.ts";
 import { textSpec } from "./text/textSpec.ts";
 
 /** The built-in tools' specs, from their own folders, by id. */
 export const BUILT_IN_SPECS = {
+	select: selectSpec,
 	text: textSpec,
 	pen: penSpec,
 	shape: shapeSpec,
@@ -35,6 +37,7 @@ export const BUILT_IN_TOOLBAR: readonly (
 	| keyof typeof BUILT_IN_SPECS
 	| OwnTool
 )[] = [
+	"select",
 	"crop",
 	"cut",
 	"adjust",

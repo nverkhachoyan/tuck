@@ -7,7 +7,7 @@ import {
 	findLayer,
 } from "../document/document.ts";
 import { reframe, setBackground } from "../document/documentEdits.ts";
-import type { Rect } from "../document/geometry.ts";
+import type { GroupTransformChange, Rect } from "../document/geometry.ts";
 import { createLayerId } from "../layers/base.ts";
 import type { Stroke } from "../layers/drawing/drawing.ts";
 import {
@@ -31,15 +31,21 @@ import {
 } from "../layers/image/imageEdits.ts";
 import { duplicateLayer, type Layer } from "../layers/layer.ts";
 import {
+	type ArrangeMove,
+	arrangeLayers,
 	deleteLayer,
 	deleteLayerGroup,
+	deleteLayers,
+	duplicateLayers,
 	moveLayer,
 	nudgeLayer,
+	nudgeLayers,
 	resizeBox,
 	setLayerFlag,
 	setLayerGroupFlag,
 	setLayerResizable,
 	transformLayer,
+	transformLayers,
 } from "../layers/layerEdits.ts";
 import type {
 	RedactionEffect,
@@ -84,7 +90,8 @@ export type EditorState = {
 	// What the app calls this session (a project, say), or null; the editor
 	// uses it only to key what it caches for the document.
 	key: string | null;
-	selectedLayerId: string | null;
+	// Selected layer ids in bottom-to-top document order, with no duplicates.
+	selectedLayerIds: readonly string[];
 	past: EditorSnapshot[];
 	future: EditorSnapshot[];
 	// While a tool is open, where it started: Cancel returns there (and redo
@@ -93,17 +100,61 @@ export type EditorState = {
 	toolSession: ToolSession | null;
 };
 
+const NO_IDS: readonly string[] = [];
+const NO_LAYERS: readonly Layer[] = [];
+
+function sameIds(a: readonly string[], b: readonly string[]): boolean {
+	return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+function normalizeSelection(
+	document: EditorDocument | null,
+	ids: readonly string[],
+): readonly string[] {
+	if (!document || ids.length === 0) return NO_IDS;
+	const wanted = new Set(ids);
+	const ordered = document.layers
+		.filter((layer) => wanted.has(layer.id))
+		.map((layer) => layer.id);
+	return ordered.length === 0 ? NO_IDS : ordered;
+}
+
 type EditorSet = (
 	partial: Partial<EditorState>,
 	replace?: false,
 	action?: string,
 ) => void;
 
-export const selectSelectedLayer = ({
+export const selectSelectedLayerId = ({
+	selectedLayerIds,
+}: Pick<EditorState, "selectedLayerIds">): string | null =>
+	selectedLayerIds.length === 1 ? selectedLayerIds[0] : null;
+
+export const selectSelectedLayer = (state: EditorState): Layer | undefined => {
+	const id = selectSelectedLayerId(state);
+	return id === null
+		? undefined
+		: state.document?.layers.find((layer) => layer.id === id);
+};
+
+let cachedLayersDoc: EditorDocument | null = null;
+let cachedLayersIds: readonly string[] = NO_IDS;
+let cachedLayers: readonly Layer[] = NO_LAYERS;
+
+export const selectSelectedLayers = ({
 	document,
-	selectedLayerId,
-}: EditorState): Layer | undefined =>
-	document?.layers.find((layer) => layer.id === selectedLayerId);
+	selectedLayerIds,
+}: Pick<EditorState, "document" | "selectedLayerIds">): readonly Layer[] => {
+	if (!document || selectedLayerIds.length === 0) return NO_LAYERS;
+	if (document === cachedLayersDoc && selectedLayerIds === cachedLayersIds) {
+		return cachedLayers;
+	}
+	const selected = new Set(selectedLayerIds);
+	cachedLayersDoc = document;
+	cachedLayersIds = selectedLayerIds;
+	cachedLayers = document.layers.filter((layer) => selected.has(layer.id));
+	return cachedLayers;
+};
 
 export const selectSelectedTextLayer = (
 	state: EditorState,
@@ -144,23 +195,30 @@ export const selectCanRedo = ({ future, toolSession }: EditorState) =>
 // since reading it from `get().actions` makes that action's return type `any`.
 export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	// The selection after `document` became `next`: a layer the edit added on
-	// top, so a stroke or restyle right after changes it, or else the selected
-	// layer while it's still there. A hidden or locked layer can't be
-	// selected, so hiding or locking the selection clears it.
-	const selectionAfter = (document: EditorDocument, next: EditorDocument) => {
+	// top, so a stroke or restyle right after changes it, or else each selected
+	// layer that's still there and wasn't just hidden or locked, in document
+	// order.
+	const selectionAfter = (
+		document: EditorDocument,
+		next: EditorDocument,
+	): readonly string[] => {
 		const top = next.layers.at(-1);
-		if (top && !findLayer(document, top.id)) return top.id;
-		const { selectedLayerId } = get();
-		const before = findLayer(document, selectedLayerId);
-		const after = findLayer(next, selectedLayerId);
-		if (
-			!after ||
-			(after.hidden && !before?.hidden) ||
-			(after.locked && !before?.locked)
-		) {
-			return null;
-		}
-		return selectedLayerId;
+		if (top && !findLayer(document, top.id)) return [top.id];
+		const { selectedLayerIds } = get();
+		if (selectedLayerIds.length === 0) return NO_IDS;
+		const selected = new Set(selectedLayerIds);
+		const kept = next.layers
+			.filter((after) => {
+				if (!selected.has(after.id)) return false;
+				const before = findLayer(document, after.id);
+				return !(
+					(after.hidden && !before?.hidden) ||
+					(after.locked && !before?.locked)
+				);
+			})
+			.map((layer) => layer.id);
+		if (kept.length === 0) return NO_IDS;
+		return sameIds(selectedLayerIds, kept) ? selectedLayerIds : kept;
 	};
 
 	// An edit that returns the document it was given changed nothing, so
@@ -168,20 +226,20 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	const setDocument = (
 		action: string,
 		update: (document: EditorDocument) => EditorDocument,
-		nextSelectedLayerId?: string | null,
+		nextSelectedLayerIds?: readonly string[],
 	) => {
-		const { document, selectedLayerId, past } = get();
+		const { document, selectedLayerIds, past } = get();
 		if (!document) return;
 		const next = update(document);
 		if (next === document) return;
 		set(
 			{
 				document: next,
-				selectedLayerId:
-					nextSelectedLayerId === undefined
+				selectedLayerIds:
+					nextSelectedLayerIds === undefined
 						? selectionAfter(document, next)
-						: nextSelectedLayerId,
-				past: [...past, { document, selectedLayerId }].slice(-MAX_HISTORY),
+						: nextSelectedLayerIds,
+				past: [...past, { document, selectedLayerIds }].slice(-MAX_HISTORY),
 				future: [],
 			},
 			false,
@@ -193,13 +251,13 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		<Args extends unknown[]>(
 			action: string,
 			fn: (document: EditorDocument, ...args: Args) => EditorDocument,
-			nextSelectedLayerId?: string | null,
+			nextSelectedLayerIds?: readonly string[],
 		) =>
 		(...args: Args) =>
 			setDocument(
 				action,
 				(document) => fn(document, ...args),
-				nextSelectedLayerId,
+				nextSelectedLayerIds,
 			);
 
 	const toggleFlag =
@@ -218,11 +276,14 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			);
 
 	const addOnTop = (action: string, layer: Layer) =>
-		setDocument(action, (document) => addLayerOnTop(document, layer), layer.id);
+		setDocument(action, (document) => addLayerOnTop(document, layer), [
+			layer.id,
+		]);
 
 	// The document the last nudge produced. While it's still the current one,
 	// nothing else has changed since, so the next nudge joins its undo step.
-	let lastNudge: { document: EditorDocument; id: string } | null = null;
+	let lastNudge: { document: EditorDocument; ids: readonly string[] } | null =
+		null;
 
 	// By id, like `transformLayer`: text edited in place is committed to
 	// the layer it came from, whatever is selected by then.
@@ -235,11 +296,11 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		steps: ToolSessionSteps = "one",
 		absorbs = false,
 	) => {
-		const { document, selectedLayerId, past, future, toolSession } = get();
+		const { document, selectedLayerIds, past, future, toolSession } = get();
 		if (!document || toolSession) return;
 		const absorbed = absorbs ? past.at(-1) : undefined;
 		const newSession: ToolSession = {
-			...(absorbed ?? { document, selectedLayerId }),
+			...(absorbed ?? { document, selectedLayerIds }),
 			opened: document,
 			undoStop: past.at(absorbed ? -2 : -1),
 			redoStop: future[0],
@@ -263,10 +324,11 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	};
 
 	// The session's steps become one from where it started, or stay one
-	// per change or per mark (`steps`). Each kept step undoes to the
-	// selection the session started with, not a mark drawn along the way.
+	// per change or per mark (`steps`). Mark steps undo to the selection the
+	// session started with, not a mark drawn along the way; `"each"` keeps
+	// each step's own selection so Select's edits restore what was selected.
 	const commitToolSession = () => {
-		const { document, selectedLayerId, toolSession, past } = get();
+		const { document, selectedLayerIds, toolSession, past } = get();
 		if (!document || !toolSession) return;
 		if (document === toolSession.document) {
 			set({ toolSession: null }, false, "editor/commitToolSession");
@@ -280,13 +342,12 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		const kept =
 			toolSession.steps === "one"
 				? [snapshotOf(toolSession)]
-				: (toolSession.steps === "each"
-						? own
-						: stepsByMark(own, { document, selectedLayerId })
-					).map((step) => ({
-						document: step.document,
-						selectedLayerId: toolSession.selectedLayerId,
-					}));
+				: toolSession.steps === "each"
+					? own
+					: stepsByMark(own, { document, selectedLayerIds }).map((step) => ({
+							document: step.document,
+							selectedLayerIds: toolSession.selectedLayerIds,
+						}));
 		set(
 			{
 				past: [...pastBefore(past, toolSession), ...kept].slice(-MAX_HISTORY),
@@ -305,7 +366,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 	// wasn't an edit (Cut's selection), so the redo steps go back to the
 	// ones from before it.
 	const cancelToolSession = () => {
-		const { document, selectedLayerId, toolSession, past, future } = get();
+		const { document, selectedLayerIds, toolSession, past, future } = get();
 		if (!document || !toolSession) return;
 		if (toolSession.previews) {
 			const stop = toolSession.redoStop
@@ -331,7 +392,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			{
 				...snapshotOf(toolSession),
 				past: pastBefore(past, toolSession),
-				future: [{ document, selectedLayerId }, ...future],
+				future: [{ document, selectedLayerIds }, ...future],
 				toolSession: null,
 			},
 			false,
@@ -345,7 +406,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 				{
 					document,
 					key,
-					selectedLayerId: null,
+					selectedLayerIds: NO_IDS,
 					past: [],
 					future: [],
 					toolSession: null,
@@ -359,7 +420,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 				{
 					document: null,
 					key: null,
-					selectedLayerId: null,
+					selectedLayerIds: NO_IDS,
 					past: [],
 					future: [],
 					toolSession: null,
@@ -370,7 +431,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 
 		// Edits that forward straight to a document/layer edit function. Those
 		// that add on top select the new layer through `selectionAfter`; detector
-		// proposals (`addRedactionBoxes`) select `null` since the group was added.
+		// proposals (`addRedactionBoxes`) select nothing since the group was added.
 		addTextLayer: edit("editor/addTextLayer", placeTextLayer),
 		eraseStroke: edit("editor/eraseStroke", eraseStroke),
 		eraseWholeStrokes: edit("editor/eraseWholeStrokes", eraseWholeStrokes),
@@ -378,7 +439,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		addRedactionBoxes: edit(
 			"editor/addRedactionBoxes",
 			addRedactionBoxes,
-			null,
+			NO_IDS,
 		),
 		addMaskedRedaction: edit("editor/addMaskedRedaction", addMaskedRedaction),
 		setRedactionEffect: edit("editor/setRedactionEffect", setRedactionEffect),
@@ -397,6 +458,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		setBackground: edit("editor/setBackground", setBackground),
 		moveLayer: edit("editor/moveLayer", moveLayer),
 		deleteLayer: edit("editor/deleteLayer", deleteLayer),
+		deleteLayers: edit("editor/deleteLayers", deleteLayers),
 		deleteLayerGroup: edit("editor/deleteLayerGroup", deleteLayerGroup),
 		setLayerHidden: toggleFlag(
 			"editor/hideLayer",
@@ -457,6 +519,43 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			addOnTop("editor/duplicateSelectedLayer", duplicateLayer(layer));
 		},
 
+		deleteSelectedLayers: () => {
+			const { selectedLayerIds } = get();
+			if (selectedLayerIds.length === 0) return;
+			setDocument(
+				"editor/deleteSelectedLayers",
+				(document) => deleteLayers(document, selectedLayerIds),
+				NO_IDS,
+			);
+		},
+
+		duplicateSelectedLayers: () => {
+			const { document, selectedLayerIds } = get();
+			if (!document || selectedLayerIds.length === 0) return;
+			const { document: next, copyIds } = duplicateLayers(
+				document,
+				selectedLayerIds,
+			);
+			if (next === document) return;
+			setDocument("editor/duplicateSelectedLayers", () => next, copyIds);
+		},
+
+		arrangeSelectedLayers: (move: ArrangeMove) => {
+			const { selectedLayerIds } = get();
+			if (selectedLayerIds.length === 0) return;
+			setDocument("editor/arrangeSelectedLayers", (document) =>
+				arrangeLayers(document, selectedLayerIds, move),
+			);
+		},
+
+		transformSelectedLayers: (change: GroupTransformChange) => {
+			const { selectedLayerIds } = get();
+			if (selectedLayerIds.length === 0) return;
+			setDocument("editor/transformSelectedLayers", (document) =>
+				transformLayers(document, selectedLayerIds, change),
+			);
+		},
+
 		// Joins the mark `joinId` (see `continuesMark`) or starts one on top.
 		// The mark it lands in is selected, so Pen can ask about it next.
 		drawStroke: (
@@ -471,17 +570,17 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		// joins it.
 		paintRedaction: (stroke: MaskStroke, effect: RedactionEffect) =>
 			setDocument("editor/paintRedaction", (document) =>
-				paintRedaction(document, get().selectedLayerId, stroke, effect),
+				paintRedaction(document, selectSelectedLayerId(get()), stroke, effect),
 			),
 
 		// One undo step; the first piece keeps the id, and stays selected.
 		separateSelectedDrawing: () => {
-			const id = get().selectedLayerId;
+			const id = selectSelectedLayerId(get());
 			if (!id) return;
 			setDocument(
 				"editor/separateSelectedDrawing",
 				(document) => separateDrawing(document, id),
-				id,
+				[id],
 			);
 		},
 
@@ -494,7 +593,7 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			setDocument(
 				"editor/addCutCopy",
 				(document) => addCutCopy(document, id, selection, copyId),
-				copyId,
+				[copyId],
 			);
 		},
 
@@ -510,26 +609,92 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 			if (!document) return;
 			const next = nudgeLayer(document, id, dx, dy);
 			if (next === document) return;
-			if (lastNudge?.document === document && lastNudge.id === id) {
+			const ids = [id];
+			if (lastNudge?.document === document && sameIds(lastNudge.ids, ids)) {
 				set({ document: next, future: [] }, false, "editor/nudgeLayer");
 			} else {
 				setDocument("editor/nudgeLayer", () => next);
 			}
-			lastNudge = { document: next, id };
+			lastNudge = { document: next, ids };
 		},
 
-		selectLayer: (id: string | null) =>
-			set({ selectedLayerId: id }, false, "editor/selectLayer"),
+		// A run of nudges to the same selection is a single undo step.
+		nudgeSelectedLayers: (dx: number, dy: number) => {
+			const { document, selectedLayerIds } = get();
+			if (!document || selectedLayerIds.length === 0) return;
+			const next = nudgeLayers(document, selectedLayerIds, dx, dy);
+			if (next === document) return;
+			if (
+				lastNudge?.document === document &&
+				sameIds(lastNudge.ids, selectedLayerIds)
+			) {
+				set(
+					{ document: next, future: [] },
+					false,
+					"editor/nudgeSelectedLayers",
+				);
+			} else {
+				setDocument("editor/nudgeSelectedLayers", () => next);
+			}
+			lastNudge = { document: next, ids: selectedLayerIds };
+		},
+
+		selectLayer: (id: string | null) => {
+			const { document, selectedLayerIds } = get();
+			const next =
+				id === null
+					? NO_IDS
+					: document
+						? normalizeSelection(document, [id])
+						: [id];
+			if (sameIds(selectedLayerIds, next)) return;
+			set({ selectedLayerIds: next }, false, "editor/selectLayer");
+		},
+
+		selectLayers: (ids: readonly string[]) => {
+			const { document, selectedLayerIds } = get();
+			const next = normalizeSelection(document, ids);
+			if (sameIds(selectedLayerIds, next)) return;
+			set({ selectedLayerIds: next }, false, "editor/selectLayers");
+		},
+
+		toggleLayerSelected: (id: string) => {
+			const { document, selectedLayerIds } = get();
+			if (!document) return;
+			const next = selectedLayerIds.includes(id)
+				? selectedLayerIds.filter((selectedId) => selectedId !== id)
+				: normalizeSelection(document, [...selectedLayerIds, id]);
+			if (sameIds(selectedLayerIds, next)) return;
+			set(
+				{ selectedLayerIds: next.length === 0 ? NO_IDS : next },
+				false,
+				"editor/toggleLayerSelected",
+			);
+		},
+
+		selectAll: () => {
+			const { document, selectedLayerIds } = get();
+			if (!document) return;
+			const next = document.layers
+				.filter((layer) => !layer.hidden && !layer.locked)
+				.map((layer) => layer.id);
+			if (sameIds(selectedLayerIds, next)) return;
+			set(
+				{ selectedLayerIds: next.length === 0 ? NO_IDS : next },
+				false,
+				"editor/selectAll",
+			);
+		},
 
 		undo: () => {
-			const { document, selectedLayerId, past, future } = get();
+			const { document, selectedLayerIds, past, future } = get();
 			const previous = past.at(-1);
 			if (!document || !previous || !selectCanUndo(get())) return;
 			set(
 				{
 					...previous,
 					past: past.slice(0, -1),
-					future: [{ document, selectedLayerId }, ...future],
+					future: [{ document, selectedLayerIds }, ...future],
 				},
 				false,
 				"editor/undo",
@@ -537,13 +702,13 @@ export function createEditorActions(set: EditorSet, get: () => EditorState) {
 		},
 
 		redo: () => {
-			const { document, selectedLayerId, past, future } = get();
+			const { document, selectedLayerIds, past, future } = get();
 			const [next, ...rest] = future;
 			if (!document || !next || !selectCanRedo(get())) return;
 			set(
 				{
 					...next,
-					past: [...past, { document, selectedLayerId }],
+					past: [...past, { document, selectedLayerIds }],
 					future: rest,
 				},
 				false,
@@ -574,7 +739,7 @@ type SliceCreator<Slice> = StateCreator<
 export const createEditorSlice: SliceCreator<EditorSlice> = (set, get) => ({
 	document: null,
 	key: null,
-	selectedLayerId: null,
+	selectedLayerIds: NO_IDS,
 	past: [],
 	future: [],
 	toolSession: null,

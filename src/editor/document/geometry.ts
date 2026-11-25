@@ -202,6 +202,86 @@ export function applyMatrix(m: Matrix, point: Point): Point {
 	};
 }
 
+export type GroupTransformChange = {
+	pivot: Point;
+	dx: number;
+	dy: number;
+	scale: number;
+	rotation: number;
+};
+
+/**
+ * Applies a group's live or committed change to one member's transform: its
+ * center scales and rotates about `pivot`, then moves by `(dx, dy)`; its
+ * scale multiplies by `scale` and its rotation adds `rotation`.
+ */
+export function transformAbout(
+	transform: Transform,
+	{ pivot, dx, dy, scale, rotation }: GroupTransformChange,
+): Transform {
+	"worklet";
+	if (dx === 0 && dy === 0 && scale === 1 && rotation === 0) return transform;
+	const { cos, sin } = cosSin(rotation);
+	const rx = (transform.x - pivot.x) * scale;
+	const ry = (transform.y - pivot.y) * scale;
+	return {
+		x: pivot.x + rx * cos - ry * sin + dx,
+		y: pivot.y + rx * sin + ry * cos + dy,
+		scaleX: transform.scaleX * scale,
+		scaleY: transform.scaleY * scale,
+		rotation:
+			rotation === 0
+				? transform.rotation
+				: normalizeAngle(transform.rotation + rotation),
+	};
+}
+
+/**
+ * The smallest box covering every item's rotated box, turned by `rotation`
+ * (upright by default), as a transform centered on the box (scale 1) and its
+ * half size. Null when `items` is empty.
+ */
+export function groupBounds(
+	items: readonly { transform: Transform; box: Box }[],
+	rotation = 0,
+): { transform: Transform; box: Box } | null {
+	"worklet";
+	if (items.length === 0) return null;
+	const { cos, sin } = cosSin(rotation);
+	let minX = Number.POSITIVE_INFINITY;
+	let minY = Number.POSITIVE_INFINITY;
+	let maxX = Number.NEGATIVE_INFINITY;
+	let maxY = Number.NEGATIVE_INFINITY;
+	for (const { transform, box } of items) {
+		// Each item measured in the frame turned by `rotation`.
+		const x = transform.x * cos + transform.y * sin;
+		const y = -transform.x * sin + transform.y * cos;
+		const { halfWidth, halfHeight } = boundingBox(
+			{ ...transform, rotation: transform.rotation - rotation },
+			box,
+		);
+		minX = Math.min(minX, x - halfWidth);
+		maxX = Math.max(maxX, x + halfWidth);
+		minY = Math.min(minY, y - halfHeight);
+		maxY = Math.max(maxY, y + halfHeight);
+	}
+	const centerX = (minX + maxX) / 2;
+	const centerY = (minY + maxY) / 2;
+	return {
+		transform: {
+			x: centerX * cos - centerY * sin,
+			y: centerX * sin + centerY * cos,
+			scaleX: 1,
+			scaleY: 1,
+			rotation,
+		},
+		box: {
+			halfWidth: (maxX - minX) / 2,
+			halfHeight: (maxY - minY) / 2,
+		},
+	};
+}
+
 export function transformsEqual(left: Transform, right: Transform): boolean {
 	"worklet";
 	return (

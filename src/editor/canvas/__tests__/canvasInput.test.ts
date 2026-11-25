@@ -122,6 +122,29 @@ describe("inputRules", () => {
 		for (const zoomed of [false, true]) {
 			assert.equal(inputRules({ type: "select" }, zoomed).twoFingers, "view");
 		}
+		// Several selected (no single layer) still transforms with two fingers.
+		assert.equal(
+			inputRules({ type: "select" }, false, undefined, true).twoFingers,
+			"selection",
+		);
+	});
+
+	test("marquee selecting keeps one finger for the box even when zoomed", () => {
+		for (const zoomed of [false, true]) {
+			assert.deepEqual(
+				inputRules({ type: "select", marquee: true }, zoomed, shape),
+				{
+					selection: "transforms",
+					twoFingers: "selection",
+					oneFinger: null,
+					cursor: "hover",
+				},
+			);
+			assert.equal(
+				inputRules({ type: "select", marquee: true }, zoomed).twoFingers,
+				"view",
+			);
+		}
 	});
 
 	test("a tool, picking a color too, keeps one finger and a crosshair", () => {
@@ -238,10 +261,26 @@ describe("outlinedLayerFor", () => {
 			outlinedLayerFor(redactBox, { ...none, selectedLayer: locked }),
 			locked,
 		);
-		// Pen shows and restyles a selected mark.
+		// Pen outlines the mark it was opened on, not one it just drew.
+		const penOn = (on: string): CanvasInput => ({
+			type: "tool",
+			tool: {
+				type: "draw",
+				brush: { type: "pen", color: "#FF3B30", width: 10 },
+				on,
+			},
+		});
+		assert.equal(
+			outlinedLayerFor(penOn(drawing.id), { ...none, selectedLayer: drawing }),
+			drawing,
+		);
 		assert.equal(
 			outlinedLayerFor(pen, { ...none, selectedLayer: drawing }),
-			drawing,
+			null,
+		);
+		assert.equal(
+			outlinedLayerFor(penOn("earlier"), { ...none, selectedLayer: drawing }),
+			null,
 		);
 	});
 

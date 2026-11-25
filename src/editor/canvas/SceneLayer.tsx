@@ -8,7 +8,7 @@ import type { Layer } from "../layers/layer";
 import { toTransformList } from "../layers/layerTransform";
 import type { CanvasTool } from "./canvasTool";
 import { LiveRedaction, LiveShape } from "./LiveLayerContent";
-import type { LiveTransform } from "./liveTransform";
+import { type LiveTransform, liveTransformOf } from "./liveTransform";
 import { cutStrokeKind } from "./strokes/cut";
 import { drawStrokeKind } from "./strokes/draw";
 import { eraseStrokeKind } from "./strokes/erase";
@@ -75,17 +75,10 @@ export function SceneLayer({
 	dimmed?: boolean;
 	onImageError: (error: unknown) => void;
 }) {
-	const transform = useDerivedValue(() => {
-		const active = live.activeId.value === layer.id;
-		const t = layer.transform;
-		return toTransformList({
-			x: active ? live.x.value : t.x,
-			y: active ? live.y.value : t.y,
-			rotation: active ? live.rotation.value : t.rotation,
-			scaleX: active ? live.scaleX.value : t.scaleX,
-			scaleY: active ? live.scaleY.value : t.scaleY,
-		});
-	}, [layer.id, layer.transform]);
+	const transform = useDerivedValue(
+		() => toTransformList(liveTransformOf(live, layer.id, layer.transform)),
+		[layer.id, layer.transform],
+	);
 
 	const activeStroke =
 		stroke && (stroke.reaches(layer) || (isCrossable(layer) && stroke.crossed))

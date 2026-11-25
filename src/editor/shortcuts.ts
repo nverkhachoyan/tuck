@@ -37,6 +37,7 @@ export function toolsByKey(
 export type Shortcut =
 	| { type: "undo" }
 	| { type: "redo" }
+	| { type: "selectAll" }
 	| { type: "delete" }
 	| { type: "deselect" }
 	| { type: "edit" }
@@ -109,6 +110,8 @@ export function shortcutFor(
 /** The command for a key pressed with ⌘ or Ctrl, or null. */
 function modifiedShortcut(press: KeyPress): Shortcut | null {
 	switch (press.key.toLowerCase()) {
+		case "a":
+			return press.shiftKey ? null : { type: "selectAll" };
 		case "z":
 			return press.shiftKey ? { type: "redo" } : { type: "undo" };
 		case "y":
@@ -196,6 +199,7 @@ const EDITING_GROUPS: ShortcutGroup[] = [
 			{ keys: "mod+E", action: "Export" },
 			{ keys: "mod+C", action: "Copy, in Export" },
 			{ keys: "Enter", action: "Download, in Export" },
+			{ keys: "mod+A", action: "Select all" },
 			{ keys: "mod+D", action: "Duplicate" },
 			{ keys: "mod+]", action: "Bring forward" },
 			{ keys: "mod+[", action: "Send backward" },

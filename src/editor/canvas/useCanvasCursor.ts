@@ -2,31 +2,35 @@ import { useCallback, useState } from "react";
 import { Platform } from "react-native";
 import { useHoverGesture } from "react-native-gesture-handler";
 import { useSharedValue } from "react-native-reanimated";
-import type { Layer } from "../layers/layer";
 import { type CanvasCursor, cursorForHandle } from "./canvasCursor";
 import type { CanvasLookups } from "./canvasTool";
-import { hitsLayer, type LayerTarget } from "./hitTest";
+import { hitsAnyLayer, type LayerTarget } from "./hitTest";
 import type { ViewZoom } from "./viewport";
 
 /**
  * What a press at the pointer would do: grab a handle, move a layer, move
  * the view, or nothing. The cursor changes only when that does, not on every
  * pointer move. With a mouse, it shows that on the canvas.
+ * `movesSelectionAt`, when given, says where a drag moves the selection:
+ * where a drag would otherwise draw a box or a stroke, or move the view or
+ * another layer.
  */
 export function useCanvasCursor({
 	scale,
 	lookups,
-	selectedLayer,
-	selectedLayerId,
+	selectionRotation,
+	selectedLayerIds,
 	dragsSelection,
+	movesSelectionAt,
 	targets,
 	zoom,
 }: {
 	scale: number;
 	lookups: CanvasLookups;
-	selectedLayer: Layer | undefined;
-	selectedLayerId: string | null;
+	selectionRotation: number | null;
+	selectedLayerIds: readonly string[];
 	dragsSelection: boolean;
+	movesSelectionAt: ((screenX: number, screenY: number) => boolean) | null;
 	targets: readonly LayerTarget[];
 	zoom: ViewZoom | null;
 }) {
@@ -35,22 +39,30 @@ export function useCanvasCursor({
 		(screenX: number, screenY: number) => {
 			if (scale === 0) return;
 			const handle = lookups.handleAt(screenX, screenY);
-			if (handle && selectedLayer) {
-				setCursor(cursorForHandle(handle, selectedLayer.transform.rotation));
+			if (handle && selectionRotation !== null) {
+				setCursor(cursorForHandle(handle, selectionRotation));
 				return;
 			}
 			if (dragsSelection) {
-				const onSelection =
-					selectedLayerId !== null &&
-					lookups.layerAt(screenX, screenY) === selectedLayerId;
+				let onSelection: boolean;
+				if (movesSelectionAt) {
+					onSelection = movesSelectionAt(screenX, screenY);
+				} else {
+					const hit = lookups.layerAt(screenX, screenY);
+					onSelection = hit !== null && selectedLayerIds.includes(hit);
+				}
 				setCursor(onSelection ? "move" : "crosshair");
+				return;
+			}
+			if (movesSelectionAt?.(screenX, screenY)) {
+				setCursor("move");
 				return;
 			}
 			if (zoom) {
 				const point = lookups.toDocument(screenX, screenY);
 				const onSelection =
-					selectedLayerId !== null &&
-					hitsLayer(targets, selectedLayerId, point);
+					selectedLayerIds.length > 0 &&
+					hitsAnyLayer(targets, selectedLayerIds, point);
 				setCursor(onSelection ? "move" : "grab");
 				return;
 			}
@@ -61,9 +73,10 @@ export function useCanvasCursor({
 		[
 			dragsSelection,
 			lookups,
+			movesSelectionAt,
 			scale,
-			selectedLayer,
-			selectedLayerId,
+			selectedLayerIds,
+			selectionRotation,
 			targets,
 			zoom,
 		],

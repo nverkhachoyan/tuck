@@ -6,7 +6,7 @@ export const MAX_HISTORY = 100;
 
 export type EditorSnapshot = {
 	document: EditorDocument;
-	selectedLayerId: string | null;
+	selectedLayerIds: readonly string[];
 };
 
 /**
@@ -36,9 +36,9 @@ export type ToolSession = EditorSnapshot & {
 
 export function snapshotOf({
 	document,
-	selectedLayerId,
+	selectedLayerIds,
 }: EditorSnapshot): EditorSnapshot {
-	return { document, selectedLayerId };
+	return { document, selectedLayerIds };
 }
 
 /**
@@ -88,7 +88,13 @@ export function stepsByMark(
 			steps[index].document.layers,
 			after.document.layers,
 		);
-		if (changed.length === 0) return after.selectedLayerId;
+		if (changed.length === 0) {
+			return after.selectedLayerIds.length === 0
+				? null
+				: after.selectedLayerIds.length === 1
+					? after.selectedLayerIds[0]
+					: after.selectedLayerIds.join("\0");
+		}
 		return changed.length === 1 ? changed[0] : steps[index];
 	};
 	const runs: { step: EditorSnapshot; mark: ReturnType<typeof markOf> }[] = [];

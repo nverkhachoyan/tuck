@@ -50,6 +50,19 @@ describe("shortcutFor", () => {
 		});
 	});
 
+	test("selects all with the modifier and A, without Shift", () => {
+		assert.deepEqual(shortcutFor(press("a", { metaKey: true })), {
+			type: "selectAll",
+		});
+		assert.deepEqual(shortcutFor(press("A", { ctrlKey: true })), {
+			type: "selectAll",
+		});
+		assert.equal(
+			shortcutFor(press("A", { metaKey: true, shiftKey: true })),
+			null,
+		);
+	});
+
 	test("duplicates and reorders with the modifier", () => {
 		assert.deepEqual(shortcutFor(press("d", { metaKey: true })), {
 			type: "duplicate",
@@ -83,6 +96,7 @@ describe("shortcutFor", () => {
 	});
 
 	test("picks up a tool, or shows the layers, with a plain letter", () => {
+		assert.deepEqual(shortcutFor(press("v")), { type: "tool", tool: "select" });
 		assert.deepEqual(shortcutFor(press("t")), { type: "tool", tool: "text" });
 		assert.deepEqual(shortcutFor(press("d")), { type: "tool", tool: "pen" });
 		assert.deepEqual(shortcutFor(press("s")), { type: "tool", tool: "shape" });
@@ -178,10 +192,10 @@ describe("shortcutGroups", () => {
 		const [toolGroup] = shortcutGroups(entries, BUILT_IN_SPECS);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["C", "B", "G", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+			["V", "C", "B", "G", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
-		assert.equal(toolGroup.items[2].action, "Remove the background");
-		assert.equal(toolGroup.items[8].action, "Find faces or text to redact");
+		assert.equal(toolGroup.items[3].action, "Remove the background");
+		assert.equal(toolGroup.items[9].action, "Find faces or text to redact");
 	});
 
 	test("leaves out grouped tools that are unavailable", () => {
@@ -192,7 +206,7 @@ describe("shortcutGroups", () => {
 		);
 		assert.deepEqual(
 			toolGroup.items.map((item) => item.keys),
-			["C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
+			["V", "C", "B", "E", "T", "D", "S", "X", "F", "R", "A", "P", "L"],
 		);
 	});
 
@@ -236,5 +250,10 @@ describe("shortcutGroups", () => {
 			{ keys: "Enter", action: "Apply" },
 			{ keys: "Escape", action: "Cancel" },
 		]);
+		assert.ok(
+			items("Editing")?.some(
+				(item) => item.keys === "mod+A" && item.action === "Select all",
+			),
+		);
 	});
 });

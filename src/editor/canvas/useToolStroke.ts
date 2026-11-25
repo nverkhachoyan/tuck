@@ -13,8 +13,8 @@ import { findLayerAt, type LayerTarget } from "./hitTest";
 import { type LiveStroke, strokeKindOf } from "./SceneLayer";
 import { strokeIntent } from "./strokeIntent";
 import { type CanvasHover, useEraseTracking } from "./strokes/useEraseTracking";
+import { useModifierKeys } from "./useModifierKeys";
 import { usePaintGesture } from "./usePaintGesture";
-import { useShiftHeld } from "./useShiftHeld";
 import type { DocumentViewport } from "./viewport";
 
 export type { CanvasHover };
@@ -102,7 +102,7 @@ export function useToolStroke({
 			document,
 		],
 	);
-	const shiftHeld = useShiftHeld();
+	const shiftHeld = useModifierKeys().shift;
 	const { onSegment, fields: eraseFields } = useEraseTracking({
 		tool,
 		viewport,

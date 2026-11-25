@@ -26,6 +26,7 @@ export function useEditorChrome({
 	tool,
 	controllers,
 	selectedLayer,
+	selectedCount = selectedLayer ? 1 : 0,
 	stylingTool,
 	wide,
 	done,
@@ -44,6 +45,7 @@ export function useEditorChrome({
 	tool: ToolId | null;
 	controllers: ToolControllers;
 	selectedLayer: Layer | undefined;
+	selectedCount?: number;
 	stylingTool: ToolId | null;
 	wide: boolean;
 	done: () => void;
@@ -72,7 +74,12 @@ export function useEditorChrome({
 		specs,
 		tool,
 		stylingTool,
-		layerName: selectedLayer ? layerKindName(selectedLayer) : null,
+		layerName:
+			selectedCount > 1
+				? `${selectedCount} layers`
+				: selectedLayer
+					? layerKindName(selectedLayer)
+					: null,
 		toolDoneLabel,
 		toolDoneVariant,
 		wide,

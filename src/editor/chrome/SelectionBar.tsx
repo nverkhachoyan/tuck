@@ -6,16 +6,16 @@ import { interaction } from "@/ui/interaction";
 import { Surface } from "@/ui/Surface";
 import { useTooltip } from "@/ui/Tooltip";
 import { colors, radii, space, typography, webTransition } from "@/ui/theme";
+import type { ArrangeMove } from "../layers/layerEdits";
 import {
 	BarChip,
 	BarGroup,
 	BarButton as HeaderButton,
 } from "../shell/ContextBar";
 
-type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
+export type { ArrangeMove };
 
-/** Where Arrange moves a layer in the stack. */
-export type ArrangeMove = "front" | "forward" | "backward" | "back";
+type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 /** What the selection bar offers, in either place it shows. */
 export type SelectionActions = {

@@ -13,6 +13,7 @@ import { hapticTick } from "@/platform/haptics";
 import {
 	type Box,
 	boundingBox,
+	type GroupTransformChange,
 	type Point,
 	type Size,
 	type Transform,
@@ -28,13 +29,20 @@ import {
 	scaleByDrag,
 } from "./handleGeometry";
 import { handleUnder, hasFinePointer } from "./handleMetrics";
-import { findLayerAt, type LayerTarget } from "./hitTest";
+import {
+	findLayerAbove,
+	findLayerAt,
+	insidePaddedBox,
+	type LayerTarget,
+} from "./hitTest";
 import {
 	clampScale,
 	holdLayer,
 	type LiveTransform,
+	liveGroupChange,
 	readLiveBox,
 	readLiveTransform,
+	SELECTION_GROUP_ID,
 } from "./liveTransform";
 import {
 	continueTravel,
@@ -74,12 +82,14 @@ const NO_LINES: AxisLines = { edges: [], centers: [] };
  *   values.
  * - A one-finger drag that starts on another layer picks that layer up at
  *   once: it's hit-tested here, on the UI thread, against `layers`, and
- *   `onSelect` tells React.
+ *   `onSelect` tells React. Inside the selection's box, only a layer over
+ *   the selection is picked up: from anywhere else there, the drag moves
+ *   the selection, even an anchored one.
  * - Two fingers never pick one up. With nothing selected, they zoom the
  *   view (see `useViewGesture`).
- * - Dragging empty space keeps moving the selection, which helps with small
- *   text, unless it's `anchored` (a redaction, which moves only from on
- *   itself).
+ * - Dragging empty space outside the box keeps moving the selection, which
+ *   helps with small text, unless it's `anchored` (a redaction, which moves
+ *   only from on itself).
  * - A one-finger drag from where `standsAside` says another gesture takes
  *   it (the view's, or a tool's) is left alone, from touch-down to lift.
  * - With `dragOnly`, only one finger's drag moves the selection or its
@@ -106,6 +116,7 @@ export function useLayerTransformGesture({
 	onTap,
 	onSelect,
 	onCommit,
+	onCommitGroup,
 	onResize,
 	onHover,
 	onHoverEnd,
@@ -122,6 +133,7 @@ export function useLayerTransformGesture({
 	// Without it, a drag only ever moves the current selection.
 	onSelect?: (id: string) => void;
 	onCommit: (id: string, transform: Transform) => void;
+	onCommitGroup?: (change: GroupTransformChange) => void;
 	// A resized box: its transform, and its new size in its own units.
 	onResize: (id: string, transform: Transform, box: Box) => void;
 	onHover: (screenX: number, screenY: number) => void;
@@ -327,7 +339,11 @@ export function useLayerTransformGesture({
 		if (activeCount.value > 0) return;
 		const id = live.heldId.value;
 		if (moved.value && id !== null && holding()) {
-			if (resizedBox.value) {
+			if (id === SELECTION_GROUP_ID) {
+				if (onCommitGroup) {
+					scheduleOnRN(onCommitGroup, liveGroupChange(live));
+				}
+			} else if (resizedBox.value) {
 				scheduleOnRN(onResize, id, readLiveTransform(live), readLiveBox(live));
 			} else {
 				scheduleOnRN(onCommit, id, readLiveTransform(live));
@@ -336,22 +352,41 @@ export function useLayerTransformGesture({
 		live.heldId.value = null;
 	};
 
-	// Picks up the layer under the pan's touch-down point, or, off the
-	// selection, pins an anchored one where it is.
+	// Picks up the layer under the pan's touch-down point, or, inside the
+	// selection's box, a layer over the selection there; keeps the selection
+	// otherwise, pinning an anchored one where it is when the drag came from
+	// outside its box.
 	const pickUp = () => {
 		"worklet";
-		const target = findLayerAt(
-			layers.value,
-			toDocument(downX.value, downY.value),
-		);
+		const point = toDocument(downX.value, downY.value);
 		const activeId = live.activeId.value;
-		if (target?.id === activeId) return;
+		const selected =
+			activeId === SELECTION_GROUP_ID
+				? live.groupIds.value
+				: activeId === null
+					? []
+					: [activeId];
+		const inBox =
+			activeId !== null &&
+			insidePaddedBox(
+				readLiveTransform(live),
+				readLiveBox(live),
+				point,
+				viewport.scale,
+			);
+		const target = inBox
+			? findLayerAbove(layers.value, selected, point)
+			: findLayerAt(layers.value, point);
+		if (target && selected.includes(target.id)) return;
 		if (onSelect && !dragOnly && target) {
 			holdLayer(live, target.id, target);
 			scheduleOnRN(onSelect, target.id);
+		} else if (inBox) {
+			return;
 		} else {
-			pinned.value =
-				layers.value.find((layer) => layer.id === activeId)?.anchored ?? false;
+			pinned.value = layers.value.some(
+				(layer) => layer.anchored && selected.includes(layer.id),
+			);
 		}
 	};
 
@@ -402,9 +437,14 @@ export function useLayerTransformGesture({
 				transform: readLiveTransform(live),
 				box: readLiveBox(live),
 			};
+			const held = live.heldId.value;
+			const heldGroup =
+				held === SELECTION_GROUP_ID ? live.groupIds.value : null;
 			snapLines.value = snapLinesFor(
 				documentSize,
-				layers.value.filter((target) => target.id !== live.heldId.value),
+				layers.value.filter((target) =>
+					heldGroup ? !heldGroup.includes(target.id) : target.id !== held,
+				),
 			);
 		},
 		onUpdate: (event) => {

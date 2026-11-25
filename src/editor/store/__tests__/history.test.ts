@@ -17,6 +17,7 @@ import {
 	selectAppDocument,
 	selectCanRedo,
 	selectCanUndo,
+	selectSelectedLayerId,
 	stepsByMark,
 } from "../editorSlice.ts";
 
@@ -52,11 +53,11 @@ describe("history", () => {
 		const actions = store.getState().actions;
 		actions.undo();
 		assert.equal(textLayers(store).length, 0);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 
 		actions.redo();
 		assert.deepEqual(textLayers(store), [text]);
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 	});
 
 	test("undoing a delete brings the layer back selected", () => {
@@ -65,7 +66,7 @@ describe("history", () => {
 		actions.deleteLayer(text.id);
 		actions.undo();
 		assert.deepEqual(textLayers(store), [text]);
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 	});
 
 	test("undoing a hide shows the layer selected again", () => {
@@ -74,7 +75,7 @@ describe("history", () => {
 		actions.setLayerHidden(text.id, true);
 		actions.undo();
 		assert.deepEqual(textLayers(store), [text]);
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 	});
 
 	test("undoing a move restores the order", () => {
@@ -221,6 +222,23 @@ describe("history", () => {
 		actions.redo();
 		assert.equal(store.getState(), before);
 	});
+
+	test("undo and redo restore a selection of several layers", () => {
+		const { store, text: a } = storeWithText();
+		const actions = store.getState().actions;
+		actions.addTextLayer("B");
+		const [, b] = textLayers(store);
+		actions.selectLayers([a.id, b.id]);
+
+		actions.setLayerHidden(a.id, true);
+		assert.deepEqual(store.getState().selectedLayerIds, [b.id]);
+
+		actions.undo();
+		assert.deepEqual(store.getState().selectedLayerIds, [a.id, b.id]);
+
+		actions.redo();
+		assert.deepEqual(store.getState().selectedLayerIds, [b.id]);
+	});
 });
 describe("tool sessions", () => {
 	const pen = (points: number[]): Stroke & { type: "pen" } => ({
@@ -244,7 +262,7 @@ describe("tool sessions", () => {
 
 		actions.undo();
 		assert.equal(store.getState().document, before);
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 	});
 
 	const drawingsIn = (store: ReturnType<typeof createTestStore>) =>
@@ -259,11 +277,11 @@ describe("tool sessions", () => {
 		const steps = store.getState().past.length;
 		actions.beginToolSession(false, "marks");
 		actions.drawStroke(pen([0, 0, 10, 0]));
-		const a = store.getState().selectedLayerId;
+		const a = selectSelectedLayerId(store.getState());
 		actions.drawStroke(pen([10, 0, 20, 0]), a);
 		actions.drawStroke(pen([20, 0, 30, 0]), a);
 		actions.drawStroke(pen([200, 200, 210, 200]));
-		const b = store.getState().selectedLayerId;
+		const b = selectSelectedLayerId(store.getState());
 		actions.drawStroke(pen([210, 200, 220, 200]), b);
 		actions.commitToolSession();
 		assert.equal(store.getState().past.length, steps + 2);
@@ -273,7 +291,7 @@ describe("tool sessions", () => {
 			drawingsIn(store).map((drawing) => drawing.strokes.length),
 			[3],
 		);
-		assert.equal(store.getState().selectedLayerId, null);
+		assert.equal(selectSelectedLayerId(store.getState()), null);
 		actions.undo();
 		assert.equal(drawingsIn(store).length, 0);
 		actions.redo();
@@ -293,7 +311,7 @@ describe("tool sessions", () => {
 		const steps = store.getState().past.length;
 		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
-		const a = store.getState().selectedLayerId ?? "";
+		const a = selectSelectedLayerId(store.getState()) ?? "";
 		actions.setShapeStyle(a, { color: "#0A84FF" });
 		// Deselecting before the next box leaves A's restyle with A.
 		actions.selectLayer(null);
@@ -346,20 +364,20 @@ describe("tool sessions", () => {
 	test("undo after a kept session restores the starting selection", () => {
 		const { store, text } = storeWithText();
 		const actions = store.getState().actions;
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		actions.beginToolSession(false, "marks");
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		actions.drawStroke(pen([200, 0, 210, 0]));
 		actions.commitToolSession();
 		actions.undo();
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 	});
 
 	test("restyling the mark it opened on joins that mark's step", () => {
 		const { store } = storeWithText();
 		const actions = store.getState().actions;
 		actions.drawStroke(pen([0, 0, 10, 0]));
-		const mark = store.getState().selectedLayerId ?? "";
+		const mark = selectSelectedLayerId(store.getState()) ?? "";
 		const steps = store.getState().past.length;
 		actions.beginToolSession(false, "marks");
 		actions.restyleDrawing(mark, { color: "#0A84FF" });
@@ -418,7 +436,7 @@ describe("tool sessions", () => {
 		let shade = 0;
 		const snapshot = (selectedLayerId: string | null) => ({
 			document: createBlankDocument(10, 10, `#0000${shade++}0`),
-			selectedLayerId,
+			selectedLayerIds: selectedLayerId ? [selectedLayerId] : [],
 		});
 		// The steps before each change; the mark after each is the next
 		// snapshot's selection, and the last's is `current`'s.
@@ -436,7 +454,7 @@ describe("tool sessions", () => {
 		const { past } = store.getState();
 		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
-		const shape = store.getState().selectedLayerId ?? "";
+		const shape = selectSelectedLayerId(store.getState()) ?? "";
 		actions.setShapeStyle(shape, { color: "#0A84FF" });
 		actions.deleteLayer(shape);
 		actions.commitToolSession();
@@ -450,7 +468,7 @@ describe("tool sessions", () => {
 		actions.beginToolSession(false, "marks");
 		actions.drawStroke(pen([0, 0, 10, 0]));
 		actions.drawStroke(pen([200, 0, 210, 0]));
-		actions.deleteLayer(store.getState().selectedLayerId ?? "");
+		actions.deleteLayer(selectSelectedLayerId(store.getState()) ?? "");
 		actions.commitToolSession();
 		assert.equal(store.getState().past.length, steps + 1);
 		actions.undo();
@@ -465,18 +483,18 @@ describe("tool sessions", () => {
 		const { past } = store.getState();
 		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
-		const first = store.getState().selectedLayerId ?? "";
+		const first = selectSelectedLayerId(store.getState()) ?? "";
 		actions.addShape("ellipse", place, style);
-		const second = store.getState().selectedLayerId ?? "";
+		const second = selectSelectedLayerId(store.getState()) ?? "";
 		actions.deleteLayer(second);
 		actions.setShapeStyle(first, { color: "#0A84FF" });
 		actions.commitToolSession();
 		assert.equal(store.getState().past.length, past.length + 1);
 		actions.beginToolSession(false, "marks");
 		actions.addShape("rectangle", place, style);
-		const third = store.getState().selectedLayerId ?? "";
+		const third = selectSelectedLayerId(store.getState()) ?? "";
 		actions.addShape("ellipse", place, style);
-		const fourth = store.getState().selectedLayerId ?? "";
+		const fourth = selectSelectedLayerId(store.getState()) ?? "";
 		actions.deleteLayer(fourth);
 		actions.deleteLayer(third);
 		actions.commitToolSession();
@@ -518,7 +536,7 @@ describe("tool sessions", () => {
 		actions.deleteLayer(text.id);
 		actions.cancelToolSession();
 		assert.equal(store.getState().document, before);
-		assert.equal(store.getState().selectedLayerId, text.id);
+		assert.equal(selectSelectedLayerId(store.getState()), text.id);
 		assert.deepEqual(store.getState().past, past);
 		assert.equal(store.getState().toolSession, null);
 	});
@@ -530,13 +548,13 @@ describe("tool sessions", () => {
 		actions.beginToolSession();
 		actions.drawStroke(pen([0, 0, 100, 100]));
 		actions.deleteLayer(text.id);
-		const { document: canceled, selectedLayerId } = store.getState();
+		const { document: canceled, selectedLayerIds } = store.getState();
 		actions.cancelToolSession();
 		assert.equal(selectCanRedo(store.getState()), true);
 
 		actions.redo();
 		assert.equal(store.getState().document, canceled);
-		assert.equal(store.getState().selectedLayerId, selectedLayerId);
+		assert.deepEqual(store.getState().selectedLayerIds, selectedLayerIds);
 		actions.undo();
 		assert.equal(store.getState().document, before);
 	});
@@ -791,7 +809,7 @@ describe("a session that absorbs the step before it", () => {
 		const pastLength = store.getState().past.length;
 		actions.addCutCopy("photo", { mask: "file:///mask.png" });
 		const withCopy = store.getState().document;
-		const copyId = store.getState().selectedLayerId ?? "";
+		const copyId = selectSelectedLayerId(store.getState()) ?? "";
 		actions.beginToolSession(false, "one", true);
 		const brighter = { ...neutralAdjustments, brightness: 0.3 };
 		const adjust = () => actions.setAdjustments(copyId, brighter);

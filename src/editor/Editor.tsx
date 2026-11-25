@@ -65,6 +65,7 @@ import {
 	selectCanRedo,
 	selectCanUndo,
 	selectSelectedLayer,
+	selectSelectedLayers,
 } from "./store/editorSlice";
 import { BUILT_IN_TOOLBAR } from "./tools/builtInSpecs";
 import { BUILT_IN_TOOLS } from "./tools/builtInTools";
@@ -137,18 +138,24 @@ export function Editor({
 	});
 	const { specs } = toolbox;
 	const selectedLayer = useStore(selectSelectedLayer);
+	const selectedLayerIds = useStore((state) => state.selectedLayerIds);
+	const selectedLayers = useStore(selectSelectedLayers);
 	const canUndo = useStore(selectCanUndo);
 	const canRedo = useStore(selectCanRedo);
 	const actions = useStore((state) => state.actions);
 	const {
 		addImageLayer,
 		addStickerLayer,
-		duplicateSelectedLayer,
+		duplicateSelectedLayers,
 		transformLayer,
+		transformSelectedLayers,
 		resizeBox,
-		nudgeLayer,
+		nudgeSelectedLayers,
 		setLayerResizable,
 		selectLayer,
+		selectLayers,
+		selectAll,
+		toggleLayerSelected,
 		undo,
 		redo,
 	} = actions;
@@ -289,7 +296,7 @@ export function Editor({
 		root?.toggleAttribute("inert", !focused);
 	}, [focused]);
 
-	const selectedPlace = useArrangeSelected(document, selectedLayer);
+	const selectedPlace = useArrangeSelected(document, selectedLayers);
 
 	// Back puts the open tool down, applying what it picked.
 	const leave = () => {
@@ -297,8 +304,9 @@ export function Editor({
 		host.leave();
 	};
 
-	// A shape in Shape, a mark in Pen: what the open tool draws, and shows
-	// selected, so Delete takes it without putting the tool down.
+	// A shape in Shape, a mark in Pen: what the open tool draws, and keeps
+	// selected, so Delete takes it without putting the tool down. Pen outlines
+	// a mark only when it was opened on it.
 	const drawnSelected =
 		canvasInput.input.type === "tool" &&
 		restyles(canvasInput.input.tool, selectedLayer);
@@ -315,6 +323,7 @@ export function Editor({
 		tool,
 		controllers,
 		selectedLayer,
+		selectedCount: selectedLayers.length,
 		stylingTool: selectedStyler,
 		wide,
 		done,
@@ -338,11 +347,13 @@ export function Editor({
 		modeState,
 		selection: drawnSelected
 			? "drawn"
-			: selectedEditor
-				? "editable"
-				: selectedLayer
-					? "layer"
-					: null,
+			: selectedLayers.length > 1
+				? "many"
+				: selectedEditor
+					? "editable"
+					: selectedLayer
+						? "layer"
+						: null,
 		dispatchMode,
 		undo,
 		redo,
@@ -351,14 +362,17 @@ export function Editor({
 		done,
 		putDown: putDownTool,
 		startTool,
+		selectAll,
 		editSelected: () => {
 			if (selectedLayer) editLayer(selectedLayer);
 		},
 		deleteSelected: () => {
-			if (selectedLayer) editNotice.deleteLayer(selectedLayer.id);
+			if (selectedLayerIds.length > 0) {
+				editNotice.deleteLayers(selectedLayerIds);
+			}
 		},
 		deselect: () => selectLayer(null),
-		duplicate: duplicateSelectedLayer,
+		duplicate: duplicateSelectedLayers,
 		arrange: selectedPlace.arrange,
 		nudge: (dx, dy) => canvasRef.current?.nudgeSelection(dx, dy),
 		stepBrush: stepToolSize,
@@ -373,7 +387,7 @@ export function Editor({
 
 	const layerList = layerListProps({
 		document,
-		selectedLayer,
+		selectedLayerIds,
 		actions: {
 			...actions,
 			deleteLayer: editNotice.deleteLayer,
@@ -438,19 +452,19 @@ export function Editor({
 
 	// The actions every selected layer shares, while the canvas selects: in
 	// the header on a wide window, where they cover nothing, or else
-	// floating by the layer.
-	const selectionActions = selectedLayer &&
+	// floating by the selection.
+	const selectionActions = selectedLayers.length > 0 &&
 		canvasInput.input.type === "select" && (
 			<LayerSelectionBar
-				layer={selectedLayer}
+				layers={selectedLayers}
 				inBar={wide}
-				index={selectedPlace.index}
-				topIndex={selectedPlace.topIndex}
+				canMoveForward={selectedPlace.canMoveForward}
+				canMoveBackward={selectedPlace.canMoveBackward}
 				onEdit={editable ? () => editLayer(editable) : undefined}
 				onSetResizable={setLayerResizable}
 				onArrange={selectedPlace.arrange}
-				onDuplicate={duplicateSelectedLayer}
-				onDelete={editNotice.deleteLayer}
+				onDuplicate={duplicateSelectedLayers}
+				onDelete={() => editNotice.deleteLayers(selectedLayerIds)}
 			/>
 		);
 
@@ -511,15 +525,18 @@ export function Editor({
 						<EditorCanvas
 							ref={canvasRef}
 							document={document}
-							selectedLayer={selectedLayer}
+							selectedLayers={selectedLayers}
 							draft={draft}
 							keepFocus={typing}
 							previewUri={host.previewUri}
 							onSelectLayer={selectLayer}
+							onSelectLayers={selectLayers}
+							onToggleSelectLayer={toggleLayerSelected}
 							onTapSelectedLayer={editSelectedAt || undefined}
 							onCommitTransform={transformLayer}
+							onCommitGroupTransform={transformSelectedLayers}
 							onResizeBox={resizeBox}
-							onNudgeLayer={nudgeLayer}
+							onNudgeSelection={nudgeSelectedLayers}
 							{...canvasInput}
 							onToolInteractionEnd={() =>
 								dispatchMode({ type: "closeToolOptions" })

@@ -49,6 +49,7 @@ export function useEditorShortcuts({
 	done,
 	putDown,
 	startTool,
+	selectAll,
 	editSelected,
 	deleteSelected,
 	deselect,
@@ -71,6 +72,7 @@ export function useEditorShortcuts({
 	done: () => void;
 	putDown: () => void;
 	startTool: ToolStarters;
+	selectAll: () => void;
 	editSelected: () => void;
 	deleteSelected: () => void;
 	deselect: () => void;
@@ -108,8 +110,15 @@ export function useEditorShortcuts({
 			case "putDownTool":
 				putDown();
 				break;
+			case "putDownAndSelectAll":
+				putDown();
+				selectAll();
+				break;
 			case "doneWithTool":
 				done();
+				break;
+			case "selectAll":
+				selectAll();
 				break;
 			case "tool":
 				startTool[command.tool]();
